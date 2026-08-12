@@ -7,6 +7,7 @@ using Jewel.JPMS.Api.Features.MailboxIntake.Sharing;
 using Jewel.JPMS.Api.Features.Progress.Storage;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Features.Requests;
+using Jewel.JPMS.Api.Features.Requests.Documents;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.MailboxCompose;
 using Jewel.JPMS.Contracts.RecordLinks;
@@ -458,6 +459,23 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
                         ?? throw new InvalidOperationException($"The photo file for {photo.FileName} couldn't be read from storage.");
                     resolved.Add(new MailboxDraftAttachment(
                         photo.FileName, blob.ContentType, await ReadAllAsync(blob.Content, ct)));
+                    break;
+                }
+
+                case ComposeAttachmentSource.RecordDocument:
+                {
+                    // The record's official PDF, rendered NOW — same builder + renderer as the
+                    // record page's download, so the attached file is byte-for-byte the document
+                    // as it currently stands. The request family is the only record type with an
+                    // official document so far; new types slot in as further cases here once they
+                    // grow a renderer.
+                    if (reference.RecordType is not null && reference.RecordType != RecordType.Request)
+                        throw new InvalidOperationException(
+                            $"{reference.RecordType} records don't have an official document to attach yet — remove it and try again.");
+                    var model = await RequestDocumentBuilder.BuildAsync(context, reference.Id, ct)
+                        ?? throw new InvalidOperationException("A selected request record no longer exists — remove its document and try again.");
+                    resolved.Add(new MailboxDraftAttachment(
+                        model.FileName, "application/pdf", RequestDocumentRenderer.Render(model)));
                     break;
                 }
 

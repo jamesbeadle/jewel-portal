@@ -1,6 +1,7 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
 @using Jewel.JPMS.Contracts.Commercial
 @inject IVariationStore Variations
+@inject IIntakeQueue Intake
 
 @* Approve / Reject Variation Order as STAGED actions on the triage bar's project. Approving
    reuses VariationApprovePanel — the exact cost-code/lines build-up the variation page shows —
@@ -96,7 +97,8 @@
         await OnStaged.InvokeAsync(new StagedSystemAction(
             SystemActionKind.ApproveVariationOrder,
             $"approve {picked.DisplayNumber} at {request.Total.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"))}",
-            async () => await variations.ApproveAsync(picked.VariationOrderId, request.PrimaryCostCode, request.Total, request.Lines)));
+            async () => await variations.ApproveAsync(picked.VariationOrderId, request.PrimaryCostCode, request.Total, request.Lines),
+            await TargetFor(picked)));
         variationOrderId = "";
     }
 
@@ -107,7 +109,25 @@
         await OnStaged.InvokeAsync(new StagedSystemAction(
             SystemActionKind.RejectVariationOrder,
             $"reject {picked.DisplayNumber}",
-            async () => await variations.RejectAsync(picked.VariationOrderId)));
+            async () => await variations.RejectAsync(picked.VariationOrderId),
+            await TargetFor(picked)));
         variationOrderId = "";
+    }
+
+    // The decision fires on an existing variation, so its tag rides along (SystemActionsPane
+    // stages the pick into System Tags) — approving V87 from an email files the email against
+    // V87. The server's own projection is fetched rather than hand-built: a not-yet-approved
+    // variation links under its stable quoting-stage identity (the VOQ- tag stem), and only the
+    // provider knows which identity a row carries. Links land before actions run in the page's
+    // Apply, so the tag stem staged here is the record's identity at apply time — and the
+    // variation page reads both stems' mail either way.
+    private async Task<LinkableRecord?> TargetFor(VariationOrder picked)
+    {
+        try
+        {
+            var records = await Intake.ListLinkableRecordsAsync(picked.ProjectId, RecordType.Variation);
+            return records.FirstOrDefault(r => r.RecordId == picked.VariationOrderId);
+        }
+        catch { return null; } // the action still stages; only the automatic tag is lost
     }
 }

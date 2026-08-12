@@ -8,7 +8,11 @@
       Raise Defect, Create To-do Items): drafted into page-owned staging and raised by Apply
       through the intake commands, so the EMAIL IS TAGGED to the new record.
     - Staged store calls (RFI transitions, variations, directory contact): each reuses the
-      component or store call its home page uses, snapshotted as a closure at stage time.
+      component or store call its home page uses, snapshotted as a closure at stage time. When
+      the call fires on an EXISTING record (a transition, a variation decision), staging it also
+      stages that record's tag into the page's System Tags picks — actioning a record from an
+      email files the email against it, so the record's correspondence shows the email that
+      caused the action. Removing the action removes the tag it added (and only that one).
 *@
 
 <div class="panel p-5 space-y-4">
@@ -26,7 +30,7 @@
                 <div class="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
                     <p class="text-sm text-content min-w-0">
                         <span class="text-xs uppercase tracking-wider text-accent font-semibold mr-2">@SystemActionKinds.Label(action.Kind)</span>
-                        <span class="text-content-muted">Will @action.Summary.</span>
+                        <span class="text-content-muted">Will @action.Summary.@(TargetIsTagged(action) ? " This email is tagged to it." : "")</span>
                     </p>
                     <button type="button" class="text-xs text-content-subtle hover:text-negative shrink-0"
                             @onclick="() => RemoveAsync(action)">Remove</button>
@@ -128,7 +132,8 @@
 
     <p class="text-xs text-content-subtle pt-2 border-t border-line">
         Everything lined up here runs with the email's Apply — created records are tagged to the
-        email; staged actions clear if you move to another email without applying.
+        email, and an action on an existing record stages that record's tag in System Tags;
+        staged actions clear if you move to another email without applying.
     </p>
 </div>
 
@@ -145,6 +150,12 @@
     /// adds/removes and notifies.</summary>
     [Parameter, EditorRequired] public List<StagedSystemAction> StagedActions { get; set; } = new();
     [Parameter] public EventCallback OnStagingChanged { get; set; }
+
+    /// <summary>The page's staged System Tags picks — the same list SystemTagsPane mutates. An
+    /// action on an existing record stages that record's tag here the moment it stages, so the
+    /// email is filed against what it actioned when Apply links the picks (links land before
+    /// actions run).</summary>
+    [Parameter, EditorRequired] public List<LinkableRecord> PickedRecords { get; set; } = new();
 
     /// <summary>The staged new record (null = none) — the email-linked creates' one draft. Owned
     /// by the page; edited in <see cref="StagedRecordActionEditor"/>.</summary>
@@ -181,6 +192,15 @@
 
     private async Task StagedAsync(StagedSystemAction action)
     {
+        // An action on an existing record tags the email to it: the target's pick is staged the
+        // moment the action stages, exactly as if it had been ticked in System Tags by hand. A
+        // record the triager already picked stays theirs (TargetAutoTagged false), so removing
+        // the action later never takes away a tag it didn't add.
+        if (action.Target is { } target && !PickedRecords.Any(r => r.RecordId == target.RecordId))
+        {
+            PickedRecords.Add(target);
+            action = action with { TargetAutoTagged = true };
+        }
         StagedActions.Add(action);
         await OnStagingChanged.InvokeAsync();
     }
@@ -188,8 +208,22 @@
     private async Task RemoveAsync(StagedSystemAction action)
     {
         StagedActions.Remove(action);
+        // Take back the tag this action staged — unless another staged action still targets the
+        // same record (its tag is still owed), or the pick was the triager's own to begin with.
+        if (action is { TargetAutoTagged: true, Target: { } target }
+            && !StagedActions.Any(a => a.Target?.RecordId == target.RecordId)
+            && PickedRecords.FirstOrDefault(r => r.RecordId == target.RecordId) is { } picked)
+        {
+            PickedRecords.Remove(picked);
+        }
         await OnStagingChanged.InvokeAsync();
     }
+
+    /// <summary>Whether the action's target record is (still) among the staged tag picks — read
+    /// live rather than snapshotted, so the row's "tagged to it" note stays honest if the pick
+    /// is unticked in System Tags afterwards.</summary>
+    private bool TargetIsTagged(StagedSystemAction action) =>
+        action.Target is { } target && PickedRecords.Any(r => r.RecordId == target.RecordId);
 
     private async Task ClearStagedCreateAsync()
     {

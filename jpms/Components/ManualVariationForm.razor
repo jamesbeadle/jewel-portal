@@ -14,11 +14,14 @@
         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
     }
 
-    <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-        Adds a standalone variation in <span class="font-medium text-content">Quoting</span> — no RFI needed. It won't
-        appear on the valuation report until you approve it: open it and use
-        <span class="font-medium text-content">Approve manually &amp; raise VO</span> (cost code + value).
-    </p>
+    @if (ShowIntro)
+    {
+        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+            Adds a standalone variation in <span class="font-medium text-content">Quoting</span> — no RFI needed. It won't
+            appear on the valuation report until you approve it: open it and use
+            <span class="font-medium text-content">Approve manually &amp; raise VO</span> (cost code + value).
+        </p>
+    }
 
     <div>
         <FormField Label="Variation no." Value="@numberText" OnChange="v => numberText = v" InputType="number" />
@@ -53,6 +56,10 @@
     /// round-trips. Empty when the host has no register to hand; the server still rejects.</summary>
     [Parameter] public IReadOnlyCollection<int> UsedNumbers { get; set; } = Array.Empty<int>();
 
+    /// <summary>Hosts that say what happens next in their own words (the System Actions pane's
+    /// approve-on-apply toggle) turn the standard lands-in-Quoting blurb off.</summary>
+    [Parameter] public bool ShowIntro { get; set; } = true;
+
     private string numberText = "";
     private string title = "";
     private string description = "";
@@ -62,6 +69,12 @@
     private int? ParsedNumber => int.TryParse(numberText, out var n) && n > 0 ? n : null;
     // Shows the number the way the rest of the app shows it ("V50").
     private string Preview => ParsedNumber is { } n ? $"V{n}" : "V…";
+
+    /// <summary>What's typed right now — read by hosts that seed another panel from this form
+    /// before it is submitted (the approve-on-apply build-up seeds its first line from these).</summary>
+    public string CurrentTitle => title.Trim();
+    public decimal? CurrentEstimatedValue =>
+        !string.IsNullOrWhiteSpace(valueText) && decimal.TryParse(valueText, out var current) ? current : null;
 
     private void OnDescriptionInput(ChangeEventArgs e) => description = e.Value?.ToString() ?? "";
 

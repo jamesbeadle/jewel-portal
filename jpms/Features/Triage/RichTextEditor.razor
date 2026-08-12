@@ -2,8 +2,8 @@
 @implements IAsyncDisposable
 @inject IJSRuntime Js
 
-@* Rich-lite compose editor: contenteditable body with a small formatting bar, backed by
-   wwwroot/js/rich-compose.js. Pasted screenshots land inline as data: images (the server turns
+@* Rich-lite compose editor: contenteditable body with a small formatting bar (bold / italic /
+   underline / text colour / lists), backed by wwwroot/js/rich-compose.js. Pasted screenshots land inline as data: images (the server turns
    each into a proper cid attachment before sending); pasted HTML is flattened to a small tag set.
    Value is the editor's HTML — send it with BodyIsHtml=true so the server runs the outbound
    sanitiser + inline-image extraction over it. *@
@@ -16,6 +16,30 @@
                 title="Italic" @onclick='() => ExecAsync("italic")' @onmousedown:preventDefault>I</button>
         <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm underline text-content-muted hover:text-content hover:bg-surface"
                 title="Underline" @onclick='() => ExecAsync("underline")' @onmousedown:preventDefault>U</button>
+        <div class="relative">
+            <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm font-semibold text-content-muted hover:text-content hover:bg-surface"
+                    title="Text colour" @onclick="ToggleColourMenu" @onmousedown:preventDefault>
+                <span class="block leading-none">A</span>
+                <span class="block h-[3px] rounded-sm mt-[2px]"
+                      style="background:@(lastColour ?? "linear-gradient(90deg,#DC2626,#EA580C,#15803D,#2563EB,#7C3AED)")"></span>
+            </button>
+            @if (colourMenuOpen)
+            {
+                <div class="fixed inset-0 z-10" @onclick="CloseColourMenu" @onmousedown:preventDefault></div>
+                <div class="absolute left-0 top-full z-20 mt-1 w-40 rounded-lg border border-line bg-surface-raised p-2 shadow-lg">
+                    <button type="button" tabindex="-1" class="mb-2 w-full rounded px-2 py-1 text-left text-xs text-content-muted hover:text-content hover:bg-surface"
+                            @onclick="() => ApplyColourAsync(null)" @onmousedown:preventDefault>Automatic</button>
+                    <div class="grid grid-cols-4 gap-1.5">
+                        @foreach (var (name, css) in Palette)
+                        {
+                            <button type="button" tabindex="-1" title="@name"
+                                    class="h-5 w-full rounded border border-line"
+                                    style="background:@css" @onclick="() => ApplyColourAsync(css)" @onmousedown:preventDefault></button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
         <span class="mx-1 h-4 w-px bg-line"></span>
         <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm text-content-muted hover:text-content hover:bg-surface"
                 title="Bulleted list" @onclick='() => ExecAsync("insertUnorderedList")' @onmousedown:preventDefault>•&nbsp;List</button>
@@ -75,8 +99,39 @@
         await ValueChanged.InvokeAsync(html);
     }
 
+    private bool colourMenuOpen;
+    private string? lastColour;
+
+    /// <summary>Preset text colours — a small email-safe set, all legible on the white background
+    /// most recipients read against. "Automatic" (null) resets to the recipient's default via
+    /// color:inherit.</summary>
+    private static readonly (string Name, string Css)[] Palette =
+    {
+        ("Black", "#111111"),
+        ("Grey", "#6B7280"),
+        ("Red", "#DC2626"),
+        ("Orange", "#EA580C"),
+        ("Amber", "#B45309"),
+        ("Green", "#15803D"),
+        ("Blue", "#2563EB"),
+        ("Purple", "#7C3AED"),
+    };
+
+    private void ToggleColourMenu() => colourMenuOpen = !colourMenuOpen;
+    private void CloseColourMenu() => colourMenuOpen = false;
+
+    private async Task ApplyColourAsync(string? css)
+    {
+        colourMenuOpen = false;
+        lastColour = css;
+        await ExecValueAsync("foreColor", css ?? "inherit");
+    }
+
     private Task ExecAsync(string command) =>
         initialised ? Js.InvokeVoidAsync("jpmsRichCompose.exec", editor, command).AsTask() : Task.CompletedTask;
+
+    private Task ExecValueAsync(string command, string value) =>
+        initialised ? Js.InvokeVoidAsync("jpmsRichCompose.execValue", editor, command, value).AsTask() : Task.CompletedTask;
 
     public async ValueTask DisposeAsync()
     {

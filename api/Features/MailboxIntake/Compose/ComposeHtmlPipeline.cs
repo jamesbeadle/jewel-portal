@@ -91,10 +91,14 @@ public sealed class ComposeHtmlPipeline
         sanitiser.AllowedAttributes.Add("href");
         sanitiser.AllowedAttributes.Add("src");
         sanitiser.AllowedAttributes.Add("alt");
+        sanitiser.AllowedAttributes.Add("style"); // colour only — see AllowedCssProperties below
 
-        // No style pass-through at all: outbound mail carries the recipient's default styling, and
-        // style attributes are the classic sanitiser escape hatch.
+        // Style pass-through is a single property: color, for the composer's text-colour button
+        // (which writes <span style="color:…">). Everything else in a style attribute — the
+        // classic sanitiser escape hatch — is still stripped, so outbound mail otherwise carries
+        // the recipient's default styling.
         sanitiser.AllowedCssProperties.Clear();
+        sanitiser.AllowedCssProperties.Add("color");
         sanitiser.AllowedAtRules.Clear();
 
         sanitiser.AllowedSchemes.Clear();

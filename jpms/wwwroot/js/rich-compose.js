@@ -1,8 +1,8 @@
 // Rich-lite compose surface for the triage composer (RichTextEditor.razor).
 //
 // A contenteditable div with three behaviours the plain textarea couldn't give the PM team:
-//   • basic formatting (bold / italic / lists) via execCommand — deprecated but universally
-//     supported, and the server re-sanitises everything to a small allowlist anyway;
+//   • basic formatting (bold / italic / lists / text colour) via execCommand — deprecated but
+//     universally supported, and the server re-sanitises everything to a small allowlist anyway;
 //   • PASTED IMAGES: an image on the clipboard (a screenshot, a snip of a drawing) is inserted
 //     inline as a data: URL <img>. The server extracts each one into a proper cid inline
 //     attachment before sending, so what the composer shows is what the recipient sees;
@@ -12,7 +12,8 @@
 //
 // Interop surface: init(element, dotNetRef) wires input+paste and pushes HTML changes up via
 // dotNetRef.invokeMethodAsync('OnEditorHtmlChanged', html); setHtml/getHtml/clear do what they
-// say; exec runs a formatting command; dispose detaches.
+// say; exec runs a formatting command, execValue one that takes an argument (text colour);
+// dispose detaches.
 window.jpmsRichCompose = (function () {
     const KEEP_TAGS = new Set([
         "P", "DIV", "BR", "B", "STRONG", "I", "EM", "U", "S",
@@ -20,6 +21,10 @@ window.jpmsRichCompose = (function () {
         "H1", "H2", "H3", "H4", "TABLE", "THEAD", "TBODY", "TR", "TH", "TD", "HR"
     ]);
     const KEEP_ATTRS = { A: ["href"], IMG: ["src", "alt"] };
+    // Style properties that survive the paste flattener, per tag. Colour only — it matches what
+    // the toolbar's colour button produces and what the server's outbound sanitiser lets through;
+    // everything else in a pasted style attribute (fonts, sizes, margins) is still dropped.
+    const KEEP_STYLE_PROPS = { SPAN: ["color"] };
 
     const instances = new Map();
 
@@ -35,9 +40,20 @@ window.jpmsRichCompose = (function () {
                     node.removeChild(child);
                 } else {
                     const keep = KEEP_ATTRS[child.tagName] || [];
+                    // Capture the allowed style properties (if any) before the style attribute is
+                    // stripped with the rest, then re-apply just those.
+                    const keepStyles = KEEP_STYLE_PROPS[child.tagName] || [];
+                    const preserved = keepStyles
+                        .map(prop => {
+                            const value = child.style.getPropertyValue(prop);
+                            return value ? `${prop}: ${value}` : null;
+                        })
+                        .filter(Boolean)
+                        .join("; ");
                     for (const attr of Array.from(child.attributes)) {
                         if (!keep.includes(attr.name.toLowerCase())) child.removeAttribute(attr.name);
                     }
+                    if (preserved) child.setAttribute("style", preserved);
                     // Images may only be data: (pasted) or cid: (already inline) or https.
                     if (child.tagName === "IMG") {
                         const src = child.getAttribute("src") || "";
@@ -120,7 +136,21 @@ window.jpmsRichCompose = (function () {
         exec: function (element, command) {
             if (!element) return;
             element.focus();
+            // styleWithCSS off so bold/italic/underline keep producing <b>/<i>/<u>, which is what
+            // both sanitisers' tag allowlists expect (styleWithCSS is document-wide state, so an
+            // earlier execValue call would otherwise leak into these).
+            document.execCommand("styleWithCSS", false, false);
             document.execCommand(command, false, null);
+            notify(element);
+        },
+        execValue: function (element, command, value) {
+            if (!element) return;
+            element.focus();
+            // styleWithCSS on so foreColor produces <span style="color:…"> rather than <font>,
+            // which is the one styled form the sanitisers allow through.
+            document.execCommand("styleWithCSS", false, true);
+            document.execCommand(command, false, value);
+            document.execCommand("styleWithCSS", false, false);
             notify(element);
         },
         dispose: function (element) {

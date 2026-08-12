@@ -3,11 +3,37 @@
 
 @* Raise Variation Order as a STAGED action: the same ManualVariationForm the variations page's
    dialog uses, snapshotted here and fired by the email's Apply. Lands in Quoting, like every
-   manual variation, on the triage bar's project. *@
+   manual variation, on the triage bar's project — unless "Approve on apply" is ticked, which
+   adds the same cost-centre build-up the Approve Variation Order action uses and stages ONE
+   action that creates the variation and then runs the real approval (V-ref minted, valuation
+   report / CVR / budget written through), so a retrospective or client-instructed variation
+   never sits in Quoting waiting for a second pass. *@
 
 <div class="space-y-3">
-    <ManualVariationForm @ref="form" OnSubmit="StageAsync" />
-    <button type="button" class="btn-primary" @onclick="SubmitAsync">Stage action</button>
+    <ManualVariationForm @ref="form" ShowIntro="@(!approveOnApply)" OnSubmit="StageAsync" />
+
+    <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
+           title="Apply creates the variation and approves it in the same run — the V-ref is minted and the lines write through to the valuation report, CVR and cost-centre budgets, exactly as if you'd opened it and used Approve manually & raise VO">
+        <input type="checkbox" class="cursor-pointer align-middle" checked="@approveOnApply"
+               @onchange="OnApproveToggled" />
+        Approve on apply — create it and approve it in one go
+    </label>
+
+    @if (approveOnApply)
+    {
+        @* Keyed per toggle so the build-up seeds fresh from whatever the form held at tick time. *@
+        <VariationApprovePanel @key="approveSeedKey"
+                               IsManual="true" ShowHeading="false"
+                               EstimatedValue="@seedEstimate"
+                               DefaultDescription="@seedDescription"
+                               SubmitLabel="Stage action"
+                               HelpOverride="Staged, not sent: Apply creates the variation, mints its V-ref and writes these lines to the valuation report, CVR and cost-centre budgets."
+                               OnApprove="StageCreateAndApproveAsync" />
+    }
+    else
+    {
+        <button type="button" class="btn-primary" @onclick="SubmitAsync">Stage action</button>
+    }
 </div>
 
 @code {
@@ -19,10 +45,37 @@
     [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
 
     private ManualVariationForm? form;
+    private bool approveOnApply;
+    // Snapshotted when the toggle is ticked — the build-up's first line seeds from these, and the
+    // panel is the source of truth for the value from then on (matching the form's own footnote).
+    private decimal? seedEstimate;
+    private string seedDescription = "";
+    private int approveSeedKey;
+    // The build-up the panel just validated, held only across the form's own validation pass so
+    // StageAsync knows whether it is staging a plain create or a create-and-approve.
+    private VariationApprovePanel.ApproveRequest? pendingApprove;
+
+    private void OnApproveToggled(ChangeEventArgs e)
+    {
+        approveOnApply = e.Value is true;
+        if (!approveOnApply) return;
+        seedEstimate = form?.CurrentEstimatedValue;
+        seedDescription = form?.CurrentTitle ?? "";
+        approveSeedKey++;
+    }
 
     private async Task SubmitAsync()
     {
         if (form is not null) await form.TrySubmitAsync();
+    }
+
+    /// <summary>The approve panel validated its lines — now run the form's validation; a valid
+    /// draft comes back through <see cref="StageAsync"/> with <see cref="pendingApprove"/> set.</summary>
+    private async Task StageCreateAndApproveAsync(VariationApprovePanel.ApproveRequest request)
+    {
+        pendingApprove = request;
+        try { if (form is not null) await form.TrySubmitAsync(); }
+        finally { pendingApprove = null; }
     }
 
     private async Task StageAsync(ManualVariationForm.Draft draft)
@@ -30,11 +83,28 @@
         var variations = Variations;
         var stagedProjectId = ProjectId;
         var project = Projects.FirstOrDefault(p => p.ProjectId == stagedProjectId);
-        await OnStaged.InvokeAsync(new StagedSystemAction(
-            SystemActionKind.RaiseVariationOrder,
-            $"raise variation \"{draft.Title}\" on {project?.Reference ?? "the project"}",
-            async () => await variations.CreateManualAsync(
-                stagedProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number)));
+
+        if (pendingApprove is { } approve)
+        {
+            await OnStaged.InvokeAsync(new StagedSystemAction(
+                SystemActionKind.RaiseVariationOrder,
+                $"raise and approve variation \"{draft.Title}\" at {approve.Total.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"))} on {project?.Reference ?? "the project"}",
+                async () =>
+                {
+                    var created = await variations.CreateManualAsync(
+                        stagedProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number);
+                    await variations.ApproveAsync(created.VariationOrderId, approve.PrimaryCostCode, approve.Total, approve.Lines);
+                }));
+            approveOnApply = false;
+        }
+        else
+        {
+            await OnStaged.InvokeAsync(new StagedSystemAction(
+                SystemActionKind.RaiseVariationOrder,
+                $"raise variation \"{draft.Title}\" on {project?.Reference ?? "the project"}",
+                async () => await variations.CreateManualAsync(
+                    stagedProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number)));
+        }
         form?.Reset();
     }
 }

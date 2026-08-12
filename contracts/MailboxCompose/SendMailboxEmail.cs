@@ -36,7 +36,8 @@ public sealed record SendMailboxEmail(
     string Body,
     bool BodyIsHtml,
     // Attachments by reference — uploaded files travel as multipart parts named by Id; drawings,
-    // progress photos and the original email's own attachments are resolved server-side by id.
+    // progress photos, system record documents and the original email's own attachments are
+    // resolved server-side by id.
     IReadOnlyList<ComposeAttachmentRef> Attachments,
     // Stop after staging the draft (review + send from Outlook) instead of sending.
     bool SaveAsDraftOnly = false,
@@ -72,17 +73,25 @@ public enum ComposeAttachmentSource
     ProgressPhoto = 2,
     /// <summary>An attachment on a mailbox message (forwarding it on) — Id is the Graph attachment
     /// id, SourceMessageId the Graph message id it belongs to.</summary>
-    OriginalMessage = 3
+    OriginalMessage = 3,
+    /// <summary>The official PDF of a system record, rendered server-side at send time so the
+    /// attached document is always the record as it currently stands. Id is the record id;
+    /// RecordType says which type. The request family (RFI/NOD/EOT…) is the only type with an
+    /// official document so far — extend the resolver as more record types grow one.</summary>
+    RecordDocument = 4
 }
 
 /// <summary>One attachment on a composed email, by reference (bytes are resolved server-side —
-/// uploads from the multipart request, the rest from blob storage / the mailbox).</summary>
+/// uploads from the multipart request, the rest from blob storage / the mailbox / the record's
+/// document renderer).</summary>
 public sealed record ComposeAttachmentRef(
     ComposeAttachmentSource Source,
     string Id,
     string? SourceMessageId = null,
     // Display-only: the file name the composer showed (the server re-derives the real one).
-    string FileName = "");
+    string FileName = "",
+    // RecordDocument only: the record type Id belongs to, so the server knows which renderer.
+    RecordType? RecordType = null);
 
 /// <summary>
 /// What happened to a composed email. Sent=true means it was delivered from the projects mailbox;

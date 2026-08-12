@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.MailboxCompose;
+using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Components.Forms;
 
 namespace Jewel.JPMS.Features.Triage;
@@ -7,7 +8,8 @@ namespace Jewel.JPMS.Features.Triage;
 /// One attachment the composer is holding, before send. Key doubles as the multipart part name for
 /// uploads (a fresh guid) and as the list key in the UI; the server resolves everything else by
 /// reference (<see cref="ToRef"/>): drawings and progress photos from blob storage, forwards from
-/// the original message, uploads from the request's file parts.
+/// the original message, uploads from the request's file parts, record documents from the record's
+/// own PDF renderer (rendered at send time, so the document is always current).
 /// </summary>
 public sealed record ComposeDraftAttachment(
     string Key,
@@ -16,13 +18,15 @@ public sealed record ComposeDraftAttachment(
     string FileName,
     long SizeBytes,
     string? SourceMessageId = null,
-    IBrowserFile? File = null)
+    IBrowserFile? File = null,
+    RecordType? RecordType = null)
 {
     public ComposeAttachmentRef ToRef() => new(
         Source,
         Source == ComposeAttachmentSource.Upload ? Key : Id,
         SourceMessageId,
-        FileName);
+        FileName,
+        RecordType);
 
     public static ComposeDraftAttachment FromUpload(IBrowserFile file) => new(
         Guid.NewGuid().ToString("N"), ComposeAttachmentSource.Upload, "", file.Name, file.Size, File: file);
@@ -35,4 +39,10 @@ public sealed record ComposeDraftAttachment(
 
     public static ComposeDraftAttachment FromOriginal(string sourceMessageId, string attachmentId, string fileName, long size) => new(
         Guid.NewGuid().ToString("N"), ComposeAttachmentSource.OriginalMessage, attachmentId, fileName, size, sourceMessageId);
+
+    // Size is unknown client-side (the PDF is rendered at send time) — 0 renders as no size label,
+    // which is honest. Request-family documents are small; the 25 MB planner still guards the total.
+    public static ComposeDraftAttachment FromRecordDocument(LinkableRecord record) => new(
+        Guid.NewGuid().ToString("N"), ComposeAttachmentSource.RecordDocument, record.RecordId,
+        $"{record.Reference}.pdf", 0, RecordType: record.Type);
 }

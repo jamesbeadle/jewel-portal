@@ -4,6 +4,7 @@
 @inject IRequestRegister RequestRegister
 @inject IAgentDesk Agents
 @inject AuthService Auth
+@inject IIntakeQueue Intake
 
 @* Promote Request to RFI / Close RFI / Reopen RFI as STAGED actions: pick the target record on
    the triage bar's project, stage; the same store calls the request page's buttons make fire
@@ -93,8 +94,23 @@
             if (chosen.Date > DateTime.Today) { error = "The closed date cannot be in the future."; return; }
             closedAt = new DateTimeOffset(DateTime.SpecifyKind(chosen.Date, DateTimeKind.Utc));
         }
-        await OnStaged.InvokeAsync(new StagedSystemAction(Kind, SummaryFor(picked, closedAt), ExecutorFor(picked, closedAt)));
+        await OnStaged.InvokeAsync(new StagedSystemAction(
+            Kind, SummaryFor(picked, closedAt), ExecutorFor(picked, closedAt), await TargetFor(picked)));
         requestId = "";
+    }
+
+    // The action fires on an existing record, so its tag rides along (SystemActionsPane stages
+    // the pick into System Tags) — actioning REQ-0012 from an email files the email against
+    // REQ-0012. The server's own projection is fetched rather than hand-built here: tag stems
+    // are provider business (project-qualified), and a guessed stem would silently detach mail.
+    private async Task<LinkableRecord?> TargetFor(Request picked)
+    {
+        try
+        {
+            var records = await Intake.ListLinkableRecordsAsync(picked.ProjectId, RecordType.Request);
+            return records.FirstOrDefault(r => r.RecordId == picked.RequestId);
+        }
+        catch { return null; } // the action still stages; only the automatic tag is lost
     }
 
     private string SummaryFor(Request picked, DateTimeOffset? closedAt) => Kind switch

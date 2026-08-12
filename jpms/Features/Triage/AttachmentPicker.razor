@@ -3,11 +3,14 @@
 @implements IDisposable
 @inject IDrawingStore Drawings
 @inject IProgressStore Progress
+@inject IIntakeQueue Intake
 
-@* The composer's attachment tray: what's attached so far (chips with remove), plus four ways to
-   add — files from this computer, drawings from a project's register, progress photos, and the
-   opened email's own attachments (forwarding them on). Drawings and photos are attached by id and
-   resolved server-side from blob storage, so nothing round-trips through the browser. *@
+@* The composer's attachment tray: what's attached so far (chips with remove), plus five ways to
+   add — files from this computer, drawings from a project's register, progress photos, a system
+   record's official document (an RFI's PDF, say), and the opened email's own attachments
+   (forwarding them on). Everything except uploads is attached by id and resolved server-side —
+   drawings and photos from blob storage, record documents rendered fresh at send time — so
+   nothing round-trips through the browser. *@
 
 <div class="space-y-2">
     @if (Attachments.Count > 0)
@@ -33,6 +36,7 @@
         </label>
         <button type="button" class="@SourceButtonClass(Panel.Drawings)" @onclick="() => TogglePanel(Panel.Drawings)">📐 Project drawings</button>
         <button type="button" class="@SourceButtonClass(Panel.Photos)" @onclick="() => TogglePanel(Panel.Photos)">📷 Progress photos</button>
+        <button type="button" class="@SourceButtonClass(Panel.Records)" @onclick="() => TogglePanel(Panel.Records)">📄 System documents</button>
         @if (OriginalAttachments is { Count: > 0 })
         {
             <button type="button" class="@SourceButtonClass(Panel.Original)" @onclick="() => TogglePanel(Panel.Original)">✉️ This email's attachments</button>
@@ -46,7 +50,7 @@
     @if (openPanel != Panel.None)
     {
         <div class="rounded-lg border border-line bg-surface-raised p-3 space-y-2">
-            @if (openPanel is Panel.Drawings or Panel.Photos)
+            @if (openPanel is Panel.Drawings or Panel.Photos or Panel.Records)
             {
                 <div>
                     <label class="block text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Project</label>
@@ -153,6 +157,64 @@
                     </div>
                 }
             }
+            else if (openPanel == Panel.Records)
+            {
+                @if (string.IsNullOrEmpty(panelProjectId))
+                {
+                    <p class="text-xs text-content-subtle">Choose a project to list its records.</p>
+                }
+                else if (recordsFailedFor == panelProjectId)
+                {
+                    <p class="text-xs text-negative">The project's records couldn't be loaded — close and reopen this panel to try again.</p>
+                }
+                else if (!recordsByProject.ContainsKey(panelProjectId))
+                {
+                    <p class="text-xs text-content-subtle">Loading records…</p>
+                }
+                else
+                {
+                    <div class="flex flex-wrap items-center gap-3">
+                        <input class="field flex-1 min-w-[10rem]" type="text" placeholder="Filter by reference or title…"
+                               value="@recordSearch" @oninput="e => recordSearch = e.Value?.ToString() ?? string.Empty" />
+                        <label class="inline-flex items-center gap-1.5 text-xs text-content-muted whitespace-nowrap">
+                            <input type="checkbox" checked="@recordsIncludeInactive"
+                                   @onchange="e => recordsIncludeInactive = e.Value is true" />
+                            Include closed
+                        </label>
+                    </div>
+
+                    @if (FilteredRecords.Count == 0)
+                    {
+                        <p class="text-xs text-content-subtle">
+                            @(recordsByProject[panelProjectId].Count == 0
+                                ? "No requests on this project yet."
+                                : "No records match — clear the filter or include closed records.")
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="max-h-56 overflow-y-auto divide-y divide-line">
+                            @foreach (var record in FilteredRecords)
+                            {
+                                <button type="button" @key="record.RecordId" title="Attach the official PDF"
+                                        class="w-full text-left text-xs text-content-muted hover:text-accent flex items-center gap-2 py-1.5"
+                                        @onclick="() => AddRecordDocumentAsync(record)">
+                                    <span class="font-mono text-content">@record.Reference</span>
+                                    <span class="truncate flex-1">@record.Title</span>
+                                    @if (record.StatusLabel is { Length: > 0 })
+                                    {
+                                        <span class="text-content-faint">@record.StatusLabel</span>
+                                    }
+                                </button>
+                            }
+                        </div>
+                    }
+                    <p class="text-[11px] text-content-faint">
+                        Attaches the record's official PDF, rendered as the record stands when the email is sent.
+                        Requests (RFI, NOD, EOT…) carry official documents today.
+                    </p>
+                }
+            }
             else if (openPanel == Panel.Original && OriginalAttachments is not null)
             {
                 <div class="space-y-1">
@@ -190,11 +252,36 @@
 
     private const long MaxFileBytes = 25_000_000;
 
-    private enum Panel { None, Drawings, Photos, Original }
+    private enum Panel { None, Drawings, Photos, Records, Original }
     private Panel openPanel = Panel.None;
     private string panelProjectId = "";
     private string? expandedDrawingId;
     private string? oversizeNote;
+
+    // System-documents panel state. Records are fetched once per project for the composer's life
+    // (a picker list, not a live view); absence from the dictionary is the honest "not fetched
+    // yet", so the panel shows Loading rather than an empty answer it hasn't got.
+    private readonly Dictionary<string, IReadOnlyList<LinkableRecord>> recordsByProject = new();
+    private string? recordsFailedFor;
+    private string recordSearch = "";
+    private bool recordsIncludeInactive;
+    private const int RecordResultCap = 50;
+
+    private IReadOnlyList<LinkableRecord> FilteredRecords
+    {
+        get
+        {
+            if (!recordsByProject.TryGetValue(panelProjectId, out var pool)) return Array.Empty<LinkableRecord>();
+            var live = recordsIncludeInactive ? pool : pool.Where(r => r.IsActive);
+            var needle = recordSearch.Trim();
+            var matches = needle.Length == 0
+                ? live
+                : live.Where(r => r.Reference.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    || r.Title.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    || (r.Summary?.Contains(needle, StringComparison.OrdinalIgnoreCase) ?? false));
+            return matches.Take(RecordResultCap).ToList();
+        }
+    }
 
     protected override void OnInitialized()
     {
@@ -210,23 +297,39 @@
 
     private void StoreChanged() => InvokeAsync(StateHasChanged);
 
-    private void TogglePanel(Panel panel)
+    private async Task TogglePanel(Panel panel)
     {
         openPanel = openPanel == panel ? Panel.None : panel;
         oversizeNote = null;
-        if (openPanel is Panel.Drawings && !string.IsNullOrEmpty(panelProjectId))
-            Drawings.Refresh(panelProjectId);
-        if (openPanel is Panel.Photos && !string.IsNullOrEmpty(panelProjectId))
-            Progress.Refresh(panelProjectId);
+        if (openPanel is Panel.Records) recordsFailedFor = null; // reopening retries a failed load
+        if (string.IsNullOrEmpty(panelProjectId)) return;
+        if (openPanel is Panel.Drawings) Drawings.Refresh(panelProjectId);
+        if (openPanel is Panel.Photos) Progress.Refresh(panelProjectId);
+        if (openPanel is Panel.Records) await LoadRecordsAsync(panelProjectId);
     }
 
-    private void OnPanelProjectChanged(ChangeEventArgs e)
+    private async Task OnPanelProjectChanged(ChangeEventArgs e)
     {
         panelProjectId = e.Value?.ToString() ?? "";
         expandedDrawingId = null;
         if (string.IsNullOrEmpty(panelProjectId)) return;
         if (openPanel == Panel.Drawings) Drawings.Refresh(panelProjectId);
         if (openPanel == Panel.Photos) Progress.Refresh(panelProjectId);
+        if (openPanel == Panel.Records) await LoadRecordsAsync(panelProjectId);
+    }
+
+    private async Task LoadRecordsAsync(string projectId)
+    {
+        if (recordsByProject.ContainsKey(projectId)) return;
+        try
+        {
+            recordsByProject[projectId] = await Intake.ListLinkableRecordsAsync(projectId, RecordType.Request);
+        }
+        catch
+        {
+            // The query client has reported the failure; the panel says so and reopening retries.
+            recordsFailedFor = projectId;
+        }
     }
 
     private void ToggleDrawing(string drawingId) =>
@@ -257,6 +360,9 @@
     private Task AddOriginalAsync(IntakeAttachment attachment) =>
         AddAsync(ComposeDraftAttachment.FromOriginal(OriginalMessageId ?? "", attachment.Id, attachment.Name, attachment.Size));
 
+    private Task AddRecordDocumentAsync(LinkableRecord record) =>
+        AddAsync(ComposeDraftAttachment.FromRecordDocument(record));
+
     private async Task AddAsync(ComposeDraftAttachment attachment)
     {
         // The same file attached twice is a mistake, not a request for two copies.
@@ -279,6 +385,7 @@
         ComposeAttachmentSource.Drawing => "📐",
         ComposeAttachmentSource.ProgressPhoto => "📷",
         ComposeAttachmentSource.OriginalMessage => "✉️",
+        ComposeAttachmentSource.RecordDocument => "📄",
         _ => "📎"
     };
 
