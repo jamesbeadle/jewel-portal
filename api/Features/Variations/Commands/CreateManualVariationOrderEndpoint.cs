@@ -10,8 +10,9 @@ namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
 /// POST /api/projects/{projectId}/manual-variation — create a standalone variation order (in
-/// Quoting) with no request behind it. Body: { title, description?, estimatedValue?, number? }.
-/// The creator is the signed-in user. ProjectId is taken from the route.
+/// Quoting) with no request behind it. Body: { title, description?, estimatedValue?, number?,
+/// commercialBasis?, programmeImpact?, exclusions? }. The creator is the signed-in user.
+/// ProjectId is taken from the route.
 /// </summary>
 public sealed class CreateManualVariationOrderEndpoint
 {

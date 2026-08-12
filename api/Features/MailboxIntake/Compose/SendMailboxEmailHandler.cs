@@ -8,6 +8,7 @@ using Jewel.JPMS.Api.Features.Progress.Storage;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Features.Requests.Documents;
+using Jewel.JPMS.Api.Features.Variations.Documents;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.MailboxCompose;
 using Jewel.JPMS.Contracts.RecordLinks;
@@ -466,16 +467,9 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
                 {
                     // The record's official PDF, rendered NOW — same builder + renderer as the
                     // record page's download, so the attached file is byte-for-byte the document
-                    // as it currently stands. The request family is the only record type with an
-                    // official document so far; new types slot in as further cases here once they
-                    // grow a renderer.
-                    if (reference.RecordType is not null && reference.RecordType != RecordType.Request)
-                        throw new InvalidOperationException(
-                            $"{reference.RecordType} records don't have an official document to attach yet — remove it and try again.");
-                    var model = await RequestDocumentBuilder.BuildAsync(context, reference.Id, ct)
-                        ?? throw new InvalidOperationException("A selected request record no longer exists — remove its document and try again.");
-                    resolved.Add(new MailboxDraftAttachment(
-                        model.FileName, "application/pdf", RequestDocumentRenderer.Render(model)));
+                    // as it currently stands. Requests and variation orders carry official
+                    // documents; new types slot in as further cases here once they grow a renderer.
+                    resolved.Add(await RenderRecordDocumentAsync(reference, ct));
                     break;
                 }
 
@@ -494,6 +488,35 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
             }
         }
         return resolved;
+    }
+
+    // A record's official document, rendered at send time. A null RecordType is a request — the
+    // only type the picker offered before variations grew a document (old drafts stay valid).
+    private async Task<MailboxDraftAttachment> RenderRecordDocumentAsync(ComposeAttachmentRef reference, CancellationToken ct)
+    {
+        switch (reference.RecordType)
+        {
+            case null:
+            case RecordType.Request:
+            {
+                var model = await RequestDocumentBuilder.BuildAsync(context, reference.Id, ct)
+                    ?? throw new InvalidOperationException("A selected request record no longer exists — remove its document and try again.");
+                return new MailboxDraftAttachment(model.FileName, "application/pdf", RequestDocumentRenderer.Render(model));
+            }
+
+            // One variation, two historic identities (VO- and VOQ- tags) — both render the same sheet.
+            case RecordType.Variation:
+            case RecordType.VariationQuote:
+            {
+                var model = await VariationDocumentBuilder.BuildAsync(context, reference.Id, ct)
+                    ?? throw new InvalidOperationException("A selected variation order no longer exists — remove its document and try again.");
+                return new MailboxDraftAttachment(model.FileName, "application/pdf", VariationDocumentRenderer.Render(model));
+            }
+
+            default:
+                throw new InvalidOperationException(
+                    $"{reference.RecordType} records don't have an official document to attach yet — remove it and try again.");
+        }
     }
 
     private static async Task<byte[]> ReadAllAsync(Stream stream, CancellationToken ct)

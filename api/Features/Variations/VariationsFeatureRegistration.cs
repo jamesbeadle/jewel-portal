@@ -15,6 +15,7 @@ public static class VariationsFeatureRegistration
         services.AddScoped<IQueryHandler<GetVoqByRequest, VariationOrder?>, GetVoqByRequestHandler>();
         services.AddScoped<IQueryHandler<GetVariationOrderById, VariationOrder?>, GetVariationOrderByIdHandler>();
         services.AddScoped<IQueryHandler<ListVariationOrdersForProject, IReadOnlyList<VariationOrder>>, ListVariationOrdersForProjectHandler>();
+        services.AddScoped<IQueryHandler<GetVariationOrderDocument, VariationDocumentFile?>, GetVariationOrderDocumentHandler>();
 
         services.AddScoped<ICommandHandler<CreateVoqFromRfq, VariationOrder>, CreateVoqFromRfqHandler>();
         services.AddScoped<CreateVoqFromRfqAuthorisation>();
@@ -59,6 +60,10 @@ public static class VariationsFeatureRegistration
         services.AddScoped<ICommandHandler<RenameVariationOrder, VariationOrder>, RenameVariationOrderHandler>();
         services.AddScoped<RenameVariationOrderAuthorisation>();
         services.AddScoped<RenameVariationOrderValidation>();
+
+        services.AddScoped<ICommandHandler<UpdateVariationOrderNarratives, VariationOrder>, UpdateVariationOrderNarrativesHandler>();
+        services.AddScoped<UpdateVariationOrderNarrativesAuthorisation>();
+        services.AddScoped<UpdateVariationOrderNarrativesValidation>();
 
         services.AddScoped<ICommandHandler<DeleteVariationOrder, Acknowledgement>, DeleteVariationOrderHandler>();
         services.AddScoped<DeleteVariationOrderAuthorisation>();

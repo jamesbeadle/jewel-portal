@@ -20,4 +20,10 @@ public sealed record CreateManualVariationOrder(
     string Title,
     string? Description = null,
     decimal? EstimatedValue = null,
-    int? Number = null) : ICommand<VariationOrder>;
+    int? Number = null,
+    // Narrative sections of the issued VO document — commercial basis, programme impact and
+    // exclusions, captured at creation so the document is complete from the first render. All
+    // optional, and editable later via UpdateVariationOrderNarratives.
+    string? CommercialBasis = null,
+    string? ProgrammeImpact = null,
+    string? Exclusions = null) : ICommand<VariationOrder>;

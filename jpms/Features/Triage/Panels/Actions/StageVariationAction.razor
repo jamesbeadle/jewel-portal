@@ -92,7 +92,8 @@
                 async () =>
                 {
                     var created = await variations.CreateManualAsync(
-                        stagedProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number);
+                        stagedProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number,
+                        draft.CommercialBasis, draft.ProgrammeImpact, draft.Exclusions);
                     await variations.ApproveAsync(created.VariationOrderId, approve.PrimaryCostCode, approve.Total, approve.Lines);
                 }));
             approveOnApply = false;
@@ -103,7 +104,8 @@
                 SystemActionKind.RaiseVariationOrder,
                 $"raise variation \"{draft.Title}\" on {project?.Reference ?? "the project"}",
                 async () => await variations.CreateManualAsync(
-                    stagedProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number)));
+                    stagedProjectId, draft.Title, draft.Description, draft.EstimatedValue, draft.Number,
+                    draft.CommercialBasis, draft.ProgrammeImpact, draft.Exclusions)));
         }
         form?.Reset();
     }

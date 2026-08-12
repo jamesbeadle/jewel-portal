@@ -18,6 +18,10 @@ public sealed class ManualVariationOrderTests
         Assert.Null(command.Number);          // auto-assign the project's next number
         Assert.Null(command.Description);
         Assert.Null(command.EstimatedValue);
+        // The document's narrative sections are optional at creation — editable at every stage.
+        Assert.Null(command.CommercialBasis);
+        Assert.Null(command.ProgrammeImpact);
+        Assert.Null(command.Exclusions);
     }
 
     [Fact]

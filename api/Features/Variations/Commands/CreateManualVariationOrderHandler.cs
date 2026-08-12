@@ -33,6 +33,9 @@ public sealed class CreateManualVariationOrderHandler : ICommandHandler<CreateMa
         // Clamp to the entity's storage limits — the same guard CreateVoqFromRfq applies.
         if (title.Length > 256) title = title[..256];
         if (description.Length > 2048) description = description[..2048];
+        var commercialBasis = VariationNarratives.Clean(command.CommercialBasis);
+        var programmeImpact = VariationNarratives.Clean(command.ProgrammeImpact);
+        var exclusions = VariationNarratives.Clean(command.Exclusions);
 
         // Numbering is per-project (references like "VOQ-0050" are only unique within a project).
         // A caller-set number is honoured once it is free; otherwise take one past the project's max.
@@ -65,6 +68,9 @@ public sealed class CreateManualVariationOrderHandler : ICommandHandler<CreateMa
             Description = description,
             Status = (int)VariationOrderStatus.Quoting,
             EstimatedValue = command.EstimatedValue,
+            CommercialBasis = commercialBasis,
+            ProgrammeImpact = programmeImpact,
+            Exclusions = exclusions,
             CreatedAt = DateTimeOffset.UtcNow,
             CreatedByEmail = command.CreatedByEmail
         };

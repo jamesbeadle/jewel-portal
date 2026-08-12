@@ -34,6 +34,13 @@ public sealed class VariationOrderEntity
     public decimal Value { get; set; }
     [MaxLength(32)]      public string? CostCode { get; set; }
 
+    // Narrative sections of the issued VO document (see Jewel.JPMS.Models.VariationOrder): the
+    // commercial basis of the price, the programme impact and the exclusions. Free text, all
+    // optional — the same 4000-character allowance as the request document's narrative fields.
+    [MaxLength(4000)]    public string? CommercialBasis { get; set; }
+    [MaxLength(4000)]    public string? ProgrammeImpact { get; set; }
+    [MaxLength(4000)]    public string? Exclusions { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset? IssuedAt { get; set; }
