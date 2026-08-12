@@ -25,10 +25,6 @@ public static class VariationsFeatureRegistration
         services.AddScoped<CreateManualVariationOrderAuthorisation>();
         services.AddScoped<CreateManualVariationOrderValidation>();
 
-        services.AddScoped<ICommandHandler<PrepareVoqDraft, VoqDraftProposal>, PrepareVoqDraftHandler>();
-        services.AddScoped<PrepareVoqDraftAuthorisation>();
-        services.AddScoped<PrepareVoqDraftValidation>();
-
         services.AddScoped<ICommandHandler<AddBidPackageToVoq, BidPackage>, AddBidPackageToVoqHandler>();
         services.AddScoped<AddBidPackageToVoqAuthorisation>();
         services.AddScoped<AddBidPackageToVoqValidation>();

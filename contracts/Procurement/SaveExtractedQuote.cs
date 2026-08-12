@@ -12,3 +12,14 @@ public sealed record SaveExtractedQuote(
     string SubcontractorId,
     string Notes,
     IReadOnlyList<QuoteExtractionLine> Lines) : ICommand<Quote>;
+
+// One priced line of the submission. Lines align to the package's line items via
+// BidPackageLineItemId where the tender matched them; null marks an extra line the
+// subcontractor priced that isn't on the package.
+public sealed record QuoteExtractionLine(
+    string? BidPackageLineItemId,
+    string Description,
+    string Unit,
+    decimal Quantity,
+    decimal Rate,
+    decimal Total);

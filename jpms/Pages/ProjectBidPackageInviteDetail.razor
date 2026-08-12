@@ -73,24 +73,12 @@ else
                         <p class="text-xs text-content-subtle mt-1.5">Materials apply — the invite asks tenderers whether they supply their own.</p>
                     }
                 </div>
-                @if (CanManage)
-                {
-                    <button type="button" class="btn-secondary inline-flex items-center gap-2" disabled="@busy" @onclick="GenerateWithAi">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15l-1.9-4.1L5.5 9l4.6-1.4z"/></svg>
-                        Generate using AI
-                    </button>
-                }
             </header>
 
             @if (lineageVariation is not null)
             {
                 <RecordTabBar ProjectId="@ProjectId" ActiveId="@BidPackageId"
                               Request="lineageRequest" Variation="lineageVariation" BidPackages="siblingPackages" />
-            }
-
-            @if (aiNote is not null)
-            {
-                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-6">@aiNote</p>
             }
 
             @* ---- Invited subcontractors ---- *@
@@ -384,8 +372,8 @@ else
                     @if (fetchedQuotes is not null)
                     {
                         <p class="text-sm text-content-subtle italic">
-                            No tender submissions yet. Extract one from a tagged email below, or use
-                            “Record tender manually” for prices that arrived by phone or outside the mailbox.
+                            No tender submissions yet. Use “Record tender manually” to enter each
+                            subcontractor's prices as their submissions come in.
                         </p>
                     }
                 }
@@ -547,14 +535,7 @@ else
                             <li class="rounded-lg border border-line bg-surface px-4 py-3">
                                 <div class="flex flex-wrap items-center justify-between gap-2">
                                     <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
-                                    <div class="flex items-center gap-3">
-                                        <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
-                                        @if (CanManage)
-                                        {
-                                            <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
-                                                    @onclick="() => OpenExtractModal(email)">Extract tender</button>
-                                        }
-                                    </div>
+                                    <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
                                 </div>
                                 <p class="text-sm text-content mt-0.5">
                                     @email.Subject
@@ -877,83 +858,61 @@ else
         }
     </Modal>
 
-    @* ---- Review an extracted tender before saving it as a quote ---- *@
+    @* ---- Record a tender submission and save it as a quote ---- *@
     <Modal IsOpen="showExtractModal" Title="Tender submission" ShowFooter="true"
            ConfirmLabel="@(busy ? "Saving…" : "Save submission")" CancelLabel="Cancel"
            OnCancel="CloseExtractModal" OnConfirm="ConfirmSaveExtracted" Class="max-w-3xl w-full">
-        @if (extractBusy)
-        {
-            <p class="text-sm text-content-subtle">Reading the email…</p>
-        }
-        else
-        {
-            @if (extractProposed)
-            {
-                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content mb-3">
-                    Extracted by Claude from the email — check every figure against the message before saving.
-                </p>
-            }
-            else if (manualExtract)
-            {
-                <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-                    Recording a tender received outside the mailbox — the package's line items are pre-filled;
-                    enter the rates as the subcontractor gave them.
-                </p>
-            }
-            else
-            {
-                <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-                    Automatic extraction wasn't available — the package's line items are pre-filled for manual entry.
-                </p>
-            }
+        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+            Recording a tender as the subcontractor gave it — the package's line items are pre-filled;
+            enter the rates from their submission.
+        </p>
 
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subcontractor</label>
-            <select class="field mb-3" @bind="extractSubcontractorId">
-                <option value="">Select the subcontractor…</option>
-                @foreach (var recipient in recipients)
-                {
-                    var sub = Subs.Find(recipient.SubcontractorId);
-                    <option value="@recipient.SubcontractorId">@(sub?.CompanyName ?? recipient.SubcontractorId)</option>
-                }
-            </select>
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subcontractor</label>
+        <select class="field mb-3" @bind="extractSubcontractorId">
+            <option value="">Select the subcontractor…</option>
+            @foreach (var recipient in recipients)
+            {
+                var sub = Subs.Find(recipient.SubcontractorId);
+                <option value="@recipient.SubcontractorId">@(sub?.CompanyName ?? recipient.SubcontractorId)</option>
+            }
+        </select>
 
-            <div class="rounded-xl border border-line bg-surface mb-3">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Rate</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Total</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
+        <div class="rounded-xl border border-line bg-surface mb-3">
+            <table class="w-full text-sm">
+                <thead class="bg-surface-raised border-b border-line">
+                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Rate</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Total</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-line">
+                    @foreach (var draft in extractDrafts)
+                    {
+                        <tr class="@(draft.BidPackageLineItemId is null ? "bg-accent/5" : "")">
+                            <td class="px-3 py-2"><input class="field" @bind="draft.Description" /></td>
+                            <td class="px-3 py-2 hidden sm:table-cell"><input class="field w-16" @bind="draft.Unit" /></td>
+                            <td class="px-3 py-2"><input class="field w-20" type="number" step="any" @bind="draft.Quantity" /></td>
+                            <td class="px-3 py-2"><input class="field w-24" type="number" step="any" @bind="draft.Rate" @onblur="() => RecalcTotal(draft)" /></td>
+                            <td class="px-3 py-2"><input class="field w-28" type="number" step="any" @bind="draft.Total" /></td>
+                            <td class="px-3 py-2 text-right">
+                                <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => extractDrafts.Remove(draft)">Remove</button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var draft in extractDrafts)
-                        {
-                            <tr class="@(draft.BidPackageLineItemId is null ? "bg-accent/5" : "")">
-                                <td class="px-3 py-2"><input class="field" @bind="draft.Description" /></td>
-                                <td class="px-3 py-2 hidden sm:table-cell"><input class="field w-16" @bind="draft.Unit" /></td>
-                                <td class="px-3 py-2"><input class="field w-20" type="number" step="any" @bind="draft.Quantity" /></td>
-                                <td class="px-3 py-2"><input class="field w-24" type="number" step="any" @bind="draft.Rate" @onblur="() => RecalcTotal(draft)" /></td>
-                                <td class="px-3 py-2"><input class="field w-28" type="number" step="any" @bind="draft.Total" /></td>
-                                <td class="px-3 py-2 text-right">
-                                    <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => extractDrafts.Remove(draft)">Remove</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div class="flex items-center justify-between mb-3">
-                <button type="button" class="btn-secondary" @onclick="AddExtractLine">Add line</button>
-                <p class="text-sm text-content font-medium">Total: @extractDrafts.Sum(d => d.Total).ToString("£#,##0.00")</p>
-            </div>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="flex items-center justify-between mb-3">
+            <button type="button" class="btn-secondary" @onclick="AddExtractLine">Add line</button>
+            <p class="text-sm text-content font-medium">Total: @extractDrafts.Sum(d => d.Total).ToString("£#,##0.00")</p>
+        </div>
 
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Notes (exclusions, caveats, lead times)</label>
-            <textarea class="field" rows="3" @bind="extractNotes"></textarea>
-        }
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Notes (exclusions, caveats, lead times)</label>
+        <textarea class="field" rows="3" @bind="extractNotes"></textarea>
     </Modal>
 
     @* ---- Work-order email to the winning subcontractor (drafted, sent from Outlook) ---- *@
@@ -971,106 +930,6 @@ else
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Body (HTML)</label>
         <textarea class="field font-mono text-xs" rows="14" @bind="woEmailBody"></textarea>
     </Modal>
-
-    @* ---- Generate using AI: confirm before anything runs ---- *@
-    <Modal IsOpen="showAiConfirmModal" Title="Generate using AI" ShowFooter="true"
-           ConfirmLabel="@(aiBusy ? "Generating…" : "Generate draft")" ConfirmDisabled="@aiBusy" CancelLabel="Cancel"
-           OnCancel="CloseAiConfirmModal" OnConfirm="ConfirmAiGenerate" Class="max-w-lg w-full">
-        <p class="text-sm text-content mb-3">
-            Claude drafts this package — scope and line items — from what's tagged to it:
-        </p>
-        <ul class="text-sm text-content-muted space-y-1 mb-4 list-disc pl-5">
-            <li>@emails.Count related email@(emails.Count == 1 ? "" : "s")</li>
-            <li>@packageDrawings.Count linked drawing@(packageDrawings.Count == 1 ? "" : "s")</li>
-        </ul>
-        @if (emails.Count == 0 && packageDrawings.Count == 0)
-        {
-            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
-                No related emails or linked drawings yet — Claude will only have the package title and trade
-                to work from, so the draft may be thin.
-            </p>
-        }
-        @if (lineItems.Count > 0)
-        {
-            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
-                This package already has @lineItems.Count line item@(lineItems.Count == 1 ? "" : "s").
-                Generating never changes or removes them — the draft opens in a review screen and only
-                the lines you accept are added.
-            </p>
-        }
-        else
-        {
-            <p class="text-xs text-content-subtle">
-                The draft opens in a review screen — nothing is added to the package until you accept it.
-            </p>
-        }
-    </Modal>
-
-    @* ---- Generate using AI: review the draft before anything is saved ---- *@
-    <Modal IsOpen="showAiReviewModal" Title="Review AI draft" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Adding…" : AiAcceptedCount() == 0 ? "Nothing selected" : $"Add {AiAcceptedCount()} line item{(AiAcceptedCount() == 1 ? "" : "s")}")"
-           ConfirmDisabled="@(busy || AiAcceptedCount() == 0)" CancelLabel="Discard draft"
-           OnCancel="CloseAiReviewModal" OnConfirm="ConfirmAiApply" Class="max-w-3xl w-full">
-        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content mb-3">
-            Drafted by Claude — nothing has been saved yet. Only ticked lines are added when you confirm;
-            your existing line items are never changed or removed. Check every figure before accepting.
-        </p>
-
-        @if (!string.IsNullOrWhiteSpace(aiProposalNotes))
-        {
-            <p class="text-sm text-content-muted mb-3">@aiProposalNotes</p>
-        }
-
-        <div class="rounded-xl border border-line bg-surface mb-3">
-            <table class="w-full text-sm">
-                <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Add</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Trade</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Cost code</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    @foreach (var draft in aiDrafts)
-                    {
-                        <tr class="@(draft.Include ? "" : "opacity-60")">
-                            <td class="px-3 py-2">
-                                <input type="checkbox" checked="@draft.Include"
-                                       @onchange="e => draft.Include = e.Value is true" />
-                            </td>
-                            <td class="px-3 py-2"><input class="field w-28" @bind="draft.Trade" /></td>
-                            <td class="px-3 py-2">
-                                <input class="field" @bind="draft.Description" />
-                                @if (draft.AlreadyOnPackage)
-                                {
-                                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-muted mt-1">Already on package</span>
-                                }
-                            </td>
-                            <td class="px-3 py-2 hidden sm:table-cell"><input class="field w-16" @bind="draft.Unit" /></td>
-                            <td class="px-3 py-2"><input class="field w-20" type="number" step="any" @bind="draft.Quantity" /></td>
-                            <td class="px-3 py-2">
-                                <select class="field min-w-[12rem]" @bind="draft.CostCode">
-                                    <option value="">Cost centre…</option>
-                                    @foreach (var centre in CostCenters.Alphabetical)
-                                    {
-                                        <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
-                                    }
-                                </select>
-                            </td>
-                            <td class="px-3 py-2 text-right">
-                                <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => aiDrafts.Remove(draft)">Remove</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <button type="button" class="btn-secondary" @onclick="AddAiDraftLine">Add line</button>
-    </Modal>
 }
 
 @code {
@@ -1085,7 +944,6 @@ else
     private bool loadAttempted;
     private bool busy;
     private string? error;
-    private string? aiNote;
 
     private BidPackage? package;
     // Nullable on purpose: every one of these lists has a real empty answer ("nobody invited yet",
@@ -1285,133 +1143,6 @@ else
 
     private static string Append(string? existing, string line) =>
         string.IsNullOrEmpty(existing) ? line : existing + "\n" + line;
-
-    // ---- Generate using AI: confirm → generate → review → apply (merge, never replace) ----
-
-    private sealed class AiDraftLine
-    {
-        public string Trade { get; set; } = "";
-        public string Description { get; set; } = "";
-        public string Unit { get; set; } = "";
-        public decimal Quantity { get; set; }
-        public string CostCode { get; set; } = "";
-        public bool Include { get; set; } = true;
-        public bool AlreadyOnPackage { get; set; }
-    }
-
-    private sealed class AiDraftProposal
-    {
-        public string? Notes { get; set; }
-        public List<AiDraftLine> Lines { get; set; } = new();
-    }
-
-    private bool showAiConfirmModal;
-    private bool showAiReviewModal;
-    private bool aiBusy;
-    private string? aiProposalNotes;
-    private List<AiDraftLine> aiDrafts = new();
-
-    // The header button never generates directly — it opens the confirm screen.
-    private void GenerateWithAi()
-    {
-        aiNote = null;
-        showAiConfirmModal = true;
-    }
-
-    private void CloseAiConfirmModal() => showAiConfirmModal = false;
-
-    private async Task ConfirmAiGenerate()
-    {
-        if (aiBusy || !CanManage) return;
-        aiBusy = true;
-        try
-        {
-            var proposal = await RequestAiProposalAsync();
-            showAiConfirmModal = false;
-            if (proposal is null)
-            {
-                aiNote = "Claude couldn't draft this package just now — check the Anthropic key is configured, then try again. Nothing has been changed: the draft only ever opens here for review, and existing content is never touched.";
-                return;
-            }
-            aiProposalNotes = proposal.Notes;
-            aiDrafts = proposal.Lines;
-            foreach (var draft in aiDrafts)
-            {
-                draft.AlreadyOnPackage = IsExistingLine(draft);
-                if (draft.AlreadyOnPackage) draft.Include = false; // never re-add what's already there
-            }
-            showAiReviewModal = true;
-        }
-        finally { aiBusy = false; }
-    }
-
-    // The generation seam: server-side, Claude reads the package's tagged emails and linked
-    // drawings and proposes notes + lines. Null (not configured / no parseable answer / request
-    // failure) surfaces as the aiNote explanation — the confirm → review → apply flow is unchanged.
-    private async Task<AiDraftProposal?> RequestAiProposalAsync()
-    {
-        try
-        {
-            var proposal = await Commands.SendAsync(new GenerateBidPackageDraft(BidPackageId), CancellationToken.None);
-            if (proposal is null || !proposal.Proposed) return null;
-            return new AiDraftProposal
-            {
-                Notes = proposal.Notes,
-                Lines = proposal.Lines
-                    .Select(line => new AiDraftLine
-                    {
-                        Trade = line.Trade,
-                        Description = line.Description,
-                        Unit = line.Unit,
-                        Quantity = line.Quantity,
-                        CostCode = line.CostCode
-                    })
-                    .ToList()
-            };
-        }
-        catch { return null; }
-    }
-
-    private bool IsExistingLine(AiDraftLine draft) =>
-        lineItems.Any(item =>
-            string.Equals(item.Description.Trim(), draft.Description.Trim(), StringComparison.OrdinalIgnoreCase)
-            && string.Equals((item.Trade ?? "").Trim(), (draft.Trade ?? "").Trim(), StringComparison.OrdinalIgnoreCase));
-
-    private void CloseAiReviewModal() => showAiReviewModal = false;
-
-    private void AddAiDraftLine() => aiDrafts.Add(new AiDraftLine { Trade = package?.Trade ?? "", Quantity = 1 });
-
-    private int AiAcceptedCount() => aiDrafts.Count(d => d.Include && !string.IsNullOrWhiteSpace(d.Description));
-
-    // Apply = append-only: AddBidPackageLineItems never reads, deletes or recreates existing rows,
-    // so their ids, coverage links and quote-line references stay intact. (Deliberately NOT
-    // SetBidPackageLineItems — that replaces the whole set and would drop those links.)
-    private async Task ConfirmAiApply()
-    {
-        if (busy || !CanManage) return;
-        error = null;
-        try
-        {
-            var accepted = aiDrafts.Where(d => d.Include && !string.IsNullOrWhiteSpace(d.Description)).ToList();
-            if (accepted.Count == 0) { showAiReviewModal = false; return; }
-            // Every line put out to tender must know its cost-centre home.
-            if (accepted.Any(d => string.IsNullOrWhiteSpace(d.CostCode)))
-            {
-                error = "Every accepted line needs a cost code — pick a cost centre for each ticked line before applying.";
-                return;
-            }
-            busy = true;
-            var inputs = accepted
-                .Select(d => new BidPackageLineItemInput(
-                    d.Description.Trim(), (d.Unit ?? "").Trim(), d.Quantity, (d.Trade ?? "").Trim(), d.CostCode.Trim()))
-                .ToList();
-            fetchedLineItems = await Commands.SendAsync(new AddBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
-            showAiReviewModal = false;
-            aiNote = $"Added {accepted.Count} line item{(accepted.Count == 1 ? "" : "s")} from the AI draft. Existing line items were left untouched.";
-        }
-        catch { error = "Couldn't add the accepted line items. Please try again."; }
-        finally { busy = false; }
-    }
 
     // ---- Invite (modal over the directory) ----
 
@@ -1839,7 +1570,7 @@ else
         finally { busy = false; }
     }
 
-    // ---- Extract a tender from a tagged email, review, save as a quote ----
+    // ---- Record a tender submission, review, save as a quote ----
 
     private sealed class ExtractDraft
     {
@@ -1852,24 +1583,18 @@ else
     }
 
     private bool showExtractModal;
-    private bool extractBusy;
-    private bool extractProposed;
-    private bool manualExtract;
     private string extractSubcontractorId = "";
     private string extractNotes = "";
     private List<ExtractDraft> extractDrafts = new();
     private string? awardNote;
 
-    // Opens the same review modal with no source email — for tenders phoned through, posted, or
-    // sat in an email that never got tagged. Saving goes through SaveExtractedQuote exactly as the
-    // email path does, so recipient/package statuses and supersede-on-resubmit behave identically.
+    // The one way a tender submission is recorded here — however it arrived (email, phone, post).
+    // Saving goes through SaveExtractedQuote, so recipient/package statuses and
+    // supersede-on-resubmit behave identically however the prices came in.
     private void OpenManualTenderModal()
     {
         if (busy || !CanManage) return;
         showExtractModal = true;
-        extractBusy = false;
-        extractProposed = false;
-        manualExtract = true;
         extractSubcontractorId = "";
         extractNotes = "";
         extractDrafts = lineItems
@@ -1878,53 +1603,6 @@ else
         if (extractDrafts.Count == 0) extractDrafts.Add(new ExtractDraft { Quantity = 1 });
     }
 
-    private async Task OpenExtractModal(MailboxMessage email)
-    {
-        if (busy) return;
-        showExtractModal = true;
-        extractBusy = true;
-        extractProposed = false;
-        manualExtract = false;
-        extractSubcontractorId = "";
-        extractNotes = "";
-        extractDrafts = new();
-        StateHasChanged();
-        try
-        {
-            var proposal = await Commands.SendAsync(
-                new ExtractQuoteFromMessage(BidPackageId, email.Id), CancellationToken.None);
-            extractProposed = proposal.Proposed;
-            extractSubcontractorId = proposal.SubcontractorId ?? "";
-            extractNotes = proposal.Notes;
-            extractDrafts = proposal.Lines
-                .Select(line => new ExtractDraft
-                {
-                    BidPackageLineItemId = line.BidPackageLineItemId,
-                    Description = line.Description,
-                    Unit = line.Unit,
-                    Quantity = line.Quantity,
-                    Rate = line.Rate,
-                    Total = line.Total
-                })
-                .ToList();
-            if (extractDrafts.Count == 0)
-                extractDrafts = lineItems
-                    .Select(item => new ExtractDraft { BidPackageLineItemId = item.LineItemId, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity })
-                    .ToList();
-        }
-        catch
-        {
-            error = "Couldn't read that email for extraction. You can still enter the submission manually.";
-            extractDrafts = lineItems
-                .Select(item => new ExtractDraft { BidPackageLineItemId = item.LineItemId, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity })
-                .ToList();
-        }
-        finally
-        {
-            extractBusy = false;
-            StateHasChanged();
-        }
-    }
 
     private void CloseExtractModal() => showExtractModal = false;
 

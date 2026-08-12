@@ -14,8 +14,6 @@ public interface IVariationStore
     Task<IReadOnlyList<VariationOrder>> ListForProjectAsync(string projectId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<BidPackage>> ListBidPackagesAsync(string variationOrderId, CancellationToken cancellationToken = default);
 
-    /// <summary>AI-drafts a variation order from the request and its tagged emails; nothing is saved.</summary>
-    Task<VoqDraftProposal> PrepareVoqDraftAsync(string requestId, CancellationToken cancellationToken = default);
     Task<VariationOrder> CreateFromRfqAsync(string requestId, string? title = null, string? description = null, decimal? estimatedValue = null, CancellationToken cancellationToken = default);
 
     /// <summary>Creates a standalone variation order (in Quoting) with no request behind it — the

@@ -20,9 +20,8 @@ public sealed record ClaudeReply(
     int OutputTokens = 0);
 
 /// <summary>
-/// Multi-turn client with tool support. Separate from <see cref="IClaudeClient"/>, which stays as
-/// it is — <c>PrepareVoqDraftHandler</c> and <c>ExtractQuoteFromMessageHandler</c> depend on its
-/// single-shot shape and should not be disturbed.
+/// Multi-turn client with tool support. Separate from <see cref="IClaudeClient"/>, which keeps its
+/// single-shot shape for callers that need one prompt → one answer with no tools.
 /// </summary>
 public interface IClaudeConversationClient
 {

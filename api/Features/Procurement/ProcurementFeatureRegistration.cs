@@ -89,15 +89,6 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<SendWorkOrderPoEmailAuthorisation>();
         services.AddScoped<SendWorkOrderPoEmailValidation>();
 
-        services.AddScoped<ICommandHandler<ExtractQuoteFromMessage, QuoteExtractionProposal>, ExtractQuoteFromMessageHandler>();
-        services.AddScoped<ExtractQuoteFromMessageAuthorisation>();
-        services.AddScoped<ExtractQuoteFromMessageValidation>();
-
-        // Same propose-then-review convention as quote extraction: nothing saves until accepted.
-        services.AddScoped<ICommandHandler<GenerateBidPackageDraft, BidPackageDraftProposal>, GenerateBidPackageDraftHandler>();
-        services.AddScoped<GenerateBidPackageDraftAuthorisation>();
-        services.AddScoped<GenerateBidPackageDraftValidation>();
-
         services.AddScoped<ICommandHandler<SaveExtractedQuote, Quote>, SaveExtractedQuoteHandler>();
         services.AddScoped<SaveExtractedQuoteAuthorisation>();
         services.AddScoped<SaveExtractedQuoteValidation>();

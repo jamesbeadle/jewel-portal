@@ -30,10 +30,6 @@ public sealed class HttpVariationStore : IVariationStore
     public Task<IReadOnlyList<BidPackage>> ListBidPackagesAsync(string variationOrderId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListBidPackagesForVoq(variationOrderId), cancellationToken);
 
-    public Task<VoqDraftProposal> PrepareVoqDraftAsync(string requestId, CancellationToken cancellationToken = default) =>
-        // A command (POST) rather than a query: it spends an LLM call server-side. Nothing is saved.
-        commands.SendAsync(new PrepareVoqDraft(requestId), cancellationToken);
-
     public async Task<VariationOrder> CreateFromRfqAsync(string requestId, string? title = null, string? description = null, decimal? estimatedValue = null, CancellationToken cancellationToken = default)
     {
         // The API resolves the creator from the signed-in user, so the email here is a placeholder.
