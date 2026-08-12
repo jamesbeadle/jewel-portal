@@ -21,7 +21,9 @@ public enum PanelKind
     /// <summary>The Xero explorer: search and read Xero transactions.</summary>
     Xero,
     /// <summary>Compose a fresh outbound email from the projects mailbox (was the New email modal).</summary>
-    Compose
+    Compose,
+    /// <summary>The subcontractor communications browser: every "JPMS/SubComms" thread, read live.</summary>
+    SubcontractorComms
 }
 
 /// <summary>Which of the two workspace panes — the divider between them is user-draggable.</summary>

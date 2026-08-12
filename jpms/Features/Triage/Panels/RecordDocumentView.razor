@@ -70,5 +70,6 @@
         <RecordAttachmentList ProjectId="@Record.ProjectId" RequestId="@Record.RecordId" OnPreview="OnPreview" />
     }
 
-    <RecordEmailList Type="Record.Type" RecordId="@Record.RecordId" />
+    <RecordEmailList Type="Record.Type" RecordId="@Record.RecordId"
+                     ExcludeTag="@($"JPMS/{Record.TagReference}")" OnPreview="OnPreview" />
 </div>

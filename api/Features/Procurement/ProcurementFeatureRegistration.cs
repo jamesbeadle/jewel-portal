@@ -68,6 +68,16 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<UpdateBidPackageScopeAuthorisation>();
         services.AddScoped<UpdateBidPackageScopeValidation>();
 
+        // Ends the tender without a winner / puts it back in play. No reason is captured — closing
+        // without incident needs no paperwork.
+        services.AddScoped<ICommandHandler<CloseBidPackage, BidPackage>, CloseBidPackageHandler>();
+        services.AddScoped<CloseBidPackageAuthorisation>();
+        services.AddScoped<CloseBidPackageValidation>();
+
+        services.AddScoped<ICommandHandler<ReopenBidPackage, BidPackage>, ReopenBidPackageHandler>();
+        services.AddScoped<ReopenBidPackageAuthorisation>();
+        services.AddScoped<ReopenBidPackageValidation>();
+
         services.AddScoped<ICommandHandler<SetBidPackageDrawings, IReadOnlyList<Drawing>>, SetBidPackageDrawingsHandler>();
         services.AddScoped<SetBidPackageDrawingsAuthorisation>();
         services.AddScoped<SetBidPackageDrawingsValidation>();

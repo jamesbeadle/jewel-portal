@@ -8,9 +8,10 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Variations.Commands;
 
 /// <summary>
-/// Deletes a non-approved variation order and its quoting-stage tender data. See
-/// DeleteVariationOrder for the guard rules. The cascade is explicit (no DB-level cascade is
-/// configured on these tables): bid-package children first, then the packages, then the order.
+/// Deletes a non-approved variation order. See DeleteVariationOrder for the guard rules. Bid
+/// packages are separate records (separation 2026-08-12) and are never deleted with a variation —
+/// legacy packages still parented to this VO are detached, and any line-item coverage pointing at
+/// it is reset to Unassigned so nothing references a deleted order.
 /// </summary>
 public sealed class DeleteVariationOrderHandler : ICommandHandler<DeleteVariationOrder, Acknowledgement>
 {
@@ -32,37 +33,22 @@ public sealed class DeleteVariationOrderHandler : ICommandHandler<DeleteVariatio
         if (instructed)
             throw new InvalidOperationException("Work orders instruct this variation — cancel them before deleting it.");
 
-        // Cascade the tender data hanging off this VO's bid packages.
-        var packageIds = await context.BidPackages
+        // Bid packages survive the variation: detach any legacy package still parented to this VO
+        // (the parent link predates the 2026-08-12 separation), and reset coverage on any package
+        // line that named this VO as its commercial home — the QS re-links those lines to the
+        // right home rather than the record pointing at a deleted order.
+        var childPackages = await context.BidPackages
             .Where(p => p.VariationOrderId == order.VariationOrderId)
-            .Select(p => p.BidPackageId)
             .ToListAsync(cancellationToken);
-        if (packageIds.Count > 0)
+        foreach (var package in childPackages) package.VariationOrderId = null;
+
+        var coveredLines = await context.BidPackageLineItems
+            .Where(l => l.VariationOrderId == order.VariationOrderId)
+            .ToListAsync(cancellationToken);
+        foreach (var line in coveredLines)
         {
-            var quoteIds = await context.Quotes
-                .Where(q => packageIds.Contains(q.BidPackageId))
-                .Select(q => q.QuoteId)
-                .ToListAsync(cancellationToken);
-
-            var quoteLines = await context.QuoteLineItems
-                .Where(l => quoteIds.Contains(l.QuoteId)).ToListAsync(cancellationToken);
-            var quotes = await context.Quotes
-                .Where(q => packageIds.Contains(q.BidPackageId)).ToListAsync(cancellationToken);
-            var recipients = await context.BidPackageRecipients
-                .Where(r => packageIds.Contains(r.BidPackageId)).ToListAsync(cancellationToken);
-            var lineItems = await context.BidPackageLineItems
-                .Where(l => packageIds.Contains(l.BidPackageId)).ToListAsync(cancellationToken);
-            var drawings = await context.BidPackageDrawings
-                .Where(d => packageIds.Contains(d.BidPackageId)).ToListAsync(cancellationToken);
-            var packages = await context.BidPackages
-                .Where(p => packageIds.Contains(p.BidPackageId)).ToListAsync(cancellationToken);
-
-            context.QuoteLineItems.RemoveRange(quoteLines);
-            context.Quotes.RemoveRange(quotes);
-            context.BidPackageRecipients.RemoveRange(recipients);
-            context.BidPackageLineItems.RemoveRange(lineItems);
-            context.BidPackageDrawings.RemoveRange(drawings);
-            context.BidPackages.RemoveRange(packages);
+            line.Coverage = (int)BidPackageLineCoverage.Unassigned;
+            line.VariationOrderId = null;
         }
 
         // If this VO came from accepting a subcontractor's variation request, unlink it so that

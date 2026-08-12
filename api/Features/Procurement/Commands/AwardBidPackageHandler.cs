@@ -25,6 +25,8 @@ public sealed class AwardBidPackageHandler
     {
         var package = await context.BidPackages.FindAsync(new object[] { command.BidPackageId }, cancellationToken);
         if (package is null) throw new InvalidOperationException($"Bid package {command.BidPackageId} not found.");
+        if (package.Status == (int)BidPackageStatus.Closed)
+            throw new InvalidOperationException("This bid package was closed without a winner — reopen it before awarding.");
 
         // Numbers are sequential per project (mirroring Buildertrend's per-job PO numbering, which
         // seeded orders keep so paperwork cross-references hold), shared across all orders however

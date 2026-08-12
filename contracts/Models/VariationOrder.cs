@@ -39,8 +39,9 @@ public sealed record VariationOrder(
     string Title,
     string Description,
     VariationOrderStatus Status,
-    string? SelectedBidPackageId,   // winning tender, when one was selected during Quoting
-    string? SelectedSubcontractorId,// who is doing the work (from the selected tender)
+    string? SelectedBidPackageId,   // LEGACY (pre-2026-08-12): the winning package when tenders ran
+                                    // through the VO. No longer written — kept for old records
+    string? SelectedSubcontractorId,// who the works will be instructed to (recorded agreed tender)
     decimal? EstimatedValue,        // the quoting-stage estimate; Value is the approved figure
     string? VariationRef,           // e.g. "V18" — minted at approval; null until then
     decimal Value,                  // approved (contract) value; 0 until approved

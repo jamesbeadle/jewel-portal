@@ -51,7 +51,9 @@ public sealed class BidPackageInviteLinkProvider : ILinkableRecordProvider
             StatusLabel:  ((BidPackageStatus)entity.Status).ToString(),
             // Bid packages have no free-text description; the trade is the next-best discriminator.
             Summary:      RecordSummaries.Clip(entity.Trade),
-            // Awarded means the tendering is finished business — the work order takes over from there.
-            IsActive:     entity.Status != (int)BidPackageStatus.Awarded);
+            // Awarded means the tendering is finished business — the work order takes over from
+            // there. Closed is the other ending: the tender ran and no winner was picked.
+            IsActive:     entity.Status != (int)BidPackageStatus.Awarded
+                       && entity.Status != (int)BidPackageStatus.Closed);
     }
 }

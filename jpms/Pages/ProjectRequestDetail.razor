@@ -131,7 +131,7 @@ else
            the official stage are panes of THIS page; the variation and bid package tabs carry on
            to those records' own pages, which render the same bar. *@
         <RecordTabBar ProjectId="@ProjectId" ActiveId="@ActiveTabId"
-                      Request="record" Variation="variation" BidPackages="bidPackages"
+                      Request="record" Variation="variation"
                       LocalRequestTabs="true" OnSelect="SetActiveTab"
                       ActivityFor="TabActivity" />
 
@@ -961,8 +961,6 @@ else
     private string? ladderError;
     private VariationOrder? variation;
     private string? variationError;
-    // Bid packages hang off the variation; the RecordTabBar branches them off after a divider.
-    private IReadOnlyList<BidPackage> bidPackages = Array.Empty<BidPackage>();
 
     // Official document form editor (the itemised queries + narrative sections).
     private bool editingForm;
@@ -1221,18 +1219,6 @@ else
         // flag, so always look for one rather than gating on HasRfq. Returns null when none.
         try { variation = await Variations.GetByRequestAsync(RequestId); }
         catch { variation = null; }
-
-        // Its bid packages, for the lineage bar. Best-effort — the bar simply shows placeholders
-        // when they can't be read.
-        if (variation is not null)
-        {
-            try { bidPackages = await Variations.ListBidPackagesAsync(variation.VariationOrderId); }
-            catch { bidPackages = Array.Empty<BidPackage>(); }
-        }
-        else
-        {
-            bidPackages = Array.Empty<BidPackage>();
-        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -1685,8 +1671,10 @@ else
             estimatedValue = parsedValue;
         }
 
-        // Accepted scope lines become the variation's first (draft) bid package — every line put out to
-        // tender must know its cost-centre home, so a ticked line without a code blocks the create.
+        // Accepted scope lines become a standalone (draft) bid package on the project — bid packages
+        // are separate records from the variation (separation 2026-08-12), so this is the ordinary
+        // project package, not a child of the VO. Every line put out to tender must know its
+        // cost-centre home, so a ticked line without a code blocks the create.
         var acceptedRows = draftVariationLines.Where(row => row.Accepted).ToList();
         if (acceptedRows.Any(row => string.IsNullOrWhiteSpace(row.CostCode)))
         {
@@ -1702,7 +1690,9 @@ else
 
             if (acceptedRows.Count > 0)
             {
-                var package = await Variations.AddBidPackageAsync(variation.VariationOrderId, variation.Title, DraftPackageTrade);
+                var package = await Commands.SendAsync(
+                    new CreateBidPackage(ProjectId, variation.Title, DraftPackageTrade, Auth.CurrentUser?.Email ?? ""),
+                    CancellationToken.None);
                 var inputs = acceptedRows
                     .Select(row => new BidPackageLineItemInput(
                         row.Line.Description, row.Line.Unit, row.Line.Quantity,
@@ -1724,7 +1714,7 @@ else
         {
             variationDraftError = variation is null
                 ? "Couldn't raise the variation. Please try again."
-                : "The variation was raised, but adding the scope lines failed. Open it from the panel to add them manually.";
+                : "The variation was raised, but creating the bid package for its scope failed. Add one from the Bid Package Invites tab instead.";
         }
         finally
         {

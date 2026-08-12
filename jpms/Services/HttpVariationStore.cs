@@ -27,9 +27,6 @@ public sealed class HttpVariationStore : IVariationStore
     public Task<IReadOnlyList<VariationOrder>> ListForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListVariationOrdersForProject(projectId), cancellationToken);
 
-    public Task<IReadOnlyList<BidPackage>> ListBidPackagesAsync(string variationOrderId, CancellationToken cancellationToken = default) =>
-        queries.AskAsync(new ListBidPackagesForVoq(variationOrderId), cancellationToken);
-
     public async Task<VariationOrder> CreateFromRfqAsync(string requestId, string? title = null, string? description = null, decimal? estimatedValue = null, CancellationToken cancellationToken = default)
     {
         // The API resolves the creator from the signed-in user, so the email here is a placeholder.
@@ -46,17 +43,9 @@ public sealed class HttpVariationStore : IVariationStore
         return created;
     }
 
-    public async Task<BidPackage> AddBidPackageAsync(string variationOrderId, string title, string trade, CancellationToken cancellationToken = default)
+    public async Task<VariationOrder> SelectTenderAsync(string variationOrderId, string subcontractorId, decimal? estimatedValue, CancellationToken cancellationToken = default)
     {
-        // OwnerEmail is set from the signed-in user server-side.
-        var package = await commands.SendAsync(new AddBidPackageToVoq(variationOrderId, title, trade, string.Empty), cancellationToken);
-        OnChange?.Invoke();
-        return package;
-    }
-
-    public async Task<VariationOrder> SelectTenderAsync(string variationOrderId, string bidPackageId, string subcontractorId, decimal? estimatedValue, CancellationToken cancellationToken = default)
-    {
-        var order = await commands.SendAsync(new SelectVoqTender(variationOrderId, bidPackageId, subcontractorId, estimatedValue), cancellationToken);
+        var order = await commands.SendAsync(new SelectVoqTender(variationOrderId, subcontractorId, estimatedValue), cancellationToken);
         OnChange?.Invoke();
         return order;
     }

@@ -69,7 +69,7 @@ else
                     <tbody class="divide-y divide-line">
                         @foreach (var package in Packages)
                         {
-                            <tr class="hover:bg-surface-raised">
+                            <tr class="hover:bg-surface-raised @(package.Status == BidPackageStatus.Closed ? "opacity-60" : "")">
                                 <td class="px-4 py-3">
                                     <a class="text-content font-medium hover:underline underline-offset-4"
                                        href="@($"/projects/{ProjectId}/bid-package-invites/{package.BidPackageId}")">@package.Title</a>
@@ -122,7 +122,12 @@ else
     private string createTrade = "";
     private bool createMaterials;
 
-    private IReadOnlyList<BidPackage> Packages => ProcurementStore.PackagesFor(ProjectId);
+    // Closed packages are ordered last, not hidden — the record stays reachable (the same rule
+    // as completed projects). OrderBy is stable, so the store's newest-first order holds within
+    // each band.
+    private IReadOnlyList<BidPackage> Packages => ProcurementStore.PackagesFor(ProjectId)
+        .OrderBy(p => p.Status == BidPackageStatus.Closed ? 1 : 0)
+        .ToList();
 
     private bool CanManage => Session.AvailableRoles.Any(r =>
         r is Role.Admin or Role.ManagingDirector or Role.ProjectManager);

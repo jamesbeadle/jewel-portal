@@ -43,12 +43,10 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
         var record = await provider.FindAsync(command.RecordId, cancellationToken)
             ?? throw new InvalidOperationException($"{command.Type} record '{command.RecordId}' not found.");
 
-        // A closed request can't receive new triage emails — the pickers already hide them (see
-        // RequestLinkProvider); this guards the command path itself so no caller can link one.
-        if (record.Type == RecordType.Request &&
-            string.Equals(record.StatusLabel, nameof(RequestStatus.Closed), StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException(
-                $"{record.Reference} is closed, so this email can't be linked to it. Reopen the request first, or link the email to another record.");
+        // Closed requests stay linkable on purpose: a late reply on a closed RFI's thread files to
+        // the record it belongs to without reopening it — the pickers show closed records for
+        // exactly this (see RequestLinkProvider). The guard that refused them here (2026-07-16)
+        // predated that decision and rejected the triage page's own picks; removed 2026-08-12.
 
         // Read the email back from the mailbox to confirm it's there and pick up a fresh threading id +
         // its conversation id (so we can tag the whole thread, not just this message) + its current

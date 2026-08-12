@@ -12,7 +12,9 @@ public sealed class BidPackageEntity
     public DateTimeOffset CreatedAt { get; set; }
     [MaxLength(256)]     public string OwnerEmail { get; set; } = "";
 
-    // Parent Variation Order, when this package belongs to one. Null for standalone packages.
+    // LEGACY parent Variation Order (pre-2026-08-12, when packages could be created under a
+    // variation). Never set on new packages — bid packages are standalone records; a line's
+    // Coverage is how tendered scope maps to a variation. Kept for old rows only.
     // (Column keeps its historic VariationOrderQuoteId spelling — see VariationEntities.cs.)
     [MaxLength(64)]
     [System.ComponentModel.DataAnnotations.Schema.Column("VariationOrderQuoteId")]
@@ -25,6 +27,10 @@ public sealed class BidPackageEntity
     // Materials matter to this scope: the tender invite asks each subcontractor to state whether
     // they will supply their own materials or price labour-only.
     public bool MaterialsApplicable { get; set; }
+
+    // When the package was closed without a winner (BidPackageStatus.Closed). Null unless closed;
+    // cleared on reopen. No reason is stored — closing without incident needs no paperwork.
+    public DateTimeOffset? ClosedAt { get; set; }
 
     // Canonical reference this package's emails are tagged with ("JPMS/BPI-0001"). Falls back to an
     // id-derived stem for legacy rows that predate numbering. Computed, not stored.

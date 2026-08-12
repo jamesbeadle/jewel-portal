@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Api.Features.Procurement;
 internal static class ProcurementEntityMapping
 {
     public static BidPackage ToModel(this BidPackageEntity entity) =>
-        new(entity.BidPackageId, entity.ProjectId, entity.Title, entity.Trade, (BidPackageStatus)entity.Status, entity.CreatedAt, entity.OwnerEmail, entity.VariationOrderId, entity.Number, entity.MaterialsApplicable);
+        new(entity.BidPackageId, entity.ProjectId, entity.Title, entity.Trade, (BidPackageStatus)entity.Status, entity.CreatedAt, entity.OwnerEmail, entity.VariationOrderId, entity.Number, entity.MaterialsApplicable, entity.ClosedAt);
 
     public static BidPackageRecipient ToModel(this BidPackageRecipientEntity entity) =>
         new(entity.RecipientId, entity.BidPackageId, entity.SubcontractorId, (BidPackageRecipientStatus)entity.Status, entity.InvitedAt, entity.RespondedAt);

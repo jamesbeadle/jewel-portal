@@ -1,0 +1,249 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Triage.Workspace
+@inject IIntakeQueue Intake
+
+@*
+    A browsable correspondence list in the house card style: one card per CONVERSATION (Graph's
+    ConversationId), newest thread first, the latest email leading its card with the earlier
+    members folded behind a "Thread · N emails" toggle. Any email expands in place to its full
+    body — read live on demand, exactly like the request conversation and programme panels — and
+    the expanded view lists the attachments with Preview (into the workspace Preview pane, when
+    the host passes OnPreview) and Download. Built for gathering context and copy/paste while
+    working an email in the other window; acting on the mail stays in triage.
+*@
+
+<ul class="space-y-2">
+    @foreach (var thread in Threads)
+    {
+        <li @key="thread.Key" class="rounded-lg border border-line bg-surface px-4 py-3">
+            @EmailEntry(thread.Latest, thread)
+
+            @if (thread.Earlier.Count > 0 && expandedThreads.Contains(thread.Key))
+            {
+                <div class="mt-3 pl-3 border-l-2 border-line space-y-3">
+                    @foreach (var member in thread.Earlier)
+                    {
+                        <div @key="member.Id">@EmailEntry(member, null)</div>
+                    }
+                </div>
+            }
+        </li>
+    }
+</ul>
+
+@code {
+    /// <summary>Every email to list — the component groups them into conversations itself.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<MailboxMessage> Emails { get; set; } = Array.Empty<MailboxMessage>();
+
+    /// <summary>The tag that IS this list's premise (e.g. the open record's own "JPMS/RFI-001") —
+    /// excluded from the chip rows, which show where ELSE an email is filed.</summary>
+    [Parameter] public string ExcludeTag { get; set; } = "";
+
+    /// <summary>Open an attachment in the workspace Preview pane. Without a delegate the
+    /// attachments still list with Download links — Preview simply isn't offered.</summary>
+    [Parameter] public EventCallback<PreviewRequest> OnPreview { get; set; }
+
+    private readonly HashSet<string> expandedThreads = new();
+    private readonly HashSet<string> expandedEmails = new();
+    // Detail cached for the component's life: null value = fetch in flight ("Loading full email…").
+    private readonly Dictionary<string, MailboxMessageDetail?> details = new();
+
+    private sealed record ThreadGroup(string Key, MailboxMessage Latest, IReadOnlyList<MailboxMessage> Earlier);
+
+    // Emails without a ConversationId (Graph occasionally omits it) each stand as their own card.
+    private List<ThreadGroup> Threads =>
+        Emails
+            .GroupBy(email => string.IsNullOrEmpty(email.ConversationId) ? $"single:{email.Id}" : email.ConversationId)
+            .Select(group =>
+            {
+                var newestFirst = group.OrderByDescending(email => email.ReceivedAt).ToList();
+                return new ThreadGroup(group.Key, newestFirst[0], newestFirst.Skip(1).ToList());
+            })
+            .OrderByDescending(thread => thread.Latest.ReceivedAt)
+            .ToList();
+
+    // One email's entry — the card lead when `thread` is passed (it carries the thread toggle),
+    // or an earlier thread member when null.
+    private RenderFragment EmailEntry(MailboxMessage email, ThreadGroup? thread) => __builder =>
+    {
+        var detail = details.GetValueOrDefault(email.Id);
+        var isExpanded = expandedEmails.Contains(email.Id);
+
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <span class="text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+            </div>
+            <p class="text-sm text-content mt-0.5">
+                @email.Subject
+                @if (email.HasAttachments)
+                {
+                    <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                }
+            </p>
+            @if (OtherTags(email) is { Count: > 0 } chips)
+            {
+                <div class="flex flex-wrap items-center gap-1 mt-1">
+                    @foreach (var tag in chips)
+                    {
+                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagStem(tag)</span>
+                    }
+                </div>
+            }
+
+            @if (isExpanded)
+            {
+                <div class="mt-2 rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
+                    @if (detail is null)
+                    {
+                        <p class="text-sm text-content-subtle italic">Loading full email…</p>
+                    }
+                    else
+                    {
+                        @if (detail.To is { Count: > 0 } to)
+                        {
+                            <p class="text-xs text-content-subtle truncate">To: @string.Join("; ", to)</p>
+                        }
+                        @if (detail.Cc is { Count: > 0 } cc)
+                        {
+                            <p class="text-xs text-content-subtle truncate">Cc: @string.Join("; ", cc)</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
+                        {
+                            <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto mt-1">@((MarkupString)detail.BodyHtml)</div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(detail.BodyHtml))
+                        {
+                            <p class="text-sm text-content whitespace-pre-wrap mt-1">@detail.BodyHtml</p>
+                        }
+                        else
+                        {
+                            <p class="text-sm text-content whitespace-pre-wrap mt-1">@email.BodyPreview</p>
+                        }
+                    }
+                </div>
+                @if (detail is { Attachments.Count: > 0 })
+                {
+                    <div class="mt-2 rounded-lg bg-surface-raised border border-line p-3">
+                        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+                            @detail.Attachments.Count attachment@(detail.Attachments.Count == 1 ? "" : "s")
+                        </p>
+                        <ul class="space-y-1">
+                            @foreach (var attachment in detail.Attachments)
+                            {
+                                <li class="flex items-center justify-between gap-3 text-sm text-content">
+                                    <span class="truncate">@attachment.Name</span>
+                                    <span class="flex items-center gap-3 whitespace-nowrap">
+                                        @if (attachment.Size > 0)
+                                        {
+                                            <span class="text-xs text-content-subtle">@FormatSize(attachment.Size)</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(attachment.Id))
+                                        {
+                                            @if (OnPreview.HasDelegate && IsPreviewable(attachment))
+                                            {
+                                                <button type="button" class="text-xs text-accent hover:underline"
+                                                        @onclick="() => OpenAttachmentPreviewAsync(email, attachment)">
+                                                    Preview
+                                                </button>
+                                            }
+                                            <a href="@AttachmentUrl(email, attachment, inline: false)" target="_blank" rel="noopener"
+                                               class="text-xs text-accent hover:underline">Download</a>
+                                        }
+                                    </span>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+                else if (email.HasAttachments && detail is not null && detail.Attachments.Count == 0)
+                {
+                    <p class="text-xs text-content-subtle italic mt-1">This email has attachments, but their names couldn't be retrieved.</p>
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(email.BodyPreview))
+            {
+                <p class="text-xs text-content-subtle mt-1 line-clamp-2">@email.BodyPreview</p>
+            }
+
+            <div class="mt-2 flex flex-wrap items-center gap-4">
+                <button type="button" class="text-xs font-medium text-accent hover:underline"
+                        @onclick="() => ToggleEmailAsync(email)">
+                    @(isExpanded ? "Show summary" : "Show full email")
+                </button>
+                @if (thread is { } threadGroup && threadGroup.Earlier.Count > 0)
+                {
+                    <button type="button" class="text-xs font-medium text-accent hover:underline"
+                            @onclick="() => ToggleThread(threadGroup.Key)">
+                        @(expandedThreads.Contains(threadGroup.Key)
+                            ? "Hide earlier emails"
+                            : $"Thread · {threadGroup.Earlier.Count + 1} emails")
+                    </button>
+                }
+            </div>
+        </div>
+    };
+
+    private void ToggleThread(string key)
+    {
+        if (!expandedThreads.Add(key)) expandedThreads.Remove(key);
+    }
+
+    private async Task ToggleEmailAsync(MailboxMessage email)
+    {
+        if (!expandedEmails.Add(email.Id))
+        {
+            expandedEmails.Remove(email.Id);
+            return;
+        }
+        if (details.ContainsKey(email.Id)) return;
+        details[email.Id] = null;
+        try
+        {
+            details[email.Id] = await Intake.GetMessageDetailAsync(email.Id, email.InternetMessageId);
+        }
+        catch
+        {
+            // The query client has reported the failure; the pane degrades to the preview text.
+            details[email.Id] = new MailboxMessageDetail(email.Id, "", false, Array.Empty<IntakeAttachment>());
+        }
+    }
+
+    private IReadOnlyList<string> OtherTags(MailboxMessage email) =>
+        email.Categories
+            .Where(tag => !tag.Equals(ExcludeTag, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private static string TagStem(string tag) =>
+        tag.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? tag["JPMS/".Length..] : tag;
+
+    // Same previewable set as triage's attachment tray: PDFs (the in-app viewer) and images.
+    private static bool IsPreviewable(IntakeAttachment attachment)
+    {
+        var type = attachment.ContentType ?? "";
+        return type.Contains("pdf", StringComparison.OrdinalIgnoreCase)
+            || type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Ids go in the query string, never the path — Graph ids don't survive a URL path segment.
+    private static string AttachmentUrl(MailboxMessage email, IntakeAttachment attachment, bool inline) =>
+        $"/api/mailbox/message/attachment?id={Uri.EscapeDataString(email.Id)}"
+        + $"&aid={Uri.EscapeDataString(attachment.Id)}{(inline ? "&inline=1" : "")}";
+
+    private Task OpenAttachmentPreviewAsync(MailboxMessage email, IntakeAttachment attachment)
+    {
+        var isPdf = (attachment.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase);
+        return OnPreview.InvokeAsync(new PreviewRequest(
+            attachment.Name,
+            AttachmentUrl(email, attachment, inline: true),
+            AttachmentUrl(email, attachment, inline: false),
+            isPdf));
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1_048_576) return $"{bytes / 1_048_576.0:0.#} MB";
+        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes} B";
+    }
+}

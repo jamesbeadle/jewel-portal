@@ -52,7 +52,20 @@ public sealed class RecordLinksEndpoints
         var command = await ReadBody<LinkMessageToRecord>(request);
         if (command is null || string.IsNullOrWhiteSpace(command.MessageId) || string.IsNullOrWhiteSpace(command.RecordId))
             return new BadRequestObjectResult("messageId and recordId are required.");
-        return new OkObjectResult(await link.HandleAsync(command, request.HttpContext.RequestAborted));
+        try
+        {
+            return new OkObjectResult(await link.HandleAsync(command, request.HttpContext.RequestAborted));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // The handler's own rejections — record not found, the client wall, the cross-pathway
+            // confirm, a tag that wouldn't verify — are answers the triage page shows verbatim
+            // (and string-matches for the "file under both" confirm: TriageQueue.IsCrossFilePrompt),
+            // so they must travel as a 400 with the message. Left uncaught they surfaced as a
+            // body-less 500 and a "Backend call failure" toast, which also made the cross-filing
+            // confirm unreachable.
+            return new BadRequestObjectResult(ex.Message);
+        }
     }
 
     // Accept the record type either by name ("Request") or numeric value ("0").

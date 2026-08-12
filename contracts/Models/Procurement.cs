@@ -2,13 +2,17 @@ namespace Jewel.JPMS.Models;
 
 // Persisted as ints, so values are explicit. Comparing (3) was removed 2026-07-22: nothing ever
 // set it — comparing tenders is a view over a QuotesReceived package, not a state of its own —
-// and Awarded keeps its stored value of 4.
+// and Awarded keeps its stored value of 4. Closed (5, added 2026-08-12) is the no-winner outcome:
+// the tender process ended without an award (all declined, re-scoped, works lapsed) — no reason is
+// recorded, closing without incident needs no paperwork. Reopening restores the status the
+// package's data implies (quotes → QuotesReceived, recipients → Inviting, else Draft).
 public enum BidPackageStatus
 {
     Draft = 0,
     Inviting = 1,
     QuotesReceived = 2,
-    Awarded = 4
+    Awarded = 4,
+    Closed = 5
 }
 
 // Where a single invited subcontractor sits on a bid package. Invited is the default once an invite
@@ -70,10 +74,14 @@ public sealed record BidPackage(
     BidPackageStatus Status,
     DateTimeOffset CreatedAt,
     string OwnerEmail,
-    string? VariationOrderId = null,        // parent variation order, when this package belongs to one
+    string? VariationOrderId = null,        // LEGACY parent VO (pre-2026-08-12, when packages could be
+                                             // created under a variation). Never set on new packages;
+                                             // line-item Coverage is how scope maps to a variation now
     int Number = 0,                          // sequential; rendered BPI-0001 via Reference
-    bool MaterialsApplicable = false)        // materials matter to this scope — the tender invite asks
+    bool MaterialsApplicable = false,        // materials matter to this scope — the tender invite asks
                                              // whether the subcontractor will supply their own
+    DateTimeOffset? ClosedAt = null)         // when the package was closed without a winner; null
+                                             // unless Status is Closed (cleared on reopen)
 {
     // Human, collision-safe reference and the stem tagged on the package's emails ("JPMS/BPI-0001"),
     // so RFT responses group under the package in the Bid Package Invites section. Blank until numbered.

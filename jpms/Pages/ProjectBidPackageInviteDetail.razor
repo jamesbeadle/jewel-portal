@@ -12,7 +12,6 @@
 @inject ICommandSender Commands
 @inject CostCentersReadModel CostCenters
 @inject ISubcontractorStore Subs
-@inject IRequestRegister RequestRegister
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel SubsReadModel
 @inject NavigationManager Nav
 @implements IDisposable
@@ -59,7 +58,7 @@ else
                         <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@package.Status</span>
                     </div>
                     <p class="text-sm text-content-muted">@package.Trade</p>
-                    @if (CanManage)
+                    @if (CanEdit)
                     {
                         <label class="mt-1.5 flex items-center gap-2 text-xs text-content-muted cursor-pointer"
                                title="When ticked, the tender-invite email asks each subcontractor to state whether they will supply their own materials or price labour-only.">
@@ -73,19 +72,33 @@ else
                         <p class="text-xs text-content-subtle mt-1.5">Materials apply — the invite asks tenderers whether they supply their own.</p>
                     }
                 </div>
+                @if (CanManage && package.Status != BidPackageStatus.Awarded)
+                {
+                    <Toolbar>
+                        @if (IsClosed)
+                        {
+                            <ToolbarButton Icon="rotate" Label="Reopen this bid package — puts the tender back in play" Busy="@busy" OnClick="ReopenPackage" />
+                        }
+                        else
+                        {
+                            <ToolbarButton Icon="close" Label="Close this bid package — ends the tender with no winner selected" Busy="@busy" OnClick="ClosePackage" />
+                        }
+                    </Toolbar>
+                }
             </header>
 
-            @if (lineageVariation is not null)
+            @if (IsClosed)
             {
-                <RecordTabBar ProjectId="@ProjectId" ActiveId="@BidPackageId"
-                              Request="lineageRequest" Variation="lineageVariation" BidPackages="siblingPackages" />
+                <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mb-6">
+                    Closed@(package.ClosedAt is { } closedAt ? $" on {closedAt.LocalDateTime:d MMM yyyy}" : "") — the tender ended with no winner selected. Reopen it to continue.
+                </p>
             }
 
             @* ---- Invited subcontractors ---- *@
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Invited to tender</h3>
-                    @if (CanManage)
+                    @if (CanEdit)
                     {
                         <div class="flex items-center gap-4">
                             @if (recipients.Count > 0)
@@ -151,7 +164,7 @@ else
                                         <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
                                         <td class="px-4 py-3 @(recipient.Status == BidPackageRecipientStatus.Declined ? "text-content-subtle" : "text-content-muted")">@recipient.Status</td>
                                         <td class="px-4 py-3 text-right">
-                                            @if (CanManage)
+                                            @if (CanEdit)
                                             {
                                                 <span class="inline-flex items-center gap-3">
                                                     @if (recipient.Status == BidPackageRecipientStatus.Declined)
@@ -188,7 +201,7 @@ else
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Line items</h3>
-                    @if (CanManage && !editingLines)
+                    @if (CanEdit && !editingLines)
                     {
                         <button type="button" class="text-xs text-content-muted hover:text-content" @onclick="EditLines">Edit</button>
                     }
@@ -264,7 +277,7 @@ else
                                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Qty</th>
                                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Cost code</th>
                                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Covered by</th>
-                                            @if (CanManage)
+                                            @if (CanEdit)
                                             {
                                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2"></th>
                                             }
@@ -298,7 +311,7 @@ else
                                                         <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium @(item.Coverage == BidPackageLineCoverage.Variation ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted")">@CoverageLabel(item)</span>
                                                     }
                                                 </td>
-                                                @if (CanManage)
+                                                @if (CanEdit)
                                                 {
                                                     <td class="px-4 py-2 text-right">
                                                         <button type="button" class="text-xs text-accent hover:underline" disabled="@busy" @onclick="() => OpenCoverageModal(item)">@(item.Coverage == BidPackageLineCoverage.Unassigned ? "Link" : "Change")</button>
@@ -319,7 +332,7 @@ else
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Tender submissions</h3>
-                    @if (CanManage && recipients.Count > 0)
+                    @if (CanEdit && recipients.Count > 0)
                     {
                         <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
                                 title="Key in a tender received outside email — phoned through, posted, or from a message that wasn't tagged."
@@ -346,7 +359,7 @@ else
                                 work order WO-@awarded.Order.Number.ToString("0000")</a>
                             raised as the purchase order.
                         </p>
-                        @if (CanManage)
+                        @if (CanEdit)
                         {
                             <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
                                     title="Draft the work-order email to the winning subcontractor in the shared mailbox — reviewed and sent from Outlook, nothing sends from here."
@@ -439,7 +452,7 @@ else
                                         <td class="px-4 py-2 text-right">@quote.Value.ToString("£#,##0.00")</td>
                                     }
                                 </tr>
-                                @if (CanManage && package.Status != BidPackageStatus.Awarded)
+                                @if (CanEdit && package.Status != BidPackageStatus.Awarded)
                                 {
                                     <tr>
                                         <td class="px-4 py-2"></td>
@@ -470,7 +483,7 @@ else
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Documents</h3>
-                    @if (CanManage)
+                    @if (CanEdit)
                     {
                         <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenDrawingsModal">Link drawings</button>
                     }
@@ -983,6 +996,12 @@ else
     private bool CanManage => Session.AvailableRoles.Any(r =>
         r is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
 
+    // A closed package is read-only: every action affordance gates on CanEdit, so the record
+    // stays as the audit trail of a tender that ran and ended. Close/Reopen themselves gate on
+    // CanManage — they are the acts that flip this.
+    private bool IsClosed => package?.Status == BidPackageStatus.Closed;
+    private bool CanEdit => CanManage && !IsClosed;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -1054,36 +1073,8 @@ else
         try { variations = await Queries.AskAsync(new ListVariationOrdersForProject(ProjectId), CancellationToken.None); }
         catch { /* picker simply shows no variations */ }
 
-        await LoadLineageAsync();
     }
 
-    // ---- Record lineage (Request → RFI → Variation, plus sibling packages) for the nav bar ----
-    // Only packages that belong to a variation have a lineage; BoQ-covered packages show no bar.
-    // Every read is best-effort: a missing piece renders as a placeholder chip, never an error.
-
-    private Request? lineageRequest;
-    private VariationOrder? lineageVariation;
-    private IReadOnlyList<BidPackage> siblingPackages = Array.Empty<BidPackage>();
-
-    private async Task LoadLineageAsync()
-    {
-        if (string.IsNullOrEmpty(package?.VariationOrderId))
-        {
-            lineageRequest = null; lineageVariation = null;
-            siblingPackages = Array.Empty<BidPackage>();
-            return;
-        }
-
-        var variationId = package.VariationOrderId;
-        try { lineageVariation = await Queries.AskAsync(new GetVariationOrderById(variationId), CancellationToken.None); }
-        catch { lineageVariation = null; }
-        if (lineageVariation is null) return;
-
-        try { lineageRequest = await RequestRegister.GetAsync(lineageVariation.RequestId); }
-        catch { lineageRequest = null; }
-        try { siblingPackages = await Queries.AskAsync(new ListBidPackagesForVoq(variationId), CancellationToken.None); }
-        catch { siblingPackages = Array.Empty<BidPackage>(); }
-    }
 
     // ---- Line-item coverage (link to a contract BoQ line or a variation) ----
 
@@ -1125,7 +1116,7 @@ else
 
     private async Task ConfirmCoverage()
     {
-        if (busy || linkingLine is null || !CanManage) return;
+        if (busy || linkingLine is null || !CanEdit) return;
         error = null;
         try
         {
@@ -1234,7 +1225,7 @@ else
 
     private async Task ConfirmInvite()
     {
-        if (busy || InviteCount() == 0 || !CanManage) return;
+        if (busy || InviteCount() == 0 || !CanEdit) return;
         error = null;
         try
         {
@@ -1345,7 +1336,7 @@ else
     // Save each ticked company to the directory (unless it's already there), then invite them all.
     private async Task ConfirmFindInvite()
     {
-        if (busy || selectedPlaces.Count == 0 || !CanManage) return;
+        if (busy || selectedPlaces.Count == 0 || !CanEdit) return;
         error = null;
         try
         {
@@ -1403,7 +1394,7 @@ else
 
     private async Task RemoveRecipient(BidPackageRecipient recipient)
     {
-        if (busy || !CanManage) return;
+        if (busy || !CanEdit) return;
         error = null;
         try
         {
@@ -1419,7 +1410,7 @@ else
 
     private async Task SetDeclined(BidPackageRecipient recipient, bool declined)
     {
-        if (busy || !CanManage) return;
+        if (busy || !CanEdit) return;
         error = null;
         try
         {
@@ -1456,7 +1447,7 @@ else
 
     private async Task ConfirmDrawings()
     {
-        if (busy || !CanManage) return;
+        if (busy || !CanEdit) return;
         error = null;
         try
         {
@@ -1547,7 +1538,7 @@ else
 
     private async Task ConfirmSendInvite()
     {
-        if (busy || package is null || !CanManage) return;
+        if (busy || package is null || !CanEdit) return;
         error = null;
         try
         {
@@ -1593,7 +1584,7 @@ else
     // supersede-on-resubmit behave identically however the prices came in.
     private void OpenManualTenderModal()
     {
-        if (busy || !CanManage) return;
+        if (busy || !CanEdit) return;
         showExtractModal = true;
         extractSubcontractorId = "";
         extractNotes = "";
@@ -1616,7 +1607,7 @@ else
 
     private async Task ConfirmSaveExtracted()
     {
-        if (busy || !CanManage || string.IsNullOrWhiteSpace(extractSubcontractorId)) return;
+        if (busy || !CanEdit || string.IsNullOrWhiteSpace(extractSubcontractorId)) return;
         error = null;
         try
         {
@@ -1694,7 +1685,7 @@ else
 
     private async Task ConfirmWorkOrderEmailDraft()
     {
-        if (busy || !CanManage || AwardedOrder is not { } awarded) return;
+        if (busy || !CanEdit || AwardedOrder is not { } awarded) return;
         error = null;
         try
         {
@@ -1714,7 +1705,7 @@ else
 
     private async Task AwardTo(Quote quote)
     {
-        if (busy || package is null || !CanManage) return;
+        if (busy || package is null || !CanEdit) return;
         error = null;
         try
         {
@@ -1754,7 +1745,7 @@ else
     // subcontractor to state whether they will supply their own materials or price labour-only.
     private async Task ToggleMaterialsApplicable(bool applicable)
     {
-        if (busy || package is null || !CanManage) return;
+        if (busy || package is null || !CanEdit) return;
         error = null;
         try
         {
@@ -1764,6 +1755,36 @@ else
                 CancellationToken.None);
         }
         catch { error = "Couldn't update the materials setting. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // ---- Close / reopen: the no-winner ending. Closing records ClosedAt and makes the page
+    // read-only (CanEdit); reopening restores the status the package's data implies. ----
+
+    private async Task ClosePackage()
+    {
+        if (busy || package is null || !CanManage
+            || package.Status is BidPackageStatus.Awarded or BidPackageStatus.Closed) return;
+        error = null;
+        try
+        {
+            busy = true;
+            package = await Commands.SendAsync(new CloseBidPackage(BidPackageId), CancellationToken.None);
+        }
+        catch { error = "Couldn't close the bid package. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task ReopenPackage()
+    {
+        if (busy || package is null || !CanManage || package.Status != BidPackageStatus.Closed) return;
+        error = null;
+        try
+        {
+            busy = true;
+            package = await Commands.SendAsync(new ReopenBidPackage(BidPackageId), CancellationToken.None);
+        }
+        catch { error = "Couldn't reopen the bid package. Please try again."; }
         finally { busy = false; }
     }
 
@@ -1791,7 +1812,7 @@ else
 
     private async Task SaveLines()
     {
-        if (busy || !CanManage) return;
+        if (busy || !CanEdit) return;
         error = null;
         try
         {

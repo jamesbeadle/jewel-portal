@@ -12,7 +12,6 @@ public interface IVariationStore
     Task<VariationOrder?> GetByIdAsync(string variationOrderId, CancellationToken cancellationToken = default);
     Task<VariationOrder?> GetByRequestAsync(string requestId, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<VariationOrder>> ListForProjectAsync(string projectId, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<BidPackage>> ListBidPackagesAsync(string variationOrderId, CancellationToken cancellationToken = default);
 
     Task<VariationOrder> CreateFromRfqAsync(string requestId, string? title = null, string? description = null, decimal? estimatedValue = null, CancellationToken cancellationToken = default);
 
@@ -20,8 +19,11 @@ public interface IVariationStore
     /// manual-entry route for historic / client-instructed variations. A supplied number fixes the
     /// VOQ number (and the V-ref minted at approval); null takes the project's next number.</summary>
     Task<VariationOrder> CreateManualAsync(string projectId, string title, string? description, decimal? estimatedValue, int? number, CancellationToken cancellationToken = default);
-    Task<BidPackage> AddBidPackageAsync(string variationOrderId, string title, string trade, CancellationToken cancellationToken = default);
-    Task<VariationOrder> SelectTenderAsync(string variationOrderId, string bidPackageId, string subcontractorId, decimal? estimatedValue, CancellationToken cancellationToken = default);
+
+    /// <summary>Records the agreed subcontractor and value on a quoting variation order — who the
+    /// works will be instructed to if the variation is approved. (Bid packages were separated from
+    /// the VO quoting process 2026-08-12; the tender itself runs on the bid package.)</summary>
+    Task<VariationOrder> SelectTenderAsync(string variationOrderId, string subcontractorId, decimal? estimatedValue, CancellationToken cancellationToken = default);
 
     /// <summary>Attaches a variation order to the request (RFI) it was raised from — repairs pre-link (seeded) records.</summary>
     Task<VariationOrder> LinkToRequestAsync(string variationOrderId, string requestId, CancellationToken cancellationToken = default);
@@ -57,8 +59,9 @@ public interface IVariationStore
     /// already written to the valuation report and CVR keep the wording they were issued with.</summary>
     Task<VariationOrder> RenameAsync(string variationOrderId, string title, CancellationToken cancellationToken = default);
 
-    /// <summary>Deletes a non-approved variation order and its bid-package tender data — a VOQ raised
-    /// in error. Refused for an approved order (reject / return to quoting first).</summary>
+    /// <summary>Deletes a non-approved variation order — a VOQ raised in error. Refused for an
+    /// approved order (reject / return to quoting first). Bid packages are separate records and
+    /// are never deleted with a variation.</summary>
     Task DeleteAsync(string variationOrderId, CancellationToken cancellationToken = default);
 
     /// <summary>Revises the value of an approved variation order; the delta writes through to the valuation report, CVR and budget.</summary>

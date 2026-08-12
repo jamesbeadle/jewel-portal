@@ -13,7 +13,6 @@ public static class VariationsFeatureRegistration
     public static IServiceCollection AddVariationsFeature(this IServiceCollection services)
     {
         services.AddScoped<IQueryHandler<GetVoqByRequest, VariationOrder?>, GetVoqByRequestHandler>();
-        services.AddScoped<IQueryHandler<ListBidPackagesForVoq, IReadOnlyList<BidPackage>>, ListBidPackagesForVoqHandler>();
         services.AddScoped<IQueryHandler<GetVariationOrderById, VariationOrder?>, GetVariationOrderByIdHandler>();
         services.AddScoped<IQueryHandler<ListVariationOrdersForProject, IReadOnlyList<VariationOrder>>, ListVariationOrdersForProjectHandler>();
 
@@ -24,10 +23,6 @@ public static class VariationsFeatureRegistration
         services.AddScoped<ICommandHandler<CreateManualVariationOrder, VariationOrder>, CreateManualVariationOrderHandler>();
         services.AddScoped<CreateManualVariationOrderAuthorisation>();
         services.AddScoped<CreateManualVariationOrderValidation>();
-
-        services.AddScoped<ICommandHandler<AddBidPackageToVoq, BidPackage>, AddBidPackageToVoqHandler>();
-        services.AddScoped<AddBidPackageToVoqAuthorisation>();
-        services.AddScoped<AddBidPackageToVoqValidation>();
 
         services.AddScoped<ICommandHandler<SelectVoqTender, VariationOrder>, SelectVoqTenderHandler>();
         services.AddScoped<SelectVoqTenderAuthorisation>();

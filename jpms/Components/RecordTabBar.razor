@@ -1,10 +1,11 @@
 @using Jewel.JPMS.Models
 
 @*
-    The record tab bar: the request chain — Request → RFI (official stage) → Variation, with bid
-    packages branching off the variation — presented as document tabs rather than a chip map, so
-    the page reads as ONE containing object whose related documents sit behind tabs. Rendered on
-    every page in the chain; the active tab is the record (or pane) you are looking at.
+    The record tab bar: the request chain — Request → RFI (official stage) → Variation — presented
+    as document tabs rather than a chip map, so the page reads as ONE containing object whose
+    related documents sit behind tabs. Rendered on every page in the chain; the active tab is the
+    record (or pane) you are looking at. (Bid packages left the chain 2026-08-12: they are
+    standalone procurement records now, not a branch off the variation.)
 
     Only tabs whose record EXISTS render (plus the request page's own panes): a request that has
     not been promoted shows no RFI tab, an RFI with no variation shows no Variation tab. The
@@ -51,36 +52,12 @@
         }
     }
 
-    @if (Variation is not null && BidPackages is { Count: > 0 })
-    {
-        <span class="mx-1 h-5 w-px bg-line shrink-0" aria-hidden="true"></span>
-        @foreach (var package in BidPackages)
-        {
-            var current = package;
-            @if (current.BidPackageId == ActiveId)
-            {
-                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
-                      aria-current="page" title="@PackageTitle(current)">
-                    <ActionIcon Name="package" Class="w-4 h-4 shrink-0" />
-                    <span class="font-mono text-xs">@PackageLabel(current)</span>
-                </span>
-            }
-            else
-            {
-                <a href="@PackageHref(current.BidPackageId)" class="@InactiveClass" title="@PackageTitle(current)">
-                    <ActionIcon Name="package" Class="w-4 h-4 shrink-0" />
-                    <span class="font-mono text-xs">@PackageLabel(current)</span>
-                    <ActivityBadge Activity="@ActivityOf(RecordType.BidPackageInvite, current.BidPackageId)" DotOnly="true" />
-                </a>
-            }
-        }
-    }
 </nav>
 
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
 
-    /// <summary>The active tab: "request", "official", "variation", or a bid package id.</summary>
+    /// <summary>The active tab: "request", "official", or "variation".</summary>
     [Parameter, EditorRequired] public string ActiveId { get; set; } = "";
 
     [Parameter] public Request? Request { get; set; }
@@ -88,8 +65,6 @@
     /// <summary>The variation this chain produced, at whatever stage it has reached — one record,
     /// whichever status it holds.</summary>
     [Parameter] public VariationOrder? Variation { get; set; }
-
-    [Parameter] public IReadOnlyList<BidPackage>? BidPackages { get; set; }
 
     /// <summary>Set on the request page: the Request / official-document tabs switch panes in
     /// place (via OnSelect) instead of navigating.</summary>
@@ -147,7 +122,6 @@
     private string RequestHref => Request is null ? "" : $"/projects/{ProjectId}/requests/view/{Request.RequestId}";
     private string OfficialHref => Request is null ? "" : $"/projects/{ProjectId}/requests/view/{Request.RequestId}?tab=official";
     private string VariationHref => Variation is null ? "" : $"/projects/{ProjectId}/variations/{Variation.VariationOrderId}";
-    private string PackageHref(string bidPackageId) => $"/projects/{ProjectId}/bid-package-invites/{bidPackageId}";
 
     // The container tab always shows the REQ-#### number (the official reference lives on the
     // official-stage tab); a back-filled record with no number falls back to its reference.
@@ -159,9 +133,4 @@
     private static string VariationLabel(VariationOrder variation) =>
         string.IsNullOrWhiteSpace(variation.VariationRef) ? variation.DisplayNumber : variation.VariationRef!;
 
-    private static string PackageLabel(BidPackage package) =>
-        string.IsNullOrWhiteSpace(package.Reference) ? package.Title : package.Reference;
-
-    private static string PackageTitle(BidPackage package) =>
-        $"{package.Title} ({package.Trade}) — invited subcontractors and their tenders";
 }

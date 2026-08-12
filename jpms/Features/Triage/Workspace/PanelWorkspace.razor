@@ -45,6 +45,7 @@
     [Parameter] public RenderFragment? PreviewContent { get; set; }
     [Parameter] public RenderFragment? XeroContent { get; set; }
     [Parameter] public RenderFragment? ComposeContent { get; set; }
+    [Parameter] public RenderFragment? SubcontractorCommsContent { get; set; }
 
     private ElementReference root;
     private ElementReference divider;
@@ -63,6 +64,7 @@
         PanelKind.Preview => PreviewContent,
         PanelKind.Xero => XeroContent,
         PanelKind.Compose => ComposeContent,
+        PanelKind.SubcontractorComms => SubcontractorCommsContent,
         _ => null
     };
 

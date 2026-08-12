@@ -1,0 +1,142 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.RecordLinks
+@using Jewel.JPMS.Features.Triage.Workspace
+@inject IIntakeQueue Intake
+
+@*
+    The subcontractor communications browser: every email tagged "JPMS/SubComms" — general
+    subcontractor correspondence filed at triage with the Subcontractor tab's communication tick —
+    read live from the mailbox, newest thread first. A workspace pane rather than the standalone
+    page so it reads SIDE BY SIDE with a compose or an open email: browse a subbie's thread one
+    window, copy and paste into the reply the other. Read-only over the mail itself — tagging
+    (and untagging, from the Tagged view) stays in mailbox triage.
+*@
+
+<div class="space-y-3">
+    <header>
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Subcontractor communications</p>
+        @if (loaded && loadError is null && total > 0)
+        {
+            <p class="text-sm text-content-muted mt-1">
+                @total email@(total == 1 ? "" : "s") tagged as subcontractor communication.
+            </p>
+        }
+    </header>
+
+    @if (loadError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
+    }
+
+    @if (!loaded)
+    {
+        <JewelSpinner Label="Loading communications" />
+    }
+    else if (items.Count == 0)
+    {
+        @* A failed fetch leaves the list empty; the banner above says so, and "nothing tagged
+           yet" would read as an answer rather than a failure. *@
+        @if (loadError is null)
+        {
+            <div class="panel p-6 text-center">
+                <p class="text-sm text-content">No subcontractor communications yet.</p>
+                <p class="text-xs text-content-subtle mt-1">
+                    Tick "Subcontractor communication" in System Tags and the thread appears here.
+                </p>
+            </div>
+        }
+    }
+    else
+    {
+        <input class="field" type="search" placeholder="Filter by sender or subject…"
+               value="@filter" @oninput="e => filter = e.Value?.ToString() ?? string.Empty" />
+
+        @if (Filtered.Count == 0)
+        {
+            <p class="text-sm text-content-subtle">
+                No loaded email matches "@filter"@(nextCursor is not null ? " — try loading more below" : "").
+            </p>
+        }
+        else
+        {
+            <CorrespondenceThreadList Emails="Filtered" ExcludeTag="@SubcontractorComms.Tag" OnPreview="OnPreview" />
+        }
+
+        @if (nextCursor is not null)
+        {
+            <div class="text-center">
+                <button type="button" class="btn-secondary text-sm" disabled="@loadingMore" @onclick="LoadMoreAsync">
+                    @(loadingMore ? "Loading…" : "Load more")
+                </button>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private const int PageSize = 25;
+
+    /// <summary>Opens an email attachment in the workspace Preview pane, opposite this window.</summary>
+    [Parameter] public EventCallback<PreviewRequest> OnPreview { get; set; }
+
+    // `loaded` opens the gate whether the fetch landed or failed (the banner says which);
+    // the list itself accumulates pages like the Tagged view does.
+    private readonly List<MailboxMessage> items = new();
+    private bool loaded;
+    private bool loadingMore;
+    private string? loadError;
+    private int total;
+    private string? nextCursor;
+    private string filter = "";
+
+    protected override Task OnInitializedAsync() => LoadPageAsync(cursor: null);
+
+    // A quick narrowing over the pages fetched so far — sender, subject or opening line. The
+    // thread grouping happens after the filter, so a matching reply still surfaces its card.
+    private IReadOnlyList<MailboxMessage> Filtered
+    {
+        get
+        {
+            var needle = filter.Trim();
+            if (needle.Length == 0) return items;
+            return items.Where(email =>
+                    email.Subject.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    || email.FromName.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    || email.FromEmail.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    || email.BodyPreview.Contains(needle, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    // One live read of the tagged mail, newest first — the same query the Tagged view and the
+    // Subcontractor folder's Communications page use, narrowed to the one communication tag.
+    private async Task LoadPageAsync(string? cursor)
+    {
+        loadError = null;
+        try
+        {
+            var page = await Intake.ListTaggedLiveAsync(
+                cursor, PageSize, new[] { SubcontractorComms.Tag }, newestFirst: true);
+            if (cursor is null) items.Clear();
+            items.AddRange(page.Items);
+            total = page.Total;
+            nextCursor = page.NextCursor;
+        }
+        catch
+        {
+            loadError = "Couldn't load the communications. Please try again.";
+        }
+        finally
+        {
+            loaded = true;
+        }
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        if (nextCursor is null || loadingMore) return;
+        loadingMore = true;
+        try { await LoadPageAsync(nextCursor); }
+        finally { loadingMore = false; }
+    }
+}

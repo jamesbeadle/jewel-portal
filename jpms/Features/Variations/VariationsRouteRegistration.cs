@@ -16,10 +16,6 @@ public static class VariationsRouteRegistration
             new QueryRoute("/api/requests/{requestId}/voq",
                 query => $"/api/requests/{((GetVoqByRequest)query).RequestId}/voq"));
 
-        queries.Register<ListBidPackagesForVoq, IReadOnlyList<BidPackage>>(
-            new QueryRoute("/api/voqs/{voqId}/bid-packages",
-                query => $"/api/voqs/{((ListBidPackagesForVoq)query).VariationOrderId}/bid-packages"));
-
         commands.Register<CreateVoqFromRfq, VariationOrder>(
             new CommandRoute("POST", "/api/requests/{requestId}/voq",
                 command => $"/api/requests/{((CreateVoqFromRfq)command).RequestId}/voq"));
@@ -28,10 +24,6 @@ public static class VariationsRouteRegistration
         commands.Register<CreateManualVariationOrder, VariationOrder>(
             new CommandRoute("POST", "/api/projects/{projectId}/manual-variation",
                 command => $"/api/projects/{((CreateManualVariationOrder)command).ProjectId}/manual-variation"));
-
-        commands.Register<AddBidPackageToVoq, BidPackage>(
-            new CommandRoute("POST", "/api/voqs/{voqId}/bid-packages",
-                command => $"/api/voqs/{((AddBidPackageToVoq)command).VariationOrderId}/bid-packages"));
 
         commands.Register<SelectVoqTender, VariationOrder>(
             new CommandRoute("POST", "/api/voqs/{voqId}/select-tender",

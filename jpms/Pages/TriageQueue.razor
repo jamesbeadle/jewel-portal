@@ -1260,6 +1260,7 @@ else
             </PreviewContent>
             <XeroContent><XeroExplorerPane OnPreview="OpenXeroPreview" /></XeroContent>
             <ComposeContent>@ComposePaneContent</ComposeContent>
+            <SubcontractorCommsContent><SubcontractorCommsPane OnPreview="OpenSubcontractorCommsPreview" /></SubcontractorCommsContent>
         </PanelWorkspace>
         </div>
     </section>
@@ -1727,6 +1728,11 @@ else
     // A document opened from a Xero transaction — same Preview pane, opposite the explorer.
     private void OpenXeroPreview(PreviewRequest document) =>
         workspace.OpenPreview(document, PanelKind.Xero);
+
+    // An attachment opened from the subcontractor communications browser — same Preview pane,
+    // opposite the browser, so the email thread and its document read together.
+    private void OpenSubcontractorCommsPreview(PreviewRequest document) =>
+        workspace.OpenPreview(document, PanelKind.SubcontractorComms);
 
     // System actions lined up in the Actions pane, run by the one Apply after the filing —
     // payloads snapshotted at stage time, cleared per selection like all staging.
