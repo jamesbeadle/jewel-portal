@@ -273,6 +273,10 @@ public static class SidebarFolders
                 // (UpdateToast) on every signed-in tab.
                 new SidebarRow(new NavigationItem("System", "/admin/system"),
                     DesktopNavigation.AdministratorOnly),
+                // The agent architecture, live — the registry the turn loop actually runs on,
+                // each agent with its configuration and its skills (docs/ai/05-agents-and-skills.md).
+                new SidebarRow(new NavigationItem("AI Agents", "/admin/agents"),
+                    DesktopNavigation.DirectorRoles),
                 // The assistant's skills — the domain knowledge behind each agent, edited by the
                 // discipline owner (docs/ai/05-agents-and-skills.md). Directors rather than
                 // administrator-only, deliberately: the MD maintaining his own doctrine is the

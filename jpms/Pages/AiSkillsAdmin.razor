@@ -5,6 +5,7 @@
 @inject SessionService Session
 @inject IQueryClient Queries
 @inject ICommandSender Commands
+@inject NavigationManager Nav
 
 <PageTitle>AI skills · JPMS</PageTitle>
 
@@ -302,7 +303,38 @@ else
     {
         await Session.EnsureLoadedAsync();
         sessionReady = true;
-        if (CanSee) await LoadAsync();
+        if (!CanSee) return;
+
+        await LoadAsync();
+
+        // Deep links from the AI Agents page land straight in the right editor:
+        // ?skill=… opens that skill; ?agent=…&new=1 starts a new one already attached to it.
+        // Parsed from the URL by hand, the same way ProjectRequestDetail reads ?openModal=.
+        var skillParam = QueryValue("skill");
+        if (!string.IsNullOrWhiteSpace(skillParam))
+        {
+            await OpenAsync(skillParam);
+        }
+        else if (!string.IsNullOrWhiteSpace(QueryValue("new")))
+        {
+            StartNew();
+            var agentParam = QueryValue("agent");
+            if (editing is not null && !string.IsNullOrWhiteSpace(agentParam))
+                editing.AgentKey = agentParam.Trim().ToLowerInvariant();
+        }
+    }
+
+    private string? QueryValue(string name)
+    {
+        var query = new Uri(Nav.Uri).Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            if (separator <= 0) continue;
+            if (!string.Equals(pair[..separator], name, StringComparison.OrdinalIgnoreCase)) continue;
+            return Uri.UnescapeDataString(pair[(separator + 1)..]);
+        }
+        return null;
     }
 
     private async Task LoadAsync()
