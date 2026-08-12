@@ -1074,13 +1074,15 @@
             }
             <div class="flex items-center gap-2">
                 <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
-                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null)" @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
+                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null || TagPickingOpen)"
+                        title="@(TagPickingOpen ? "System Tags is still open — press Done to confirm the picks first" : null)"
+                        @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
                     @ApplyButtonLabel
                 </button>
                 @if (OutboxSendCount > 0)
                 {
-                    <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
-                            title="Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it">
+                    <button type="button" class="btn-secondary" disabled="@(busy || TagPickingOpen)" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
+                            title="@(TagPickingOpen ? "System Tags is still open — press Done to confirm the picks first" : "Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it")">
                         @(OutboxSendCount == 1 ? "Save reply as draft" : "Save replies as drafts")
                     </button>
                 }
@@ -1467,7 +1469,8 @@ else
     // other non-client side's types (the lane): linking one triggers the cross-filing confirm.
     private static readonly RecordType[] ClientTaggedLinkTypes =
     {
-        RecordType.Request, RecordType.Variation, RecordType.Scheduling, RecordType.Lad, RecordType.Todo
+        RecordType.Request, RecordType.Variation, RecordType.Scheduling, RecordType.Lad,
+        RecordType.ValuationReportSnapshot, RecordType.Todo
     };
     private static readonly RecordType[] NonClientTaggedLinkTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Todo };
 
@@ -1491,7 +1494,8 @@ else
     private static string RecordTypePathwayLabel(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
-            or RecordType.Scheduling or RecordType.Lad => "Client",
+            or RecordType.Scheduling or RecordType.Lad
+            or RecordType.ValuationReportSnapshot => "Client",
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => "Subcontractor",
         RecordType.CostCentre       => "Client or Subcontractor",
@@ -1518,6 +1522,7 @@ else
         RecordType.Lad              => "LADs claim",
         RecordType.Todo             => "To-do item",
         RecordType.SubcontractorComms => "Subcontractor communication",
+        RecordType.ValuationReportSnapshot => "Valuation report snapshot",
         _                           => type.ToString()
     };
 
@@ -1669,6 +1674,7 @@ else
             RecordType.Scheduling or RecordType.Lad => $"/projects/{projectId}/programme",
             RecordType.CostCentre => $"/projects/{projectId}/financials",
             RecordType.Todo       => $"/projects/{projectId}/todos",
+            RecordType.ValuationReportSnapshot => $"/projects/{projectId}/valuation-snapshots",
             _ => null
         };
     }
@@ -2814,6 +2820,14 @@ else
             : $"{label} (keeping {attachmentCount} attachment{(attachmentCount == 1 ? "" : "s")} on the order — not emailed)";
     }
 
+    // True while the System Tags window is on show for the open email — a pick in progress.
+    // Apply stands down until the pane's Done confirms the staged list (the pane closes on Done),
+    // so a half-made tagging can't be applied by accident. Same "decision not yet made" rule as
+    // the half-built lined-up reply below.
+    private bool TagPickingOpen =>
+        view == QueueView.Active && selected is not null
+        && workspace.SideShowing(PanelKind.SystemTags) is not null;
+
     private string ApplyButtonLabel
     {
         get
@@ -2885,6 +2899,15 @@ else
         var scope = triageEntireThread ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly;
         if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !relevantEvent && !discarding
             && stagedSystemActions.Count == 0 && queuedReplies.Count == 0) return;
+
+        // An open System Tags window is the same decision not yet made — its Done is the "yes,
+        // that's the list" step. Belt-and-braces behind the disabled button, so no other route
+        // into the apply (the cross-filing re-run included) can land a half-made tagging.
+        if (TagPickingOpen)
+        {
+            actionError = "System Tags is still open — press Done to confirm the picks, then Apply.";
+            return;
+        }
 
         // A half-built lined-up reply is a decision not yet made — finish it or remove it, rather
         // than have Apply skip it (or the server reject it after the filing has already landed).

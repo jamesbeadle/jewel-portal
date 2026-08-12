@@ -20,6 +20,7 @@ public enum SystemActionKind
     CreateBidPackageInvite,
     RaiseDefect,
     CreateTodos,
+    CompleteTodo,
     AddDirectoryContact
 }
 
@@ -40,6 +41,7 @@ public static class SystemActionKinds
         SystemActionKind.CreateBidPackageInvite,
         SystemActionKind.RaiseDefect,
         SystemActionKind.CreateTodos,
+        SystemActionKind.CompleteTodo,
         SystemActionKind.AddDirectoryContact
     };
 
@@ -57,6 +59,7 @@ public static class SystemActionKinds
         SystemActionKind.CreateBidPackageInvite => "Create Bid Package Invite",
         SystemActionKind.RaiseDefect => "Raise Defect",
         SystemActionKind.CreateTodos => "Create To-do Items",
+        SystemActionKind.CompleteTodo => "Mark To-do Done",
         SystemActionKind.AddDirectoryContact => "Add Directory Contact",
         _ => kind.ToString()
     };

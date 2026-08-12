@@ -1,0 +1,126 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.Todos
+@inject ITodoStore Todos
+@inject IIntakeQueue Intake
+
+@* Mark To-do Done as a STAGED action: pick one of the project's open to-dos, stage; the same
+   UpdateTodoItem the To-do tab's board fires runs with the email's Apply (re-read at fire time,
+   so no other field is clobbered by a stale copy), and the email is tagged to the item —
+   actioning TODO-0041 from an email files the email against it. *@
+
+<div class="space-y-3">
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+    <select class="field" disabled="@(items is null)" @bind="todoItemId">
+        @if (items is null)
+        {
+            <option value="">Loading…</option>
+        }
+        else
+        {
+            <option value="">@(Candidates.Count == 0 ? "No open to-dos on this project" : "Select a to-do…")</option>
+            @foreach (var item in Candidates)
+            {
+                <option value="@item.TodoItemId">@item.Reference — @item.Title</option>
+            }
+        }
+    </select>
+
+    <button type="button" class="btn-primary" disabled="@(todoItemId == "")" @onclick="StageAsync">Stage action</button>
+</div>
+
+@code {
+    /// <summary>The email's project, set in the triage bar above the split.</summary>
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
+
+    private string loadedProjectId = "";
+    private string todoItemId = "";
+    private string? error;
+    // Nullable = not fetched yet: the select renders disabled with a Loading… placeholder while
+    // this is null (a control is never gated), and Candidates reads it through a non-null view.
+    private IReadOnlyList<TodoItem>? items;
+
+    // The triage bar owns the project; re-read the pool when it changes hands. ITodoStore is a
+    // plain async read (no cached register), so the component holds its own copy per project.
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProjectId == loadedProjectId) return;
+        loadedProjectId = ProjectId;
+        todoItemId = "";
+        error = null;
+        items = null;
+        if (ProjectId == "") return;
+        var requested = ProjectId;
+        try
+        {
+            var loaded = await Todos.ListForProjectAsync(requested);
+            if (requested == ProjectId) items = loaded;
+        }
+        catch
+        {
+            // A failed fetch must open the gate: the empty list re-enables the select, and the
+            // error says what went wrong instead of a Loading… that never resolves.
+            if (requested == ProjectId)
+            {
+                items = Array.Empty<TodoItem>();
+                error = "The project's to-dos couldn't be loaded. Re-pick the project to try again.";
+            }
+        }
+    }
+
+    // Only OPEN items can be marked done; the server's open-first ordering is kept as-is.
+    private IReadOnlyList<TodoItem> Candidates =>
+        (items ?? Array.Empty<TodoItem>()).Where(item => !item.IsComplete).ToList();
+
+    private async Task StageAsync()
+    {
+        error = null;
+        var picked = Candidates.FirstOrDefault(item => item.TodoItemId == todoItemId);
+        if (picked is null) { error = "Pick the to-do first."; return; }
+        await OnStaged.InvokeAsync(new StagedSystemAction(
+            SystemActionKind.CompleteTodo,
+            $"mark {picked.Reference} ({picked.Title}) as done",
+            ExecutorFor(picked),
+            await TargetFor(picked)));
+        todoItemId = "";
+    }
+
+    // The action fires on an existing record, so its tag rides along (SystemActionsPane stages
+    // the pick into System Tags). The server's own projection is fetched rather than hand-built
+    // here: tag stems are provider business, and a guessed stem would silently detach mail.
+    private async Task<LinkableRecord?> TargetFor(TodoItem picked)
+    {
+        try
+        {
+            var records = await Intake.ListLinkableRecordsAsync(ProjectId, RecordType.Todo);
+            return records.FirstOrDefault(r => r.RecordId == picked.TodoItemId);
+        }
+        catch { return null; } // the action still stages; only the automatic tag is lost
+    }
+
+    // The same full-row UpdateTodoItem the To-do tab's board sends, re-read at fire time so no
+    // other field is clobbered by a stale copy — and a to-do someone ticked off in the meantime
+    // is left exactly as it is.
+    private Func<Task> ExecutorFor(TodoItem picked)
+    {
+        var todos = Todos;
+        return async () =>
+        {
+            var current = await todos.GetAsync(picked.TodoItemId)
+                ?? throw new CommandFailedException($"{picked.Reference} no longer exists.");
+            if (current.IsComplete) return; // already done — nothing to change
+            await todos.UpdateAsync(new UpdateTodoItem(
+                current.TodoItemId,
+                current.Title,
+                string.IsNullOrWhiteSpace(current.Notes) ? null : current.Notes,
+                current.AssigneeRole,
+                current.AssigneePersonEmail,
+                current.DueAt,
+                IsComplete: true));
+        };
+    }
+}

@@ -58,10 +58,22 @@ internal static class ValuationReportSnapshotCapture
         var contractSum = ValuationCalculations.ContractSum(lineModels);
         var netVariations = ValuationCalculations.NetVariations(lineModels);
 
+        // The next per-project number — the stem of the snapshot's mailbox tag
+        // ("JPMS/VRS-{projectRef}-{Number}"), so triage can associate emails with THIS
+        // snapshot. Max + 1 over the saved register: captures are one per command, so a
+        // same-save collision cannot arise in practice. (If the latest snapshot is deleted
+        // its number CAN be re-minted — deletes are for snapshots taken in error, before
+        // anything is linked to them.)
+        var number = await context.ValuationReportSnapshots
+            .Where(s => s.ProjectId == projectId)
+            .Select(s => (int?)s.Number)
+            .MaxAsync(cancellationToken) ?? 0;
+
         var snapshot = new ValuationReportSnapshotEntity
         {
             ValuationReportSnapshotId = CommercialIdentifierFactory.NextValuationReportSnapshotId(),
             ProjectId = projectId,
+            Number = number + 1,
             ValuationInvoiceId = valuationInvoiceId,
             ValuationClaimId = claim?.ValuationClaimId,
             Label = label,

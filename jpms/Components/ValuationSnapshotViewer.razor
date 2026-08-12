@@ -1,6 +1,9 @@
 @using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Contracts.RecordLinks
+@using Jewel.JPMS.Features.Triage.Panels
 @using Jewel.JPMS.Services.Excel
 @inject IValuationReportStore Store
+@inject IQueryClient Queries
 
 @* Read-only rendering of one frozen valuation-report snapshot: the same grouped-bill +
    summary-footer layout as the live ValuationReportTable, fed entirely from the
@@ -132,6 +135,32 @@ else
             <SummaryRow Label="Payment due (ex VAT)" Value="@Money(snapshot.PaymentDueExVat)" Strong="true" />
         </dl>
     </div>
+
+    @* The mail behind this statement: everything triaged to the snapshot's own tag, read back
+       live from the mailbox — the same record-agnostic mechanism as the variation page's
+       Communications. Reading only: tagging (and replying from a record) stays in the Control
+       Centre, where the pathway guards live. *@
+    <div class="mt-4 rounded-xl border border-line bg-surface p-5">
+        <h3 class="text-sm font-semibold text-content mb-3">Correspondence</h3>
+        @* One gate for the region; a failed fetch opens it and says so (never pulses forever). *@
+        <LoadGate IsLoading="@(emails is null && emailsError is null)" Label="Loading correspondence">
+            @if (emailsError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@emailsError</p>
+            }
+            else if (emails is { Count: 0 })
+            {
+                <p class="text-sm text-content-subtle italic">
+                    No emails are linked to this snapshot yet. Link one in the Control Centre —
+                    System tags → Client → Valuation report snapshot — and it appears here.
+                </p>
+            }
+            else if (emails is not null)
+            {
+                <CorrespondenceThreadList Emails="emails" />
+            }
+        </LoadGate>
+    </div>
 }
 
 @code {
@@ -147,14 +176,37 @@ else
     private bool loadFailed;
     private string? loadedSnapshotId;
 
+    // Null until the mailbox has ANSWERED — an empty list is a real "none", never a placeholder
+    // (the loading convention: nullable backing field, gate on the null).
+    private IReadOnlyList<MailboxMessage>? emails;
+    private string? emailsError;
+
     protected override async Task OnParametersSetAsync()
     {
         if (SnapshotId == loadedSnapshotId) return;
         loadedSnapshotId = SnapshotId;
         detail = null;
         loadFailed = false;
+        emails = null;
+        emailsError = null;
         try { detail = await Store.GetSnapshotAsync(SnapshotId); }
         catch { loadFailed = true; }
+        await LoadEmailsAsync();
+    }
+
+    // The emails triaged to this snapshot's tag, read live — a failure opens the gate with its
+    // own message rather than blocking the report above (the frozen lines are the main event).
+    private async Task LoadEmailsAsync()
+    {
+        try
+        {
+            emails = await Queries.AskAsync(
+                new ListRecordEmails(RecordType.ValuationReportSnapshot, SnapshotId), CancellationToken.None);
+        }
+        catch
+        {
+            emailsError = "Couldn't load this snapshot's correspondence. Please try again.";
+        }
     }
 
     private record Section(string Title, List<ValuationReportSnapshotLine> Lines)

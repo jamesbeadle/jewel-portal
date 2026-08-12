@@ -98,7 +98,7 @@
     // (2026-08-07): the programme bucket isn't a record anyone picks — the page's own
     // "Relevant Event for Programme" checkbox files to it instead; the bucket's claims
     // documents stay reachable here via Request / RFI and LADs claim.
-    private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.Lad };
+    private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.Lad, RecordType.ValuationReportSnapshot };
     private static readonly RecordType[] SubcontractorTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Defect };
     private static readonly RecordType[] InternalTypes = { RecordType.Todo };
 
@@ -336,6 +336,7 @@
         RecordType.Request => "Request / RFI",
         RecordType.Variation => "Variation Order",
         RecordType.Lad => "LADs claim",
+        RecordType.ValuationReportSnapshot => "Valuation report snapshot",
         RecordType.Scheduling => "Relevant Event",
         RecordType.BidPackageInvite => "Bid Package Invite",
         RecordType.WorkOrder => "Work Order",

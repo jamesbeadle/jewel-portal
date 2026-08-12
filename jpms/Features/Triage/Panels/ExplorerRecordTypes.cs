@@ -12,7 +12,7 @@ public static class ExplorerRecordTypes
     public static readonly RecordType[] All =
     {
         RecordType.Request, RecordType.Variation, RecordType.WorkOrder,
-        RecordType.BidPackageInvite, RecordType.Lad, RecordType.Todo
+        RecordType.BidPackageInvite, RecordType.Defect, RecordType.Lad, RecordType.Todo
     };
 
     public static string Label(RecordType type) => type switch
@@ -21,6 +21,7 @@ public static class ExplorerRecordTypes
         RecordType.Variation => "Variation Orders",
         RecordType.WorkOrder => "Work Orders",
         RecordType.BidPackageInvite => "Bid Package Invites",
+        RecordType.Defect => "Defects",
         RecordType.Lad => "LADs claims",
         RecordType.Todo => "To-do items",
         _ => type.ToString()
@@ -33,6 +34,7 @@ public static class ExplorerRecordTypes
         RecordType.Variation or RecordType.VariationQuote => $"/projects/{record.ProjectId}/variations/{record.RecordId}",
         RecordType.BidPackageInvite => $"/projects/{record.ProjectId}/bid-package-invites/{record.RecordId}",
         RecordType.WorkOrder => $"/projects/{record.ProjectId}/work-orders",
+        RecordType.Defect => $"/projects/{record.ProjectId}/defects",
         RecordType.Scheduling or RecordType.Lad => $"/projects/{record.ProjectId}/programme",
         RecordType.Todo => string.IsNullOrEmpty(record.ProjectId) ? "/todos" : $"/projects/{record.ProjectId}/todos",
         _ => null

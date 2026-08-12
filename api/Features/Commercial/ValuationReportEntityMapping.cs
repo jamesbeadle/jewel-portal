@@ -38,7 +38,8 @@ internal static class ValuationReportEntityMapping
             entity.RetentionPercent, entity.RetentionHeld,
             entity.RetentionReleasePercent, entity.RetentionReleased,
             entity.CertifiedToDate, entity.PaymentDueExVat,
-            entity.DepositPercent, entity.DepositReleased);
+            entity.DepositPercent, entity.DepositReleased,
+            entity.Number);
 
     public static ValuationReportSnapshotLine ToModel(this ValuationReportSnapshotLineEntity entity) =>
         new(entity.ValuationReportSnapshotLineId, entity.ValuationReportSnapshotId,

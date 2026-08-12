@@ -70,6 +70,11 @@ public sealed class ValuationReportSnapshotEntity
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(64)]      public string? ValuationInvoiceId { get; set; }
     [MaxLength(64)]      public string? ValuationClaimId { get; set; }
+    // Per-project sequential number, minted at capture (max + 1). It is the stem of the
+    // snapshot's mailbox tag ("JPMS/VRS-{projectRef}-{Number}") — the association triage
+    // writes — so it is persisted, never derived from register order (a deletion must not
+    // renumber snapshots whose tags are already stamped on emails).
+    public int Number { get; set; }
     [MaxLength(256)]     public string Label { get; set; } = "";
     public DateTimeOffset TakenAt { get; set; }
     public bool IsSuperseded { get; set; }

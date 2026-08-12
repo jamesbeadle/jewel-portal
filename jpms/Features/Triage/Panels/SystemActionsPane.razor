@@ -7,9 +7,10 @@
     - Email-linked creates (Raise Request / RFI, Raise Work Order, Create Bid Package Invite,
       Raise Defect, Create To-do Items): drafted into page-owned staging and raised by Apply
       through the intake commands, so the EMAIL IS TAGGED to the new record.
-    - Staged store calls (RFI transitions, variations, directory contact): each reuses the
-      component or store call its home page uses, snapshotted as a closure at stage time. When
-      the call fires on an EXISTING record (a transition, a variation decision), staging it also
+    - Staged store calls (RFI transitions, variations, to-do completion, directory contact):
+      each reuses the component or store call its home page uses, snapshotted as a closure at
+      stage time. When the call fires on an EXISTING record (a transition, a variation decision,
+      a to-do marked done), staging it also
       stages that record's tag into the page's System Tags picks — actioning a record from an
       email files the email against it, so the record's correspondence shows the email that
       caused the action. Removing the action removes the tag it added (and only that one).
@@ -123,6 +124,9 @@
             case SystemActionKind.CreateTodos:
                 <StageTodosAction TodoRows="TodoRows" TodoAssigneeOptions="@TodoAssigneeOptions"
                                   TodoProjectNote="@TodoProjectNote" OnStagingChanged="OnStagingChanged" />
+                break;
+            case SystemActionKind.CompleteTodo:
+                <StageTodoCompleteAction ProjectId="@ProjectId" OnStaged="StagedAsync" />
                 break;
             case SystemActionKind.AddDirectoryContact:
                 <StageDirectoryContactAction OnStaged="StagedAsync" />

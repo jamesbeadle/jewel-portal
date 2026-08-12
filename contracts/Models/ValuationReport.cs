@@ -128,7 +128,11 @@ public sealed record ValuationReportSnapshot(
     // Cash-up-front deposit as frozen at capture: the claim's deposit % and the cumulative
     // amount released back to the client. Trailing defaults for pre-deposit callers.
     decimal DepositPercent = 0m,
-    decimal DepositReleased = 0m);
+    decimal DepositReleased = 0m,
+    // Per-project sequential number minted at capture — the stem of the snapshot's mailbox tag
+    // ("JPMS/VRS-{projectRef}-{Number}"), which is how a triaged email is associated with the
+    // snapshot. Trailing default keeps the positional constructor stable for older callers.
+    int Number = 0);
 
 // One frozen row of a snapshot: values copied (not referenced) from the live line item and its
 // claim entry at capture time, so later edits/deletions of live data never disturb the snapshot.
