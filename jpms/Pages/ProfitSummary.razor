@@ -55,10 +55,14 @@
     profit to date on Xero figures only (the accountant's call, 2026-08-05 — no forecast
     snapshots):
 
-      Monthly profit      — each month's own profit as a % of that month's invoicing per job
-                            (the accountant's "Current Month % Profit" row, 2026-08-12 — his
-                            Xero P&L format, replacing the margin-movement pp cells the board
-                            found unreadable), with the running % to date as "Position now";
+      Running profit by month — the project-to-date running % at each month end (cumulative
+                            operating profit over cumulative turnover, the accountant's
+                            "Running % Profit" row), with the month's movement in percentage
+                            points as small print beneath (Jeremy's running-balance format,
+                            2026-08-13 — "the trend of the whole project rather than each
+                            month, as spikes and falls will get lost"; the month's own %,
+                            2026-08-12's format, lives on in the hover), and the running %
+                            to date as "Position now";
       Trajectory by job   — the running total of the months' profit £, one mini-chart per
                             job on its own scale against its budgeted-profit band;
       Cumulative position — the two lines the running total is the gap between: cumulative
@@ -69,7 +73,13 @@
     as it does on his Xero P&L, not the −17.9% gross-only figure).
 
     All three report the INVOICED rung of the ladder, so they deliberately sit near, not on,
-    the table's certified figures.
+    the table's certified figures. Jeremy asked whether the two should agree (2026-08-13) —
+    they shouldn't, for two structural reasons the footnotes now spell out: the Xero panels
+    deduct overheads tracked to the site (Woodhouse's −17.9% certified vs −20.7% invoiced is
+    exactly its £7,167 site salaries), and they count what is invoiced, which runs ahead of
+    certification on deposit-led jobs (Ravenswood: ~£104k invoiced vs £60k certified) and
+    behind it where retention is certified but not yet billed. Both panel groups carry a
+    basis tag ("certified basis" / "invoiced basis") so the page answers this itself.
 *@
 
 @if (!sessionReady)
@@ -262,7 +272,7 @@ else
                             <tr class="text-left text-[10px] uppercase tracking-widest text-content-subtle font-semibold border-b border-line">
                                 <th class="px-4 pt-3 pb-2"></th>
                                 <th class="px-4 pt-3 pb-2 border-l border-line" colspan="2">The deal <span class="normal-case tracking-normal font-normal text-content-faint ml-1">contract + variations</span></th>
-                                <th class="px-4 pt-3 pb-2 border-l border-line" colspan="3">Current position <span class="normal-case tracking-normal font-normal text-content-faint ml-1">valuations + Xero</span></th>
+                                <th class="px-4 pt-3 pb-2 border-l border-line" colspan="3">Current position <span class="normal-case tracking-normal font-normal text-content-faint ml-1">valuations + allocated Xero cost · certified basis</span></th>
                                 <th class="px-4 pt-3 pb-2 border-l border-line" colspan="3">To finish <span class="normal-case tracking-normal font-normal text-content-faint ml-1">today → completion</span></th>
                                 <th class="px-4 pt-3 pb-2 border-l border-line" colspan="2">Forecast at completion <span class="normal-case tracking-normal font-normal text-content-faint ml-1">Financials tab</span></th>
                             </tr>
@@ -412,34 +422,41 @@ else
                     <span class="text-content-muted">certified</span> <span class="text-content-faint mx-0.5">→</span>
                     <span class="text-content-muted">invoiced</span> <span class="text-content-faint mx-0.5">→</span>
                     <span class="text-content-muted">paid</span>.
-                    This page reports the <span class="text-content-muted">certified</span> rung;
-                    the Cash Summary reports what has actually been paid.
+                    This table reports the <span class="text-content-muted">certified</span> rung;
+                    the Xero panels below report the <span class="text-content-muted">invoiced</span> rung
+                    and deduct overheads tracked to the site, so a job's % there deliberately sits near, not
+                    on, its Current profit here — salaries tracked to a site pull the Xero figure lower, and
+                    deposits invoiced ahead of certification push it higher. The Cash Summary reports what
+                    has actually been paid.
                 </p>
             }
             </LoadGate>
 
-            @* ── Monthly profit + trajectory + cumulative position — all three panels driven
-               by the SAME stored Xero site P&L months, on Xero figures only (the
-               accountant's call, 2026-08-05 — no forecast snapshots). The grid is his Xero
-               P&L format (2026-08-12): each month's own profit as a % of that month's
-               invoicing, "n/a" where nothing was invoiced, the running % to date as
-               "Position now" — replacing the margin-movement pp cells the board found
-               unreadable. Profit includes overheads tracked to the site, so the figures
+            @* ── Running profit by month + trajectory + cumulative position — all three
+               panels driven by the SAME stored Xero site P&L months, on Xero figures only
+               (the accountant's call, 2026-08-05 — no forecast snapshots). The grid is
+               Jeremy's running-balance format (2026-08-13): each cell's main figure is the
+               project-to-date running % at that month end (the accountant's "Running %
+               Profit"), the small print beneath is the month's movement in percentage
+               points — the trend of the whole job, so one month's spike or fall can't
+               masquerade as the position. The month's own % (the 2026-08-12 format) lives
+               in the hover. Profit includes overheads tracked to the site, so the figures
                reconcile with his P&L exactly. The trajectory is the running total of those
                months' profit £; the cumulative panel shows the two lines that total is the
                gap between. Conditional regions: they appear once the store has answered,
                and the cumulative panel (last) carries the group's loading gate and error
-               states. ── *@
+               states. The panels follow the table's row order (GridProjects) — Jeremy
+               mis-paired rows when the two disagreed (2026-08-13). ── *@
             @if (selectionInitialised && SelectedProjects.Count > 0
-                 && SitePnl.Current is { IsConfigured: true } && MovementFor(SelectedProjects) is { } movement)
+                 && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } movement)
             {
                 <div class="rounded-xl border border-line bg-surface p-5 mt-6">
                     <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        Monthly profit
-                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— each month's profit as % of that month's invoicing · Xero site P&L</span>
+                        Running profit by month
+                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— the whole job's % profit to date at each month end, that month's movement beneath · Xero site P&L, invoiced basis</span>
                     </p>
                     <p class="text-xs text-content-muted mt-1 mb-3">
-                        Scan a column for a bad month, a row for a job that loses money every month, the last column for where the job stands to date.
+                        The main figure is the trend of the whole project; the small print is what the month did to it — spikes and falls live there, so they can't get lost. The last column is where the job stands to date.
                     </p>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm" style="border-collapse:separate;border-spacing:3px">
@@ -450,7 +467,7 @@ else
                                     {
                                         <th class="text-center py-1.5 px-2 whitespace-nowrap">@month.ToString("MMM yy")</th>
                                     }
-                                    <th class="text-center py-1.5 px-2 whitespace-nowrap">6 mo</th>
+                                    <th class="text-center py-1.5 px-2 whitespace-nowrap">6-mo Δ</th>
                                     <th class="text-center py-1.5 px-2 whitespace-nowrap">Position now</th>
                                 </tr>
                             </thead>
@@ -466,26 +483,32 @@ else
                                         {
                                             var cell = row.MonthCells[index];
                                             var cellMonth = movement.Months[index];
+                                            var move = row.MovementsPp[index];
                                             @if (cell.Empty)
                                             {
                                                 <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c">—</td>
                                             }
-                                            else if (cell.Percent is not decimal cellPct)
+                                            else if (cell.Running is not decimal runningLevel)
                                             {
-                                                @* Costs moved but nothing was invoiced — no honest %; the £ is in the hover. *@
+                                                @* Costs have moved but nothing has EVER been invoiced — no honest running %; the £ is in the hover. *@
                                                 <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c"
-                                                    title="@($"{cellMonth:MMM yy} — nothing invoiced · profit {SignedMoneyCompact(cell.Profit)}")">n/a</td>
+                                                    title="@($"{cellMonth:MMM yy} — nothing invoiced to date · profit to date {SignedMoneyCompact(cell.CumProfit)}")">n/a</td>
                                             }
                                             else
                                             {
-                                                <td class="text-center rounded-md py-2.5 px-2 text-xs text-content tabular-nums"
-                                                    style="@MovementCellStyle(cellPct, movement.ShadeMax)"
-                                                    title="@($"{cellMonth:MMM yy} — invoiced {MoneyCompact(cell.Income)} · profit {SignedMoneyCompact(cell.Profit)}")">@PctCell(cellPct)</td>
+                                                @* Main figure = running % to date; small print = the month's movement in pp.
+                                                   The shade follows the MOVEMENT (the month's news), the number carries the level. *@
+                                                <td class="text-center rounded-md py-1.5 px-2 text-xs tabular-nums"
+                                                    style="@(move is decimal shadePp ? MovementCellStyle(shadePp, movement.ShadeMax) : "background:#12151c")"
+                                                    title="@RunningCellHover(cellMonth, cell)">
+                                                    <span class="font-medium @ProfitClass(runningLevel)">@PctCell(runningLevel)</span>
+                                                    <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(move)</span>
+                                                </td>
                                             }
                                         }
-                                        <td class="text-center py-2.5 px-2 text-xs font-semibold tabular-nums @ProfitClass(row.Window.Percent ?? 0m)"
-                                            title="@($"last 6 months — invoiced {MoneyCompact(row.Window.Income)} · profit {SignedMoneyCompact(row.Window.Profit)}")">
-                                            @(row.Window.Percent is decimal windowPct ? PctCell(windowPct) : "—")
+                                        <td class="text-center py-2.5 px-2 text-xs font-semibold tabular-nums @ProfitClass(row.WindowDelta ?? 0m)"
+                                            title="@($"running % now vs 6 months ago · the window itself: invoiced {MoneyCompact(row.Window.Income)} · profit {SignedMoneyCompact(row.Window.Profit)}")">
+                                            @(row.WindowDelta is decimal windowDelta ? SignedPp(windowDelta) : "—")
                                         </td>
                                         <td class="text-center rounded-md py-2 px-3 text-xs font-semibold whitespace-nowrap border border-line bg-surface-raised @ProfitClass(row.RunningPercent ?? 0m)">
                                             @(row.RunningPercent is decimal runningPct ? PctCell(runningPct) : "—")
@@ -504,15 +527,26 @@ else
                                             All jobs with Xero data
                                             <span class="block font-normal text-[9px] text-content-faint">combined margin — total profit over total invoiced</span>
                                         </td>
-                                        @foreach (var total in movement.ColumnTotals)
+                                        @for (var index = 0; index < movement.ColumnTotals.Count; index++)
                                         {
-                                            <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(total.Percent ?? 0m)"
-                                                title="@($"invoiced {MoneyCompact(total.Income)} · profit {SignedMoneyCompact(total.Profit)}")">
-                                                @(total.Percent is decimal totalPct ? PctCell(totalPct) : total.Empty ? "—" : "n/a")
+                                            var total = movement.ColumnTotals[index];
+                                            var totalMove = movement.TotalMovementsPp[index];
+                                            <td class="text-center py-2 px-2 text-xs border-t border-line tabular-nums"
+                                                title="@($"invoiced to date {MoneyCompact(total.CumIncome)} · profit to date {SignedMoneyCompact(total.CumProfit)}")">
+                                                @if (total.Running is decimal totalPct)
+                                                {
+                                                    <span class="@ProfitClass(totalPct)">@PctCell(totalPct)</span>
+                                                    <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(totalMove)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-content-faint">@(total.Empty ? "—" : "n/a")</span>
+                                                }
                                             </td>
                                         }
-                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(movement.TotalWindow.Percent ?? 0m)">
-                                            @(movement.TotalWindow.Percent is decimal totalWindowPct ? PctCell(totalWindowPct) : "—")
+                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(movement.TotalWindowDelta ?? 0m)"
+                                            title="@($"running % now vs 6 months ago · the window itself: invoiced {MoneyCompact(movement.TotalWindow.Income)} · profit {SignedMoneyCompact(movement.TotalWindow.Profit)}")">
+                                            @(movement.TotalWindowDelta is decimal totalWindowDelta ? SignedPp(totalWindowDelta) : "—")
                                         </td>
                                         <td class="text-center py-2.5 px-2 text-xs border-t border-line whitespace-nowrap @ProfitClass(movement.TotalRunningPercent ?? 0m)">
                                             @(movement.TotalRunningPercent is decimal totalRunningPct ? PctCell(totalRunningPct) : "—")
@@ -524,15 +558,23 @@ else
                         </table>
                     </div>
                     <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
-                        Each cell is that month's own profit — income less cost of sales less overheads tracked to the
-                        site, in Xero — as a percentage of that month's invoicing, exactly the accountant's "Current
-                        Month % Profit" row. "Position now" is the running % to date (his "Running % Profit"; the £
-                        beneath it is the profit it is made of), and "6 mo" is the last six months taken together.
-                        "n/a" is a month where costs moved but nothing was invoiced — no honest percentage exists;
-                        hover for the £. "—" is a month with nothing at all. Early months swing wildly by nature — a
-                        £2k invoice against £10k of cost is −400% — so read young jobs by the £ in the hover, not the %.
-                        Cell shade scales with the size of the percentage; every cell keeps its number, so colour never
-                        carries the meaning alone.
+                        Each cell's main figure is the whole job to that month end — cumulative profit (income less
+                        cost of sales less overheads tracked to the site, in Xero) over cumulative invoicing, exactly
+                        the accountant's "Running % Profit" row — so the row reads as the project's trend, and the
+                        last month always agrees with "Position now" (the £ beneath it is the profit it is made of).
+                        The small print is what the month did to that figure, in percentage points; the month's own
+                        profit and % (his "Current Month % Profit") are in the cell's hover. "6-mo Δ" is the running %
+                        now against six months ago — "—" where the job wasn't invoiced back then. "n/a" is a job with
+                        costs but no invoicing at all yet — no honest percentage exists; hover for the £. "—" is a
+                        month before anything happened. Young jobs swing wildly by nature — deposits against little
+                        cost read absurdly high — so read them by the £ in the hover, not the %. Cell shade follows
+                        the month's movement, improving green and worsening red; every cell keeps its numbers, so
+                        colour never carries the meaning alone. These panels report the
+                        <span class="text-content-muted">invoiced</span> rung of the ladder and deduct site-tracked
+                        overheads, so they deliberately sit near, not on, the table's
+                        <span class="text-content-muted">certified</span> figures above — a job with salaries tracked
+                        to its site reads lower here, and one with deposits invoiced ahead of certification reads
+                        higher.
                         @if (movement.Rows.Any(row => row.Stale))
                         {
                             <text>⚠ A job with no movement for six months usually means stalled or unbilled, not that nothing is happening on site. </text>
@@ -644,7 +686,7 @@ else
                         }
                         else
                         {
-                            var cards = CumulativeCardsFor(SelectedProjects);
+                            var cards = CumulativeCardsFor(GridProjects);
 
                             @if (SitePnl.Current.LastSyncedAtUtc is null)
                             {
@@ -773,6 +815,16 @@ else
 
     private List<Project> FailedSelectedProjects =>
         SelectedProjects.Where(project => failedProjects.Contains(project.ProjectId)).ToList();
+
+    // The Xero panels' row order: the SAME order the table is showing — league order by
+    // default, the clicked column when sorted — so a reader can run a finger across the
+    // page (Jeremy paired Coombe Lane's row with By France's when the orders differed,
+    // 2026-08-13). Until the table's figures have landed the work order stands in; the
+    // hand-over doesn't reshuffle mid-read because the whole table region is gated on
+    // TableReady anyway.
+    private List<Project> GridProjects => TableReady
+        ? LoadedRows().Select(entry => entry.Project).ToList()
+        : SelectedProjects;
 
     private bool TableReady =>
         selectionInitialised
@@ -1075,14 +1127,17 @@ else
             warning);
     }
 
-    // ---- Monthly profit + trajectory (same Xero months as the cumulative panel) ---------
-    // The accountant's Xero P&L format (2026-08-12): each cell is that month's OWN profit —
-    // income less cost of sales less site-tracked overheads — as a percentage of that
-    // month's invoicing (his "Current Month % Profit" row), n/a where nothing was invoiced,
-    // and "Position now" is the running % to date (his "Running % Profit"). This replaced
-    // the margin-movement pp cells, which the board read as meaningless. A month with cost
-    // but no invoice has no honest % — the cell says n/a and carries the £ in its hover
-    // rather than printing an exploded figure. The trajectory stays in £ — the running
+    // ---- Running profit by month + trajectory (same Xero months as the cumulative panel) ----
+    // Jeremy's running-balance format (2026-08-13): each cell's MAIN figure is the running %
+    // to date at that month end — cumulative operating profit (income less cost of sales less
+    // site-tracked overheads) over cumulative invoicing, the accountant's "Running % Profit"
+    // row — so the row is the trend of the whole project and the last month equals "Position
+    // now" by construction. The SMALL PRINT is the month's movement in percentage points
+    // (main figure minus the prior month end's), and the month's own profit % (the 2026-08-12
+    // "Current Month % Profit" format this replaced) lives in the hover, so a single month's
+    // spike or fall is visible without being mistakable for the position. A job with cost but
+    // no invoicing ever has no honest running % — the cell says n/a and carries the £ in its
+    // hover rather than printing an exploded figure. The trajectory stays in £ — the running
     // total the cumulative panel's gap shows.
 
     // Money movements within £50 of zero read as no movement (stale detection, trajectory
@@ -1098,10 +1153,22 @@ else
         public bool Empty => Income == 0m && Math.Abs(Profit) < MovementZeroThreshold;
     }
 
+    // The grid's cell: the job to date at a month end. Running is the main figure (null while
+    // nothing has ever been invoiced — no base, no honest percentage: the n/a cell); Empty is
+    // a month end before anything had happened at all (the "—" cell). Own is that month's own
+    // figures, kept for the hover.
+    private sealed record RunningCell(MonthCell Own, decimal CumIncome, decimal CumProfit)
+    {
+        public decimal? Running => CumIncome == 0m ? null : CumProfit / CumIncome * 100m;
+        public bool Empty => CumIncome == 0m && Math.Abs(CumProfit) < MovementZeroThreshold;
+    }
+
     private sealed record MovementRow(
         Project Project,
-        IReadOnlyList<MonthCell> MonthCells,    // the window's months, oldest first
-        MonthCell Window,                       // the six months taken together
+        IReadOnlyList<RunningCell> MonthCells,  // the window's month ends, oldest first
+        IReadOnlyList<decimal?> MovementsPp,    // per month: running % minus the prior month end's (null when either side has no %)
+        MonthCell Window,                       // the six months' own figures taken together (the Δ cell's hover)
+        decimal? WindowDelta,                   // running % now minus six months ago — "6-mo Δ" (null when there was no % back then)
         decimal? RunningPercent,                // running % to date — "Position now"
         decimal PositionMoney,                  // cumulative profit £ (the memo line)
         decimal MoneySixMonthDelta,             // £ over the window — the trajectory's headline
@@ -1110,8 +1177,10 @@ else
     private sealed record MovementModel(
         IReadOnlyList<DateTime> Months,
         IReadOnlyList<MovementRow> Rows,
-        IReadOnlyList<MonthCell> ColumnTotals,  // the combined book, per month
+        IReadOnlyList<RunningCell> ColumnTotals,   // the combined book to date, per month end
+        IReadOnlyList<decimal?> TotalMovementsPp,
         MonthCell TotalWindow,
+        decimal? TotalWindowDelta,
         decimal? TotalRunningPercent,
         decimal TotalPositionMoney,
         IReadOnlyList<Project> Excluded,
@@ -1138,6 +1207,32 @@ else
             new(pnl.Where(inRange).Sum(row => row.Income),
                 pnl.Where(inRange).Sum(ProfitOf));
 
+        // The running cells and their movements for one job (or the combined book): cumulative
+        // through each month end, each month's movement against the prior month end — seeded
+        // from the month BEFORE the window so the first column has an honest movement too, and
+        // the same seed is the 6-mo Δ's baseline (null baseline — nothing invoiced back then —
+        // means no honest Δ, the "—").
+        (List<RunningCell> Cells, List<decimal?> Moves, decimal? WindowDelta) RunningFor(List<XeroSiteMonthlyPnl> pnl, List<MonthCell> ownCells)
+        {
+            var beforeWindow = CellFor(pnl, row => row.Month < months[0]);
+            var baseline = beforeWindow.Income == 0m ? (decimal?)null : beforeWindow.Profit / beforeWindow.Income * 100m;
+
+            var cells = new List<RunningCell>();
+            var moves = new List<decimal?>();
+            var previous = baseline;
+            for (var index = 0; index < months.Count; index++)
+            {
+                var end = months[index].AddMonths(1);
+                var toDate = CellFor(pnl, row => row.Month < end);
+                var cell = new RunningCell(ownCells[index], toDate.Income, toDate.Profit);
+                cells.Add(cell);
+                moves.Add(cell.Running is decimal current && previous is decimal prior ? current - prior : null);
+                previous = cell.Running;
+            }
+            var windowDelta = cells[^1].Running is decimal last && baseline is decimal from ? last - from : (decimal?)null;
+            return (cells, moves, windowDelta);
+        }
+
         var rows = new List<MovementRow>();
         var excluded = new List<Project>();
         var included = new List<List<XeroSiteMonthlyPnl>>();
@@ -1150,21 +1245,24 @@ else
             }
             included.Add(pnl);
 
-            var monthCells = months
+            var ownCells = months
                 .Select(month => CellFor(pnl, row => row.Month.Year == month.Year && row.Month.Month == month.Month))
                 .ToList();
+            var (runningCells, movements, windowDelta) = RunningFor(pnl, ownCells);
             var window = CellFor(pnl, row => row.Month >= months[0]);
             var running = CellFor(pnl, _ => true);
             // Stale needs history: a job whose data only starts inside the window isn't
             // "stalled", it's young — only flag silence on jobs that were already running.
-            var stale = monthCells.All(cell => Math.Abs(cell.Profit) < MovementZeroThreshold
-                                               && Math.Abs(cell.Income) < MovementZeroThreshold)
+            var stale = ownCells.All(cell => Math.Abs(cell.Profit) < MovementZeroThreshold
+                                             && Math.Abs(cell.Income) < MovementZeroThreshold)
                         && pnl.Any(row => row.Month < months[0]);
 
             rows.Add(new MovementRow(
                 project,
-                monthCells,
+                runningCells,
+                movements,
                 window,
+                windowDelta,
                 running.Percent,
                 running.Profit,
                 window.Profit,
@@ -1172,40 +1270,41 @@ else
         }
         if (rows.Count == 0) return null;
 
-        // The portfolio row is the combined book's own % (total profit over total invoiced),
-        // NOT an average of the jobs' percentages — percentages don't add across jobs.
+        // The portfolio row is the combined book's own running % (total profit to date over
+        // total invoiced to date), NOT an average of the jobs' percentages — percentages
+        // don't add across jobs.
         var combined = included.SelectMany(pnl => pnl).ToList();
-        var columnTotals = months
+        var combinedOwn = months
             .Select(month => CellFor(combined, row => row.Month.Year == month.Year && row.Month.Month == month.Month))
             .ToList();
+        var (columnTotals, totalMovements, totalWindowDelta) = RunningFor(combined, combinedOwn);
         var totalWindow = CellFor(combined, row => row.Month >= months[0]);
         var totalRunning = CellFor(combined, _ => true);
 
-        // Shade relative to the biggest percentage, capped at 60% so one wild early-job
-        // month (a small invoice against real cost) can't wash every other cell out.
-        var maxAbs = rows.SelectMany(row => row.MonthCells)
-            .Select(cell => cell.Percent)
-            .Where(percent => percent is not null)
-            .Select(percent => Math.Abs(percent!.Value))
+        // Shade relative to the biggest movement, capped at 20pp so one wild early-job swing
+        // (a first deposit landing on months of cost) can't wash every other cell out.
+        var maxAbs = rows.SelectMany(row => row.MovementsPp)
+            .Where(move => move is not null)
+            .Select(move => Math.Abs(move!.Value))
             .DefaultIfEmpty(0m)
             .Max();
-        var shadeMax = Math.Min(maxAbs, 60m);
+        var shadeMax = Math.Min(maxAbs, 20m);
 
         return new MovementModel(
-            months, rows, columnTotals,
-            totalWindow,
+            months, rows, columnTotals, totalMovements,
+            totalWindow, totalWindowDelta,
             totalRunning.Percent,
             rows.Sum(row => row.PositionMoney),
             excluded, shadeMax);
     }
 
-    /// <summary>The grid's cell shading: alpha scales with the percentage's share of the biggest (capped).</summary>
-    private static string MovementCellStyle(decimal percent, decimal shadeMax)
+    /// <summary>The grid's cell shading: green improving, red worsening, alpha scaling with the movement's share of the biggest (capped).</summary>
+    private static string MovementCellStyle(decimal movementPp, decimal shadeMax)
     {
-        if (shadeMax <= 0m) return "";
-        var alpha = (0.10m + 0.55m * Math.Min(Math.Abs(percent), shadeMax) / shadeMax)
+        if (shadeMax <= 0m) return "background:#12151c";
+        var alpha = (0.10m + 0.55m * Math.Min(Math.Abs(movementPp), shadeMax) / shadeMax)
             .ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
-        return percent < 0m
+        return movementPp < 0m
             ? $"background:rgba(194,85,85,{alpha})"
             : $"background:rgba(46,160,101,{alpha})";
     }
@@ -1213,6 +1312,23 @@ else
     /// <summary>The grid's unit: a percentage with one decimal ("26.5%", "−39.0%"), the accountant's rounding.</summary>
     private static string PctCell(decimal value) =>
         value >= 0m ? $"{value:0.0}%" : $"−{Math.Abs(value):0.0}%";
+
+    /// <summary>A movement in percentage points, one decimal, always signed ("+15.3", "−11.8") — Jeremy's small print.</summary>
+    private static string SignedPp(decimal value) =>
+        value >= 0m ? $"+{value:0.0}" : $"−{Math.Abs(value):0.0}";
+
+    /// <summary>The small-print line: the movement, or "—" for no meaningful movement (or no prior % to move from).</summary>
+    private static string MovementPrint(decimal? movementPp) =>
+        movementPp is decimal move && Math.Abs(move) >= 0.05m ? SignedPp(move) : "—";
+
+    /// <summary>The running cell's hover: the position to date, then the month's own figures — the old grid's cell, preserved.</summary>
+    private static string RunningCellHover(DateTime month, RunningCell cell)
+    {
+        var own = cell.Own.Percent is decimal ownPct
+            ? $"this month: invoiced {MoneyCompact(cell.Own.Income)} · profit {SignedMoneyCompact(cell.Own.Profit)} ({PctCell(ownPct)})"
+            : $"this month: nothing invoiced · profit {SignedMoneyCompact(cell.Own.Profit)}";
+        return $"{month:MMM yy} — to date: invoiced {MoneyCompact(cell.CumIncome)} · profit {SignedMoneyCompact(cell.CumProfit)} · {own}";
+    }
 
     /// <summary>Signed compact £ for the grid's hovers ("+£8.1k", "−£4.8k").</summary>
     private static string SignedMoneyCompact(decimal value) =>
