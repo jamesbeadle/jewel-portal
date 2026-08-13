@@ -47,13 +47,15 @@
     movement = Forecast Profit, because Cost movement is defined as Initial Contract Costs −
     Forecasted Cost of Sales. The project filter defaults to live jobs and offers every project.
 
-    Under the table sit the three panels from the accountant's combined mock (2026-08-04/05,
+    Around the table sit the three panels from the accountant's combined mock (2026-08-04/05,
     replacing the reconstructed margin-% lines, which sawtoothed because certification
     arrives in lumps), ALL driven by the same stored Xero site P&L months (the profit & loss
     report filtered by each project's Sites tracking option, stored monthly by
     SyncXeroSitePnl — nightly worker + the cumulative panel's Refresh button), cumulative
     profit to date on Xero figures only (the accountant's call, 2026-08-05 — no forecast
-    snapshots):
+    snapshots). The running grid LEADS the page — above the summary strip, bridge and table
+    (Jeremy, 2026-08-13 pm: "an easy one stop shop for what Nigel wants to see as a trend
+    for the projects", so the trend comes first); the other two sit under the table:
 
       Running profit by month — the project-to-date running % at each month end (cumulative
                             operating profit over cumulative turnover, the accountant's
@@ -131,6 +133,160 @@ else
                                      Disabled="@(!TableReady || SelectedProjects.Count == 0 || FailedSelectedProjects.Count > 0)"
                                      BuildWorkbook="BuildExportWorkbook" />
             </div>
+
+            @* ── Running profit by month — FIRST on the page (Jeremy, 2026-08-13 pm: "an easy
+               one stop shop for what Nigel wants to see as a trend for the projects, and it
+               is live", so the trend leads and the deal/certified table follows). Jeremy's
+               running-balance format (2026-08-13): each cell's main figure is the
+               project-to-date running % at that month end (the accountant's "Running %
+               Profit"), the small print beneath is the month's movement in percentage
+               points — the trend of the whole job, so one month's spike or fall can't
+               masquerade as the position. The month's own % (the 2026-08-12 format) lives
+               in the hover. Profit includes overheads tracked to the site, so the figures
+               reconcile with his P&L exactly — Xero data only, no forecast snapshots (the
+               accountant's call, 2026-08-05). Rows follow the table's order (GridProjects)
+               — Jeremy mis-paired rows when the two disagreed (2026-08-13). A conditional
+               region: it appears once the Xero store has answered; the cumulative panel at
+               the bottom carries the group's loading gate and error states. ── *@
+            @if (selectionInitialised && SelectedProjects.Count > 0
+                 && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } movement)
+            {
+                <div class="rounded-xl border border-line bg-surface p-5 mb-6">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        Running profit by month
+                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— the whole job's % profit to date at each month end, that month's movement beneath · Xero site P&L, invoiced basis</span>
+                    </p>
+                    <p class="text-xs text-content-muted mt-1 mb-3">
+                        The main figure is the trend of the whole project; the small print is what the month did to it — spikes and falls live there, so they can't get lost. The last column is where the job stands to date.
+                    </p>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm" style="border-collapse:separate;border-spacing:3px">
+                            <thead>
+                                <tr class="text-[10px] uppercase tracking-wider text-content-subtle font-medium">
+                                    <th class="text-left py-1.5 px-2">Project</th>
+                                    @foreach (var month in movement.Months)
+                                    {
+                                        <th class="text-center py-1.5 px-2 whitespace-nowrap">@month.ToString("MMM yy")</th>
+                                    }
+                                    <th class="text-center py-1.5 px-2 whitespace-nowrap">6-mo Δ</th>
+                                    <th class="text-center py-1.5 px-2 whitespace-nowrap">Position now</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in movement.Rows)
+                                {
+                                    <tr>
+                                        <td class="text-left whitespace-nowrap py-2 pr-3">
+                                            <span class="text-content">@row.Project.Name</span>
+                                            <span class="block font-mono text-[9px] text-content-faint">@row.Project.Reference</span>
+                                        </td>
+                                        @for (var index = 0; index < row.MonthCells.Count; index++)
+                                        {
+                                            var cell = row.MonthCells[index];
+                                            var cellMonth = movement.Months[index];
+                                            var move = row.MovementsPp[index];
+                                            @if (cell.Empty)
+                                            {
+                                                <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c">—</td>
+                                            }
+                                            else if (cell.Running is not decimal runningLevel)
+                                            {
+                                                @* Costs have moved but nothing has EVER been invoiced — no honest running %; the £ is in the hover. *@
+                                                <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c"
+                                                    title="@($"{cellMonth:MMM yy} — nothing invoiced to date · profit to date {SignedMoneyCompact(cell.CumProfit)}")">n/a</td>
+                                            }
+                                            else
+                                            {
+                                                @* Main figure = running % to date; small print = the month's movement in pp.
+                                                   The shade follows the MOVEMENT (the month's news), the number carries the level. *@
+                                                <td class="text-center rounded-md py-1.5 px-2 text-xs tabular-nums"
+                                                    style="@(move is decimal shadePp ? MovementCellStyle(shadePp, movement.ShadeMax) : "background:#12151c")"
+                                                    title="@RunningCellHover(cellMonth, cell)">
+                                                    <span class="font-medium @ProfitClass(runningLevel)">@PctCell(runningLevel)</span>
+                                                    <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(move)</span>
+                                                </td>
+                                            }
+                                        }
+                                        <td class="text-center py-2.5 px-2 text-xs font-semibold tabular-nums @ProfitClass(row.WindowDelta ?? 0m)"
+                                            title="@($"running % now vs 6 months ago · the window itself: invoiced {MoneyCompact(row.Window.Income)} · profit {SignedMoneyCompact(row.Window.Profit)}")">
+                                            @(row.WindowDelta is decimal windowDelta ? SignedPp(windowDelta) : "—")
+                                        </td>
+                                        <td class="text-center rounded-md py-2 px-3 text-xs font-semibold whitespace-nowrap border border-line bg-surface-raised @ProfitClass(row.RunningPercent ?? 0m)">
+                                            @(row.RunningPercent is decimal runningPct ? PctCell(runningPct) : "—")
+                                            <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(row.PositionMoney)</span>
+                                            @if (row.Stale)
+                                            {
+                                                <span class="block font-normal text-[10px] text-amber-400 mt-0.5">⚠ no movement 6 mo</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                                @if (movement.Rows.Count > 1)
+                                {
+                                    <tr class="font-semibold">
+                                        <td class="text-left py-2.5 pr-3 border-t border-line text-content">
+                                            All jobs with Xero data
+                                            <span class="block font-normal text-[9px] text-content-faint">combined margin — total profit over total invoiced</span>
+                                        </td>
+                                        @for (var index = 0; index < movement.ColumnTotals.Count; index++)
+                                        {
+                                            var total = movement.ColumnTotals[index];
+                                            var totalMove = movement.TotalMovementsPp[index];
+                                            <td class="text-center py-2 px-2 text-xs border-t border-line tabular-nums"
+                                                title="@($"invoiced to date {MoneyCompact(total.CumIncome)} · profit to date {SignedMoneyCompact(total.CumProfit)}")">
+                                                @if (total.Running is decimal totalPct)
+                                                {
+                                                    <span class="@ProfitClass(totalPct)">@PctCell(totalPct)</span>
+                                                    <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(totalMove)</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-content-faint">@(total.Empty ? "—" : "n/a")</span>
+                                                }
+                                            </td>
+                                        }
+                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(movement.TotalWindowDelta ?? 0m)"
+                                            title="@($"running % now vs 6 months ago · the window itself: invoiced {MoneyCompact(movement.TotalWindow.Income)} · profit {SignedMoneyCompact(movement.TotalWindow.Profit)}")">
+                                            @(movement.TotalWindowDelta is decimal totalWindowDelta ? SignedPp(totalWindowDelta) : "—")
+                                        </td>
+                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line whitespace-nowrap @ProfitClass(movement.TotalRunningPercent ?? 0m)">
+                                            @(movement.TotalRunningPercent is decimal totalRunningPct ? PctCell(totalRunningPct) : "—")
+                                            <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(movement.TotalPositionMoney)</span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
+                        Each cell's main figure is the whole job to that month end — cumulative profit (income less
+                        cost of sales less overheads tracked to the site, in Xero) over cumulative invoicing, exactly
+                        the accountant's "Running % Profit" row — so the row reads as the project's trend, and the
+                        last month always agrees with "Position now" (the £ beneath it is the profit it is made of).
+                        The small print is what the month did to that figure, in percentage points; the month's own
+                        profit and % (his "Current Month % Profit") are in the cell's hover. "6-mo Δ" is the running %
+                        now against six months ago — "—" where the job wasn't invoiced back then. "n/a" is a job with
+                        costs but no invoicing at all yet — no honest percentage exists; hover for the £. "—" is a
+                        month before anything happened. Young jobs swing wildly by nature — deposits against little
+                        cost read absurdly high — so read them by the £ in the hover, not the %. Cell shade follows
+                        the month's movement, improving green and worsening red; every cell keeps its numbers, so
+                        colour never carries the meaning alone. This grid reports the
+                        <span class="text-content-muted">invoiced</span> rung of the ladder and deducts site-tracked
+                        overheads, so its figures deliberately sit near, not on, the
+                        <span class="text-content-muted">certified</span> figures in the table below — a job with
+                        salaries tracked to its site reads lower here, and one with deposits invoiced ahead of
+                        certification reads higher.
+                        @if (movement.Rows.Any(row => row.Stale))
+                        {
+                            <text>⚠ A job with no movement for six months usually means stalled or unbilled, not that nothing is happening on site. </text>
+                        }
+                        @if (movement.Excluded.Count > 0)
+                        {
+                            <text>@string.Join(", ", movement.Excluded.Select(project => project.Name)) @(movement.Excluded.Count == 1 ? "has" : "have") no Xero site data yet — see the cards below.</text>
+                        }
+                    </p>
+                </div>
+            }
 
             @* ── Summary strip. Stat-tile pattern (the loading-states convention): each tile keeps
                its label and pulses until every selected project has landed, because every figure
@@ -423,169 +579,22 @@ else
                     <span class="text-content-muted">invoiced</span> <span class="text-content-faint mx-0.5">→</span>
                     <span class="text-content-muted">paid</span>.
                     This table reports the <span class="text-content-muted">certified</span> rung;
-                    the Xero panels below report the <span class="text-content-muted">invoiced</span> rung
-                    and deduct overheads tracked to the site, so a job's % there deliberately sits near, not
-                    on, its Current profit here — salaries tracked to a site pull the Xero figure lower, and
-                    deposits invoiced ahead of certification push it higher. The Cash Summary reports what
-                    has actually been paid.
+                    the Xero panels — the running grid at the top of the page, the charts below — report
+                    the <span class="text-content-muted">invoiced</span> rung and deduct overheads tracked
+                    to the site, so a job's % there deliberately sits near, not on, its Current profit
+                    here — salaries tracked to a site pull the Xero figure lower, and deposits invoiced
+                    ahead of certification push it higher. The Cash Summary reports what has actually
+                    been paid.
                 </p>
             }
             </LoadGate>
 
-            @* ── Running profit by month + trajectory + cumulative position — all three
-               panels driven by the SAME stored Xero site P&L months, on Xero figures only
-               (the accountant's call, 2026-08-05 — no forecast snapshots). The grid is
-               Jeremy's running-balance format (2026-08-13): each cell's main figure is the
-               project-to-date running % at that month end (the accountant's "Running %
-               Profit"), the small print beneath is the month's movement in percentage
-               points — the trend of the whole job, so one month's spike or fall can't
-               masquerade as the position. The month's own % (the 2026-08-12 format) lives
-               in the hover. Profit includes overheads tracked to the site, so the figures
-               reconcile with his P&L exactly. The trajectory is the running total of those
-               months' profit £; the cumulative panel shows the two lines that total is the
-               gap between. Conditional regions: they appear once the store has answered,
-               and the cumulative panel (last) carries the group's loading gate and error
-               states. The panels follow the table's row order (GridProjects) — Jeremy
-               mis-paired rows when the two disagreed (2026-08-13). ── *@
+            @* ── Trajectory by job — the running total in £ of the same Xero months the
+               grid at the top of the page shows in %, one mini-chart per job against its
+               budgeted-profit band. Same model, same row order (GridProjects). ── *@
             @if (selectionInitialised && SelectedProjects.Count > 0
-                 && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } movement)
+                 && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } trend)
             {
-                <div class="rounded-xl border border-line bg-surface p-5 mt-6">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        Running profit by month
-                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— the whole job's % profit to date at each month end, that month's movement beneath · Xero site P&L, invoiced basis</span>
-                    </p>
-                    <p class="text-xs text-content-muted mt-1 mb-3">
-                        The main figure is the trend of the whole project; the small print is what the month did to it — spikes and falls live there, so they can't get lost. The last column is where the job stands to date.
-                    </p>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-sm" style="border-collapse:separate;border-spacing:3px">
-                            <thead>
-                                <tr class="text-[10px] uppercase tracking-wider text-content-subtle font-medium">
-                                    <th class="text-left py-1.5 px-2">Project</th>
-                                    @foreach (var month in movement.Months)
-                                    {
-                                        <th class="text-center py-1.5 px-2 whitespace-nowrap">@month.ToString("MMM yy")</th>
-                                    }
-                                    <th class="text-center py-1.5 px-2 whitespace-nowrap">6-mo Δ</th>
-                                    <th class="text-center py-1.5 px-2 whitespace-nowrap">Position now</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var row in movement.Rows)
-                                {
-                                    <tr>
-                                        <td class="text-left whitespace-nowrap py-2 pr-3">
-                                            <span class="text-content">@row.Project.Name</span>
-                                            <span class="block font-mono text-[9px] text-content-faint">@row.Project.Reference</span>
-                                        </td>
-                                        @for (var index = 0; index < row.MonthCells.Count; index++)
-                                        {
-                                            var cell = row.MonthCells[index];
-                                            var cellMonth = movement.Months[index];
-                                            var move = row.MovementsPp[index];
-                                            @if (cell.Empty)
-                                            {
-                                                <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c">—</td>
-                                            }
-                                            else if (cell.Running is not decimal runningLevel)
-                                            {
-                                                @* Costs have moved but nothing has EVER been invoiced — no honest running %; the £ is in the hover. *@
-                                                <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c"
-                                                    title="@($"{cellMonth:MMM yy} — nothing invoiced to date · profit to date {SignedMoneyCompact(cell.CumProfit)}")">n/a</td>
-                                            }
-                                            else
-                                            {
-                                                @* Main figure = running % to date; small print = the month's movement in pp.
-                                                   The shade follows the MOVEMENT (the month's news), the number carries the level. *@
-                                                <td class="text-center rounded-md py-1.5 px-2 text-xs tabular-nums"
-                                                    style="@(move is decimal shadePp ? MovementCellStyle(shadePp, movement.ShadeMax) : "background:#12151c")"
-                                                    title="@RunningCellHover(cellMonth, cell)">
-                                                    <span class="font-medium @ProfitClass(runningLevel)">@PctCell(runningLevel)</span>
-                                                    <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(move)</span>
-                                                </td>
-                                            }
-                                        }
-                                        <td class="text-center py-2.5 px-2 text-xs font-semibold tabular-nums @ProfitClass(row.WindowDelta ?? 0m)"
-                                            title="@($"running % now vs 6 months ago · the window itself: invoiced {MoneyCompact(row.Window.Income)} · profit {SignedMoneyCompact(row.Window.Profit)}")">
-                                            @(row.WindowDelta is decimal windowDelta ? SignedPp(windowDelta) : "—")
-                                        </td>
-                                        <td class="text-center rounded-md py-2 px-3 text-xs font-semibold whitespace-nowrap border border-line bg-surface-raised @ProfitClass(row.RunningPercent ?? 0m)">
-                                            @(row.RunningPercent is decimal runningPct ? PctCell(runningPct) : "—")
-                                            <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(row.PositionMoney)</span>
-                                            @if (row.Stale)
-                                            {
-                                                <span class="block font-normal text-[10px] text-amber-400 mt-0.5">⚠ no movement 6 mo</span>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                                @if (movement.Rows.Count > 1)
-                                {
-                                    <tr class="font-semibold">
-                                        <td class="text-left py-2.5 pr-3 border-t border-line text-content">
-                                            All jobs with Xero data
-                                            <span class="block font-normal text-[9px] text-content-faint">combined margin — total profit over total invoiced</span>
-                                        </td>
-                                        @for (var index = 0; index < movement.ColumnTotals.Count; index++)
-                                        {
-                                            var total = movement.ColumnTotals[index];
-                                            var totalMove = movement.TotalMovementsPp[index];
-                                            <td class="text-center py-2 px-2 text-xs border-t border-line tabular-nums"
-                                                title="@($"invoiced to date {MoneyCompact(total.CumIncome)} · profit to date {SignedMoneyCompact(total.CumProfit)}")">
-                                                @if (total.Running is decimal totalPct)
-                                                {
-                                                    <span class="@ProfitClass(totalPct)">@PctCell(totalPct)</span>
-                                                    <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(totalMove)</span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-content-faint">@(total.Empty ? "—" : "n/a")</span>
-                                                }
-                                            </td>
-                                        }
-                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line tabular-nums @ProfitClass(movement.TotalWindowDelta ?? 0m)"
-                                            title="@($"running % now vs 6 months ago · the window itself: invoiced {MoneyCompact(movement.TotalWindow.Income)} · profit {SignedMoneyCompact(movement.TotalWindow.Profit)}")">
-                                            @(movement.TotalWindowDelta is decimal totalWindowDelta ? SignedPp(totalWindowDelta) : "—")
-                                        </td>
-                                        <td class="text-center py-2.5 px-2 text-xs border-t border-line whitespace-nowrap @ProfitClass(movement.TotalRunningPercent ?? 0m)">
-                                            @(movement.TotalRunningPercent is decimal totalRunningPct ? PctCell(totalRunningPct) : "—")
-                                            <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(movement.TotalPositionMoney)</span>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
-                        Each cell's main figure is the whole job to that month end — cumulative profit (income less
-                        cost of sales less overheads tracked to the site, in Xero) over cumulative invoicing, exactly
-                        the accountant's "Running % Profit" row — so the row reads as the project's trend, and the
-                        last month always agrees with "Position now" (the £ beneath it is the profit it is made of).
-                        The small print is what the month did to that figure, in percentage points; the month's own
-                        profit and % (his "Current Month % Profit") are in the cell's hover. "6-mo Δ" is the running %
-                        now against six months ago — "—" where the job wasn't invoiced back then. "n/a" is a job with
-                        costs but no invoicing at all yet — no honest percentage exists; hover for the £. "—" is a
-                        month before anything happened. Young jobs swing wildly by nature — deposits against little
-                        cost read absurdly high — so read them by the £ in the hover, not the %. Cell shade follows
-                        the month's movement, improving green and worsening red; every cell keeps its numbers, so
-                        colour never carries the meaning alone. These panels report the
-                        <span class="text-content-muted">invoiced</span> rung of the ladder and deduct site-tracked
-                        overheads, so they deliberately sit near, not on, the table's
-                        <span class="text-content-muted">certified</span> figures above — a job with salaries tracked
-                        to its site reads lower here, and one with deposits invoiced ahead of certification reads
-                        higher.
-                        @if (movement.Rows.Any(row => row.Stale))
-                        {
-                            <text>⚠ A job with no movement for six months usually means stalled or unbilled, not that nothing is happening on site. </text>
-                        }
-                        @if (movement.Excluded.Count > 0)
-                        {
-                            <text>@string.Join(", ", movement.Excluded.Select(project => project.Name)) @(movement.Excluded.Count == 1 ? "has" : "have") no Xero site data yet — see the cards below.</text>
-                        }
-                    </p>
-                </div>
-
                 <div class="rounded-xl border border-line bg-surface p-5 mt-6">
                     <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                         Trajectory by job
@@ -595,7 +604,7 @@ else
                         One mini-chart per job — shape is comparable, scale is per-job, so one big job can't squash the others flat.
                     </p>
                     <div class="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
-                        @foreach (var card in TrajectoriesFor(movement))
+                        @foreach (var card in TrajectoriesFor(trend))
                         {
                             <div class="rounded-lg border border-line bg-surface-raised px-4 pt-3 pb-2.5">
                                 <div class="flex items-baseline justify-between gap-2">
