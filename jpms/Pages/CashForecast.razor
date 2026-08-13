@@ -3,6 +3,8 @@
 @page "/finance/cash-summary"
 @using Jewel.JPMS.Commercial
 @using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Contracts.Cqrs
+@using Jewel.JPMS.Contracts.Projects
 @using Jewel.JPMS.Contracts.Retention
 @using Jewel.JPMS.Contracts.Xero
 @using Jewel.JPMS.Features.Commercial
@@ -22,6 +24,7 @@
 @inject IXeroCashSummaryStore Cash
 @inject ForecastOverheadsStorage OverheadsStorage
 @inject IQueryClient Queries
+@inject ICommandSender Commands
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -52,6 +55,16 @@
     Figures come from exactly the same sources and arithmetic as each project's Cashflow tab
     (ValuationSummaryFigures, RetentionSchedule, ProjectDrawdown, part-payment-aware unpaid
     bills), so this page and the per-project statement can never disagree.
+
+    The Future valuations row carries the FD's two per-project knobs (2026-08-13 — "France's
+    next valuation won't be till next month… Woodhouse seems to be a lot less than that…
+    Abbott will probably land up being more"), edited inline on its expanded lines: WHEN the
+    next valuation lands (the project's NextExpectedValuationDate) and roughly how much the
+    architect is expected to certify per month (ExpectedMonthlyValuation). With a monthly
+    figure set, the engine claims at that rate until left-to-claim runs out instead of
+    spreading evenly to practical completion — the AMOUNT is still the statement's, only its
+    timing moves, so the tie-back below stays exact. Both are stored on the project (API-gated
+    Director/FD/PM), so the tweak survives reloads and every colleague sees the same forecast.
 *@
 
 @if (!sessionReady)
@@ -764,7 +777,7 @@ else
         new(ForecastCategory.InvoicesOutstanding, "Valuation invoices outstanding",
             "already issued (or awaiting approval) · lands a payment-mechanism lag after issue"),
         new(ForecastCategory.FutureValuations, "Future valuations",
-            "left to claim, spread over remaining valuation months, lagged by payment terms"),
+            "left to claim — spread evenly to practical completion, or claimed at the project's expected £/month where set — lagged by payment terms"),
         new(ForecastCategory.RetentionReleases, "Retention releases",
             "R1 at practical completion · R2 after the defects period")
     };
@@ -836,7 +849,9 @@ else
             new DatedAmount(row.Release2, schedule?.FinalRelease.DueOn),
             row.BillsUnpaid,
             row.WoLeftToInvoice,
-            row.Drawdown);
+            row.Drawdown,
+            // The FD's per-project view of the certifying rate — null keeps the even spread.
+            project.ExpectedMonthlyValuation);
     }
 
     private sealed record ForecastView(
@@ -961,6 +976,25 @@ else
                            title="This project's full statement — the figures this line is spread from">
                             <span class="font-mono text-[10px] text-content-subtle mr-1.5">@project.Reference</span>@project.Name
                         </a>
+                        @if (category == ForecastCategory.FutureValuations)
+                        {
+                            @* The FD's two knobs (2026-08-13), inline like the overheads input —
+                               controls, so never gated. Stored on the project via their own
+                               commands; the API gate (Director/FD/PM) is the authority, and a
+                               refusal lands on the error toast like any failed command. *@
+                            <span class="block mt-1 text-[10px] text-content-faint whitespace-nowrap">
+                                next valuation
+                                <input type="month" value="@(project.NextExpectedValuationDate?.ToString("yyyy-MM"))"
+                                       @onchange="args => OnNextValuationChangedAsync(project, args)"
+                                       class="rounded border border-line-strong bg-surface-field px-1 py-0.5 text-[10px] text-content mx-1" />
+                                · expects
+                                <input type="number" min="0" step="1000" placeholder="even"
+                                       value="@(project.ExpectedMonthlyValuation?.ToString("0"))"
+                                       @onchange="args => OnMonthlyValuationChangedAsync(project, args)"
+                                       class="w-20 rounded border border-line-strong bg-surface-field px-1 py-0.5 text-[10px] text-content mx-1" />
+                                £/month · blank = spread evenly to practical completion
+                            </span>
+                        }
                     </td>
                     @for (var index = 0; index < forecast.Axis.Length; index++)
                     {
@@ -1018,6 +1052,46 @@ else
     {
         overheadsMonthly = decimal.TryParse(args.Value?.ToString(), out var value) && value >= 0m ? value : 0m;
         if (Auth.CurrentUser is { } user) await OverheadsStorage.WriteAsync(user.Email, overheadsMonthly);
+    }
+
+    // ---- The FD's inline forecast assumptions (2026-08-13) --------------------------------
+    // The two knobs behind the Future valuations row: when the next valuation lands, and
+    // roughly how much the architect is expected to certify per month. Each saves through its
+    // own command, then the project list is re-read so BuildForecast picks the stored values
+    // up on the next render — the forecast, the reconciliation check and every other reader
+    // of SelectedProjects see the same project. An empty (or zero) amount clears the view and
+    // returns the project to the even spread.
+
+    private async Task OnNextValuationChangedAsync(Project project, ChangeEventArgs args)
+    {
+        DateTimeOffset? next = DateTime.TryParseExact(
+                args.Value?.ToString(), "yyyy-MM", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var month)
+            ? new DateTimeOffset(month, TimeSpan.Zero)
+            : null;
+        await SaveForecastAssumptionAsync(new SetNextValuationDate(project.ProjectId, next));
+    }
+
+    private async Task OnMonthlyValuationChangedAsync(Project project, ChangeEventArgs args)
+    {
+        decimal? monthly = decimal.TryParse(args.Value?.ToString(), out var value) && value > 0m
+            ? Math.Round(value, 2)
+            : null;
+        await SaveForecastAssumptionAsync(new SetExpectedMonthlyValuation(project.ProjectId, monthly));
+    }
+
+    private async Task SaveForecastAssumptionAsync(ICommand<Project> command)
+    {
+        try
+        {
+            await Commands.SendAsync(command, CancellationToken.None);
+            await Projects.RefreshAsync(CancellationToken.None);
+        }
+        catch
+        {
+            // HttpCommandSender / the read model have already raised the error toast with a
+            // reference; the inputs simply keep showing the last-saved values.
+        }
     }
 
     // What the combined statement's header names — mirroring ProjectMultiSelect's own toggle

@@ -1,5 +1,6 @@
 @using Jewel.JPMS.Contracts.Commercial
 @using Jewel.JPMS.Contracts.RecordLinks
+@using Jewel.JPMS.Features.Commercial
 @using Jewel.JPMS.Features.Triage.Panels
 @using Jewel.JPMS.Services.Excel
 @inject IValuationReportStore Store
@@ -249,66 +250,76 @@ else
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
 
     // Every frozen line plus the summary footer — exactly what the viewer shows, so the workbook
-    // and the screen (and the PDF, rendered from the same lines) always agree.
+    // and the screen (and the PDF, rendered from the same lines) always agree. The workbook is
+    // the shared two-tab shape (branded presentation + flat raw data); each line's "Previous" is
+    // its cumulative claimed less the period increment frozen at capture.
     private ExcelWorkbook? BuildExportWorkbook(bool _)
     {
         if (detail is null) return null;
         var snapshot = detail.Snapshot;
 
-        var workbook = new ExcelWorkbook();
-        var lines = workbook.AddSheet("Valuation report",
-            new ExcelColumn("Section"),
-            new ExcelColumn("Code"),
-            new ExcelColumn("Description", Width: 44),
-            new ExcelColumn("Line type"),
-            new ExcelColumn("Unit"),
-            new ExcelColumn("Qty", ExcelFormat.Number),
-            new ExcelColumn("Rate £", ExcelFormat.Currency),
-            new ExcelColumn("Amount £", ExcelFormat.Currency),
-            new ExcelColumn("% Complete", ExcelFormat.Percent),
-            new ExcelColumn("Claimed £", ExcelFormat.Currency),
-            new ExcelColumn("Period increment £", ExcelFormat.Currency),
-            new ExcelColumn("Comments", Width: 36));
-
+        var exportLines = new List<ValuationExportLine>();
         foreach (var section in Sections)
         {
             foreach (var line in section.Lines)
             {
-                lines.AddRow(
+                exportLines.Add(new ValuationExportLine(
                     section.Title,
                     CodeFor(line),
                     TitleFor(line),
-                    line.LineType.ToString(),
+                    LineTypeLabel(line.LineType),
+                    line.CountsTowardTotals,
                     line.Unit,
                     line.Quantity,
                     line.Rate,
                     line.LineAmount,
-                    line.CountsTowardTotals ? (decimal?)(line.PercentComplete / 100m) : null,
-                    line.CountsTowardTotals ? (decimal?)line.CumulativeClaimed : null,
-                    line.CountsTowardTotals ? (decimal?)line.PeriodIncrement : null,
-                    line.Comments);
+                    line.PercentComplete,
+                    line.CumulativeClaimed - line.PeriodIncrement,
+                    line.PeriodIncrement,
+                    line.CumulativeClaimed,
+                    line.Comments));
             }
         }
 
-        var summary = workbook.AddSheet("Summary",
-            new ExcelColumn("Item", Width: 34),
-            new ExcelColumn("Amount £", ExcelFormat.Currency));
-        summary.AddRow("Snapshot", snapshot.Label);
-        summary.AddRow("Taken", snapshot.TakenAt.ToString("dd MMM yyyy HH:mm", Gb));
-        summary.AddRow("Original contract sum", snapshot.ContractSum);
-        summary.AddRow("Net variations", snapshot.NetVariations);
-        summary.AddRow("Revised contract sum", snapshot.RevisedContractSum);
-        summary.AddRow("Total works complete", snapshot.TotalWorksComplete);
-        summary.AddRow($"Retention held ({Pct(snapshot.RetentionPercent)})", snapshot.RetentionHeld);
-        summary.AddRow($"Retention released ({Pct(snapshot.RetentionReleasePercent)})", snapshot.RetentionReleased);
-        summary.AddRow("Certified to date", snapshot.CertifiedToDate);
+        var periodTotal = detail.Lines
+            .Where(line => line.CountsTowardTotals)
+            .Sum(line => line.PeriodIncrement);
+
+        var summary = new List<ValuationExportSummaryRow>
+        {
+            new("Original contract sum", snapshot.ContractSum),
+            new("Net variations", snapshot.NetVariations),
+            new("Revised contract sum", snapshot.RevisedContractSum, Strong: true),
+            new("Total works complete", snapshot.TotalWorksComplete),
+            new("Works claimed this period", periodTotal),
+            new($"Retention held ({Pct(snapshot.RetentionPercent)})", snapshot.RetentionHeld),
+            new($"Retention released ({Pct(snapshot.RetentionReleasePercent)})", snapshot.RetentionReleased),
+            new("Certified to date", snapshot.CertifiedToDate),
+        };
         if (snapshot.DepositPercent > 0m || snapshot.DepositReleased != 0m)
         {
-            summary.AddRow("Payment due before deposit (ex VAT)", snapshot.PaymentDueExVat + snapshot.DepositReleased);
-            summary.AddRow($"Less deposit released ({Pct(snapshot.DepositPercent)})", snapshot.DepositReleased);
+            summary.Add(new("Payment due before deposit (ex VAT)", snapshot.PaymentDueExVat + snapshot.DepositReleased));
+            summary.Add(new($"Less deposit released ({Pct(snapshot.DepositPercent)})", snapshot.DepositReleased));
         }
-        summary.AddRow("Payment due (ex VAT)", snapshot.PaymentDueExVat);
+        summary.Add(new("Payment due (ex VAT)", snapshot.PaymentDueExVat, Strong: true));
 
-        return workbook;
+        return ValuationReportExportWorkbook.Build(
+            new ValuationExportMeta(
+                snapshot.Label,
+                $"Snapshot taken {snapshot.TakenAt.ToString("dd MMM yyyy HH:mm", Gb)} · immutable record from the JPMS register",
+                IsDraft: false),
+            exportLines,
+            summary);
     }
+
+    // Same wording as the PDF renderer, so the workbook and the statement agree.
+    private static string LineTypeLabel(ValuationLineType type) => type switch
+    {
+        ValuationLineType.Priced => "Priced",
+        ValuationLineType.ProvisionalSum => "Provisional sum",
+        ValuationLineType.Omit => "Omit",
+        ValuationLineType.Declined => "Declined",
+        ValuationLineType.Tbc => "TBC",
+        _ => type.ToString()
+    };
 }

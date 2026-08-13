@@ -13,14 +13,47 @@ namespace Jewel.JPMS.Api.Features.Commercial;
 /// Issued+Paid valuation invoices at this moment. Values are copied, never referenced — later
 /// edits or deletions of live lines must not disturb what was submitted to the client.
 ///
-/// Adds the snapshot and its lines to the change tracker but does NOT save; callers (invoice
-/// raise, submission/issue re-freezes after an amendment, on-demand capture) save in their own
-/// transaction. When the snapshot backs an invoice, any earlier snapshots for the same invoice
-/// are flagged superseded in the same save.
+/// <see cref="CaptureAsync"/> adds the snapshot and its lines to the change tracker but does NOT
+/// save; callers (invoice raise, submission/issue re-freezes after an amendment, on-demand
+/// capture) save in their own transaction. When the snapshot backs an invoice, any earlier
+/// snapshots for the same invoice are flagged superseded in the same save.
+/// <see cref="ComputeAsync"/> is the read-only half: the same maths producing the same entities
+/// without touching the change tracker — the draft (working-copy) PDF renders from it so the
+/// preview and the eventual snapshot can never disagree.
 /// </summary>
 internal static class ValuationReportSnapshotCapture
 {
     public static async Task<ValuationReportSnapshotEntity> CaptureAsync(
+        JpmsContext context,
+        string projectId,
+        string label,
+        string? valuationInvoiceId,
+        CancellationToken cancellationToken)
+    {
+        var (snapshot, lines) = await ComputeAsync(context, projectId, label, valuationInvoiceId, cancellationToken);
+
+        foreach (var line in lines)
+            context.ValuationReportSnapshotLines.Add(line);
+        context.ValuationReportSnapshots.Add(snapshot);
+
+        if (valuationInvoiceId is not null)
+        {
+            var earlier = await context.ValuationReportSnapshots
+                .Where(s => s.ValuationInvoiceId == valuationInvoiceId && !s.IsSuperseded)
+                .ToListAsync(cancellationToken);
+            foreach (var previous in earlier.Where(s => s.ValuationReportSnapshotId != snapshot.ValuationReportSnapshotId))
+                previous.IsSuperseded = true;
+        }
+
+        return snapshot;
+    }
+
+    /// <summary>
+    /// Computes the snapshot a capture WOULD freeze right now — same figures, same line order —
+    /// without adding anything to the change tracker. Nothing here persists: the entities exist
+    /// only to be mapped/rendered (the working-copy PDF) or handed to <see cref="CaptureAsync"/>.
+    /// </summary>
+    public static async Task<(ValuationReportSnapshotEntity Snapshot, List<ValuationReportSnapshotLineEntity> Lines)> ComputeAsync(
         JpmsContext context,
         string projectId,
         string label,
@@ -91,6 +124,7 @@ internal static class ValuationReportSnapshotCapture
             CertifiedToDate = certifiedToDate
         };
 
+        var snapshotLines = new List<ValuationReportSnapshotLineEntity>(lines.Count);
         var totalWorksComplete = 0m;
         // Contract-side works only (variations excluded) — the base the deposit releases against.
         var nonVariationWorksComplete = 0m;
@@ -142,7 +176,7 @@ internal static class ValuationReportSnapshotCapture
                 if (snapshotLine.ElementType != (int)ValuationElementType.Variation)
                     nonVariationWorksComplete += snapshotLine.CumulativeClaimed;
             }
-            context.ValuationReportSnapshotLines.Add(snapshotLine);
+            snapshotLines.Add(snapshotLine);
         }
 
         snapshot.TotalWorksComplete = totalWorksComplete;
@@ -161,17 +195,6 @@ internal static class ValuationReportSnapshotCapture
             totalWorksComplete, snapshot.RetentionHeld, snapshot.RetentionReleased,
             snapshot.DepositReleased, certifiedToDate);
 
-        context.ValuationReportSnapshots.Add(snapshot);
-
-        if (valuationInvoiceId is not null)
-        {
-            var earlier = await context.ValuationReportSnapshots
-                .Where(s => s.ValuationInvoiceId == valuationInvoiceId && !s.IsSuperseded)
-                .ToListAsync(cancellationToken);
-            foreach (var previous in earlier.Where(s => s.ValuationReportSnapshotId != snapshot.ValuationReportSnapshotId))
-                previous.IsSuperseded = true;
-        }
-
-        return snapshot;
+        return (snapshot, snapshotLines);
     }
 }

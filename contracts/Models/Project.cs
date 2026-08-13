@@ -25,4 +25,10 @@ public sealed record Project(
     // stamps it on every allocated line and refuses to run while it's unset.
     string? XeroSiteName = null,
     // When the next valuation is expected. Set manually via SetNextValuationDate; informational.
-    DateTimeOffset? NextExpectedValuationDate = null);
+    DateTimeOffset? NextExpectedValuationDate = null,
+    // The FD's per-project forecast assumption (2026-08-13): roughly how much the architect is
+    // expected to certify per valuation month. Null means "no view" — the Cash Forecast spreads
+    // left-to-claim evenly to practical completion; set, it claims at this rate until the money
+    // runs out. Set via SetExpectedMonthlyValuation (the Cash Forecast page's inline editor);
+    // forecasting only — it never touches valuations or invoices.
+    decimal? ExpectedMonthlyValuation = null);

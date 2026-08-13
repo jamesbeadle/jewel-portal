@@ -54,7 +54,13 @@ public sealed record ProjectForecastInputs(
     // stated on the page); work-order value still to be invoiced; drawdowns still to spend.
     decimal BillsUnpaid,
     decimal WoLeftToInvoice,
-    decimal Drawdown);
+    decimal Drawdown,
+    // The FD's per-project override (2026-08-13): roughly how much the architect is expected
+    // to certify per valuation month. Null → the even spread to practical completion stands;
+    // set → FutureValuations is claimed at this rate until the money runs out, and needs no
+    // practical-completion anchor (the rate itself dates every slice). Trailing optional so
+    // every existing construction site still compiles unchanged.
+    decimal? MonthlyValuationOverride = null);
 
 /// <summary>One category's phased answer: a cell per month of the visible horizon, a Later
 /// bucket for dated flows beyond it, and an Undated bucket for flows with no honest date.
@@ -145,13 +151,21 @@ public static class CashForecastPhasing
             [ForecastCategory.InvoicesOutstanding] =
                 Bucket(inputs.InvoiceReceipts, start, monthCount, undatedAllowed: false),
 
-            // The remainder still to be valued: spread one slice per valuation month from the
-            // next expected valuation to practical completion, each slice received a payment-
-            // mechanism lag after its valuation month.
-            [ForecastCategory.FutureValuations] = SpreadWithLag(
-                inputs.FutureValuations,
-                inputs.FirstValuationMonth is { } first ? MonthOf(first) : start.AddMonths(1),
-                pcMonth, inputs.ReceiptLagDays, monthShift: 0, start, monthCount),
+            // The remainder still to be valued. With no FD view: spread one slice per valuation
+            // month from the next expected valuation to practical completion, each slice
+            // received a payment-mechanism lag after its valuation month. With the FD's
+            // per-project monthly rate set (2026-08-13): claim at that rate from the next
+            // expected valuation until the money runs out — the rate dates every slice, so no
+            // practical-completion anchor is needed and nothing goes Undated.
+            [ForecastCategory.FutureValuations] = inputs.MonthlyValuationOverride is { } monthlyRate && monthlyRate > 0m
+                ? ClaimAtRate(
+                    inputs.FutureValuations,
+                    inputs.FirstValuationMonth is { } firstAtRate ? MonthOf(firstAtRate) : start.AddMonths(1),
+                    monthlyRate, inputs.ReceiptLagDays, start, monthCount)
+                : SpreadWithLag(
+                    inputs.FutureValuations,
+                    inputs.FirstValuationMonth is { } first ? MonthOf(first) : start.AddMonths(1),
+                    pcMonth, inputs.ReceiptLagDays, monthShift: 0, start, monthCount),
 
             [ForecastCategory.RetentionReleases] =
                 Bucket(new[] { inputs.Release1, inputs.Release2 }, start, monthCount, undatedAllowed: true),
@@ -223,6 +237,44 @@ public static class CashForecastPhasing
             var lands = new DateTimeOffset(from.AddMonths(slice + monthShift), TimeSpan.Zero)
                 .AddDays(lagDays);
             dated.Add(new DatedAmount(amount, lands));
+        }
+        return Bucket(dated, start, monthCount, undatedAllowed: false);
+    }
+
+    /// <summary>Claims a total at a fixed monthly rate from <paramref name="fromMonth"/> until it
+    /// is exhausted — full slices of <paramref name="monthlyRate"/>, then one final partial slice,
+    /// each received a payment-mechanism lag after its valuation month. The FD's per-project
+    /// override ("the architect will only certify about £X a month", 2026-08-13). Needs no
+    /// practical-completion anchor: the rate itself dates every slice, so nothing goes Undated
+    /// and the slices always sum exactly to the total. A negative total (invoices already issued
+    /// past left-to-claim) has no rate to claim at — it lands whole in the first valuation month,
+    /// exactly as the even spread would land it, keeping the tie-back to the statement exact.
+    /// The slice count is capped at <see cref="ProbeMonths"/> (a 50-year tail no real job has);
+    /// anything past the cap folds into the final slice rather than dropping.</summary>
+    private static PhasedCategory ClaimAtRate(
+        decimal total, DateTime fromMonth, decimal monthlyRate,
+        int lagDays, DateTime start, int monthCount)
+    {
+        if (total == 0m) return PhasedCategory.Empty(monthCount);
+
+        var from = fromMonth < start ? start : fromMonth;
+        DateTimeOffset LandsOn(int slice) =>
+            new DateTimeOffset(from.AddMonths(slice), TimeSpan.Zero).AddDays(lagDays);
+
+        var dated = new List<DatedAmount>();
+        if (total < 0m)
+        {
+            dated.Add(new DatedAmount(total, LandsOn(0)));
+        }
+        else
+        {
+            var remaining = total;
+            for (var slice = 0; remaining > 0m && slice < ProbeMonths; slice++)
+            {
+                var amount = slice == ProbeMonths - 1 ? remaining : Math.Min(monthlyRate, remaining);
+                remaining -= amount;
+                dated.Add(new DatedAmount(amount, LandsOn(slice)));
+            }
         }
         return Bucket(dated, start, monthCount, undatedAllowed: false);
     }

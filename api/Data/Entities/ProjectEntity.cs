@@ -30,6 +30,12 @@ public sealed class ProjectEntity
     // (date-maths editor: base date plus N days/weeks/months); purely informational.
     public DateTimeOffset? NextExpectedValuationDate { get; set; }
 
+    // The FD's forecast assumption (2026-08-13): roughly how much the architect is expected to
+    // certify per valuation month on this project. Null = no view (the Cash Forecast spreads
+    // left-to-claim evenly to practical completion); set, the forecast claims at this rate until
+    // the money runs out. Edited inline on the Cash Forecast page; forecasting only.
+    public decimal? ExpectedMonthlyValuation { get; set; }
+
     // Site address — Town + Postcode drive the "find local subcontractors" search near the project.
     [MaxLength(256)]     public string AddressLine { get; set; } = "";
     [MaxLength(128)]     public string Town { get; set; } = "";

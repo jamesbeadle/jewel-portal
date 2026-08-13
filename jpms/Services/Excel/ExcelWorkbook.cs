@@ -22,14 +22,88 @@ public enum ExcelFormat
 }
 
 /// <summary>
+/// Named font treatments for presentation cells. Each maps to one concrete font
+/// (size, weight, colour) in the writer — the JewelBB document palette, matching the
+/// branded PDFs (navy band, gold accents, muted greys).
+/// </summary>
+public enum ExcelFont
+{
+    /// <summary>Calibri 11 in the default ink.</summary>
+    Default,
+    /// <summary>Calibri 11 bold.</summary>
+    Bold,
+    /// <summary>Calibri 10 muted grey — secondary facts, comments.</summary>
+    Muted,
+    /// <summary>Calibri 9 muted grey — footnotes and legends.</summary>
+    SmallMuted,
+    /// <summary>Calibri 16 bold white — the report title on the navy band.</summary>
+    Title,
+    /// <summary>Calibri 10 bold gold — subtitles on the navy band.</summary>
+    Gold,
+    /// <summary>Calibri 9 white — small print on the navy band.</summary>
+    BandText,
+    /// <summary>Calibri 11 bold navy — section headings and strong figures.</summary>
+    NavyBold,
+    /// <summary>Calibri 11 negative red — omits and other negative money.</summary>
+    Negative,
+}
+
+/// <summary>Background fill for a presentation cell.</summary>
+public enum ExcelFill
+{
+    None,
+    /// <summary>The JewelBB navy header band.</summary>
+    Navy,
+    /// <summary>Light panel grey — column headers, totals rows, strong summary rows.</summary>
+    Panel,
+    /// <summary>Warm gold tint — lines that moved this period.</summary>
+    Highlight,
+}
+
+/// <summary>Bottom border applied to a presentation cell.</summary>
+public enum ExcelBorder
+{
+    None,
+    /// <summary>Thin grey hairline under data rows.</summary>
+    Hairline,
+    /// <summary>The orange rule under section headings.</summary>
+    Accent,
+}
+
+/// <summary>Horizontal alignment override. Auto leaves Excel's own default (numbers right, text left).</summary>
+public enum ExcelAlign { Auto, Left, Right, Center }
+
+/// <summary>
+/// The full visual treatment of one presentation cell. The writer deduplicates styles, so
+/// reusing the same record instance (or equal values) costs nothing.
+/// </summary>
+public sealed record ExcelCellStyle(
+    ExcelFormat Format = ExcelFormat.General,
+    ExcelFont Font = ExcelFont.Default,
+    ExcelFill Fill = ExcelFill.None,
+    ExcelBorder Border = ExcelBorder.None,
+    ExcelAlign Align = ExcelAlign.Auto,
+    bool WrapText = false);
+
+/// <summary>
+/// One presentation cell: a value plus its style. Mix freely with plain values in a row —
+/// plain values keep taking their column's format, styled cells override everything.
+/// A null value with a style still renders (an empty navy band cell, a filled spacer).
+/// </summary>
+public sealed record ExcelStyledCell(object? Value, ExcelCellStyle Style);
+
+/// <summary>
 /// A column definition for an exported sheet. Width is in Excel character units;
 /// leave null to size automatically from the header and cell contents.
 /// </summary>
 public sealed record ExcelColumn(string Header, ExcelFormat Format = ExcelFormat.General, double? Width = null);
 
 /// <summary>
-/// A single worksheet: a styled header row followed by data rows.
+/// A single worksheet: an optional styled header row followed by data rows.
 /// Row cells are matched to columns by position; nulls render as blank cells.
+/// The presentation flags (header row, autofilter, freeze, gridlines) default to the
+/// classic data-table behaviour; a branded presentation sheet turns them off and
+/// builds its layout from <see cref="ExcelStyledCell"/>s instead.
 /// </summary>
 public sealed class ExcelSheet
 {
@@ -42,6 +116,21 @@ public sealed class ExcelSheet
     public string Name { get; }
     public IReadOnlyList<ExcelColumn> Columns { get; }
     public List<object?[]> Rows { get; } = new();
+
+    /// <summary>Render the bold column-header row (and count it in the autofilter/freeze).</summary>
+    public bool ShowHeaderRow { get; set; } = true;
+    /// <summary>Put an autofilter across the header row. Ignored when the header row is off.</summary>
+    public bool AutoFilter { get; set; } = true;
+    /// <summary>Freeze the header row. Ignored when the header row is off.</summary>
+    public bool FreezeHeaderRow { get; set; } = true;
+    /// <summary>Show worksheet gridlines. Presentation sheets switch them off.</summary>
+    public bool ShowGridLines { get; set; } = true;
+    /// <summary>Print landscape, fitted to one page wide — for presentation sheets an accountant may print.</summary>
+    public bool PrintLandscapeFitToWidth { get; set; }
+
+    /// <summary>A1-style ranges to merge (e.g. "A1:F1"). Content and style come from the top-left cell;
+    /// give the other cells in the range the same fill so the band reads as one block.</summary>
+    public List<string> MergedRanges { get; } = new();
 
     public void AddRow(params object?[] cells) => Rows.Add(cells);
 }

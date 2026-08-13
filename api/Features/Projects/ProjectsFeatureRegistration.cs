@@ -31,6 +31,9 @@ public static class ProjectsFeatureRegistration
         services.AddScoped<ICommandHandler<SetNextValuationDate, Project>, SetNextValuationDateHandler>();
         services.AddScoped<SetNextValuationDateAuthorisation>();
 
+        services.AddScoped<ICommandHandler<SetExpectedMonthlyValuation, Project>, SetExpectedMonthlyValuationHandler>();
+        services.AddScoped<SetExpectedMonthlyValuationAuthorisation>();
+
         // Project contacts — the clients/architects a project's RFIs and requests are issued to.
         services.AddScoped<IQueryHandler<ListProjectContacts, IReadOnlyList<ProjectContact>>, ListProjectContactsHandler>();
         services.AddScoped<ICommandHandler<UpsertProjectContact, ProjectContact>, UpsertProjectContactHandler>();

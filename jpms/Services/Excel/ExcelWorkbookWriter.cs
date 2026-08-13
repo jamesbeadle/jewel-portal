@@ -6,9 +6,11 @@ namespace Jewel.JPMS.Services.Excel;
 
 /// <summary>
 /// Writes an <see cref="ExcelWorkbook"/> as a real .xlsx file (SpreadsheetML in a zip)
-/// with no external dependencies, keeping the WASM payload small. Every sheet gets a
+/// with no external dependencies, keeping the WASM payload small. Data sheets get a
 /// bold frozen header row, an autofilter, sensible column widths, and per-column
-/// number formats (currency, dates, percentages).
+/// number formats; presentation sheets (built from <see cref="ExcelStyledCell"/>s)
+/// additionally get fills, fonts, borders, merges and print setup from a style
+/// registry that grows only with the styles actually used.
 /// </summary>
 public static class ExcelWorkbookWriter
 {
@@ -19,6 +21,11 @@ public static class ExcelWorkbookWriter
             throw new InvalidOperationException("Cannot export a workbook with no sheets.");
         }
 
+        // Sheets render FIRST so the style registry has seen every styled cell by the
+        // time styles.xml is written; entry order inside the zip is irrelevant to Excel.
+        var styles = new StyleRegistry();
+        var sheetXml = workbook.Sheets.Select(sheet => SheetXml(sheet, styles)).ToList();
+
         using var stream = new MemoryStream();
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
@@ -26,11 +33,11 @@ public static class ExcelWorkbookWriter
             AddEntry(zip, "_rels/.rels", RootRelsXml());
             AddEntry(zip, "xl/workbook.xml", WorkbookXml(workbook));
             AddEntry(zip, "xl/_rels/workbook.xml.rels", WorkbookRelsXml(workbook.Sheets.Count));
-            AddEntry(zip, "xl/styles.xml", StylesXml());
+            AddEntry(zip, "xl/styles.xml", styles.ToXml());
 
-            for (var i = 0; i < workbook.Sheets.Count; i++)
+            for (var i = 0; i < sheetXml.Count; i++)
             {
-                AddEntry(zip, $"xl/worksheets/sheet{i + 1}.xml", SheetXml(workbook.Sheets[i]));
+                AddEntry(zip, $"xl/worksheets/sheet{i + 1}.xml", sheetXml[i]);
             }
         }
 
@@ -99,63 +106,247 @@ public static class ExcelWorkbookWriter
         return builder.ToString();
     }
 
-    // Style indexes referenced from SheetXml. Order matters — keep in sync with StylesXml.
-    private const int StyleDefault = 0;
-    private const int StyleHeader = 1;
-    private static int StyleFor(ExcelFormat format) => format switch
-    {
-        ExcelFormat.Integer  => 2,
-        ExcelFormat.Number   => 3,
-        ExcelFormat.Currency => 4,
-        ExcelFormat.Date     => 5,
-        ExcelFormat.DateTime => 6,
-        ExcelFormat.Percent  => 7,
-        _                    => StyleDefault,
-    };
+    // ----- styles ---------------------------------------------------------
 
-    private static string StylesXml() =>
-        """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""" +
-        """<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""" +
-        """<numFmts count="6">""" +
-        """<numFmt numFmtId="164" formatCode="#,##0"/>""" +
-        """<numFmt numFmtId="165" formatCode="#,##0.00"/>""" +
-        """<numFmt numFmtId="166" formatCode="&quot;£&quot;#,##0.00"/>""" +
-        """<numFmt numFmtId="167" formatCode="dd/mm/yyyy"/>""" +
-        """<numFmt numFmtId="168" formatCode="dd/mm/yyyy\ hh:mm"/>""" +
-        """<numFmt numFmtId="169" formatCode="0.0%"/>""" +
-        "</numFmts>" +
-        """<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>""" +
-        """<fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>""" +
-        """<fill><patternFill patternType="solid"><fgColor rgb="FFF2F1EE"/></patternFill></fill></fills>""" +
-        """<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>""" +
-        """<border><left/><right/><top/><bottom style="thin"><color rgb="FFB9B6B0"/></bottom><diagonal/></border></borders>""" +
-        """<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>""" +
-        """<cellXfs count="8">""" +
-        """<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>""" +                                          // 0 default / text
-        """<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/>""" + // 1 header
-        """<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>""" +                   // 2 integer
-        """<xf numFmtId="165" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>""" +                   // 3 number
-        """<xf numFmtId="166" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>""" +                   // 4 currency
-        """<xf numFmtId="167" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>""" +                   // 5 date
-        """<xf numFmtId="168" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>""" +                   // 6 datetime
-        """<xf numFmtId="169" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>""" +                   // 7 percent
-        "</cellXfs>" +
-        """<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>""" +
-        "</styleSheet>";
+    /// <summary>
+    /// Builds styles.xml from the styles the sheets actually reference. The first eight
+    /// cellXfs reproduce the writer's classic fixed indexes (default, header, and the six
+    /// column formats) so plain data sheets keep rendering exactly as before; presentation
+    /// styles are registered on first use and deduplicated by value.
+    /// </summary>
+    private sealed class StyleRegistry
+    {
+        // JewelBB document palette — matches the branded PDF renderers.
+        private const string MutedArgb = "FF606672";
+        private const string NavyArgb = "FF1A1E29";
+        private const string GoldArgb = "FFC09A51";
+        private const string WhiteArgb = "FFFFFFFF";
+        private const string NegativeArgb = "FFB42318";
+        private const string PanelArgb = "FFF3F3F5";
+        private const string HighlightArgb = "FFFBF2E2";
+        private const string LegacyHeaderFillArgb = "FFF2F1EE";
+        private const string HairlineArgb = "FFB9B6B0";
+        private const string AccentArgb = "FFFF8300";
+
+        private sealed record FontSpec(double Size, bool Bold, string? ColorArgb);
+        private sealed record XfKey(int FontId, int FillId, int BorderId, int NumFmtId, ExcelAlign Align, bool WrapText);
+
+        private readonly List<FontSpec> fonts = new();
+        private readonly List<string?> fills = new();     // solid fill ARGB; null = none, "gray125" = the mandatory second fill
+        private readonly List<ExcelBorder> borders = new();
+        private readonly List<XfKey> cellXfs = new();
+        private readonly Dictionary<XfKey, int> xfIndex = new();
+
+        public StyleRegistry()
+        {
+            FontId(new FontSpec(11, false, null));                       // font 0 — default
+            FontId(new FontSpec(11, true, null));                        // font 1 — bold
+            fills.Add(null); fills.Add("gray125");                       // fills 0, 1 — required by the spec
+            borders.Add(ExcelBorder.None);                               // border 0
+
+            // The eight classic cellXfs, in their historical order: 0 default, 1 header,
+            // 2 integer, 3 number, 4 currency, 5 date, 6 datetime, 7 percent.
+            Register(new XfKey(0, 0, 0, 0, ExcelAlign.Auto, false));
+            Register(new XfKey(1, FillId(LegacyHeaderFillArgb), BorderId(ExcelBorder.Hairline), 0, ExcelAlign.Auto, false));
+            Register(new XfKey(0, 0, 0, NumFmtId(ExcelFormat.Integer), ExcelAlign.Auto, false));
+            Register(new XfKey(0, 0, 0, NumFmtId(ExcelFormat.Number), ExcelAlign.Auto, false));
+            Register(new XfKey(0, 0, 0, NumFmtId(ExcelFormat.Currency), ExcelAlign.Auto, false));
+            Register(new XfKey(0, 0, 0, NumFmtId(ExcelFormat.Date), ExcelAlign.Auto, false));
+            Register(new XfKey(0, 0, 0, NumFmtId(ExcelFormat.DateTime), ExcelAlign.Auto, false));
+            Register(new XfKey(0, 0, 0, NumFmtId(ExcelFormat.Percent), ExcelAlign.Auto, false));
+        }
+
+        public int Header => 1;
+
+        public int For(ExcelFormat format) => format switch
+        {
+            ExcelFormat.Integer => 2,
+            ExcelFormat.Number => 3,
+            ExcelFormat.Currency => 4,
+            ExcelFormat.Date => 5,
+            ExcelFormat.DateTime => 6,
+            ExcelFormat.Percent => 7,
+            _ => 0,
+        };
+
+        public int For(ExcelCellStyle style)
+        {
+            var font = style.Font switch
+            {
+                ExcelFont.Bold => new FontSpec(11, true, null),
+                ExcelFont.Muted => new FontSpec(10, false, MutedArgb),
+                ExcelFont.SmallMuted => new FontSpec(9, false, MutedArgb),
+                ExcelFont.Title => new FontSpec(16, true, WhiteArgb),
+                ExcelFont.Gold => new FontSpec(10, true, GoldArgb),
+                ExcelFont.BandText => new FontSpec(9, false, WhiteArgb),
+                ExcelFont.NavyBold => new FontSpec(11, true, NavyArgb),
+                ExcelFont.Negative => new FontSpec(11, false, NegativeArgb),
+                _ => new FontSpec(11, false, null),
+            };
+            var fill = style.Fill switch
+            {
+                ExcelFill.Navy => FillId(NavyArgb),
+                ExcelFill.Panel => FillId(PanelArgb),
+                ExcelFill.Highlight => FillId(HighlightArgb),
+                _ => 0,
+            };
+            return Register(new XfKey(
+                FontId(font), fill, BorderId(style.Border), NumFmtId(style.Format), style.Align, style.WrapText));
+        }
+
+        private int FontId(FontSpec spec)
+        {
+            var index = fonts.IndexOf(spec);
+            if (index >= 0) return index;
+            fonts.Add(spec);
+            return fonts.Count - 1;
+        }
+
+        private int FillId(string argb)
+        {
+            var index = fills.IndexOf(argb);
+            if (index >= 0) return index;
+            fills.Add(argb);
+            return fills.Count - 1;
+        }
+
+        private int BorderId(ExcelBorder border)
+        {
+            var index = borders.IndexOf(border);
+            if (index >= 0) return index;
+            borders.Add(border);
+            return borders.Count - 1;
+        }
+
+        private static int NumFmtId(ExcelFormat format) => format switch
+        {
+            ExcelFormat.Integer => 164,
+            ExcelFormat.Number => 165,
+            ExcelFormat.Currency => 166,
+            ExcelFormat.Date => 167,
+            ExcelFormat.DateTime => 168,
+            ExcelFormat.Percent => 169,
+            _ => 0,
+        };
+
+        private int Register(XfKey key)
+        {
+            if (xfIndex.TryGetValue(key, out var existing)) return existing;
+            cellXfs.Add(key);
+            var index = cellXfs.Count - 1;
+            xfIndex[key] = index;
+            return index;
+        }
+
+        public string ToXml()
+        {
+            var builder = new StringBuilder();
+            builder.Append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""");
+            builder.Append("""<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""");
+
+            builder.Append("""<numFmts count="6">""");
+            builder.Append("""<numFmt numFmtId="164" formatCode="#,##0"/>""");
+            builder.Append("""<numFmt numFmtId="165" formatCode="#,##0.00"/>""");
+            builder.Append("""<numFmt numFmtId="166" formatCode="&quot;£&quot;#,##0.00"/>""");
+            builder.Append("""<numFmt numFmtId="167" formatCode="dd/mm/yyyy"/>""");
+            builder.Append("""<numFmt numFmtId="168" formatCode="dd/mm/yyyy\ hh:mm"/>""");
+            builder.Append("""<numFmt numFmtId="169" formatCode="0.0%"/>""");
+            builder.Append("</numFmts>");
+
+            builder.Append($"""<fonts count="{fonts.Count}">""");
+            foreach (var font in fonts)
+            {
+                builder.Append("<font>");
+                if (font.Bold) builder.Append("<b/>");
+                builder.Append($"""<sz val="{font.Size.ToString("0.##", CultureInfo.InvariantCulture)}"/>""");
+                if (font.ColorArgb is not null) builder.Append($"""<color rgb="{font.ColorArgb}"/>""");
+                builder.Append("""<name val="Calibri"/></font>""");
+            }
+            builder.Append("</fonts>");
+
+            builder.Append($"""<fills count="{fills.Count}">""");
+            foreach (var fill in fills)
+            {
+                builder.Append(fill switch
+                {
+                    null => """<fill><patternFill patternType="none"/></fill>""",
+                    "gray125" => """<fill><patternFill patternType="gray125"/></fill>""",
+                    _ => $"""<fill><patternFill patternType="solid"><fgColor rgb="{fill}"/></patternFill></fill>""",
+                });
+            }
+            builder.Append("</fills>");
+
+            builder.Append($"""<borders count="{borders.Count}">""");
+            foreach (var border in borders)
+            {
+                builder.Append(border switch
+                {
+                    ExcelBorder.Hairline => $"""<border><left/><right/><top/><bottom style="thin"><color rgb="{HairlineArgb}"/></bottom><diagonal/></border>""",
+                    ExcelBorder.Accent => $"""<border><left/><right/><top/><bottom style="medium"><color rgb="{AccentArgb}"/></bottom><diagonal/></border>""",
+                    _ => "<border><left/><right/><top/><bottom/><diagonal/></border>",
+                });
+            }
+            builder.Append("</borders>");
+
+            builder.Append("""<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>""");
+
+            builder.Append($"""<cellXfs count="{cellXfs.Count}">""");
+            foreach (var xf in cellXfs)
+            {
+                builder.Append($"<xf numFmtId=\"{xf.NumFmtId}\" fontId=\"{xf.FontId}\" fillId=\"{xf.FillId}\" borderId=\"{xf.BorderId}\" xfId=\"0\"");
+                if (xf.NumFmtId != 0) builder.Append(" applyNumberFormat=\"1\"");
+                if (xf.FontId != 0) builder.Append(" applyFont=\"1\"");
+                if (xf.FillId != 0) builder.Append(" applyFill=\"1\"");
+                if (xf.BorderId != 0) builder.Append(" applyBorder=\"1\"");
+                if (xf.Align != ExcelAlign.Auto || xf.WrapText)
+                {
+                    builder.Append(" applyAlignment=\"1\"><alignment");
+                    if (xf.Align != ExcelAlign.Auto)
+                        builder.Append($" horizontal=\"{xf.Align.ToString().ToLowerInvariant()}\"");
+                    if (xf.WrapText) builder.Append(" wrapText=\"1\" vertical=\"top\"");
+                    builder.Append("/></xf>");
+                }
+                else
+                {
+                    builder.Append("/>");
+                }
+            }
+            builder.Append("</cellXfs>");
+
+            builder.Append("""<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>""");
+            builder.Append("</styleSheet>");
+            return builder.ToString();
+        }
+    }
 
     // ----- worksheet ------------------------------------------------------
 
-    private static string SheetXml(ExcelSheet sheet)
+    private static string SheetXml(ExcelSheet sheet, StyleRegistry styles)
     {
         var columnCount = sheet.Columns.Count;
         var lastColumn = ColumnLetter(columnCount);
-        var lastRow = sheet.Rows.Count + 1;
+        var headerRows = sheet.ShowHeaderRow ? 1 : 0;
+        var lastRow = sheet.Rows.Count + headerRows;
 
         var builder = new StringBuilder();
         builder.Append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""");
         builder.Append("""<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""");
-        builder.Append($"""<dimension ref="A1:{lastColumn}{lastRow}"/>""");
-        builder.Append("""<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>""");
+        if (sheet.PrintLandscapeFitToWidth)
+        {
+            builder.Append("""<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>""");
+        }
+        builder.Append($"""<dimension ref="A1:{lastColumn}{Math.Max(lastRow, 1)}"/>""");
+
+        builder.Append("<sheetViews><sheetView workbookViewId=\"0\"");
+        if (!sheet.ShowGridLines) builder.Append(" showGridLines=\"0\"");
+        if (sheet.ShowHeaderRow && sheet.FreezeHeaderRow)
+        {
+            builder.Append("""><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>""");
+        }
+        else
+        {
+            builder.Append("/></sheetViews>");
+        }
         builder.Append("""<sheetFormatPr defaultRowHeight="15"/>""");
 
         builder.Append("<cols>");
@@ -168,65 +359,127 @@ public static class ExcelWorkbookWriter
 
         builder.Append("<sheetData>");
 
-        builder.Append("""<row r="1">""");
-        for (var c = 0; c < columnCount; c++)
+        if (sheet.ShowHeaderRow)
         {
-            AppendInlineString(builder, $"{ColumnLetter(c + 1)}1", StyleHeader, sheet.Columns[c].Header);
+            builder.Append("""<row r="1">""");
+            for (var c = 0; c < columnCount; c++)
+            {
+                AppendInlineString(builder, $"{ColumnLetter(c + 1)}1", styles.Header, sheet.Columns[c].Header);
+            }
+            builder.Append("</row>");
         }
-        builder.Append("</row>");
 
         for (var r = 0; r < sheet.Rows.Count; r++)
         {
-            var rowRef = r + 2;
-            builder.Append($"""<row r="{rowRef}">""");
+            var rowRef = r + 1 + headerRows;
             var cells = sheet.Rows[r];
+            var height = EstimateRowHeight(sheet, cells);
+            builder.Append(height is null
+                ? $"""<row r="{rowRef}">"""
+                : $"""<row r="{rowRef}" ht="{height.Value.ToString("0.##", CultureInfo.InvariantCulture)}" customHeight="1">""");
             for (var c = 0; c < columnCount && c < cells.Length; c++)
             {
-                AppendCell(builder, $"{ColumnLetter(c + 1)}{rowRef}", sheet.Columns[c].Format, cells[c]);
+                AppendCell(builder, $"{ColumnLetter(c + 1)}{rowRef}", sheet.Columns[c].Format, cells[c], styles);
             }
             builder.Append("</row>");
         }
 
         builder.Append("</sheetData>");
-        builder.Append($"""<autoFilter ref="A1:{lastColumn}{lastRow}"/>""");
+        if (sheet.ShowHeaderRow && sheet.AutoFilter)
+        {
+            builder.Append($"""<autoFilter ref="A1:{lastColumn}{lastRow}"/>""");
+        }
+        if (sheet.MergedRanges.Count > 0)
+        {
+            builder.Append($"""<mergeCells count="{sheet.MergedRanges.Count}">""");
+            foreach (var range in sheet.MergedRanges)
+            {
+                builder.Append($"""<mergeCell ref="{Escape(range)}"/>""");
+            }
+            builder.Append("</mergeCells>");
+        }
+        if (sheet.PrintLandscapeFitToWidth)
+        {
+            builder.Append("""<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/>""");
+            builder.Append("""<pageSetup orientation="landscape" fitToWidth="1" fitToHeight="0"/>""");
+        }
         builder.Append("</worksheet>");
         return builder.ToString();
     }
 
-    private static void AppendCell(StringBuilder builder, string cellRef, ExcelFormat format, object? value)
+    /// <summary>
+    /// Rows with wrapping presentation cells get an explicit height (Excel does not auto-fit
+    /// wrapped text written by other tools): estimated line count times the default line height.
+    /// </summary>
+    private static double? EstimateRowHeight(ExcelSheet sheet, object?[] cells)
     {
+        double? height = null;
+        for (var c = 0; c < sheet.Columns.Count && c < cells.Length; c++)
+        {
+            if (cells[c] is not ExcelStyledCell { Style.WrapText: true } styled) continue;
+            var text = styled.Value?.ToString() ?? "";
+            if (text.Length == 0) continue;
+            var charsPerLine = Math.Max(8.0, (sheet.Columns[c].Width ?? 10) - 2);
+            var lines = Math.Clamp((int)Math.Ceiling(text.Length / charsPerLine), 1, 12);
+            var estimate = lines * 14.6 + 2;
+            if (height is null || estimate > height) height = estimate;
+        }
+        return height;
+    }
+
+    private static void AppendCell(StringBuilder builder, string cellRef, ExcelFormat columnFormat, object? value, StyleRegistry styles)
+    {
+        if (value is ExcelStyledCell styled)
+        {
+            var styleId = styles.For(styled.Style);
+            // A styled null still renders — that's how band fills and spacer cells exist.
+            if (styled.Value is null)
+            {
+                builder.Append($"""<c r="{cellRef}" s="{styleId}"/>""");
+                return;
+            }
+            AppendValue(builder, cellRef, styleId, styled.Value, styles, styled.Style.Format);
+            return;
+        }
+
         if (value is null)
         {
             return;
         }
 
-        var style = StyleFor(format);
+        AppendValue(builder, cellRef, styles.For(columnFormat), value, styles, columnFormat);
+    }
+
+    private static void AppendValue(StringBuilder builder, string cellRef, int styleId, object value, StyleRegistry styles, ExcelFormat format)
+    {
         switch (value)
         {
             case DateTimeOffset dto:
-                AppendNumber(builder, cellRef, DateStyle(format), dto.DateTime.ToOADate());
+                AppendNumber(builder, cellRef, DateStyle(styleId, format, styles), dto.DateTime.ToOADate());
                 break;
             case DateTime dt:
-                AppendNumber(builder, cellRef, DateStyle(format), dt.ToOADate());
+                AppendNumber(builder, cellRef, DateStyle(styleId, format, styles), dt.ToOADate());
                 break;
             case DateOnly d:
-                AppendNumber(builder, cellRef, DateStyle(format), d.ToDateTime(TimeOnly.MinValue).ToOADate());
+                AppendNumber(builder, cellRef, DateStyle(styleId, format, styles), d.ToDateTime(TimeOnly.MinValue).ToOADate());
                 break;
             case bool b:
-                AppendInlineString(builder, cellRef, style, b ? "Yes" : "No");
+                AppendInlineString(builder, cellRef, styleId, b ? "Yes" : "No");
                 break;
             case decimal or double or float or int or long or short or byte or uint or ulong or ushort or sbyte:
-                AppendNumber(builder, cellRef, style, Convert.ToDouble(value, CultureInfo.InvariantCulture));
+                AppendNumber(builder, cellRef, styleId, Convert.ToDouble(value, CultureInfo.InvariantCulture));
                 break;
             default:
-                AppendInlineString(builder, cellRef, StyleDefault, value.ToString() ?? "");
+                AppendInlineString(builder, cellRef, styleId, value.ToString() ?? "");
                 break;
         }
     }
 
     /// <summary>Dates always take a date style so a mistyped column format still yields a readable cell.</summary>
-    private static int DateStyle(ExcelFormat format) =>
-        format == ExcelFormat.DateTime ? StyleFor(ExcelFormat.DateTime) : StyleFor(ExcelFormat.Date);
+    private static int DateStyle(int styleId, ExcelFormat format, StyleRegistry styles) =>
+        format is ExcelFormat.Date or ExcelFormat.DateTime
+            ? styleId
+            : styles.For(ExcelFormat.Date);
 
     private static void AppendNumber(StringBuilder builder, string cellRef, int style, double value)
     {
@@ -269,6 +522,7 @@ public static class ExcelWorkbookWriter
     private static int CellTextLength(object? value) => value switch
     {
         null => 0,
+        ExcelStyledCell styled => CellTextLength(styled.Value),
         DateTimeOffset or DateTime or DateOnly => 10,
         decimal m => m.ToString("#,##0.00", CultureInfo.InvariantCulture).Length + 1,
         double d => d.ToString("#,##0.00", CultureInfo.InvariantCulture).Length + 1,

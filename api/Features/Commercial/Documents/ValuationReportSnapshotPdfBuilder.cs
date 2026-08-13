@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Documents;
 
@@ -21,6 +22,9 @@ public sealed record ValuationReportSnapshotPdf(
 /// bytes the email command attaches, so what's downloaded and what's sent never diverge. Loads the
 /// frozen detail through the existing query handler and the project header for the document's
 /// identity, then hands both to <see cref="ValuationReportSnapshotRenderer"/>.
+/// <see cref="BuildDraftAsync"/> renders the same statement from the LIVE report instead: the
+/// capture maths compute what a snapshot would freeze right now (nothing is saved), and the
+/// renderer stamps it as a working copy — so the preview and any later snapshot always agree.
 /// </summary>
 public sealed class ValuationReportSnapshotPdfBuilder
 {
@@ -52,6 +56,48 @@ public sealed class ValuationReportSnapshotPdfBuilder
             $"{project.Reference} - Valuation report - {snapshot.Label} - {snapshot.TakenAt:yyyy-MM-dd}.pdf");
 
         return new ValuationReportSnapshotPdf(pdf, fileName, snapshot.ProjectId, project.Name, snapshot);
+    }
+
+    /// <summary>
+    /// The live valuation report as a working-copy PDF: computes the snapshot a capture would
+    /// freeze right now (same maths, same line order — via ComputeAsync, which never touches the
+    /// change tracker, so nothing persists) and renders it with the draft stamps. Labelled with
+    /// the latest claim's period name so the accountant knows which claim they are reading.
+    /// </summary>
+    public async Task<ValuationReportSnapshotPdf> BuildDraftAsync(string projectId, CancellationToken cancellationToken)
+    {
+        var project = await context.Projects.FindAsync(new object[] { projectId }, cancellationToken)
+            ?? throw new InvalidOperationException($"Project {projectId} not found.");
+
+        // "June 2026 — working copy" when the latest claim is named, "Claim 3 — working copy"
+        // otherwise, "Working copy" when the project has never been valued.
+        var claim = await context.ValuationClaims
+            .Where(c => c.ProjectId == projectId)
+            .OrderByDescending(c => c.ClaimNumber)
+            .FirstOrDefaultAsync(cancellationToken);
+        var claimName = claim is null
+            ? null
+            : string.IsNullOrWhiteSpace(claim.Name) ? $"Claim {claim.ClaimNumber}" : claim.Name;
+        var label = claimName is null ? "Working copy" : $"{claimName} — working copy";
+
+        var (snapshotEntity, lineEntities) = await ValuationReportSnapshotCapture.ComputeAsync(
+            context, projectId, label, valuationInvoiceId: null, cancellationToken);
+
+        var detail = new ValuationReportSnapshotDetail(
+            snapshotEntity.ToModel(),
+            lineEntities.Select(line => line.ToModel()).ToList());
+
+        var pdf = ValuationReportSnapshotRenderer.Render(new ValuationReportSnapshotDocument(
+            project.Reference,
+            project.Name,
+            project.ClientName,
+            detail,
+            IsDraft: true));
+
+        var fileName = SanitiseFileName(
+            $"{project.Reference} - Valuation report - Working copy - {DateTimeOffset.UtcNow:yyyy-MM-dd}.pdf");
+
+        return new ValuationReportSnapshotPdf(pdf, fileName, projectId, project.Name, detail.Snapshot);
     }
 
     private static string SanitiseFileName(string fileName)

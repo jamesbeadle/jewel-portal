@@ -10,20 +10,25 @@ namespace Jewel.JPMS.Api.Features.Commercial.Documents;
 
 /// <summary>
 /// Everything the snapshot PDF needs beyond the frozen detail itself: the project identity for
-/// the header. Assembled by <see cref="ValuationReportSnapshotPdfBuilder"/>.
+/// the header, and whether this is a frozen snapshot or a working copy of the live report
+/// (draft exports render the same statement with working-copy stamps instead of the immutable
+/// -record wording). Assembled by <see cref="ValuationReportSnapshotPdfBuilder"/>.
 /// </summary>
 public sealed record ValuationReportSnapshotDocument(
     string ProjectReference,
     string ProjectName,
     string ClientName,
-    ValuationReportSnapshotDetail Detail);
+    ValuationReportSnapshotDetail Detail,
+    bool IsDraft = false);
 
 /// <summary>
 /// Renders one frozen valuation-report snapshot into a branded PDF using PDFsharp/MigraDoc: the
 /// same grouped-bill + summary-footer layout as the on-screen snapshot viewer (Contract Works,
 /// Provisional Sums, Contingency Sums, Variations), fed entirely from the snapshot's copied lines
-/// — live report edits never show here, exactly as on screen. Pure function of the document
-/// model, so the download endpoint and the email attachment render identically.
+/// — live report edits never show here, exactly as on screen. Each line carries the movement
+/// story the accountant traces a claim by: Previous / This period / Claimed, with lines that
+/// moved this period shaded gold. Pure function of the document model, so the download endpoint
+/// and the email attachment render identically.
 /// Follows the JewelBB palette established by <see cref="Progress.Documents.ProgressReportRenderer"/>.
 /// </summary>
 public static class ValuationReportSnapshotRenderer
@@ -38,6 +43,8 @@ public static class ValuationReportSnapshotRenderer
     private static readonly Color Muted = new(0x60, 0x66, 0x72);
     private static readonly Color Ink = new(0x22, 0x26, 0x30);
     private static readonly Color Negative = new(0xB4, 0x23, 0x18);
+    // Warm gold tint behind lines that moved this period — light enough to print.
+    private static readonly Color Highlight = new(0xFB, 0xF2, 0xE2);
 
     private const string FontFamily = "JPMS Sans";
     private static readonly CultureInfo Uk = CultureInfo.GetCultureInfo("en-GB");
@@ -54,7 +61,7 @@ public static class ValuationReportSnapshotRenderer
         var pdf = new Document();
         pdf.Info.Title = $"{document.ProjectName} Valuation Report — {snapshot.Label}".Trim();
         pdf.Info.Author = "Jewel Bespoke Build";
-        pdf.Info.Subject = "Valuation report";
+        pdf.Info.Subject = document.IsDraft ? "Valuation report (working copy)" : "Valuation report";
 
         var normal = pdf.Styles["Normal"]!;
         normal.Font.Name = FontFamily;
@@ -71,15 +78,16 @@ public static class ValuationReportSnapshotRenderer
 
         AddHeaderBand(section, document);
         AddDetailsGrid(section, document);
+        AddMovementLegend(section, document);
 
         AddElementGroup(section, document.Detail, "Contract Works", ValuationElementType.ContractWorks);
         AddElementGroup(section, document.Detail, "Provisional Sums", ValuationElementType.PcSum);
         AddElementGroup(section, document.Detail, "Contingency Sums", ValuationElementType.Contingency);
         AddElementGroup(section, document.Detail, "Variations", ValuationElementType.Variation);
 
-        AddSummary(section, snapshot);
-        AddClosingNote(section, snapshot);
-        AddFooter(section, snapshot);
+        AddSummary(section, document.Detail);
+        AddClosingNote(section, document);
+        AddFooter(section, document);
 
         var renderer = new PdfDocumentRenderer { Document = pdf };
         renderer.RenderDocument();
@@ -132,9 +140,20 @@ public static class ValuationReportSnapshotRenderer
         stamp.Format.Font.Color = White;
         SpaceAfter(stamp, 2);
 
-        var date = row.Cells[1].AddParagraph($"Snapshot taken  {DateTime(snapshot.TakenAt)}");
+        var date = row.Cells[1].AddParagraph(document.IsDraft
+            ? $"Prepared  {DateTime(snapshot.TakenAt)}"
+            : $"Snapshot taken  {DateTime(snapshot.TakenAt)}");
         date.Format.Font.Size = 8;
         date.Format.Font.Color = Gold;
+
+        if (document.IsDraft)
+        {
+            var draft = row.Cells[1].AddParagraph("WORKING COPY — NOT AN ISSUED STATEMENT");
+            draft.Format.Font.Size = 8;
+            draft.Format.Font.Bold = true;
+            draft.Format.Font.Color = Orange;
+            SpaceBefore(draft, 1.5);
+        }
 
         Hairline(section);
     }
@@ -162,7 +181,7 @@ public static class ValuationReportSnapshotRenderer
             "Client", document.ClientName);
         AddGridRow(table,
             "Statement", snapshot.Label,
-            "Snapshot taken", DateTime(snapshot.TakenAt));
+            document.IsDraft ? "Prepared" : "Snapshot taken", DateTime(snapshot.TakenAt));
         AddGridRow(table,
             "Revised contract sum", Money(snapshot.RevisedContractSum),
             "Total works complete", Money(snapshot.TotalWorksComplete));
@@ -171,6 +190,26 @@ public static class ValuationReportSnapshotRenderer
             "Payment due (ex VAT)", Money(snapshot.PaymentDueExVat));
 
         SpaceAfterTable(section);
+    }
+
+    /// <summary>
+    /// One line telling the reader how to trace the claim: what the movement columns mean and
+    /// what the gold shading marks. Sits between the details grid and the first bill section.
+    /// </summary>
+    private static void AddMovementLegend(Section section, ValuationReportSnapshotDocument document)
+    {
+        var legend = section.AddParagraph();
+        legend.Format.Font.Size = 7.5;
+        legend.Format.Font.Color = Muted;
+        legend.AddFormattedText("◆ ", new Font { Color = Orange, Size = 7.5 });
+        legend.AddText("Lines shaded gold moved this period. ");
+        legend.AddFormattedText("Previous", new Font { Bold = true, Size = 7.5, Color = Muted });
+        legend.AddText(" is the cumulative value claimed on the statement before this one, ");
+        legend.AddFormattedText("This period", new Font { Bold = true, Size = 7.5, Color = Muted });
+        legend.AddText(" the movement now being claimed, ");
+        legend.AddFormattedText("Claimed", new Font { Bold = true, Size = 7.5, Color = Muted });
+        legend.AddText(" the cumulative total to date. All figures net of VAT.");
+        SpaceAfter(legend, 1.5);
     }
 
     private static void AddElementGroup(
@@ -188,17 +227,21 @@ public static class ValuationReportSnapshotRenderer
         var table = section.AddTable();
         table.Borders.Color = Hair;
         table.Borders.Width = 0.5;
-        table.AddColumn(Unit.FromCentimeter(1.7));                              // code
-        table.AddColumn(Unit.FromCentimeter(6.0));                              // description
-        var qty = table.AddColumn(Unit.FromCentimeter(1.5));
-        var rate = table.AddColumn(Unit.FromCentimeter(2.1));
-        var amount = table.AddColumn(Unit.FromCentimeter(2.3));
-        var percent = table.AddColumn(Unit.FromCentimeter(1.6));
-        var claimed = table.AddColumn(Unit.FromCentimeter(2.6));
+        table.AddColumn(Unit.FromCentimeter(1.5));                              // code
+        table.AddColumn(Unit.FromCentimeter(4.9));                              // description
+        var qty = table.AddColumn(Unit.FromCentimeter(1.0));
+        var rate = table.AddColumn(Unit.FromCentimeter(1.4));
+        var amount = table.AddColumn(Unit.FromCentimeter(1.9));
+        var percent = table.AddColumn(Unit.FromCentimeter(1.1));
+        var previous = table.AddColumn(Unit.FromCentimeter(1.9));
+        var period = table.AddColumn(Unit.FromCentimeter(2.0));
+        var claimed = table.AddColumn(Unit.FromCentimeter(2.1));
         qty.Format.Alignment = ParagraphAlignment.Right;
         rate.Format.Alignment = ParagraphAlignment.Right;
         amount.Format.Alignment = ParagraphAlignment.Right;
         percent.Format.Alignment = ParagraphAlignment.Right;
+        previous.Format.Alignment = ParagraphAlignment.Right;
+        period.Format.Alignment = ParagraphAlignment.Right;
         claimed.Format.Alignment = ParagraphAlignment.Right;
 
         var header = table.AddRow();
@@ -211,14 +254,21 @@ public static class ValuationReportSnapshotRenderer
         HeaderCell(header.Cells[2], "Qty");
         HeaderCell(header.Cells[3], "Rate");
         HeaderCell(header.Cells[4], "Amount");
-        HeaderCell(header.Cells[5], "% Complete");
-        HeaderCell(header.Cells[6], "Claimed");
+        HeaderCell(header.Cells[5], "%");
+        HeaderCell(header.Cells[6], "Previous");
+        HeaderCell(header.Cells[7], "This period");
+        HeaderCell(header.Cells[8], "Claimed");
 
         foreach (var line in lines)
         {
+            var moved = line.CountsTowardTotals && line.PeriodIncrement != 0m;
+            var previousClaimed = line.CumulativeClaimed - line.PeriodIncrement;
+
             var row = table.AddRow();
             row.TopPadding = Unit.FromMillimeter(1.2);
             row.BottomPadding = Unit.FromMillimeter(1.2);
+            // The gold tint is the accountant's scan line: only rows that moved carry it.
+            if (moved) row.Shading.Color = Highlight;
 
             var code = row.Cells[0].AddParagraph(CodeFor(line));
             code.Format.Font.Size = 8;
@@ -242,27 +292,33 @@ public static class ValuationReportSnapshotRenderer
             }
 
             var qtyCell = row.Cells[2].AddParagraph(Num(line.Quantity));
-            qtyCell.Format.Font.Size = 8.5;
+            qtyCell.Format.Font.Size = 8;
             qtyCell.Format.Font.Color = Muted;
 
             var rateCell = row.Cells[3].AddParagraph(Num(line.Rate));
-            rateCell.Format.Font.Size = 8.5;
+            rateCell.Format.Font.Size = 8;
             rateCell.Format.Font.Color = Muted;
 
             MoneyCell(row.Cells[4], line.LineAmount,
                 colour: line.LineAmount < 0 ? Negative : line.CountsTowardTotals ? null : Muted);
 
             var pct = row.Cells[5].AddParagraph(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—");
-            pct.Format.Font.Size = 8.5;
+            pct.Format.Font.Size = 8;
             pct.Format.Font.Color = Muted;
 
             if (line.CountsTowardTotals)
-                MoneyCell(row.Cells[6], line.CumulativeClaimed);
+            {
+                MoneyCell(row.Cells[6], previousClaimed, colour: Muted);
+                // The figure this statement exists to show — bold on the rows that moved.
+                MoneyCell(row.Cells[7], line.PeriodIncrement, bold: moved,
+                    colour: line.PeriodIncrement < 0 ? Negative : moved ? Navy : Muted);
+                MoneyCell(row.Cells[8], line.CumulativeClaimed);
+            }
             else
             {
-                var dash = row.Cells[6].AddParagraph("—");
-                dash.Format.Font.Size = 8.5;
-                dash.Format.Font.Color = Muted;
+                DashCell(row.Cells[6]);
+                DashCell(row.Cells[7]);
+                DashCell(row.Cells[8]);
             }
         }
 
@@ -276,13 +332,17 @@ public static class ValuationReportSnapshotRenderer
         label.Format.Font.Bold = true;
         label.Format.Font.Color = Navy;
         MoneyCell(totals.Cells[4], counting.Sum(line => line.LineAmount), bold: true);
-        MoneyCell(totals.Cells[6], counting.Sum(line => line.CumulativeClaimed), bold: true);
+        MoneyCell(totals.Cells[6], counting.Sum(line => line.CumulativeClaimed - line.PeriodIncrement), bold: true);
+        MoneyCell(totals.Cells[7], counting.Sum(line => line.PeriodIncrement), bold: true);
+        MoneyCell(totals.Cells[8], counting.Sum(line => line.CumulativeClaimed), bold: true);
 
         SpaceAfterTable(section);
     }
 
-    private static void AddSummary(Section section, ValuationReportSnapshot snapshot)
+    private static void AddSummary(Section section, ValuationReportSnapshotDetail detail)
     {
+        var snapshot = detail.Snapshot;
+
         SectionHeading(section, "Valuation summary");
 
         var table = section.AddTable();
@@ -307,10 +367,17 @@ public static class ValuationReportSnapshotRenderer
                 colour: amount < 0 ? Negative : null);
         }
 
+        // The movement being claimed on this statement — the same total as the per-section
+        // "This period" columns, so the bill and the summary reconcile by inspection.
+        var periodTotal = detail.Lines
+            .Where(line => line.CountsTowardTotals)
+            .Sum(line => line.PeriodIncrement);
+
         SummaryRow("Original contract sum", snapshot.ContractSum);
         SummaryRow("Net variations", snapshot.NetVariations);
         SummaryRow("Revised contract sum", snapshot.RevisedContractSum, strong: true);
         SummaryRow("Total works complete", snapshot.TotalWorksComplete);
+        SummaryRow("Works claimed this period", periodTotal);
         SummaryRow($"Retention held ({Pct(snapshot.RetentionPercent)})", snapshot.RetentionHeld);
         SummaryRow($"Retention released ({Pct(snapshot.RetentionReleasePercent)})", snapshot.RetentionReleased);
         SummaryRow("Certified to date", snapshot.CertifiedToDate);
@@ -327,21 +394,27 @@ public static class ValuationReportSnapshotRenderer
         SpaceAfterTable(section);
     }
 
-    private static void AddClosingNote(Section section, ValuationReportSnapshot snapshot)
+    private static void AddClosingNote(Section section, ValuationReportSnapshotDocument document)
     {
-        var note = section.AddParagraph(
-            "All figures are net of VAT. This statement is a frozen record of the valuation report exactly "
-            + $"as it stood when the snapshot was taken on {Date(snapshot.TakenAt)}; work recorded since is "
-            + "not reflected here. Declined and to-be-confirmed lines are shown for completeness but are not "
-            + "priced into any total. If anything on this statement doesn't match your records, please get "
-            + "in touch so we can reconcile it together.");
+        var snapshot = document.Detail.Snapshot;
+        var note = section.AddParagraph(document.IsDraft
+            ? "All figures are net of VAT. This is a WORKING COPY of the live valuation report as it stood "
+              + $"when prepared on {Date(snapshot.TakenAt)} — figures may change until the claim is locked "
+              + "and a snapshot is taken; nothing here has been issued to anyone. Declined and "
+              + "to-be-confirmed lines are shown for completeness but are not priced into any total."
+            : "All figures are net of VAT. This statement is a frozen record of the valuation report exactly "
+              + $"as it stood when the snapshot was taken on {Date(snapshot.TakenAt)}; work recorded since is "
+              + "not reflected here. Declined and to-be-confirmed lines are shown for completeness but are not "
+              + "priced into any total. If anything on this statement doesn't match your records, please get "
+              + "in touch so we can reconcile it together.");
         note.Format.Font.Size = 8;
         note.Format.Font.Color = Muted;
         SpaceBefore(note, 2);
     }
 
-    private static void AddFooter(Section section, ValuationReportSnapshot snapshot)
+    private static void AddFooter(Section section, ValuationReportSnapshotDocument document)
     {
+        var snapshot = document.Detail.Snapshot;
         var footer = section.Footers.Primary.AddParagraph();
         footer.Format.Borders.Top.Width = 0.75;
         footer.Format.Borders.Top.Color = Orange;
@@ -353,7 +426,9 @@ public static class ValuationReportSnapshotRenderer
         footer.AddFormattedText("    WWW.JEWELBB.CO.UK", new Font { Color = Gold, Bold = true, Size = 7.5 });
         footer.AddTab();
         footer.AddFormattedText(
-            $"Snapshot taken {DateTime(snapshot.TakenAt)} · immutable record from the JPMS register",
+            document.IsDraft
+                ? $"Prepared {DateTime(snapshot.TakenAt)} · working copy of the live report — not an issued statement"
+                : $"Snapshot taken {DateTime(snapshot.TakenAt)} · immutable record from the JPMS register",
             new Font { Color = Muted, Size = 7 });
 
         footer.Format.TabStops.AddTabStop(Unit.FromCentimeter(18.3), TabAlignment.Right);
@@ -412,9 +487,17 @@ public static class ValuationReportSnapshotRenderer
     {
         cell.Format.RightIndent = Unit.FromMillimeter(1.5);
         var p = cell.AddParagraph(Money(amount));
-        p.Format.Font.Size = 8.5;
+        p.Format.Font.Size = 8;
         p.Format.Font.Bold = bold;
         p.Format.Font.Color = colour ?? Ink;
+    }
+
+    private static void DashCell(Cell cell)
+    {
+        cell.Format.RightIndent = Unit.FromMillimeter(1.5);
+        var p = cell.AddParagraph("—");
+        p.Format.Font.Size = 8;
+        p.Format.Font.Color = Muted;
     }
 
     private static void AddGridRow(Table table, string l1, string v1, string l2, string v2)

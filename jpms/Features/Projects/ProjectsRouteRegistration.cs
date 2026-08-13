@@ -45,6 +45,12 @@ public static class ProjectsRouteRegistration
                 "/api/projects/{projectId}/next-valuation-date",
                 command => $"/api/projects/{((SetNextValuationDate)command).ProjectId}/next-valuation-date"));
 
+        commands.Register<SetExpectedMonthlyValuation, Project>(
+            new CommandRoute(
+                "PUT",
+                "/api/projects/{projectId}/expected-monthly-valuation",
+                command => $"/api/projects/{((SetExpectedMonthlyValuation)command).ProjectId}/expected-monthly-valuation"));
+
         // The project's correspondence profile: linked party-contact routing overrides plus the
         // ad-hoc To/CC/BCC recipients (e.g. internal Jewel staff copied on issued documents).
         queries.Register<ListProjectContacts, IReadOnlyList<ProjectContact>>(

@@ -23,13 +23,14 @@ public sealed class CashForecastPhasingTests
         DatedAmount? release2 = null,
         decimal bills = 0m,
         decimal wo = 0m,
-        decimal drawdown = 0m) =>
+        decimal drawdown = 0m,
+        decimal? monthlyOverride = null) =>
         new("p1",
             invoices ?? Array.Empty<DatedAmount>(),
             futureValuations, firstValuation, practicalCompletion, lagDays,
             release1 ?? new DatedAmount(0m, null),
             release2 ?? new DatedAmount(0m, null),
-            bills, wo, drawdown);
+            bills, wo, drawdown, monthlyOverride);
 
     // ---- The invariant -------------------------------------------------------------------
 
@@ -181,6 +182,94 @@ public sealed class CashForecastPhasingTests
         Assert.Equal(33.33m, months[1]);
         Assert.Equal(33.33m, months[2]);
         Assert.Equal(33.34m, months[3]);
+    }
+
+    // ---- The FD's monthly-rate override (2026-08-13) ---------------------------------------
+    // "Woodhouse seems to be a lot less than that … Abbott will probably land up being more."
+    // With ExpectedMonthlyValuation set, future valuations are claimed at that rate from the
+    // next expected valuation until left-to-claim runs out — full slices, then one partial —
+    // rather than spread evenly to practical completion.
+
+    [Fact]
+    public void MonthlyOverride_claimsAtTheRate_thenOnePartialFinalSlice()
+    {
+        // £50k at £20k/month from Sep: 20k Sep, 20k Oct, 10k Nov — no PC date needed.
+        var forecast = CashForecastPhasing.Phase(
+            Inputs(futureValuations: 50_000m,
+                firstValuation: new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero),
+                monthlyOverride: 20_000m),
+            AsOf, monthCount: 6);
+
+        var phased = forecast.Categories[ForecastCategory.FutureValuations];
+        Assert.Equal(0m, phased.Months[0]);          // Aug — nothing before the first valuation
+        Assert.Equal(20_000m, phased.Months[1]);     // Sep
+        Assert.Equal(20_000m, phased.Months[2]);     // Oct
+        Assert.Equal(10_000m, phased.Months[3]);     // Nov — the partial tail
+        Assert.Equal(0m, phased.Undated);
+        Assert.Equal(50_000m, phased.Total);         // the invariant survives the override
+    }
+
+    [Fact]
+    public void MonthlyOverride_lagsEachSlice_byThePaymentMechanism()
+    {
+        // Valued Sep and Oct, received 35 days later: Oct and Nov.
+        var forecast = CashForecastPhasing.Phase(
+            Inputs(futureValuations: 20_000m,
+                firstValuation: new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero),
+                lagDays: 35,
+                monthlyOverride: 10_000m),
+            AsOf, monthCount: 6);
+
+        var months = forecast.Categories[ForecastCategory.FutureValuations].Months;
+        Assert.Equal(0m, months[1]);                 // Sep — valued, not yet paid
+        Assert.Equal(10_000m, months[2]);            // Oct
+        Assert.Equal(10_000m, months[3]);            // Nov
+    }
+
+    [Fact]
+    public void MonthlyOverride_needsNoPracticalCompletion_nothingGoesUndated()
+    {
+        // The even spread would quarantine this to Undated (no PC date); the rate dates it.
+        var forecast = CashForecastPhasing.Phase(
+            Inputs(futureValuations: 30_000m, monthlyOverride: 15_000m),
+            AsOf, monthCount: 6);
+
+        var phased = forecast.Categories[ForecastCategory.FutureValuations];
+        Assert.Equal(0m, phased.Undated);
+        Assert.Equal(15_000m, phased.Months[1]);     // no first-valuation date → next month
+        Assert.Equal(15_000m, phased.Months[2]);
+        Assert.Equal(30_000m, phased.Total);
+    }
+
+    [Fact]
+    public void MonthlyOverride_negativeRemainder_landsWholeInTheFirstValuationMonth()
+    {
+        // Invoices already issued past left-to-claim: nothing to claim at a rate — the
+        // negative correction lands whole where the even spread would put it, keeping the
+        // tie-back to the statement exact.
+        var forecast = CashForecastPhasing.Phase(
+            Inputs(futureValuations: -5_000m,
+                firstValuation: new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero),
+                monthlyOverride: 20_000m),
+            AsOf, monthCount: 6);
+
+        var phased = forecast.Categories[ForecastCategory.FutureValuations];
+        Assert.Equal(-5_000m, phased.Months[1]);
+        Assert.Equal(-5_000m, phased.Total);
+    }
+
+    [Fact]
+    public void MonthlyOverride_extendsTheHorizon_theProbeSeesTheRateSpread()
+    {
+        // £120k at £10k/month from Sep 26 runs to Aug 27 — the axis must follow it.
+        var projects = new[]
+        {
+            Inputs(futureValuations: 120_000m,
+                firstValuation: new DateTimeOffset(2026, 9, 1, 0, 0, 0, TimeSpan.Zero),
+                monthlyOverride: 10_000m)
+        };
+
+        Assert.Equal(new DateTime(2027, 8, 1), CashForecastPhasing.HorizonEndFor(projects, AsOf));
     }
 
     // ---- The horizon probe ----------------------------------------------------------------
