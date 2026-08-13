@@ -91,9 +91,9 @@
     private sealed record Entry(WorkOrder Order, string SupplierName, WorkOrderLine Line);
 
     // Mirrors CommittedByCostCode so this drill-down sums to the centre's committed
-    // figure: drafts count, rejected drafts don't.
+    // figure: drafts count, rejected drafts and cancelled orders don't.
     private List<Entry> Entries =>
-        Orders.Where(detail => !detail.Order.IsRejected)
+        Orders.Where(detail => !detail.Order.IsRejected && !detail.Order.IsCancelled)
             .SelectMany(detail => detail.Lines
                 .Where(line => CostCodes.Contains(line.CostCode, StringComparer.OrdinalIgnoreCase))
                 .Select(line => new Entry(detail.Order, detail.SubcontractorName, line)))

@@ -215,6 +215,16 @@ public static class ProcurementRouteRegistration
                     return $"/api/projects/{c.ProjectId}/work-orders/{c.WorkOrderId}/reject";
                 }));
 
+        // Cancels a released order — terminal, keeps its number as the record of a voided
+        // purchase order; its value stops counting everywhere. Directors / FD only.
+        commands.Register<CancelWorkOrder, WorkOrder>(
+            new CommandRoute("POST", "/api/projects/{projectId}/work-orders/{workOrderId}/cancel",
+                command =>
+                {
+                    var c = (CancelWorkOrder)command;
+                    return $"/api/projects/{c.ProjectId}/work-orders/{c.WorkOrderId}/cancel";
+                }));
+
         // Re-codes / splits one priced line across cost centres, by £ amount.
         commands.Register<RecodeWorkOrderLine, IReadOnlyList<WorkOrderLine>>(
             new CommandRoute("POST", "/api/projects/{projectId}/work-order-lines/{lineId}/recode",

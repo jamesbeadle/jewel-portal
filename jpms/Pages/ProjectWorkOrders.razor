@@ -217,6 +217,30 @@ else
                 </details>
             }
 
+            @* Cancelled orders stay on the page as the record of a voided purchase order —
+               they keep their number (one went out under that reference) but count nowhere
+               and offer no actions. *@
+            @if (CancelledOrders.Count > 0)
+            {
+                <details class="mb-6">
+                    <summary class="text-xs font-medium text-content-subtle cursor-pointer select-none">
+                        Cancelled work orders (@CancelledOrders.Count)
+                    </summary>
+                    <ul class="mt-2 text-sm divide-y divide-line rounded-xl border border-line bg-surface opacity-70">
+                        @foreach (var detail in CancelledOrders)
+                        {
+                            <li class="px-4 py-2 flex items-center gap-3">
+                                <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Cancelled</span>
+                                <span class="font-mono text-[11px] text-content-subtle">@Reference(detail.Order)</span>
+                                <span class="text-content-muted">@detail.Order.Title</span>
+                                <span class="text-content-subtle">@detail.SubcontractorName</span>
+                                <span class="ml-auto text-content-subtle line-through">@Money(detail.Order.Value)</span>
+                            </li>
+                        }
+                    </ul>
+                </details>
+            }
+
             @if (Rows.Count == 0 && OrdersWithoutLines.Count == 0)
             {
                 @* Searching: nothing issued matched (drafts that matched are already listed
@@ -225,7 +249,7 @@ else
                 <p class="text-sm text-content-subtle italic">
                     @(Searching
                         ? $"No {(DraftOrders.Count > 0 ? "issued " : "")}work orders match “{supplierSearch.Trim()}”."
-                        : "Nothing issued yet — every work order on this project is still awaiting approval, or was rejected.")
+                        : "Nothing stands issued — every work order on this project is still awaiting approval, or was rejected or cancelled.")
                 </p>
             }
             else
@@ -334,6 +358,26 @@ else
                                                         <td class="px-3 py-2 text-right @(PaymentKnown(line.Detail) ? "" : "text-content-subtle")"
                                                             title="@(PaymentKnown(line.Detail) ? "" : UnknownPaidHint)">@(PaymentKnown(line.Detail) ? Money(line.Line.PaidToDate) : Dash)</td>
                                                         <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                            @if (CancelPendingFor(line.Detail))
+                                                            {
+                                                                @* Two clicks on purpose: cancelling voids an order the supplier
+                                                                   has already been sent, and there is no undo. *@
+                                                                <button type="button"
+                                                                        class="mr-3 text-xs font-medium text-negative underline underline-offset-4"
+                                                                        title="@($"Void {Reference(line.Detail.Order)} — it keeps its number as a record, but its value stops counting everywhere and there is no undo")"
+                                                                        disabled="@cancelBusy"
+                                                                        @onclick="() => CancelAsync(line.Detail)" @onclick:stopPropagation>
+                                                                    @(cancelBusy ? "Working…" : "Confirm cancel")
+                                                                </button>
+                                                                <button type="button"
+                                                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                                                        disabled="@cancelBusy"
+                                                                        @onclick="ClearCancelPending" @onclick:stopPropagation>
+                                                                    Keep order
+                                                                </button>
+                                                            }
+                                                            else
+                                                            {
                                                             <a class="mr-3 text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
                                                                title="View / print the purchase order sent to the supplier"
                                                                href="@($"/projects/{ProjectId}/work-orders/{line.Detail.Order.WorkOrderId}/po")"
@@ -355,6 +399,16 @@ else
                                                                     @onclick="() => OpenRecode(line)" @onclick:stopPropagation>
                                                                 Re-code…
                                                             </button>
+                                                            @if (CanCancelOrders)
+                                                            {
+                                                                <button type="button"
+                                                                        class="ml-3 text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4"
+                                                                        title="Cancel this issued order — void the whole order (not just this line); it keeps its number as a record but stops counting everywhere. Refused while bills are linked or money is paid against it."
+                                                                        @onclick="() => SetCancelPending(line.Detail)" @onclick:stopPropagation>
+                                                                    Cancel…
+                                                                </button>
+                                                            }
+                                                            }
                                                         </td>
                                                     </tr>
                                                 }
@@ -378,6 +432,12 @@ else
                     </tfoot>
                 </table>
             </div>
+            @if (cancelError is not null)
+            {
+                @* 400s are answers for the caller to show, not toasts — say what refused and why
+                   (bills still linked, money already paid, role not allowed). *@
+                <p class="text-sm text-negative mt-2">@cancelError</p>
+            }
             }
 
             @if (OrdersWithoutLines.Count > 0)
@@ -395,6 +455,24 @@ else
                             <span class="text-content font-medium">@detail.Order.Title</span>
                             <span class="text-content-subtle">@detail.SubcontractorName</span>
                             <span class="ml-auto">@Money(detail.Order.Value)</span>
+                            @if (CancelPendingFor(detail))
+                            {
+                                <button type="button"
+                                        class="text-xs font-medium text-negative underline underline-offset-4"
+                                        title="@($"Void {Reference(detail.Order)} — it keeps its number as a record, but its value stops counting everywhere and there is no undo")"
+                                        disabled="@cancelBusy"
+                                        @onclick="() => CancelAsync(detail)">
+                                    @(cancelBusy ? "Working…" : "Confirm cancel")
+                                </button>
+                                <button type="button"
+                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                        disabled="@cancelBusy"
+                                        @onclick="ClearCancelPending">
+                                    Keep order
+                                </button>
+                            }
+                            else
+                            {
                             <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
                                title="View / print the purchase order sent to the supplier"
                                href="@($"/projects/{ProjectId}/work-orders/{detail.Order.WorkOrderId}/po")">
@@ -408,6 +486,16 @@ else
                                         @onclick="() => OpenEdit(detail)">
                                     Edit…
                                 </button>
+                            }
+                            @if (CanCancelOrders)
+                            {
+                                <button type="button"
+                                        class="text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4"
+                                        title="Cancel this issued order — void it; it keeps its number as a record but stops counting everywhere. Refused while bills are linked or money is paid against it."
+                                        @onclick="() => SetCancelPending(detail)">
+                                    Cancel…
+                                </button>
+                            }
                             }
                         </li>
                     }
@@ -494,16 +582,20 @@ else
 
     private IReadOnlyList<ProjectWorkOrderDetail> Orders => WorkOrders.Current(ProjectId);
 
-    // The table, its totals and the export are the truth about what has been ISSUED, so
-    // drafts and rejected drafts stay out of all of them and live in their own sections.
+    // The table, its totals and the export are the truth about what has been ISSUED and still
+    // stands, so drafts, rejected drafts and cancelled orders stay out of all of them and live
+    // in their own sections.
     private List<ProjectWorkOrderDetail> LiveOrders =>
-        Orders.Where(detail => detail.Order.Status is not (WorkOrderStatus.Draft or WorkOrderStatus.Rejected)).ToList();
+        Orders.Where(detail => detail.Order.Status is not (WorkOrderStatus.Draft or WorkOrderStatus.Rejected or WorkOrderStatus.Cancelled)).ToList();
 
     private List<ProjectWorkOrderDetail> DraftOrders =>
         Orders.Where(detail => detail.Order.IsDraft && MatchesSearch(detail)).ToList();
 
     private List<ProjectWorkOrderDetail> RejectedOrders =>
         Orders.Where(detail => detail.Order.IsRejected && MatchesSearch(detail)).ToList();
+
+    private List<ProjectWorkOrderDetail> CancelledOrders =>
+        Orders.Where(detail => detail.Order.IsCancelled && MatchesSearch(detail)).ToList();
 
     private List<OrderLine> AllLines =>
         LiveOrders.SelectMany(detail => detail.Lines.Select(line => new OrderLine(detail, line))).ToList();
@@ -817,6 +909,57 @@ else
 
     private DraftDecision? PendingFor(ProjectWorkOrderDetail detail) =>
         pendingDraftId == detail.Order.WorkOrderId ? pendingDecision : null;
+
+    // ── Cancelling an issued order: terminal, directors and the FD only ──
+    // Same two-click shape as the draft decisions: cancelling voids an order the supplier
+    // has already been sent, and there is no undo. The API is the real gate (CancelWorkOrder
+    // is Admin/Director/FD only); CanCancelOrders just keeps the action out of everyone
+    // else's way. Admin expands to every role at sign-in, so checking the two roles is enough.
+    private bool CanCancelOrders =>
+        Auth.CurrentRoles.Contains(Role.ManagingDirector) || Auth.CurrentRoles.Contains(Role.FinanceDirector);
+
+    private string? pendingCancelId;
+    private bool cancelBusy;
+    private string? cancelError;
+
+    private bool CancelPendingFor(ProjectWorkOrderDetail detail) =>
+        pendingCancelId == detail.Order.WorkOrderId;
+
+    private void SetCancelPending(ProjectWorkOrderDetail detail)
+    {
+        pendingCancelId = detail.Order.WorkOrderId;
+        cancelError = null;
+    }
+
+    private void ClearCancelPending() => pendingCancelId = null;
+
+    private async Task CancelAsync(ProjectWorkOrderDetail detail)
+    {
+        if (cancelBusy) return;
+        cancelBusy = true;
+        cancelError = null;
+        try
+        {
+            await Commands.SendAsync(new CancelWorkOrder(ProjectId, detail.Order.WorkOrderId), CancellationToken.None);
+            pendingCancelId = null;
+            // Post-write reload: never let a failed re-query take the page down after a write
+            // that succeeded (JPMS-668D10) — the query client has already toasted it, and the
+            // next stale-while-revalidate refresh fixes the stale list.
+            try { await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None); }
+            catch (OperationCanceledException) { throw; }
+            catch { }
+        }
+        catch (CommandFailedException ex)
+        {
+            // 400s are answers for the caller to show, not toasts — bills still linked,
+            // money already paid, or the role isn't allowed to.
+            cancelError = $"Couldn't cancel {Reference(detail.Order)}: {ex.Message}";
+        }
+        finally
+        {
+            cancelBusy = false;
+        }
+    }
 
     // What happened to the automatic purchase-order email after a release (modal creation or
     // draft approval) — shown at the top of the page until dismissed.

@@ -48,7 +48,16 @@ else
             <a class="text-sm text-content-subtle hover:text-content underline underline-offset-4"
                href="@($"/projects/{ProjectId}/work-orders")">← Work orders</a>
             <div class="flex items-center gap-3">
-                @if (Detail.Order.IsAccepted)
+                @if (Detail.Order.IsCancelled)
+                {
+                    @* Checked before acceptance: a cancelled order may well have been accepted
+                       first, and "Accepted by supplier" on a voided order reads as live. *@
+                    <span class="rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-content-subtle"
+                          title="This order was cancelled after issue — it keeps its number as the record of a voided purchase order, but its value counts nowhere.">
+                        Cancelled
+                    </span>
+                }
+                else if (Detail.Order.IsAccepted)
                 {
                     <span class="rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 px-2.5 py-0.5 text-xs font-medium"
                           title="@($"Electronically accepted by {Detail.Order.AcceptedByName} on {Detail.Order.AcceptedAt!.Value.LocalDateTime:d MMM yyyy, HH:mm}")">
@@ -76,8 +85,10 @@ else
                     </span>
                 }
                 @* A draft has no number and the supplier must not hear about it (and a
-                   rejected draft never does), so the covering email waits for approval. *@
-                @if (Detail.Order.Status is not (WorkOrderStatus.Draft or WorkOrderStatus.Rejected))
+                   rejected draft never does), so the covering email waits for approval.
+                   A cancelled order is dead — emailing its PO would announce a commitment
+                   that no longer stands. *@
+                @if (Detail.Order.Status is not (WorkOrderStatus.Draft or WorkOrderStatus.Rejected or WorkOrderStatus.Cancelled))
                 {
                     <button type="button" class="btn-secondary text-sm" @onclick="OpenEmailModal"
                             title="Draft the covering email to the supplier in the shared mailbox — nothing sends until you review it in Outlook">

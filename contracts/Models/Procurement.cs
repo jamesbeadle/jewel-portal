@@ -178,6 +178,12 @@ public sealed record WorkOrder(
     /// <summary>A rejected draft: terminal, unnumbered, counts nowhere.</summary>
     public bool IsRejected => Status == WorkOrderStatus.Rejected;
 
+    /// <summary>A cancelled order: terminal, like a rejected draft — but it was ISSUED first,
+    /// so it keeps its minted number and stays visible as the record of a voided purchase
+    /// order. Its value counts nowhere (CancelWorkOrder refuses while bills or paid money
+    /// are recorded against it, so there is never a cost left behind to account for).</summary>
+    public bool IsCancelled => Status == WorkOrderStatus.Cancelled;
+
     /// <summary>The human reference. Drafts and rejected drafts have no number — approval is
     /// what mints it — so they read by their state; anything else unnumbered falls back to an
     /// id stem, mirroring WorkOrderEntity.Reference server-side. Never render

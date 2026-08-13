@@ -23,7 +23,11 @@ public sealed class ListMyWorkOrdersHandler : IQueryHandler<ListMyWorkOrders, IR
         var orders = await context.WorkOrders.AsNoTracking()
             .Where(order => order.SubcontractorId == query.SubcontractorId
                 && order.Status != (int)WorkOrderStatus.Draft
-                && order.Status != (int)WorkOrderStatus.Rejected)
+                && order.Status != (int)WorkOrderStatus.Rejected
+                // A cancelled order was voided after issue — the supplier has been told by
+                // the office, and a dead order in their portal list would only invite work
+                // against it.
+                && order.Status != (int)WorkOrderStatus.Cancelled)
             .OrderByDescending(order => order.AwardedAt)
             .ToListAsync(cancellationToken);
         if (orders.Count == 0) return Array.Empty<PortalWorkOrder>();

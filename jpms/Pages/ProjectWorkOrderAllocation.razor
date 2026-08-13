@@ -536,9 +536,12 @@ else
         var linesTask = Queries.AskAsync(new ListProjectCostOfSalesLines(ProjectId), CancellationToken.None);
         // Drafts and rejected drafts are dropped at the door: unnumbered, uninvoiceable,
         // nothing to allocate against — either would inflate "left to invoice" with an
-        // order that hasn't been (or never will be) issued.
+        // order that hasn't been (or never will be) issued. Cancelled orders too: the API
+        // refuses new links to them, and CancelWorkOrder refuses while anything is linked,
+        // so a cancelled order here could only ever show its full value as "left to
+        // invoice" on a commitment that no longer stands.
         summaries = (await summariesTask)
-            .Where(summary => summary.Status is not (WorkOrderStatus.Draft or WorkOrderStatus.Rejected))
+            .Where(summary => summary.Status is not (WorkOrderStatus.Draft or WorkOrderStatus.Rejected or WorkOrderStatus.Cancelled))
             .ToList();
         AllLines = (await linesTask).ToList();
     }
