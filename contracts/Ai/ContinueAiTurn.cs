@@ -11,4 +11,8 @@ namespace Jewel.JPMS.Contracts.Ai;
 public sealed record ContinueAiTurn(
     string ConversationId,
     AiScope Scope,
-    string SentByEmail) : ICommand<AiTurnResult>;
+    string SentByEmail,
+    /// <summary>An <see cref="AiModelCatalogue"/> key — the model the user chose in the panel.
+    /// Sent with every hop so a mid-turn choice sticks; null or unknown degrades to the cheap
+    /// default server-side.</summary>
+    string? Model = null) : ICommand<AiTurnResult>;

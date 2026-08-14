@@ -35,6 +35,7 @@ public sealed class ContinueAiTurnHandler : ICommandHandler<ContinueAiTurn, AiTu
             throw new InvalidOperationException("That conversation could not be found.");
         }
 
-        return await runner.RunHopAsync(conversation, user, command.Scope, cancellationToken);
+        return await runner.RunHopAsync(
+            conversation, user, command.Scope, command.Model, cancellationToken);
     }
 }

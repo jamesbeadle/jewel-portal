@@ -29,12 +29,15 @@ public interface IClaudeConversationClient
 
     /// <summary>
     /// One round trip. <paramref name="messages"/> is the Anthropic messages array, already shaped
-    /// by the caller (see <c>SendAiMessageHandler</c>).
+    /// by the caller (see <c>SendAiMessageHandler</c>). <paramref name="modelTier"/> is an
+    /// AiModelCatalogue key — resolved to a real model id here, against config, so the client of
+    /// this client can never name a raw model.
     /// </summary>
     Task<ClaudeReply> ContinueAsync(
         string systemPrompt,
         IReadOnlyList<object> messages,
         IReadOnlyList<ClaudeToolSpec> tools,
+        string? modelTier,
         CancellationToken ct);
 }
 
@@ -44,7 +47,7 @@ public sealed class NullClaudeConversationClient : IClaudeConversationClient
 
     public Task<ClaudeReply> ContinueAsync(
         string systemPrompt, IReadOnlyList<object> messages,
-        IReadOnlyList<ClaudeToolSpec> tools, CancellationToken ct) =>
+        IReadOnlyList<ClaudeToolSpec> tools, string? modelTier, CancellationToken ct) =>
         Task.FromResult(new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null, "not_configured"));
 }
 
@@ -74,6 +77,7 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
         string systemPrompt,
         IReadOnlyList<object> messages,
         IReadOnlyList<ClaudeToolSpec> tools,
+        string? modelTier,
         CancellationToken ct)
     {
         if (!options.IsConfigured)
@@ -91,7 +95,10 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
             // END of the messages array (the turn-context block), never in system.
             var payload = new Dictionary<string, object?>
             {
-                ["model"] = options.Model,
+                // The user's tier choice, resolved against config. Note the prompt cache is scoped
+                // per model, so switching tier mid-conversation re-pays the prefix once — correct,
+                // and not worth preventing.
+                ["model"] = options.ModelForTier(modelTier),
                 ["max_tokens"] = ConversationMaxTokens,
                 ["system"] = new object[]
                 {

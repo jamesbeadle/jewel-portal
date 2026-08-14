@@ -16,6 +16,25 @@ public sealed class AnthropicOptions
     public string? ApiKey { get; set; }
     public string Model { get; set; } = DefaultModel;
 
+    // ---- Chat model tiers --------------------------------------------------------------------
+    // The three models the chat panel offers (AiModelCatalogue keys: haiku, opus, fable), cheapest
+    // first. Ids are config-overridable (Anthropic__ModelHaiku etc.) so a renamed alias is an app
+    // setting, not a redeploy. `Model` above stays what it always was: the single-shot extraction
+    // callers (PrepareVoqDraft, ExtractQuote), untouched by the picker.
+    public string ModelHaiku { get; set; } = "claude-haiku-4-5";
+    public string ModelOpus { get; set; } = "claude-opus-4-6";
+    public string ModelFable { get; set; } = "claude-fable-5";
+
+    /// <summary>The model id for a tier key from the panel. Anything unknown — including null, a
+    /// stale client, or a hand-crafted request — degrades to the CHEAP tier: the client can pick a
+    /// tier, never name a model, and can never upgrade the spend by accident.</summary>
+    public string ModelForTier(string? tierKey) => tierKey?.ToLowerInvariant() switch
+    {
+        "opus" => ModelOpus,
+        "fable" => ModelFable,
+        _ => ModelHaiku
+    };
+
     // Anthropic's required API version header value.
     public string ApiVersion { get; set; } = "2023-06-01";
 
@@ -53,6 +72,18 @@ public sealed class AnthropicOptions
         var model = section["Model"];
         if (!string.IsNullOrWhiteSpace(model))
             options.Model = model;
+
+        var modelHaiku = section["ModelHaiku"];
+        if (!string.IsNullOrWhiteSpace(modelHaiku))
+            options.ModelHaiku = modelHaiku;
+
+        var modelOpus = section["ModelOpus"];
+        if (!string.IsNullOrWhiteSpace(modelOpus))
+            options.ModelOpus = modelOpus;
+
+        var modelFable = section["ModelFable"];
+        if (!string.IsNullOrWhiteSpace(modelFable))
+            options.ModelFable = modelFable;
 
         var apiVersion = section["ApiVersion"];
         if (!string.IsNullOrWhiteSpace(apiVersion))

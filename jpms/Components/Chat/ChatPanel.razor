@@ -245,14 +245,26 @@
                                   placeholder="@ComposerPlaceholder" aria-label="Message"
                                   class="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed text-content placeholder:text-content-faint focus:outline-none disabled:opacity-60"></textarea>
                         <div class="flex items-center justify-between gap-2 px-2 pb-2">
-                            <span class="pl-1 text-[10px] text-content-faint">@ComposerFootnote</span>
-                            <button type="button" class="btn-primary px-3 py-1.5" disabled="@CannotSend" @onclick="Send">
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                    <path d="M4 12l16-8-5.5 16-3.2-6.3z" />
-                                </svg>
-                                Send
-                            </button>
+                            <span class="pl-1 min-w-0 truncate text-[10px] text-content-faint">@ComposerFootnote</span>
+                            <div class="shrink-0 flex items-center gap-2">
+                                @* The cost lever. Cheap is the default on purpose; the user's own
+                                   pick is remembered per browser and wins from then on. Only a tier
+                                   KEY leaves the browser — the server maps it to a model id. *@
+                                <select @bind="BoundModelKey" disabled="@busy" title="@ModelHint" aria-label="Model"
+                                        class="bg-transparent text-[10px] text-content-subtle hover:text-content focus:outline-none disabled:opacity-60 cursor-pointer">
+                                    @foreach (var choice in AiModelCatalogue.All)
+                                    {
+                                        <option value="@choice.Key" title="@choice.Hint">@choice.DisplayName</option>
+                                    }
+                                </select>
+                                <button type="button" class="btn-primary px-3 py-1.5" disabled="@CannotSend" @onclick="Send">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M4 12l16-8-5.5 16-3.2-6.3z" />
+                                    </svg>
+                                    Send
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </footer>
@@ -278,6 +290,37 @@
     // the user into the fresh one (the handover Context row). Consumed by the next Send.
     private string? pendingPreviousConversationId;
     private bool resumeAttempted;
+    private string modelKey = AiModelCatalogue.DefaultKey;
+    private bool modelLoaded;
+
+    /// <summary>The picker's binding: normalises, remembers per user, and never blocks the UI on
+    /// the write — a failed persist only costs the user one re-pick next visit.</summary>
+    private string BoundModelKey
+    {
+        get => modelKey;
+        set
+        {
+            var normalised = AiModelCatalogue.Normalise(value);
+            if (normalised == modelKey) return;
+            modelKey = normalised;
+            _ = Chat.RememberModelAsync(modelKey);
+        }
+    }
+
+    private string ModelHint =>
+        AiModelCatalogue.Find(modelKey)?.Hint ?? "Which Claude model answers";
+
+    /// <summary>Cheap by default; the user's stored choice wins once the session is known.</summary>
+    private async Task TryLoadModelChoiceAsync()
+    {
+        if (modelLoaded) return;
+        if (!CanUseAssistant) return; // Guarantees the session — and the storage key — are known.
+        modelLoaded = true;
+        var stored = await Chat.LoadStoredModelAsync();
+        if (string.IsNullOrWhiteSpace(stored)) return;
+        modelKey = AiModelCatalogue.Normalise(stored);
+        StateHasChanged();
+    }
 
     private bool CanUseAssistant =>
         Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
@@ -367,6 +410,7 @@
         Projects.OnChanged += StateHasChanged;
         Nav.LocationChanged += HandleLocationChanged;
         await Chat.EnsureAcknowledgementLoadedAsync();
+        await TryLoadModelChoiceAsync();
         await TryResumeAsync();
     }
 
@@ -375,6 +419,7 @@
     private void HandleSessionChange()
     {
         _ = Chat.EnsureAcknowledgementLoadedAsync();
+        _ = TryLoadModelChoiceAsync();
         _ = TryResumeAsync();
         StateHasChanged();
     }
@@ -582,7 +627,7 @@
             var scope = BuildScope();
 
             var result = await Commands.SendAsync(
-                new SendAiMessage(conversationId, text, scope, string.Empty, previousConversationId),
+                new SendAiMessage(conversationId, text, scope, string.Empty, previousConversationId, modelKey),
                 CancellationToken.None);
 
             conversationId = result.ConversationId;
@@ -601,7 +646,7 @@
                 if (result.Status != AiTurnStatus.NeedsContinue) break;
 
                 result = await Commands.SendAsync(
-                    new ContinueAiTurn(conversationId, scope, string.Empty), CancellationToken.None);
+                    new ContinueAiTurn(conversationId, scope, string.Empty, modelKey), CancellationToken.None);
                 conversationId = result.ConversationId;
             }
 

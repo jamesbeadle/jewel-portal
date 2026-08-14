@@ -18,4 +18,8 @@ public sealed record SendAiMessage(
     /// in just before. The server carries its tail over as a Context row so the assistant remembers
     /// what was being discussed. Ignored when continuing an existing conversation, and silently
     /// dropped when the previous conversation belongs to someone else.</summary>
-    string? PreviousConversationId = null) : ICommand<AiTurnResult>;
+    string? PreviousConversationId = null,
+    /// <summary>An <see cref="AiModelCatalogue"/> key — the model the user chose in the panel.
+    /// Null or unknown degrades to the cheap default server-side; the client can never name a raw
+    /// model id.</summary>
+    string? Model = null) : ICommand<AiTurnResult>;

@@ -49,6 +49,7 @@ public sealed class AiTurnRunner
         AiConversationEntity conversation,
         SignedInUser user,
         AiScope? scope,
+        string? modelTier,
         CancellationToken cancellationToken)
     {
         var clock = Stopwatch.StartNew();
@@ -120,7 +121,7 @@ public sealed class AiTurnRunner
             user, scope, project?.Reference, project?.Name, hopsSpent, MaxHops);
 
         var reply = await claude.ContinueAsync(
-            systemPrompt, BuildTranscript(rows, turnContext), tools, cancellationToken);
+            systemPrompt, BuildTranscript(rows, turnContext), tools, modelTier, cancellationToken);
 
         if (!reply.Ok)
         {

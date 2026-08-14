@@ -149,6 +149,37 @@ public sealed class ChatPanelState
         catch { }
     }
 
+    // ---- the model choice --------------------------------------------------------------------
+    // Cheap by default; the user's own pick is remembered per browser and wins from then on. Only
+    // the AiModelCatalogue KEY is stored — mapping a key to a real model id is the server's,
+    // against config, so nothing in localStorage can name a model.
+
+    public async Task<string?> LoadStoredModelAsync()
+    {
+        if (auth.CurrentUser is null) return null;
+        try
+        {
+            var stored = await js.InvokeAsync<string?>(GetItem, ModelKey);
+            return string.IsNullOrWhiteSpace(stored) ? null : stored;
+        }
+        catch
+        {
+            return null; // No storage means the default — the cheap direction to fail.
+        }
+    }
+
+    public async Task RememberModelAsync(string? modelKey)
+    {
+        if (auth.CurrentUser is null || string.IsNullOrWhiteSpace(modelKey)) return;
+        try { await js.InvokeVoidAsync(SetItem, ModelKey, modelKey); }
+        catch { }
+    }
+
+    private const string ModelKeyPrefix = "jpms.chatModel";
+
+    private string ModelKey =>
+        $"{ModelKeyPrefix}.{auth.CurrentUser?.Email.Trim().ToLowerInvariant() ?? "anonymous"}";
+
     private string ConversationKey =>
         $"{ConversationKeyPrefix}.{auth.CurrentUser?.Email.Trim().ToLowerInvariant() ?? "anonymous"}";
 

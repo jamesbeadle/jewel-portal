@@ -66,7 +66,8 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
         });
         await context.SaveChangesAsync(cancellationToken);
 
-        var result = await runner.RunHopAsync(conversation, user, command.Scope, cancellationToken);
+        var result = await runner.RunHopAsync(
+            conversation, user, command.Scope, command.Model, cancellationToken);
 
         // The client rendered the user's message optimistically; echoing the server's copy back keeps
         // ids consistent for anything that later wants to reference a specific turn.
