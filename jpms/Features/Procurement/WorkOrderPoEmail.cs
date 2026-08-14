@@ -24,6 +24,12 @@ public static class WorkOrderPoEmail
 
     public static Line ToLine(WorkOrderLine line) => new(line.Title, line.Quantity, line.Unit, line.LineTotal);
 
+    // Scope is plain text typed in the work-order form; the PO sheet prints it pre-wrap. The
+    // email body is HTML, where raw newlines collapse into spaces — encode then convert breaks,
+    // so a breakdown typed one charge per line stays one charge per line here too.
+    private static string AsHtmlLines(string text) =>
+        System.Net.WebUtility.HtmlEncode(text.Trim()).Replace("\r\n", "\n").Replace("\n", "<br/>");
+
     public static string Subject(WorkOrder order, string projectName) =>
         $"Work order {order.Reference} — {order.Title} — {projectName}";
 
@@ -50,7 +56,7 @@ public static class WorkOrderPoEmail
         {
             sb.AppendLine($"<p><strong>Order value:</strong> {order.Value:£#,##0.00}</p>");
             if (!string.IsNullOrWhiteSpace(order.Scope))
-                sb.AppendLine($"<p><strong>Scope:</strong> {order.Scope}</p>");
+                sb.AppendLine($"<p><strong>Scope:</strong><br/>{AsHtmlLines(order.Scope)}</p>");
         }
         if (order.ProgrammeStart is { } start)
             sb.AppendLine($"<p><strong>Programme start:</strong> {start.LocalDateTime:d MMM yyyy}</p>");
