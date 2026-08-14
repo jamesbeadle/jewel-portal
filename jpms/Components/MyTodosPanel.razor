@@ -109,10 +109,7 @@
                         {
                             <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
                         }
-                        @if (TodoAssigneePicker.Label(item) is string assigneeLabel)
-                        {
-                            <span class="whitespace-nowrap">Assigned to @assigneeLabel</span>
-                        }
+                        <TodoAssigneeBadge Item="item" />
                     </div>
                 </button>
             }
@@ -229,8 +226,9 @@
     private IReadOnlyList<TodoItem> VisibleOpenItems =>
         roleFilter == "" ? openItems : openItems.Where(MatchesRoleFilter).ToList();
 
-    // The board card's project badge: the reference as a compact chip (hover for the full name),
-    // or the accent "Company" chip for a no-project item.
+    // The board card's project badge: reference AND name (the ref alone said nothing to anyone
+    // not living in the numbering; the board truncates long names, hover for the full label), or
+    // the accent "Company" chip for a no-project item.
     private TodoBoard.ScopeChip ScopeChipFor(TodoItem item)
     {
         if (IsGeneral(item)) return new TodoBoard.ScopeChip("Company", "Company-wide — no project", true);
@@ -238,7 +236,7 @@
             .FirstOrDefault(p => p.ProjectId == item.ProjectId);
         return project is null
             ? new TodoBoard.ScopeChip("Project", "Project", false)
-            : new TodoBoard.ScopeChip(project.Reference, $"{project.Reference} — {project.Name}", false);
+            : new TodoBoard.ScopeChip($"{project.Reference} — {project.Name}", $"{project.Reference} — {project.Name}", false);
     }
 
     private string ViewTabClass(bool board) =>

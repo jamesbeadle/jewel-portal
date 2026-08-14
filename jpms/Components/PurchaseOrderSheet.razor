@@ -166,7 +166,9 @@
                             }
                         </td>
                         <td>@line.CostType</td>
-                        <td>@line.Description</td>
+                        @* pre-wrap: a multi-line description keeps its typed line breaks instead
+                           of collapsing into one run-on cell (2026-08-13, accounts layout ask). *@
+                        <td class="po-prewrap">@line.Description</td>
                         <td class="po-right">@line.Quantity.ToString("0.##") @line.Unit</td>
                         <td class="po-right">@Money(line.UnitCost)</td>
                         <td class="po-right">@Money(line.LineTotal)</td>

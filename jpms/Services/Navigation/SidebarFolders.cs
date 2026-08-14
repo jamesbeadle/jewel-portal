@@ -10,8 +10,9 @@ namespace Jewel.JPMS.Services.Navigation;
 /// money (Finance), the read-only money (Financial Reports), the Xero screens (one home per
 /// screen), oversight (Audit) and finally the system itself (Admin). Folders mix scopes
 /// deliberately — project-scoped rows ("/projects/{project}/…" templates) and company rows sit
-/// side by side where the work does. A row that belongs to no folder at all — the Control Centre
-/// and the Valuation Report — lives in SidebarFolders.Standalone.
+/// side by side where the work does. A row that belongs to no folder at all — the Control Centre,
+/// Document Control, Xero Cost Allocation and the Valuation Report — lives in
+/// SidebarFolders.Standalone.
 ///
 /// The retired Client folder's rows (Requests, Architect's Instructions, Valuation Report
 /// Snapshots) moved into Project: with only directors using the system there is no external
@@ -54,18 +55,21 @@ public static class SidebarFolders
     public static readonly IReadOnlyList<SidebarFolderInfo> All = new[]
     {
         // ---- Project: the day-to-day running of the picked job, led by the record chain —
-        // Requests → RFIs → Variations is one lifecycle in one register. First folder, so its
-        // first row (Requests) is the bare-project-URL landing. ----
+        // Request → RFI → Variation is one lifecycle, split across the RFIs page and the
+        // Variation Orders page (2026-08-14). First folder, so its first row (RFIs) is the
+        // bare-project-URL landing. ----
         new SidebarFolderInfo(
             SidebarFolder.Project,
             "Project",
             "#project",
             new[]
             {
-                // The document register (Requests, RFIs and Variations, one lifecycle). Exact on
-                // the base route: the register's variations view belongs to the row below, so this
-                // row matches the register's other views and the request detail pages explicitly.
-                new SidebarRow(new NavigationItem("Requests", "/projects/{project}/requests",
+                // The RFI register (RFIs leading, the legacy General requests one tab behind —
+                // split from the combined document register 2026-08-14). Exact on the base route:
+                // the variations pages belong to the row below, so this row matches the register's
+                // other views and the request detail pages explicitly. The slug stays /requests
+                // (the standing convention: labels move, slugs don't).
+                new SidebarRow(new NavigationItem("RFIs", "/projects/{project}/requests",
                         new[]
                         {
                             "/projects/{project}/requests/all",
@@ -74,11 +78,11 @@ public static class SidebarFolders
                             "/projects/{project}/requests/view"
                         }, ExactMatch: true),
                     DesktopNavigation.DirectorRoles),
-                // The register's variations view, plus the variation detail pages (and the legacy
-                // /voq route kept for links already sent out). Its own row (2026-08-11): the
-                // variation book is checked on its own far more often than the rest of the chain.
-                new SidebarRow(new NavigationItem("Variation Orders", "/projects/{project}/requests/variations",
-                        new[] { "/projects/{project}/variations", "/projects/{project}/voq" }),
+                // The variation book, on its own page since 2026-08-14 (plus the variation detail
+                // pages and the legacy routes — /requests/variations from its register-tab days
+                // and /voq — kept for links already sent out).
+                new SidebarRow(new NavigationItem("Variation Orders", "/projects/{project}/variations",
+                        new[] { "/projects/{project}/requests/variations", "/projects/{project}/voq" }),
                     DesktopNavigation.DirectorRoles),
                 // The formal instructions that authorise varied work — what a variation at
                 // Awaiting AI is waiting for.
@@ -216,16 +220,14 @@ public static class SidebarFolders
 
         // ---- Xero: every screen that reads or feeds the accounts system — one home per screen
         // (2026-08-11; Allocation and Transactions were tabs behind one row, the aged views
-        // lived under Financial Reports). ----
+        // lived under Financial Reports). Cost Allocation moved out to Standalone (2026-08-14):
+        // it is a standing work queue, not a reference screen. ----
         new SidebarFolderInfo(
             SidebarFolder.Xero,
             "Xero",
             "#xero",
             new[]
             {
-                // The working screen: distributing allocated purchase lines to cost centres.
-                new SidebarRow(new NavigationItem("Xero Cost Allocation", "/finance/allocation"),
-                    DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Xero Transactions", "/finance/xero"),
                     DesktopNavigation.DirectorRoles),
                 // Outstanding sales invoices aged as in Xero but including drafts still being
@@ -292,8 +294,9 @@ public static class SidebarFolders
 
     /// <summary>Rows that belong to no folder — they render as top-level links at the FOOT of the
     /// sidebar, below every folder, with an icon, like Home. Gated per row exactly like folder
-    /// rows. Two kinds of resident: whole-company destinations that answer to no one project
-    /// (the Control Centre), and the one project record important enough to outrank its folder
+    /// rows. Two kinds of resident: whole-company destinations that answer to no one project —
+    /// the standing work queues (the Control Centre, Document Control and, since 2026-08-14,
+    /// Xero Cost Allocation) — and the one project record important enough to outrank its folder
     /// (the Valuation Report — the system's flagship output, elevated 2026-08-11; being a
     /// {project} template it follows the picker like any folder row).</summary>
     public static readonly IReadOnlyList<SidebarRow> Standalone = new[]
@@ -307,6 +310,12 @@ public static class SidebarFolders
         // Control Centre, filed out to Drawings, Payment Certificates or subcontractor records.
         // Same whole-company footing as the Control Centre it feeds from (decision 2026-08-12).
         new SidebarRow(new NavigationItem("Document Control", "/document-control"),
+            DesktopNavigation.DirectorRoles),
+        // Xero Cost Allocation — distributing allocated purchase lines to cost centres. Moved up
+        // from the Xero folder (2026-08-14): like the two queues above it is standing work that
+        // NEEDS DOING, not a screen that is merely read, so it sits with them at the foot of the
+        // rail rather than behind a folder header.
+        new SidebarRow(new NavigationItem("Xero Cost Allocation", "/finance/allocation"),
             DesktopNavigation.DirectorRoles),
         // The picked project's live valuation report.
         new SidebarRow(new NavigationItem("Valuation Reports", "/projects/{project}/valuation"),

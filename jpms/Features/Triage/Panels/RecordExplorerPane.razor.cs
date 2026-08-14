@@ -19,6 +19,10 @@ public partial class RecordExplorerPane
     /// the page lines the reply up in the Outbox. No delegate, no Reply buttons.</summary>
     [Parameter] public EventCallback<MailboxMessage> OnReply { get; set; }
 
+    /// <summary>Raised when a Forward is started on an email in the open record's correspondence
+    /// — the page lines the forward up in the Outbox. No delegate, no Forward buttons.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnForward { get; set; }
+
     private const int ResultCap = 50;
 
     private string projectId = "";

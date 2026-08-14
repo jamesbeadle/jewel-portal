@@ -7,9 +7,12 @@
      record pages' behaviour (a reply from a variation's Communications panel just sends).
    - Stage mode (OnStage): nothing is sent; the composer hands back a StagedOutboxReply for the
      Control Centre's Outbox, where many replies line up and the page's Apply sends them all.
-   Either way the envelope prefills reply-all from the anchor's live detail (minus the projects
-   mailbox — Cc'ing it would deliver a copy straight back into the triage queue), and the visible
-   fields are exactly what goes on the wire. *@
+   Forward=true composes a FORWARD of the anchor instead: blank envelope, "FW:" subject, and the
+   original email's attachments travel automatically (Graph's createForward carries them on the
+   draft), so the picker doesn't offer them a second time. A reply's envelope prefills reply-all
+   from the anchor's live detail (minus the projects mailbox — Cc'ing it would deliver a copy
+   straight back into the triage queue). Either way the visible fields are exactly what goes on
+   the wire. *@
 
 <div class="rounded-lg border border-line bg-surface-raised p-4 space-y-3">
     <div class="flex items-center justify-between">
@@ -55,15 +58,26 @@
     </div>
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
-            @(IsReply ? "Your reply *" : "Your email *")
+            @(IsForward ? "Your message *" : IsReply ? "Your reply *" : "Your email *")
         </label>
         <RichTextEditor @bind-Value="body" MinHeight="180"
-                        Placeholder="@(IsReply ? "Write the reply — the whole thread is quoted behind it…" : "Write the email…")" />
+                        Placeholder="@(IsForward ? "Write the message — the forwarded email is quoted behind it…"
+                                     : IsReply ? "Write the reply — the whole thread is quoted behind it…" : "Write the email…")" />
     </div>
 
+    @* A forward carries the original email's attachments automatically (Graph's createForward
+       copies them onto the draft), so the picker only offers EXTRA files — offering the originals
+       again would attach every file twice. *@
     <AttachmentPicker Attachments="attachments" AttachmentsChanged="picked => attachments = picked"
                       Projects="@Projects" ProjectId="@ProjectId"
-                      OriginalAttachments="@anchorDetail?.Attachments" OriginalMessageId="@AnchorMessageId" />
+                      OriginalAttachments="@(IsForward ? null : anchorDetail?.Attachments)" OriginalMessageId="@AnchorMessageId" />
+    @if (IsForward && anchorDetail is { Attachments.Count: > 0 } forwarded)
+    {
+        <p class="text-xs text-content-subtle">
+            The original email's @(forwarded.Attachments.Count == 1 ? "attachment travels" : $"{forwarded.Attachments.Count} attachments travel")
+            with the forward automatically.
+        </p>
+    }
 
     <div class="flex items-center justify-between gap-3 pt-1">
         <p class="text-xs text-content-subtle">@(FooterNote ?? DefaultFooterNote)</p>

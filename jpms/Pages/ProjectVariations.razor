@@ -1,16 +1,809 @@
 @page "/projects/{ProjectId}/variations"
+@page "/projects/{ProjectId}/requests/variations"
+@using Jewel.JPMS.Contracts.Requests
+@using Jewel.JPMS.Features.RecordLinks
+@inject AuthService Auth
+@inject SessionService Session
+@inject IRequestRegister RequestRegister
+@inject RecordActivityReadModel Activity
+@inject IVariationStore Variations
+@inject IProcurementStore Procurement
 @inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Variation Orders · JPMS</PageTitle>
 
 @*
-    The Variations tab is retired — variations live in the combined document register on the
-    Requests tab (Requests → RFIs → Variations, one lifecycle, no tab-jumping between an RFI
-    and the variation that prices it). Old links and bookmarks land here and are redirected;
-    replace:true keeps Back working naturally.
+    The project's variation book, on its own page (split out of the combined document register
+    2026-08-14 — the register's tabs were carrying two documents' controls at once). The second
+    route is the legacy alias: the variations lived at /requests/variations while they were a
+    register tab, and links already sent out still land. The lifecycle link back to the RFI a
+    variation prices survives on the record itself (the Originating request panel and the
+    RecordTabBar), and the Request column below links straight through.
 *@
+
+@if (!isLoaded)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="variations">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div>
+                <h2 class="text-lg font-semibold text-content">Variation Orders</h2>
+                <p class="text-sm text-content-subtle mt-0.5">
+                    @OpenVariationsCount open · @ApprovedVariationsCount approved · @Money(ApprovedOrders.Sum(vo => vo.Value)) approved value
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <ExportToExcelButton FileName="Variations register"
+                                     Disabled="@(Rows.Count == 0)"
+                                     ShowIncludeAllRows="@Searching"
+                                     IncludeAllLabel="Include entire register"
+                                     BuildWorkbook="BuildExportWorkbook" />
+                @if (CanManageVariations)
+                {
+                    @* Manual entry — a standalone variation with no RFI behind it, for reconciling
+                       historic / client-instructed variations against a valuation report already issued. *@
+                    <button type="button" class="btn-primary" @onclick="OpenAddVariationDialog">Add variation manually</button>
+                }
+            </div>
+        </div>
+
+        @* ---- Document-type explainer ----------------------------------------------------------
+           Red is reserved for what can genuinely hurt: quoting-stage money treated as approved. *@
+        <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4">
+            <p class="text-sm font-medium text-content mb-1">Variation — one document, four stages</p>
+            <p class="text-sm text-content-muted">
+                When every requirement of a specific group has been identified and costed, the request becomes a
+                <span class="text-content font-medium">variation</span> — the priced scope put to the client for
+                approval. It is one record throughout, and its status says where it has got to:
+                <span class="text-content font-medium">Quoting</span> while it is being priced,
+                <span class="text-content font-medium">Issued</span> once it is with the client, then
+                <span class="text-content font-medium">Approved</span> or
+                <span class="text-content font-medium">Rejected</span>. Approval is what writes its value onto
+                the project valuation report.
+            </p>
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">
+                A variation is not approved money until it is Approved — nothing on it appears on the valuation
+                report or can be billed before then.
+            </p>
+            @if (UnlinkedRows.Count > 0)
+            {
+                <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mt-2">
+                    @UnlinkedRows.Count historic variation@(UnlinkedRows.Count == 1 ? " isn't" : "s aren't") linked back
+                    to a request yet — open a variation and attach the RFI it was raised from in its
+                    <span class="font-medium text-content">Originating request</span> panel, or open the RFI
+                    and link the variation from its <span class="font-medium text-content">Variation</span> panel.
+                </p>
+            }
+        </div>
+
+        @* Free-text search over the variation book — reference (both spellings), title,
+           description, cost code and the originating request's own text. *@
+        <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
+            <div class="relative ml-auto w-full sm:w-80">
+                <input type="search" placeholder="Search text in variations…"
+                       class="bg-surface border border-line rounded-lg pl-3 pr-8 py-1.5 text-sm text-content placeholder:text-content-subtle w-full focus:outline-none focus:border-accent"
+                       value="@search" @oninput="OnSearchInput" />
+                @if (Searching)
+                {
+                    <button type="button" title="Clear search"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-content-faint hover:text-content-muted text-sm leading-none"
+                            @onclick="ClearSearch">✕</button>
+                }
+            </div>
+        </div>
+
+        @if (Searching)
+        {
+            <p class="text-sm text-content-subtle -mt-2 mb-5">
+                @FilteredRows.Count match@(FilteredRows.Count == 1 ? "" : "es") for “@search.Trim()”
+                <span class="text-content-faint">· searches reference, title, description, cost code and the originating request</span>
+            </p>
+        }
+
+        @if (variationsError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@variationsError</p>
+        }
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div class="panel p-4">
+                <p class="eyebrow mb-1">Variations</p>
+                <p class="text-xl font-semibold text-content">@OpenVariationsCount open · @ApprovedVariationsCount approved</p>
+            </div>
+            <div class="panel p-4">
+                <p class="eyebrow mb-1">Approved value</p>
+                <p class="text-xl font-semibold text-content">@Money(ApprovedOrders.Sum(vo => vo.Value))</p>
+            </div>
+        </div>
+
+        @* Subcontractor-raised variation requests: the portal-side entry to this register. Accepting
+           creates a Selected variation carrying the sub's price (it appears in the table below); the
+           normal approve step then writes the VO to the valuation and CVR. *@
+        @if (OpenRequests.Count > 0 || ReviewedRequests.Count > 0)
+        {
+            <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+                <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-content-muted">Subcontractor variation requests</h3>
+                    <span class="text-xs text-content-subtle">@OpenRequests.Count awaiting review</span>
+                </header>
+                @if (requestError is not null)
+                {
+                    <p class="mx-5 mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@requestError</p>
+                }
+                @if (OpenRequests.Count == 0)
+                {
+                    <p class="p-5 text-sm text-content-subtle italic">Nothing awaiting review.</p>
+                }
+                else
+                {
+                    <ul class="divide-y divide-line">
+                        @foreach (var variationRequest in OpenRequests)
+                        {
+                            <li class="p-4 text-sm">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div>
+                                        <p class="font-medium text-content">@variationRequest.Title</p>
+                                        <p class="text-xs text-content-subtle mt-1">
+                                            @variationRequest.SubcontractorName · against WO-@variationRequest.WorkOrderNumber.ToString("0000") · raised @variationRequest.SubmittedAt.LocalDateTime.ToString("d MMM yyyy")
+                                        </p>
+                                        <p class="text-sm text-content-muted mt-2 whitespace-pre-line">@variationRequest.Description</p>
+                                    </div>
+                                    <div class="text-right shrink-0">
+                                        <p class="font-medium text-content">@Money(variationRequest.ProposedValue)</p>
+                                        @if (CanManageVariations)
+                                        {
+                                            <div class="flex gap-2 mt-2 justify-end">
+                                                <button type="button" class="rounded-lg bg-accent text-accent-ink text-xs font-medium px-2.5 py-1 hover:bg-accent-hover transition disabled:opacity-60"
+                                                        disabled="@requestBusy" @onclick="() => AcceptRequest(variationRequest.VariationRequestId)">
+                                                    Accept → variation
+                                                </button>
+                                                <button type="button" class="rounded-lg border border-line text-xs font-medium px-2.5 py-1 text-content-muted hover:text-content transition disabled:opacity-60"
+                                                        disabled="@requestBusy" @onclick="() => StartReject(variationRequest.VariationRequestId)">
+                                                    Reject
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                                @if (rejectingRequestId == variationRequest.VariationRequestId)
+                                {
+                                    <div class="mt-3 flex flex-wrap gap-2 items-center">
+                                        <input class="field w-72" placeholder="Reason (the subcontractor sees this)"
+                                               @bind="rejectReason" @bind:event="oninput" />
+                                        <button type="button" class="btn-secondary" disabled="@(requestBusy || string.IsNullOrWhiteSpace(rejectReason))"
+                                                @onclick="() => ConfirmReject(variationRequest.VariationRequestId)">
+                                            @(requestBusy ? "Rejecting…" : "Confirm reject")
+                                        </button>
+                                        <button type="button" class="text-xs text-content-subtle underline underline-offset-2"
+                                                @onclick="() => rejectingRequestId = null">Cancel</button>
+                                    </div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                @if (ReviewedRequests.Count > 0)
+                {
+                    <details class="border-t border-line px-5 py-3">
+                        <summary class="text-xs text-content-subtle cursor-pointer">Reviewed (@ReviewedRequests.Count)</summary>
+                        <ul class="mt-2 space-y-1">
+                            @foreach (var reviewed in ReviewedRequests)
+                            {
+                                <li class="text-xs text-content-subtle">
+                                    @reviewed.Title — @reviewed.Status.ToString().ToLowerInvariant()
+                                    @(reviewed.Status == VariationRequestStatus.Rejected && !string.IsNullOrWhiteSpace(reviewed.RejectionReason) ? $" ({reviewed.RejectionReason})" : "")
+                                    · @reviewed.SubcontractorName · @Money(reviewed.ProposedValue)
+                                </li>
+                            }
+                        </ul>
+                    </details>
+                }
+            </div>
+        }
+
+        @* Issue-WO / accept-reject errors need a home even when the review section above is not rendered. *@
+        @if (requestError is not null && OpenRequests.Count == 0 && ReviewedRequests.Count == 0)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@requestError</p>
+        }
+
+        @if (FilteredRows.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">
+                @if (Searching)
+                {
+                    <text>No variations match “@search.Trim()”.</text>
+                }
+                else
+                {
+                    <text>
+                        No variations yet. Raise one from an RFQ on one of the project's RFIs, accept a
+                        subcontractor's variation request, or add one manually above.
+                    </text>
+                }
+            </p>
+        }
+        else
+        {
+            @if (variationStatusError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@variationStatusError</p>
+            }
+            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Ref</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Title</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Request</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Value</th>
+                            @* Issued is the official date the client was notified (stamped when
+                               the variation enters Issued) — a dash while it is still being
+                               quoted. The system's Created stamp travels on the export only. *@
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Issued</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Approved</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Work order</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var order in FilteredRows)
+                        {
+                            <tr class="hover:bg-surface-raised">
+                                <td class="px-4 py-3 font-mono text-[12px] whitespace-nowrap">
+                                    <a class="text-content hover:underline underline-offset-4"
+                                       href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@RowReference(order)</a>
+                                </td>
+                                <td class="px-4 py-3">
+                                    <a class="text-content font-medium hover:underline underline-offset-4"
+                                       href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@order.Title</a>
+                                    @* Recent triage activity — the api coalesces the historic
+                                       VOQ-typed rows onto Variation, so one lookup covers the
+                                       variation's whole correspondence. *@
+                                    <ActivityBadge Activity="@Activity.For(ProjectId, RecordType.Variation, order.VariationOrderId)" Class="ml-1.5" />
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @{ var sourceRequest = RequestFor(order); }
+                                    @if (sourceRequest is not null)
+                                    {
+                                        @* The trace back up the lifecycle: the variation → the RFI/request it prices. *@
+                                        <a class="font-mono text-xs text-content-muted hover:text-content hover:underline underline-offset-4"
+                                           title="@sourceRequest.Title"
+                                           href="@($"/projects/{ProjectId}/requests/view/{sourceRequest.RequestId}")">@RefLabel(sourceRequest)</a>
+                                    }
+                                    else
+                                    {
+                                        @* Seeded rows predate the variation→request link. Kept quiet here — repairing
+                                           the link is done deliberately on the variation itself, so the badge
+                                           links through to the variation page's Originating-request panel. *@
+                                        <a class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-subtle hover:text-content hover:border-content-subtle transition-colors"
+                                           title="No request behind this variation yet — open it to link the RFI it was raised from"
+                                           href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">No request</a>
+                                    }
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @{ var statusChoices = CanManageVariations ? VariationStatusChoices(order) : new List<VariationStatusChoice>(); }
+                                    @if (statusChoices.Count > 0)
+                                    {
+                                        @* The chip doubles as the status control. Direct moves cover the
+                                           side-effect-free stages; the commercial transitions (approve,
+                                           un-approve, reject) link through to the variation, where their
+                                           real flows — cost code, confirms, reversals — live. *@
+                                        <div class="relative">
+                                            <button type="button" class="@BadgeClass(order) gap-1"
+                                                    title="Change status"
+                                                    disabled="@(variationStatusBusyId == order.VariationOrderId)"
+                                                    @onclick="() => ToggleVariationStatusMenu(order.VariationOrderId)">
+                                                @VariationStatusLabel(order) <span class="text-[9px]" aria-hidden="true">▾</span>
+                                            </button>
+                                            @if (variationStatusMenuId == order.VariationOrderId)
+                                            {
+                                                <div class="absolute left-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden">
+                                                    <ul class="divide-y divide-line">
+                                                        @foreach (var choice in statusChoices)
+                                                        {
+                                                            var pick = choice;
+                                                            <li>
+                                                                <button type="button"
+                                                                        class="w-full text-left px-3 py-2 text-sm transition @(pick.IsCurrent ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
+                                                                        disabled="@pick.IsCurrent"
+                                                                        title="@pick.Hint"
+                                                                        @onclick="() => PickVariationStatus(pick)">
+                                                                    @pick.Label@(pick.IsCurrent ? " ✓" : "")
+                                                                </button>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="@BadgeClass(order)">@VariationStatusLabel(order)</span>
+                                    }
+                                </td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap @(order.Status == VariationOrderStatus.Rejected ? "text-content-subtle line-through" : "text-content")">
+                                    @(RowValue(order) is { } v ? Money(v) : "—")
+                                </td>
+                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@(order.IssuedAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—")</td>
+                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">
+                                    @(order.Status == VariationOrderStatus.Approved ? order.ApprovedAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—" : "—")
+                                </td>
+                                <td class="px-4 py-3 whitespace-nowrap">
+                                    @{ var issued = IssuedWorkOrdersFor(order); }
+                                    @if (issued.Count > 0)
+                                    {
+                                        <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}"))</span>
+                                    }
+                                    @if (CanIssueWorkOrder(order))
+                                    {
+                                        <button type="button" class="@(issued.Count > 0 ? "block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
+                                                title="@(issued.Count > 0 ? "Issue a further work order for this variation" : "Issue the work order instructing this variation")"
+                                                disabled="@requestBusy" @onclick="() => IssueWorkOrder(order.VariationOrderId)">
+                                            @(issued.Count > 0 ? "Issue another" : "Issue WO")
+                                        </button>
+                                    }
+                                    else if (issued.Count == 0)
+                                    {
+                                        <span class="text-content-subtle">—</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-xs text-content-subtle mt-3">
+                Only approved variations are included on the valuation report; the rest stay here until they are.
+            </p>
+        }
+    </ProjectPageShell>
+
+    <AddManualVariationDialog ProjectId="@ProjectId"
+                              IsOpen="addVariationOpen"
+                              SuggestedNumber="@NextVariationNumber"
+                              UsedNumbers="@UsedVariationNumbers"
+                              OnClose="CloseAddVariationDialog"
+                              OnCreated="OnManualVariationCreated" />
+
+    @* Declining from the register is one click away from a terminal state, so it confirms first —
+       the same guard the variation's own page applies. Post-approval rejects never reach here:
+       that choice links through to the variation, where the reversal can be explained next to the
+       figures it changes. *@
+    @if (decliningVariation is { } declining)
+    {
+        <Modal IsOpen="true"
+               Title="@($"Decline {declining.DisplayNumber}?")"
+               ConfirmLabel="@(variationStatusBusyId is not null ? "Declining…" : "Decline variation")"
+               CancelLabel="Keep it open"
+               ConfirmDisabled="@(variationStatusBusyId is not null)"
+               OnCancel="() => decliningVariation = null"
+               OnConfirm="ConfirmDeclineVariation"
+               Class="max-w-md">
+            <div class="space-y-3">
+                @if (variationStatusError is not null)
+                {
+                    <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@variationStatusError</div>
+                }
+                <p class="text-sm text-content">
+                    <span class="font-mono">@declining.DisplayNumber</span> — @declining.Title
+                </p>
+                <p class="text-sm text-content-subtle">
+                    Closes the variation as <span class="text-content font-medium">Rejected</span>: the client
+                    declined it, or it has been withdrawn. Nothing commercial is written — it simply stops here.
+                </p>
+                <p class="text-xs text-content-subtle">Rejected is terminal; the variation can't be reopened.</p>
+            </div>
+        </Modal>
+    }
+}
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    protected override void OnInitialized() =>
-        Nav.NavigateTo($"/projects/{ProjectId}/requests/variations", replace: true);
+    private bool isLoaded;
+
+    // The request register rides along read-only: the Request column links each variation back to
+    // the RFI it prices, and the search reads the originating request's text.
+    private IReadOnlyList<Request> AllRecords => RequestRegister.ForProject(ProjectId);
+
+    // Manual variation entry (a standalone variation with no request). The number field pre-fills with the
+    // project's next number but the user can set it to match a client-issued reference.
+    private bool addVariationOpen;
+    private int NextVariationNumber => (orders.Count == 0 ? 0 : orders.Max(o => o.Number)) + 1;
+    private IReadOnlyCollection<int> UsedVariationNumbers => orders.Select(o => o.Number).ToHashSet();
+    private void OpenAddVariationDialog() => addVariationOpen = true;
+    private void CloseAddVariationDialog() => addVariationOpen = false;
+
+    private async Task OnManualVariationCreated(VariationOrder created)
+    {
+        addVariationOpen = false;
+        // The new draft appears as a "No request" row in the register; approve it there (or open it)
+        // to write it onto the valuation report.
+        await LoadVariationsAsync();
+    }
+
+    // ---- The variation book ---------------------------------------------------------------------
+
+    private string? variationsError;
+    private IReadOnlyList<VariationOrder> orders = Array.Empty<VariationOrder>();
+
+    // One row per variation order — the unified document from first pricing to client decision.
+    private List<VariationOrder> Rows { get; set; } = new();
+
+    private int OpenVariationsCount => orders.Count(o =>
+        o.Status is VariationOrderStatus.Quoting or VariationOrderStatus.Issued
+            or VariationOrderStatus.AwaitingArchitectInstruction);
+
+    private int ApprovedVariationsCount => orders.Count(o => o.Status == VariationOrderStatus.Approved);
+
+    private List<VariationOrder> ApprovedOrders =>
+        orders.Where(o => o.Status == VariationOrderStatus.Approved).ToList();
+
+    // The record's identifier: the "V18" VariationRef once approved, else the same number rendered
+    // the same way ("V18"). One document, one number, at every stage — Reference keeps the historic
+    // "VOQ-0001" spelling because it is a persisted identifier, not something a user should read.
+    private static string RowReference(VariationOrder order) =>
+        !string.IsNullOrWhiteSpace(order.VariationRef) ? order.VariationRef! : order.DisplayNumber;
+
+    // The quoting estimate until approval, then the agreed (contract) value.
+    private static decimal? RowValue(VariationOrder order) =>
+        order.Status == VariationOrderStatus.Approved ? order.Value : order.EstimatedValue;
+
+    // The trace back up the lifecycle: the register's request this variation prices, if its
+    // RequestId resolves. Seeded variations predate the link, so a null here renders the "No request" badge.
+    private Request? RequestFor(VariationOrder order) =>
+        string.IsNullOrWhiteSpace(order.RequestId)
+            ? null
+            : AllRecords.FirstOrDefault(r => string.Equals(r.RequestId, order.RequestId, StringComparison.OrdinalIgnoreCase));
+
+    private static string RefLabel(Request record) =>
+        !string.IsNullOrWhiteSpace(record.Reference) ? record.Reference
+        : record.DisplayNumber.Length > 0 ? record.DisplayNumber
+        : "(no ref)";
+
+    // Blank RequestId only — the definition both repair panels (the variation page's
+    // Originating-request picker and the RFI page's Link-variation picker) use, so the banner
+    // never counts a record neither of them can fix (a dangling RequestId whose request was deleted).
+    private List<VariationOrder> UnlinkedRows => Rows.Where(order => string.IsNullOrWhiteSpace(order.RequestId)).ToList();
+
+    // ---- Free-text search -----------------------------------------------------------------------
+    // Keywords are ANDed on whitespace, same as every register search. The originating request's
+    // own text is included — someone searching "boiler" should find the variation that priced the
+    // boiler RFI even when only the RFI says the word.
+
+    private string search = "";
+
+    private bool Searching => !string.IsNullOrWhiteSpace(search);
+
+    private void OnSearchInput(ChangeEventArgs e) => search = e.Value?.ToString() ?? "";
+
+    private void ClearSearch() => search = "";
+
+    private bool MatchesSearch(VariationOrder order)
+    {
+        if (!Searching) return true;
+
+        var tokens = search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.All(token =>
+            SearchableText(order).Any(field => field is not null && field.Contains(token, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private IEnumerable<string?> SearchableText(VariationOrder order)
+    {
+        yield return order.Reference;
+        yield return order.DisplayNumber;
+        yield return order.VariationRef;
+        yield return order.Title;
+        yield return order.Description;
+        yield return order.CostCode;
+
+        // The Request column's own text, so the search finds a variation by its RFI.
+        var source = RequestFor(order);
+        if (source is null) yield break;
+        yield return source.Reference;
+        yield return source.DisplayNumber;
+        yield return source.Title;
+    }
+
+    private IReadOnlyList<VariationOrder> FilteredRows =>
+        Rows.Where(MatchesSearch).ToList();
+
+    // ---- Subcontractor variation requests ----
+
+    private IReadOnlyList<SubcontractorVariationRequest> variationRequests = Array.Empty<SubcontractorVariationRequest>();
+    private bool requestBusy;
+    private string? requestError;
+    private string? rejectingRequestId;
+    private string rejectReason = "";
+
+    private List<SubcontractorVariationRequest> OpenRequests =>
+        variationRequests.Where(r => r.IsOpen).ToList();
+
+    private List<SubcontractorVariationRequest> ReviewedRequests =>
+        variationRequests.Where(r => !r.IsOpen).ToList();
+
+    // Mirrors the API's VariationRoles.AllowedToManageVariations.
+    private bool CanManageVariations => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.QuantitySurveyor);
+
+    // Mirrors the API's issue gate (Director/PM, like awarding a bid package).
+    private bool CanIssueWorkOrders => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
+
+    private async Task AcceptRequest(string variationRequestId)
+    {
+        if (requestBusy) return;
+        requestError = null;
+        try
+        {
+            requestBusy = true;
+            await Variations.AcceptVariationRequestAsync(variationRequestId);
+            await LoadVariationsAsync(); // The new Selected variation appears in the register below.
+        }
+        catch (CommandFailedException ex) { requestError = ex.Message; }
+        catch { requestError = "Couldn't accept the request. Please try again."; }
+        finally { requestBusy = false; }
+    }
+
+    private void StartReject(string variationRequestId)
+    {
+        rejectingRequestId = variationRequestId;
+        rejectReason = "";
+        requestError = null;
+    }
+
+    private async Task ConfirmReject(string variationRequestId)
+    {
+        if (requestBusy || string.IsNullOrWhiteSpace(rejectReason)) return;
+        requestError = null;
+        try
+        {
+            requestBusy = true;
+            await Variations.RejectVariationRequestAsync(variationRequestId, rejectReason.Trim());
+            rejectingRequestId = null;
+            await LoadVariationsAsync();
+        }
+        catch (CommandFailedException ex) { requestError = ex.Message; }
+        catch { requestError = "Couldn't reject the request. Please try again."; }
+        finally { requestBusy = false; }
+    }
+
+    // ---- Issue work order for an approved variation order ----
+
+    private IReadOnlyList<WorkOrder> IssuedWorkOrdersFor(VariationOrder order) =>
+        Procurement.WorkOrdersFor(ProjectId)
+            .Where(wo => string.Equals(wo.VariationOrderId, order.VariationOrderId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    // A work order is only instructed after approval — the client's instruction to proceed.
+    private bool CanIssueWorkOrder(VariationOrder order) =>
+        CanIssueWorkOrders
+        && order.Status == VariationOrderStatus.Approved
+        && !string.IsNullOrWhiteSpace(order.SelectedSubcontractorId);
+
+    private async Task IssueWorkOrder(string variationOrderId)
+    {
+        if (requestBusy) return;
+        requestError = null;
+        try
+        {
+            requestBusy = true;
+            await Variations.IssueWorkOrderForVariationOrderAsync(variationOrderId);
+            Procurement.Refresh(ProjectId); // Show the new order in the issued-WO column.
+            await LoadVariationsAsync();    // VO may have moved Approved → Issued.
+        }
+        catch (CommandFailedException ex) { requestError = ex.Message; }
+        catch { requestError = "Couldn't issue the work order. Please try again."; }
+        finally { requestBusy = false; }
+    }
+
+    // ---- In-row variation status changes (the chip's dropdown) ----------------------------------
+
+    private string? variationStatusMenuId;
+    private string? variationStatusBusyId;
+    private string? variationStatusError;
+
+    private void ToggleVariationStatusMenu(string variationOrderId) =>
+        variationStatusMenuId = variationStatusMenuId == variationOrderId ? null : variationOrderId;
+
+    // One dropdown entry: a direct move (Action) or a link through to the variation (Href) for the
+    // transitions whose real flows — cost code, confirms, reversals — live on the record itself.
+    private sealed record VariationStatusChoice(string Label, string? Hint, bool IsCurrent, Func<Task>? Action = null, string? Href = null);
+
+    private List<VariationStatusChoice> VariationStatusChoices(VariationOrder order)
+    {
+        var choices = new List<VariationStatusChoice>();
+        var variationHref = $"/projects/{ProjectId}/variations/{order.VariationOrderId}";
+
+        // Rejected is a terminal audit record — the pill doesn't offer reactivation.
+        if (order.Status == VariationOrderStatus.Rejected) return choices;
+
+        if (order.Status == VariationOrderStatus.Approved)
+        {
+            // An approved order can only move back to Quoting (data repair, un-approve) or to
+            // Rejected (a real commercial event) — never straight across to Issued.
+            choices.Add(new("Approved", null, true));
+            choices.Add(new("Quoting (return to quoting)…",
+                "Un-approves — reverses the approval's writes and frees the V-ref; a record correction",
+                false,
+                Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Quoting)));
+            choices.Add(new("Rejected…",
+                "A real commercial event — reverses the approval's valuation / CVR / budget writes",
+                false,
+                Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Rejected)));
+            return choices;
+        }
+
+        // Quoting / Issued / Awaiting AI: move directly between the side-effect-free stages, approve
+        // (through the variation, where the cost code and value are collected) or reject.
+        choices.Add(new("Quoting", null, order.Status == VariationOrderStatus.Quoting,
+            Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Quoting)));
+        choices.Add(new("Issued",
+            "Marks the variation as sent to the client, awaiting their decision",
+            order.Status == VariationOrderStatus.Issued,
+            Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.Issued)));
+        choices.Add(new("Awaiting AI",
+            "Issued and waiting on a formal Architect's Instruction — no commercial effect yet",
+            order.Status == VariationOrderStatus.AwaitingArchitectInstruction,
+            Action: () => ChangeVariationStatusInline(order, VariationOrderStatus.AwaitingArchitectInstruction)));
+        choices.Add(new("Approved…",
+            "Approving mints the V-ref and writes the contract figures — runs on the variation itself",
+            false, Href: variationHref));
+        choices.Add(new("Rejected…",
+            "Declined by the client or withdrawn — terminal, and confirmed before it is applied",
+            false,
+            Action: () => { decliningVariation = order; return Task.CompletedTask; }));
+        return choices;
+    }
+
+    private async Task PickVariationStatus(VariationStatusChoice choice)
+    {
+        variationStatusMenuId = null;
+        if (choice.IsCurrent) return;
+        if (choice.Href is not null) { Nav.NavigateTo(choice.Href); return; }
+        if (choice.Action is not null) await choice.Action();
+    }
+
+    // The variation the decline modal is asking about; null when the modal is closed.
+    private VariationOrder? decliningVariation;
+
+    private async Task ConfirmDeclineVariation()
+    {
+        if (decliningVariation is not { } order) return;
+        await ChangeVariationStatusInline(order, VariationOrderStatus.Rejected);
+        // Close only on success — a failure leaves the modal up with the error visible behind it,
+        // rather than silently swallowing the attempt.
+        if (variationStatusError is null) decliningVariation = null;
+    }
+
+    private async Task ChangeVariationStatusInline(VariationOrder order, VariationOrderStatus status)
+    {
+        if (variationStatusBusyId is not null) return;
+        variationStatusError = null;
+        try
+        {
+            variationStatusBusyId = order.VariationOrderId;
+            if (status == VariationOrderStatus.Rejected)
+                await Variations.RejectAsync(order.VariationOrderId);
+            else if (status == VariationOrderStatus.Quoting && order.Status == VariationOrderStatus.Approved)
+                await Variations.ReturnToQuotingAsync(order.VariationOrderId);
+            else
+                await Variations.SetStatusAsync(order.VariationOrderId, status);
+            await LoadVariationsAsync();
+        }
+        catch (CommandFailedException ex) { variationStatusError = $"{RowReference(order)}: {ex.Message}"; }
+        catch { variationStatusError = $"Couldn't change the status of {RowReference(order)}. Please try again."; }
+        finally { variationStatusBusyId = null; }
+    }
+
+    private static string VariationStatusLabel(VariationOrder order) => order.Status switch
+    {
+        VariationOrderStatus.Quoting => "Quoting",
+        VariationOrderStatus.Issued => "Issued",
+        VariationOrderStatus.AwaitingArchitectInstruction => "Awaiting AI",
+        VariationOrderStatus.Approved => "Approved",
+        VariationOrderStatus.Rejected => "Rejected",
+        _ => "Variation"
+    };
+
+    private static string BadgeClass(VariationOrder order)
+    {
+        const string baseClass = "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ";
+        return order.Status switch
+        {
+            VariationOrderStatus.Approved => baseClass + "bg-accent/10 border-accent/30 text-accent",
+            VariationOrderStatus.Rejected => baseClass + "bg-negative/10 border-negative/30 text-negative",
+            _ => baseClass + "bg-surface-raised border-line text-content-muted"
+        };
+    }
+
+    private static string Money(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // ---- Excel export ----------------------------------------------------------------------
+    // One Variations sheet — the current view (following the search); "Include entire register"
+    // from the export menu overrides the search and takes every row.
+
+    private ExcelWorkbook? BuildExportWorkbook(bool includeEntireRegister)
+    {
+        var workbook = new ExcelWorkbook();
+
+        var variationRows = includeEntireRegister ? (IReadOnlyList<VariationOrder>)Rows : FilteredRows;
+        if (variationRows.Count > 0)
+        {
+            var sheet = workbook.AddSheet("Variations",
+                new ExcelColumn("Ref"),
+                new ExcelColumn("Title"),
+                new ExcelColumn("Request"),
+                new ExcelColumn("Status"),
+                new ExcelColumn("Value", ExcelFormat.Currency),
+                new ExcelColumn("Issued", ExcelFormat.Date),
+                new ExcelColumn("Approved", ExcelFormat.Date),
+                new ExcelColumn("Created", ExcelFormat.Date),
+                new ExcelColumn("Work order"));
+
+            foreach (var order in variationRows)
+            {
+                var sourceRequest = RequestFor(order);
+                var issued = IssuedWorkOrdersFor(order);
+                sheet.AddRow(
+                    RowReference(order),
+                    order.Title,
+                    sourceRequest is null ? null : RefLabel(sourceRequest),
+                    VariationStatusLabel(order),
+                    RowValue(order),
+                    order.IssuedAt?.LocalDateTime,
+                    order.Status == VariationOrderStatus.Approved ? order.ApprovedAt?.LocalDateTime : null,
+                    order.CreatedAt.LocalDateTime,
+                    issued.Count == 0 ? null : string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}")));
+            }
+        }
+
+        return workbook.Sheets.Count == 0 ? null : workbook;
+    }
+
+    private async Task LoadVariationsAsync()
+    {
+        try
+        {
+            orders = await Variations.ListForProjectAsync(ProjectId);
+            variationRequests = await Variations.ListVariationRequestsForProjectAsync(ProjectId);
+            Rows = orders.OrderByDescending(order => order.Number).ToList();
+            variationsError = null;
+        }
+        catch { variationsError = "Couldn't load variations. Please try again."; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        RequestRegister.OnChange += StateHasChanged;
+        Activity.OnChanged += StateHasChanged;
+        // Refresh on entry (stale-while-revalidate): cached data renders immediately, then
+        // updates when the background reload lands.
+        RequestRegister.Refresh(ProjectId); // The Request column + search read the register.
+        Procurement.Refresh(ProjectId);     // Background revalidation of work orders (issued-WO column).
+        Activity.Refresh(ProjectId);        // Activity badges land in the background — absent until then.
+        await LoadVariationsAsync();
+        isLoaded = true;
+    }
+
+    public void Dispose()
+    {
+        RequestRegister.OnChange -= StateHasChanged;
+        Activity.OnChanged -= StateHasChanged;
+    }
 }

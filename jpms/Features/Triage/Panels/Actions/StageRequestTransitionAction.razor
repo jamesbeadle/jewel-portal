@@ -16,13 +16,14 @@
     {
         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
     }
-    <select class="field" @bind="requestId">
-        <option value="">@(Candidates.Count == 0 ? $"No {CandidateNoun} on this project" : $"Select a {CandidateNoun}…")</option>
-        @foreach (var request in Candidates)
-        {
-            <option value="@request.RequestId">@request.Reference — @request.Title</option>
-        }
-    </select>
+    @* SearchSelect rather than a native select: the register runs long, so the record is found
+       by typing (matches reference and title), the list opens downward whenever it fits, and
+       the options read in reference-number order rather than the store's arrival order. *@
+    <SearchSelect Options="@CandidateOptions"
+                  WidthClass="w-full" InputClass="field"
+                  Disabled="@(Candidates.Count == 0)"
+                  Placeholder="@(Candidates.Count == 0 ? $"No {CandidateNoun} on this project" : $"Select a {CandidateNoun}…")"
+                  @bind-Value="requestId" />
 
     @if (Kind == SystemActionKind.CloseRfi)
     {
@@ -64,16 +65,37 @@
     }
 
     // Which records the transition can touch: promotion takes an unpromoted General container;
-    // closing takes anything not yet closed; reopening takes what is closed.
-    private IReadOnlyList<Request> Candidates => Kind switch
+    // closing takes anything not yet closed; reopening takes what is closed. Always presented in
+    // reference-number order (REQ-009 before REQ-012, prefixes grouped) — the store's order is
+    // arrival order, which reads as random in a picker.
+    private IReadOnlyList<Request> Candidates => (Kind switch
     {
         SystemActionKind.PromoteRequestToRfi => RequestRegister.ForProject(ProjectId)
-            .Where(request => request.Kind == RequestType.General && request.Status != RequestStatus.Closed).ToList(),
+            .Where(request => request.Kind == RequestType.General && request.Status != RequestStatus.Closed),
         SystemActionKind.CloseRfi => RequestRegister.ForProject(ProjectId)
-            .Where(request => request.Status != RequestStatus.Closed).ToList(),
+            .Where(request => request.Status != RequestStatus.Closed),
         _ => RequestRegister.ForProject(ProjectId)
-            .Where(request => request.Status == RequestStatus.Closed).ToList()
-    };
+            .Where(request => request.Status == RequestStatus.Closed)
+    })
+        .OrderBy(request => ReferenceSortKey(request).Prefix, StringComparer.OrdinalIgnoreCase)
+        .ThenBy(request => ReferenceSortKey(request).Number)
+        .ThenBy(request => request.Reference, StringComparer.OrdinalIgnoreCase)
+        .ToList();
+
+    private IReadOnlyList<SearchSelect.Option> CandidateOptions =>
+        Candidates.Select(request => new SearchSelect.Option(
+            request.RequestId, $"{request.Reference} — {request.Title}")).ToList();
+
+    // "REQ-012" → ("REQ", 12); suffixed references still parse ("RFI-049A" → 49); anything not
+    // shaped {prefix}-{digits} sorts after the numbered entries under its own prefix.
+    private static (string Prefix, int Number) ReferenceSortKey(Request request)
+    {
+        var reference = request.Reference?.Trim() ?? string.Empty;
+        var dash = reference.IndexOf('-');
+        if (dash <= 0) return (reference, int.MaxValue);
+        var digits = new string(reference[(dash + 1)..].TakeWhile(char.IsDigit).ToArray());
+        return (reference[..dash], int.TryParse(digits, out var number) ? number : int.MaxValue);
+    }
 
     private string CandidateNoun => Kind switch
     {

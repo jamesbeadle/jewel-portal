@@ -8,7 +8,8 @@ namespace Jewel.JPMS.Features.Triage.Panels;
 /// </summary>
 public enum SystemActionKind
 {
-    RaiseRequest,
+    // RaiseRequest retired 2026-08-14 — General requests are sunset: raise a to-do for things
+    // that aren't an RFI. Existing requests can still be promoted/worked; nothing raises new ones.
     PromoteRequestToRfi,
     RaiseRfi,
     ReopenRfi,
@@ -26,12 +27,12 @@ public enum SystemActionKind
 
 public static class SystemActionKinds
 {
-    /// <summary>Dropdown order — Nigel's list, verbatim.</summary>
+    /// <summary>Dropdown order — Nigel's list, minus the retired Raise Request (2026-08-14);
+    /// Raise RFI leads as the default create.</summary>
     public static readonly SystemActionKind[] All =
     {
-        SystemActionKind.RaiseRequest,
-        SystemActionKind.PromoteRequestToRfi,
         SystemActionKind.RaiseRfi,
+        SystemActionKind.PromoteRequestToRfi,
         SystemActionKind.ReopenRfi,
         SystemActionKind.CloseRfi,
         SystemActionKind.RaiseVariationOrder,
@@ -47,7 +48,6 @@ public static class SystemActionKinds
 
     public static string Label(SystemActionKind kind) => kind switch
     {
-        SystemActionKind.RaiseRequest => "Raise Request",
         SystemActionKind.PromoteRequestToRfi => "Promote Request to RFI",
         SystemActionKind.RaiseRfi => "Raise RFI",
         SystemActionKind.ReopenRfi => "Reopen RFI",

@@ -98,12 +98,14 @@ else
             {
                 <div class="mb-4 space-y-2">
                     <p class="text-sm text-content-muted">
-                        Replying to <span class="text-content font-medium">@DisplayFrom(replyingTo)</span> —
+                        @(composeIsForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@DisplayFrom(replyingTo)</span> —
                         <span class="italic">@replyingTo.Subject</span>
                     </p>
-                    <MailReplyComposer @key="replyingTo.Id" ReplyTo="replyingTo"
+                    <MailReplyComposer @key="@($"{replyingTo.Id}:{composeIsForward}")" ReplyTo="replyingTo" Forward="composeIsForward"
                                        Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@ProjectId"
-                                       FooterNote="The reply sends now from the projects mailbox and files itself back into this list."
+                                       FooterNote="@(composeIsForward
+                                           ? "The forward sends now from the projects mailbox and files itself back into this list."
+                                           : "The reply sends now from the projects mailbox and files itself back into this list.")"
                                        OnSent="OnReplySent" OnCancel="() => replyTo = null" />
                 </div>
             }
@@ -154,9 +156,11 @@ else
                                 <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[10px] text-content-subtle">@TagStem(tag)</span>
                             }
                         </div>
-                        <div class="mt-2">
+                        <div class="mt-2 flex items-center gap-4">
                             <button type="button" class="text-xs font-medium text-accent hover:underline"
-                                    @onclick="() => replyTo = item.Message">↩ Reply</button>
+                                    @onclick="() => StartCompose(item.Message, forward: false)">↩ Reply</button>
+                            <button type="button" class="text-xs font-medium text-accent hover:underline"
+                                    @onclick="() => StartCompose(item.Message, forward: true)">→ Forward</button>
                         </div>
                     </li>
                 }
@@ -199,17 +203,27 @@ else
     private string? nextCursor;
     private int total;
 
-    // The email a Reply was pressed on (the shared composer opens above the list; replying from a
-    // record page sends immediately) and the confirmation left behind by the last send.
+    // The email a Reply or Forward was pressed on (the shared composer opens above the list;
+    // sending from a record page sends immediately), which of the two it was, and the
+    // confirmation left behind by the last send.
     private MailboxMessage? replyTo;
+    private bool composeIsForward;
     private string? replySent;
+
+    private void StartCompose(MailboxMessage message, bool forward)
+    {
+        replyTo = message;
+        composeIsForward = forward;
+    }
 
     private async Task OnReplySent(Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome outcome)
     {
+        var wasForward = composeIsForward;
         replyTo = null;
+        composeIsForward = false;
         replySent = outcome.Sent
-            ? $"Reply sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
-            : "The reply was saved to the mailbox's Drafts — review and send it from Outlook.";
+            ? $"{(wasForward ? "Forward" : "Reply")} sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
+            : $"The {(wasForward ? "forward" : "reply")} was saved to the mailbox's Drafts — review and send it from Outlook.";
         // The sent copy self-files by the thread's tags; re-read so it appears straight away.
         await LoadAsync(reset: true);
     }

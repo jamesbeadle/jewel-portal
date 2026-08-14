@@ -49,4 +49,11 @@ public static class MailCompose
         string.IsNullOrWhiteSpace(subject) ? "RE: (no subject)"
         : subject.TrimStart().StartsWith("RE:", StringComparison.OrdinalIgnoreCase) ? subject.Trim()
         : $"RE: {subject.Trim()}";
+
+    /// <summary>"FW: " the subject once — an already-FW'd (or FWD'd) subject stays as it is.</summary>
+    public static string ForwardSubjectFor(string? subject) =>
+        string.IsNullOrWhiteSpace(subject) ? "FW: (no subject)"
+        : subject.TrimStart().StartsWith("FW:", StringComparison.OrdinalIgnoreCase)
+          || subject.TrimStart().StartsWith("FWD:", StringComparison.OrdinalIgnoreCase) ? subject.Trim()
+        : $"FW: {subject.Trim()}";
 }

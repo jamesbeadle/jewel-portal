@@ -21,6 +21,13 @@ namespace Jewel.JPMS.Contracts.MailboxCompose;
 // can additionally be filed to an existing record (LinkRecordType/LinkRecordId) or raise a General
 // request carrying the reply as its description (AlsoRaiseRequest — the old "Reply in thread"
 // composite, now opt-in). SenderEmail is stamped server-side from the signed-in user.
+//
+// Forward=true turns an anchored compose into a FORWARD of that email (Graph createForward instead
+// of createReplyAll: "FW:" scaffolding, quoted history, and the original attachments travel on the
+// draft automatically). Forwarding is passing the email on, not answering it, so a forward is never
+// a triage decision: MarkThreadHandled is ignored and the thread is never tagged JPMS/Replied. The
+// sent copy stays in the same conversation, so it still inherits the anchor's record tags and files
+// itself the same way a reply does. Meaningless without ReplyToMessageId.
 public sealed record SendMailboxEmail(
     // Reply target, or null for a brand-new email. InternetMessageId re-finds the message if its
     // Graph id changed since the list was rendered.
@@ -57,7 +64,10 @@ public sealed record SendMailboxEmail(
     // Required when AlsoRaiseRequest: the project the request is raised on.
     string? ProjectId = null,
     // Stamped server-side from the signed-in user; the client cannot spoof it.
-    string SenderEmail = "") : ICommand<ComposeOutcome>;
+    string SenderEmail = "",
+    // Forward the anchored email instead of replying to it (see the type comment). Ignored when
+    // ReplyToMessageId is null.
+    bool Forward = false) : ICommand<ComposeOutcome>;
 
 /// <summary>A composer recipient (address plus optional display name).</summary>
 public sealed record ComposeRecipient(string Email, string? Name = null);

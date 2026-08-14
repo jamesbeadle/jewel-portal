@@ -41,9 +41,14 @@
     </div>
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope</label>
-        <textarea rows="2" maxlength="4000" placeholder="What the order instructs (optional)"
+        @* Prints as typed (line breaks kept — the sheet renders it pre-wrap) in the PO's
+           "Works Order info" section, so an itemised breakdown can sit one charge per line,
+           lined up on the left, the way accounts lay it out in email. Grown from rows="2"
+           (2026-08-13): two rows invited one-line scopes and hid that multi-line lists work. *@
+        <textarea rows="6" maxlength="4000" placeholder="What the order instructs (optional) — line breaks print as typed, e.g.&#10;£350 - Urgent delivery surcharge&#10;£1,540 - Floor protection"
                   class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
                   disabled="@Busy" @bind="scope" @bind:event="oninput"></textarea>
+        <p class="text-xs text-content-subtle mt-1">Prints in the purchase order's "Works Order info" section exactly as typed — each line keeps its own line, aligned left.</p>
     </div>
 
     @* ── Programme: printed in the purchase order's Programme section ──── *@

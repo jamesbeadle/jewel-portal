@@ -63,11 +63,11 @@
                     <TodoEmailCard @key="email.Id" Email="@email" OwnTag="@OwnTag" CanSend="@CanSend"
                                    Expanded="@expanded.Contains(email.Id)"
                                    Detail="@DetailFor(email.Id)"
-                                   OnToggleExpand="ToggleExpandAsync" OnReply="StartReply" />
+                                   OnToggleExpand="ToggleExpandAsync" OnReply="StartReply" OnForward="StartForward" />
                     @if (replyingTo?.Id == email.Id)
                     {
                         <li>
-                            <TodoEmailComposer Todo="@Todo" ReplyTo="@replyingTo" Projects="@Projects"
+                            <TodoEmailComposer Todo="@Todo" ReplyTo="@replyingTo" Forward="@composeIsForward" Projects="@Projects"
                                                OnSent="HandleSent" OnCancel="CloseComposer" />
                         </li>
                     }

@@ -4,7 +4,7 @@
     System actions — THE creation surface for triage: line up records and actions against the email
     being triaged, fired when its Apply runs (System Tags is tagging only — linking the email to
     records that already exist). Two families share the dropdown:
-    - Email-linked creates (Raise Request / RFI, Raise Work Order, Create Bid Package Invite,
+    - Email-linked creates (Raise RFI, Raise Work Order, Create Bid Package Invite,
       Raise Defect, Create To-do Items): drafted into page-owned staging and raised by Apply
       through the intake commands, so the EMAIL IS TAGGED to the new record.
     - Staged store calls (RFI transitions, variations, to-do completion, directory contact):
@@ -84,11 +84,6 @@
     {
         @switch (kind)
         {
-            case SystemActionKind.RaiseRequest:
-                <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Request" RequestKind="RequestType.General"
-                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
-                break;
             case SystemActionKind.RaiseRfi:
                 <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Request" RequestKind="RequestType.Rfi"
                                           StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
@@ -180,7 +175,7 @@
     /// defect assignee. Suggestions only.</summary>
     [Parameter] public string SenderEmail { get; set; } = "";
 
-    private SystemActionKind kind = SystemActionKind.RaiseRequest;
+    private SystemActionKind kind = SystemActionKind.RaiseRfi;
 
     // To-dos are company-wide until a project is set, and a directory contact has no project at
     // all — everything else raises on the email's project.

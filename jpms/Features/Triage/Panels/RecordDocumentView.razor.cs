@@ -15,6 +15,10 @@ public partial class RecordDocumentView
     /// correspondence list; the host decides what replying means.</summary>
     [Parameter] public EventCallback<MailboxMessage> OnReply { get; set; }
 
+    /// <summary>Start a forward of one of the record's emails — same pass-through as
+    /// <see cref="OnReply"/>.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnForward { get; set; }
+
     // A request is the one type read in full here; every other type shows its explorer summary.
     private Request? request;
     private bool requestLoading;

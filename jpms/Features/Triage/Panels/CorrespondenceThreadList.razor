@@ -10,9 +10,9 @@
     the expanded view lists the attachments with Preview (into the workspace Preview pane, when
     the host passes OnPreview) and Download. Built for gathering context and copy/paste while
     working an email in the other window. A host that passes OnReply also gets a Reply button on
-    every email — the consistent reply affordance wherever a communication is listed: record pages
-    send there and then; the Control Centre lines the reply up in its Outbox instead. Tagging
-    (and untagging) stays in mailbox triage.
+    every email (and OnForward a Forward button) — the consistent reply/forward affordance
+    wherever a communication is listed: record pages send there and then; the Control Centre
+    lines the email up in its Outbox instead. Tagging (and untagging) stays in mailbox triage.
 *@
 
 <ul class="space-y-2">
@@ -50,6 +50,11 @@
     /// — the host decides whether replying is offered here, and what it means (send now on a
     /// record page; line up in the Outbox in the Control Centre).</summary>
     [Parameter] public EventCallback<MailboxMessage> OnReply { get; set; }
+
+    /// <summary>Start a FORWARD of an email in the list — same host semantics as
+    /// <see cref="OnReply"/> (send now on a record page; line up in the Outbox in the Control
+    /// Centre). Without a delegate no Forward button renders.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnForward { get; set; }
 
     private readonly HashSet<string> expandedThreads = new();
     private readonly HashSet<string> expandedEmails = new();
@@ -183,6 +188,11 @@
                 {
                     <button type="button" class="text-xs font-medium text-accent hover:underline"
                             @onclick="() => OnReply.InvokeAsync(email)">↩ Reply</button>
+                }
+                @if (OnForward.HasDelegate)
+                {
+                    <button type="button" class="text-xs font-medium text-accent hover:underline"
+                            @onclick="() => OnForward.InvokeAsync(email)">→ Forward</button>
                 }
                 @if (thread is { } threadGroup && threadGroup.Earlier.Count > 0)
                 {
