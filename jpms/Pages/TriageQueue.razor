@@ -937,7 +937,7 @@
         The triage bar — rendered ABOVE the two-window split, because the selected email is the
         one thing global to everything below: whatever the windows are showing, this strip says
         which email is being dealt with, holds the decisions that belong to the email itself
-        (project, the staged-work doors, the ticks) and fires the one Apply. Selecting another
+        (project, the staged-work doors, the two Yes/No decisions) and fires the one Apply. Selecting another
         email swaps the bar's subject; the windows carry on where they were.
     *@
     RenderFragment TriageBarContent =@<div class="panel px-4 py-3 mb-3 relative space-y-3">
@@ -962,22 +962,33 @@
                                ToggleTitle="The email's project — everything staged files against it" />
             </div>
 
-            @* The email-global ticks, stacked and compact — the full wording lives in the hover
-               titles. The thread tick says how many emails the apply would sweep, once the
-               thread has been read (staging tags themselves lives on the System Tags window). *@
-            <div class="flex flex-col gap-1">
-                <label class="flex items-center gap-1.5 text-sm text-content cursor-pointer select-none"
-                       title="Tags the email to the project's programme — it appears in the Programme tab's Relevant Events">
-                    <input type="checkbox" checked="@relevantEventStaged"
-                           @onchange="e => relevantEventStaged = e.Value is true" />
-                    Relevant Event for Programme
-                </label>
-                <label class="flex items-center gap-1.5 text-sm text-content cursor-pointer select-none"
-                       title="Everything you apply also tags every email currently in this conversation, clearing them from the queue together. Leave off to deal with just this email">
-                    <input type="checkbox" checked="@triageEntireThread"
-                           @onchange="e => triageEntireThread = e.Value is true" />
-                    Entire thread@(thread.Count > 1 ? $" · {thread.Count} emails" : "")
-                </label>
+            @* The email-global decisions, stacked and compact — the full wording lives in the
+               hover titles. Each is a Yes/No pair that starts BLANK: neither side is pre-picked,
+               and Apply stands down until both are answered, so every apply carries a conscious
+               choice rather than an inherited default. The thread row says how many emails a Yes
+               would sweep, once the thread has been read (staging tags themselves lives on the
+               System Tags window). *@
+            <div class="flex flex-col gap-1.5">
+                <div class="flex items-center justify-between gap-3"
+                     title="Yes tags the email to the project's programme — it appears in the Programme tab's Relevant Events. No leaves the programme out of it">
+                    <span class="text-sm text-content">Relevant Event for Programme</span>
+                    <div class="flex items-center shrink-0">
+                        <button type="button" class="@YesNoClass(relevantEventStaged, answer: true, first: true)"
+                                @onclick="() => relevantEventStaged = true">Yes</button>
+                        <button type="button" class="@YesNoClass(relevantEventStaged, answer: false, first: false)"
+                                @onclick="() => relevantEventStaged = false">No</button>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between gap-3"
+                     title="Yes means everything you apply also tags every email currently in this conversation, clearing them from the queue together. No deals with just this email">
+                    <span class="text-sm text-content">Entire thread@(thread.Count > 1 ? $" · {thread.Count} emails" : "")</span>
+                    <div class="flex items-center shrink-0">
+                        <button type="button" class="@YesNoClass(triageEntireThread, answer: true, first: true)"
+                                @onclick="() => triageEntireThread = true">Yes</button>
+                        <button type="button" class="@YesNoClass(triageEntireThread, answer: false, first: false)"
+                                @onclick="() => triageEntireThread = false">No</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1016,15 +1027,15 @@
             }
             <div class="flex items-center gap-2">
                 <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
-                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null || TagPickingOpen)"
-                        title="@(TagPickingOpen ? "System Tags is still open — press Done to confirm the picks first" : null)"
+                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null || TagPickingOpen || TriageDecisionsMissing)"
+                        title="@(TagPickingOpen ? "System Tags is still open — press Done to confirm the picks first" : TriageDecisionsMissing ? DecisionsMissingHint : null)"
                         @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
                     @ApplyButtonLabel
                 </button>
                 @if (OutboxSendCount > 0)
                 {
-                    <button type="button" class="btn-secondary" disabled="@(busy || TagPickingOpen)" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
-                            title="@(TagPickingOpen ? "System Tags is still open — press Done to confirm the picks first" : "Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it")">
+                    <button type="button" class="btn-secondary" disabled="@(busy || TagPickingOpen || TriageDecisionsMissing)" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
+                            title="@(TagPickingOpen ? "System Tags is still open — press Done to confirm the picks first" : TriageDecisionsMissing ? DecisionsMissingHint : "Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it")">
                         @(OutboxSendCount == 1 ? "Save reply as draft" : "Save replies as drafts")
                     </button>
                 }
@@ -1808,15 +1819,18 @@ else
     // (null = none) — StagedRecordKind decides whether Apply raises a request, a bid package, a work order or a defect.
     private bool discardArmed;
     private StagedRecordCreate? stagedCreate;
-    // The "Relevant Event for Programme" tick — staged like everything else, applied by the one
-    // Apply. Lives OUTSIDE System Tags because the programme bucket isn't a record anyone picks
-    // or creates: every project has exactly one, so filing to it is a yes/no, not a search.
-    private bool relevantEventStaged;
-    // The "Also triage the email's entire thread" tick: when on, every action in the apply spreads
-    // across the whole current conversation (LinkThreadScope.EntireThread); when off — the default —
-    // each action tags only the clicked email (MessageOnly). Never persisted, cleared with the rest
-    // of the staging on every selection/view change and after every apply.
-    private bool triageEntireThread;
+    // The "Relevant Event for Programme" decision — staged like everything else, applied by the
+    // one Apply. Lives OUTSIDE System Tags because the programme bucket isn't a record anyone
+    // picks or creates: every project has exactly one, so filing to it is a yes/no, not a search.
+    // Nullable on purpose: null = not yet answered (the Yes/No pair renders blank), and Apply
+    // refuses to run until the triager picks a side — a conscious decision, never a default.
+    private bool? relevantEventStaged;
+    // The "Entire thread" decision: Yes means every action in the apply spreads across the whole
+    // current conversation (LinkThreadScope.EntireThread); No means each action tags only the
+    // clicked email (MessageOnly). Nullable like the Relevant Event decision above — blank until
+    // answered, required before Apply. Never persisted, cleared back to blank with the rest of
+    // the staging on every selection/view change and after every apply.
+    private bool? triageEntireThread;
 
     // The System Tags modal's tab IS the pathway decision — parse the tab label back onto the
     // page's own pathway state so filing, to-dos and a record-less reply all read one field.
@@ -1931,8 +1945,8 @@ else
         detailLoading = false;
         discardArmed = false;
         stagedCreate = null;
-        relevantEventStaged = false;
-        triageEntireThread = false;
+        relevantEventStaged = null;
+        triageEntireThread = null;
         pickedRecords.Clear();
         actionError = null;
         composeOutcome = null;
@@ -1957,8 +1971,8 @@ else
         detailLoading = false;
         discardArmed = false;
         stagedCreate = null;
-        relevantEventStaged = false;
-        triageEntireThread = false;
+        relevantEventStaged = null;
+        triageEntireThread = null;
         pickedRecords.Clear();
         actionError = null;
         composeOutcome = null;
@@ -2261,8 +2275,11 @@ else
         public IReadOnlyList<StagedSystemAction> SystemActions { get; init; } = Array.Empty<StagedSystemAction>();
         public StagedRecordCreate? Create { get; init; }
         public List<TodoDraftRow> TodoRows { get; init; } = new();
-        public bool RelevantEventStaged { get; init; }
-        public bool TriageEntireThread { get; init; }
+        // Nullable like the live fields: a parked email keeps its answered-or-blank state, so a
+        // deliberate No survives a selection change exactly like a Yes — and an unanswered pair
+        // comes back still demanding an answer.
+        public bool? RelevantEventStaged { get; init; }
+        public bool? TriageEntireThread { get; init; }
         // Attachment ids ticked "Send to document control" — drafted against ONE email's
         // attachments, so they must travel with that email like every other draft (the same
         // rule that kept the old save-to-drawings form from leaking under the next email).
@@ -2278,8 +2295,10 @@ else
         || stagedSystemActions.Count > 0
         || stagedCreate is not null
         || createTodoRows.Any(row => !string.IsNullOrWhiteSpace(row.Title) || !string.IsNullOrWhiteSpace(row.Notes))
-        || relevantEventStaged
-        || triageEntireThread
+        // An ANSWERED Yes/No is a decision the triager made — a No as much as a Yes — so either
+        // pair being non-null is worth keeping across a selection change.
+        || relevantEventStaged is not null
+        || triageEntireThread is not null
         || stagedDocControlIds.Count > 0
         // The project counts only when the triager chose it themselves. An auto-matched project
         // (TryPrefillProjectFromEmailAsync's guess from the email text) is the page's doing, not
@@ -2387,8 +2406,8 @@ else
         stagedSystemActions.Clear();
         discardArmed = false;
         stagedCreate = null;
-        relevantEventStaged = false;
-        triageEntireThread = false;
+        relevantEventStaged = null;
+        triageEntireThread = null;
         // The document-control ticks are drafted against ONE email's attachments — leaving them
         // across a selection change would send another email's attachment ids against this
         // message. Parked above, reset here, restored below like every other per-email draft.
@@ -2398,7 +2417,7 @@ else
 
     // Open the clicked email exactly as clicked — the selection stays on it; the thread panel
     // below still shows any newer replies for context. Actions apply to just this email unless
-    // the "entire thread" checkbox opts the apply into the whole conversation.
+    // a thread-wide Yes on the "Entire thread" decision opts the apply into the whole conversation.
     private async Task Select(MailboxMessage item)
     {
         var restoredParkedWork = ApplySelection(item);
@@ -2719,15 +2738,15 @@ else
                 parts.Add($"run 1 system action ({stagedSystemActions[0].Summary})");
             else if (stagedSystemActions.Count > 1)
                 parts.Add($"run {stagedSystemActions.Count} system actions");
-            if (relevantEventStaged)
+            if (relevantEventStaged == true)
                 parts.Add("tag it a Relevant Event for the Programme");
             if (discardArmed)
                 parts.Add("discard this email and its thread");
             if (parts.Count == 0) return null;
             var summary = parts.Count == 1 ? parts[0] : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[^1];
-            // The thread tick changes what an apply MEANS, so the sentence says so — but only when
+            // A thread-wide Yes changes what an apply MEANS, so the sentence says so — but only when
             // something staged actually spreads (a bare discard is thread-wide regardless).
-            if (triageEntireThread && !(discardArmed && parts.Count == 1))
+            if (triageEntireThread == true && !(discardArmed && parts.Count == 1))
                 summary += " — covering every email currently in this thread";
             // Lined-up replies inherit the triage's record picks: the sentence says so, because
             // tagging OTHER emails is the one effect a reader wouldn't otherwise expect.
@@ -2758,13 +2777,38 @@ else
         view == QueueView.Active && selected is not null
         && workspace.SideShowing(PanelKind.SystemTags) is not null;
 
+    // True while either of the bar's Yes/No pairs is still blank for the open email. Apply (and
+    // save-as-drafts) stand down until both are answered — the pairs deliberately start with
+    // NEITHER side picked, so tagging the programme and sweeping the thread are always decisions
+    // someone actually made, never a default that slipped through.
+    private bool TriageDecisionsMissing =>
+        selected is not null && (relevantEventStaged is null || triageEntireThread is null);
+
+    private string DecisionsMissingHint =>
+        relevantEventStaged is null && triageEntireThread is null
+            ? "Answer Relevant Event for Programme and Entire thread — Yes or No — first"
+            : relevantEventStaged is null
+                ? "Answer Relevant Event for Programme — Yes or No — first"
+                : "Answer Entire thread — Yes or No — first";
+
+    // The bar's Yes/No pair: two joined pill halves, neither lit until the triager picks a side
+    // (null = blank). Picked reads like a picked record row (accent border on raised surface);
+    // the unpicked side stays muted. Clicking the picked side again is a no-op, not a clear —
+    // the whole point is that "no answer" isn't a state anyone can put back.
+    private static string YesNoClass(bool? decided, bool answer, bool first) =>
+        "px-2.5 py-1 text-xs border transition "
+        + (first ? "rounded-l-lg" : "rounded-r-lg -ml-px")
+        + (decided == answer
+            ? " relative border-accent bg-surface-raised text-content font-medium"
+            : " border-line text-content-subtle hover:text-content hover:border-line-strong");
+
     private string ApplyButtonLabel
     {
         get
         {
             var filing = CurrentTodoDrafts().Count > 0
                 || pickedRecords.Count > 0
-                || relevantEventStaged
+                || relevantEventStaged == true
                 || stagedSystemActions.Count > 0
                 || stagedDocControlIds.Count > 0
                 || (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId));
@@ -2862,12 +2906,26 @@ else
         var drafts = anchorEmail is null ? new List<TodoItemDraft>() : CurrentTodoDrafts();
         var picks = pickedRecords.ToList();
         var createReady = anchorEmail is not null && StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId);
-        var relevantEvent = relevantEventStaged && anchorEmail is not null;
+        var relevantEvent = relevantEventStaged == true && anchorEmail is not null;
         var discarding = discardArmed && anchorEmail is not null;
-        // One scope for the whole apply: the checkbox opts every staged action into the thread.
-        var scope = triageEntireThread ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly;
+        // One scope for the whole apply: a thread-wide Yes opts every staged action into the thread.
+        var scope = triageEntireThread == true ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly;
         if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !relevantEvent && !discarding
             && stagedSystemActions.Count == 0 && queuedReplies.Count == 0 && stagedDocControlIds.Count == 0) return;
+
+        // The bar's two Yes/No pairs start blank on purpose — an apply with either unanswered is
+        // a decision not yet made, same rule as an open System Tags window. Belt-and-braces
+        // behind the disabled button, so no other route into the apply (the cross-filing re-run
+        // included) can land with a blank answer.
+        if (anchorEmail is not null && (relevantEventStaged is null || triageEntireThread is null))
+        {
+            actionError = relevantEventStaged is null && triageEntireThread is null
+                ? "Answer Relevant Event for Programme and Entire thread — Yes or No — then Apply."
+                : relevantEventStaged is null
+                    ? "Answer Relevant Event for Programme — Yes or No — then Apply."
+                    : "Answer Entire thread — Yes or No — then Apply.";
+            return;
+        }
 
         // An open System Tags window is the same decision not yet made — its Done is the "yes,
         // that's the list" step. Belt-and-braces behind the disabled button, so no other route
@@ -2900,14 +2958,14 @@ else
         }
         if (discarding && relevantEvent)
         {
-            actionError = "Discard and a Relevant Event tag don't mix — untick one of them.";
+            actionError = "Discard and a Relevant Event tag don't mix — answer No to Relevant Event, or disarm the discard.";
             return;
         }
-        // A ticked Relevant Event without a project is a decision not yet made — same rule as the
+        // A Relevant Event answered Yes without a project is a decision not yet made — same rule as the
         // staged create: finish it or clear it, rather than have Apply quietly skip it.
         if (relevantEvent && string.IsNullOrWhiteSpace(triageProjectId))
         {
-            actionError = "To tag a Relevant Event for the Programme, set the email's Project first — or untick it.";
+            actionError = "To tag a Relevant Event for the Programme, set the email's Project first — or answer No.";
             return;
         }
 
@@ -3013,7 +3071,7 @@ else
                     filed = true;
                 }
             }
-            // The Relevant Event tick: link the thread to the project's programme bucket — the
+            // A Relevant Event answered Yes: link the thread to the project's programme bucket — the
             // record id IS the project id (one bucket per project, SchedulingLinkProvider). Same
             // cross-filing confirm as the picks above: Scheduling is a Client-side record, so on
             // a non-client thread the server asks first.
@@ -3163,7 +3221,7 @@ else
             //      answered — decision 2026-08-12), then the reply sends; the server files the
             //      sent copy by the anchor's tags, the fresh ones included, because the links
             //      land before the send. MessageOnly spread: the reply answers THAT email; the
-            //      selected email's thread tick doesn't reach into other conversations. Each
+            //      selected email's thread decision doesn't reach into other conversations. Each
             //      entry is removed as it completes, so a failure stops the apply with the
             //      already-sent replies never re-sent. ----
             var outboxSent = 0;
@@ -3255,8 +3313,8 @@ else
             detailLoading = false;
             discardArmed = false;
             stagedCreate = null;
-            relevantEventStaged = false;
-            triageEntireThread = false;
+            relevantEventStaged = null;
+            triageEntireThread = null;
             pickedRecords.Clear();
             stagedSystemActions.Clear();
         }
@@ -3516,8 +3574,8 @@ else
             detailLoading = false;
             discardArmed = false;
             stagedCreate = null;
-            relevantEventStaged = false;
-            triageEntireThread = false;
+            relevantEventStaged = null;
+            triageEntireThread = null;
             pickedRecords.Clear();
         }
         catch (CommandFailedException ex)
