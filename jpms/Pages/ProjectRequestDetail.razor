@@ -398,7 +398,8 @@ else
                    the document already cites them by code and revision. *@
                 <RequestAttachmentsPanel ProjectId="@ProjectId" RequestId="@RequestId" CanEdit="@CanEditDetails" />
 
-                <RequestConversation RequestId="@RequestId" CanDraftReply="false" />
+                <RequestConversation RequestId="@RequestId" CanDraftReply="false"
+                                     RequestReference="@record?.Reference" />
 
                 @if (!HasOfficialTab)
                 {

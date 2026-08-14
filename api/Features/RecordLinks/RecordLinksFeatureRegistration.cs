@@ -41,6 +41,7 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<IQueryHandler<ListSchedulingEmails, IReadOnlyList<MailboxMessage>>, ListSchedulingEmailsHandler>();
         services.AddScoped<IQueryHandler<GetProgrammeEmailDetail, MailboxMessageDetail>, GetProgrammeEmailDetailHandler>();
         services.AddScoped<IQueryHandler<ListRecordEmails, IReadOnlyList<MailboxMessage>>, ListRecordEmailsHandler>();
+        services.AddScoped<IQueryHandler<SearchMailboxMessages, IReadOnlyList<MailboxMessage>>, SearchMailboxMessagesHandler>();
         services.AddScoped<IQueryHandler<ListRecordActivity, IReadOnlyList<RecordActivitySummary>>, ListRecordActivityHandler>();
         services.AddScoped<IQueryHandler<ListProjectCommunications, ProjectCommunicationsPage>, ListProjectCommunicationsHandler>();
         services.AddScoped<ICommandHandler<LinkMessageToRecord, Acknowledgement>, LinkMessageToRecordHandler>();

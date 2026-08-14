@@ -41,6 +41,20 @@ public sealed class AnthropicOptions
         _ => ModelHaiku
     };
 
+    // Context windows per tier, in tokens (live list 2026-08-14: Haiku 4.5 = 200k; Sonnet 5,
+    // Opus 5 and Fable 5 = 1M). Config-overridable (Anthropic__ContextTokensHaiku /
+    // __ContextTokensLarge) so a window change is an app setting. These are what lets the
+    // conversation client STEP UP a tier when a turn has outgrown the chosen model, instead of
+    // letting Haiku hit the wall mid-conversation.
+    public int ContextTokensHaiku { get; set; } = 200_000;
+    public int ContextTokensLarge { get; set; } = 1_000_000;
+
+    public int ContextTokensForTier(string? tierKey) => tierKey?.ToLowerInvariant() switch
+    {
+        "sonnet" or "opus" or "fable" => ContextTokensLarge,
+        _ => ContextTokensHaiku
+    };
+
     // Anthropic's required API version header value.
     public string ApiVersion { get; set; } = "2023-06-01";
 
@@ -94,6 +108,12 @@ public sealed class AnthropicOptions
         var modelFable = section["ModelFable"];
         if (!string.IsNullOrWhiteSpace(modelFable))
             options.ModelFable = modelFable;
+
+        if (int.TryParse(section["ContextTokensHaiku"], out var contextHaiku) && contextHaiku > 0)
+            options.ContextTokensHaiku = contextHaiku;
+
+        if (int.TryParse(section["ContextTokensLarge"], out var contextLarge) && contextLarge > 0)
+            options.ContextTokensLarge = contextLarge;
 
         var apiVersion = section["ApiVersion"];
         if (!string.IsNullOrWhiteSpace(apiVersion))

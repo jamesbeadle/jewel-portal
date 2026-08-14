@@ -1,11 +1,14 @@
 @namespace Jewel.JPMS.Features.Todos.Detail
+@using Jewel.JPMS.Features.Triage.Panels
 @inject ITodoStore Todos
-@inject IIntakeQueue Intake
 
 @* The item's communications: mail tagged "JPMS/@Todo.Reference" in the projects mailbox, read
-   live — tag or untag an email in the Control Centre and this list follows. Replying (and sending
-   a new email filed to the item) happens here too; the sent copy carries the item's tag, so it
-   lands back in this list. Newest first — the latest exchange is what people come to check. *@
+   live — tag or untag an email in the Control Centre and this list follows. The list itself is
+   the shared CorrespondenceThreadList (threads, full email on demand, attachments with
+   preview/download, tag chips, Reply/Forward) — the consistent widget wherever a communication
+   is listed. Replying (and sending a new email filed to the item) happens here too, in the
+   record-page shape: the composer opens above the list; the sent copy carries the item's tag,
+   so it lands back in this list. Newest first — the latest exchange is what people come to check. *@
 
 <Panel Title="Communications" BodyClass="p-5" IsLoading="@loading">
     <HeaderActions>
@@ -48,6 +51,18 @@
             </div>
         }
 
+        @if (replyingTo is { } replyAnchor)
+        {
+            <div class="mb-3 space-y-2">
+                <p class="text-sm text-content-muted">
+                    @(composeIsForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyAnchor.FromName) ? replyAnchor.FromEmail : replyAnchor.FromName)</span> —
+                    <span class="italic">@replyAnchor.Subject</span>
+                </p>
+                <TodoEmailComposer @key="@($"{replyAnchor.Id}:{composeIsForward}")" Todo="@Todo" ReplyTo="@replyAnchor" Forward="@composeIsForward"
+                                   Projects="@Projects" OnSent="HandleSent" OnCancel="CloseComposer" />
+            </div>
+        }
+
         @if (failed is null && emails.Count == 0 && !composingNew)
         {
             <p class="text-sm text-content-subtle italic">
@@ -57,22 +72,8 @@
         }
         else if (emails.Count > 0)
         {
-            <ul class="space-y-3">
-                @foreach (var email in emails)
-                {
-                    <TodoEmailCard @key="email.Id" Email="@email" OwnTag="@OwnTag" CanSend="@CanSend"
-                                   Expanded="@expanded.Contains(email.Id)"
-                                   Detail="@DetailFor(email.Id)"
-                                   OnToggleExpand="ToggleExpandAsync" OnReply="StartReply" OnForward="StartForward" />
-                    @if (replyingTo?.Id == email.Id)
-                    {
-                        <li>
-                            <TodoEmailComposer Todo="@Todo" ReplyTo="@replyingTo" Forward="@composeIsForward" Projects="@Projects"
-                                               OnSent="HandleSent" OnCancel="CloseComposer" />
-                        </li>
-                    }
-                }
-            </ul>
+            <CorrespondenceThreadList Emails="emails" ExcludeTag="@OwnTag"
+                                      OnReply="@ReplyCallback" OnForward="@ForwardCallback" />
         }
     </ChildContent>
 </Panel>

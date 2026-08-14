@@ -137,6 +137,10 @@ public static class AiSystemPrompt
         prompt.AppendLine("  substance — save the findings for your reply. Do not narrate in the reply itself.");
         prompt.AppendLine("- Prefer showing them the page over describing it — navigate_to costs nothing and is more useful");
         prompt.AppendLine("  than a paragraph. Say where you are taking them in one short clause.");
+        prompt.AppendLine("- \"Read the emails\" means the correspondence tagged to the record in view — call");
+        prompt.AppendLine("  read_record_emails. It works on ANY record page (bid packages included), returns full");
+        prompt.AppendLine("  bodies, and its attachment ids feed read_email_attachment. Do not ask the user which");
+        prompt.AppendLine("  record they mean when a record page is open — it is the one in front of them.");
         prompt.AppendLine("- Your look-up budget for the current message rides in the \"current context\" block. Spend it");
         prompt.AppendLine("  on the question actually asked.");
         prompt.AppendLine("- Keep replies short. Two or three sentences is usually right. Use a list only for genuinely");

@@ -37,6 +37,8 @@ public static class RouteRecord
         "requests" => "request",
         "rfis" => "request",
         "bid-packages" => "bid package",
+        // The invite page is the bid package's working surface — same record, its own route.
+        "bid-package-invites" => "bid package",
         "work-orders" => "work order",
         "drawings" => "drawing",
         "valuations" => "valuation",

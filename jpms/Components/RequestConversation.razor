@@ -14,12 +14,22 @@
 
 <Panel Title="Conversation" BodyClass="p-5">
     <HeaderActions>
-        @if (loaded && messages.Count > 0)
-        {
-            <span class="text-xs text-content-subtle">
-                @messages.Count message@(messages.Count == 1 ? "" : "s")@(InternalCount > 0 ? $" · {InternalCount} internal" : "")
-            </span>
-        }
+        <div class="flex items-center gap-3">
+            @if (loaded && messages.Count > 0)
+            {
+                <span class="text-xs text-content-subtle">
+                    @messages.Count message@(messages.Count == 1 ? "" : "s")@(InternalCount > 0 ? $" · {InternalCount} internal" : "")
+                </span>
+            }
+            @if (!string.IsNullOrWhiteSpace(RequestReference))
+            {
+                @* Search the whole mailbox and tag what belongs to this request — the conversation
+                   AND the assistant's context both get richer with each tag. *@
+                <Jewel.JPMS.Features.Triage.Panels.EmailFinder Type="RecordType.Request" RecordId="@RequestId"
+                             RecordReference="@RequestReference" ExcludeTag="@($"JPMS/{RequestReference}")"
+                             OnLinked="LoadAsync" />
+            }
+        </div>
     </HeaderActions>
     <ChildContent>
     @if (!loaded)
@@ -70,34 +80,62 @@
                         @if (!string.IsNullOrEmpty(message.MailboxId)
                              && expanded.Contains(message.MessageId))
                         {
-                            @* Expanded email: the full body (incl. the quoted thread), fetched live on demand.
-                               The listed Body is only Graph's short preview snippet, so long emails and their
-                               history only appear here. HTML is sanitised server-side before it reaches us. *@
+                            @* Expanded email: the full body (incl. the quoted thread), fetched live on demand,
+                               rendered in the shared correspondence card's shape — To/Cc envelope lines above
+                               the body, the attachments as their own bounded block below. The listed Body is
+                               only Graph's short preview snippet, so long emails and their history only appear
+                               here. HTML is sanitised server-side before it reaches us. *@
                             <div class="rounded-lg bg-surface border border-line p-3 max-h-[28rem] overflow-y-auto">
                                 @if (!details.TryGetValue(message.MessageId, out var detail) || detail is null)
                                 {
                                     <p class="text-sm text-content-subtle italic">Loading full email…</p>
                                 }
-                                else if (!string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
-                                {
-                                    <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)detail.BodyHtml)</div>
-                                }
-                                else if (!string.IsNullOrWhiteSpace(detail.BodyHtml))
-                                {
-                                    <p class="text-sm text-content whitespace-pre-wrap">@detail.BodyHtml</p>
-                                }
                                 else
                                 {
-                                    <p class="text-sm text-content whitespace-pre-wrap">@message.Body</p>
+                                    @if (detail.To is { Count: > 0 } to)
+                                    {
+                                        <p class="text-xs text-content-subtle truncate">To: @string.Join("; ", to)</p>
+                                    }
+                                    @if (detail.Cc is { Count: > 0 } cc)
+                                    {
+                                        <p class="text-xs text-content-subtle truncate">Cc: @string.Join("; ", cc)</p>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
+                                    {
+                                        <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto mt-1">@((MarkupString)detail.BodyHtml)</div>
+                                    }
+                                    else if (!string.IsNullOrWhiteSpace(detail.BodyHtml))
+                                    {
+                                        <p class="text-sm text-content whitespace-pre-wrap mt-1">@detail.BodyHtml</p>
+                                    }
+                                    else
+                                    {
+                                        <p class="text-sm text-content whitespace-pre-wrap mt-1">@message.Body</p>
+                                    }
                                 }
                             </div>
                             @if (details.TryGetValue(message.MessageId, out var loadedDetail)
                                  && loadedDetail is { Attachments.Count: > 0 })
                             {
-                                <p class="text-xs text-content-subtle mt-1">
-                                    @loadedDetail.Attachments.Count attachment@(loadedDetail.Attachments.Count == 1 ? "" : "s"):
-                                    @string.Join(", ", loadedDetail.Attachments.Select(a => a.Name))
-                                </p>
+                                @* Names and sizes only: request emails live in the requests mailbox, which has
+                                   no attachment-download endpoint (the projects-mailbox URL can't serve them). *@
+                                <div class="mt-2 rounded-lg bg-surface border border-line p-3">
+                                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+                                        @loadedDetail.Attachments.Count attachment@(loadedDetail.Attachments.Count == 1 ? "" : "s")
+                                    </p>
+                                    <ul class="space-y-1">
+                                        @foreach (var attachment in loadedDetail.Attachments)
+                                        {
+                                            <li class="flex items-center justify-between gap-3 text-sm text-content">
+                                                <span class="truncate">@attachment.Name</span>
+                                                @if (attachment.Size > 0)
+                                                {
+                                                    <span class="text-xs text-content-subtle whitespace-nowrap">@FormatSize(attachment.Size)</span>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
                             }
                         }
                         else
@@ -177,6 +215,10 @@
 
 @code {
     [Parameter, EditorRequired] public string RequestId { get; set; } = "";
+
+    /// <summary>The request's human reference ("RFI-049"). When supplied, the header offers the
+    /// Find-emails dialog so more correspondence can be tagged to the request from right here.</summary>
+    [Parameter] public string? RequestReference { get; set; }
 
     /// <summary>Whether the signed-in user may stage reply drafts carrying the official PDF —
     /// mirrors the page-level draft gate (directors, PMs, site managers, architects).</summary>
@@ -302,6 +344,14 @@
         string.IsNullOrWhiteSpace(message.AuthorName) ? message.AuthorEmail : message.AuthorName;
 
     private int InternalCount => messages.Count(m => m.Visibility == MessageVisibility.Internal);
+
+    // Same formatting as the shared correspondence list's attachment block.
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1_048_576) return $"{bytes / 1_048_576.0:0.#} MB";
+        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes} B";
+    }
 
     // Up to two initials for the author avatar: "Nigel Reilly" → NR, "plg@…" → P. Purely a scanning
     // aid, so anything unexpected degrades to a single character rather than throwing.

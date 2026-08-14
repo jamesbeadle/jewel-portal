@@ -1,0 +1,228 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.RecordLinks
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+
+@*
+    "Find emails" for a record page: search the whole projects mailbox from beside the record,
+    pick the emails that belong, and tag them to the record there and then — no trip to mailbox
+    triage. The tag is the association (LinkMessageToRecord), so the moment it lands the emails
+    appear in the page's correspondence list AND in everything the assistant reads through
+    read_record_emails: this dialog is how a record's AI context gets richer.
+
+    Self-contained on purpose — the trigger button and the modal travel together, so a host adds
+    the whole affordance with one element and a reload callback. Works in the empty state too,
+    which is exactly when it is needed most.
+*@
+
+<button type="button" class="text-xs font-medium text-accent hover:underline" @onclick="OpenModal">
+    + Find &amp; tag emails
+</button>
+
+<Modal IsOpen="@isOpen" Title="@($"Find emails for {RecordReference}")" ShowFooter="false"
+       OnCancel="CloseModal" Class="w-full max-w-2xl">
+    <div class="flex gap-2">
+        <input @bind="query" @bind:event="oninput" @onkeydown="SearchOnEnter"
+               placeholder="Search the projects mailbox — sender, subject, wording…"
+               class="grow rounded-lg border border-line bg-surface-field px-3 py-2 text-sm text-content placeholder:text-content-faint focus:outline-none focus:border-line-strong" />
+        <button type="button" class="btn-primary shrink-0" disabled="@(searching || string.IsNullOrWhiteSpace(query))"
+                @onclick="SearchAsync">
+            @(searching ? "Searching…" : "Search")
+        </button>
+    </div>
+    <p class="mt-1.5 text-[11px] text-content-subtle">
+        Searches the whole mailbox — subjects, bodies, senders and attachment names. Tagging an email
+        files it to @RecordReference, so it shows in this page's correspondence and the assistant reads it too.
+    </p>
+
+    @if (error is not null)
+    {
+        <p class="mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+
+    @if (results is not null)
+    {
+        @if (results.Count == 0)
+        {
+            <p class="mt-4 text-sm text-content-subtle italic">Nothing matched. Try fewer or different words.</p>
+        }
+        else
+        {
+            <ul class="mt-4 space-y-2">
+                @foreach (var email in results)
+                {
+                    var alreadyTagged = IsAlreadyTagged(email);
+                    <li @key="email.Id"
+                        class="rounded-lg border px-3 py-2 @(alreadyTagged ? "border-line bg-surface-raised opacity-60" : selected.Contains(email.Id) ? "border-accent bg-accent/5 cursor-pointer" : "border-line bg-surface hover:border-line-strong cursor-pointer")"
+                        @onclick="() => Toggle(email, alreadyTagged)">
+                        <div class="flex items-start gap-2.5">
+                            <input type="checkbox" class="mt-1 shrink-0" checked="@selected.Contains(email.Id)"
+                                   disabled="@alreadyTagged" tabindex="-1" />
+                            <div class="min-w-0 grow">
+                                <div class="flex flex-wrap items-baseline justify-between gap-2">
+                                    <span class="text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                                    <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                                </div>
+                                <p class="text-sm text-content truncate">
+                                    @email.Subject
+                                    @if (email.HasAttachments)
+                                    {
+                                        <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                    }
+                                </p>
+                                @if (!string.IsNullOrWhiteSpace(email.BodyPreview))
+                                {
+                                    <p class="text-xs text-content-subtle mt-0.5 line-clamp-2">@email.BodyPreview</p>
+                                }
+                                <div class="flex flex-wrap items-center gap-1 mt-1">
+                                    @if (alreadyTagged)
+                                    {
+                                        <span class="inline-flex items-center rounded-full bg-positive/10 text-positive text-[10px] font-medium px-2 py-0.5">Already tagged to @RecordReference</span>
+                                    }
+                                    @foreach (var tag in OtherTags(email))
+                                    {
+                                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagStem(tag)</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ul>
+
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
+                <label class="flex items-center gap-2 text-xs text-content-muted cursor-pointer">
+                    <input type="checkbox" @bind="tagEntireThread" />
+                    Also tag each email's entire thread
+                </label>
+                <button type="button" class="btn-primary" disabled="@(linking || selected.Count == 0)" @onclick="LinkSelectedAsync">
+                    @(linking ? "Tagging…" : selected.Count == 0 ? "Tag emails" : $"Tag {selected.Count} email{(selected.Count == 1 ? "" : "s")} to {RecordReference}")
+                </button>
+            </div>
+        }
+    }
+</Modal>
+
+@code {
+    /// <summary>The record the picked emails are tagged to.</summary>
+    [Parameter, EditorRequired] public RecordType Type { get; set; }
+    [Parameter, EditorRequired] public string RecordId { get; set; } = "";
+
+    /// <summary>What the user reads the record as — "BPI-0010", "V72". Titles the dialog and the button.</summary>
+    [Parameter, EditorRequired] public string RecordReference { get; set; } = "";
+
+    /// <summary>The record's own tag ("JPMS/BPI-0010") — used to mark results already filed here.</summary>
+    [Parameter] public string ExcludeTag { get; set; } = "";
+
+    /// <summary>Raised after at least one email was tagged — the host reloads its email list.</summary>
+    [Parameter] public EventCallback OnLinked { get; set; }
+
+    private bool isOpen;
+    private string query = "";
+    private bool searching;
+    private bool linking;
+    private bool tagEntireThread;
+    private string? error;
+    private IReadOnlyList<MailboxMessage>? results;
+    private readonly HashSet<string> selected = new();
+
+    private void OpenModal()
+    {
+        isOpen = true;
+        error = null;
+    }
+
+    private void CloseModal()
+    {
+        isOpen = false;
+        // Kept deliberately: reopening shows the last search, which is usually being worked through.
+    }
+
+    private async Task SearchOnEnter(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !searching && !string.IsNullOrWhiteSpace(query)) await SearchAsync();
+    }
+
+    private async Task SearchAsync()
+    {
+        searching = true;
+        error = null;
+        selected.Clear();
+        try
+        {
+            results = await Queries.AskAsync(new SearchMailboxMessages(query.Trim()), CancellationToken.None);
+        }
+        catch
+        {
+            results = Array.Empty<MailboxMessage>();
+            error = "The mailbox couldn't be searched just then. Try again in a moment.";
+        }
+        finally { searching = false; }
+    }
+
+    private void Toggle(MailboxMessage email, bool alreadyTagged)
+    {
+        if (alreadyTagged || linking) return;
+        if (!selected.Add(email.Id)) selected.Remove(email.Id);
+    }
+
+    private async Task LinkSelectedAsync()
+    {
+        if (selected.Count == 0 || results is null) return;
+        linking = true;
+        error = null;
+        var failures = new List<string>();
+        var linkedAny = false;
+
+        foreach (var email in results.Where(email => selected.Contains(email.Id)))
+        {
+            try
+            {
+                // MessageOnly by default — the same rule as triage: a decision made on an email
+                // covers that email; the thread checkbox opts everything in explicitly.
+                await Commands.SendAsync(new LinkMessageToRecord(
+                    email.Id, Type, RecordId, email.InternetMessageId,
+                    Scope: tagEntireThread ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly),
+                    CancellationToken.None);
+                linkedAny = true;
+                selected.Remove(email.Id);
+            }
+            catch (Exception ex)
+            {
+                // The handler's own rejections (the client wall, cross-pathway confirm) travel as
+                // messages worth showing verbatim — same as triage.
+                failures.Add($"{email.Subject}: {ex.Message}");
+            }
+        }
+
+        linking = false;
+
+        if (failures.Count > 0)
+        {
+            error = string.Join(" — ", failures.Take(3));
+        }
+
+        if (linkedAny)
+        {
+            await OnLinked.InvokeAsync();
+            if (failures.Count == 0)
+            {
+                isOpen = false;
+                results = null;
+                query = "";
+            }
+        }
+    }
+
+    private bool IsAlreadyTagged(MailboxMessage email) =>
+        !string.IsNullOrWhiteSpace(ExcludeTag)
+        && email.Categories.Any(tag => tag.Equals(ExcludeTag, StringComparison.OrdinalIgnoreCase));
+
+    private IReadOnlyList<string> OtherTags(MailboxMessage email) =>
+        email.Categories
+            .Where(tag => !tag.Equals(ExcludeTag, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    private static string TagStem(string tag) =>
+        tag.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? tag["JPMS/".Length..] : tag;
+}

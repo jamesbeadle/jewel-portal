@@ -104,7 +104,11 @@ public sealed record AiTurnResult(
     /// <summary>The agent in force AFTER this hop (an AgentCatalogue key) — a switch_agent call
     /// takes effect on the next hop, and the panel shows this so a change of hat is visible.
     /// Defaulted so pre-agent clients and cached responses keep deserialising.</summary>
-    string? AgentKey = null)
+    string? AgentKey = null,
+    /// <summary>Set when the server stepped the model up a tier because the conversation had
+    /// outgrown the chosen one's context window (e.g. Haiku's 200k). One short human sentence,
+    /// shown by the panel so a reply that billed as a bigger model is never a mystery.</summary>
+    string? ModelNote = null)
 {
     /// <summary>The label to show beside the pulsing jewel while the next hop runs.</summary>
     public string? LatestLabel => Steps.Count > 0 ? Steps[^1].Label : null;

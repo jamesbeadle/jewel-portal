@@ -4,9 +4,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace Jewel.JPMS.Features.Todos.Detail;
 
-// The communications panel's working state: the tagged-mail list, per-email full-body detail
-// fetched on demand (cached for the page's life), one open composer at a time (a reply under its
-// email, or the New email form at the top), and the outcome note after a send.
+// The communications panel's working state: the tagged-mail list (rendered by the shared
+// CorrespondenceThreadList, which owns expansion and full-body fetching itself), one open
+// composer at a time (a reply/forward above the list, or the New email form at the top), and
+// the outcome note after a send.
 public partial class TodoCommunicationsPanel
 {
     [Parameter, EditorRequired] public TodoItem Todo { get; set; } = default!;
@@ -21,13 +22,8 @@ public partial class TodoCommunicationsPanel
     private string? failed;
     private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
 
-    // Expanded emails render their FULL body (with the quoted thread + attachment names), fetched
-    // live from the mailbox and cached per message for the page's life.
-    private readonly HashSet<string> expanded = new();
-    private readonly Dictionary<string, MailboxMessageDetail?> details = new();
-
-    // One composer at a time: a reply (or forward — composeIsForward says which) anchored under
-    // its email, or the new-email form.
+    // One composer at a time: a reply (or forward — composeIsForward says which) above the list,
+    // or the new-email form.
     private MailboxMessage? replyingTo;
     private bool composeIsForward;
     private bool composingNew;
@@ -37,8 +33,13 @@ public partial class TodoCommunicationsPanel
 
     private string OwnTag => $"JPMS/{Todo.Reference}";
 
-    private MailboxMessageDetail? DetailFor(string emailId) =>
-        details.TryGetValue(emailId, out var detail) ? detail : null;
+    // The shared thread list renders Reply/Forward only when a delegate is passed — without send
+    // rights the callbacks stay empty and the list is read-only, exactly as before.
+    private EventCallback<MailboxMessage> ReplyCallback =>
+        CanSend ? EventCallback.Factory.Create<MailboxMessage>(this, StartReply) : default;
+
+    private EventCallback<MailboxMessage> ForwardCallback =>
+        CanSend ? EventCallback.Factory.Create<MailboxMessage>(this, StartForward) : default;
 
     protected override async Task OnInitializedAsync()
     {
@@ -67,26 +68,6 @@ public partial class TodoCommunicationsPanel
         refreshing = true;
         try { await LoadAsync(); }
         finally { refreshing = false; }
-    }
-
-    private async Task ToggleExpandAsync(MailboxMessage email)
-    {
-        if (!expanded.Add(email.Id))
-        {
-            expanded.Remove(email.Id);
-            return;
-        }
-        if (details.ContainsKey(email.Id)) return;
-
-        try
-        {
-            details[email.Id] = await Intake.GetMessageDetailAsync(email.Id, email.InternetMessageId);
-        }
-        catch
-        {
-            // Fetch failed — the card falls back to the preview body inside the expanded pane.
-            details[email.Id] = new MailboxMessageDetail(email.Id, "", false, Array.Empty<IntakeAttachment>());
-        }
     }
 
     private void StartReply(MailboxMessage email)

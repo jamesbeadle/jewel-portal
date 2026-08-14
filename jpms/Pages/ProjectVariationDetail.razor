@@ -380,10 +380,17 @@ else
                 <div class="panel p-5">
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="eyebrow">Communications</h3>
-                        @if (emailsLoaded && emails.Count > 0)
-                        {
-                            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@emails.Count</span>
-                        }
+                        <div class="flex items-center gap-3">
+                            @if (emailsLoaded && emails.Count > 0)
+                            {
+                                <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@emails.Count</span>
+                            }
+                            @* Search the whole mailbox and tag what belongs here — the list AND the
+                               assistant's read_record_emails both get richer with each tag. *@
+                            <EmailFinder Type="RecordType.VariationQuote" RecordId="@VariationOrderId"
+                                         RecordReference="@order.Reference" ExcludeTag="@($"JPMS/{order.Reference}")"
+                                         OnLinked="LoadEmailsAsync" />
+                        </div>
                     </div>
 
                     @if (emailsError is not null)

@@ -6,7 +6,10 @@
 @using Jewel.JPMS.Contracts.Variations
 @using Jewel.JPMS.Cqrs
 @using Jewel.JPMS.Features.CostCenters
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Features.Triage.Panels
 @inject AuthService Auth
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
 @inject SessionService Session
 @inject IQueryClient Queries
 @inject ICommandSender Commands
@@ -592,10 +595,51 @@ else
                 </LoadGate>
             </section>
 
-            @* ---- Tender responses & related emails (read live by the package's tag) ---- *@
+            @* ---- Tender responses & related emails (read live by the package's tag) ----
+                   The shared thread list carries the consistent communications widget — threads,
+                   full email on demand, attachments with preview/download, tag chips, and the
+                   Reply/Forward affordance: replying from here SENDS there and then from the
+                   projects mailbox, and the sent copy inherits the thread's tags, so it files
+                   straight back into this list. *@
             <section>
-                <h3 class="eyebrow mb-3">Tender responses & related emails</h3>
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="eyebrow">Tender responses & related emails</h3>
+                    <div class="flex items-center gap-3">
+                        @if (fetchedEmails is not null && emails.Count > 0)
+                        {
+                            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@emails.Count</span>
+                        }
+                        @* Search the whole mailbox and tag what belongs here — the list below AND
+                           the assistant's read_record_emails both get richer with each tag. *@
+                        <EmailFinder Type="RecordType.BidPackageInvite" RecordId="@BidPackageId"
+                                     RecordReference="@package.Reference" ExcludeTag="@($"JPMS/{package.Reference}")"
+                                     OnLinked="ReloadEmailsAsync" />
+                    </div>
+                </div>
                 <LoadGate IsLoading="@(!EmailsReady)" Prominent="true" Label="Loading related emails">
+                @if (commsReplySent is not null)
+                {
+                    <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+                        <p class="text-sm text-content">@commsReplySent</p>
+                        <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                                @onclick="() => commsReplySent = null">✕</button>
+                    </div>
+                }
+                @if (commsReplyTo is { } replyingTo)
+                {
+                    <div class="mb-3 space-y-2">
+                        <p class="text-sm text-content-muted">
+                            @(commsComposeIsForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyingTo.FromName) ? replyingTo.FromEmail : replyingTo.FromName)</span> —
+                            <span class="italic">@replyingTo.Subject</span>
+                        </p>
+                        <MailReplyComposer @key="@($"{replyingTo.Id}:{commsComposeIsForward}")" ReplyTo="replyingTo" Forward="commsComposeIsForward"
+                                           Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@ProjectId"
+                                           FooterNote="@(commsComposeIsForward
+                                               ? "The forward sends now from the projects mailbox and files itself back into this list."
+                                               : "The reply sends now from the projects mailbox and files itself back into this list.")"
+                                           OnSent="OnCommsReplySent" OnCancel="() => commsReplyTo = null" />
+                    </div>
+                }
                 @if (emails.Count == 0)
                 {
                     @* Only once the fetch has answered — the banner above carries a failure. *@
@@ -609,28 +653,9 @@ else
                 }
                 else
                 {
-                    <ul class="space-y-2">
-                        @foreach (var email in emails)
-                        {
-                            <li class="rounded-lg border border-line bg-surface px-4 py-3">
-                                <div class="flex flex-wrap items-center justify-between gap-2">
-                                    <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
-                                    <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
-                                </div>
-                                <p class="text-sm text-content mt-0.5">
-                                    @email.Subject
-                                    @if (email.HasAttachments)
-                                    {
-                                        <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
-                                    }
-                                </p>
-                                @if (!string.IsNullOrWhiteSpace(email.BodyPreview))
-                                {
-                                    <p class="text-xs text-content-subtle mt-1 line-clamp-2">@email.BodyPreview</p>
-                                }
-                            </li>
-                        }
-                    </ul>
+                    <CorrespondenceThreadList Emails="emails" ExcludeTag="@($"JPMS/{package.Reference}")"
+                                              OnReply="email => StartCommsCompose(email, forward: false)"
+                                              OnForward="email => StartCommsCompose(email, forward: true)" />
                 }
                 </LoadGate>
             </section>
@@ -1060,6 +1085,40 @@ else
     // The Documents panel reads drawings AND uploaded attachments — it reveals in one piece.
     private bool DrawingsReady => (fetchedPackageDrawings is not null && fetchedAttachments is not null) || loadAttempted;
 
+    // ---- Communications: the shared Reply/Forward composer over the tagged-email list ----
+    // The email a Reply or Forward was pressed on (the shared composer opens above the list;
+    // sending from a record page sends immediately), which of the two it was, and the
+    // confirmation left behind by the last send.
+    private MailboxMessage? commsReplyTo;
+    private bool commsComposeIsForward;
+    private string? commsReplySent;
+
+    private void StartCommsCompose(MailboxMessage message, bool forward)
+    {
+        commsReplyTo = message;
+        commsComposeIsForward = forward;
+    }
+
+    private async Task OnCommsReplySent(Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome outcome)
+    {
+        var wasForward = commsComposeIsForward;
+        commsReplyTo = null;
+        commsComposeIsForward = false;
+        commsReplySent = outcome.Sent
+            ? $"{(wasForward ? "Forward" : "Reply")} sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
+            : $"The {(wasForward ? "forward" : "reply")} was saved to the mailbox's Drafts — review and send it from Outlook.";
+        // The sent copy self-files by tag; re-read so it appears in the list straight away.
+        try { fetchedEmails = await Queries.AskAsync(new ListBidPackageEmails(BidPackageId), CancellationToken.None); }
+        catch { /* the list simply refreshes on the next full load */ }
+    }
+
+    /// <summary>After the Find-emails dialog tags something: re-read so it appears straight away.</summary>
+    private async Task ReloadEmailsAsync()
+    {
+        try { fetchedEmails = await Queries.AskAsync(new ListBidPackageEmails(BidPackageId), CancellationToken.None); }
+        catch { /* the list simply refreshes on the next full load */ }
+    }
+
     private bool showInviteModal;
     private string subSearch = "";
     private readonly HashSet<string> selected = new(StringComparer.OrdinalIgnoreCase);
@@ -1082,6 +1141,10 @@ else
             sessionReady = true;
             Subs.OnChange += OnStoreChanged;
             CostCenters.OnChanged += OnStoreChanged;
+            // The project list feeds the reply composer's attachment picker (drawings/photos by
+            // project) — revalidated in the background like every other read model here.
+            ProjectList.OnChanged += OnStoreChanged;
+            _ = LoadProjectListAsync();
             try { _ = Subs.All(); } catch { /* directory load is best-effort */ }
             // Cost centres feed the line-item cost-code selects — best-effort background refresh.
             try { _ = CostCenters.RefreshAsync(CancellationToken.None); } catch { }
@@ -1104,6 +1167,14 @@ else
     {
         Subs.OnChange -= OnStoreChanged;
         CostCenters.OnChanged -= OnStoreChanged;
+        ProjectList.OnChanged -= OnStoreChanged;
+    }
+
+    // Losing the project list should cost the composer its drawing/photo sources, not the page.
+    private async Task LoadProjectListAsync()
+    {
+        try { await ProjectList.RefreshAsync(CancellationToken.None); }
+        catch { /* reported by the query client; the picker's project sources render empty */ }
     }
 
     private void OnStoreChanged() => InvokeAsync(StateHasChanged);

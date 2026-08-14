@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
+using Jewel.JPMS.Contracts.Ai;
 using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Ai;
@@ -17,7 +18,10 @@ public sealed record ClaudeReply(
     string? Error,
     /// <summary>Reported by Anthropic per call. Summed across a turn's steps for the activity log.</summary>
     int InputTokens = 0,
-    int OutputTokens = 0);
+    int OutputTokens = 0,
+    /// <summary>Set when the call ran on a bigger tier than asked for because the request had
+    /// outgrown the chosen model's context window. One human sentence, surfaced by the panel.</summary>
+    string? EscalationNote = null);
 
 /// <summary>
 /// Multi-turn client with tool support. Separate from <see cref="IClaudeClient"/>, which keeps its
@@ -73,6 +77,43 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
 
     public bool IsConfigured => options.IsConfigured;
 
+    /// <summary>Rough tokens-per-character for estimation. Deliberately conservative (real English
+    /// prose runs nearer 4 chars/token) so the fit check errs toward stepping up a tier rather than
+    /// hitting the wall.</summary>
+    private const int CharsPerToken = 3;
+
+    /// <summary>Headroom on top of the payload estimate: the reply itself plus estimation slack.</summary>
+    private const int EstimateHeadroomTokens = ConversationMaxTokens + 4_000;
+
+    /// <summary>
+    /// The tier this request will actually run on. Starts from what the user chose and STEPS UP —
+    /// never down — to the cheapest tier whose context window fits the estimated request, so a
+    /// conversation that has outgrown Haiku's 200k window carries on seamlessly on a bigger model
+    /// instead of failing mid-turn and asking the user to switch by hand. If nothing fits (past
+    /// even the 1M windows), the biggest candidate is returned and the API's own error handles it —
+    /// the transcript budget should make that unreachable.
+    /// </summary>
+    private (string TierKey, string? Note) FitTier(string? requestedTier, int estimatedTokens)
+    {
+        var requested = AiModelCatalogue.Normalise(requestedTier);
+        if (estimatedTokens <= options.ContextTokensForTier(requested)) return (requested, null);
+
+        var order = AiModelCatalogue.All; // cheapest first
+        var requestedIndex = 0;
+        for (var i = 0; i < order.Count; i++)
+            if (string.Equals(order[i].Key, requested, StringComparison.OrdinalIgnoreCase)) requestedIndex = i;
+
+        for (var i = requestedIndex + 1; i < order.Count; i++)
+        {
+            if (estimatedTokens > options.ContextTokensForTier(order[i].Key)) continue;
+            var from = AiModelCatalogue.Find(requested)?.DisplayName ?? requested;
+            return (order[i].Key,
+                $"Stepped up to {order[i].DisplayName} for this reply — the conversation has grown past what {from} can read.");
+        }
+
+        return (order[^1].Key, null);
+    }
+
     public async Task<ClaudeReply> ContinueAsync(
         string systemPrompt,
         IReadOnlyList<object> messages,
@@ -95,10 +136,6 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
             // END of the messages array (the turn-context block), never in system.
             var payload = new Dictionary<string, object?>
             {
-                // The user's tier choice, resolved against config. Note the prompt cache is scoped
-                // per model, so switching tier mid-conversation re-pays the prefix once — correct,
-                // and not worth preventing.
-                ["model"] = options.ModelForTier(modelTier),
                 ["max_tokens"] = ConversationMaxTokens,
                 ["system"] = new object[]
                 {
@@ -131,26 +168,88 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
                     .ToArray();
             }
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, MessagesUrl)
+            // ---- fit the model to the size of the request --------------------------------------
+            // Serialise once without the model to measure what is actually about to be sent, then
+            // pick the tier: the user's choice when it fits, the cheapest bigger one when it does
+            // not. This is the guard against "Haiku started the chat and now cannot finish it" —
+            // the step-up happens here, mid-conversation, without the user doing anything. (The
+            // prompt cache is per model, so a step-up re-pays the prefix once — correct, and cheap
+            // next to a failed turn.)
+            var payloadJson = JsonSerializer.Serialize(payload);
+            var estimatedTokens = payloadJson.Length / CharsPerToken + EstimateHeadroomTokens;
+            var (tier, escalationNote) = FitTier(modelTier, estimatedTokens);
+            if (escalationNote is not null)
             {
-                Content = JsonContent.Create(payload)
-            };
-            request.Headers.Add("x-api-key", options.ApiKey);
-            request.Headers.Add("anthropic-version", options.ApiVersion);
-
-            using var response = await http.SendAsync(request, ct);
-            if (!response.IsSuccessStatusCode)
-            {
-                var body = await response.Content.ReadAsStringAsync(ct);
-                logger.LogWarning("Anthropic conversation call failed: {Status} {Body}.", (int)response.StatusCode, body);
-                return new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null,
-                    $"upstream_{(int)response.StatusCode}");
+                logger.LogInformation(
+                    "Stepped the conversation model up from {Requested} to {Used}: ~{Tokens} tokens estimated.",
+                    AiModelCatalogue.Normalise(modelTier), tier, estimatedTokens);
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(ct);
-            using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-            var root = document.RootElement;
+            // At most two attempts: the estimated fit, then one retry a tier up if the API still
+            // says the prompt is too long — the estimate is conservative, so this path should be
+            // rare, but "rare" is not "never" and a hard failure mid-conversation is the one
+            // outcome this method exists to prevent.
+            for (var attempt = 0; ; attempt++)
+            {
+                payload["model"] = options.ModelForTier(tier);
 
+                using var request = new HttpRequestMessage(HttpMethod.Post, MessagesUrl)
+                {
+                    Content = JsonContent.Create(payload)
+                };
+                request.Headers.Add("x-api-key", options.ApiKey);
+                request.Headers.Add("anthropic-version", options.ApiVersion);
+
+                using var response = await http.SendAsync(request, ct);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var body = await response.Content.ReadAsStringAsync(ct);
+                    logger.LogWarning("Anthropic conversation call failed: {Status} {Body}.", (int)response.StatusCode, body);
+
+                    if (attempt == 0
+                        && (int)response.StatusCode == 400
+                        && body.Contains("too long", StringComparison.OrdinalIgnoreCase)
+                        && NextBiggerTier(tier) is { } bigger)
+                    {
+                        var fromName = AiModelCatalogue.Find(tier)?.DisplayName ?? tier;
+                        tier = bigger;
+                        escalationNote = $"Stepped up to {AiModelCatalogue.Find(bigger)?.DisplayName ?? bigger} for this "
+                                         + $"reply — the conversation has grown past what {fromName} can read.";
+                        continue;
+                    }
+
+                    return new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null,
+                        $"upstream_{(int)response.StatusCode}");
+                }
+
+                await using var stream = await response.Content.ReadAsStreamAsync(ct);
+                using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+                return Parse(document.RootElement, escalationNote);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Anthropic conversation call errored.");
+            return new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null, "exception");
+        }
+    }
+
+    /// <summary>The next tier up with a genuinely bigger window, or null from the top.</summary>
+    private string? NextBiggerTier(string currentTier)
+    {
+        var order = AiModelCatalogue.All;
+        var currentWindow = options.ContextTokensForTier(currentTier);
+        var index = 0;
+        for (var i = 0; i < order.Count; i++)
+            if (string.Equals(order[i].Key, currentTier, StringComparison.OrdinalIgnoreCase)) index = i;
+        for (var i = index + 1; i < order.Count; i++)
+            if (options.ContextTokensForTier(order[i].Key) > currentWindow) return order[i].Key;
+        return null;
+    }
+
+    /// <summary>One successful Messages-API response into a typed reply.</summary>
+    private static ClaudeReply Parse(JsonElement root, string? escalationNote)
+    {
             var stopReason = root.TryGetProperty("stop_reason", out var stopElement)
                 ? stopElement.GetString()
                 : null;
@@ -195,12 +294,7 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
                 }
             }
 
-            return new ClaudeReply(true, text, toolCalls, stopReason, null, inputTokens, outputTokens);
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            logger.LogWarning(ex, "Anthropic conversation call errored.");
-            return new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null, "exception");
-        }
+            return new ClaudeReply(true, text, toolCalls, stopReason, null, inputTokens, outputTokens,
+                escalationNote);
     }
 }

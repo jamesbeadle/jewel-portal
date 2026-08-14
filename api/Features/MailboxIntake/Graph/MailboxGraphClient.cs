@@ -37,6 +37,11 @@ public interface IMailboxGraphClient
     /// drafts excluded.</summary>
     Task<MailboxPage> ListTaggedAsync(string? cursor, int take, bool newestFirst, CancellationToken ct);
 
+    /// <summary>Free-text search across the WHOLE mailbox (Graph $search over subjects, bodies,
+    /// senders and attachment names), relevance-ordered, one page — the record pages' "Find
+    /// emails" dialog. Drafts excluded, like every other read.</summary>
+    Task<MailboxPage> SearchAsync(string query, int take, CancellationToken ct);
+
     /// <summary>Every message in one Graph conversation (the email + its replies/forwards), oldest
     /// first and regardless of tags — so a triage view can show an email's whole thread. Mailbox-wide:
     /// the mailbox's own sent replies (which never arrive back in the Inbox) take their place in the
@@ -240,6 +245,8 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<MailboxPage> ListTaggedAsync(string? cursor, int take, bool newestFirst, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
+    public Task<MailboxPage> SearchAsync(string query, int take, CancellationToken ct) =>
+        Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<MailboxPage> ListByTagsAsync(IReadOnlyList<string> tags, string? cursor, int take, bool newestFirst, CancellationToken ct) =>
         Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0));
     public Task<MailboxPage> ListConversationAsync(string conversationId, CancellationToken ct) =>
@@ -354,6 +361,37 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
                     items.Add(m);
 
         items.Sort((a, b) => a.ReceivedAt.CompareTo(b.ReceivedAt));
+        return new MailboxPage(items, null, items.Count);
+    }
+
+    public async Task<MailboxPage> SearchAsync(string query, int take, CancellationToken ct)
+    {
+        take = Math.Clamp(take, 1, 50);
+
+        // Graph's message $search takes a KQL phrase and cannot combine with $filter, $orderby or
+        // $count — results come back relevance-ordered, which is what a find dialog wants anyway.
+        // A double quote inside the query would end the phrase early, so quotes are flattened.
+        var phrase = "\"" + query.Replace("\"", " ").Trim() + "\"";
+        var url = $"{GraphBase}/users/{Mailbox}/messages"
+            + $"?$search={Uri.EscapeDataString(phrase)}"
+            + $"&$select={Summary}&$top={take}";
+
+        var items = new List<MailboxMessage>();
+        using var response = await SendAsync(HttpMethod.Get, url, content: null, ct, allowNotFound: true, consistencyEventual: true);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Mailbox search failed: {Status}. {Detail}",
+                (int)response.StatusCode, await SafeBodyAsync(response, ct));
+            return new MailboxPage(items, null, 0);
+        }
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+        if (doc.RootElement.TryGetProperty("value", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            foreach (var item in arr.EnumerateArray())
+                if (!IsDraft(item) && Parse(item) is { } m)
+                    items.Add(m);
+
         return new MailboxPage(items, null, items.Count);
     }
 

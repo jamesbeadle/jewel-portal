@@ -214,7 +214,7 @@ public sealed class AiTurnRunner
                 : Truncate(reply.Text!, 400),
             steps, clock, reply.InputTokens, reply.OutputTokens, cancellationToken);
 
-        return Result(conversation, status, newMessages, uiActions, steps, remaining);
+        return Result(conversation, status, newMessages, uiActions, steps, remaining, reply.EscalationNote);
     }
 
     // ---- agents and skills -----------------------------------------------------------------
@@ -549,7 +549,8 @@ public sealed class AiTurnRunner
     private static AiTurnResult Result(
         AiConversationEntity conversation, AiTurnStatus status,
         IEnumerable<AiConversationMessageEntity> messages,
-        IReadOnlyList<AiUiAction> uiActions, IReadOnlyList<AiStep> steps, int remaining) =>
+        IReadOnlyList<AiUiAction> uiActions, IReadOnlyList<AiStep> steps, int remaining,
+        string? modelNote = null) =>
         new(conversation.ConversationId,
             status,
             messages
@@ -562,7 +563,8 @@ public sealed class AiTurnRunner
             remaining,
             // Post-switch: a switch_agent call in this hop is already on the conversation, so the
             // panel can show the new hat as soon as the hop returns.
-            conversation.CapabilityKey);
+            conversation.CapabilityKey,
+            modelNote);
 
     private static string Fail(string message) => JsonSerializer.Serialize(new { ok = false, error = message });
 

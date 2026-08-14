@@ -206,6 +206,14 @@
                             </div>
                         }
 
+                        @if (modelNote is not null && !busy)
+                        {
+                            @* The server stepped the model up a tier because the conversation had
+                               outgrown the chosen one. Said quietly, once per turn — a reply that
+                               billed as a bigger model must never be a mystery. *@
+                            <p class="text-[10px] leading-snug text-content-faint">@modelNote</p>
+                        }
+
                         @if (busy)
                         {
                             <div class="flex flex-col items-start">
@@ -241,7 +249,8 @@
 
                 <footer class="shrink-0 border-t border-line px-3 py-3">
                     <div class="rounded-xl border border-line bg-surface-field transition focus-within:border-line-strong">
-                        <textarea @bind="draft" @bind:event="oninput" rows="2" maxlength="8000" disabled="@busy"
+                        <textarea @bind="draft" @bind:event="oninput" @onkeydown="HandleComposerKeyDown"
+                                  rows="2" maxlength="8000" disabled="@busy"
                                   placeholder="@ComposerPlaceholder" aria-label="Message"
                                   class="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed text-content placeholder:text-content-faint focus:outline-none disabled:opacity-60"></textarea>
                         <div class="flex items-center justify-between gap-2 px-2 pb-2">
@@ -285,6 +294,7 @@
     private bool busy;
     private string? activityLabel;
     private string? error;
+    private string? modelNote;
     private bool showCarryOn;
     // A task kick-off hands the previous conversation's id to the server so its tail can follow
     // the user into the fresh one (the handover Context row). Consumed by the next Send.
@@ -527,6 +537,7 @@
         agentKey = null;
         draft = "";
         error = null;
+        modelNote = null;
         showCarryOn = false;
         pendingPreviousConversationId = null;
         _ = Chat.ForgetConversationAsync();
@@ -587,6 +598,7 @@
         foreach (var action in result.UiActions) Apply(action);
 
         agentKey = result.AgentKey;
+        if (result.ModelNote is not null) modelNote = result.ModelNote;
         activityLabel = narration ?? result.LatestLabel;
 
         // No API key, or the call failed. Tell the dialog, so a form sitting blank waiting for a
@@ -606,6 +618,7 @@
         busy = true;
         showCarryOn = false;
         activityLabel = null;
+        modelNote = null;
         lastToolsUsed = new List<string>();
 
         // The handover only makes sense on the FIRST message of a fresh conversation; consumed
@@ -633,9 +646,11 @@
             conversationId = result.ConversationId;
             _ = Chat.RememberConversationAsync(conversationId);
 
-            // Replace the optimistic user turn with the server's, then append the rest. Guarded:
-            // StartNewChat can empty the list while this turn is in flight.
-            if (messages.Count > 0) messages.RemoveAt(messages.Count - 1);
+            // The optimistic user bubble STAYS. The server never echoes the user's message back in
+            // NewMessages (a hop's result carries only what the hop created), so the old
+            // remove-and-replace here removed and never replaced — the user's own words vanished
+            // from the panel the moment the first hop landed, though the server had them all along
+            // (which is why a refresh brought them back).
 
             // A turn is a sequence of hops. Each one is a single Claude call server-side, so the
             // panel can say what it is doing between them instead of sitting on one long request.
@@ -684,6 +699,20 @@
         showCarryOn = false;
         draft = "Carry on from where you got to.";
         await Send();
+    }
+
+    /// <summary>
+    /// Enter sends; Shift+Enter stays a newline. Blazor cannot conditionally preventDefault, so the
+    /// browser still inserts the newline behind Send's back — Send has already captured and cleared
+    /// the draft by then (its synchronous head runs before the input event lands), so the clean-up
+    /// afterwards just clears the stray newline the default action left in the box. The textarea is
+    /// disabled while a turn is in flight, so nothing the user typed can be sitting there to lose.
+    /// </summary>
+    private async Task HandleComposerKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key != "Enter" || e.ShiftKey) return;
+        await Send();
+        draft = "";
     }
 
     /// <summary>

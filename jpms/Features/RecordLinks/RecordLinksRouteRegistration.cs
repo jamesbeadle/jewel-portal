@@ -49,6 +49,15 @@ public static class RecordLinksRouteRegistration
                     return $"/api/records/{q.Type}/{Uri.EscapeDataString(q.RecordId)}/emails";
                 }));
 
+        // Free-text mailbox search behind the record pages' "Find emails" dialog.
+        queries.Register<SearchMailboxMessages, IReadOnlyList<MailboxMessage>>(
+            new QueryRoute("/api/mailbox/search",
+                query =>
+                {
+                    var q = (SearchMailboxMessages)query;
+                    return $"/api/mailbox/search?q={Uri.EscapeDataString(q.Query)}&take={q.Take}";
+                }));
+
         // One call per project page view feeds every activity badge on it (register rows, record
         // tab dots) — derived server-side from the audit trail's link events, never the mailbox.
         queries.Register<ListRecordActivity, IReadOnlyList<RecordActivitySummary>>(
