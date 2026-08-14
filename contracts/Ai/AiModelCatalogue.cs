@@ -20,6 +20,7 @@ public static class AiModelCatalogue
     public static readonly IReadOnlyList<AiModelChoice> All = new[]
     {
         new AiModelChoice("haiku", "Haiku", "Fast and cheap — right for most questions"),
+        new AiModelChoice("sonnet", "Sonnet", "The middle ground — sharper than Haiku at a fifth of Fable's price"),
         new AiModelChoice("opus", "Opus", "Smarter and slower — for harder commercial reasoning"),
         new AiModelChoice("fable", "Fable", "The strongest and priciest — for the hardest work"),
     };

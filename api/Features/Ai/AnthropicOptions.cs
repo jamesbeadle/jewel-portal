@@ -21,8 +21,13 @@ public sealed class AnthropicOptions
     // first. Ids are config-overridable (Anthropic__ModelHaiku etc.) so a renamed alias is an app
     // setting, not a redeploy. `Model` above stays what it always was: the single-shot extraction
     // callers (PrepareVoqDraft, ExtractQuote), untouched by the picker.
+    //
+    // Verified against the live model list 2026-08-14 ($/MTok in/out): haiku-4-5 $1/$5,
+    // sonnet-5 $2/$10, opus-5 $5/$25, fable-5 $10/$50. The dateless ids are pinned snapshots per
+    // Anthropic's docs.
     public string ModelHaiku { get; set; } = "claude-haiku-4-5";
-    public string ModelOpus { get; set; } = "claude-opus-4-6";
+    public string ModelSonnet { get; set; } = "claude-sonnet-5";
+    public string ModelOpus { get; set; } = "claude-opus-5";
     public string ModelFable { get; set; } = "claude-fable-5";
 
     /// <summary>The model id for a tier key from the panel. Anything unknown — including null, a
@@ -30,6 +35,7 @@ public sealed class AnthropicOptions
     /// tier, never name a model, and can never upgrade the spend by accident.</summary>
     public string ModelForTier(string? tierKey) => tierKey?.ToLowerInvariant() switch
     {
+        "sonnet" => ModelSonnet,
         "opus" => ModelOpus,
         "fable" => ModelFable,
         _ => ModelHaiku
@@ -76,6 +82,10 @@ public sealed class AnthropicOptions
         var modelHaiku = section["ModelHaiku"];
         if (!string.IsNullOrWhiteSpace(modelHaiku))
             options.ModelHaiku = modelHaiku;
+
+        var modelSonnet = section["ModelSonnet"];
+        if (!string.IsNullOrWhiteSpace(modelSonnet))
+            options.ModelSonnet = modelSonnet;
 
         var modelOpus = section["ModelOpus"];
         if (!string.IsNullOrWhiteSpace(modelOpus))
