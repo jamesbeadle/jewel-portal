@@ -473,7 +473,15 @@ else
         catch { /* Address bar cosmetics. Never worth failing the page over. */ }
         modalRequestHonoured = true;
 
-        if (!CanManageVariations) return;
+        if (!CanManageVariations)
+        {
+            // Said out loud — the assistant routed here believing the dialog would open, and a
+            // silent no-op leaves the user (and the model) certain something deeper is broken.
+            variationsError = "The assistant tried to open the Add-variation dialog, but the role "
+                + "you are viewing as can't add variations.";
+            StateHasChanged();
+            return;
+        }
 
         addVariationOpen = true;
 
