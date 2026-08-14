@@ -1,20 +1,24 @@
 @namespace Jewel.JPMS.Features.Todos.Detail
 @using Jewel.JPMS.Features.Triage
 
-@* The item's composer, in both shapes the Control Centre sends: a REPLY inside a linked email's
-   conversation (the whole thread quoted behind it), or a brand-new outbound email filed to this
-   item. Either way the sent copy carries the item's "JPMS/TODO-####" tag — a reply inherits the
-   inbound thread's tags, a new email is stamped with the record link — so what is sent from here
-   appears in this same communications list. The widget itself is the shared MailReplyComposer in
-   send mode; this wrapper only supplies the to-do's filing and phrasing. *@
+@* The item's composer, in the shapes the Control Centre sends: a REPLY inside a linked email's
+   conversation (the whole thread quoted behind it), a FORWARD of a linked email (original
+   attachments travelling automatically), or a brand-new outbound email filed to this item.
+   Either way the sent copy carries the item's "JPMS/TODO-####" tag — a reply or forward inherits
+   the inbound thread's tags, a new email is stamped with the record link — so what is sent from
+   here appears in this same communications list. The widget itself is the shared
+   MailReplyComposer in send mode; this wrapper only supplies the to-do's filing and phrasing. *@
 
 <MailReplyComposer ReplyTo="ReplyTo"
+                   Forward="Forward"
                    Projects="Projects"
                    ProjectId="@ProjectIdOrNull"
                    MarkThreadHandled="false"
                    LinkRecordType="@(IsReply ? (RecordType?)null : RecordType.Todo)"
                    LinkRecordId="@(IsReply ? null : Todo.TodoItemId)"
-                   FooterNote="@(IsReply
+                   FooterNote="@(Forward && IsReply
+                       ? "The sent forward stays in this thread and files itself under this to-do, so it appears in this list."
+                       : IsReply
                        ? "The sent reply joins this thread and files itself under this to-do, so it appears in this list."
                        : $"The sent email files itself under {Todo.Reference}, so it appears in this list.")"
                    OnSent="OnSent"
@@ -24,6 +28,9 @@
     [Parameter, EditorRequired] public TodoItem Todo { get; set; } = default!;
     /// <summary>The linked email being replied to — null composes a brand-new outbound email.</summary>
     [Parameter] public MailboxMessage? ReplyTo { get; set; }
+    /// <summary>Forward the linked email instead of replying to it (only meaningful with
+    /// <see cref="ReplyTo"/>).</summary>
+    [Parameter] public bool Forward { get; set; }
     /// <summary>Project pool for the attachment picker's drawing / photo sources.</summary>
     [Parameter] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
     [Parameter] public EventCallback<Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome> OnSent { get; set; }

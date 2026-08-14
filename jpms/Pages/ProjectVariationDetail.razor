@@ -37,20 +37,20 @@ else if (!orderLoaded)
 {
     @* Tab chrome first, the record when it lands — "could not be found" must never flash over a
        fetch that is still running. *@
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="variations">
         <LoadGate IsLoading="true" Prominent="true" Label="Loading variation" />
     </ProjectPageShell>
 }
 else if (order is null)
 {
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="variations">
         @* A failed fetch and a missing record both leave `order` null — say which. *@
         <p class="text-sm text-content-subtle italic">@(error ?? "That variation order could not be found.")</p>
     </ProjectPageShell>
 }
 else
 {
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="variations">
         @* Portal-accepted variation orders (subcontractor variation requests) have no originating request. *@
         @if (!string.IsNullOrWhiteSpace(order.RequestId))
         {
@@ -60,7 +60,7 @@ else
         }
         else
         {
-            <a href="@($"/projects/{ProjectId}/requests/variations")" class="text-sm text-content-muted hover:text-content inline-flex items-center gap-1 mb-4">
+            <a href="@($"/projects/{ProjectId}/variations")" class="text-sm text-content-muted hover:text-content inline-flex items-center gap-1 mb-4">
                 &larr; Variations
             </a>
         }
@@ -404,12 +404,14 @@ else
                     {
                         <div class="mb-3 space-y-2">
                             <p class="text-sm text-content-muted">
-                                Replying to <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyingTo.FromName) ? replyingTo.FromEmail : replyingTo.FromName)</span> —
+                                @(commsComposeIsForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyingTo.FromName) ? replyingTo.FromEmail : replyingTo.FromName)</span> —
                                 <span class="italic">@replyingTo.Subject</span>
                             </p>
-                            <MailReplyComposer @key="replyingTo.Id" ReplyTo="replyingTo"
+                            <MailReplyComposer @key="@($"{replyingTo.Id}:{commsComposeIsForward}")" ReplyTo="replyingTo" Forward="commsComposeIsForward"
                                                Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@ProjectId"
-                                               FooterNote="The reply sends now from the projects mailbox and files itself back into this list."
+                                               FooterNote="@(commsComposeIsForward
+                                                   ? "The forward sends now from the projects mailbox and files itself back into this list."
+                                                   : "The reply sends now from the projects mailbox and files itself back into this list.")"
                                                OnSent="OnCommsReplySent" OnCancel="() => commsReplyTo = null" />
                         </div>
                     }
@@ -428,7 +430,8 @@ else
                     else
                     {
                         <CorrespondenceThreadList Emails="emails" ExcludeTag="@($"JPMS/{order.Reference}")"
-                                                  OnReply="email => commsReplyTo = email" />
+                                                  OnReply="email => StartCommsCompose(email, forward: false)"
+                                                  OnForward="email => StartCommsCompose(email, forward: true)" />
                     }
                     </LoadGate>
                 </div>
@@ -791,17 +794,27 @@ else
     private bool emailsLoaded;
     private string? emailsError;
     private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
-    // The email a Reply was pressed on (the shared composer opens above the list; replying from a
-    // record page sends immediately) and the confirmation left behind by the last send.
+    // The email a Reply or Forward was pressed on (the shared composer opens above the list;
+    // sending from a record page sends immediately), which of the two it was, and the
+    // confirmation left behind by the last send.
     private MailboxMessage? commsReplyTo;
+    private bool commsComposeIsForward;
     private string? commsReplySent;
+
+    private void StartCommsCompose(MailboxMessage message, bool forward)
+    {
+        commsReplyTo = message;
+        commsComposeIsForward = forward;
+    }
 
     private async Task OnCommsReplySent(Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome outcome)
     {
+        var wasForward = commsComposeIsForward;
         commsReplyTo = null;
+        commsComposeIsForward = false;
         commsReplySent = outcome.Sent
-            ? $"Reply sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
-            : "The reply was saved to the mailbox's Drafts — review and send it from Outlook.";
+            ? $"{(wasForward ? "Forward" : "Reply")} sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
+            : $"The {(wasForward ? "forward" : "reply")} was saved to the mailbox's Drafts — review and send it from Outlook.";
         // The sent copy self-files by tag; re-read so it appears in the list straight away.
         await LoadEmailsAsync();
     }
@@ -1220,7 +1233,7 @@ else
             busy = true;
             await Variations.DeleteAsync(VariationOrderId);
             // The record is gone — return to the variations register rather than a dead page.
-            Nav.NavigateTo($"/projects/{ProjectId}/requests/variations");
+            Nav.NavigateTo($"/projects/{ProjectId}/variations");
         }
         catch (CommandFailedException ex) { error = ex.Message; busy = false; }
         catch { error = "Couldn't delete the variation order. Please try again."; busy = false; }

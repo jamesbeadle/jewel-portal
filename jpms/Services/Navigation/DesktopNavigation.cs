@@ -199,7 +199,7 @@ public static class DesktopNavigation
             .ToList();
 
     /// <summary>Where the bare project URL (/projects/{id}) lands: the first project-scoped row
-    /// of the first visible folder — Project → Requests for full-access roles. The Requests
+    /// of the first visible folder — Project → RFIs for full-access roles. The RFIs
     /// fallback keeps the redirect deterministic if a role somehow reaches a project URL with no
     /// project rows; the page's own RBAC remains the enforcement.</summary>
     public static string FirstProjectTabHref(Role role, string projectId)
@@ -207,7 +207,7 @@ public static class DesktopNavigation
         var first = FoldersFor(role)
             .SelectMany(folder => folder.Items)
             .FirstOrDefault(item => item.IsProjectScoped);
-        return (first ?? new NavigationItem("Requests", "/projects/{project}/requests"))
+        return (first ?? new NavigationItem("RFIs", "/projects/{project}/requests"))
             .ResolveHref(projectId);
     }
 

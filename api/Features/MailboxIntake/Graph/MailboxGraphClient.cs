@@ -127,8 +127,12 @@ public interface IMailboxGraphClient
     /// original recipients and quoted history all supplied by Graph (createReplyAll) — then prepend
     /// the given cover note above the quoted history, apply the workflow categories and attach the
     /// files. The recipient's mail client threads the sent copy under the existing conversation.
-    /// Nothing is sent. Returns null when the mailbox is unconfigured, the original message is gone,
-    /// or a step failed (a partially prepared draft may remain in Drafts for a human to inspect).
+    /// With <see cref="MailboxReplyDraftMessage.Forward"/> set the draft is a FORWARD instead
+    /// (createForward): "FW:" subject, no recipients pre-filled, quoted history — and the original
+    /// message's attachments are carried onto the draft by Graph itself, so callers must not attach
+    /// them again. Nothing is sent. Returns null when the mailbox is unconfigured, the original
+    /// message is gone, or a step failed (a partially prepared draft may remain in Drafts for a
+    /// human to inspect).
     /// </summary>
     Task<MailboxReplyDraft?> CreateReplyDraftAsync(MailboxReplyDraftMessage reply, CancellationToken ct);
 
@@ -191,12 +195,15 @@ public sealed record MailboxDraftAttachment(
 public sealed record MailboxDraft(string Id, string? WebLink);
 
 /// <summary>A reply-draft to stage on an existing mailbox message: the cover note goes above the
-/// quoted history Graph supplies; recipients come from the original message (reply-all).</summary>
+/// quoted history Graph supplies; recipients come from the original message (reply-all). Forward
+/// stages a forward draft instead (createForward — "FW:" subject, no recipients, and the original
+/// attachments carried over by Graph; Attachments here are EXTRA files on top of those).</summary>
 public sealed record MailboxReplyDraftMessage(
     string MessageId,
     string HtmlCoverNote,
     IReadOnlyList<MailboxDraftAttachment> Attachments,
-    IReadOnlyList<string>? Categories = null);
+    IReadOnlyList<string>? Categories = null,
+    bool Forward = false);
 
 /// <summary>A created reply draft: identity plus the subject and recipients Graph pre-filled from
 /// the original message, so callers can report who the reply is addressed to.</summary>
@@ -1057,8 +1064,12 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         // 1. createReplyAll stages the reply draft in Drafts: same conversation, "RE:" subject,
         //    thread headers (In-Reply-To/References), quoted history in the body, and the original
         //    sender + copied recipients pre-filled — everything a mail client needs to show the sent
-        //    copy inside the existing thread.
-        var createUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(reply.MessageId)}/createReplyAll";
+        //    copy inside the existing thread. createForward is the same shape for a FORWARD: "FW:"
+        //    subject, quoted history, no recipients — and Graph copies the original message's
+        //    attachments onto the draft itself (matching Outlook's forward), which is why the caller
+        //    never re-attaches them.
+        var createAction = reply.Forward ? "createForward" : "createReplyAll";
+        var createUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(reply.MessageId)}/{createAction}";
         string? id, webLink;
         string subject, existingBody, existingType;
         List<string> to, cc;
@@ -1067,7 +1078,8 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         {
             if (!createResponse.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Reply-draft create failed: {Status}. {Detail}",
+                _logger.LogWarning("{Kind}-draft create failed: {Status}. {Detail}",
+                    reply.Forward ? "Forward" : "Reply",
                     (int)createResponse.StatusCode, await SafeBodyAsync(createResponse, ct));
                 return null;
             }

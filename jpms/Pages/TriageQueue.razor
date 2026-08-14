@@ -703,12 +703,14 @@
 
                     @MessageBody
 
-                            @* Reply where the reading ends — you get to the bottom of an email and
-                               answer it, so the button (and the open composer) sit right here. *@
+                            @* Reply (or forward) where the reading ends — you get to the bottom of
+                               an email and answer it or pass it on, so the buttons (and the open
+                               composer) sit right here. *@
                             @if (!replyOpen)
                             {
-                                <div>
-                                    <button type="button" class="btn-secondary" @onclick="() => replyOpen = true">↩ Reply</button>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" class="btn-secondary" @onclick="() => OpenReplyComposer(forward: false)">↩ Reply</button>
+                                    <button type="button" class="btn-secondary" @onclick="() => OpenReplyComposer(forward: true)">→ Forward</button>
                                 </div>
                             }
                             <div>
@@ -716,7 +718,7 @@
                                     {
                                         <div class="space-y-3">
                                             <div class="flex items-center justify-between">
-                                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Reply — sends from the projects mailbox</p>
+                                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">@(replyIsForward ? "Forward" : "Reply") — sends from the projects mailbox</p>
                                                 <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="DiscardReplyDraft">Discard draft</button>
                                             </div>
 
@@ -749,14 +751,24 @@
                                                 <input class="field" type="text" value="@replySubject" @oninput="OnReplySubjectInput" />
                                             </div>
                                             <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Your reply *</label>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">@(replyIsForward ? "Your message *" : "Your reply *")</label>
                                                 <RichTextEditor @bind-Value="replyBody" MinHeight="180"
-                                                                Placeholder="Write the reply — the whole thread is quoted behind it…" />
+                                                                Placeholder="@(replyIsForward ? "Write the message — the forwarded email is quoted behind it…" : "Write the reply — the whole thread is quoted behind it…")" />
                                             </div>
 
+                                            @* A forward carries the original email's attachments automatically (Graph's
+                                               createForward copies them onto the draft), so the picker only offers EXTRA
+                                               files — offering the originals again would attach every file twice. *@
                                             <AttachmentPicker Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
                                                               Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
-                                                              OriginalAttachments="detail?.Attachments" OriginalMessageId="@selected?.Id" />
+                                                              OriginalAttachments="@(replyIsForward ? null : detail?.Attachments)" OriginalMessageId="@selected?.Id" />
+                                            @if (replyIsForward && detail is { Attachments.Count: > 0 } forwardedDetail)
+                                            {
+                                                <p class="text-xs text-content-subtle">
+                                                    The original email's @(forwardedDetail.Attachments.Count == 1 ? "attachment travels" : $"{forwardedDetail.Attachments.Count} attachments travel")
+                                                    with the forward automatically.
+                                                </p>
+                                            }
 
                                         </div>
                                     }
@@ -1235,7 +1247,8 @@ else
             </ActionsContent>
             <RecordsContent>
                 <RecordExplorerPane Projects="@ProjectOptionsFor(null)" OnPreview="OpenRecordPreview"
-                                    OnReply="message => StartOutboxReply(message, PanelKind.Records)" />
+                                    OnReply="message => StartOutboxReply(message, PanelKind.Records)"
+                                    OnForward="message => StartOutboxForward(message, PanelKind.Records)" />
             </RecordsContent>
             <PreviewContent>
                 <PreviewPane Request="@workspace.Preview" OnClose="() => workspace.ClosePreview()" />
@@ -1243,12 +1256,15 @@ else
             <XeroContent><XeroExplorerPane OnPreview="OpenXeroPreview" /></XeroContent>
             <ComposeContent>@ComposePaneContent</ComposeContent>
             <SubcontractorCommsContent><SubcontractorCommsPane OnPreview="OpenSubcontractorCommsPreview"
-                                                               OnReply="message => StartOutboxReply(message, PanelKind.SubcontractorComms)" /></SubcontractorCommsContent>
+                                                               OnReply="message => StartOutboxReply(message, PanelKind.SubcontractorComms)"
+                                                               OnForward="message => StartOutboxForward(message, PanelKind.SubcontractorComms)" /></SubcontractorCommsContent>
             <OutboxContent>
                 <OutboxPane QueuedReplies="queuedReplies"
                             OnChanged="StateHasChanged"
                             @bind-ComposeAnchor="outboxComposeAnchor"
+                            ComposeAnchorIsForward="@outboxComposeAnchorIsForward"
                             CurrentReplyPending="@ReplyDraftPending"
+                            CurrentReplyIsForward="@replyIsForward"
                             CurrentReplySubject="@replySubject"
                             OnEditCurrentReply="ShowCurrentReplyComposer"
                             OnDiscardCurrentReply="DiscardReplyDraft"
@@ -1680,6 +1696,10 @@ else
     // The reply composer is its own section under the filing tabs — open on demand, combinable
     // with whatever filing is set up above (one Send applies both).
     private bool replyOpen;
+    // The open composer is a FORWARD of the open email rather than a reply: blank envelope, "FW:"
+    // subject, original attachments carried automatically by Graph, and the send never counts as
+    // a triage decision (the email stays queued unless something else files it).
+    private bool replyIsForward;
     // Set once per selection when the detail lands, so a user's edits are never overwritten by a
     // slow fetch arriving after they started typing.
     private bool replyEnvelopePrefilled;
@@ -1739,28 +1759,39 @@ else
     // payloads snapshotted at stage time, cleared per selection like all staging.
     private readonly List<StagedSystemAction> stagedSystemActions = new();
 
-    // ---- The Outbox: replies lined up against OLDER emails (started from a Reply button on a
-    //      record's correspondence or the subcontractor comms browser), sent by the one Apply.
+    // ---- The Outbox: replies and forwards lined up against OLDER emails (started from a Reply
+    //      or Forward button on a record's correspondence or the subcontractor comms browser),
+    //      sent by the one Apply.
     //      Deliberately WORKSPACE-LEVEL, not per-selection staging: they survive moving between
     //      inbox emails, and each anchor email is tagged with whatever System Tags picks are
     //      staged when the apply actually runs (decision 2026-08-12) — one triage decision
     //      covering the open email and every email being answered. ----
     private readonly List<StagedOutboxReply> queuedReplies = new();
-    // The older email a Reply press just chose — the Outbox pane opens its composer for it.
-    // Cleared (by the pane) when the reply is lined up or the composer discarded.
+    // The older email a Reply or Forward press just chose — the Outbox pane opens its composer
+    // for it (outboxComposeAnchorIsForward says which button it was). Cleared (by the pane) when
+    // the entry is lined up or the composer discarded.
     private MailboxMessage? outboxComposeAnchor;
+    private bool outboxComposeAnchorIsForward;
     // The Outbox badge counts everything Apply will send: lined-up replies + the open email's own.
     private int OutboxSendCount => queuedReplies.Count + (ReplyDraftPending ? 1 : 0);
     // What the last apply sent from the Outbox — shown with the other outcome banners where the
     // cleared selection was; dismissable; cleared on the next selection.
     private string? outboxNote;
 
-    // A Reply pressed on an older email anywhere in the workspace: composing happens in the
-    // Outbox pane, opened OPPOSITE the list it came from (like a preview) so thread and reply
-    // read side by side — the flow is identical from every entry point.
+    // A Reply (or Forward) pressed on an older email anywhere in the workspace: composing happens
+    // in the Outbox pane, opened OPPOSITE the list it came from (like a preview) so thread and
+    // reply read side by side — the flow is identical from every entry point.
     private void StartOutboxReply(MailboxMessage message, PanelKind anchor)
     {
         outboxComposeAnchor = message;
+        outboxComposeAnchorIsForward = false;
+        workspace.ShowOpposite(PanelKind.Outbox, anchor);
+    }
+
+    private void StartOutboxForward(MailboxMessage message, PanelKind anchor)
+    {
+        outboxComposeAnchor = message;
+        outboxComposeAnchorIsForward = true;
         workspace.ShowOpposite(PanelKind.Outbox, anchor);
     }
 
@@ -2220,6 +2251,7 @@ else
         public string ReplySubject { get; init; } = "";
         public bool ReplyShowBcc { get; init; }
         public bool ReplyOpen { get; init; }
+        public bool ReplyIsForward { get; init; }
         public bool ReplyEnvelopePrefilled { get; init; }
         public IReadOnlyList<ComposeDraftAttachment> ReplyAttachments { get; init; } = Array.Empty<ComposeDraftAttachment>();
         public string ProjectId { get; init; } = "";
@@ -2269,6 +2301,7 @@ else
             ReplySubject = replySubject,
             ReplyShowBcc = replyShowBcc,
             ReplyOpen = replyOpen,
+            ReplyIsForward = replyIsForward,
             ReplyEnvelopePrefilled = replyEnvelopePrefilled,
             ReplyAttachments = replyAttachments,
             ProjectId = triageProjectId,
@@ -2297,6 +2330,7 @@ else
         replySubject = parked.ReplySubject;
         replyShowBcc = parked.ReplyShowBcc;
         replyOpen = parked.ReplyOpen;
+        replyIsForward = parked.ReplyIsForward;
         replyEnvelopePrefilled = parked.ReplyEnvelopePrefilled;
         replyAttachments = parked.ReplyAttachments;
         triageProjectId = parked.ProjectId;
@@ -2344,6 +2378,7 @@ else
         replyToField = replyCcField = replyBccField = replySubject = "";
         replyShowBcc = false;
         replyOpen = false;
+        replyIsForward = false;
         replyEnvelopePrefilled = false;
         replyAttachments = Array.Empty<ComposeDraftAttachment>();
         triageProjectId = "";
@@ -2607,6 +2642,9 @@ else
     private void PrefillReplyEnvelope(MailboxMessage item, MailboxMessageDetail loaded)
     {
         if (replyEnvelopePrefilled) return;
+        // A forward's envelope is deliberately blank (FW subject already set) — the late-landing
+        // detail must not overwrite it with the reply-all prefill.
+        if (replyIsForward) return;
 
         var toAddress = loaded.ReplyTo ?? loaded.FromEmail ?? item.FromEmail;
         replyToField = toAddress ?? "";
@@ -2651,11 +2689,11 @@ else
         {
             var parts = new List<string>();
             if (ReplyDraftPending)
-                parts.Add("send your reply");
+                parts.Add(replyIsForward ? "send your forward" : "send your reply");
             if (queuedReplies.Count > 0)
                 parts.Add(queuedReplies.Count == 1
-                    ? $"send the lined-up reply to {queuedReplies[0].AnchorFrom}"
-                    : $"send {queuedReplies.Count} lined-up replies");
+                    ? $"send the lined-up {(queuedReplies[0].IsForward ? "forward" : "reply")} to {queuedReplies[0].AnchorFrom}"
+                    : $"send {queuedReplies.Count} lined-up emails");
             var todoCount = CurrentTodoDrafts().Count;
             if (todoCount > 0)
                 parts.Add(todoCount == 1 ? "raise the to-do" : $"raise {todoCount} to-dos");
@@ -2694,7 +2732,7 @@ else
             // Lined-up replies inherit the triage's record picks: the sentence says so, because
             // tagging OTHER emails is the one effect a reader wouldn't otherwise expect.
             if (queuedReplies.Count > 0 && pickedRecords.Count > 0)
-                summary += $" (the lined-up {(queuedReplies.Count == 1 ? "reply's email is" : "replies' emails are")} tagged to the picked records too)";
+                summary += $" (the lined-up {(queuedReplies.Count == 1 ? "email's anchor is" : "emails' anchors are")} tagged to the picked records too)";
             return summary;
         }
     }
@@ -2744,11 +2782,49 @@ else
     // finishes exactly what was originally asked.
     private bool pendingSaveDraft;
 
+    // Open the composer under the open email as a reply or a forward. The two kinds prime the
+    // envelope differently — reply-all prefill vs a blank envelope with a "FW:" subject — so
+    // switching kind re-primes it (the written body and any extra attachments survive; original
+    // attachments picked for a reply are dropped on a switch to forward, because Graph carries
+    // the originals on a forward draft automatically).
+    private void OpenReplyComposer(bool forward)
+    {
+        replyOpen = true;
+        if (replyIsForward == forward) return;
+        replyIsForward = forward;
+        replyShowBcc = false;
+        if (forward)
+        {
+            replyToField = replyCcField = replyBccField = "";
+            replySubject = MailCompose.ForwardSubjectFor(detail?.Subject ?? selected?.Subject);
+            replyAttachments = replyAttachments
+                .Where(a => a.Source != ComposeAttachmentSource.OriginalMessage)
+                .ToList();
+        }
+        else
+        {
+            replyToField = replyCcField = replyBccField = "";
+            replySubject = "";
+            replyEnvelopePrefilled = false;
+            if (selected is { } item && detail is { } loaded) PrefillReplyEnvelope(item, loaded);
+        }
+    }
+
     private void DiscardReplyDraft()
     {
         replyOpen = false;
         replyBody = "";
         replyAttachments = Array.Empty<ComposeDraftAttachment>();
+        // A discarded forward hands the composer back in reply shape, reply-all re-prefilled, so
+        // the next "↩ Reply" press starts from the normal envelope.
+        if (replyIsForward)
+        {
+            replyIsForward = false;
+            replyToField = replyCcField = replyBccField = "";
+            replySubject = "";
+            replyEnvelopePrefilled = false;
+            if (selected is { } item && detail is { } loaded) PrefillReplyEnvelope(item, loaded);
+        }
     }
 
     // The shared composer rules (MailCompose), aliased so every call site here reads the same as
@@ -2802,18 +2878,19 @@ else
             return;
         }
 
-        // A half-built lined-up reply is a decision not yet made — finish it or remove it, rather
+        // A half-built lined-up email is a decision not yet made — finish it or remove it, rather
         // than have Apply skip it (or the server reject it after the filing has already landed).
         if (queuedReplies.FirstOrDefault(lined => lined.Problem is not null) is { } notReady)
         {
-            actionError = $"A lined-up reply ({notReady.AnchorSubject}) isn't ready — {notReady.Problem} Finish it in the Outbox, or remove it.";
+            actionError = $"A lined-up {(notReady.IsForward ? "forward" : "reply")} ({notReady.AnchorSubject}) isn't ready — {notReady.Problem} Finish it in the Outbox, or remove it.";
             return;
         }
 
         // A reply and a discard contradict each other — an email worth answering isn't spam.
+        // (Same rule for an unsent forward: send or discard the draft before binning the email.)
         if (discarding && replying)
         {
-            actionError = "Discard and a reply don't mix — send (or discard) the reply draft first.";
+            actionError = $"Discard and a {(replyIsForward ? "forward" : "reply")} don't mix — send (or discard) the draft first.";
             return;
         }
         if (discarding && picks.Count > 0)
@@ -3113,9 +3190,10 @@ else
                         return;
                     }
                 }
-                busyLabel = saveAsDraftOnly ? "Saving lined-up drafts" : "Sending lined-up replies";
+                busyLabel = saveAsDraftOnly ? "Saving lined-up drafts" : "Sending lined-up emails";
                 // MarkThreadHandled off: the anchor is an already-triaged email — its record tags
-                // say more than Replied would, and it isn't sitting in the queue to clear.
+                // say more than Replied would, and it isn't sitting in the queue to clear. A
+                // lined-up FORWARD routes through Graph's createForward server-side (Forward).
                 var linedCommand = new SendMailboxEmail(
                     ReplyToMessageId: lined.MessageId,
                     ReplyToInternetMessageId: lined.InternetMessageId,
@@ -3128,22 +3206,25 @@ else
                     Attachments: lined.Attachments.Select(a => a.ToRef()).ToList(),
                     SaveAsDraftOnly: saveAsDraftOnly,
                     Pathway: null,
-                    MarkThreadHandled: false);
+                    MarkThreadHandled: false,
+                    Forward: lined.IsForward);
                 await Intake.SendComposedEmailAsync(linedCommand, MailCompose.UploadPartsOf(lined.Attachments));
                 queuedReplies.Remove(lined);
                 outboxSent++;
             }
             if (outboxSent > 0)
                 outboxNote = saveAsDraftOnly
-                    ? $"{outboxSent} lined-up {(outboxSent == 1 ? "reply was" : "replies were")} saved to the mailbox's Drafts — review and send from Outlook."
-                    : $"{outboxSent} lined-up {(outboxSent == 1 ? "reply was" : "replies were")} sent from the projects mailbox{(picks.Count > 0 ? ", each email tagged to the picked records" : "")}.";
+                    ? $"{outboxSent} lined-up {(outboxSent == 1 ? "email was" : "emails were")} saved to the mailbox's Drafts — review and send from Outlook."
+                    : $"{outboxSent} lined-up {(outboxSent == 1 ? "email was" : "emails were")} sent from the projects mailbox{(picks.Count > 0 ? ", each email tagged to the picked records" : "")}.";
 
-            // ---- Section 1: the reply — last, so nothing above can be lost to a send failure.
-            //      When a filing already dealt with the thread its record tag says more than
-            //      Replied, so the stamp is skipped. ----
+            // ---- Section 1: the reply (or forward) — last, so nothing above can be lost to a
+            //      send failure. When a filing already dealt with the thread its record tag says
+            //      more than Replied, so the stamp is skipped — and a FORWARD never stamps: it
+            //      passes the email on rather than answering it, so the email stays queued
+            //      unless a filing above dealt with it. ----
             if (replying)
             {
-                busyLabel = saveAsDraftOnly ? "Saving draft" : "Sending reply";
+                busyLabel = saveAsDraftOnly ? "Saving draft" : (replyIsForward ? "Sending forward" : "Sending reply");
                 var command = new SendMailboxEmail(
                     ReplyToMessageId: anchor.Id,
                     ReplyToInternetMessageId: anchor.InternetMessageId,
@@ -3156,10 +3237,12 @@ else
                     Attachments: replyAttachments.Select(a => a.ToRef()).ToList(),
                     SaveAsDraftOnly: saveAsDraftOnly,
                     Pathway: pathway?.ToString(),
-                    MarkThreadHandled: !filed);
+                    MarkThreadHandled: !filed && !replyIsForward,
+                    Forward: replyIsForward);
                 composeOutcome = await Intake.SendComposedEmailAsync(command, uploadParts);
                 replyBody = "";
                 replyOpen = false;
+                replyIsForward = false;
                 replyAttachments = Array.Empty<ComposeDraftAttachment>();
             }
 

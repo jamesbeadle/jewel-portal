@@ -14,9 +14,9 @@
     The Subcontractor folder's Communications page: every email tagged "JPMS/SubComms" — general
     subcontractor correspondence filed at triage with the Subcontractor tab's communication tick —
     read live from the mailbox, newest first, in the shared thread list (threads group, any email
-    expands to its full body, and every email carries the consistent Reply widget — replying from
-    here SENDS there and then; the sent copy inherits the thread's tags and files back into this
-    list). Tagging (and untagging, from the Control Centre's Tagged view) stays in mailbox triage.
+    expands to its full body, and every email carries the consistent Reply and Forward widget —
+    sending from here SENDS there and then; the sent copy inherits the thread's tags and files
+    back into this list). Tagging (and untagging, from the Control Centre's Tagged view) stays in mailbox triage.
 *@
 
 @if (!sessionReady)
@@ -77,17 +77,20 @@ else
             {
                 <div class="mb-4 space-y-2">
                     <p class="text-sm text-content-muted">
-                        Replying to <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyingTo.FromName) ? replyingTo.FromEmail : replyingTo.FromName)</span> —
+                        @(composeIsForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyingTo.FromName) ? replyingTo.FromEmail : replyingTo.FromName)</span> —
                         <span class="italic">@replyingTo.Subject</span>
                     </p>
-                    <MailReplyComposer @key="replyingTo.Id" ReplyTo="replyingTo"
+                    <MailReplyComposer @key="@($"{replyingTo.Id}:{composeIsForward}")" ReplyTo="replyingTo" Forward="composeIsForward"
                                        Projects="@(ProjectList.Current ?? Array.Empty<Project>())"
-                                       FooterNote="The reply sends now from the projects mailbox and files itself back into this list."
+                                       FooterNote="@(composeIsForward
+                                           ? "The forward sends now from the projects mailbox and files itself back into this list."
+                                           : "The reply sends now from the projects mailbox and files itself back into this list.")"
                                        OnSent="OnReplySent" OnCancel="() => replyTo = null" />
                 </div>
             }
             <CorrespondenceThreadList Emails="items" ExcludeTag="@SubcontractorComms.Tag"
-                                      OnReply="email => replyTo = email" />
+                                      OnReply="email => StartCompose(email, forward: false)"
+                                      OnForward="email => StartCompose(email, forward: true)" />
 
             @if (nextCursor is not null)
             {

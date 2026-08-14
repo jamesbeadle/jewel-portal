@@ -23,7 +23,7 @@ else if (emails.Count > 0)
         <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
             Correspondence · @emails.Count
         </p>
-        <CorrespondenceThreadList Emails="emails" ExcludeTag="@ExcludeTag" OnPreview="OnPreview" OnReply="OnReply" />
+        <CorrespondenceThreadList Emails="emails" ExcludeTag="@ExcludeTag" OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward" />
     </div>
 }
 
@@ -41,6 +41,10 @@ else if (emails.Count > 0)
     /// <summary>Start a reply to one of the record's emails — passed through to the thread list;
     /// the host decides what replying means.</summary>
     [Parameter] public EventCallback<MailboxMessage> OnReply { get; set; }
+
+    /// <summary>Start a forward of one of the record's emails — passed through to the thread
+    /// list; the host decides what forwarding means.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnForward { get; set; }
 
     private IReadOnlyList<MailboxMessage>? emails;
     private string loadedRecordId = "";

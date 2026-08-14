@@ -13,7 +13,7 @@
 
 @if (openRecord is { } record)
 {
-    <RecordDocumentView Record="record" OnBack="() => openRecord = null" OnPreview="OnPreview" OnReply="OnReply" />
+    <RecordDocumentView Record="record" OnBack="() => openRecord = null" OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward" />
 }
 else
 {

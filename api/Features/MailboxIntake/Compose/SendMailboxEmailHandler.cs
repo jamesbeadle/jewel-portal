@@ -20,10 +20,14 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 
 /// <summary>
 /// Triage compose: stage a draft in the projects mailbox and SEND it (docs: the 2026-08-04 send
-/// decision, reversing ADR-006's draft-only rule — see the ADR amendment). One handler covers both
-/// shapes: a reply inside an existing conversation (Graph's createReplyAll supplies the threading
-/// headers and quoted history; the composer's envelope then replaces the scaffolding wholesale) and
-/// a brand-new outbound email.
+/// decision, reversing ADR-006's draft-only rule — see the ADR amendment). One handler covers all
+/// three shapes: a reply inside an existing conversation (Graph's createReplyAll supplies the
+/// threading headers and quoted history; the composer's envelope then replaces the scaffolding
+/// wholesale), a FORWARD of an existing email (Graph's createForward — same scaffolding shape, and
+/// Graph carries the original attachments onto the draft itself), and a brand-new outbound email.
+/// A forward is passing the email on, not answering it, so it never tags the thread JPMS/Replied;
+/// its sent copy still inherits the anchor's record tags (same conversation), so it files itself
+/// into a linked record's correspondence exactly like a reply.
 ///
 /// Failure ordering puts the irreversible step last and keeps every failure recoverable:
 ///   validate → resolve attachments → (optional) raise request → stage draft (+envelope, categories,
@@ -95,6 +99,7 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
     {
         // ---- 1. Validate -------------------------------------------------------------------------
         var isReply = !string.IsNullOrWhiteSpace(command.ReplyToMessageId);
+        var isForward = isReply && command.Forward;
         var subject = command.Subject?.Trim() ?? "";
         var to = CleanRecipients(command.To);
         var cc = CleanRecipients(command.Cc);
@@ -110,6 +115,8 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
             throw new InvalidOperationException("Write the email before sending.");
         if (command.AlsoRaiseRequest && !isReply)
             throw new InvalidOperationException("A request can only be raised from a reply to an email.");
+        if (command.AlsoRaiseRequest && isForward)
+            throw new InvalidOperationException("A request is raised from a reply, not a forward.");
         if (command.AlsoRaiseRequest && string.IsNullOrWhiteSpace(command.ProjectId))
             throw new InvalidOperationException("Choose the project the request is raised on.");
         if (command.AlsoRaiseRequest && command.LinkRecordType is not null)
@@ -131,8 +138,9 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
         // A pathway-less reply is allowed: answering IS dealing with the email, so the thread is
         // triaged with JPMS/Replied alone and no bucket — choosing a side in System Tags (or any
         // record filing) is what files it under a pathway. Step 9 only stamps a bucket when one
-        // was chosen or already fixed on the thread.
-        var willHandleThread = isReply && command.MarkThreadHandled;
+        // was chosen or already fixed on the thread. A FORWARD never handles the thread — passing
+        // an email on isn't answering it, so it stays in the queue unless something else files it.
+        var willHandleThread = isReply && !isForward && command.MarkThreadHandled;
 
         // ---- 3. Resolve attachments (bytes in hand before anything is created) -------------------
         var attachments = await ResolveAttachmentsAsync(command, uploads, cancellationToken);
@@ -269,13 +277,14 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
                     command.ReplyToMessageId!,
                     HtmlCoverNote: bodyHtml,
                     Attachments: allAttachments,
-                    Categories: draftCategories.Count == 0 ? null : draftCategories),
+                    Categories: draftCategories.Count == 0 ? null : draftCategories,
+                    Forward: isForward),
                 cancellationToken);
             if (replyDraft is null)
             {
                 await RollBackRaisedRequestAsync(raisedRequest, recordTag, cancellationToken);
                 throw new InvalidOperationException(
-                    "The reply couldn't be staged in the projects mailbox, so nothing was sent and nothing was triaged. "
+                    $"The {(isForward ? "forward" : "reply")} couldn't be staged in the projects mailbox, so nothing was sent and nothing was triaged. "
                     + "The original email may no longer be there, or the mailbox connection failed — check and try again.");
             }
             draftId = replyDraft.Id;

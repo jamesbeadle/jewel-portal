@@ -26,8 +26,10 @@ public partial class TodoCommunicationsPanel
     private readonly HashSet<string> expanded = new();
     private readonly Dictionary<string, MailboxMessageDetail?> details = new();
 
-    // One composer at a time: a reply anchored under its email, or the new-email form.
+    // One composer at a time: a reply (or forward — composeIsForward says which) anchored under
+    // its email, or the new-email form.
     private MailboxMessage? replyingTo;
+    private bool composeIsForward;
     private bool composingNew;
 
     private string? sentNote;
@@ -92,6 +94,15 @@ public partial class TodoCommunicationsPanel
         composingNew = false;
         sentNote = sentNoteWebLink = null;
         replyingTo = email;
+        composeIsForward = false;
+    }
+
+    private void StartForward(MailboxMessage email)
+    {
+        composingNew = false;
+        sentNote = sentNoteWebLink = null;
+        replyingTo = email;
+        composeIsForward = true;
     }
 
     private void StartNewEmail()
@@ -104,6 +115,7 @@ public partial class TodoCommunicationsPanel
     private void CloseComposer()
     {
         replyingTo = null;
+        composeIsForward = false;
         composingNew = false;
     }
 

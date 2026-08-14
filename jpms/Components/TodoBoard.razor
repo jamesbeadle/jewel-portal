@@ -10,8 +10,10 @@
 
     Cards carry the assignee ROLE's accent colour as a left-edge stripe (RolePresentations, the
     same colour the role wears everywhere else in the app); unassigned items get a muted stripe.
-    On boards that mix projects, each card also wears a compact project reference chip (Scope) —
-    hover it for the full project name.
+    The stripe's colour is NAMED right on the card: the assignee badge (TodoAssigneeBadge) wears
+    the same tint with the role (and any pinned person) written inside it, so the colours need no
+    separate key. On boards that mix projects, each card also wears a project chip (Scope) —
+    reference and name, truncated when long; hover for the full label.
 
     Shared by the To-dos browser page, the project To-do tab and the dashboard My-todos panel
     (Compact) so the three surfaces can never lay the board out differently. The host passes the
@@ -20,6 +22,12 @@
     While a drag is in flight the one valid destination (the OTHER column) shows a dashed accent
     border — a drop anywhere else, or of a card onto its own column, is a no-op. Drops are ignored
     while Busy so a slow command can't be stacked on.
+
+    The drop is ACCEPTED by todo-board.js, not by Blazor: a browser only permits a drop where the
+    dragover default is cancelled on every event, and the standalone @ondragover:preventDefault
+    directive did not deliver that in practice (Chrome animated the card back and never fired
+    @ondrop). The columns opt in with data-todo-dropzone; the shim cancels dragover there while a
+    card is mid-drag. The directive stays as belt-and-braces, and @ondrop stays a C# handler.
 *@
 
 <div class="grid grid-cols-1 sm:grid-cols-2 @(Compact ? "gap-3" : "gap-4")">
@@ -30,7 +38,7 @@
         var isTarget = dragging is TodoItem drag && drag.IsComplete != done;
 
         <div class="rounded-lg border p-2.5 flex flex-col @(isTarget ? "border-dashed border-accent/60 bg-accent/5" : "border-line bg-canvas/40")"
-             @key="done"
+             @key="done" data-todo-dropzone
              @ondragover:preventDefault
              @ondrop="() => HandleDrop(done)" @ondrop:preventDefault>
 
@@ -66,7 +74,7 @@
                             @if (Scope is not null && Scope(item) is ScopeChip chip)
                             {
                                 <span title="@chip.Title"
-                                      class="inline-flex items-center rounded border px-1.5 text-[10px] font-mono leading-4 whitespace-nowrap @(chip.Emphasis ? "border-accent/40 text-accent" : "border-line bg-surface-raised text-content-muted")">@chip.Label</span>
+                                      class="inline-flex min-w-0 max-w-[14rem] items-center rounded border px-1.5 text-[10px] font-mono leading-4 whitespace-nowrap @(chip.Emphasis ? "border-accent/40 text-accent" : "border-line bg-surface-raised text-content-muted")"><span class="truncate">@chip.Label</span></span>
                             }
                             @if (!item.IsComplete && item.DueAt is not null)
                             {
@@ -76,10 +84,7 @@
                             {
                                 <span class="whitespace-nowrap">Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
                             }
-                            @if (TodoAssigneePicker.Label(item) is string assigneeLabel)
-                            {
-                                <span class="truncate">@assigneeLabel</span>
-                            }
+                            <TodoAssigneeBadge Item="item" />
                         </div>
                     </button>
                 }

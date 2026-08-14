@@ -231,10 +231,7 @@ else
                                     {
                                         <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
                                     }
-                                    @if (TodoAssigneePicker.Label(item) is string assigneeLabel)
-                                    {
-                                        <span class="whitespace-nowrap">Assigned to @assigneeLabel</span>
-                                    }
+                                    <TodoAssigneeBadge Item="item" />
                                     @if (item.CompletedAt is not null)
                                     {
                                         <span class="whitespace-nowrap">Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
@@ -548,8 +545,9 @@ else
         return project is null ? "Project" : $"{project.Reference} — {project.Name}";
     }
 
-    // The board card's project badge: the reference as a compact chip (hover for the full name),
-    // or the accent "Company" chip for a no-project item. While the project labels are still in
+    // The board card's project badge: reference AND name (the ref alone said nothing to anyone
+    // not living in the numbering; the board truncates long names, hover for the full label), or
+    // the accent "Company" chip for a no-project item. While the project labels are still in
     // flight the chip says just "Project" rather than nothing.
     private TodoBoard.ScopeChip ScopeChipFor(TodoItem item)
     {
@@ -558,7 +556,7 @@ else
             .FirstOrDefault(p => p.ProjectId == item.ProjectId);
         return project is null
             ? new TodoBoard.ScopeChip("Project", "Project", false)
-            : new TodoBoard.ScopeChip(project.Reference, $"{project.Reference} — {project.Name}", false);
+            : new TodoBoard.ScopeChip($"{project.Reference} — {project.Name}", $"{project.Reference} — {project.Name}", false);
     }
 
     // The role filter's option pool: the roles that actually HAVE items on this reader's current

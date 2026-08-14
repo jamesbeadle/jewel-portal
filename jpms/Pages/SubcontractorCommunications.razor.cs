@@ -18,10 +18,18 @@ public partial class SubcontractorCommunications
     private int total;
     private string? nextCursor;
 
-    // The email a Reply was pressed on (the shared composer opens above the list; replying from
-    // this page sends immediately) and the confirmation left behind by the last send.
+    // The email a Reply or Forward was pressed on (the shared composer opens above the list;
+    // sending from this page sends immediately), which of the two it was, and the confirmation
+    // left behind by the last send.
     private MailboxMessage? replyTo;
+    private bool composeIsForward;
     private string? replySent;
+
+    private void StartCompose(MailboxMessage message, bool forward)
+    {
+        replyTo = message;
+        composeIsForward = forward;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -43,10 +51,12 @@ public partial class SubcontractorCommunications
 
     private async Task OnReplySent(Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome outcome)
     {
+        var wasForward = composeIsForward;
         replyTo = null;
+        composeIsForward = false;
         replySent = outcome.Sent
-            ? $"Reply sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
-            : "The reply was saved to the mailbox's Drafts — review and send it from Outlook.";
+            ? $"{(wasForward ? "Forward" : "Reply")} sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
+            : $"The {(wasForward ? "forward" : "reply")} was saved to the mailbox's Drafts — review and send it from Outlook.";
         // The sent copy self-files by tag; re-read the first page so it appears straight away.
         await LoadPageAsync(cursor: null);
     }

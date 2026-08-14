@@ -1,0 +1,35 @@
+@using Jewel.JPMS.Contracts.Todos
+@using Jewel.JPMS.Features.Todos
+
+@*
+    One to-do's assignee, worn as a badge in the assignee ROLE's own colour — the tinted chip cut
+    of the same accent RolePresentations gives the role everywhere else (and the board card's
+    left-edge stripe). The badge names the role — "Project Manager", or "Project Manager — Jane
+    Doe" when pinned — so the colour needs no separate key: the answer to "whose colour is that?"
+    is written inside it. Shared by the board cards and every flat to-do list row so the four
+    to-do surfaces can never dress an assignee differently.
+
+    Unassigned items wear a muted "Unassigned" chip (matching the board stripe's muted grey)
+    rather than nothing — an item nobody owns is exactly the one worth noticing.
+*@
+
+@if (Item.AssigneeRole is Role role)
+{
+    <span title="Assigned to @TodoAssigneePicker.Label(Item)"
+          class="inline-flex min-w-0 max-w-[14rem] items-center rounded border px-1.5 text-[10px] font-medium leading-4 whitespace-nowrap @RolePresentations.For(role).BadgeClass">
+        <span class="truncate">@TodoAssigneePicker.Label(Item)</span>
+    </span>
+}
+else if (ShowUnassigned)
+{
+    <span title="Assigned to nobody yet"
+          class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 text-[10px] leading-4 whitespace-nowrap text-content-subtle">Unassigned</span>
+}
+
+@code {
+    /// <summary>The item whose assignee the badge names.</summary>
+    [Parameter, EditorRequired] public TodoItem Item { get; set; } = default!;
+
+    /// <summary>Whether an unassigned item wears the muted "Unassigned" chip (default) or nothing.</summary>
+    [Parameter] public bool ShowUnassigned { get; set; } = true;
+}
