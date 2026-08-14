@@ -159,7 +159,58 @@ public static class ModalCatalog
                 "What this variation expressly does not price. Only what the user's data supports.")
         });
 
-    public static IReadOnlyList<ModalDescriptor> All { get; } = new[] { VariationDraft, ManualVariation };
+    /// <summary>
+    /// The Control Centre's "New email" composer, registered as a dialog so the assistant drafts
+    /// email THROUGH the portal UI — never straight into Outlook (decision 2026-08-14, retiring the
+    /// draft_outlook_email tool). The assistant opens the composer, writes the draft into it, and
+    /// the user reviews the envelope and body on their own screen and presses Send (or Save as
+    /// draft) themselves — the same human-sends rule every other dialog carries. Record-less and
+    /// project-less: the route has no <c>{project}</c> or <c>{record}</c>, because the composer is a
+    /// whole-company page and a brand-new email needs no originating record.
+    /// </summary>
+    public static readonly ModalDescriptor ComposeEmail = new(
+        "compose_email",
+        "New email",
+        "It drafts a brand-new email from the projects mailbox in the Control Centre's composer. The "
+        + "user reviews every field — recipients, subject, message — and presses Send themselves; "
+        + "nothing is sent, and no draft exists anywhere, until they do.",
+        "/control-centre",
+        // Exactly the people who can open the Control Centre (the API's TriageRoles) — whoever the
+        // compose endpoint will accept SendMailboxEmail from, and nobody else. The QS has the
+        // assistant but not this page: offering the dialog would route them to an access refusal.
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.FinanceDirector,
+            Role.ProjectManager
+        },
+        new ModalField[]
+        {
+            new("to", "string",
+                "The To recipients as email addresses separated by semicolons. Only addresses that "
+                + "actually appear in the conversation, a tool result or the correspondence — NEVER "
+                + "guess or construct an address, a plausible wrong one sends a real email to a "
+                + "stranger. If you have a name but no address, leave this out and say so.",
+                Required: true),
+
+            new("cc", "string",
+                "Cc recipients, semicolon-separated. Same rule: only addresses you have actually read."),
+
+            new("subject", "string",
+                "A concise subject in the house style — the record reference first where one applies: "
+                + "\"V72 — Revised Coving: quotation attached\". Not a sentence.",
+                Required: true),
+
+            new("body", "string",
+                "The message as PLAIN TEXT — blank lines between paragraphs, no HTML, no markdown. "
+                + "Plain UK English, direct, commercial position first. Sign off as the sender would "
+                + "(their name is in the conversation context); never invent commitments, figures or "
+                + "dates that are not in what you have read.",
+                Required: true)
+        });
+
+    public static IReadOnlyList<ModalDescriptor> All { get; } = new[] { VariationDraft, ManualVariation, ComposeEmail };
 
     public static ModalDescriptor? Find(string? modalKey) =>
         string.IsNullOrWhiteSpace(modalKey)

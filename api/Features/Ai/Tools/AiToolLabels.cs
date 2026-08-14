@@ -36,8 +36,14 @@ public static class AiToolLabels
                                       ?? "Reading a reference",
             "read_record_emails" => "Reading the tagged emails",
             "read_email_attachment" => "Reading an attachment",
-            "draft_outlook_email" => Named(arguments, "subject", subject => $"Drafting \"{subject}\"")
-                                     ?? "Drafting an email",
+            "open_modal" => Named(arguments, "modal_key", key => key switch
+                            {
+                                "compose_email" => "Opening the email composer",
+                                "manual_variation" => "Opening the Add-variation form",
+                                "variation_draft" => "Opening the variation draft",
+                                _ => "Opening a dialog"
+                            }) ?? "Opening a dialog",
+            "update_open_modal" => "Writing into the form",
             _ => "Working on it"
         };
     }

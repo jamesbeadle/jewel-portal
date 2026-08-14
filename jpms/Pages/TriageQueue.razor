@@ -14,6 +14,7 @@
 @using Jewel.JPMS.Features.Todos
 @using Jewel.JPMS.Features.Triage.Panels
 @using Jewel.JPMS.Features.Triage.Workspace
+@using Jewel.JPMS.Contracts.Ai
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
@@ -27,6 +28,9 @@
 @inject IQueryClient Queries
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel Subcontractors
+@inject AiTaskState AiTasks
+@inject ChatPanelState Chat
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Control Centre · JPMS</PageTitle>
@@ -1134,6 +1138,12 @@
     RenderFragment ComposePaneContent =@<div class="panel p-5">
         <h2 class="text-base font-semibold text-content mb-4">New email</h2>
         <div class="space-y-3">
+        @if (AiTasks.Active?.ModalKey == ModalCatalog.ComposeEmail.ModalKey && Chat.AssistantBusy)
+        {
+            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-accent animate-pulse">
+                The assistant is writing into this form — it merges with anything you type, and nothing sends until you press Send.
+            </p>
+        }
         <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
             Sends from the <span class="font-medium text-content">projects mailbox</span>. Optionally file it to a record so the sent copy shows in that record's correspondence — replies will arrive in the queue either way.
         </p>
@@ -1166,7 +1176,7 @@
         </div>
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Message *</label>
-            <RichTextEditor @bind-Value="newEmailBody" MinHeight="200" Placeholder="Write the email…" />
+            <RichTextEditor Value="@newEmailBody" ValueChanged="OnNewEmailBodyChanged" MinHeight="200" Placeholder="Write the email…" />
         </div>
 
         <AttachmentPicker Attachments="newEmailAttachments" AttachmentsChanged="OnNewEmailAttachmentsChanged"
@@ -1926,6 +1936,9 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
         workspace.OnChange += StateHasChanged;
+        Nav.LocationChanged += HandleLocationChangedForModal;
+        AiTasks.OnDraftApplied += ApplyAssistantEmailDraft;
+        Chat.OnChange += StateHasChanged; // repaints the "assistant is writing" banner
         // The sort preference has to land first — LoadAsync pages the mailbox in this order, so
         // reading it late would fetch the first page the wrong way round. It is a local-storage
         // read, so it costs almost nothing.
@@ -1951,6 +1964,10 @@ else
             LoadUnassignedAsync(),
             LoadTodoAssignableRolesAsync(),
             LoadRecentTriageAsync());
+
+        // The assistant's route in: ?openModal=compose_email opens the New email composer as a
+        // shared task. Honoured after the loads so CanTriage is decided from real session state.
+        await HonourRequestedModalAsync();
 
         // Land straight in the first email: opening the top of the queue is what a triager does
         // first every time, so the page does it for them. Initial load only — after an action the
@@ -3405,6 +3422,168 @@ else
     private void OnReplyBccInput(ChangeEventArgs e) => replyBccField = e.Value?.ToString() ?? "";
     private void OnReplySubjectInput(ChangeEventArgs e) => replySubject = e.Value?.ToString() ?? "";
 
+    // ---- The assistant's route in: open_modal → ?openModal=compose_email --------------------
+    //
+    // "Draft an email to…" in the chat lands HERE, not in Outlook (decision 2026-08-14, retiring
+    // draft_outlook_email): the assistant opens the Control Centre's own New email composer, writes
+    // the draft into it as a shared AiTask, and the user reviews the envelope and body on this page
+    // and presses Send (or Save as draft) themselves. Same recipe as manual_variation on the
+    // variations register, including the LocationChanged belt — a query-only navigation onto a page
+    // already open fires NO lifecycle hook.
+
+    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
+    // for the life of this component. This is what stops a later repaint re-honouring it.
+    private bool composeModalHonoured;
+
+    private bool WantsComposeFromRoute() =>
+        !composeModalHonoured
+        && new Uri(Nav.Uri).Query.Contains(
+            $"openModal={ModalCatalog.ComposeEmail.ModalKey}", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Honoured only where this user could have opened the composer by clicking — the assistant can
+    /// route somebody to a page; it cannot get them past a gate. The query is cleared first, through
+    /// history rather than the router, so F5 does not reopen the dialog and re-bill a kick-off turn.
+    /// </summary>
+    private async Task HonourRequestedModalAsync()
+    {
+        if (!WantsComposeFromRoute()) return;
+
+        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
+        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
+        composeModalHonoured = true;
+
+        if (!CanTriage)
+        {
+            // Said out loud — the assistant routed here believing the composer would open, and a
+            // silent no-op leaves the user (and the model) certain something deeper is broken.
+            actionError = "The assistant tried to open the New email composer, but the role you are "
+                + "viewing as can't use the Control Centre.";
+            StateHasChanged();
+            return;
+        }
+
+        workspace.Show(PanelKind.Compose, PanelSide.Right);
+
+        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
+        {
+            AiTasks.Start(
+                new AiTask(
+                    TaskKey: "compose-email",
+                    ModalKey: ModalCatalog.ComposeEmail.ModalKey,
+                    BannerLabel: "Drafting an email",
+                    BusyLabel: "Writing the draft…",
+                    // A user turn, so it outranks the system prompt — it has to say the same thing.
+                    KickoffMessage:
+                        "Write the email we were just discussing into the \"New email\" form open "
+                        + "beside me — To, subject and the message body as plain text. Use only "
+                        + "addresses that actually appeared in our conversation or in correspondence "
+                        + "you have read; leave anything you cannot establish blank and tell me in "
+                        + "one line. I will review it and press Send myself.",
+                    ProjectId: null,
+                    RecordType: null,
+                    RecordId: null,
+                    RecordReference: null),
+                "{}");
+
+            Chat.Open();
+            Chat.SetCoexistence(true);
+        }
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Braces: the case the lifecycle hooks MISS. When the panel's open_modal fires while the user
+    /// is ALREADY in the Control Centre, the navigation changes only the query string — Blazor
+    /// re-renders nothing and no lifecycle hook runs. This event is the one signal that always
+    /// fires. history.replaceState does not raise it, so honouring cannot loop.
+    /// </summary>
+    private void HandleLocationChangedForModal(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
+        _ = InvokeAsync(async () =>
+        {
+            if (!sessionReady) return;
+            composeModalHonoured = false; // a fresh navigation is a fresh request
+            await HonourRequestedModalAsync();
+        });
+
+    /// <summary>
+    /// The assistant's draft arriving from the chat (update_open_modal). MERGES field by field —
+    /// a field the assistant did not send keeps whatever the user typed — and converts the plain-
+    /// text body it writes into the composer's HTML. The user still presses Send.
+    /// </summary>
+    private void ApplyAssistantEmailDraft(string fieldsJson)
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.ComposeEmail.ModalKey) return;
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(fieldsJson);
+            var root = document.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return;
+
+            if (ReadDraftText(root, "to") is { } to) newEmailTo = to;
+            if (ReadDraftText(root, "cc") is { } cc) newEmailCc = cc;
+            if (ReadDraftText(root, "subject") is { } subject) newEmailSubject = subject;
+            if (ReadDraftText(root, "body") is { } body) newEmailBody = PlainTextToComposeHtml(body);
+
+            PublishComposeDraft();
+            _ = InvokeAsync(StateHasChanged);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // A malformed draft is the model's problem; the form keeps what the user has.
+        }
+    }
+
+    private static string? ReadDraftText(System.Text.Json.JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    /// <summary>What the form says RIGHT NOW, for the model's "current context" block — body as
+    /// plain text, because the model writes plain text and should read back what it wrote.</summary>
+    private void PublishComposeDraft()
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.ComposeEmail.ModalKey) return;
+        AiTasks.UpdateDraft(System.Text.Json.JsonSerializer.Serialize(new
+        {
+            to = newEmailTo,
+            cc = newEmailCc,
+            subject = newEmailSubject,
+            body = ComposeHtmlToPlainText(newEmailBody)
+        }));
+    }
+
+    /// <summary>Assistant plain text → composer HTML: encoded, blank lines as paragraphs.</summary>
+    private static string PlainTextToComposeHtml(string text)
+    {
+        var paragraphs = (text ?? "").Replace("\r\n", "\n").Split("\n\n", StringSplitOptions.RemoveEmptyEntries);
+        return string.Join("", paragraphs.Select(paragraph =>
+            "<p>" + System.Net.WebUtility.HtmlEncode(paragraph).Replace("\n", "<br/>") + "</p>"));
+    }
+
+    /// <summary>Composer HTML → plain text for the draft JSON the model reads.</summary>
+    private static string ComposeHtmlToPlainText(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return "";
+        var text = html
+            .Replace("</p>", "\n\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("</div>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase);
+        text = System.Text.RegularExpressions.Regex.Replace(text, "<[^>]+>", "");
+        return System.Net.WebUtility.HtmlDecode(text).Trim();
+    }
+
+    /// <summary>Hands the conversation back to the orchestrator once the composer closes — after a
+    /// send, or on Cancel. Safe when no compose task is active.</summary>
+    private void EndComposeTask()
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.ComposeEmail.ModalKey) return;
+        AiTasks.End();
+        Chat.SetCoexistence(false);
+    }
+
     // ---- New email (fresh outbound thread from the projects mailbox) ----
 
     // Clears the compose form and hands its window back to whatever it showed before — pressed
@@ -3412,6 +3591,7 @@ else
     private void CloseNewEmail()
     {
         if (newEmailBusy) return;
+        EndComposeTask();
         workspace.Close(PanelKind.Compose);
         newEmailError = null;
         newEmailTo = newEmailCc = newEmailBcc = newEmailSubject = newEmailBody = "";
@@ -3429,10 +3609,12 @@ else
         && HtmlHasContent(newEmailBody)
         && (!newEmailFile || (!string.IsNullOrEmpty(newEmailProjectId) && !string.IsNullOrEmpty(newEmailRecordId)));
 
-    private void OnNewEmailToInput(ChangeEventArgs e) => newEmailTo = e.Value?.ToString() ?? "";
-    private void OnNewEmailCcInput(ChangeEventArgs e) => newEmailCc = e.Value?.ToString() ?? "";
+    private void OnNewEmailToInput(ChangeEventArgs e) { newEmailTo = e.Value?.ToString() ?? ""; PublishComposeDraft(); }
+    private void OnNewEmailCcInput(ChangeEventArgs e) { newEmailCc = e.Value?.ToString() ?? ""; PublishComposeDraft(); }
     private void OnNewEmailBccInput(ChangeEventArgs e) => newEmailBcc = e.Value?.ToString() ?? "";
-    private void OnNewEmailSubjectInput(ChangeEventArgs e) => newEmailSubject = e.Value?.ToString() ?? "";
+    private void OnNewEmailSubjectInput(ChangeEventArgs e) { newEmailSubject = e.Value?.ToString() ?? ""; PublishComposeDraft(); }
+
+    private void OnNewEmailBodyChanged(string html) { newEmailBody = html; PublishComposeDraft(); }
     private void OnNewEmailAttachmentsChanged(IReadOnlyList<ComposeDraftAttachment> attachments) =>
         newEmailAttachments = attachments;
 
@@ -3903,5 +4085,8 @@ else
         StageFilter.OnChange -= StageFilterChanged;
         RequestRegister.OnChange -= StateHasChanged;
         workspace.OnChange -= StateHasChanged;
+        Nav.LocationChanged -= HandleLocationChangedForModal;
+        AiTasks.OnDraftApplied -= ApplyAssistantEmailDraft;
+        Chat.OnChange -= StateHasChanged;
     }
 }

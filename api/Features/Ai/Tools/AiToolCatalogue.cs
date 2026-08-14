@@ -50,9 +50,11 @@ public static class AiToolCatalogue
 
     private const int MaxConversationChars = 50_000;
 
-    /// <summary>Every tool, before role filtering.</summary>
+    /// <summary>Every tool, before role filtering. (AiEmailTools' draft_outlook_email was retired
+    /// 2026-08-14: assistant-drafted email now goes through the Control Centre's own composer —
+    /// open_modal "compose_email" — so the user reviews and sends in the portal, never in Outlook.)</summary>
     public static IReadOnlyList<AiTool> All { get; } =
-        Build().Concat(AiRecordTools.Build()).Concat(AiSkillTools.Build()).Concat(AiEmailTools.Build()).ToList();
+        Build().Concat(AiRecordTools.Build()).Concat(AiSkillTools.Build()).ToList();
 
     /// <summary>
     /// The catalogue this caller is told about, on this turn.
@@ -674,13 +676,16 @@ public static class AiToolCatalogue
                 + "\"variation_draft\" drafts the variation an EXISTING RFI has led to and needs that RFI's "
                 + "request id (call find_by_reference or list_requests for the real id first — never invent "
                 + "one); \"manual_variation\" creates a brand-new standalone variation from data the user "
-                + "already has (an attached spreadsheet, the conversation) and takes NO record_id.",
+                + "already has (an attached spreadsheet, the conversation) and takes NO record_id; "
+                + "\"compose_email\" opens the Control Centre's New email composer for ANY email the user asks "
+                + "you to draft — it takes NO record_id and NO project_id, and it is the ONLY way you draft "
+                + "email (the user reviews and presses Send in the Control Centre; you never send).",
                 AiToolSchema.Object(
-                    ("modal_key", "string", "One of: \"variation_draft\", \"manual_variation\".", true),
+                    ("modal_key", "string", "One of: \"variation_draft\", \"manual_variation\", \"compose_email\".", true),
                     ("record_id", "string",
                         "The record the dialog works from — REQUIRED for variation_draft (the request id, from "
-                        + "find_by_reference or list_requests). Omit for manual_variation.", false),
-                    ("project_id", "string", "Defaults to the project in view.", false),
+                        + "find_by_reference or list_requests). Omit for manual_variation and compose_email.", false),
+                    ("project_id", "string", "Defaults to the project in view. Omit for compose_email.", false),
                     ("reason", "string", "One clause explaining why.", false)),
                 AiToolKind.Ui,
                 JpmsRoleSets.CommercialTeam,

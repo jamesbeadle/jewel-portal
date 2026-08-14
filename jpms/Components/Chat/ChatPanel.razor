@@ -1037,14 +1037,20 @@
                 return;
             }
 
-            var projectId = ReadString(root, "project_id") ?? PageProject?.ProjectId;
-            if (string.IsNullOrWhiteSpace(projectId))
-            {
-                error = $"The assistant asked to open \"{modal.DisplayName}\" but didn't say which project.";
-                return;
-            }
+            var route = modal.RouteTemplate;
 
-            var route = modal.RouteTemplate.Replace("{project}", projectId, StringComparison.Ordinal);
+            // A dialog on a project page needs a project; a whole-company dialog (compose_email on
+            // the Control Centre) has no {project} in its route and needs none.
+            if (route.Contains("{project}", StringComparison.Ordinal))
+            {
+                var projectId = ReadString(root, "project_id") ?? PageProject?.ProjectId;
+                if (string.IsNullOrWhiteSpace(projectId))
+                {
+                    error = $"The assistant asked to open \"{modal.DisplayName}\" but didn't say which project.";
+                    return;
+                }
+                route = route.Replace("{project}", projectId, StringComparison.Ordinal);
+            }
 
             // A dialog that works FROM a record (variation_draft) needs one; a dialog that CREATES
             // (manual_variation) has no {record} in its route and needs none.
