@@ -11,13 +11,13 @@
 *@
 
 <Modal IsOpen="IsOpen"
-       Title="Raise a request"
-       ConfirmLabel="@(saving ? "Raising…" : raisedRequest is null ? "Raise request" : "Continue to the request")"
+       Title="@(RfiOnly ? "Raise an RFI" : "Raise a request")"
+       ConfirmLabel="@(saving ? "Raising…" : raisedRequest is null ? (RfiOnly ? "Raise RFI" : "Raise request") : (RfiOnly ? "Continue to the RFI" : "Continue to the request"))"
        OnCancel="Cancel"
        OnConfirm="Submit"
        Class="max-w-2xl">
     <div class="space-y-3">
-        <RequestForm @ref="form" ProjectId="@ProjectId" Busy="@saving" OnSubmit="SendAsync" />
+        <RequestForm @ref="form" ProjectId="@ProjectId" LockToRfi="@RfiOnly" Busy="@saving" OnSubmit="SendAsync" />
         @if (attachmentWarning is not null)
         {
             <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">@attachmentWarning</p>
@@ -28,6 +28,11 @@
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>Lock the dialog to raising an official RFI (no General option) — the RFIs page's
+    /// manual entry. General requests are sunset (2026-08-14).</summary>
+    [Parameter] public bool RfiOnly { get; set; }
+
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback<Request> OnRaised { get; set; }
 

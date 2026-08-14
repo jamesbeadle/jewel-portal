@@ -20,27 +20,39 @@
         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
     }
 
-    <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Raise as</label>
-        <div class="flex gap-2">
-            <button type="button"
-                    class="@KindButtonClass(RequestType.General)"
-                    @onclick="() => SetKind(RequestType.General)">General request</button>
-            <button type="button"
-                    class="@KindButtonClass(RequestType.Rfi)"
-                    @onclick="() => SetKind(RequestType.Rfi)">Official RFI</button>
-        </div>
-        <p class="mt-2 rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-            @if (kind == RequestType.General)
-            {
-                <text>Auto-numbered REQ-####. Promote it to an official RFI from the request once it's created.</text>
-            }
-            else
-            {
-                <text>Takes the project's next RFI number automatically — edit the reference only to back-fill a legacy RFI.</text>
-            }
+    @if (LockToRfi)
+    {
+        @* General requests are sunset (2026-08-14): hosts that lock the form to RFI never offer
+           the kind toggle — the manual entry is an official RFI, full stop. *@
+        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+            Raised as an official <span class="font-medium text-content">RFI</span> — takes the project's
+            next RFI number automatically; edit the reference only to back-fill a legacy RFI.
         </p>
-    </div>
+    }
+    else
+    {
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Raise as</label>
+            <div class="flex gap-2">
+                <button type="button"
+                        class="@KindButtonClass(RequestType.General)"
+                        @onclick="() => SetKind(RequestType.General)">General request</button>
+                <button type="button"
+                        class="@KindButtonClass(RequestType.Rfi)"
+                        @onclick="() => SetKind(RequestType.Rfi)">Official RFI</button>
+            </div>
+            <p class="mt-2 rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+                @if (kind == RequestType.General)
+                {
+                    <text>Auto-numbered REQ-####. Promote it to an official RFI from the request once it's created.</text>
+                }
+                else
+                {
+                    <text>Takes the project's next RFI number automatically — edit the reference only to back-fill a legacy RFI.</text>
+                }
+            </p>
+        </div>
+    }
 
     @if (kind == RequestType.Rfi)
     {
@@ -111,7 +123,7 @@
 
     <label class="inline-flex items-center gap-2 text-sm text-content-muted cursor-pointer">
         <input type="checkbox" checked="@backfill" @onchange="OnBackfillChanged" class="rounded border-line-strong" />
-        Log a historical request (set issue date &amp; status)
+        Log a historical @(LockToRfi ? "RFI" : "request") (set issue date &amp; status)
     </label>
 
     @if (backfill)

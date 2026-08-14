@@ -16,7 +16,8 @@
     The project's RFI register. RFIs lead — the official asks with contractual response-due
     dates are what this view is for — with the legacy General requests kept one tab behind them
     (requests are being sunset: nothing raises a new one any more; to-dos cover "something needs
-    doing" and the Control Centre raises official RFIs). Variations moved to their own page at
+    doing", the Control Centre raises RFIs from emails, and Raise RFI here covers the manual
+    case). Variations moved to their own page at
     /projects/{id}/variations (split 2026-08-14) — the lifecycle link survives on each record:
     an RFI's Variation panel, a variation's Originating request panel, and the RecordTabBar.
 *@
@@ -48,6 +49,10 @@ else
                                      ShowIncludeAllRows="true"
                                      IncludeAllLabel="Include entire register"
                                      BuildWorkbook="BuildExportWorkbook" />
+                @* The view's one act of creation: a manual official RFI — raised outside the
+                   Control Centre flow (no email behind it), or back-filling a legacy RFI. The
+                   dialog is locked to RFI: General requests are sunset and nothing raises one. *@
+                <button type="button" class="btn-primary" @onclick="OpenRaiseDialog">Raise RFI</button>
             </div>
         </div>
 
@@ -266,6 +271,12 @@ else
             </div>
         }
     </ProjectPageShell>
+
+    <RaiseRequestDialog ProjectId="@ProjectId"
+                        RfiOnly="true"
+                        IsOpen="raiseDialogOpen"
+                        OnClose="CloseRaiseDialog"
+                        OnRaised="OnRaised" />
 }
 
 @code {
@@ -273,6 +284,22 @@ else
     [Parameter] public string? Kind { get; set; }
 
     private bool isLoaded;
+
+    // ---- Manual RFI entry ----------------------------------------------------------------------
+    // The RFI-locked raise dialog (attachments and all). Most RFIs are raised from an email in
+    // the Control Centre; this is the way in for one with no email behind it, or a legacy
+    // back-fill via the form's "Log a historical RFI" tick.
+
+    private bool raiseDialogOpen;
+
+    private void OpenRaiseDialog() => raiseDialogOpen = true;
+    private void CloseRaiseDialog() => raiseDialogOpen = false;
+
+    private void OnRaised(Request raised)
+    {
+        raiseDialogOpen = false;
+        Nav.NavigateTo($"/projects/{ProjectId}/requests/view/{raised.RequestId}");
+    }
 
     private IReadOnlyList<Request> AllRecords => RequestRegister.ForProject(ProjectId);
     private int OpenCount => AllRecords.Count(r => r.Status is not RequestStatus.Closed);

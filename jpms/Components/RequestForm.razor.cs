@@ -26,6 +26,11 @@ public partial class RequestForm : IDisposable
     /// <summary>The host's in-flight flag — disables the attachment controls while it works.</summary>
     [Parameter] public bool Busy { get; set; }
 
+    /// <summary>Lock the form to raising an official RFI: no "Raise as" toggle, RFI defaults from
+    /// the start. The RFIs page's manual "Raise RFI" uses this — General requests are sunset
+    /// (2026-08-14) and nothing raises a new one.</summary>
+    [Parameter] public bool LockToRfi { get; set; }
+
     private static readonly RequestStatus[] StatusOptions =
     {
         RequestStatus.NeedsAction, RequestStatus.Open,
@@ -59,6 +64,8 @@ public partial class RequestForm : IDisposable
         // warm-up on mount means "Attach drawings" has something in it the first time it's pressed.
         Drawings.OnChange += StateHasChanged;
         if (ShowAttachments && !string.IsNullOrEmpty(ProjectId)) Drawings.Refresh(ProjectId);
+        // A locked form starts on RFI (with the next-number suggestion), not on the retired General.
+        if (LockToRfi) SetKind(RequestType.Rfi);
     }
 
     public void Dispose() => Drawings.OnChange -= StateHasChanged;
@@ -78,6 +85,7 @@ public partial class RequestForm : IDisposable
         selectedRevisions.Clear();
         pendingFiles.Clear();
         drawingPickerOpen = false;
+        if (LockToRfi) SetKind(RequestType.Rfi); // back to RFI, with a fresh next-number suggestion
         // Warm the drawing register from here, never from render, so "Attach drawings" has
         // something in it the first time it is pressed.
         if (ShowAttachments && !string.IsNullOrEmpty(ProjectId)) Drawings.Refresh(ProjectId);
