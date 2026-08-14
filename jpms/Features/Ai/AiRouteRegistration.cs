@@ -22,6 +22,9 @@ public static class AiRouteRegistration
         commands.Register<ContinueAiTurn, AiTurnResult>(
             CommandRoute.Post("/api/ai/turn/continue"));
 
+        commands.Register<AddAiAttachment, AiAttachmentReceipt>(
+            CommandRoute.Post("/api/ai/attachments"));
+
         // The skill store — the AI Skills admin page (docs/ai/05-agents-and-skills.md §2).
         queries.Register<ListAiSkills, IReadOnlyList<SkillSummary>>(
             new QueryRoute("/api/ai/skills", _ => "/api/ai/skills"));

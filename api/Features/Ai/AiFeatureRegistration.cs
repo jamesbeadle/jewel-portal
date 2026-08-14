@@ -60,6 +60,10 @@ public static class AiFeatureRegistration
         services.AddScoped<ContinueAiTurnAuthorisation>();
         services.AddScoped<ContinueAiTurnValidation>();
 
+        // Chat attachments: extract-once-to-text, persisted as a Context row. No Claude call.
+        services.AddScoped<ICommandHandler<AddAiAttachment, AiAttachmentReceipt>, AddAiAttachmentHandler>();
+        services.AddScoped<AddAiAttachmentValidation>();
+
         services.AddScoped<IQueryHandler<ListAiConversation, IReadOnlyList<AiChatMessage>>, ListAiConversationHandler>();
 
         // The agent activity log. Scoped because it writes through the request's JpmsContext.

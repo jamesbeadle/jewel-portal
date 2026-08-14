@@ -40,6 +40,12 @@
       IFontResolver (DocumentFontResolver) supplies the TrueType faces it needs there.
     -->
     <PackageReference Include="PDFsharp-MigraDoc" Version="6.1.1" />
+    <!--
+      ClosedXML (MIT, pure managed — fine on the Linux Functions host) reads the spreadsheets users
+      attach to the assistant chat (AiAttachmentReader): the boss's tracker workbook goes in, text
+      the model can populate a create form from comes out. Read-only use; nothing writes xlsx here.
+    -->
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
