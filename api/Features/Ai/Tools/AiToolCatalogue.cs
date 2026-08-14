@@ -52,7 +52,7 @@ public static class AiToolCatalogue
 
     /// <summary>Every tool, before role filtering.</summary>
     public static IReadOnlyList<AiTool> All { get; } =
-        Build().Concat(AiRecordTools.Build()).Concat(AiSkillTools.Build()).ToList();
+        Build().Concat(AiRecordTools.Build()).Concat(AiSkillTools.Build()).Concat(AiEmailTools.Build()).ToList();
 
     /// <summary>
     /// The catalogue this caller is told about, on this turn.

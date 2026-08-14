@@ -34,6 +34,10 @@ public static class AiToolLabels
                             ?? "Reading a skill",
             "load_skill_reference" => Named(arguments, "ref_key", key => $"Reading {key}")
                                       ?? "Reading a reference",
+            "read_record_emails" => "Reading the tagged emails",
+            "read_email_attachment" => "Reading an attachment",
+            "draft_outlook_email" => Named(arguments, "subject", subject => $"Drafting \"{subject}\"")
+                                     ?? "Drafting an email",
             _ => "Working on it"
         };
     }

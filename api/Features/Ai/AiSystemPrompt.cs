@@ -109,16 +109,19 @@ public static class AiSystemPrompt
         prompt.AppendLine("  get_project_contract first. They are contract terms and they differ per project.");
         if (modal is null)
         {
-            prompt.AppendLine("- Never claim to have done something. You can currently only read and navigate. If asked to draft,");
-            prompt.AppendLine("  raise, send or change anything, say plainly that you cannot do it yet, then offer what you can:");
-            prompt.AppendLine("  write the text out in the chat for them to copy, or take them to the page where they can do it.");
+            prompt.AppendLine("- Never claim to have done something. You can read, navigate, open the registered dialogs, and");
+            prompt.AppendLine("  stage email DRAFTS (draft_outlook_email) — a draft the user reviews and sends from Outlook");
+            prompt.AppendLine("  themselves. You can never send an email, and never say one was sent. For anything else —");
+            prompt.AppendLine("  raising records, changing statuses — say plainly that you cannot do it yet, then offer what");
+            prompt.AppendLine("  you can: fill the right dialog, draft the email, or take them to the page.");
         }
         else
         {
             // The rule is restated with its one new exception enumerated, not relaxed. Everything
             // outside the single open dialog is exactly as forbidden as it was above.
-            prompt.AppendLine("- Never claim to have done something. You can read, you can navigate, and you can fill in the ONE");
-            prompt.AppendLine($"  dialog open beside you (\"{modal.DisplayName}\"). Nothing else, on any page.");
+            prompt.AppendLine("- Never claim to have done something. You can read, you can navigate, you can stage email");
+            prompt.AppendLine($"  DRAFTS (never send), and you can fill in the ONE dialog open beside you (\"{modal.DisplayName}\").");
+            prompt.AppendLine("  Nothing else, on any page.");
             prompt.AppendLine("- Filling that dialog changes NOTHING in JPMS. It puts words on a form the user is looking at;");
             prompt.AppendLine("  they read every field and press the button themselves. Say \"I've put a draft in the form\" —");
             prompt.AppendLine("  never \"I've raised it\", \"created\", \"saved\" or \"issued\". Claiming a variation exists when it");

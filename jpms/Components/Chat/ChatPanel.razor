@@ -537,10 +537,10 @@
         ? "How can I help you today?"
         : "Tell it what to change…";
 
-    // "Can't change anything yet" is true of the portal and false of the form beside the panel. The
-    // second half of the task wording is the part that matters: the assistant never presses anything.
+    // The honest one-liner of what it can do. Everything it writes — a filled form, a staged
+    // Outlook draft — waits for the user's own press of a button; the assistant sends nothing.
     private string ComposerFootnote => AiTasks.Active is null
-        ? "Reads the portal; can't change anything yet"
+        ? "Reads the portal and stages drafts; you review and send"
         : "Fills in the form beside you. You still press the button.";
 
     // The panel's subject: the page in the middle column, named exactly as the header above it
