@@ -126,8 +126,25 @@ else
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-line">
+                                    @{ var currentArea = ""; }
                                     @foreach (var line in section.Lines)
                                     {
+                                        @* Area title rows — the estimate's own section headings ("Electrics",
+                                           "Plumbing & Heating"), falling back to the line's cost-centre name,
+                                           so the bill reads in the same titled areas as the estimate instead
+                                           of one flat run. Consecutive runs in display order, never a re-sort. *@
+                                        @if (ValuationReportAreas.GroupsByArea(section.Type))
+                                        {
+                                            var area = AreaTitleFor(line);
+                                            if (ValuationReportAreas.StartsNewArea(area, currentArea))
+                                            {
+                                                currentArea = area;
+                                                <tr>
+                                                    <td colspan="2" class="sticky left-0 z-10 bg-surface-raised px-3 pt-3 pb-1.5 text-[11px] uppercase tracking-wider font-semibold text-content-muted whitespace-nowrap">@area</td>
+                                                    <td colspan="@(ColumnCount - 2)" class="bg-surface-raised"></td>
+                                                </tr>
+                                            }
+                                        }
                                         <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
                                             <td class="sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@CodeFor(line)</td>
                                             <td class="sticky left-[72px] z-10 bg-surface px-3 py-2 text-content">
@@ -527,6 +544,21 @@ else
         return amount == 0m ? 0m : Math.Round(ClaimedTotalFor(section) / amount * 100m, 2);
     }
 
+    // ---- Area titles --------------------------------------------------------
+    // The sub-headings within a bill section (shared rule: ValuationReportAreas) —
+    // the estimate section recorded on the line when there is one, otherwise the
+    // line's cost-centre name. Rendered as title rows whenever the area changes.
+    private string AreaTitleFor(ValuationLineItem line) =>
+        ValuationReportAreas.TitleFor(line.SectionName, line.CostCode, CostCentreNameFor);
+
+    private string? CostCentreNameFor(string code) =>
+        CostCenters.All().FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase))?.Name;
+
+    // How many columns the table currently renders — the area title row must span them all.
+    // Base: Code, Description, Cost centre, Qty, Rate, Amount, % Complete, Claimed = 8;
+    // a selected claim adds Prev. % and Period, edit rights add the actions column.
+    private int ColumnCount => 8 + (SelectedClaim is not null ? 2 : 0) + (CanEditLines ? 1 : 0);
+
     // Non-variation lines show the Jewel master cost code (00001..00137, per the
     // seeded CostCenters master); fall back to the NRM2 section ref only if a line
     // has no cost code mapped. Variation lines prefer their VariationRef but now
@@ -536,10 +568,13 @@ else
             ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
             : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
 
+    // Variation lines lead with their own line description (a multi-line VO reads as its
+    // distinct items, not the VO title repeated); the VO title is only the fallback for
+    // lines that never carried a description of their own.
     private static string TitleFor(ValuationLineItem line)
     {
         if (line.ElementType == ValuationElementType.Variation)
-            return string.IsNullOrWhiteSpace(line.VariationTitle) ? line.Description : line.VariationTitle;
+            return string.IsNullOrWhiteSpace(line.Description) ? line.VariationTitle : line.Description;
         if (!string.IsNullOrWhiteSpace(line.Description)) return line.Description;
         return line.SectionName;
     }
@@ -1035,6 +1070,7 @@ else
         var workbook = new ExcelWorkbook();
         var linesSheet = workbook.AddSheet("Valuation lines",
             new ExcelColumn("Section"),
+            new ExcelColumn("Area"),
             new ExcelColumn("Code"),
             new ExcelColumn("Description"),
             new ExcelColumn("Cost centre"),
@@ -1050,6 +1086,7 @@ else
             {
                 linesSheet.AddRow(
                     SectionLabel(section.Type),
+                    ValuationReportAreas.GroupsByArea(section.Type) ? AreaTitleFor(line) : null,
                     CodeFor(line),
                     TitleFor(line),
                     !string.IsNullOrWhiteSpace(line.CostCode)

@@ -50,7 +50,8 @@ public sealed class ValuationReportSnapshotPdfBuilder
             project.Reference,
             project.Name,
             project.ClientName,
-            detail));
+            detail,
+            CostCentreNames: await CostCentreNamesAsync(cancellationToken)));
 
         var fileName = SanitiseFileName(
             $"{project.Reference} - Valuation report - {snapshot.Label} - {snapshot.TakenAt:yyyy-MM-dd}.pdf");
@@ -92,12 +93,26 @@ public sealed class ValuationReportSnapshotPdfBuilder
             project.Name,
             project.ClientName,
             detail,
-            IsDraft: true));
+            IsDraft: true,
+            CostCentreNames: await CostCentreNamesAsync(cancellationToken)));
 
         var fileName = SanitiseFileName(
             $"{project.Reference} - Valuation report - Working copy - {DateTimeOffset.UtcNow:yyyy-MM-dd}.pdf");
 
         return new ValuationReportSnapshotPdf(pdf, fileName, projectId, project.Name, detail.Snapshot);
+    }
+
+    // Cost code → master name, for the bill's area sub-headings when a line carries no
+    // estimate section (the ValuationReportAreas rule the renderer applies). Grouped rather
+    // than ToDictionary so a duplicated code can never turn a PDF download into a 500.
+    private async Task<IReadOnlyDictionary<string, string>> CostCentreNamesAsync(CancellationToken cancellationToken)
+    {
+        var centres = await context.CostCenters.AsNoTracking()
+            .Select(centre => new { centre.Code, centre.Name })
+            .ToListAsync(cancellationToken);
+        return centres
+            .GroupBy(centre => centre.Code, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Name, StringComparer.OrdinalIgnoreCase);
     }
 
     private static string SanitiseFileName(string fileName)

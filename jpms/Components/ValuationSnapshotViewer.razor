@@ -5,6 +5,8 @@
 @using Jewel.JPMS.Services.Excel
 @inject IValuationReportStore Store
 @inject IQueryClient Queries
+@inject ICostCenterStore CostCenters
+@implements IDisposable
 
 @* Read-only rendering of one frozen valuation-report snapshot: the same grouped-bill +
    summary-footer layout as the live ValuationReportTable, fed entirely from the
@@ -88,8 +90,22 @@ else
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-line">
+                                @{ var currentArea = ""; }
                                 @foreach (var line in section.Lines)
                                 {
+                                    @* Area title rows, same rule as the live report table (ValuationReportAreas):
+                                       the estimate section frozen on the line, else its cost-centre name. *@
+                                    @if (ValuationReportAreas.GroupsByArea(section.Type))
+                                    {
+                                        var area = AreaTitleFor(line);
+                                        if (ValuationReportAreas.StartsNewArea(area, currentArea))
+                                        {
+                                            currentArea = area;
+                                            <tr>
+                                                <td colspan="7" class="bg-surface-raised px-3 pt-3 pb-1.5 text-[11px] uppercase tracking-wider font-semibold text-content-muted whitespace-nowrap">@area</td>
+                                            </tr>
+                                        }
+                                    }
                                     <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
                                         <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@CodeFor(line)</td>
                                         <td class="px-3 py-2 text-content">
@@ -210,7 +226,7 @@ else
         }
     }
 
-    private record Section(string Title, List<ValuationReportSnapshotLine> Lines)
+    private record Section(ValuationElementType Type, string Title, List<ValuationReportSnapshotLine> Lines)
     {
         public decimal Amount => Lines.Where(l => l.CountsTowardTotals).Sum(l => l.LineAmount);
         public decimal Claimed => Lines.Where(l => l.CountsTowardTotals).Sum(l => l.CumulativeClaimed);
@@ -222,9 +238,9 @@ else
         {
             if (detail is null) yield break;
             Section Make(string title, ValuationElementType type) =>
-                new(title, detail.Lines.Where(l => l.ElementType == type)
-                                       .OrderBy(l => l.DisplayOrder)
-                                       .ToList());
+                new(type, title, detail.Lines.Where(l => l.ElementType == type)
+                                             .OrderBy(l => l.DisplayOrder)
+                                             .ToList());
             yield return Make("Contract Works", ValuationElementType.ContractWorks);
             yield return Make("Provisional Sums", ValuationElementType.PcSum);
             yield return Make("Contingency Sums", ValuationElementType.Contingency);
@@ -232,15 +248,40 @@ else
         }
     }
 
+    // ---- Area titles --------------------------------------------------------
+    // Same shared rule as the live report table: the estimate section frozen on the line,
+    // else the cost-centre name from the master. The master loads in the background —
+    // re-render when it lands so fallback titles fill in (a snapshot is read-only, so a
+    // late name never changes any figure).
+    private string AreaTitleFor(ValuationReportSnapshotLine line) =>
+        ValuationReportAreas.TitleFor(line.SectionName, line.CostCode, CostCentreNameFor);
+
+    private string? CostCentreNameFor(string code) =>
+        CostCenters.All().FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase))?.Name;
+
+    protected override void OnInitialized()
+    {
+        CostCenters.OnChange += OnCostCentresChanged;
+        // Revalidate the master (stale-while-revalidate; fetch-once underneath) — the host
+        // page usually warmed it already, but the snapshots register opens this viewer too.
+        _ = CostCenters.ListAllAsync();
+    }
+
+    private void OnCostCentresChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose() => CostCenters.OnChange -= OnCostCentresChanged;
+
     private static string CodeFor(ValuationReportSnapshotLine line) =>
         line.ElementType == ValuationElementType.Variation
             ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
             : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
 
+    // Variation lines lead with their own line description; VO title is the fallback —
+    // mirrors ValuationReportTable so the snapshot reads like the live report.
     private static string TitleFor(ValuationReportSnapshotLine line)
     {
         if (line.ElementType == ValuationElementType.Variation)
-            return string.IsNullOrWhiteSpace(line.VariationTitle) ? line.Description : line.VariationTitle;
+            return string.IsNullOrWhiteSpace(line.Description) ? line.VariationTitle : line.Description;
         if (!string.IsNullOrWhiteSpace(line.Description)) return line.Description;
         return line.SectionName;
     }
@@ -265,6 +306,7 @@ else
             {
                 exportLines.Add(new ValuationExportLine(
                     section.Title,
+                    ValuationReportAreas.GroupsByArea(section.Type) ? AreaTitleFor(line) : "",
                     CodeFor(line),
                     TitleFor(line),
                     LineTypeLabel(line.LineType),

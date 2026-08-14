@@ -1,5 +1,6 @@
 using System.Globalization;
 using Jewel.JPMS.Api.Features.Requests.Documents;
+using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Models;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
@@ -19,7 +20,10 @@ public sealed record ValuationReportSnapshotDocument(
     string ProjectName,
     string ClientName,
     ValuationReportSnapshotDetail Detail,
-    bool IsDraft = false);
+    bool IsDraft = false,
+    // Cost code → master name, for the bill's area sub-headings when a line carries no
+    // estimate section (ValuationReportAreas rule). Null renders codes rather than names.
+    IReadOnlyDictionary<string, string>? CostCentreNames = null);
 
 /// <summary>
 /// Renders one frozen valuation-report snapshot into a branded PDF using PDFsharp/MigraDoc: the
@@ -80,10 +84,10 @@ public static class ValuationReportSnapshotRenderer
         AddDetailsGrid(section, document);
         AddMovementLegend(section, document);
 
-        AddElementGroup(section, document.Detail, "Contract Works", ValuationElementType.ContractWorks);
-        AddElementGroup(section, document.Detail, "Provisional Sums", ValuationElementType.PcSum);
-        AddElementGroup(section, document.Detail, "Contingency Sums", ValuationElementType.Contingency);
-        AddElementGroup(section, document.Detail, "Variations", ValuationElementType.Variation);
+        AddElementGroup(section, document, "Contract Works", ValuationElementType.ContractWorks);
+        AddElementGroup(section, document, "Provisional Sums", ValuationElementType.PcSum);
+        AddElementGroup(section, document, "Contingency Sums", ValuationElementType.Contingency);
+        AddElementGroup(section, document, "Variations", ValuationElementType.Variation);
 
         AddSummary(section, document.Detail);
         AddClosingNote(section, document);
@@ -213,8 +217,9 @@ public static class ValuationReportSnapshotRenderer
     }
 
     private static void AddElementGroup(
-        Section section, ValuationReportSnapshotDetail detail, string title, ValuationElementType elementType)
+        Section section, ValuationReportSnapshotDocument document, string title, ValuationElementType elementType)
     {
+        var detail = document.Detail;
         var lines = detail.Lines
             .Where(line => line.ElementType == elementType)
             .OrderBy(line => line.DisplayOrder)
@@ -259,8 +264,34 @@ public static class ValuationReportSnapshotRenderer
         HeaderCell(header.Cells[7], "This period");
         HeaderCell(header.Cells[8], "Claimed");
 
+        var currentArea = "";
         foreach (var line in lines)
         {
+            // Area sub-headings — the estimate's own section titles ("Electrics", "Plumbing &
+            // Heating"), else the line's cost-centre name — so the statement reads in the same
+            // titled areas as the estimate it was priced from. Same shared rule as the screen
+            // and the workbook (ValuationReportAreas); consecutive runs in display order.
+            if (ValuationReportAreas.GroupsByArea(elementType))
+            {
+                var area = ValuationReportAreas.TitleFor(line.SectionName, line.CostCode,
+                    code => document.CostCentreNames is { } names && names.TryGetValue(code, out var name) ? name : null);
+                if (ValuationReportAreas.StartsNewArea(area, currentArea))
+                {
+                    currentArea = area;
+                    var areaRow = table.AddRow();
+                    areaRow.Shading.Color = Panel;
+                    areaRow.TopPadding = Unit.FromMillimeter(1.4);
+                    areaRow.BottomPadding = Unit.FromMillimeter(1);
+                    areaRow.KeepWith = 1; // never strand a title at the foot of a page
+                    areaRow.Cells[0].MergeRight = 8;
+                    var areaTitle = areaRow.Cells[0].AddParagraph(area.ToUpperInvariant());
+                    areaTitle.Format.LeftIndent = Unit.FromMillimeter(1.5);
+                    areaTitle.Format.Font.Size = 7.5;
+                    areaTitle.Format.Font.Bold = true;
+                    areaTitle.Format.Font.Color = Navy;
+                }
+            }
+
             var moved = line.CountsTowardTotals && line.PeriodIncrement != 0m;
             var previousClaimed = line.CumulativeClaimed - line.PeriodIncrement;
 
@@ -442,10 +473,12 @@ public static class ValuationReportSnapshotRenderer
             ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
             : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
 
+    // Variation lines lead with their own line description; VO title is the fallback —
+    // mirrors the report table and snapshot viewer so every surface agrees.
     private static string TitleFor(ValuationReportSnapshotLine line)
     {
         if (line.ElementType == ValuationElementType.Variation)
-            return string.IsNullOrWhiteSpace(line.VariationTitle) ? line.Description : line.VariationTitle;
+            return string.IsNullOrWhiteSpace(line.Description) ? line.VariationTitle : line.Description;
         if (!string.IsNullOrWhiteSpace(line.Description)) return line.Description;
         return line.SectionName;
     }

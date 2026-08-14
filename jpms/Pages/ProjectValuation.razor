@@ -680,7 +680,7 @@ else
                 var claimed = ValuationCalculations.CumulativeClaimed(PercentIn(entries, line), line.LineAmount);
                 var previous = ValuationCalculations.CumulativeClaimed(PercentIn(previousEntries, line), line.LineAmount);
                 exportLines.Add(new ValuationExportLine(
-                    title, ExportCodeFor(line), ExportTitleFor(line), LineTypeLabel(line.LineType),
+                    title, ExportAreaFor(line), ExportCodeFor(line), ExportTitleFor(line), LineTypeLabel(line.LineType),
                     line.CountsTowardTotals, line.Unit, line.Quantity, line.Rate, line.LineAmount,
                     PercentIn(entries, line), previous, claimed - previous, claimed, line.Comments));
             }
@@ -722,6 +722,14 @@ else
             summary);
     }
 
+    // The area sub-heading this line falls under in the workbook — same shared rule as the
+    // report table's title rows (estimate section, else cost-centre name); variations never group.
+    private string ExportAreaFor(ValuationLineItem line) =>
+        ValuationReportAreas.GroupsByArea(line.ElementType)
+            ? ValuationReportAreas.TitleFor(line.SectionName, line.CostCode,
+                code => CostCenters.All().FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase))?.Name)
+            : "";
+
     // Same fallbacks as the report table and the snapshot renderer, so every surface agrees.
     private static string ExportCodeFor(ValuationLineItem line) =>
         line.ElementType == ValuationElementType.Variation
@@ -731,7 +739,7 @@ else
     private static string ExportTitleFor(ValuationLineItem line)
     {
         if (line.ElementType == ValuationElementType.Variation)
-            return string.IsNullOrWhiteSpace(line.VariationTitle) ? line.Description : line.VariationTitle;
+            return string.IsNullOrWhiteSpace(line.Description) ? line.VariationTitle : line.Description;
         if (!string.IsNullOrWhiteSpace(line.Description)) return line.Description;
         return line.SectionName;
     }

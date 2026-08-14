@@ -15,6 +15,7 @@ public sealed record ValuationExportMeta(string StatementLabel, string PreparedL
 /// </summary>
 public sealed record ValuationExportLine(
     string Section,
+    string Area,               // sub-heading within the section (ValuationReportAreas rule); "" = untitled, continues the run above
     string Code,
     string Title,
     string LineTypeLabel,
@@ -67,6 +68,11 @@ public static class ValuationReportExportWorkbook
         Font: negative ? ExcelFont.Negative : strong ? ExcelFont.NavyBold : ExcelFont.Default,
         Border: ExcelBorder.Hairline,
         Fill: FillFor(moved));
+
+    // Area sub-headings within a section — a panel band with the title on the left, so the
+    // bill reads in the estimate's own areas ("Electrics", "Plumbing & Heating").
+    private static readonly ExcelCellStyle AreaHead = new(Font: ExcelFont.NavyBold, Fill: ExcelFill.Panel);
+    private static readonly ExcelCellStyle AreaFill = new(Fill: ExcelFill.Panel);
 
     private static readonly ExcelCellStyle TotalLabel = new(Font: ExcelFont.NavyBold, Fill: ExcelFill.Panel);
     private static readonly ExcelCellStyle TotalFill = new(Fill: ExcelFill.Panel);
@@ -170,8 +176,24 @@ public static class ValuationReportExportWorkbook
                 new ExcelStyledCell("This period £", ColHeadRight),
                 new ExcelStyledCell("Claimed £", ColHeadRight));
 
+            var currentArea = "";
             foreach (var line in section)
             {
+                // Area band whenever the line opens a new run — same consecutive-run rule as
+                // every other surface, so screen, PDF and workbook always title alike.
+                if (!string.IsNullOrWhiteSpace(line.Area)
+                    && !string.Equals(line.Area, currentArea, StringComparison.OrdinalIgnoreCase))
+                {
+                    currentArea = line.Area;
+                    sheet.AddRow(
+                        new ExcelStyledCell(line.Area, AreaHead),
+                        new ExcelStyledCell(null, AreaFill), new ExcelStyledCell(null, AreaFill),
+                        new ExcelStyledCell(null, AreaFill), new ExcelStyledCell(null, AreaFill),
+                        new ExcelStyledCell(null, AreaFill), new ExcelStyledCell(null, AreaFill),
+                        new ExcelStyledCell(null, AreaFill), new ExcelStyledCell(null, AreaFill),
+                        new ExcelStyledCell(null, AreaFill));
+                }
+
                 var moved = line.MovedThisPeriod;
                 var description = line.Title;
                 if (!string.IsNullOrWhiteSpace(line.Comments)) description += "\n" + line.Comments;
@@ -244,6 +266,7 @@ public static class ValuationReportExportWorkbook
     {
         var sheet = workbook.AddSheet("Raw data",
             new ExcelColumn("Section"),
+            new ExcelColumn("Area"),
             new ExcelColumn("Code"),
             new ExcelColumn("Description", Width: 44),
             new ExcelColumn("Line type"),
@@ -263,6 +286,7 @@ public static class ValuationReportExportWorkbook
         {
             sheet.AddRow(
                 line.Section,
+                line.Area,
                 line.Code,
                 line.Title,
                 line.LineTypeLabel,
