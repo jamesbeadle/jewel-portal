@@ -60,6 +60,9 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
             MessageId = Guid.NewGuid().ToString("N"),
             ConversationId = conversation.ConversationId,
             Role = (int)AiChatRole.User,
+            // A task's machine-authored kick-off is marked so every rendering shows it as a task
+            // badge rather than as words the user typed. The model still reads it as a user turn.
+            ToolName = command.IsKickoff ? "kickoff" : null,
             Body = command.Message,
             Sequence = sequence + 1,
             PostedAt = DateTimeOffset.UtcNow

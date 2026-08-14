@@ -11,6 +11,7 @@
 @inject ProjectListReadModel Projects
 @inject ICommandSender Commands
 @inject IQueryClient Queries
+@inject IJSRuntime JS
 @implements IDisposable
 
 @*
@@ -63,7 +64,8 @@
                         {
                             @* Disabled mid-turn: clearing the transcript while a reply is in flight
                                lands the old conversation's messages, and its id, in the new chat. *@
-                            <button type="button" @onclick="StartNewChat" title="New chat" aria-label="New chat" disabled="@busy"
+                            <button type="button" @onclick="StartFresh" aria-label="New chat" disabled="@busy"
+                                    title="New chat — clears the assistant's context and ends any task in progress. Past conversations stay saved."
                                     class="inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40">
                                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
@@ -200,6 +202,22 @@
                                             <path d="M21 12.5l-8.5 8.5a5.66 5.66 0 0 1-8-8l9-9a3.77 3.77 0 0 1 5.3 5.3l-9 9a1.89 1.89 0 0 1-2.7-2.7l8.3-8.3" />
                                         </svg>
                                         @message.Body
+                                    </span>
+                                </div>
+                            }
+                            else if (message.ToolName == "kickoff")
+                            {
+                                @* A task's machine-authored instruction. A badge, never a green
+                                   bubble — these are commands the app sent on the user's behalf,
+                                   not words they typed. Full text on hover. *@
+                                <div class="flex justify-center">
+                                    <span title="@message.Body"
+                                          class="inline-flex max-w-[19rem] items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] text-accent">
+                                        <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M13 2L4.5 13.5h6L11 22l8.5-11.5h-6z" />
+                                        </svg>
+                                        <span class="truncate">@KickoffLabel(message.Body)</span>
                                     </span>
                                 </div>
                             }
@@ -567,6 +585,25 @@
         await TryResumeAsync();
     }
 
+    // Wired once the panel's element actually exists (it renders only when the session grants the
+    // assistant, which lands after the first render). The JS answers false until then; true stops
+    // the retries. Dropping a file anywhere on the panel then feeds the same hidden InputFile the
+    // paperclip uses — one upload path.
+    private bool dropZoneWired;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (dropZoneWired || !CanUseAssistant) return;
+        try
+        {
+            dropZoneWired = await JS.InvokeAsync<bool>("jpmsChatDropZone", DomId, "jpms-chat-attachment");
+        }
+        catch
+        {
+            dropZoneWired = true; // No JS (prerender, missing script): don't retry every render.
+        }
+    }
+
     // The panel is instantiated before auth resolves, so the acknowledgement can only be read once
     // the session lands — the same reason SideNav defers its project fetch to this event.
     private void HandleSessionChange()
@@ -668,8 +705,37 @@
         var previousConversationId = conversationId;
         StartNewChat();
         pendingPreviousConversationId = previousConversationId;
+        nextSendIsKickoff = true;
         draft = kickoff;
         await Send();
+    }
+
+    // The next Send carries a task's machine-authored kick-off — rendered and stored as a badge,
+    // never as the user's own words. Consumed by Send.
+    private bool nextSendIsKickoff;
+
+    /// <summary>The badge line for a kick-off: the task banner when one is in force (the honest
+    /// short name of the job), else the instruction clipped.</summary>
+    private string KickoffLabel(string body)
+    {
+        var banner = AiTasks.Active?.BannerLabel;
+        if (!string.IsNullOrWhiteSpace(banner)) return banner!;
+        return body.Length <= 80 ? body : body[..80] + "…";
+    }
+
+    /// <summary>
+    /// The header's New chat: a TRUE clean slate. Ends any task in force (otherwise the banner
+    /// stays up and the dialog's contents keep riding along with every turn of the "fresh" chat),
+    /// drops the staged file, forgets the stored conversation id, and empties the panel. Nothing
+    /// is destroyed — every past conversation stays persisted server-side; the model just cannot
+    /// see any of it from here.
+    /// </summary>
+    private void StartFresh()
+    {
+        // Deliberately NOT SetCoexistence(false): that flag belongs to the dialog, which may still
+        // be open beside the panel — the user can carry on filling it in by hand.
+        if (AiTasks.Active is not null) AiTasks.End();
+        StartNewChat();
     }
 
     private void StartNewChat()
@@ -781,9 +847,12 @@
         }
 
         var text = draft.Trim();
+        var isKickoff = nextSendIsKickoff;
+        nextSendIsKickoff = false;
         draft = "";
         error = null;
         busy = true;
+        Chat.SetAssistantBusy(true);
         showCarryOn = false;
         activityLabel = null;
         modelNote = null;
@@ -794,9 +863,10 @@
         var previousConversationId = conversationId is null ? pendingPreviousConversationId : null;
         pendingPreviousConversationId = null;
 
-        // Show the user's own message straight away rather than waiting on the round trip.
+        // Show the user's own message straight away rather than waiting on the round trip. A
+        // kick-off carries its marker, so it renders as a task badge, never as their words.
         messages.Add(new AiChatMessage(
-            Guid.NewGuid().ToString("N"), AiChatRole.User, text, null, DateTimeOffset.UtcNow));
+            Guid.NewGuid().ToString("N"), AiChatRole.User, text, isKickoff ? "kickoff" : null, DateTimeOffset.UtcNow));
         // The attachment pill sits UNDER the message it went with — sent together, shown together.
         if (attached is not null)
         {
@@ -815,7 +885,7 @@
             var scope = BuildScope();
 
             var result = await Commands.SendAsync(
-                new SendAiMessage(conversationId, text, scope, string.Empty, previousConversationId, modelKey),
+                new SendAiMessage(conversationId, text, scope, string.Empty, previousConversationId, modelKey, isKickoff),
                 CancellationToken.None);
 
             conversationId = result.ConversationId;
@@ -858,6 +928,7 @@
         finally
         {
             busy = false;
+            Chat.SetAssistantBusy(false);
             activityLabel = null;
         }
 

@@ -839,6 +839,16 @@ else
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@variationDraftError</p>
             }
 
+            @if (TaskIsForThisRecord && Chat.AssistantBusy)
+            {
+                @* The assistant is mid-turn on this very form — say so, or the user watches a
+                   blank dialog with no idea the model is typing into it through the wire. *@
+                <div class="flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2">
+                    <span class="w-3 h-3 shrink-0 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></span>
+                    <p class="text-xs text-accent">The assistant is working on this form — fields fill in as it goes.</p>
+                </div>
+            }
+
             @if (TaskIsForThisRecord)
             {
                 <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content">
@@ -1071,6 +1081,7 @@ else
         AiTasks.OnAssistantUnavailable += HandleAssistantUnavailable;
         CostCenters.OnChanged += Repaint;
         Activity.OnChanged += Repaint;
+        Chat.OnChange += Repaint; // the dialog's "assistant is working" banner tracks the panel's turn
         Nav.LocationChanged += HandleLocationChangedForModal;
 
         await Session.EnsureLoadedAsync();
@@ -1166,6 +1177,7 @@ else
         AiTasks.OnAssistantUnavailable -= HandleAssistantUnavailable;
         CostCenters.OnChanged -= Repaint;
         Activity.OnChanged -= Repaint;
+        Chat.OnChange -= Repaint;
         Nav.LocationChanged -= HandleLocationChangedForModal;
         flashTimer?.Dispose();
 

@@ -2,6 +2,7 @@
 @using Jewel.JPMS.Contracts.Ai
 @inject IVariationStore Variations
 @inject AiTaskState AiTasks
+@inject ChatPanelState Chat
 @implements IDisposable
 
 @*
@@ -23,6 +24,15 @@
        ChatAware="true"
        DismissOnOverlayClick="@(!AssistantTaskActive)"
        Class="max-w-xl">
+    @if (AssistantTaskActive && Chat.AssistantBusy)
+    {
+        @* The assistant is mid-turn on this very form. Without this, the user watches a blank
+           dialog while the model works through the wire and has no idea anything is happening. *@
+        <div class="mb-3 flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2">
+            <span class="w-3 h-3 shrink-0 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></span>
+            <p class="text-xs text-accent">The assistant is working on this form — fields fill in as it goes.</p>
+        </div>
+    }
     <ManualVariationForm @ref="form" UsedNumbers="@UsedNumbers" OnSubmit="SendAsync" OnEdited="PublishDraft" />
 </Modal>
 
@@ -46,6 +56,8 @@
         // the handler itself checks the task matches, so a variation_draft task elsewhere never
         // writes into this form.
         AiTasks.OnDraftApplied += HandleAssistantDraft;
+        // Repaints the working banner as the assistant's turn starts and finishes.
+        Chat.OnChange += StateHasChanged;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -75,6 +87,7 @@
     public void Dispose()
     {
         AiTasks.OnDraftApplied -= HandleAssistantDraft;
+        Chat.OnChange -= StateHasChanged;
     }
 
     private async Task Cancel() => await OnClose.InvokeAsync();

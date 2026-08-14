@@ -77,6 +77,21 @@ public sealed class ChatPanelState
     }
 
     /// <summary>
+    /// True while the assistant has a turn in flight. Set by the panel, read by chat-aware dialogs
+    /// so a form the assistant is filling can SAY it is being worked on — a user watching a blank
+    /// form while the model types into it through the wire otherwise has no idea anything is
+    /// happening.
+    /// </summary>
+    public bool AssistantBusy { get; private set; }
+
+    public void SetAssistantBusy(bool value)
+    {
+        if (AssistantBusy == value) return;
+        AssistantBusy = value;
+        OnChange?.Invoke();
+    }
+
+    /// <summary>
     /// Reads the stored acknowledgement for the signed-in user, once per user. Deliberately a
     /// no-op while the user is unknown: the panel is instantiated by MainLayout on the very first
     /// render, before /api/auth/me has answered, and latching on a key derived from "anonymous"

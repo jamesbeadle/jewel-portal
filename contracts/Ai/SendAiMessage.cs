@@ -22,4 +22,8 @@ public sealed record SendAiMessage(
     /// <summary>An <see cref="AiModelCatalogue"/> key — the model the user chose in the panel.
     /// Null or unknown degrades to the cheap default server-side; the client can never name a raw
     /// model id.</summary>
-    string? Model = null) : ICommand<AiTurnResult>;
+    string? Model = null,
+    /// <summary>True when this message is a task's machine-authored kick-off rather than something
+    /// the user typed. Purely presentational: the row is marked so every rendering of the
+    /// transcript — live and replayed — shows it as a task badge, never as the user's own words.</summary>
+    bool IsKickoff = false) : ICommand<AiTurnResult>;
