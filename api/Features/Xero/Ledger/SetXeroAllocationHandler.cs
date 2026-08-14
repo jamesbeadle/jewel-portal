@@ -26,6 +26,13 @@ namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 /// same project, new centre) drags the linked orders with it: they are recoded
 /// wholesale to the new centre, because the invoice drives the work order's
 /// coding (see WorkOrderInvoiceRecoding).
+///
+/// The dispute trio (2026-08-14): Dispute parks queued/allocated lines in the
+/// Disputed bucket with an optional opening message; AddDisputeMessage appends
+/// to the thread and touches nothing else; ResolveDispute returns lines to the
+/// queue keeping the agreed coding and writes the agreed Site to Xero. Set (and
+/// its saved cost centre) works on disputed lines too, Xero deferred to
+/// resolution.
 /// </summary>
 public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation, int>
 {
@@ -61,49 +68,79 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
 
         if (command.Action == XeroAllocationAction.SetProject)
         {
-            // A null project is a deliberate unset (clears the saved project and the
+            // A null project is a deliberate unset (clears the saved coding and the
             // Xero site); a supplied project must exist.
             if (command.ProjectId is not null
                 && !await context.Projects.AnyAsync(project => project.ProjectId == command.ProjectId, cancellationToken))
                 throw new InvalidOperationException("Choose a project to set.");
-            if (lines.Any(line => line.AllocationStatus != (int)XeroAllocationStatus.Unallocated))
-                throw new InvalidOperationException("Set applies to queued (unallocated) lines only.");
+            // Disputed lines take Set too (2026-08-14): the coding the two sides are
+            // converging on is saved mid-dispute where both can see it, ready for the
+            // moment the line is resolved back into the queue.
+            if (lines.Any(line => line.AllocationStatus != (int)XeroAllocationStatus.Unallocated
+                                  && line.AllocationStatus != (int)XeroAllocationStatus.Disputed))
+                throw new InvalidOperationException("Set applies to queued or disputed lines only.");
+            if (command.CostCenterCode is not null
+                && !await context.CostCenters.AnyAsync(
+                    centre => centre.Code == command.CostCenterCode && centre.IsActive, cancellationToken))
+                throw new InvalidOperationException("Choose an active cost centre.");
         }
 
-        // Whatever the action, the previous split rows no longer describe these lines.
-        // Reconciled in place rather than delete-and-re-add: EF's identity map refuses a
-        // new instance whose key matches a deleted-but-tracked row, and a re-cut split
-        // commonly keeps some of the same project + centre combinations (same keys).
-        var oldSplits = await context.XeroCostSplits
-            .Where(split => ids.Contains(split.XeroLedgerLineId))
-            .ToListAsync(cancellationToken);
+        if (command.Action == XeroAllocationAction.Dispute
+            && lines.Any(line => line.AllocationStatus != (int)XeroAllocationStatus.Unallocated
+                                 && line.AllocationStatus != (int)XeroAllocationStatus.Allocated))
+            throw new InvalidOperationException("Dispute applies to queued or allocated lines.");
 
-        var desiredSplits = new Dictionary<string, XeroCostSplit>(StringComparer.OrdinalIgnoreCase);
-        if (command.Action == XeroAllocationAction.Allocate && splits is not null)
-            foreach (var split in splits)
-                desiredSplits[$"{lines[0].XeroLedgerLineId}:{split.ProjectId}:{split.CostCenterCode}"] = split; // splits ⇒ exactly one line (validated above)
-
-        foreach (var oldSplit in oldSplits)
+        if (command.Action == XeroAllocationAction.AddDisputeMessage)
         {
-            if (desiredSplits.TryGetValue(oldSplit.XeroCostSplitId, out var kept))
-            {
-                oldSplit.Net = kept.Net;
-                desiredSplits.Remove(oldSplit.XeroCostSplitId);
-            }
-            else
-            {
-                context.XeroCostSplits.Remove(oldSplit);
-            }
+            if (string.IsNullOrWhiteSpace(command.Note))
+                throw new InvalidOperationException("Write a message.");
+            if (lines.Any(line => line.AllocationStatus != (int)XeroAllocationStatus.Disputed))
+                throw new InvalidOperationException("Messages can only be added to disputed lines.");
         }
-        foreach (var (key, split) in desiredSplits)
-            context.XeroCostSplits.Add(new XeroCostSplitEntity
+
+        if (command.Action == XeroAllocationAction.ResolveDispute
+            && lines.Any(line => line.AllocationStatus != (int)XeroAllocationStatus.Disputed))
+            throw new InvalidOperationException("Only disputed lines can be returned to allocation.");
+
+        // Whatever the action, the previous split rows no longer describe these lines —
+        // EXCEPT a discussion message, which changes nothing about the allocation and
+        // must not quietly delete anything. Reconciled in place rather than
+        // delete-and-re-add: EF's identity map refuses a new instance whose key matches
+        // a deleted-but-tracked row, and a re-cut split commonly keeps some of the same
+        // project + centre combinations (same keys).
+        if (command.Action != XeroAllocationAction.AddDisputeMessage)
+        {
+            var oldSplits = await context.XeroCostSplits
+                .Where(split => ids.Contains(split.XeroLedgerLineId))
+                .ToListAsync(cancellationToken);
+
+            var desiredSplits = new Dictionary<string, XeroCostSplit>(StringComparer.OrdinalIgnoreCase);
+            if (command.Action == XeroAllocationAction.Allocate && splits is not null)
+                foreach (var split in splits)
+                    desiredSplits[$"{lines[0].XeroLedgerLineId}:{split.ProjectId}:{split.CostCenterCode}"] = split; // splits ⇒ exactly one line (validated above)
+
+            foreach (var oldSplit in oldSplits)
             {
-                XeroCostSplitId = key,
-                XeroLedgerLineId = lines[0].XeroLedgerLineId,
-                ProjectId = split.ProjectId!,
-                CostCenterCode = split.CostCenterCode,
-                Net = split.Net
-            });
+                if (desiredSplits.TryGetValue(oldSplit.XeroCostSplitId, out var kept))
+                {
+                    oldSplit.Net = kept.Net;
+                    desiredSplits.Remove(oldSplit.XeroCostSplitId);
+                }
+                else
+                {
+                    context.XeroCostSplits.Remove(oldSplit);
+                }
+            }
+            foreach (var (key, split) in desiredSplits)
+                context.XeroCostSplits.Add(new XeroCostSplitEntity
+                {
+                    XeroCostSplitId = key,
+                    XeroLedgerLineId = lines[0].XeroLedgerLineId,
+                    ProjectId = split.ProjectId!,
+                    CostCenterCode = split.CostCenterCode,
+                    Net = split.Net
+                });
+        }
 
         // A split spanning projects has no single line-level project; keep the common
         // one when there is one so lists and summaries can still show it directly.
@@ -111,6 +148,7 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
 
         var now = DateTimeOffset.UtcNow;
         var linesKeepingLinks = new List<string>();
+        var approvedSiteRewrites = new List<string>();
         foreach (var line in lines)
         {
             var previousProjectId = line.ProjectId;
@@ -157,20 +195,65 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                     line.Note = null;
                     break;
                 case XeroAllocationAction.SetProject:
-                    // The half-step: project decided (or, with null, un-decided), cost
-                    // centre still pending. The line stays Unallocated — queued under
-                    // its project when one is set — and is not stamped as allocated;
-                    // Allocate does that when the centre lands.
+                    // The half-step: project decided (or, with null, un-decided). The
+                    // line keeps its status — Unallocated (queued under its project) or
+                    // Disputed — and is not stamped as allocated; Allocate does that.
+                    // A supplied cost centre is saved too (the dispute-stage agreement);
+                    // unsetting the project clears both.
                     line.ProjectId = command.ProjectId;
+                    line.CostCenterCode = command.ProjectId is null ? null
+                        : command.CostCenterCode ?? line.CostCenterCode;
+                    break;
+                case XeroAllocationAction.Dispute:
+                    // Parked for the conversation: the line leaves the queue (or its
+                    // allocation) and sits in the Disputed bucket. Coding already on the
+                    // line is KEPT as the position under discussion; AllocatedBy/AtUtc
+                    // become the "disputed by / on" stamp and Note the opening message
+                    // (also first row of the thread, added below).
+                    line.AllocationStatus = (int)XeroAllocationStatus.Disputed;
+                    line.Bucket = null;
+                    line.AllocatedBy = command.AllocatedBy;
+                    line.AllocatedAtUtc = now;
+                    line.Note = command.Note;
+                    break;
+                case XeroAllocationAction.AddDisputeMessage:
+                    // The line itself is untouched — the message row is added below.
+                    break;
+                case XeroAllocationAction.ResolveDispute:
+                    // Either side returns the line to the queue, agreed coding kept:
+                    // with a project (and centre) saved it lands on that project's tab
+                    // armed for Allocate. The thread survives as history.
+                    line.AllocationStatus = (int)XeroAllocationStatus.Unallocated;
+                    line.AllocatedBy = null;
+                    line.AllocatedAtUtc = null;
+                    line.Note = null;
                     break;
             }
 
+            // A re-allocation that moves an approved bill's line to another project must
+            // carry the move to Xero too — the Sites tracking is what the accountant
+            // reads, and a change of mind after approval is legitimate (decision
+            // 2026-08-14). Draft/submitted bills take the full write-back below instead;
+            // paid bills are locked in Xero and move portal-side only (the write-back
+            // service skips them). Multi-project splits have no line-level project to
+            // site (ProjectId null), and an unchanged project needs no rewrite.
+            if (command.Action == XeroAllocationAction.Allocate
+                && line.InvoiceStatus.Equals("AUTHORISED", StringComparison.OrdinalIgnoreCase)
+                && line.ProjectId is not null
+                && !string.Equals(line.ProjectId, previousProjectId, StringComparison.OrdinalIgnoreCase))
+                approvedSiteRewrites.Add(line.XeroLedgerLineId);
+
             // Work-order link slices only describe a whole line allocated to the order's
             // project. Moving the line to another project, re-cutting it as a split,
-            // bucketing, ignoring or resetting it orphans the slices — clear them so the
-            // orders' invoiced balances never count a line that left them. Moving between
-            // cost centres within the same project keeps the links.
-            if (command.Action != XeroAllocationAction.Allocate
+            // bucketing, ignoring, disputing or resetting it orphans the slices — clear
+            // them so the orders' invoiced balances never count a line that left them.
+            // Moving between cost centres within the same project keeps the links; a
+            // discussion message moves nothing and touches nothing.
+            if (command.Action == XeroAllocationAction.AddDisputeMessage)
+            {
+                // No allocation change — links (and everything else) stay as they are.
+            }
+            else if (command.Action != XeroAllocationAction.Allocate
                 || line.CostCenterCode is null
                 || !string.Equals(line.ProjectId, previousProjectId, StringComparison.OrdinalIgnoreCase))
             {
@@ -209,6 +292,23 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
                 context, linkedOrderIds, singleCode!, cancellationToken);
         }
 
+        // The thread: Dispute's opening message (when one was written) and every
+        // AddDisputeMessage become rows, stamped with the signed-in user.
+        if ((command.Action == XeroAllocationAction.Dispute && !string.IsNullOrWhiteSpace(command.Note))
+            || command.Action == XeroAllocationAction.AddDisputeMessage)
+        {
+            var body = command.Note!.Trim();
+            foreach (var line in lines)
+                context.XeroDisputeMessages.Add(new XeroDisputeMessageEntity
+                {
+                    XeroDisputeMessageId = $"XDM-{Guid.NewGuid():N}",
+                    XeroLedgerLineId = line.XeroLedgerLineId,
+                    Author = command.AllocatedBy ?? "",
+                    Body = body,
+                    SentAtUtc = now
+                });
+        }
+
         await context.SaveChangesAsync(cancellationToken);
 
         // Confirm-and-approve any draft invoice these allocations completed. After the
@@ -217,11 +317,25 @@ public sealed class SetXeroAllocationHandler : ICommandHandler<SetXeroAllocation
             await writeBack.TryWriteBackAsync(
                 lines.Select(line => line.XeroInvoiceId).Distinct().ToList(), cancellationToken);
 
+        // Approved bills skip the write-back above (nothing to approve) — but a line
+        // that just moved project still gets its Sites tracking rewritten in Xero.
+        if (approvedSiteRewrites.Count > 0)
+            await writeBack.TrySetSiteAsync(approvedSiteRewrites, cancellationToken);
+
         // A set project writes its Site tracking to Xero without approving — same
-        // best-effort contract: the saved project stands whatever Xero says.
+        // best-effort contract: the saved project stands whatever Xero says. Disputed
+        // lines are the exception: nothing is agreed until resolution, so Xero waits.
         if (command.Action == XeroAllocationAction.SetProject && lines.Count > 0)
             await writeBack.TrySetSiteAsync(
-                lines.Select(line => line.XeroLedgerLineId).ToList(), cancellationToken);
+                lines.Where(line => line.AllocationStatus == (int)XeroAllocationStatus.Unallocated)
+                     .Select(line => line.XeroLedgerLineId).ToList(), cancellationToken);
+
+        // Resolution is when the agreed project follows through to Xero's Sites
+        // tracking — same best-effort contract, and paid bills stay untouched.
+        if (command.Action == XeroAllocationAction.ResolveDispute && lines.Count > 0)
+            await writeBack.TrySetSiteAsync(
+                lines.Where(line => line.ProjectId is not null)
+                     .Select(line => line.XeroLedgerLineId).ToList(), cancellationToken);
 
         return lines.Count;
     }

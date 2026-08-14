@@ -31,6 +31,7 @@ public sealed class GetXeroLedgerCountsHandler : IQueryHandler<GetXeroLedgerCoun
             Unallocated: CountOf(XeroAllocationStatus.Unallocated),
             Allocated:   CountOf(XeroAllocationStatus.Allocated),
             Bucketed:    CountOf(XeroAllocationStatus.Bucketed),
-            Ignored:     CountOf(XeroAllocationStatus.Ignored));
+            Ignored:     CountOf(XeroAllocationStatus.Ignored),
+            Disputed:    CountOf(XeroAllocationStatus.Disputed));
     }
 }

@@ -42,10 +42,11 @@ public sealed class AllocateSuggestedXeroLinesHandler : ICommandHandler<Allocate
         var touchedInvoiceIds = new HashSet<string>();
         foreach (var line in unallocated)
         {
-            // A project already set on the queued line (the SetProject half-step) is a
-            // human decision — it beats the tracking suggestion, never the other way.
+            // Coding already set on the queued line (the SetProject half-step, or the
+            // agreement carried out of a resolved dispute) is a human decision — it
+            // beats the tracking suggestion, never the other way.
             var projectId = line.ProjectId ?? suggester.SuggestProject(line.XeroSite);
-            var costCenterCode = suggester.SuggestCostCenter(line.XeroCostCode);
+            var costCenterCode = line.CostCenterCode ?? suggester.SuggestCostCenter(line.XeroCostCode);
             if (projectId is null || costCenterCode is null) continue;
 
             line.AllocationStatus = (int)XeroAllocationStatus.Allocated;

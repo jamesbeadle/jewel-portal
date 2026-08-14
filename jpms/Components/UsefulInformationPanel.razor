@@ -113,9 +113,9 @@
     <FooterContent>
         @if (editing is not null)
         {
-            <button type="button" class="btn-secondary text-negative mr-auto" disabled="@busy" @onclick="Delete">Delete note</button>
+            <button type="button" class="btn-neutral text-negative mr-auto" disabled="@busy" @onclick="Delete">Delete note</button>
         }
-        <button type="button" class="btn-secondary" disabled="@busy" @onclick="CloseDialog">Cancel</button>
+        <button type="button" class="btn-neutral" disabled="@busy" @onclick="CloseDialog">Cancel</button>
         <button type="button" class="btn-primary" disabled="@busy" @onclick="Save">@(editing is null ? "Add note" : "Save changes")</button>
     </FooterContent>
 </Modal>

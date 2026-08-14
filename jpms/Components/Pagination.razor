@@ -1,11 +1,11 @@
 <nav class="flex items-center justify-between gap-3 px-4 py-3 border-t border-line text-sm" aria-label="Pagination">
     <p class="text-content-subtle">@RangeLabel</p>
     <div class="flex items-center gap-1">
-        <button type="button" class="btn-ghost px-3 py-1.5" disabled="@IsFirstPage" @onclick="GoPrevious">
+        <button type="button" class="btn-secondary px-3 py-1.5" disabled="@IsFirstPage" @onclick="GoPrevious">
             Previous
         </button>
         <span class="px-3 text-content-muted">Page @CurrentPage of @TotalPages</span>
-        <button type="button" class="btn-ghost px-3 py-1.5" disabled="@IsLastPage" @onclick="GoNext">
+        <button type="button" class="btn-secondary px-3 py-1.5" disabled="@IsLastPage" @onclick="GoNext">
             Next
         </button>
     </div>

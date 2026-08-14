@@ -85,13 +85,15 @@ public interface IXeroClient
     Task<XeroApprovalResult> ApproveInvoiceAsync(XeroApprovalRequest request, CancellationToken ct);
 
     /// <summary>
-    /// Writes the Sites tracking option onto specific line items of a draft (or
-    /// submitted) bill / credit note WITHOUT approving it — the SetProject
-    /// half-step, when a queued line's project is decided before its cost
-    /// centre. Untargeted lines pass through untouched; targeted lines keep any
-    /// other tracking (Xero's own cost code) they already carry. Returns
-    /// AlreadyApproved (a silent success) when the invoice was approved outside
-    /// JPMS — those keep flowing through allocation portal-side only.
+    /// Writes the Sites tracking option onto specific line items of a draft,
+    /// submitted or approved bill / credit note WITHOUT changing its status —
+    /// the SetProject half-step (a queued line's project decided before its
+    /// cost centre) and the post-approval change of mind (a line moved between
+    /// projects after the bill was approved, decision 2026-08-14). Untargeted
+    /// lines pass through untouched; targeted lines keep any other tracking
+    /// (Xero's own cost code) they already carry. Returns AlreadyApproved (a
+    /// silent success) only for PAID invoices — Xero locks their lines once
+    /// payments are applied, so those keep flowing portal-side only.
     /// </summary>
     Task<XeroApprovalResult> SetSiteTrackingAsync(XeroSiteTrackingRequest request, CancellationToken ct);
 
@@ -1098,13 +1100,18 @@ public sealed class XeroClient : IXeroClient
 
             var invoice = items[0];
             var status = StringOf(invoice, "Status") ?? "UNKNOWN";
-            if (status.Equals("AUTHORISED", StringComparison.OrdinalIgnoreCase)
-                || status.Equals("PAID", StringComparison.OrdinalIgnoreCase))
+            // Approved-but-unpaid bills accept the tracking update (decision 2026-08-14:
+            // a cost moved between projects after approval must follow through to Xero's
+            // Sites tracking). Paid bills are locked — Xero refuses line edits once
+            // payments are applied — so those are skipped as a silent success, same as
+            // the approval path: the JPMS move stands, Xero keeps its record.
+            if (status.Equals("PAID", StringComparison.OrdinalIgnoreCase))
                 return XeroApprovalResult.SkippedAlreadyApproved(status);
             if (!status.Equals("DRAFT", StringComparison.OrdinalIgnoreCase)
-                && !status.Equals("SUBMITTED", StringComparison.OrdinalIgnoreCase))
+                && !status.Equals("SUBMITTED", StringComparison.OrdinalIgnoreCase)
+                && !status.Equals("AUTHORISED", StringComparison.OrdinalIgnoreCase))
                 return XeroApprovalResult.Failed(
-                    $"The invoice is {status} in Xero — tracking can only be updated on draft or submitted bills.");
+                    $"The invoice is {status} in Xero — its tracking can't be updated.");
 
             var categories = await GetTrackingCategoriesAsync(token, ct);
 
@@ -1152,8 +1159,9 @@ public sealed class XeroClient : IXeroClient
                     "The bill's lines have changed in Xero since they were synced "
                     + $"({unmatched.Count} line(s) no longer exist). Sync from Xero and try again.");
 
-            // No Status in the payload: the bill stays DRAFT/SUBMITTED — approval only
-            // ever happens through the full write-back once every line is allocated.
+            // No Status in the payload: the bill keeps whatever status it has (draft
+            // bills stay draft, approved bills stay approved) — approval only ever
+            // happens through the full write-back once every line is allocated.
             var payload = new JsonObject
             {
                 [idProperty] = request.InvoiceId,

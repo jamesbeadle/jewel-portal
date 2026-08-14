@@ -9,8 +9,9 @@ namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 /// <summary>
 /// Decides when an invoice's allocation is confirmed back to Xero and records what
 /// happened. An invoice is written back once EVERY stored line of it is Allocated
-/// (a project + cost centre(s) — bucketed/ignored lines block auto-approval, since
-/// approving a bill whose lines were waved through unallocated defeats the point)
+/// (a project + cost centre(s) — bucketed/ignored/disputed lines block
+/// auto-approval, since approving a bill whose lines were waved through
+/// unallocated — or are actively contested — defeats the point)
 /// AND the invoice is still awaiting approval in Xero (DRAFT/SUBMITTED). Invoices
 /// approved outside JPMS keep flowing through allocation portal-side only.
 ///
@@ -27,12 +28,14 @@ public interface IXeroWriteBackService
     Task<XeroWriteBackOutcome> RetryAsync(string xeroInvoiceId, CancellationToken ct);
 
     /// <summary>
-    /// Best-effort Sites-tracking write for lines whose project was just set while
-    /// they stay queued (SetProject half-step) — no approval. Never throws; a
-    /// failure is stamped on the affected lines only (WriteBackStatus Failed, so
-    /// the queue can flag it), and pressing Set again is the retry. Invoices
-    /// already approved outside JPMS are skipped silently — those stay
-    /// portal-side only, like allocation itself.
+    /// Best-effort Sites-tracking write for lines whose project was just set or
+    /// moved — no approval. Covers the SetProject half-step on queued lines AND
+    /// a re-allocation that moves an approved bill's line between projects
+    /// (decision 2026-08-14: a change of mind after approval follows through to
+    /// Xero). Never throws; a failure is stamped on the affected lines only
+    /// (WriteBackStatus Failed, so the page can flag it), and pressing Set /
+    /// re-sending is the retry. Paid bills are skipped silently — Xero locks
+    /// their lines once payments are applied, so those move portal-side only.
     /// </summary>
     Task TrySetSiteAsync(IReadOnlyCollection<string> xeroLedgerLineIds, CancellationToken ct);
 }
@@ -117,9 +120,11 @@ public sealed class XeroWriteBackService : IXeroWriteBackService
 
     private async Task SetSiteForInvoiceLinesAsync(List<XeroLedgerLineEntity> lines, CancellationToken ct)
     {
-        // Only bills still awaiting approval can carry the update; approved/paid ones
-        // stay portal-side only (same rule as the full write-back), silently.
-        if (!AwaitingApprovalStatuses.Contains(lines[0].InvoiceStatus, StringComparer.OrdinalIgnoreCase))
+        // Draft, submitted AND approved bills carry the update — moving a cost between
+        // sites is legitimate after approval (decision 2026-08-14), and the client
+        // re-reads the live status before writing anyway. Only paid bills stay
+        // portal-side, silently: Xero locks their lines once payments are applied.
+        if (lines[0].InvoiceStatus.Equals("PAID", StringComparison.OrdinalIgnoreCase))
             return;
 
         var projectIds = lines.Where(line => line.ProjectId is not null)
@@ -162,7 +167,7 @@ public sealed class XeroWriteBackService : IXeroWriteBackService
             }
             if (changed) await context.SaveChangesAsync(ct);
             logger.LogInformation("Xero site tracking set for {LineCount} line(s) of invoice {InvoiceId}{Skipped}.",
-                lines.Count, lines[0].XeroInvoiceId, result.AlreadyApproved ? " (already approved in Xero — skipped)" : "");
+                lines.Count, lines[0].XeroInvoiceId, result.AlreadyApproved ? " (paid in Xero — skipped)" : "");
             return;
         }
 

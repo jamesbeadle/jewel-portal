@@ -129,7 +129,7 @@
                             {
                                 <div class="flex flex-wrap gap-2 mt-2">
                                     <button type="button" class="btn-primary" disabled="@busy" @onclick="() => Decide(proposal, true)">Accept</button>
-                                    <button type="button" class="btn-secondary border-negative/40 text-negative hover:border-negative" disabled="@busy" @onclick="() => Decide(proposal, false)">Reject</button>
+                                    <button type="button" class="btn-neutral border-negative/40 text-negative hover:border-negative" disabled="@busy" @onclick="() => Decide(proposal, false)">Reject</button>
                                 </div>
                             }
                             else if (!proposal.IsPending && !string.IsNullOrWhiteSpace(proposal.DecidedByEmail))

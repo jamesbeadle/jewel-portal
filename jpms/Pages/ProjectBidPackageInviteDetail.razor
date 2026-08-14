@@ -216,7 +216,7 @@ else
                               @bind="specDraft"></textarea>
                     <div class="flex gap-2 mt-2">
                         <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveSpec">@(busy ? "Saving…" : "Save summary")</button>
-                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="CancelSpec">Cancel</button>
+                        <button type="button" class="btn-neutral" disabled="@busy" @onclick="CancelSpec">Cancel</button>
                     </div>
                 }
                 else if (!string.IsNullOrWhiteSpace(package.SpecificationSummary))

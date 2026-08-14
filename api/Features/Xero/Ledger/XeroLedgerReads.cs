@@ -41,6 +41,33 @@ internal static class XeroLedgerReads
     }
 
     /// <summary>
+    /// The discussion threads for the disputed lines being returned, keyed by line id, oldest
+    /// first. Only disputed lines carry their thread — the Disputed tab is the only place it
+    /// renders, and it is small — so every other status issues no message query at all.
+    /// </summary>
+    public static async Task<Dictionary<string, IReadOnlyList<XeroDisputeMessage>>> DisputeMessagesForAsync(
+        JpmsContext context, IReadOnlyList<XeroLedgerLineEntity> entities, CancellationToken cancellationToken)
+    {
+        var ids = entities
+            .Where(entity => entity.AllocationStatus == (int)XeroAllocationStatus.Disputed)
+            .Select(entity => entity.XeroLedgerLineId)
+            .Distinct()
+            .ToList();
+        if (ids.Count == 0) return new Dictionary<string, IReadOnlyList<XeroDisputeMessage>>();
+
+        var rows = await context.XeroDisputeMessages.AsNoTracking()
+            .Where(message => ids.Contains(message.XeroLedgerLineId))
+            .OrderBy(message => message.SentAtUtc)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(message => message.XeroLedgerLineId)
+            .ToDictionary(group => group.Key, group => (IReadOnlyList<XeroDisputeMessage>)group
+                .Select(message => new XeroDisputeMessage(message.Author, message.Body, message.SentAtUtc))
+                .ToList());
+    }
+
+    /// <summary>
     /// The suggester, built only when some line actually needs a suggestion. Building it reads the
     /// project and cost-centre tables, so an Allocated / Bucketed / Ignored page skips both.
     /// </summary>
@@ -58,7 +85,8 @@ internal static class XeroLedgerReads
     }
 
     public static XeroLedgerLine ToModel(
-        XeroLedgerLineEntity entity, IReadOnlyList<XeroCostSplit>? splits, XeroAllocationSuggester? suggester)
+        XeroLedgerLineEntity entity, IReadOnlyList<XeroCostSplit>? splits, XeroAllocationSuggester? suggester,
+        IReadOnlyList<XeroDisputeMessage>? disputeMessages = null)
     {
         // Suggestions only matter while a line still needs a decision.
         var unallocated = entity.AllocationStatus == (int)XeroAllocationStatus.Unallocated;
@@ -94,6 +122,7 @@ internal static class XeroLedgerReads
             (XeroWriteBackStatus)entity.WriteBackStatus,
             entity.WriteBackError,
             entity.WriteBackAtUtc,
-            entity.HasAttachments);
+            entity.HasAttachments,
+            disputeMessages);
     }
 }

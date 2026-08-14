@@ -13,7 +13,7 @@
     <div class="flex gap-2">
         <button type="button" class="btn-primary text-xs px-2 py-1"
                 disabled="@(Busy || (RequirePick && picked == ""))" @onclick="SaveAsync">Save</button>
-        <button type="button" class="btn-secondary text-xs px-2 py-1" disabled="@Busy"
+        <button type="button" class="btn-neutral text-xs px-2 py-1" disabled="@Busy"
                 @onclick="() => OnCancel.InvokeAsync()">Cancel</button>
     </div>
     <p class="text-[11px] text-content-subtle">@Hint</p>

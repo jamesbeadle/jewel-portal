@@ -21,7 +21,7 @@
             <span>@(TodoAssigneePicker.Label(Item) ?? "Unassigned")</span>
             @if (ShowReassign)
             {
-                <button type="button" class="btn-ghost text-[11px] px-1.5 py-0.5" disabled="@Busy"
+                <button type="button" class="btn-secondary text-[11px] px-1.5 py-0.5" disabled="@Busy"
                         title="Assign this item to a different role or person"
                         @onclick="() => editing = true">Reassign</button>
             }

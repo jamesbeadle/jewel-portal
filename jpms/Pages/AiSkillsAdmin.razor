@@ -128,7 +128,7 @@ else
         else
         {
             <div class="flex items-center justify-between gap-3 mb-4">
-                <button type="button" class="btn-secondary" @onclick="CloseEditor" disabled="@saving">
+                <button type="button" class="btn-neutral" @onclick="CloseEditor" disabled="@saving">
                     Back to the list
                 </button>
                 <div class="flex items-center gap-2">
@@ -268,7 +268,7 @@ else
                                 <button type="button" class="btn-primary" @onclick="SaveReferenceAsync" disabled="@saving">
                                     @(saving ? "Saving…" : "Save reference")
                                 </button>
-                                <button type="button" class="btn-secondary" @onclick="() => editingReference = null"
+                                <button type="button" class="btn-neutral" @onclick="() => editingReference = null"
                                         disabled="@saving">Cancel</button>
                             </div>
                         </div>

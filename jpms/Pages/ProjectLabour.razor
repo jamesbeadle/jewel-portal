@@ -147,7 +147,7 @@ else
                                         @if (isEditing)
                                         {
                                             <button type="button" class="btn-secondary mr-1" @onclick="SaveEditAsync">Save</button>
-                                            <button type="button" class="btn-secondary" @onclick="() => editingId = null">Cancel</button>
+                                            <button type="button" class="btn-neutral" @onclick="() => editingId = null">Cancel</button>
                                         }
                                         else
                                         {
@@ -181,7 +181,7 @@ else
                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-2">@rejectError</p>
                 }
                 <button type="button" class="btn-primary mr-2" @onclick="ConfirmRejectAsync">Reject timesheet</button>
-                <button type="button" class="btn-secondary" @onclick="() => rejectingId = null">Cancel</button>
+                <button type="button" class="btn-neutral" @onclick="() => rejectingId = null">Cancel</button>
             </div>
         }
 
@@ -265,7 +265,7 @@ else
                         {
                             <li class="flex items-center justify-between max-w-xs">
                                 <span class="text-content">@assignment.WorkerName</span>
-                                <button type="button" class="btn-ghost" @onclick="() => UnassignAsync(assignment.WorkerId)">Remove</button>
+                                <button type="button" class="btn-ghost text-negative" @onclick="() => UnassignAsync(assignment.WorkerId)">Remove</button>
                             </li>
                         }
                     </ul>

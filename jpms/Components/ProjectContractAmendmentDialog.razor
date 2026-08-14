@@ -47,7 +47,7 @@
         {
             <p class="mr-auto text-sm text-negative">@error</p>
         }
-        <button type="button" class="btn-secondary" disabled="@busy" @onclick="Cancel">Cancel</button>
+        <button type="button" class="btn-neutral" disabled="@busy" @onclick="Cancel">Cancel</button>
         <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveAsync">
             @(busy ? "Saving…" : "Save details")
         </button>

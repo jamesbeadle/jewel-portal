@@ -37,8 +37,10 @@ For the common repeated idioms, use the class instead of re-typing utilities:
 | `panel` | `rounded-xl border border-slate-200 bg-white` |
 | `panel-header` | `px-5 py-3 border-b border-slate-200 bg-slate-50` |
 | `field` | input border + bg + placeholder |
-| `btn-primary` / `btn-secondary` / `btn-ghost` | bespoke button class strings |
-| `btn-icon` | a Toolbar's square icon button (fixed 8×8, bordered, disabled styling built in) |
+| `btn-primary` / `btn-secondary` / `btn-neutral` / `btn-ghost` | bespoke button class strings |
+| `btn-icon` | a Toolbar's square icon button (fixed 8×8, green-bordered, disabled styling built in) |
+
+**Button colour rule: every button that DOES something is green.** `btn-primary` (solid accent) stays reserved for the page's main act of creation; every other action — Edit, Reassign, Export, Load more, filter tabs, toolbar icons — is `btn-secondary` (accent text + accent/40 outline) or `btn-icon`. Buttons that back out (`Cancel`, `Keep`, `Close`, `Not now`, `Back`) use `btn-neutral` (the old grey bordered look) or `btn-ghost`, and destructive acts add `text-negative` (usually on `btn-neutral`/`btn-ghost`, with `border-negative/40` where the border should warn too). Never put a dismiss on a green class — the green/grey split is what makes "do it" findable at a glance.
 | `data-table` | the `<table>` + thead/tbody/td/row classes |
 | `modal-overlay` / `modal-panel` | full-screen overlay + dialog surface |
 

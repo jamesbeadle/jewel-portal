@@ -48,7 +48,7 @@ else if (record is null)
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="requests">
         <p class="text-sm text-content-subtle italic">That request could not be found.</p>
-        <a href="@RegisterHref" class="btn-secondary mt-4">Back to register</a>
+        <a href="@RegisterHref" class="btn-neutral mt-4">Back to register</a>
     </ProjectPageShell>
 }
 else
@@ -182,7 +182,7 @@ else
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                     <button type="button" class="btn-primary text-xs" disabled="@busy" @onclick="() => AnswerCriticalPathNudge(true)">Yes — tag as critical path</button>
-                    <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="() => AnswerCriticalPathNudge(false)" title="Hides this prompt for this RFI, for everyone — the tag can still be set from the Actions menu">No</button>
+                    <button type="button" class="btn-neutral text-xs" disabled="@busy" @onclick="() => AnswerCriticalPathNudge(false)" title="Hides this prompt for this RFI, for everyone — the tag can still be set from the Actions menu">No</button>
                 </div>
             </div>
         }
@@ -370,7 +370,7 @@ else
 
                             <div class="flex flex-wrap gap-2">
                                 <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveForm">@(busy ? "Saving…" : "Save form")</button>
-                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="CancelFormEdit">Cancel</button>
+                                <button type="button" class="btn-neutral" disabled="@busy" @onclick="CancelFormEdit">Cancel</button>
                             </div>
                         </div>
                     }

@@ -151,7 +151,7 @@ else
                         </div>
                         <div class="flex gap-2">
                             <button type="button" class="btn-primary" disabled="@(programmeBusy || string.IsNullOrWhiteSpace(newTaskTitle) || newTaskStart is null || newTaskEnd is null)" @onclick="AddTaskAsync">Add task</button>
-                            <button type="button" class="btn-secondary" @onclick="() => ToggleProgrammeForm(ProgrammeForm.None)">Cancel</button>
+                            <button type="button" class="btn-neutral" @onclick="() => ToggleProgrammeForm(ProgrammeForm.None)">Cancel</button>
                         </div>
                     </div>
                 }
@@ -187,7 +187,7 @@ else
                         </div>
                         <div class="flex gap-2">
                             <button type="button" class="btn-primary" disabled="@(programmeBusy || string.IsNullOrWhiteSpace(linkPredecessorId) || string.IsNullOrWhiteSpace(linkSuccessorId) || linkPredecessorId == linkSuccessorId)" @onclick="AddLinkAsync">Add dependency</button>
-                            <button type="button" class="btn-secondary" @onclick="() => ToggleProgrammeForm(ProgrammeForm.None)">Cancel</button>
+                            <button type="button" class="btn-neutral" @onclick="() => ToggleProgrammeForm(ProgrammeForm.None)">Cancel</button>
                         </div>
                     </div>
                 }
@@ -201,7 +201,7 @@ else
                         </div>
                         <div class="flex gap-2">
                             <button type="button" class="btn-primary" disabled="@(programmeBusy || Tasks.Count == 0 || string.IsNullOrWhiteSpace(baselineLabel))" @onclick="TakeBaselineAsync">Take baseline</button>
-                            <button type="button" class="btn-secondary" @onclick="() => ToggleProgrammeForm(ProgrammeForm.None)">Cancel</button>
+                            <button type="button" class="btn-neutral" @onclick="() => ToggleProgrammeForm(ProgrammeForm.None)">Cancel</button>
                         </div>
                         @if (Baselines.Count > 0)
                         {
@@ -324,16 +324,16 @@ else
                                         </div>
                                         <div class="flex flex-wrap items-center gap-2">
                                             <button type="button" class="btn-primary" disabled="@(programmeBusy || string.IsNullOrWhiteSpace(editTitle) || editStart is null || editEnd is null)" @onclick="SaveEditTaskAsync">Save</button>
-                                            <button type="button" class="btn-secondary" @onclick="CancelEditTask">Cancel</button>
+                                            <button type="button" class="btn-neutral" @onclick="CancelEditTask">Cancel</button>
                                             @if (confirmingRemoveTask)
                                             {
                                                 <span class="ml-auto text-xs text-content-subtle">Removes the task and its dependencies — baseline snapshots are kept.</span>
-                                                <button type="button" class="btn-secondary text-negative" disabled="@programmeBusy" @onclick="RemoveTaskAsync">Confirm remove</button>
-                                                <button type="button" class="btn-secondary" @onclick="() => confirmingRemoveTask = false">Keep</button>
+                                                <button type="button" class="btn-neutral text-negative" disabled="@programmeBusy" @onclick="RemoveTaskAsync">Confirm remove</button>
+                                                <button type="button" class="btn-neutral" @onclick="() => confirmingRemoveTask = false">Keep</button>
                                             }
                                             else
                                             {
-                                                <button type="button" class="btn-secondary text-negative ml-auto" disabled="@programmeBusy" @onclick="() => confirmingRemoveTask = true">Remove task…</button>
+                                                <button type="button" class="btn-neutral text-negative ml-auto" disabled="@programmeBusy" @onclick="() => confirmingRemoveTask = true">Remove task…</button>
                                             }
                                         </div>
                                     </div>
@@ -375,7 +375,7 @@ else
                     </div>
                     <div class="flex gap-2">
                         <button type="button" class="btn-primary" disabled="@(claimsBusy || string.IsNullOrWhiteSpace(nodTitle))" @onclick="RaiseNodAsync">Raise NOD</button>
-                        <button type="button" class="btn-secondary" @onclick="() => ToggleForm(ClaimForm.None)">Cancel</button>
+                        <button type="button" class="btn-neutral" @onclick="() => ToggleForm(ClaimForm.None)">Cancel</button>
                     </div>
                 </div>
             }
@@ -403,7 +403,7 @@ else
                     </div>
                     <div class="flex gap-2">
                         <button type="button" class="btn-primary" disabled="@(claimsBusy || string.IsNullOrWhiteSpace(eotTitle))" @onclick="RaiseEotAsync">Raise EOT</button>
-                        <button type="button" class="btn-secondary" @onclick="() => ToggleForm(ClaimForm.None)">Cancel</button>
+                        <button type="button" class="btn-neutral" @onclick="() => ToggleForm(ClaimForm.None)">Cancel</button>
                     </div>
                 </div>
             }
@@ -443,7 +443,7 @@ else
                     </div>
                     <div class="flex gap-2">
                         <button type="button" class="btn-primary" disabled="@(claimsBusy || string.IsNullOrWhiteSpace(ladTitle))" @onclick="RecordLadAsync">Record claim</button>
-                        <button type="button" class="btn-secondary" @onclick="() => ToggleForm(ClaimForm.None)">Cancel</button>
+                        <button type="button" class="btn-neutral" @onclick="() => ToggleForm(ClaimForm.None)">Cancel</button>
                     </div>
                 </div>
             }

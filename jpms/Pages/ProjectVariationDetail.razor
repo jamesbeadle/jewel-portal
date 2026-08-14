@@ -132,7 +132,7 @@ else
                 }
                 <div class="flex gap-2">
                     <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveTitle">Save title</button>
-                    <button type="button" class="btn-secondary" disabled="@busy" @onclick="CancelRename">Cancel</button>
+                    <button type="button" class="btn-neutral" disabled="@busy" @onclick="CancelRename">Cancel</button>
                 </div>
             </div>
         }
@@ -142,7 +142,7 @@ else
                 <h2 class="text-xl font-semibold text-content">@order.Title</h2>
                 @if (CanManage)
                 {
-                    <button type="button" class="btn-ghost text-xs px-2 py-1 shrink-0 mt-0.5"
+                    <button type="button" class="btn-secondary text-xs px-2 py-1 shrink-0 mt-0.5"
                             title="Edit the title" disabled="@busy" @onclick="StartRename">Edit</button>
                 }
             </div>
@@ -272,7 +272,7 @@ else
                             </p>
                             <div class="flex gap-2">
                                 <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveNarratives">Save sections</button>
-                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => editingNarratives = false">Cancel</button>
+                                <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => editingNarratives = false">Cancel</button>
                             </div>
                         </div>
                     }
@@ -524,7 +524,7 @@ else
                                     </p>
                                     <div class="flex gap-2">
                                         <button type="button" class="btn-primary" disabled="@busy" @onclick="ReviseVoValue">Save revised value</button>
-                                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => revisingValue = false">Cancel</button>
+                                        <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => revisingValue = false">Cancel</button>
                                     </div>
                                 </div>
                             }
@@ -549,10 +549,10 @@ else
                                         the record stays on the register. Blocked once work orders instruct it or value has been claimed.
                                     </p>
                                     <div class="flex gap-2">
-                                        <button type="button" class="btn-secondary w-full text-negative" disabled="@busy" @onclick="ReturnToQuoting">
+                                        <button type="button" class="btn-neutral w-full text-negative" disabled="@busy" @onclick="ReturnToQuoting">
                                             @(busy ? "Returning…" : "Confirm — return to quoting")
                                         </button>
-                                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => returningToQuoting = false">Keep</button>
+                                        <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => returningToQuoting = false">Keep</button>
                                     </div>
                                 }
                             </div>
@@ -568,10 +568,10 @@ else
                                     Return to quoting instead so the V-ref is freed.
                                 </p>
                                 <div class="flex gap-2">
-                                    <button type="button" class="btn-secondary w-full text-negative" disabled="@busy" @onclick="RejectOrder">
+                                    <button type="button" class="btn-neutral w-full text-negative" disabled="@busy" @onclick="RejectOrder">
                                         @(busy ? "Rejecting…" : "Confirm — reject variation order")
                                     </button>
-                                    <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => rejectingOrder = false">Keep</button>
+                                    <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => rejectingOrder = false">Keep</button>
                                 </div>
                             </div>
                         }
@@ -667,10 +667,10 @@ else
                                 records change — but this can't be undone.
                             </p>
                             <div class="flex gap-2">
-                                <button type="button" class="btn-secondary w-full text-negative" disabled="@busy" @onclick="DeleteOrder">
+                                <button type="button" class="btn-neutral w-full text-negative" disabled="@busy" @onclick="DeleteOrder">
                                     @(busy ? "Deleting…" : "Confirm — delete variation")
                                 </button>
-                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => deletingOrder = false">Keep</button>
+                                <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => deletingOrder = false">Keep</button>
                             </div>
                         }
                     </div>

@@ -80,6 +80,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<XeroLedgerLineEntity> XeroLedgerLines => Set<XeroLedgerLineEntity>();
     public DbSet<XeroCostSplitEntity> XeroCostSplits => Set<XeroCostSplitEntity>();
     public DbSet<XeroLineWorkOrderLinkEntity> XeroLineWorkOrderLinks => Set<XeroLineWorkOrderLinkEntity>();
+    // The discussion thread on disputed ledger lines (the allocation page's Disputed bucket).
+    public DbSet<XeroDisputeMessageEntity> XeroDisputeMessages => Set<XeroDisputeMessageEntity>();
 
     // The stored site P&L: per project per month, from Xero's profit & loss report filtered by
     // the project's Sites tracking option — feeds the Profit Summary's cumulative chart.
@@ -316,6 +318,9 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<XeroLineTimesheetCoverEntity>()
             .HasIndex(row => row.XeroLedgerLineId)
             .HasDatabaseName("IX_XeroLineTimesheetCovers_XeroLedgerLineId");
+        modelBuilder.Entity<XeroDisputeMessageEntity>()
+            .HasIndex(row => row.XeroLedgerLineId)
+            .HasDatabaseName("IX_XeroDisputeMessages_XeroLedgerLineId");
         modelBuilder.Entity<SiteAttendanceEntity>()
             .HasIndex(row => new { row.ProjectId, row.WorkDate })
             .HasDatabaseName("IX_SiteAttendances_ProjectId_WorkDate");

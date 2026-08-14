@@ -134,6 +134,9 @@ else
                     <button class="@TabClass(XeroAllocationStatus.Bucketed)" @onclick="() => SwitchTab(XeroAllocationStatus.Bucketed)">
                         Buckets (@CountOf(XeroAllocationStatus.Bucketed))
                     </button>
+                    <button class="@TabClass(XeroAllocationStatus.Disputed)" @onclick="() => SwitchTab(XeroAllocationStatus.Disputed)">
+                        Disputed (@CountOf(XeroAllocationStatus.Disputed))
+                    </button>
                     <button class="@TabClass(XeroAllocationStatus.Ignored)" @onclick="() => SwitchTab(XeroAllocationStatus.Ignored)">
                         Ignored (@CountOf(XeroAllocationStatus.Ignored))
                     </button>
@@ -171,8 +174,8 @@ else
                             disabled="@(isBusy || string.IsNullOrEmpty(bulkProjectId) || string.IsNullOrEmpty(bulkCostCenterCode))"
                             @onclick="BulkAllocateAsync">Allocate selected</button>
                     <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
-                            title="Save the project and set its Xero site on every selected line — cost centres to follow"
-                            disabled="@(isBusy || string.IsNullOrEmpty(bulkProjectId) || !string.IsNullOrEmpty(bulkCostCenterCode))"
+                            title="Save the project and set its Xero site on every selected line — moves them to that project's tab, cost centres to follow"
+                            disabled="@(isBusy || string.IsNullOrEmpty(bulkProjectId))"
                             @onclick="BulkSetProjectAsync">Set selected</button>
                     <span class="text-content-subtle">·</span>
                     <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="bulkBucket">
@@ -196,6 +199,9 @@ else
                     <span class="text-content font-medium">@selectedIds.Count selected</span>
                     <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
                             disabled="@isBusy" @onclick="OpenSendToCostCentre">Send to cost centre…</button>
+                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
+                            title="Move the selected lines to another project — each keeps its cost centre, and the Xero site is rewritten"
+                            disabled="@isBusy" @onclick="OpenSendToProject">Send to project…</button>
                     <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
                             title="Return the selected lines to the unallocated queue"
                             disabled="@isBusy" @onclick="BulkUndoAsync">Undo selected</button>
@@ -237,6 +243,16 @@ else
                                 <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Project</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Cost centre</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Bucket</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
+                            }
+                            else if (activeTab == XeroAllocationStatus.Disputed)
+                            {
+                                @* The dispute workbench: the coding both sides are converging on is
+                                   edited and SAVED here (visible to the other party), the thread is a
+                                   click away, and either side returns the line to allocation. *@
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Project</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Cost centre</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Dispute</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
                             }
                             else
@@ -330,14 +346,16 @@ else
                                         <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                                                 disabled="@(isBusy || !CanAllocate(line) || CanBucket(line))"
                                                 @onclick="() => AllocateAsync(line)">Allocate</button>
-                                        @* The half-step: project known, cost centre not yet. Saves the
+                                        @* The half-step: project decided, allocation not yet. Saves the
                                            project — which is when the row moves to that project's tab —
-                                           and writes the Xero site without approving. Pressing it again
-                                           is the Xero retry. Unset (only on lines with a saved project)
-                                           reverses an accidental Set: project cleared here and the site
-                                           removed from the still-draft bill in Xero. *@
+                                           and writes the Xero site without approving. This is also the
+                                           change-of-mind move: pick a different project on a line the
+                                           accountant coded and Set re-sites it in Xero and re-tabs it
+                                           here. Pressing it again is the Xero retry. Unset (only on
+                                           lines with a saved project) reverses an accidental Set:
+                                           project cleared here and the site removed in Xero. *@
                                         <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40"
-                                                title="Save the project and set its Xero site now — cost centre to follow"
+                                                title="Save the project and set its Xero site now — moves the line to that project's tab, cost centre to follow"
                                                 disabled="@(isBusy || !CanSetProject(line))"
                                                 @onclick="() => SetProjectAsync(line)">Set</button>
                                         @if (line.ProjectId is not null)
@@ -356,6 +374,55 @@ else
                                         <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                                                 disabled="@isBusy"
                                                 @onclick="() => IgnoreAsync(line)">Ignore</button>
+                                        <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
+                                                title="Contest this cost — moves it to the Disputed tab and opens a discussion with the accountant"
+                                                disabled="@isBusy"
+                                                @onclick="() => OpenDispute(line)">Dispute…</button>
+                                    </td>
+                                }
+                                else if (activeTab == XeroAllocationStatus.Disputed)
+                                {
+                                    <td class="px-3 py-2.5">
+                                        <SearchSelect Options="@ProjectOptions" WidthClass="w-44"
+                                                      Value="@SelectedProjectFor(line)"
+                                                      ValueChanged="value => SetProject(line.XeroLedgerLineId, value)" />
+                                    </td>
+                                    <td class="px-3 py-2.5">
+                                        <SearchSelect Options="@CostCenterOptions" WidthClass="w-52"
+                                                      Value="@SelectedCostCenterFor(line)"
+                                                      ValueChanged="value => SetCostCenter(line.XeroLedgerLineId, value)" />
+                                    </td>
+                                    <td class="px-3 py-2.5 text-content-muted max-w-sm">
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content"
+                                                @onclick="() => OpenDiscussion(line)">
+                                            Discussion (@(line.DisputeMessages?.Count ?? 0))…
+                                        </button>
+                                        <span class="block text-xs text-content-subtle mt-1">
+                                            Disputed by @(line.AllocatedBy ?? "—")
+                                            @(line.AllocatedAtUtc is { } at ? $" · {at.ToLocalTime():d MMM yyyy}" : "")
+                                        </span>
+                                        @if (line.DisputeMessages?.LastOrDefault() is { } latest)
+                                        {
+                                            <span class="block text-xs text-content-subtle truncate" title="@latest.Body">
+                                                “@latest.Body”
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right whitespace-nowrap">
+                                        @* Save persists the coding both sides are converging on — the
+                                           line STAYS disputed, but the other party sees the proposal.
+                                           Return to allocation is the resolution: back to the queue
+                                           with the agreed coding kept, so a fully coded line lands on
+                                           its project's tab armed for Allocate. Either side may press
+                                           either button. *@
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                                                title="Save the proposed project and cost centre on the line — it stays disputed"
+                                                disabled="@(isBusy || string.IsNullOrEmpty(SelectedProjectFor(line)))"
+                                                @onclick="() => SaveDisputedCodingAsync(line)">Save</button>
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface ml-2 disabled:opacity-40"
+                                                title="Resolve the dispute — the line returns to the allocation queue keeping the coding set here"
+                                                disabled="@isBusy"
+                                                @onclick="() => ResolveDisputeAsync(line)">Return to allocation</button>
                                     </td>
                                 }
                                 else
@@ -417,6 +484,12 @@ else
                                         }
                                         <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                                                 disabled="@isBusy" @onclick="() => ResetAsync(line)">Undo</button>
+                                        @if (activeTab == XeroAllocationStatus.Allocated)
+                                        {
+                                            <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
+                                                    title="Contest this cost — un-allocates it into the Disputed tab and opens a discussion with the accountant"
+                                                    disabled="@isBusy" @onclick="() => OpenDispute(line)">Dispute…</button>
+                                        }
                                     </td>
                                 }
                             </tr>
@@ -440,7 +513,10 @@ else
                 <p class="text-xs text-content-subtle">
                     @Visible.Count lines · @Money(Visible.Sum(SignedNet)) net.
                     Allocating every line of a draft bill writes its Sites / Cost Code tracking back to Xero
-                    and approves it; bills already approved in Xero are allocated in JPMS only.
+                    and approves it. Moving a line between projects (Set, or Send to project) rewrites its
+                    Xero Sites tracking on draft and approved bills alike; paid bills are locked in Xero
+                    and move in JPMS only. A disputed line waits on the Disputed tab — its bill is never
+                    auto-approved — until either side returns it to allocation.
                 </p>
                 @if (PageCount > 1)
                 {
@@ -513,6 +589,145 @@ else
                         bills already approved in Xero are re-coded in JPMS only.
                     </p>
                 </div>
+            }
+        </Modal>
+
+        @* Bulk re-site from the Allocated tab: the change-of-mind move. Every
+           selected line moves to the chosen project, each keeping the cost
+           centre it's already coded to, and the bill's Sites tracking in Xero
+           is rewritten to the new project's site — draft or approved (paid
+           bills are locked in Xero and move in JPMS only). Re-allocating
+           replaces any stored split, so lines split across cost centres have
+           no single centre to keep and are left unchanged. *@
+        <Modal IsOpen="@sendToProjectOpen" Title="Send to project"
+               ConfirmLabel="@(isApplying ? "Sending…" : $"Send {ProjectSendableSelected.Count} {(ProjectSendableSelected.Count == 1 ? "line" : "lines")}")" CancelLabel="Cancel"
+               ConfirmDisabled="@(isBusy || string.IsNullOrEmpty(sendProjectId) || ProjectSendableSelected.Count == 0)"
+               OnConfirm="SendToProjectAsync" OnCancel="CloseSendToProject" Class="max-w-lg">
+            @if (sendToProjectOpen)
+            {
+                <div class="space-y-4">
+                    @if (sendProjectError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@sendProjectError</p>
+                    }
+                    <p class="text-sm text-content-muted">
+                        <span class="text-content font-medium">@ProjectSendableSelected.Count @(ProjectSendableSelected.Count == 1 ? "line" : "lines")</span>
+                        · @Money(ProjectSendableSelected.Sum(SignedNet)) net move to the chosen project.
+                        Each line keeps its cost centre — only the project changes.
+                    </p>
+                    @if (SelectedAllocated.Count > ProjectSendableSelected.Count)
+                    {
+                        <p class="text-xs text-content-subtle">
+                            @(SelectedAllocated.Count - ProjectSendableSelected.Count) of the selected lines are split across
+                            cost centres, so there's no single centre to keep — they'll be left unchanged.
+                            Undo and re-split those lines individually.
+                        </p>
+                    }
+                    <SearchSelect Options="@ProjectOptions" WidthClass="w-full" Placeholder="Project…"
+                                  @bind-Value="sendProjectId" />
+                    <p class="text-xs text-content-subtle">
+                        The Xero Sites tracking is rewritten to the new project's site on draft and
+                        approved bills alike; paid bills are locked in Xero and move in JPMS only.
+                    </p>
+                </div>
+            }
+        </Modal>
+
+        @* Opening a dispute: the line moves to the Disputed tab — which is itself the
+           signal to the accountant, like the Unallocated count — with an optional
+           opening message starting the thread. Any coding on the line is kept as the
+           position under discussion. *@
+        <Modal IsOpen="@(disputeLine is not null)" Title="Dispute this cost"
+               ConfirmLabel="@(isApplying ? "Disputing…" : "Move to Disputed")" CancelLabel="Cancel"
+               ConfirmDisabled="@isBusy" OnConfirm="ConfirmDisputeAsync" OnCancel="CloseDispute" Class="max-w-lg">
+            @if (disputeLine is not null)
+            {
+                <div class="space-y-4">
+                    @if (disputeError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@disputeError</p>
+                    }
+                    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm">
+                        <span class="text-content font-medium">@(disputeLine.ContactName ?? "—")</span>
+                        <span class="text-content-muted"> · @(disputeLine.Description ?? "—")</span>
+                        <span class="block text-xs text-content-subtle mt-0.5">
+                            @(disputeLine.InvoiceNumber ?? "—") · @DateText(disputeLine.Date) · @Money(SignedNet(disputeLine)) net
+                        </span>
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1.5">
+                            Why is this disputed?
+                        </label>
+                        <textarea class="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+                                  rows="4" placeholder="Optional — starts the discussion, e.g. “This isn't ours / wrong site — should this be on Elm Grove?”"
+                                  @bind="disputeMessage" @bind:event="oninput"></textarea>
+                    </div>
+                    <p class="text-xs text-content-subtle">
+                        The line moves to the Disputed tab, where the discussion continues and the agreed
+                        project and cost centre can be set. Either side returns it to allocation when settled.
+                    </p>
+                </div>
+            }
+        </Modal>
+
+        @* The discussion thread on a disputed line. Re-resolved from the store on every
+           render (not a captured snapshot), so a reply just sent — or the other side's
+           message arriving with a refresh — appears without reopening the modal. *@
+        <Modal IsOpen="@(discussLineId is not null)" Title="Dispute discussion" ShowFooter="false"
+               OnCancel="CloseDiscussion" Class="max-w-2xl">
+            @if (DiscussLine is { } discussed)
+            {
+                <div class="space-y-4">
+                    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm">
+                        <span class="text-content font-medium">@(discussed.ContactName ?? "—")</span>
+                        <span class="text-content-muted"> · @(discussed.Description ?? "—")</span>
+                        <span class="block text-xs text-content-subtle mt-0.5">
+                            @(discussed.InvoiceNumber ?? "—") · @DateText(discussed.Date) · @Money(SignedNet(discussed)) net
+                            · disputed by @(discussed.AllocatedBy ?? "—")
+                        </span>
+                    </div>
+
+                    @if (discussed.DisputeMessages is { Count: > 0 } thread)
+                    {
+                        <div class="space-y-3 max-h-[45vh] overflow-y-auto pr-1">
+                            @foreach (var message in thread)
+                            {
+                                <div class="rounded-lg border border-line px-3 py-2">
+                                    <span class="block text-xs text-content-subtle">
+                                        @message.Author · @message.SentAtUtc.ToLocalTime().ToString("d MMM yyyy HH:mm")
+                                    </span>
+                                    <span class="block text-sm text-content whitespace-pre-wrap mt-0.5">@message.Body</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-sm text-content-subtle">No messages yet — write the first one below.</p>
+                    }
+
+                    @if (discussError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@discussError</p>
+                    }
+                    <div class="flex items-start gap-2">
+                        <textarea class="grow bg-surface border border-line rounded-lg px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+                                  rows="3" placeholder="Reply…" @bind="discussMessage" @bind:event="oninput"></textarea>
+                        <button class="text-sm font-medium rounded-lg px-3 py-2 bg-content text-surface disabled:opacity-50"
+                                disabled="@(isBusy || string.IsNullOrWhiteSpace(discussMessage))"
+                                @onclick="SendDiscussionMessageAsync">Send</button>
+                    </div>
+                    <p class="text-xs text-content-subtle">
+                        Set the agreed project and cost centre on the line's row (Save keeps it disputed);
+                        Return to allocation resolves the dispute and puts the line back in the queue.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <p class="text-sm text-content-subtle py-4">
+                    This line is no longer disputed — it has been returned to allocation.
+                </p>
             }
         </Modal>
 
@@ -680,6 +895,27 @@ else
     private bool sendToCostCentreOpen;
     private string sendCostCenterCode = "";
     private string? sendError;
+    private bool sendToProjectOpen;
+    private string sendProjectId = "";
+    private string? sendProjectError;
+
+    // -- Dispute state ---------------------------------------------------------
+    // disputeLine: the line the "Dispute…" modal is composing an opening message
+    // for (a snapshot is fine — nothing about it changes while composing).
+    // discussLineId: the DISPUTED line whose thread modal is open — held as an id
+    // and re-resolved from the store each render, so a sent reply (which reloads
+    // the tab) shows up in the open modal instead of a stale snapshot.
+    private XeroLedgerLine? disputeLine;
+    private string disputeMessage = "";
+    private string? disputeError;
+    private string? discussLineId;
+    private string discussMessage = "";
+    private string? discussError;
+
+    private XeroLedgerLine? DiscussLine =>
+        discussLineId is null
+            ? null
+            : Ledger.Lines(XeroAllocationStatus.Disputed)?.FirstOrDefault(line => line.XeroLedgerLineId == discussLineId);
 
     private bool isBusy => isSyncing || isRechecking || isApplying;
 
@@ -794,7 +1030,7 @@ else
     // yet?" gate asks about. Deliberately not derived from the loaded tab: the tab bar is inside
     // that gate, and a remembered-but-empty tab would otherwise lock the user out of the page.
     private static int LedgerTotal(XeroLedgerCounts counts) =>
-        counts.Unallocated + counts.Allocated + counts.Bucketed + counts.Ignored;
+        counts.Unallocated + counts.Allocated + counts.Bucketed + counts.Ignored + counts.Disputed;
 
     // Whether the empty tab is empty because of a filter the user set, or just empty.
     private bool HasTabFilters =>
@@ -849,6 +1085,12 @@ else
         {
             columns.Add(new ExcelColumn("Reason"));
         }
+        else if (activeTab == XeroAllocationStatus.Disputed)
+        {
+            columns.Add(new ExcelColumn("Proposed project"));
+            columns.Add(new ExcelColumn("Proposed cost centre"));
+            columns.Add(new ExcelColumn("Latest message"));
+        }
         if (activeTab != XeroAllocationStatus.Unallocated)
         {
             columns.Add(new ExcelColumn("By"));
@@ -893,6 +1135,12 @@ else
             else if (activeTab == XeroAllocationStatus.Ignored)
             {
                 cells.Add(line.Note);
+            }
+            else if (activeTab == XeroAllocationStatus.Disputed)
+            {
+                cells.Add(line.ProjectId is null ? null : ProjectName(line.ProjectId));
+                cells.Add(line.CostCenterCode is null ? null : CostCenterText(line.CostCenterCode));
+                cells.Add(line.DisputeMessages?.LastOrDefault()?.Body ?? line.Note);
             }
             if (activeTab != XeroAllocationStatus.Unallocated)
             {
@@ -990,11 +1238,15 @@ else
 
     // -- SetProject: the half-step (project saved + Xero site written, line stays queued) --
 
-    // Mirrors the Allocate arming rule: exactly a project, no cost centre, and no
-    // bucket choice competing for the row's intent.
+    // A project pick alone arms Set. A chosen or suggested cost centre must NOT
+    // block it: accountant-coded lines arrive with a Xero cost-code suggestion
+    // pre-filling that dropdown, and Set is exactly how a wrong site guess gets
+    // moved to the right project's tab (decision 2026-08-14 — it used to require
+    // an empty cost centre, which greyed Set out on precisely those lines). Only
+    // a bucket choice competes for the row's intent; when both project + centre
+    // are armed, Allocate and Set sit side by side as the full and half steps.
     private bool CanSetProject(XeroLedgerLine line) =>
         !string.IsNullOrEmpty(SelectedProjectFor(line))
-        && string.IsNullOrEmpty(SelectedCostCenterFor(line))
         && !CanBucket(line);
 
     private async Task SetProjectAsync(XeroLedgerLine line) =>
@@ -1090,6 +1342,189 @@ else
     private async Task BulkUndoAsync() =>
         await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.Reset));
 
+    // -- Allocated-tab bulk re-site --------------------------------------------
+    // The change-of-mind move: costs allocated to (or coded by the accountant
+    // onto) the wrong project get sent to the right one without undoing. The
+    // mirror of "Send to cost centre": each line keeps its centre, only the
+    // project changes — sent as one Allocate per cost-centre group, since the
+    // API allocates a batch to a single project + centre. Re-allocating
+    // replaces any stored split, so a line split across centres has no single
+    // centre to keep and is left unchanged (called out in the modal).
+
+    // A split line's CostCenterCode is null (its centres live in Splits rows).
+    private IReadOnlyList<XeroLedgerLine> ProjectSendableSelected =>
+        SelectedAllocated.Where(line => line.CostCenterCode is not null).ToList();
+
+    private void OpenSendToProject()
+    {
+        sendToProjectOpen = true;
+        sendProjectId = "";
+        sendProjectError = null;
+    }
+
+    private void CloseSendToProject()
+    {
+        sendToProjectOpen = false;
+        sendProjectError = null;
+    }
+
+    // -- Disputes ---------------------------------------------------------------
+    // The lifecycle: Dispute… (queue or Allocated tab) parks the line in the
+    // Disputed bucket with an optional opening message — the tab count is what
+    // tells the accountant, exactly like Unallocated does. On the Disputed tab
+    // the two sides talk in the line's thread, Save the coding they agree on
+    // (visible to each other, line stays disputed), and either one presses
+    // Return to allocation: back to the queue with the agreed coding kept, so a
+    // fully coded line lands on its project's tab armed for Allocate. Xero's
+    // Sites tracking is written at resolution, not while the dispute is open.
+
+    private void OpenDispute(XeroLedgerLine line)
+    {
+        disputeLine = line;
+        disputeMessage = "";
+        disputeError = null;
+    }
+
+    private void CloseDispute()
+    {
+        disputeLine = null;
+        disputeError = null;
+    }
+
+    private async Task ConfirmDisputeAsync()
+    {
+        if (disputeLine is null || isBusy) return;
+        var line = disputeLine;
+        isApplying = true; disputeError = null;
+        try
+        {
+            await Ledger.ApplyAsync(new SetXeroAllocation(
+                new[] { line.XeroLedgerLineId },
+                XeroAllocationAction.Dispute,
+                Note: string.IsNullOrWhiteSpace(disputeMessage) ? null : disputeMessage.Trim()));
+            selectedIds.Remove(line.XeroLedgerLineId);
+            CloseDispute();
+            syncMessage = $"{line.ContactName ?? "The line"} · {Money(SignedNet(line))} moved to Disputed — the discussion lives on that tab.";
+        }
+        catch (CommandFailedException failure) { disputeError = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    private void OpenDiscussion(XeroLedgerLine line)
+    {
+        discussLineId = line.XeroLedgerLineId;
+        discussMessage = "";
+        discussError = null;
+    }
+
+    private void CloseDiscussion()
+    {
+        discussLineId = null;
+        discussError = null;
+    }
+
+    private async Task SendDiscussionMessageAsync()
+    {
+        if (discussLineId is null || isBusy || string.IsNullOrWhiteSpace(discussMessage)) return;
+        isApplying = true; discussError = null;
+        try
+        {
+            await Ledger.ApplyAsync(new SetXeroAllocation(
+                new[] { discussLineId },
+                XeroAllocationAction.AddDisputeMessage,
+                Note: discussMessage.Trim()));
+            discussMessage = "";
+            // The store reload has already refreshed the Disputed tab, so DiscussLine
+            // now resolves to the line carrying the new message.
+        }
+        catch (CommandFailedException failure) { discussError = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    /// <summary>
+    /// Persists the coding being converged on mid-dispute (project required,
+    /// centre optional) — the line stays disputed; the other side sees the
+    /// proposal. Xero is not touched until the dispute is resolved.
+    /// </summary>
+    private async Task SaveDisputedCodingAsync(XeroLedgerLine line)
+    {
+        var projectId = SelectedProjectFor(line);
+        if (string.IsNullOrEmpty(projectId)) return;
+        var centre = SelectedCostCenterFor(line);
+        await ApplyAsync(new SetXeroAllocation(
+            new[] { line.XeroLedgerLineId },
+            XeroAllocationAction.SetProject,
+            projectId,
+            string.IsNullOrEmpty(centre) ? null : centre));
+    }
+
+    private async Task ResolveDisputeAsync(XeroLedgerLine line)
+    {
+        if (isBusy) return;
+        // Unsaved dropdown picks travel with the resolution: they are saved first,
+        // then the line resolves — so "pick, then Return to allocation" needs no
+        // separate Save. If the save fails, the resolve does not run.
+        var projectId = SelectedProjectFor(line);
+        var centre = SelectedCostCenterFor(line);
+        isApplying = true; errorMessage = null;
+        try
+        {
+            if (!string.IsNullOrEmpty(projectId)
+                && (projectId != line.ProjectId || (string.IsNullOrEmpty(centre) ? null : centre) != line.CostCenterCode))
+                await Ledger.ApplyAsync(new SetXeroAllocation(
+                    new[] { line.XeroLedgerLineId },
+                    XeroAllocationAction.SetProject,
+                    projectId,
+                    string.IsNullOrEmpty(centre) ? null : centre));
+            await Ledger.ApplyAsync(new SetXeroAllocation(
+                new[] { line.XeroLedgerLineId }, XeroAllocationAction.ResolveDispute));
+            selectedIds.Remove(line.XeroLedgerLineId);
+            chosenProject.Remove(line.XeroLedgerLineId);
+            chosenCostCenter.Remove(line.XeroLedgerLineId);
+            chosenBucket.Remove(line.XeroLedgerLineId);
+            if (discussLineId == line.XeroLedgerLineId) CloseDiscussion();
+            syncMessage = "Dispute resolved — the line is back in the allocation queue"
+                + (string.IsNullOrEmpty(projectId) ? "." : $" under {ProjectName(projectId)}, ready to allocate.");
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    private async Task SendToProjectAsync()
+    {
+        if (isBusy || string.IsNullOrEmpty(sendProjectId)) return;
+        var sendable = ProjectSendableSelected;
+        var skipped = SelectedAllocated.Count - sendable.Count;
+        if (sendable.Count == 0) return;
+
+        isApplying = true; sendProjectError = null;
+        try
+        {
+            foreach (var group in sendable.GroupBy(line => line.CostCenterCode!))
+            {
+                var ids = group.Select(line => line.XeroLedgerLineId).ToList();
+                await Ledger.ApplyAsync(new SetXeroAllocation(
+                    ids, XeroAllocationAction.Allocate, sendProjectId, group.Key));
+                // Cleared per group, not at the end: a failure part-way leaves
+                // exactly the unapplied lines selected for a retry.
+                foreach (var id in ids)
+                {
+                    selectedIds.Remove(id);
+                    chosenProject.Remove(id);
+                    chosenCostCenter.Remove(id);
+                    chosenBucket.Remove(id);
+                }
+            }
+            sendToProjectOpen = false;
+            syncMessage = $"{sendable.Count} {(sendable.Count == 1 ? "line" : "lines")} sent to {ProjectName(sendProjectId)}."
+                + (skipped > 0
+                    ? $" {skipped} selected lines are split across cost centres and were left unchanged — undo and re-split those individually."
+                    : "");
+        }
+        catch (CommandFailedException failure) { sendProjectError = failure.Message; }
+        finally { isApplying = false; }
+    }
+
     // The line-level project catches whole-line allocations and single-project
     // splits (the API keeps the common project on the line); per-split projects
     // catch a multi-project split any time one share belongs to the filter.
@@ -1135,11 +1570,12 @@ else
             : "bg-surface text-content-muted border-line hover:text-content")
         + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
 
-    // Mirrors the server's rule: a set (persisted) project counts as matched —
-    // it's a human decision and beats the suggestion — the centre must match.
+    // Mirrors the server's rule: persisted coding (Set, or the agreement carried
+    // out of a resolved dispute) counts as matched — a human decision beats the
+    // suggestion, never the other way.
     private int FullyMatchedCount =>
         UnallocatedLines.Count(line => (line.ProjectId ?? line.SuggestedProjectId) is not null
-                                       && line.SuggestedCostCenterCode is not null);
+                                       && (line.CostCenterCode ?? line.SuggestedCostCenterCode) is not null);
 
     private async Task AllocateMatchedAsync()
     {
@@ -1539,9 +1975,14 @@ else
         }
     }
 
+    // Priority mirrors SelectedProjectFor: the user's local pick > the persisted
+    // centre (saved mid-dispute, or carried out of a resolved dispute) > the
+    // Xero-tracking suggestion.
     private string SelectedCostCenterFor(XeroLedgerLine line)
     {
-        var value = (chosenCostCenter.TryGetValue(line.XeroLedgerLineId, out var chosen) ? chosen : line.SuggestedCostCenterCode) ?? "";
+        var value = (chosenCostCenter.TryGetValue(line.XeroLedgerLineId, out var chosen)
+            ? chosen
+            : line.CostCenterCode ?? line.SuggestedCostCenterCode) ?? "";
         return CostCenters.Active().Any(centre => centre.Code == value) ? value : "";
     }
 
@@ -1632,6 +2073,9 @@ else
         bucketFilter = null;
         allocatedProjectFilter = "";
         CloseSendToCostCentre();
+        CloseSendToProject();
+        CloseDispute();
+        CloseDiscussion();
         page = 0;
         // On a project tab every line is already pointed at that project, so
         // pre-arm the bulk bar's project with it.

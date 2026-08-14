@@ -27,10 +27,12 @@ public sealed class ListXeroLedgerLinesHandler : IQueryHandler<ListXeroLedgerLin
 
         var splitsByLine = await XeroLedgerReads.SplitsForAsync(context, entities, cancellationToken);
         var suggester = await XeroLedgerReads.SuggesterForAsync(context, entities, cancellationToken);
+        var messagesByLine = await XeroLedgerReads.DisputeMessagesForAsync(context, entities, cancellationToken);
 
         return entities.Select(entity => XeroLedgerReads.ToModel(
             entity,
             splitsByLine.TryGetValue(entity.XeroLedgerLineId, out var splits) ? splits : null,
-            suggester)).ToList();
+            suggester,
+            messagesByLine.TryGetValue(entity.XeroLedgerLineId, out var messages) ? messages : null)).ToList();
     }
 }

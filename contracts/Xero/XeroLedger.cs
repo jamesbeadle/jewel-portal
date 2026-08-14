@@ -19,15 +19,32 @@ namespace Jewel.JPMS.Contracts.Xero;
 // already approved outside JPMS are still allocated portal-side only.
 // ============================================================================
 
-public enum XeroAllocationStatus { Unallocated = 0, Allocated = 1, Ignored = 2, Bucketed = 3 }
+// Disputed (2026-08-14): a cost the director contests, parked in its own bucket while he and the
+// accountant talk it through on the allocation page — a message thread per line, coding settable
+// mid-dispute, and either side resolves it back into the queue.
+public enum XeroAllocationStatus { Unallocated = 0, Allocated = 1, Ignored = 2, Bucketed = 3, Disputed = 4 }
 
 /// <summary>
 /// SetProject is the half-step before Allocate: it persists the project on a
 /// line that STAYS Unallocated (so it sits in that project's queue awaiting a
 /// cost centre) and best-effort writes the project's Site tracking to Xero
 /// without approving the bill. The line leaves the queue only via Allocate.
+/// SetProject also applies to Disputed lines (saving the coding both sides are
+/// converging on, Xero untouched until resolution), and may carry a
+/// CostCenterCode to persist alongside the project.
+///
+/// The dispute trio (2026-08-14): Dispute parks a queued or allocated line in
+/// the Disputed bucket (Note = the opening message, stored on the thread);
+/// AddDisputeMessage appends to a disputed line's thread and changes nothing
+/// else; ResolveDispute returns the line to Unallocated keeping whatever
+/// project + cost centre were agreed — set, it lands on that project's tab
+/// armed for Allocate, and the agreed Site tracking is written to Xero.
 /// </summary>
-public enum XeroAllocationAction { Allocate = 0, Ignore = 1, Reset = 2, AllocateToBucket = 3, SetProject = 4 }
+public enum XeroAllocationAction
+{
+    Allocate = 0, Ignore = 1, Reset = 2, AllocateToBucket = 3, SetProject = 4,
+    Dispute = 5, AddDisputeMessage = 6, ResolveDispute = 7
+}
 
 /// <summary>
 /// Outcome of the last attempt to write an invoice's allocation back to Xero
@@ -85,7 +102,7 @@ public sealed record ListXeroLedgerLines(XeroAllocationStatus? Status = null)
 public sealed record GetXeroLedgerCounts : IQuery<XeroLedgerCounts>;
 
 /// <summary>One count per allocation status, for the allocation page's tab bar.</summary>
-public sealed record XeroLedgerCounts(int Unallocated, int Allocated, int Bucketed, int Ignored)
+public sealed record XeroLedgerCounts(int Unallocated, int Allocated, int Bucketed, int Ignored, int Disputed = 0)
 {
     public int For(XeroAllocationStatus status) => status switch
     {
@@ -93,11 +110,20 @@ public sealed record XeroLedgerCounts(int Unallocated, int Allocated, int Bucket
         XeroAllocationStatus.Allocated   => Allocated,
         XeroAllocationStatus.Bucketed    => Bucketed,
         XeroAllocationStatus.Ignored     => Ignored,
+        XeroAllocationStatus.Disputed    => Disputed,
         _ => 0
     };
 
-    public static readonly XeroLedgerCounts Empty = new(0, 0, 0, 0);
+    public static readonly XeroLedgerCounts Empty = new(0, 0, 0, 0, 0);
 }
+
+/// <summary>
+/// One message in a disputed line's discussion — the director and the accountant
+/// talking a contested cost through on the allocation page. Oldest first when
+/// carried on <see cref="XeroLedgerLine.DisputeMessages"/>. The thread survives
+/// resolution, so re-disputing a line continues the same conversation.
+/// </summary>
+public sealed record XeroDisputeMessage(string Author, string Body, DateTimeOffset SentAtUtc);
 
 /// <summary>
 /// The allocated ledger lines coded to one project, newest first. Serves the labour tab's
@@ -153,7 +179,10 @@ public sealed record XeroLedgerLine(
     // Whether Xero holds attachments for this line's invoice (the supplier's
     // document, published by Dext) — arms the invoice viewer on the allocation
     // page. Refreshed on every sync like the other Xero facts.
-    bool HasAttachments = false);
+    bool HasAttachments = false,
+    // The dispute discussion, oldest first — populated only on Disputed lines
+    // (the only place the thread renders); null elsewhere.
+    IReadOnlyList<XeroDisputeMessage>? DisputeMessages = null);
 
 /// <summary>
 /// The attachments Xero holds for one purchase invoice or credit note — the
@@ -203,13 +232,17 @@ public sealed record AllocateSuggestedXeroLines(string? AllocatedBy = null) : IC
 /// single line, never a batch). A split entry without a ProjectId falls back
 /// to the command's ProjectId. AllocateToBucket requires a Bucket from
 /// <see cref="XeroBuckets.All"/>; Ignore takes an optional Note (reason);
-/// Reset returns lines to Unallocated. SetProject takes ProjectId only and
-/// applies to Unallocated lines: the project is saved (line stays Unallocated,
-/// queued under that project) and its Xero Site tracking is written without
-/// approving the bill; a null ProjectId unsets — the saved project is cleared
-/// and the Site tracking removed from the still-draft bill. AllocatedBy is
-/// stamped server-side from the signed-in user — any client-supplied value is
-/// ignored.
+/// Reset returns lines to Unallocated. SetProject applies to Unallocated and
+/// Disputed lines: the project (and, when supplied, CostCenterCode) is saved
+/// without leaving the current status; on queued lines the project's Xero Site
+/// tracking is written without approving the bill (disputed lines wait for
+/// resolution); a null ProjectId unsets — the saved coding is cleared and the
+/// Site tracking removed from the bill. Dispute (Note = optional opening
+/// message) parks queued or allocated lines in the Disputed bucket;
+/// AddDisputeMessage (Note required) appends to a disputed line's thread;
+/// ResolveDispute returns disputed lines to Unallocated keeping their agreed
+/// coding, writing the agreed Site tracking to Xero. AllocatedBy is stamped
+/// server-side from the signed-in user — any client-supplied value is ignored.
 /// </summary>
 public sealed record SetXeroAllocation(
     IReadOnlyList<string> XeroLedgerLineIds,

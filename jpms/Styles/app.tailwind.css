@@ -63,19 +63,29 @@
         @apply btn bg-accent text-accent-ink hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-accent;
     }
 
+    /* Secondary ACTION button — green outline. Every button that does something is green: solid
+       (btn-primary) for the page's main act, outline (btn-secondary) for the rest. Buttons that
+       back out — Cancel / Keep / Close / Back — use btn-neutral or btn-ghost so "do it" and
+       "never mind" stay visually distinct. */
     .btn-secondary {
-        @apply btn bg-surface-raised text-content border border-line hover:border-line-strong;
+        @apply btn bg-surface-raised text-accent border border-accent/40 hover:border-accent hover:bg-accent/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-accent/40 disabled:hover:bg-surface-raised;
+    }
+
+    /* The old grey bordered button, kept for dismissals (Cancel/Keep/Close/Back) and as the base
+       under destructive text-negative overrides. */
+    .btn-neutral {
+        @apply btn bg-surface-raised text-content border border-line hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-line;
     }
 
     .btn-ghost {
         @apply btn text-content-muted hover:text-content hover:bg-surface-raised;
     }
 
-    /* A Toolbar's icon button: fixed square, glyph inherits currentColor. Disabled styling lives
-       here (unlike btn-secondary) because toolbars are exactly where "can't right now" is common —
-       an export with no rows, a refresh already in flight. */
+    /* A Toolbar's icon button: fixed square, glyph inherits currentColor. Green like every other
+       action button; disabled styling is built in because toolbars are exactly where "can't right
+       now" is common — an export with no rows, a refresh already in flight. */
     .btn-icon {
-        @apply inline-flex items-center justify-center w-8 h-8 rounded-md border border-line bg-surface-raised text-content-muted transition hover:text-content hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-content-muted disabled:hover:border-line shrink-0;
+        @apply inline-flex items-center justify-center w-8 h-8 rounded-md border border-accent/40 bg-surface-raised text-accent transition hover:border-accent hover:bg-accent/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-accent/40 disabled:hover:bg-surface-raised shrink-0;
     }
 
     .data-table {
