@@ -81,22 +81,45 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
 
         try
         {
+            // Prompt caching (docs/ai — turn feel): the tool catalogue and the system prompt are
+            // stable across the hops of a turn and the turns of a conversation, so each carries a
+            // cache_control breakpoint. Cached prefix tokens cost ~10% and, more importantly here,
+            // skip re-processing — which is seconds off every hop. The transcript's own breakpoint
+            // is set by AiTurnRunner on the newest persisted block, so the prefix grows
+            // incrementally instead of being re-paid whole. Order matters to Anthropic's prefix
+            // match: tools, then system, then messages — volatile content therefore rides on the
+            // END of the messages array (the turn-context block), never in system.
             var payload = new Dictionary<string, object?>
             {
                 ["model"] = options.Model,
                 ["max_tokens"] = ConversationMaxTokens,
-                ["system"] = systemPrompt,
+                ["system"] = new object[]
+                {
+                    new Dictionary<string, object?>
+                    {
+                        ["type"] = "text",
+                        ["text"] = systemPrompt,
+                        ["cache_control"] = new { type = "ephemeral" }
+                    }
+                },
                 ["messages"] = messages
             };
 
             if (tools.Count > 0)
             {
                 payload["tools"] = tools
-                    .Select(tool => new
+                    .Select((tool, index) =>
                     {
-                        name = tool.Name,
-                        description = tool.Description,
-                        input_schema = tool.InputSchema
+                        var spec = new Dictionary<string, object?>
+                        {
+                            ["name"] = tool.Name,
+                            ["description"] = tool.Description,
+                            ["input_schema"] = tool.InputSchema
+                        };
+                        // The breakpoint goes on the LAST tool: it caches the whole catalogue.
+                        if (index == tools.Count - 1)
+                            spec["cache_control"] = new { type = "ephemeral" };
+                        return spec;
                     })
                     .ToArray();
             }

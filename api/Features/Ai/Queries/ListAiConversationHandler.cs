@@ -23,7 +23,14 @@ public sealed class ListAiConversationHandler
         var rows = await context.AiConversationMessages
             .AsNoTracking()
             .Where(row => row.ConversationId == query.ConversationId
-                          && row.Role != (int)AiChatRole.Tool)
+                          // Tool results and carried-over context are the model's reading, not the
+                          // user's conversation; assistant rows that carried tool calls are working
+                          // narration shown as a status line at the time, not bubbles — replaying
+                          // them would rewrite what the user actually saw.
+                          && row.Role != (int)AiChatRole.Tool
+                          && row.Role != (int)AiChatRole.Context
+                          && (row.Role != (int)AiChatRole.Assistant || row.ToolCallsJson == null)
+                          && row.Body != null && row.Body != "")
             .OrderBy(row => row.Sequence)
             .Select(row => new AiChatMessage(
                 row.MessageId, (AiChatRole)row.Role, row.Body, row.ToolName, row.PostedAt))

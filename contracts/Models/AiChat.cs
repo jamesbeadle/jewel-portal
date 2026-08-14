@@ -7,7 +7,11 @@ public enum AiChatRole
     Assistant = 1,
     /// <summary>A tool result. Kept in the transcript for audit and for the model's next turn, but
     /// not rendered as a bubble.</summary>
-    Tool = 2
+    Tool = 2,
+    /// <summary>Context carried over from the user's previous conversation when a task started a
+    /// fresh one. Replayed to the model as background, never rendered as a bubble — it is
+    /// continuity, not conversation.</summary>
+    Context = 3
 }
 
 public sealed record AiChatMessage(

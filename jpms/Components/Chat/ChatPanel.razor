@@ -9,6 +9,7 @@
 @inject NavigationManager Nav
 @inject ProjectListReadModel Projects
 @inject ICommandSender Commands
+@inject IQueryClient Queries
 @implements IDisposable
 
 @*
@@ -169,26 +170,16 @@
 
                 @if (messages.Count == 0 && !busy && AiTasks.Active is null)
                 {
-                    @* Suppressed during a task: the kick-off turn is on its way, and three prompts
-                       about something else is the panel not paying attention at the exact moment it
-                       was asked to do one specific job. *@
-                    <div class="grow overflow-y-auto px-5 py-6 flex flex-col items-center text-center">
+                    @* Suppressed during a task: the kick-off turn is on its way, and a greeting is
+                       the panel not paying attention at the exact moment it was asked to do one
+                       specific job. Deliberately just the one line — the header already names the
+                       page in view, and the conversation itself is where the assistant shows what
+                       it can do. *@
+                    <div class="grow overflow-y-auto px-5 py-6 flex flex-col items-center justify-center text-center">
                         <span class="w-11 h-11 rounded-xl border border-line bg-surface-raised flex items-center justify-center text-accent mb-3">
                             <ChatIcon Class="w-5 h-5" />
                         </span>
-                        <p class="text-sm font-semibold text-content mb-1">Ask about @ContextLabel</p>
-                        <p class="text-xs leading-relaxed text-content-subtle mb-5">
-                            The assistant reads the page you have open, so you can leave out the obvious.
-                        </p>
-                        <div class="w-full space-y-2">
-                            @foreach (var suggestion in Suggestions)
-                            {
-                                <button type="button" @onclick="() => SendSuggestion(suggestion)"
-                                        class="w-full text-left rounded-lg border border-line bg-surface-raised px-3 py-2 text-xs leading-snug text-content-muted hover:text-content hover:border-line-strong transition">
-                                    @suggestion
-                                </button>
-                            }
-                        </div>
+                        <p class="text-sm font-semibold text-content">How can I help you today?</p>
                     </div>
                 }
                 else
@@ -235,6 +226,16 @@
                                 <p class="text-xs leading-snug text-content-muted">@error</p>
                             </div>
                         }
+
+                        @if (showCarryOn && !busy)
+                        {
+                            @* One tap instead of typing "carry on": a new user message resets the
+                               server's derived look-up budget, so this is all a continuation needs. *@
+                            <button type="button" @onclick="CarryOn"
+                                    class="rounded-lg border border-line bg-surface-raised px-3 py-1.5 text-xs leading-snug text-content-muted hover:text-content hover:border-line-strong transition">
+                                Carry on
+                            </button>
+                        }
                     </div>
                 }
 
@@ -272,6 +273,11 @@
     private bool busy;
     private string? activityLabel;
     private string? error;
+    private bool showCarryOn;
+    // A task kick-off hands the previous conversation's id to the server so its tail can follow
+    // the user into the fresh one (the handover Context row). Consumed by the next Send.
+    private string? pendingPreviousConversationId;
+    private bool resumeAttempted;
 
     private bool CanUseAssistant =>
         Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
@@ -309,14 +315,12 @@
 
     private bool CannotSend => busy || string.IsNullOrWhiteSpace(draft);
 
-    private IReadOnlyList<string> Suggestions =>
-        ChatSuggestions.For(CurrentPath, PageProject?.Reference);
-
     // What it is doing right now beats what the task is broadly for, which beats nothing.
     private string BusyLabel => activityLabel ?? AiTasks.Active?.BusyLabel ?? "Thinking…";
 
+    // The same words as the empty state above it — one voice, not two competing prompts.
     private string ComposerPlaceholder => AiTasks.Active is null
-        ? $"Ask about {ContextLabel}…"
+        ? "How can I help you today?"
         : "Tell it what to change…";
 
     // "Can't change anything yet" is true of the portal and false of the form beside the panel. The
@@ -363,6 +367,7 @@
         Projects.OnChanged += StateHasChanged;
         Nav.LocationChanged += HandleLocationChanged;
         await Chat.EnsureAcknowledgementLoadedAsync();
+        await TryResumeAsync();
     }
 
     // The panel is instantiated before auth resolves, so the acknowledgement can only be read once
@@ -370,7 +375,47 @@
     private void HandleSessionChange()
     {
         _ = Chat.EnsureAcknowledgementLoadedAsync();
+        _ = TryResumeAsync();
         StateHasChanged();
+    }
+
+    /// <summary>
+    /// Picks the thread back up after a refresh or a new tab. The server holds every transcript;
+    /// all the browser forgets is WHICH conversation this panel was in, so the stored id plus
+    /// ListAiConversation is a full resume. Once, only into an empty panel, and never over a turn
+    /// in flight. A stored id that will not replay (deleted, or another environment's) is
+    /// forgotten so it cannot fail on every load.
+    /// </summary>
+    private async Task TryResumeAsync()
+    {
+        if (resumeAttempted) return;
+        if (!CanUseAssistant) return; // Also guarantees the session — and the storage key — are known.
+        resumeAttempted = true;
+
+        if (conversationId is not null || messages.Count > 0 || busy) return;
+        var stored = await Chat.LoadStoredConversationIdAsync();
+        if (string.IsNullOrWhiteSpace(stored)) return;
+
+        try
+        {
+            var replay = await Queries.AskAsync(new ListAiConversation(stored), CancellationToken.None);
+
+            // A turn may have started while the replay was in flight — its conversation wins.
+            if (conversationId is not null || messages.Count > 0 || busy) return;
+            if (replay.Count == 0)
+            {
+                await Chat.ForgetConversationAsync();
+                return;
+            }
+
+            conversationId = stored;
+            messages.AddRange(replay);
+            StateHasChanged();
+        }
+        catch
+        {
+            await Chat.ForgetConversationAsync();
+        }
     }
 
     private void HandleLocationChanged(object? sender, EventArgs args) => StateHasChanged();
@@ -419,7 +464,12 @@
         var kickoff = AiTasks.TakePendingKickoff();
         if (string.IsNullOrWhiteSpace(kickoff)) return;
 
+        // A task gets a fresh conversation, but the one the user was just in follows them across
+        // as a handover: the server copies its tail into the new conversation as background, so
+        // "draft it the way we just discussed" still means something.
+        var previousConversationId = conversationId;
         StartNewChat();
+        pendingPreviousConversationId = previousConversationId;
         draft = kickoff;
         await Send();
     }
@@ -432,6 +482,9 @@
         agentKey = null;
         draft = "";
         error = null;
+        showCarryOn = false;
+        pendingPreviousConversationId = null;
+        _ = Chat.ForgetConversationAsync();
     }
 
     /// <summary>The specialist agent in force, when one is — the orchestrator is the resting state
@@ -442,12 +495,6 @@
         && AgentCatalogue.Find(key) is { } agent
             ? $"{agent.DisplayName} agent"
             : null;
-
-    private async Task SendSuggestion(string suggestion)
-    {
-        draft = suggestion;
-        await Send();
-    }
 
     /// <summary>
     /// Everything the assistant needs about where the user is. The portal map is derived from
@@ -474,12 +521,28 @@
     /// <summary>Folds one hop into the panel, then repaints so the status line moves.</summary>
     private void Fold(AiTurnResult result)
     {
-        messages.AddRange(result.NewMessages.Where(m => m.Role != AiChatRole.User));
+        // Mid-turn assistant text is the model narrating its own next step ("Checking the
+        // variations register…") — asked for in the system prompt precisely so the wait can say
+        // what it is doing. It becomes the live status line, not a bubble; the reply that lands as
+        // a message is the hop with no tools left to run.
+        var working = result.Status == AiTurnStatus.NeedsContinue;
+        string? narration = null;
+        foreach (var message in result.NewMessages)
+        {
+            if (message.Role == AiChatRole.User) continue;
+            if (working && message.Role == AiChatRole.Assistant && !string.IsNullOrWhiteSpace(message.Body))
+            {
+                narration = message.Body;
+                continue;
+            }
+            messages.Add(message);
+        }
+
         foreach (var step in result.Steps) lastToolsUsed.Add(step.Tool);
         foreach (var action in result.UiActions) Apply(action);
 
         agentKey = result.AgentKey;
-        activityLabel = result.LatestLabel;
+        activityLabel = narration ?? result.LatestLabel;
 
         // No API key, or the call failed. Tell the dialog, so a form sitting blank waiting for a
         // draft fills itself in from the record instead.
@@ -496,8 +559,14 @@
         draft = "";
         error = null;
         busy = true;
+        showCarryOn = false;
         activityLabel = null;
         lastToolsUsed = new List<string>();
+
+        // The handover only makes sense on the FIRST message of a fresh conversation; consumed
+        // here so a retry cannot resend it into a conversation that meanwhile exists.
+        var previousConversationId = conversationId is null ? pendingPreviousConversationId : null;
+        pendingPreviousConversationId = null;
 
         // Show the user's own message straight away rather than waiting on the round trip. The
         // server's copy replaces it when the reply lands, so the id is only ever local.
@@ -513,9 +582,11 @@
             var scope = BuildScope();
 
             var result = await Commands.SendAsync(
-                new SendAiMessage(conversationId, text, scope, string.Empty), CancellationToken.None);
+                new SendAiMessage(conversationId, text, scope, string.Empty, previousConversationId),
+                CancellationToken.None);
 
             conversationId = result.ConversationId;
+            _ = Chat.RememberConversationAsync(conversationId);
 
             // Replace the optimistic user turn with the server's, then append the rest. Guarded:
             // StartNewChat can empty the list while this turn is in flight.
@@ -523,7 +594,8 @@
 
             // A turn is a sequence of hops. Each one is a single Claude call server-side, so the
             // panel can say what it is doing between them instead of sitting on one long request.
-            for (var hop = 0; hop < 8; hop++)
+            // The cap tracks AiTurnRunner.MaxHops (10) with headroom — the server is authoritative.
+            for (var hop = 0; hop < 12; hop++)
             {
                 Fold(result);
                 if (result.Status != AiTurnStatus.NeedsContinue) break;
@@ -534,7 +606,10 @@
             }
 
             if (result.Status == AiTurnStatus.Truncated)
-                error = "That answer was cut short — ask me to carry on and I'll pick it up.";
+            {
+                error = "That took more look-ups than one message allows.";
+                showCarryOn = true;
+            }
 
             // No API key, or the Claude call failed. Tell the dialog, so a form that is sitting
             // blank waiting for a draft fills itself in from the record instead.
@@ -555,6 +630,15 @@
         // Not recursive: TakePendingKickoff has already cleared the queue by the time Send runs
         // again, so the second pass returns immediately.
         await TryStartTaskAsync();
+    }
+
+    /// <summary>One tap instead of typing "carry on" — a new user message resets the server's
+    /// derived look-up budget, so this is all a continuation needs.</summary>
+    private async Task CarryOn()
+    {
+        showCarryOn = false;
+        draft = "Carry on from where you got to.";
+        await Send();
     }
 
     /// <summary>

@@ -23,9 +23,12 @@ namespace Jewel.JPMS.Api.Features.Ai;
 /// </summary>
 public sealed class AiTurnRunner
 {
-    /// <summary>Claude round trips per user message, across all hops. Enough for look-up →
-    /// look-up → answer, and bounded so a confused model cannot spend indefinitely.</summary>
-    public const int MaxHops = 6;
+    /// <summary>Claude round trips per user message, across all hops. Enough for a real multi-step
+    /// job — look-ups, a navigation, a draft — and bounded so a confused model cannot spend
+    /// indefinitely. Raised from 6 alongside prompt caching (which makes a hop cheap) and the
+    /// budget line in the turn context (which lets the model plan its spend); the panel's "Carry
+    /// on" chip is the escape hatch when even this is not enough.</summary>
+    public const int MaxHops = 10;
 
     private readonly JpmsContext context;
     private readonly IClaudeConversationClient claude;
@@ -109,7 +112,15 @@ public sealed class AiTurnRunner
             .Select(tool => new ClaudeToolSpec(tool.Name, tool.Description, tool.InputSchema))
             .ToList();
 
-        var reply = await claude.ContinueAsync(systemPrompt, BuildTranscript(rows), tools, cancellationToken);
+        // The volatile facts — where the user is, the dialog's live contents, the look-up budget —
+        // ride as a block on the NEWEST message rather than in the system prompt, so the system
+        // prompt and the transcript prefix stay byte-stable across hops and cache (see
+        // ClaudeConversationClient). Rebuilt every hop, never persisted.
+        var turnContext = AiSystemPrompt.BuildTurnContext(
+            user, scope, project?.Reference, project?.Name, hopsSpent, MaxHops);
+
+        var reply = await claude.ContinueAsync(
+            systemPrompt, BuildTranscript(rows, turnContext), tools, cancellationToken);
 
         if (!reply.Ok)
         {
@@ -299,7 +310,7 @@ public sealed class AiTurnRunner
     /// pin it; this method's job is to feed it and to keep the tool_use/tool_result pairing the
     /// API requires.
     /// </summary>
-    private static List<object> BuildTranscript(List<AiConversationMessageEntity> rows)
+    private static List<object> BuildTranscript(List<AiConversationMessageEntity> rows, string turnContext)
     {
         // ---- the budget pass -----------------------------------------------------------------
         var bodies = new string[rows.Count];
@@ -331,9 +342,23 @@ public sealed class AiTurnRunner
         // A tool_result may only replay against a tool_use that actually made it into the
         // transcript — an orphan pair is rejected by the API and takes the whole turn down.
         // Ids accumulate as assistant rows are walked (they always precede their tool rows).
+        //
+        // Content is built as mutable block lists (not anonymous types) because the tail of the
+        // transcript is edited after the walk: the newest persisted block gets the moving
+        // cache_control breakpoint, and the turn-context block is appended after it.
         var replayedToolUseIds = new HashSet<string>(StringComparer.Ordinal);
-        var transcript = new List<object>();
+        var transcript = new List<Dictionary<string, object?>>();
+        // Context rows (a task's carried-over conversation) fold into the NEXT user message as a
+        // leading text block — the API wants alternating roles, and context is background to the
+        // user turn it precedes, not a turn of its own.
+        var pendingContext = new List<Dictionary<string, object?>>();
         var index = 0;
+
+        static Dictionary<string, object?> Text(string text) =>
+            new() { ["type"] = "text", ["text"] = text };
+
+        void AddMessage(string role, List<Dictionary<string, object?>> blocks) =>
+            transcript.Add(new Dictionary<string, object?> { ["role"] = role, ["content"] = blocks });
 
         while (index < rows.Count)
         {
@@ -341,39 +366,48 @@ public sealed class AiTurnRunner
 
             switch ((AiChatRole)row.Role)
             {
-                case AiChatRole.User:
-                    transcript.Add(new { role = "user", content = bodies[index] });
+                case AiChatRole.Context:
+                    if (!string.IsNullOrWhiteSpace(bodies[index])) pendingContext.Add(Text(bodies[index]));
                     index++;
                     break;
 
+                case AiChatRole.User:
+                {
+                    var blocks = new List<Dictionary<string, object?>>(pendingContext) { Text(bodies[index]) };
+                    pendingContext.Clear();
+                    AddMessage("user", blocks);
+                    index++;
+                    break;
+                }
+
                 case AiChatRole.Assistant:
                 {
-                    var blocks = new List<object>();
+                    var blocks = new List<Dictionary<string, object?>>();
                     if (!string.IsNullOrWhiteSpace(bodies[index]))
-                        blocks.Add(new { type = "text", text = bodies[index] });
+                        blocks.Add(Text(bodies[index]));
 
                     foreach (var call in ReadToolCalls(row.ToolCallsJson))
                     {
                         replayedToolUseIds.Add(call.Id!);
-                        blocks.Add(new
+                        blocks.Add(new Dictionary<string, object?>
                         {
-                            type = "tool_use",
-                            id = call.Id!,
-                            name = call.Name!,
-                            input = ParseInput(call.Input)
+                            ["type"] = "tool_use",
+                            ["id"] = call.Id!,
+                            ["name"] = call.Name!,
+                            ["input"] = ParseInput(call.Input)
                         });
                     }
 
                     // An assistant row with neither text nor tool calls would be an empty content
                     // array, which the API rejects. Skip it.
-                    if (blocks.Count > 0) transcript.Add(new { role = "assistant", content = blocks.ToArray() });
+                    if (blocks.Count > 0) AddMessage("assistant", blocks);
                     index++;
                     break;
                 }
 
                 case AiChatRole.Tool:
                 {
-                    var results = new List<object>();
+                    var results = new List<Dictionary<string, object?>>();
                     while (index < rows.Count && (AiChatRole)rows[index].Role == AiChatRole.Tool)
                     {
                         var toolRow = rows[index];
@@ -383,11 +417,16 @@ public sealed class AiTurnRunner
                         var paired = !string.IsNullOrWhiteSpace(toolRow.ToolUseId)
                                      && replayedToolUseIds.Contains(toolRow.ToolUseId!);
                         results.Add(paired
-                            ? new { type = "tool_result", tool_use_id = toolRow.ToolUseId!, content = bodies[index] }
-                            : (object)new { type = "text", text = $"[earlier result from {toolRow.ToolName}]\n{bodies[index]}" });
+                            ? new Dictionary<string, object?>
+                            {
+                                ["type"] = "tool_result",
+                                ["tool_use_id"] = toolRow.ToolUseId!,
+                                ["content"] = bodies[index]
+                            }
+                            : Text($"[earlier result from {toolRow.ToolName}]\n{bodies[index]}"));
                         index++;
                     }
-                    transcript.Add(new { role = "user", content = results.ToArray() });
+                    AddMessage("user", results);
                     break;
                 }
 
@@ -397,7 +436,23 @@ public sealed class AiTurnRunner
             }
         }
 
-        return transcript;
+        // ---- the tail --------------------------------------------------------------------------
+        // The hop always ends on a user-role message (the new user turn, or the tool results). Two
+        // edits, in this order:
+        //   1. The moving cache breakpoint goes on the newest PERSISTED block, so next hop's replay
+        //      is a byte-identical prefix of this one and reads back from cache.
+        //   2. The turn context (where the user is, dialog contents, look-up budget) is appended
+        //      AFTER the breakpoint — it changes every hop, and sitting outside the cached prefix
+        //      is exactly what lets it change for free.
+        if (transcript.Count > 0
+            && transcript[^1]["content"] is List<Dictionary<string, object?>> { Count: > 0 } tail
+            && Equals(transcript[^1]["role"], "user"))
+        {
+            tail[^1]["cache_control"] = new { type = "ephemeral" };
+            tail.Add(Text(turnContext));
+        }
+
+        return transcript.Cast<object>().ToList();
     }
 
     private sealed record StoredToolCall(string? Id, string? Name, string? Input);

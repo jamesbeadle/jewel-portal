@@ -13,4 +13,9 @@ public sealed record SendAiMessage(
     string? ConversationId,
     string Message,
     AiScope Scope,
-    string SentByEmail) : ICommand<AiTurnResult>;
+    string SentByEmail,
+    /// <summary>When starting a NEW conversation (a task kick-off), the conversation the user was
+    /// in just before. The server carries its tail over as a Context row so the assistant remembers
+    /// what was being discussed. Ignored when continuing an existing conversation, and silently
+    /// dropped when the previous conversation belongs to someone else.</summary>
+    string? PreviousConversationId = null) : ICommand<AiTurnResult>;

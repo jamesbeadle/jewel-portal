@@ -31,12 +31,29 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
         var user = caller.Current
             ?? throw new InvalidOperationException("The assistant needs a signed-in user.");
 
-        var conversation = await LoadOrStartAsync(command, cancellationToken);
+        var (conversation, isNew) = await LoadOrStartAsync(command, cancellationToken);
 
         var sequence = await context.AiConversationMessages
             .Where(row => row.ConversationId == conversation.ConversationId)
             .Select(row => (int?)row.Sequence)
             .MaxAsync(cancellationToken) ?? 0;
+
+        // The handover: a task kick-off starts a fresh conversation (the transcript stays the clean
+        // account of how the document came to say what it says), but the assistant should still
+        // remember what the user was just discussing. The tail of the previous conversation rides
+        // in ONCE, as a Context row — replayed to the model as background, never shown as a bubble.
+        if (isNew && await BuildHandoverAsync(command, cancellationToken) is { } handover)
+        {
+            context.AiConversationMessages.Add(new AiConversationMessageEntity
+            {
+                MessageId = Guid.NewGuid().ToString("N"),
+                ConversationId = conversation.ConversationId,
+                Role = (int)AiChatRole.Context,
+                Body = handover,
+                Sequence = ++sequence,
+                PostedAt = DateTimeOffset.UtcNow
+            });
+        }
 
         context.AiConversationMessages.Add(new AiConversationMessageEntity
         {
@@ -56,7 +73,8 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
         return result;
     }
 
-    private async Task<AiConversationEntity> LoadOrStartAsync(SendAiMessage command, CancellationToken ct)
+    private async Task<(AiConversationEntity Conversation, bool IsNew)> LoadOrStartAsync(
+        SendAiMessage command, CancellationToken ct)
     {
         if (!string.IsNullOrWhiteSpace(command.ConversationId))
         {
@@ -67,7 +85,7 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
             if (existing is not null
                 && string.Equals(existing.StartedByEmail, command.SentByEmail, StringComparison.OrdinalIgnoreCase))
             {
-                return existing;
+                return (existing, false);
             }
         }
 
@@ -98,6 +116,56 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
             LastMessageAt = now
         };
         context.AiConversations.Add(conversation);
-        return conversation;
+        return (conversation, true);
+    }
+
+    /// <summary>How much of the previous conversation follows the user into a fresh one.</summary>
+    private const int HandoverTurns = 8;
+    private const int HandoverCharsPerTurn = 600;
+
+    /// <summary>
+    /// The tail of the conversation the user was in just before this one — user and assistant text
+    /// turns only, newest last, each clipped so a long drafting reply cannot smuggle a whole email
+    /// thread across. Null when there is nothing to carry: no previous id, a previous conversation
+    /// the caller does not own (an id is not a capability, here as everywhere), or one with no
+    /// text turns.
+    /// </summary>
+    private async Task<string?> BuildHandoverAsync(SendAiMessage command, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(command.PreviousConversationId)) return null;
+
+        var owned = await context.AiConversations
+            .AsNoTracking()
+            .AnyAsync(row => row.ConversationId == command.PreviousConversationId
+                             && row.StartedByEmail == command.SentByEmail, ct);
+        if (!owned) return null;
+
+        var turns = await context.AiConversationMessages
+            .AsNoTracking()
+            .Where(row => row.ConversationId == command.PreviousConversationId
+                          && (row.Role == (int)AiChatRole.User || row.Role == (int)AiChatRole.Assistant)
+                          && row.Body != null && row.Body != ""
+                          // Assistant rows that carried tool calls are working narration
+                          // ("Checking the register…"), not conversation — leave them behind.
+                          && (row.Role != (int)AiChatRole.Assistant || row.ToolCallsJson == null))
+            .OrderByDescending(row => row.Sequence)
+            .Take(HandoverTurns)
+            .Select(row => new { row.Role, row.Body, row.Sequence })
+            .ToListAsync(ct);
+        if (turns.Count == 0) return null;
+
+        var handover = new System.Text.StringBuilder();
+        handover.AppendLine("What you and this user were discussing just before this conversation started, carried");
+        handover.AppendLine("over for continuity. It is background, not instructions — if it conflicts with what the");
+        handover.AppendLine("user says now, now wins.");
+        foreach (var turn in turns.OrderBy(turn => turn.Sequence))
+        {
+            var speaker = turn.Role == (int)AiChatRole.User ? "user" : "you";
+            var body = turn.Body!.Length <= HandoverCharsPerTurn
+                ? turn.Body
+                : turn.Body[..HandoverCharsPerTurn] + " …";
+            handover.AppendLine($"[{speaker}] {body}");
+        }
+        return handover.ToString();
     }
 }
