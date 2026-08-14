@@ -188,13 +188,31 @@
                     <div class="grow overflow-y-auto px-4 py-4 space-y-3.5">
                         @foreach (var message in messages)
                         {
-                            var isUser = message.Role == AiChatRole.User;
-                            <div class="flex flex-col @(isUser ? "items-end" : "items-start")">
-                                <div class="@BubbleClass(isUser)">
-                                    <p class="whitespace-pre-line">@message.Body</p>
+                            @if (message.Role == AiChatRole.Context)
+                            {
+                                @* An attachment, in the flow where it happened — it is already on
+                                   the conversation server-side, and sits here so nobody thinks it
+                                   is still waiting to be sent with the next message. *@
+                                <div class="flex justify-center">
+                                    <span class="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-raised px-3 py-1 text-[11px] text-content-muted">
+                                        <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M21 12.5l-8.5 8.5a5.66 5.66 0 0 1-8-8l9-9a3.77 3.77 0 0 1 5.3 5.3l-9 9a1.89 1.89 0 0 1-2.7-2.7l8.3-8.3" />
+                                        </svg>
+                                        @message.Body
+                                    </span>
                                 </div>
-                                <span class="mt-1 text-[10px] text-content-faint">@message.PostedAt.ToLocalTime().ToString("HH:mm")</span>
-                            </div>
+                            }
+                            else
+                            {
+                                var isUser = message.Role == AiChatRole.User;
+                                <div class="flex flex-col @(isUser ? "items-end" : "items-start")">
+                                    <div class="@BubbleClass(isUser)">
+                                        <p class="whitespace-pre-line">@message.Body</p>
+                                    </div>
+                                    <span class="mt-1 text-[10px] text-content-faint">@message.PostedAt.ToLocalTime().ToString("HH:mm")</span>
+                                </div>
+                            }
                         }
 
                         @if (lastToolsUsed.Count > 0 && !busy)
@@ -249,25 +267,15 @@
                 }
 
                 <footer class="shrink-0 border-t border-line px-3 py-3">
-                    @if (attachedFiles.Count > 0 || uploadingFileName is not null || attachError is not null)
+                    @* Transient upload states only — a landed attachment shows in the TRANSCRIPT,
+                       where it happened, so it never looks like it is waiting to be re-sent. *@
+                    @if (uploadingFileName is not null || attachError is not null)
                     {
                         <div class="px-1 pb-2 space-y-1">
-                            <div class="flex flex-wrap items-center gap-1.5">
-                                @foreach (var name in attachedFiles)
-                                {
-                                    <span class="inline-flex items-center gap-1 rounded-md border border-line bg-surface-raised px-2 py-0.5 text-[10px] text-content-muted">
-                                        <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <path d="M21 12.5l-8.5 8.5a5.66 5.66 0 0 1-8-8l9-9a3.77 3.77 0 0 1 5.3 5.3l-9 9a1.89 1.89 0 0 1-2.7-2.7l8.3-8.3" />
-                                        </svg>
-                                        @name
-                                    </span>
-                                }
-                                @if (uploadingFileName is not null)
-                                {
-                                    <span class="text-[10px] text-content-faint">Reading @uploadingFileName…</span>
-                                }
-                            </div>
+                            @if (uploadingFileName is not null)
+                            {
+                                <p class="text-[10px] text-content-faint">Reading @uploadingFileName…</p>
+                            }
                             @if (attachError is not null)
                             {
                                 <p class="text-[10px] leading-snug text-negative">@attachError</p>
@@ -341,9 +349,6 @@
     private bool resumeAttempted;
     private string modelKey = AiModelCatalogue.DefaultKey;
     private bool modelLoaded;
-    // Files attached to THIS conversation, shown as chips above the composer. The contents live
-    // server-side on the conversation (a Context row), so the chips are a reminder, not the data.
-    private readonly List<string> attachedFiles = new();
     private string? uploadingFileName;
     private string? attachError;
 
@@ -380,7 +385,13 @@
 
             conversationId = receipt.ConversationId;
             _ = Chat.RememberConversationAsync(conversationId);
-            attachedFiles.Add($"{receipt.FileName} · {receipt.Summary}");
+
+            // Into the TRANSCRIPT, at the moment it landed — the contents are already stored on
+            // the conversation server-side, and a refresh replays this same line from there.
+            messages.Add(new AiChatMessage(
+                Guid.NewGuid().ToString("N"), AiChatRole.Context,
+                $"Attached {receipt.FileName} ({receipt.Summary}) — the assistant can read it now.",
+                "attachment", DateTimeOffset.UtcNow));
         }
         catch (Exception ex)
         {
@@ -631,7 +642,6 @@
         modelNote = null;
         showCarryOn = false;
         pendingPreviousConversationId = null;
-        attachedFiles.Clear();
         attachError = null;
         _ = Chat.ForgetConversationAsync();
     }
@@ -870,16 +880,21 @@
             var modal = ModalCatalog.Find(ReadString(root, "modal_key"));
             if (modal is null || !ModalCatalog.CanOpen(modal, new[] { role })) return;
 
-            var recordId = ReadString(root, "record_id");
-            if (string.IsNullOrWhiteSpace(recordId)) return;
-
             var projectId = ReadString(root, "project_id") ?? PageProject?.ProjectId;
             if (string.IsNullOrWhiteSpace(projectId)) return;
 
-            Navigate(modal.RouteTemplate
-                .Replace("{project}", projectId, StringComparison.Ordinal)
-                .Replace("{record}", recordId, StringComparison.Ordinal)
-                + "?openModal=" + modal.ModalKey);
+            var route = modal.RouteTemplate.Replace("{project}", projectId, StringComparison.Ordinal);
+
+            // A dialog that works FROM a record (variation_draft) needs one; a dialog that CREATES
+            // (manual_variation) has no {record} in its route and needs none.
+            if (route.Contains("{record}", StringComparison.Ordinal))
+            {
+                var recordId = ReadString(root, "record_id");
+                if (string.IsNullOrWhiteSpace(recordId)) return;
+                route = route.Replace("{record}", recordId, StringComparison.Ordinal);
+            }
+
+            Navigate(route + "?openModal=" + modal.ModalKey);
         }
         catch (JsonException)
         {

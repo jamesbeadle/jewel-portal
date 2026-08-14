@@ -223,6 +223,8 @@ public static class AiSystemPrompt
         prompt.AppendLine($"working from {record}. {modal.Purpose}");
         prompt.AppendLine("Your job is to fill it in with them.");
         prompt.AppendLine();
+        if (!string.IsNullOrWhiteSpace(task.RecordId))
+        {
         prompt.AppendLine($"- Call get_request_context ONCE for {record} and draft from what was actually said in it.");
         prompt.AppendLine("  Do not call it again in this conversation — you keep what it told you.");
         prompt.AppendLine("- **Read the whole thing before you decide anything is missing.** Every message comes back,");
@@ -230,6 +232,14 @@ public static class AiSystemPrompt
         prompt.AppendLine("  result says otherwise (it tells you, and marks the spot). The answer is usually further");
         prompt.AppendLine("  down a message, or in a later reply, or in the request's own Description and Response in");
         prompt.AppendLine("  the header. Look in all of them before you say you cannot find it.");
+        }
+        else
+        {
+        prompt.AppendLine("- There is no originating record behind this dialog. Draft from what the user has given");
+        prompt.AppendLine("  you — the conversation, and above all any attached file whose contents sit in it marked");
+        prompt.AppendLine("  \"attachment\". That file IS the source: read it fully before you decide anything is");
+        prompt.AppendLine("  missing, and never fill a field from anywhere else when the file states the value.");
+        }
         prompt.AppendLine("- **Drafting is the default; asking is the exception.** They opened this dialog to get a");
         prompt.AppendLine("  draft, and a question they can answer by reading their own screen wastes their time and");
         prompt.AppendLine("  makes you look like you did not read it. Where the correspondence gives you SOME of it,");

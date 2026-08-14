@@ -1,4 +1,5 @@
 @using Jewel.JPMS.Models
+@using System.Text.Json
 
 @*
     The manual-variation FORM — fields, validation and payload building, with no opinion about
@@ -24,14 +25,14 @@
     }
 
     <div>
-        <FormField Label="Variation no." Value="@numberText" OnChange="v => numberText = v" InputType="number" />
+        <FormField Label="Variation no." Value="@numberText" OnChange="v => Set(ref numberText, v)" InputType="number" />
         <p class="mt-1 text-xs text-content-subtle">
             Becomes <span class="font-mono text-content">@Preview</span> — set it to match the client's report,
             or leave it for the project's next number.
         </p>
     </div>
 
-    <FormField Label="Title" Value="@title" OnChange="v => title = v" Required="true" />
+    <FormField Label="Title" Value="@title" OnChange="v => Set(ref title, v)" Required="true" />
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
@@ -40,7 +41,7 @@
     </div>
 
     <div>
-        <FormField Label="Estimated value (£)" Value="@valueText" OnChange="v => valueText = v" InputType="number" />
+        <FormField Label="Estimated value (£)" Value="@valueText" OnChange="v => Set(ref valueText, v)" InputType="number" />
         <p class="mt-1 text-xs text-content-subtle">Optional — pre-fills the value on the approve panel. Use a negative figure for an omit.</p>
     </div>
 
@@ -48,19 +49,19 @@
        or emailed. All optional here: the wording is editable on the variation page at every stage. *@
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</label>
-        <textarea class="field" rows="3" value="@commercialBasis" @oninput="e => commercialBasis = e.Value?.ToString() ?? string.Empty"
+        <textarea class="field" rows="3" value="@commercialBasis" @oninput="e => Set(ref commercialBasis, e.Value?.ToString() ?? string.Empty)"
                   placeholder="What the price is based on — tender-face position, rate basis, OH&amp;P…"></textarea>
     </div>
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</label>
-        <textarea class="field" rows="3" value="@programmeImpact" @oninput="e => programmeImpact = e.Value?.ToString() ?? string.Empty"
+        <textarea class="field" rows="3" value="@programmeImpact" @oninput="e => Set(ref programmeImpact, e.Value?.ToString() ?? string.Empty)"
                   placeholder="Effect on the programme — procurement, mobilisation, works duration…"></textarea>
     </div>
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</label>
-        <textarea class="field" rows="3" value="@exclusions" @oninput="e => exclusions = e.Value?.ToString() ?? string.Empty"
+        <textarea class="field" rows="3" value="@exclusions" @oninput="e => Set(ref exclusions, e.Value?.ToString() ?? string.Empty)"
                   placeholder="What this variation expressly does not price…"></textarea>
     </div>
 </div>
@@ -101,7 +102,81 @@
     public decimal? CurrentEstimatedValue =>
         !string.IsNullOrWhiteSpace(valueText) && decimal.TryParse(valueText, out var current) ? current : null;
 
-    private void OnDescriptionInput(ChangeEventArgs e) => description = e.Value?.ToString() ?? "";
+    private void OnDescriptionInput(ChangeEventArgs e) => Set(ref description, e.Value?.ToString() ?? "");
+
+    // ---- The assistant pipe --------------------------------------------------------------------
+    // Out: every edit raises OnEdited so the host can republish the live state (AiTaskState.
+    // UpdateDraft) — the model always reasons from what is on screen NOW. In: ApplyAssistant merges
+    // the model's proposals field by field — a field it did not send keeps what the user typed.
+
+    /// <summary>Raised after any field changes, however it changed. Optional: a host with no
+    /// assistant (the System Actions pane) simply doesn't listen.</summary>
+    [Parameter] public EventCallback OnEdited { get; set; }
+
+    private void Set(ref string field, string value)
+    {
+        field = value;
+        if (OnEdited.HasDelegate) _ = OnEdited.InvokeAsync();
+    }
+
+    /// <summary>The form's live state as the JSON the assistant task carries with every turn.</summary>
+    public string SerialiseState() => JsonSerializer.Serialize(new
+    {
+        number = numberText,
+        title,
+        description,
+        estimatedValue = valueText,
+        commercialBasis,
+        programmeImpact,
+        exclusions
+    });
+
+    /// <summary>
+    /// The assistant's proposals, merged in. Only the fields it sent are touched; values arrive as
+    /// the dialog's schema declares them (numbers for number/estimatedValue) but strings are
+    /// tolerated — the model is not the only writer of that JSON. Validation is unchanged: whatever
+    /// lands here still goes through TrySubmitAsync when the user presses the button.
+    /// </summary>
+    public void ApplyAssistant(string fieldsJson)
+    {
+        if (string.IsNullOrWhiteSpace(fieldsJson)) return;
+        try
+        {
+            using var document = JsonDocument.Parse(fieldsJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return;
+
+            if (ReadText(root, "title") is { } proposedTitle) title = proposedTitle;
+            if (ReadText(root, "description") is { } proposedDescription) description = proposedDescription;
+            if (ReadText(root, "commercialBasis") is { } proposedBasis) commercialBasis = proposedBasis;
+            if (ReadText(root, "programmeImpact") is { } proposedImpact) programmeImpact = proposedImpact;
+            if (ReadText(root, "exclusions") is { } proposedExclusions) exclusions = proposedExclusions;
+            if (ReadNumberText(root, "estimatedValue") is { } proposedValue) valueText = proposedValue;
+            if (ReadNumberText(root, "number") is { } proposedNumber) numberText = proposedNumber;
+
+            StateHasChanged();
+        }
+        catch (JsonException)
+        {
+            // A malformed proposal is the model's problem, not the user's. The form stands.
+        }
+    }
+
+    private static string? ReadText(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static string? ReadNumberText(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty(name, out var value)) return null;
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number => value.GetDecimal().ToString(System.Globalization.CultureInfo.InvariantCulture),
+            JsonValueKind.String when !string.IsNullOrWhiteSpace(value.GetString()) => value.GetString(),
+            _ => null
+        };
+    }
 
     /// <summary>Seed the number field (the dialog's next-number suggestion). No-op once typed in.</summary>
     public void SuggestNumber(int suggested)

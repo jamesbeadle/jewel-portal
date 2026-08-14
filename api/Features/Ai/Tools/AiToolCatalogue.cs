@@ -670,12 +670,16 @@ public static class AiToolCatalogue
                 "Open one of the portal's dialogs for the user, ready to fill in. Use it when they have asked you "
                 + "to draft or create something and that dialog is not already open in front of them; if it IS "
                 + "open, use update_open_modal instead. The dialog opens beside this chat and stays live — they "
-                + "complete it and press its button themselves, so opening it creates nothing. "
-                + "One dialog exists: \"variation_draft\", which drafts the variation an RFI has led to and needs "
-                + "that RFI's request id — call find_by_reference or list_requests for it first.",
+                + "complete it and press its button themselves, so opening it creates nothing. The dialogs: "
+                + "\"variation_draft\" drafts the variation an EXISTING RFI has led to and needs that RFI's "
+                + "request id (call find_by_reference or list_requests for the real id first — never invent "
+                + "one); \"manual_variation\" creates a brand-new standalone variation from data the user "
+                + "already has (an attached spreadsheet, the conversation) and takes NO record_id.",
                 AiToolSchema.Object(
-                    ("modal_key", "string", "Exactly \"variation_draft\".", true),
-                    ("record_id", "string", "The record the dialog works from — the request id for variation_draft.", true),
+                    ("modal_key", "string", "One of: \"variation_draft\", \"manual_variation\".", true),
+                    ("record_id", "string",
+                        "The record the dialog works from — REQUIRED for variation_draft (the request id, from "
+                        + "find_by_reference or list_requests). Omit for manual_variation.", false),
                     ("project_id", "string", "Defaults to the project in view.", false),
                     ("reason", "string", "One clause explaining why.", false)),
                 AiToolKind.Ui,

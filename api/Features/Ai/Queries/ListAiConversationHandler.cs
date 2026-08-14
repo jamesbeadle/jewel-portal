@@ -26,9 +26,11 @@ public sealed class ListAiConversationHandler
                           // Tool results and carried-over context are the model's reading, not the
                           // user's conversation; assistant rows that carried tool calls are working
                           // narration shown as a status line at the time, not bubbles — replaying
-                          // them would rewrite what the user actually saw.
+                          // them would rewrite what the user actually saw. The one Context row
+                          // that DOES replay is an attachment (ToolName marks it): the panel shows
+                          // "Attached file.xlsx" in the transcript, never the extracted contents.
                           && row.Role != (int)AiChatRole.Tool
-                          && row.Role != (int)AiChatRole.Context
+                          && (row.Role != (int)AiChatRole.Context || row.ToolName == "attachment")
                           && (row.Role != (int)AiChatRole.Assistant || row.ToolCallsJson == null)
                           && row.Body != null && row.Body != "")
             .OrderBy(row => row.Sequence)
@@ -36,6 +38,18 @@ public sealed class ListAiConversationHandler
                 row.MessageId, (AiChatRole)row.Role, row.Body, row.ToolName, row.PostedAt))
             .ToListAsync(cancellationToken);
 
-        return rows;
+        // An attachment row's body is the full extracted file — the transcript wants only its
+        // first line ("The user attached … (2 sheets · 148 rows).") as the display label.
+        return rows
+            .Select(row => row.Role == AiChatRole.Context
+                ? row with { Body = FirstLine(row.Body) }
+                : row)
+            .ToList();
+    }
+
+    private static string FirstLine(string body)
+    {
+        var lineBreak = body.IndexOf('\n');
+        return lineBreak < 0 ? body : body[..lineBreak].TrimEnd();
     }
 }

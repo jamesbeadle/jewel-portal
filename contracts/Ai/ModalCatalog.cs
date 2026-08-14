@@ -105,7 +105,61 @@ public static class ModalCatalog
                 })
         });
 
-    public static IReadOnlyList<ModalDescriptor> All { get; } = new[] { VariationDraft };
+    /// <summary>
+    /// The "Add variation manually" dialog on the Variations register — a standalone variation with
+    /// no RFI behind it, which is exactly the shape of work arriving from outside the system: the
+    /// boss's spreadsheet, a client instruction, a historic reconciliation. No <c>{record}</c> in
+    /// the route: this dialog CREATES, so open_modal needs no record id for it.
+    /// </summary>
+    public static readonly ModalDescriptor ManualVariation = new(
+        "manual_variation",
+        "Add variation manually",
+        "It creates a standalone variation order — in Quoting, with no RFI behind it — from data the "
+        + "user already has: an attached spreadsheet, the conversation, a client instruction. The "
+        + "user reviews every field and presses Add variation themselves; nothing exists until they do.",
+        "/projects/{project}/variations",
+        // Same set as variation_draft: whoever the API accepts CreateManualVariationOrder from.
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.ProjectManager,
+            Role.QuantitySurveyor
+        },
+        new ModalField[]
+        {
+            new("title", "string",
+                "A concise variation title, at most 200 characters, in the house style — "
+                + "\"Internal Doors: Additional Frames and Plant Room Door Change\". Not a sentence.",
+                Required: true),
+
+            new("description", "string",
+                "What the variation covers, plain text. Drawn from the user's data — the attached "
+                + "file or what they told you — never invented. No headings, no markdown."),
+
+            new("estimatedValue", "number",
+                "The variation's value in GBP as a plain number, NET of VAT — the ex-VAT figure, "
+                + "never the inc-VAT total. Negative for an omit. Set it only where the user's data "
+                + "actually states it; otherwise leave the field out and say so."),
+
+            new("number", "number",
+                "The variation number, only when the user's data names one (V86 → 86) — it fixes "
+                + "the reference so the register lines up with what the client has already seen. "
+                + "Leave it out to take the project's next number. Never guess one."),
+
+            new("commercialBasis", "string",
+                "The document's commercial-basis narrative — what the price is based on: rate "
+                + "basis, tender-face position, OH&P. Only what the user's data supports."),
+
+            new("programmeImpact", "string",
+                "The document's programme-impact narrative — effect on procurement, mobilisation, "
+                + "works duration. Only what the user's data supports."),
+
+            new("exclusions", "string",
+                "What this variation expressly does not price. Only what the user's data supports.")
+        });
+
+    public static IReadOnlyList<ModalDescriptor> All { get; } = new[] { VariationDraft, ManualVariation };
 
     public static ModalDescriptor? Find(string? modalKey) =>
         string.IsNullOrWhiteSpace(modalKey)

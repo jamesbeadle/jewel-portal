@@ -1,19 +1,29 @@
 @using Jewel.JPMS.Models
+@using Jewel.JPMS.Contracts.Ai
 @inject IVariationStore Variations
+@inject AiTaskState AiTasks
+@implements IDisposable
 
 @*
     Manual variation entry: ManualVariationForm (the shared fields/validation component — the
     Control Centre's System Actions pane hosts the same form to stage a draft) inside the house
     Modal, with this wrapper owning the SEND. Creates a standalone variation order (in Quoting)
     with no request/RFI behind it, for reconciling historic or client-instructed variations.
+
+    When the assistant opened it (an AiTask with this dialog's modal key is active), this wrapper
+    is also the dialog ⇄ assistant pipe: every edit republishes the form's live state, and the
+    assistant's update_open_modal proposals are MERGED into the form — a field it did not send
+    keeps what the user typed. The user still presses Add variation; filling writes nothing.
 *@
 <Modal IsOpen="IsOpen"
        Title="Add variation manually"
        ConfirmLabel="@(saving ? "Adding…" : "Add variation")"
        OnCancel="Cancel"
        OnConfirm="Submit"
+       ChatAware="true"
+       DismissOnOverlayClick="@(!AssistantTaskActive)"
        Class="max-w-xl">
-    <ManualVariationForm @ref="form" UsedNumbers="@UsedNumbers" OnSubmit="SendAsync" />
+    <ManualVariationForm @ref="form" UsedNumbers="@UsedNumbers" OnSubmit="SendAsync" OnEdited="PublishDraft" />
 </Modal>
 
 @code {
@@ -27,11 +37,44 @@
     private ManualVariationForm? form;
     private bool saving;
 
+    private bool AssistantTaskActive =>
+        AiTasks.Active?.ModalKey == ModalCatalog.ManualVariation.ModalKey;
+
+    protected override void OnInitialized()
+    {
+        // The assistant's proposals, when a task is in force. Subscribed for the component's life —
+        // the handler itself checks the task matches, so a variation_draft task elsewhere never
+        // writes into this form.
+        AiTasks.OnDraftApplied += HandleAssistantDraft;
+    }
+
     protected override void OnAfterRender(bool firstRender)
     {
         // Seed the number field with the project's next number once the form has mounted (the
         // Modal renders children only while open, so each opening mounts a fresh form).
         if (IsOpen) form?.SuggestNumber(SuggestedNumber);
+    }
+
+    /// <summary>The model's update_open_modal, landing in the form. Merge, republish, repaint.</summary>
+    private void HandleAssistantDraft(string fieldsJson)
+    {
+        if (!IsOpen || !AssistantTaskActive || form is null) return;
+        form.ApplyAssistant(fieldsJson);
+        AiTasks.UpdateDraft(form.SerialiseState());
+        StateHasChanged();
+    }
+
+    /// <summary>Every human edit republishes the live state, so the model reasons from the form as
+    /// it stands NOW — the same merge-never-replace contract as the variation_draft dialog.</summary>
+    private void PublishDraft()
+    {
+        if (!AssistantTaskActive || form is null) return;
+        AiTasks.UpdateDraft(form.SerialiseState());
+    }
+
+    public void Dispose()
+    {
+        AiTasks.OnDraftApplied -= HandleAssistantDraft;
     }
 
     private async Task Cancel() => await OnClose.InvokeAsync();

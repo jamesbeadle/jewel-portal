@@ -172,8 +172,21 @@ public sealed class AiTurnRunner
             }
             else if (tool.Kind == AiToolKind.Ui)
             {
-                uiActions.Add(new AiUiAction(call.Name, call.ArgumentsJson));
-                output = JsonSerializer.Serialize(new { ok = true, handed_to_browser = true });
+                // Checked BEFORE handing to the browser. A Ui tool's "ok" used to mean only
+                // "posted" — so an open_modal with an invented record id navigated the user to a
+                // dead page while the model narrated success. Refusing here puts the failure in
+                // front of the model instead, and it corrects course.
+                var refusal = await ValidateUiActionAsync(call, cancellationToken);
+                if (refusal is not null)
+                {
+                    output = refusal;
+                    ok = false;
+                }
+                else
+                {
+                    uiActions.Add(new AiUiAction(call.Name, call.ArgumentsJson));
+                    output = JsonSerializer.Serialize(new { ok = true, handed_to_browser = true });
+                }
             }
             else
             {
@@ -215,6 +228,68 @@ public sealed class AiTurnRunner
             steps, clock, reply.InputTokens, reply.OutputTokens, cancellationToken);
 
         return Result(conversation, status, newMessages, uiActions, steps, remaining, reply.EscalationNote);
+    }
+
+    // ---- Ui-action validation ----------------------------------------------------------------
+
+    /// <summary>
+    /// Sanity-checks a Ui action the server can verify, returning a refusal payload (or null to
+    /// proceed). Today that is open_modal: the dialog must exist, a dialog whose route names a
+    /// record must be given a record id, and for variation_draft that id must be a REAL request —
+    /// the failure the model must see is "no such request", not a user stranded on a dead page.
+    /// </summary>
+    private async Task<string?> ValidateUiActionAsync(ClaudeToolCall call, CancellationToken ct)
+    {
+        if (!string.Equals(call.Name, "open_modal", StringComparison.OrdinalIgnoreCase)) return null;
+
+        string? modalKey = null;
+        string? recordId = null;
+        try
+        {
+            using var arguments = JsonDocument.Parse(
+                string.IsNullOrWhiteSpace(call.ArgumentsJson) ? "{}" : call.ArgumentsJson);
+            if (arguments.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                if (arguments.RootElement.TryGetProperty("modal_key", out var keyElement)
+                    && keyElement.ValueKind == JsonValueKind.String)
+                    modalKey = keyElement.GetString();
+                if (arguments.RootElement.TryGetProperty("record_id", out var recordElement)
+                    && recordElement.ValueKind == JsonValueKind.String)
+                    recordId = recordElement.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        var modal = ModalCatalog.Find(modalKey);
+        if (modal is null)
+        {
+            return Fail($"No dialog named {modalKey}. The dialogs are: "
+                + string.Join(", ", ModalCatalog.All.Select(candidate => candidate.ModalKey)) + ".");
+        }
+
+        var needsRecord = modal.RouteTemplate.Contains("{record}", StringComparison.Ordinal);
+        if (!needsRecord) return null;
+
+        if (string.IsNullOrWhiteSpace(recordId))
+        {
+            return Fail($"{modal.ModalKey} needs record_id — the request id from find_by_reference or "
+                + "list_requests. Do not invent one. For a variation with no RFI behind it, use "
+                + "manual_variation instead.");
+        }
+
+        // variation_draft works from a request; verify it actually exists before anyone navigates.
+        var exists = await context.Requests.AsNoTracking()
+            .AnyAsync(row => row.RequestId == recordId, ct);
+        if (!exists)
+        {
+            return Fail($"No request exists with id \"{recordId}\" — that is not a real record id. Call "
+                + "find_by_reference or list_requests for the actual id. For a variation with no RFI "
+                + "behind it, use manual_variation instead.");
+        }
+
+        return null;
     }
 
     // ---- agents and skills -----------------------------------------------------------------
