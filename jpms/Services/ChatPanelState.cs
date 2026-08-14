@@ -91,6 +91,36 @@ public sealed class ChatPanelState
         OnChange?.Invoke();
     }
 
+    // ---- the page note -----------------------------------------------------------------------
+    // What the OPEN PAGE is showing right now, beyond what the route says — the Control Centre's
+    // selected email, a register's active filter. Registered as a provider (a delegate, not a
+    // string) so the note is computed at send time from the page's live state instead of the page
+    // having to re-publish on every click. The page registers it on init and clears it on Dispose,
+    // so navigation away can never leave a stale note behind; same-page query navigation keeps it.
+    // Read by ChatPanel.BuildScope into AiScope.PageNote and rendered into the model's volatile
+    // "current context" block — it is DATA about the screen, never instructions.
+
+    private Func<string?>? pageNoteProvider;
+
+    /// <summary>The page's live "what I am showing" callback. Last writer wins (one page owns the
+    /// middle of the screen at a time).</summary>
+    public void SetPageNoteProvider(Func<string?> provider) => pageNoteProvider = provider;
+
+    /// <summary>Clears the provider, but only if it is still this caller's — a page disposing late
+    /// (Blazor disposes the old page after the new one initialises) must not wipe its successor's.</summary>
+    public void ClearPageNoteProvider(Func<string?> provider)
+    {
+        if (ReferenceEquals(pageNoteProvider, provider)) pageNoteProvider = null;
+    }
+
+    /// <summary>The note as it stands right now, or null. Never throws — a page's broken provider
+    /// costs the model one note, not the user their message.</summary>
+    public string? CurrentPageNote()
+    {
+        try { return pageNoteProvider?.Invoke(); }
+        catch { return null; }
+    }
+
     /// <summary>
     /// Reads the stored acknowledgement for the signed-in user, once per user. Deliberately a
     /// no-op while the user is unknown: the panel is instantiated by MainLayout on the very first

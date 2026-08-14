@@ -782,7 +782,8 @@
                 ? new AiTaskScope(
                     task.TaskKey, task.ModalKey, task.RecordType,
                     task.RecordId, task.RecordReference, AiTasks.DraftJson)
-                : null);
+                : null,
+            Chat.CurrentPageNote());
     }
 
     /// <summary>Folds one hop into the panel, then repaints so the status line moves.</summary>
@@ -905,8 +906,11 @@
                 Fold(result);
                 if (result.Status != AiTurnStatus.NeedsContinue) break;
 
+                // Scope is REBUILT per hop, not reused from the send: a navigate_to in the previous
+                // hop changed the page (and the page note), and the next hop must reason from where
+                // the user is NOW — that is what makes navigate-then-act chains work.
                 result = await Commands.SendAsync(
-                    new ContinueAiTurn(conversationId, scope, string.Empty, modelKey), CancellationToken.None);
+                    new ContinueAiTurn(conversationId, BuildScope(), string.Empty, modelKey), CancellationToken.None);
                 conversationId = result.ConversationId;
             }
 

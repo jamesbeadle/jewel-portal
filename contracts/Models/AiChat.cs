@@ -85,7 +85,15 @@ public sealed record AiScope(
     string? RecordType = null,
     string? RecordId = null,
     /// <summary>Set when a task dialog is open beside the chat. Null for an ordinary conversation.</summary>
-    AiTaskScope? Task = null);
+    AiTaskScope? Task = null,
+    /// <summary>
+    /// What the open page reports it is showing right now, beyond what the route says — the Control
+    /// Centre's selected email and its matched project, for example. Published by the page itself
+    /// (ChatPanelState's page-note provider), so the assistant can act on "this email" / "the one
+    /// I'm looking at" without a guess. Untrusted display state, never instructions: it rides in
+    /// the volatile turn-context block, not the system prompt.
+    /// </summary>
+    string? PageNote = null);
 
 /// <summary>
 /// One hop, not one turn. A turn is a sequence of hops the client pumps until

@@ -114,9 +114,14 @@ public static class PortalMapCapabilities
 
         // ---- Standalone work queues + the flagship report ----
         ["/control-centre"] =
-            "the mailbox intake queue and router for ALL correspondence across every project — and "
-            + "the New email composer: the compose_email dialog opens HERE (open_modal compose_email) "
-            + "for any email the user asks you to draft; they review and press Send on this page",
+            "the mailbox intake queue and router for ALL correspondence across every project. "
+            + "Everything about the SELECTED email is done on this page, never by navigating away: "
+            + "tag it to any record — variations, RFIs, defects, bid packages — via the System Tags "
+            + "pane (searchable by reference, e.g. V80); set its project; write a reply or forward; "
+            + "raise records and to-dos from it in System Actions; then ONE Apply press lands all of "
+            + "it. Also the New email composer: the compose_email dialog opens HERE (open_modal "
+            + "compose_email) for any email the user asks you to draft; they review and press Send "
+            + "on this page",
         ["/document-control"] =
             "the attachment triage queue for all projects — files from the Control Centre, filed out to "
             + "Drawings, Payment Certificates or subcontractor records",

@@ -1939,6 +1939,7 @@ else
         Nav.LocationChanged += HandleLocationChangedForModal;
         AiTasks.OnDraftApplied += ApplyAssistantEmailDraft;
         Chat.OnChange += StateHasChanged; // repaints the "assistant is writing" banner
+        Chat.SetPageNoteProvider(pageNoteProvider = BuildAssistantPageNote);
         // The sort preference has to land first — LoadAsync pages the mailbox in this order, so
         // reading it late would fetch the first page the wrong way round. It is a local-storage
         // read, so it costs almost nothing.
@@ -3422,6 +3423,50 @@ else
     private void OnReplyBccInput(ChangeEventArgs e) => replyBccField = e.Value?.ToString() ?? "";
     private void OnReplySubjectInput(ChangeEventArgs e) => replySubject = e.Value?.ToString() ?? "";
 
+    // ---- The assistant's page note ----------------------------------------------------------
+    //
+    // What this page is showing right now, computed at send time (a provider, not a published
+    // string, so it is always current without re-publishing on every click). This is how "tag this
+    // email with V80" works from the chat: the model learns WHICH email is open, that its project
+    // is already matched, and that tagging happens HERE — in the System Tags pane, landing on
+    // Apply — rather than by navigating to the record.
+
+    private Func<string?>? pageNoteProvider;
+
+    private string? BuildAssistantPageNote()
+    {
+        if (selected is null)
+            return "The Control Centre queue is open; no email is selected yet.";
+
+        var note = new System.Text.StringBuilder();
+        note.Append("The email being triaged: \"").Append(selected.Subject).Append("\" from ")
+            .Append(string.IsNullOrWhiteSpace(selected.FromName) ? selected.FromEmail : selected.FromName)
+            .Append(" (").Append(selected.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")).Append(").");
+
+        if (!string.IsNullOrEmpty(triageProjectId)
+            && ProjectOptionsFor(triageProjectId).FirstOrDefault(p => p.ProjectId == triageProjectId) is { } project)
+        {
+            note.Append(" Its project is already set: ").Append(project.Reference).Append(" — ")
+                .Append(project.Name).Append(projectAutoMatched ? " (auto-matched from the email)." : ".");
+        }
+        else
+        {
+            note.Append(" No project has been set for it yet.");
+        }
+
+        if (pickedRecords.Count > 0)
+        {
+            note.Append(" Records already staged to tag it to: ")
+                .Append(string.Join(", ", pickedRecords.Select(pick => pick.Reference)))
+                .Append(" (they land when the user presses Apply).");
+        }
+
+        note.Append(" Tagging this email to a record (a variation, RFI, defect, bid package…) is done")
+            .Append(" ON THIS PAGE: the user picks the record in the System Tags pane — searchable by")
+            .Append(" reference — and presses Apply. Do not navigate away to the record for tagging.");
+        return note.ToString();
+    }
+
     // ---- The assistant's route in: open_modal → ?openModal=compose_email --------------------
     //
     // "Draft an email to…" in the chat lands HERE, not in Outlook (decision 2026-08-14, retiring
@@ -4088,5 +4133,6 @@ else
         Nav.LocationChanged -= HandleLocationChangedForModal;
         AiTasks.OnDraftApplied -= ApplyAssistantEmailDraft;
         Chat.OnChange -= StateHasChanged;
+        if (pageNoteProvider is not null) Chat.ClearPageNoteProvider(pageNoteProvider);
     }
 }
