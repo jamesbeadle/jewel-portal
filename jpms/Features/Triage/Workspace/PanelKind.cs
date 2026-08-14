@@ -10,6 +10,10 @@ public enum PanelKind
     Inbox,
     /// <summary>The open email: header, body, attachments, thread and reply.</summary>
     Email,
+    /// <summary>A read-only second copy of the open email. Pressing the Email icon while the other
+    /// pane already shows the email lands this here instead of stealing the email across, so the
+    /// original can be read (and copied from) on one side while the reply is typed on the other.</summary>
+    EmailMirror,
     /// <summary>The staged system tags for the open email (was the System Tags modal).</summary>
     SystemTags,
     /// <summary>System actions queued to run when the email's triage completes (placeholder).</summary>

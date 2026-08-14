@@ -40,6 +40,7 @@
 
     [Parameter] public RenderFragment? InboxContent { get; set; }
     [Parameter] public RenderFragment? EmailContent { get; set; }
+    [Parameter] public RenderFragment? EmailMirrorContent { get; set; }
     [Parameter] public RenderFragment? TagsContent { get; set; }
     [Parameter] public RenderFragment? ActionsContent { get; set; }
     [Parameter] public RenderFragment? RecordsContent { get; set; }
@@ -60,6 +61,7 @@
     {
         PanelKind.Inbox => InboxContent,
         PanelKind.Email => EmailContent,
+        PanelKind.EmailMirror => EmailMirrorContent,
         PanelKind.SystemTags => TagsContent,
         PanelKind.SystemActions => ActionsContent,
         PanelKind.Records => RecordsContent,

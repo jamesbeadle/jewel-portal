@@ -934,6 +934,37 @@
     </div>;
 
     @*
+        The email's read-only twin (PanelKind.EmailMirror): the same header, attachments and body
+        fragments rendered a SECOND time, so one window can sit on the email while the reply is
+        typed at the bottom of the other — copying from the original without scrolling the composer
+        out of view. Both copies read the same live page fields, so the thread tabs, document-control
+        ticks and previews stay in step whichever side they're clicked on. The reply composer itself
+        deliberately isn't mirrored: one editor, one draft, no two cursors fighting over it.
+    *@
+    RenderFragment EmailMirrorPaneContent =@<div>
+        @if (view != QueueView.Active || selected is null)
+        {
+            <div class="panel p-8 text-center text-sm text-content-subtle">
+                Open a queue email first — this window shows a reading copy of it.
+            </div>
+        }
+        else
+        {
+            <div class="panel p-5 space-y-4">
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">
+                    Reading copy — the reply is written in the other window
+                </p>
+
+                @MessageHeader
+
+                @MessageAttachments
+
+                @MessageBody
+            </div>
+        }
+    </div>;
+
+    @*
         The triage bar — rendered ABOVE the two-window split, because the selected email is the
         one thing global to everything below: whatever the windows are showing, this strip says
         which email is being dealt with, holds the decisions that belong to the email itself
@@ -1228,6 +1259,7 @@ else
                         OutboxBadge="@OutboxSendCount">
             <InboxContent>@InboxPaneContent</InboxContent>
             <EmailContent>@EmailPaneContent</EmailContent>
+            <EmailMirrorContent>@EmailMirrorPaneContent</EmailMirrorContent>
             <TagsContent>@TagsPaneContent</TagsContent>
             <ActionsContent>
                 @if (view != QueueView.Active || selected is null)

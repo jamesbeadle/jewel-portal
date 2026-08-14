@@ -32,11 +32,18 @@ public sealed partial class PanelWorkspaceState
     public void Show(PanelKind kind, PanelSide side)
     {
         if (!IsDesktop) side = PanelSide.Left;
+        // The email is the one kind both windows can hold at once: asking for it while the other
+        // pane already shows it opens the read-only mirror HERE instead of stealing the email (and
+        // a half-written reply) across — the original stays put, this side gets a copy to read.
+        if (kind == PanelKind.Email && IsDesktop && ActiveOn(OtherThan(side)) == PanelKind.Email)
+            kind = PanelKind.EmailMirror;
         if (ActiveOn(side) == kind) return;
         if (ActiveOn(OtherThan(side)) == kind) FallBack(OtherThan(side), kind);
         var history = HistoryOf(side);
         history.Remove(kind);
         history.Add(kind);
+        // The real email arriving on a side makes any mirror queued beneath it pointless.
+        if (kind == PanelKind.Email) history.Remove(PanelKind.EmailMirror);
         everShown.Add(kind);
         Notify();
     }

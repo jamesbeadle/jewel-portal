@@ -10,7 +10,7 @@
     @RailButton(PanelKind.Inbox, "Email inbox — triage and apply")
     @if (EmailAvailable)
     {
-        @RailButton(PanelKind.Email, "The open email")
+        @RailButton(PanelKind.Email, EmailLabel)
     }
     @RailButton(PanelKind.SystemTags, "System tags")
     @RailButton(PanelKind.SystemActions, "System actions")
@@ -44,9 +44,17 @@
     /// <summary>How many emails are lined up to send — badged on the Outbox icon.</summary>
     [Parameter] public int OutboxBadge { get; set; }
 
+    // The other pane already reading the email means this icon opens the mirror — say so.
+    private string EmailLabel =>
+        State.ActiveOn(Side == PanelSide.Left ? PanelSide.Right : PanelSide.Left) == PanelKind.Email
+            ? "The open email — a reading copy this side, while the reply is written in the other window"
+            : "The open email";
+
     private RenderFragment RailButton(PanelKind kind, string label) => __builder =>
     {
-        var isActive = State.ActiveOn(Side) == kind;
+        var active = State.ActiveOn(Side);
+        // The mirror is the email pressed a second time, so it lights the Email icon too.
+        var isActive = active == kind || (kind == PanelKind.Email && active == PanelKind.EmailMirror);
         <button type="button" title="@label" aria-label="@label" @onclick="() => State.Show(kind, Side)"
                 class="@ButtonClass(isActive)">
             <WorkspaceIcon Kind="kind" />
