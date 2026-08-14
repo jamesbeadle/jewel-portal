@@ -877,6 +877,7 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
         Activity.OnChanged += StateHasChanged;
+        Nav.LocationChanged += HandleLocationChanged;
         // Refresh on entry (stale-while-revalidate): cached data renders immediately, then
         // updates when the background reload lands.
         RequestRegister.Refresh(ProjectId); // The Request column + search read the register.
@@ -888,17 +889,32 @@ else
         await HonourRequestedModalAsync();
     }
 
-    // KeyedPageRouteView keys on route values and the query string is not one — arriving from this
-    // very register (the common case: the panel navigated here) reuses the component and only runs
-    // this hook, so the openModal request must be honoured from both lifecycle paths.
+    // Belt: covers arrivals where the router does re-set parameters.
     protected override async Task OnParametersSetAsync()
     {
         if (isLoaded) await HonourRequestedModalAsync();
     }
 
+    /// <summary>
+    /// Braces: the case the lifecycle hooks MISS. When the panel's open_modal fires while the user
+    /// is ALREADY on this register, the navigation changes only the query string — the route
+    /// parameter values are identical, so Blazor re-renders nothing and neither OnInitializedAsync
+    /// nor OnParametersSetAsync runs. This event is the one signal that always fires. (Found live:
+    /// ?openModal=manual_variation sat in the address bar, un-stripped, dialog never opened.)
+    /// history.replaceState does not raise it, so honouring cannot loop.
+    /// </summary>
+    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
+        _ = InvokeAsync(async () =>
+        {
+            if (!isLoaded) return;
+            modalRequestHonoured = false; // a fresh navigation is a fresh request
+            await HonourRequestedModalAsync();
+        });
+
     public void Dispose()
     {
         RequestRegister.OnChange -= StateHasChanged;
         Activity.OnChanged -= StateHasChanged;
+        Nav.LocationChanged -= HandleLocationChanged;
     }
 }

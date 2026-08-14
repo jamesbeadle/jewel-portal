@@ -1071,6 +1071,7 @@ else
         AiTasks.OnAssistantUnavailable += HandleAssistantUnavailable;
         CostCenters.OnChanged += Repaint;
         Activity.OnChanged += Repaint;
+        Nav.LocationChanged += HandleLocationChangedForModal;
 
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
@@ -1143,12 +1144,29 @@ else
     private RecordActivitySummary? TabActivity(RecordType type, string recordId) =>
         Activity.For(ProjectId, type, recordId);
 
+    /// <summary>
+    /// The case the lifecycle hooks miss: the panel's open_modal firing while the user is ALREADY
+    /// on this very record changes only the query string — route parameter values are identical,
+    /// so Blazor re-renders nothing and neither lifecycle hook runs (found live on the Variations
+    /// register; same latent hole here). LocationChanged always fires; history.replaceState does
+    /// not raise it, so honouring cannot loop.
+    /// </summary>
+    private void HandleLocationChangedForModal(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
+        _ = InvokeAsync(async () =>
+        {
+            if (!dataLoaded) return;
+            modalRequestHonoured = false; // a fresh navigation is a fresh request
+            await HonourRequestedModalAsync();
+            StateHasChanged();
+        });
+
     public void Dispose()
     {
         AiTasks.OnDraftApplied -= HandleAssistantDraft;
         AiTasks.OnAssistantUnavailable -= HandleAssistantUnavailable;
         CostCenters.OnChanged -= Repaint;
         Activity.OnChanged -= Repaint;
+        Nav.LocationChanged -= HandleLocationChangedForModal;
         flashTimer?.Dispose();
 
         // The dialog goes with the page, so the panel must not stay lifted above an overlay that no
