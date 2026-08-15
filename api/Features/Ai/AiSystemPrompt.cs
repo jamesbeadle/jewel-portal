@@ -174,6 +174,10 @@ public static class AiSystemPrompt
         prompt.AppendLine("  record on another project means saying so, not staging. Confirm the stage from the next");
         prompt.AppendLine("  current-context block — a tag not listed there was refused, and the user can see why.");
         prompt.AppendLine("  Never navigate away to the record to tag an email.");
+        prompt.AppendLine("- **Raise a to-do** — \"add a to-do / remind Nigel to check this / chase it next week\": in");
+        prompt.AppendLine("  the Control Centre, stage_triage_todo stages it in System Actions (name the assignee as");
+        prompt.AppendLine("  the user did; it lands on Apply, against the email's project or company-wide). On any");
+        prompt.AppendLine("  other page, take them to the To-do list and say where the add button is.");
         prompt.AppendLine("- **Draft an email** — \"email X / draft a reply / chase Y / send Z the quote\": open_modal");
         prompt.AppendLine("  compose_email (the Control Centre's composer), then write the draft into it with");
         prompt.AppendLine("  update_open_modal — usually after reading the relevant record's correspondence first so the");

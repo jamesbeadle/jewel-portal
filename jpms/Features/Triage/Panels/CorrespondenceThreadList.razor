@@ -12,7 +12,11 @@
     working an email in the other window. A host that passes OnReply also gets a Reply button on
     every email (and OnForward a Forward button) — the consistent reply/forward affordance
     wherever a communication is listed: record pages send there and then; the Control Centre
-    lines the email up in its Outbox instead. Tagging (and untagging) stays in mailbox triage.
+    lines the email up in its Outbox instead. A host that passes OnUntagged (with ExcludeTag set)
+    additionally gets an Untag button per email: it removes THIS record's tag from that one email
+    — armed on first press, confirmed on second, so a stray click can't unfile correspondence.
+    An email left with no JPMS tag at all is back in the Control Centre queue by definition (the
+    queue IS the untagged inbox), so untagging is always recoverable from triage.
 *@
 
 <ul class="space-y-2">
@@ -55,6 +59,11 @@
     /// <see cref="OnReply"/> (send now on a record page; line up in the Outbox in the Control
     /// Centre). Without a delegate no Forward button renders.</summary>
     [Parameter] public EventCallback<MailboxMessage> OnForward { get; set; }
+
+    /// <summary>Raised after this record's tag (<see cref="ExcludeTag"/>) has been removed from an
+    /// email — the host reloads its list so the email disappears from it. Without a delegate no
+    /// Untag button renders; with one, ExcludeTag must be the record's full "JPMS/…" tag.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnUntagged { get; set; }
 
     private readonly HashSet<string> expandedThreads = new();
     private readonly HashSet<string> expandedEmails = new();
@@ -203,9 +212,62 @@
                             : $"Thread · {threadGroup.Earlier.Count + 1} emails")
                     </button>
                 }
+                @if (OnUntagged.HasDelegate && !string.IsNullOrWhiteSpace(ExcludeTag))
+                {
+                    @if (untagging.Contains(email.Id))
+                    {
+                        <span class="text-xs text-content-subtle italic">Untagging…</span>
+                    }
+                    else if (untagArmed.Contains(email.Id))
+                    {
+                        <button type="button" class="text-xs font-medium text-negative hover:underline"
+                                @onclick="() => UntagAsync(email)">
+                            Untag from @TagStem(ExcludeTag)? Press to confirm
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="text-xs font-medium text-content-subtle hover:text-negative"
+                                @onclick="() => untagArmed.Add(email.Id)">Untag</button>
+                    }
+                }
             </div>
+            @if (untagErrors.TryGetValue(email.Id, out var untagError))
+            {
+                <p class="text-xs text-negative mt-1">@untagError</p>
+            }
         </div>
     };
+
+    // ---- Untag: remove THIS record's tag from one email --------------------------------------
+    // Armed-then-confirm on purpose: unfiling correspondence is cheap to redo (Find & tag, or
+    // triage) but confusing to do by accident. Only the record's own tag is ever touched — an
+    // email filed to other records keeps those tags, and one left with no JPMS tag at all is
+    // simply back in the Control Centre queue.
+
+    private readonly HashSet<string> untagArmed = new();
+    private readonly HashSet<string> untagging = new();
+    private readonly Dictionary<string, string> untagErrors = new();
+
+    private async Task UntagAsync(MailboxMessage email)
+    {
+        untagArmed.Remove(email.Id);
+        untagErrors.Remove(email.Id);
+        untagging.Add(email.Id);
+        try
+        {
+            await Intake.RemoveTagFromMessageAsync(email.Id, email.InternetMessageId, ExcludeTag);
+            await OnUntagged.InvokeAsync(email);
+        }
+        catch
+        {
+            untagErrors[email.Id] = "Couldn't untag that email. Please try again.";
+        }
+        finally
+        {
+            untagging.Remove(email.Id);
+        }
+    }
 
     private void ToggleThread(string key)
     {

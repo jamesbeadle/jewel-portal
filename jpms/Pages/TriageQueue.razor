@@ -3462,10 +3462,18 @@ else
                 .Append(" (they land when the user presses Apply).");
         }
 
+        var todoDrafts = CurrentTodoDrafts();
+        if (todoDrafts.Count > 0)
+        {
+            note.Append(" To-dos staged to raise on Apply: ")
+                .Append(string.Join("; ", todoDrafts.Select(draft => $"\"{draft.Title}\"")))
+                .Append('.');
+        }
+
         note.Append(" Tagging this email to a record (a variation, RFI, defect, bid package…) is done")
             .Append(" ON THIS PAGE: find the record (search the register on the first call), stage it")
-            .Append(" with stage_triage_tag, and the user presses Apply to land it. Do not navigate")
-            .Append(" away to the record for tagging.");
+            .Append(" with stage_triage_tag, and the user presses Apply to land it. To-dos are staged")
+            .Append(" the same way with stage_triage_todo. Do not navigate away to do either.");
         return note.ToString();
     }
 
@@ -3480,10 +3488,90 @@ else
 
     private Func<string, string, Task>? pageActionHandler;
 
-    private Task HandleAssistantPageActionAsync(string tool, string argumentsJson) =>
-        string.Equals(tool, "stage_triage_tag", StringComparison.OrdinalIgnoreCase)
-            ? InvokeAsync(() => StageTagFromAssistantAsync(argumentsJson))
-            : Task.CompletedTask;
+    private Task HandleAssistantPageActionAsync(string tool, string argumentsJson) => tool.ToLowerInvariant() switch
+    {
+        "stage_triage_tag" => InvokeAsync(() => StageTagFromAssistantAsync(argumentsJson)),
+        "stage_triage_todo" => InvokeAsync(() => StageTodoFromAssistant(argumentsJson)),
+        _ => Task.CompletedTask
+    };
+
+    /// <summary>
+    /// stage_triage_todo from the chat: adds a row to the SAME createTodoRows the System Actions
+    /// "Create To-do Items" panel edits, so the user sees it there, can correct it, and Apply
+    /// raises it exactly as if they had typed it. The assignee arrives as words ("Nigel Reilly",
+    /// "the QS") and is matched against the real picker options; a name that matches nobody
+    /// stages the row unassigned and says so — a to-do for the wrong person is worse than one
+    /// waiting to be assigned.
+    /// </summary>
+    private void StageTodoFromAssistant(string argumentsJson)
+    {
+        string? title = null, notes = null, assignee = null, due = null;
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
+            if (document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                title = ReadDraftText(document.RootElement, "title");
+                notes = ReadDraftText(document.RootElement, "notes");
+                assignee = ReadDraftText(document.RootElement, "assignee");
+                due = ReadDraftText(document.RootElement, "due");
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+        }
+
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            actionError = "The assistant tried to stage a to-do without saying what is to be done.";
+            StateHasChanged();
+            return;
+        }
+
+        var row = new TodoDraftRow { Title = title.Trim(), Notes = notes?.Trim() ?? "" };
+        if (!string.IsNullOrWhiteSpace(due) && DateTime.TryParse(due, out var dueDate))
+            row.Due = dueDate.ToString("yyyy-MM-dd");
+
+        string? assigneeNote = null;
+        if (!string.IsNullOrWhiteSpace(assignee))
+        {
+            // Loose match against the picker's real options — "Nigel Reilly" finds
+            // "Nigel Reilly (Project Manager)", "nigel" finds him too. Ambiguity or a miss
+            // stages unassigned and says so, rather than guessing a person.
+            var wanted = assignee.Trim();
+            var matches = todoAssigneeOptions
+                .Where(option => option.Label.Contains(wanted, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            if (matches.Count == 1)
+                row.Assignees.Add(matches[0].Value);
+            else
+                assigneeNote = matches.Count == 0
+                    ? $"nobody called \"{wanted}\" is in the assignee list — pick them in System Actions"
+                    : $"\"{wanted}\" matches {matches.Count} people — pick the right one in System Actions";
+        }
+
+        // Reuse the untouched starter row rather than leaving a blank above the staged one.
+        var blank = createTodoRows.FirstOrDefault(existing =>
+            string.IsNullOrWhiteSpace(existing.Title) && string.IsNullOrWhiteSpace(existing.Notes)
+            && existing.Assignees.Count == 0);
+        if (blank is not null)
+        {
+            blank.Title = row.Title;
+            blank.Notes = row.Notes;
+            blank.Due = row.Due;
+            blank.Assignees.AddRange(row.Assignees);
+        }
+        else
+        {
+            createTodoRows.Add(row);
+        }
+
+        if (assigneeNote is not null)
+        {
+            actionError = $"The assistant staged the to-do \"{row.Title}\" unassigned — {assigneeNote}.";
+        }
+        StateHasChanged();
+    }
 
     private async Task StageTagFromAssistantAsync(string argumentsJson)
     {

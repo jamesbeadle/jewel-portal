@@ -117,8 +117,9 @@ public static class PortalMapCapabilities
             "the mailbox intake queue and router for ALL correspondence across every project. "
             + "Everything about the SELECTED email is done on this page, never by navigating away: "
             + "tag it to any record — variations, RFIs, defects, bid packages — with stage_triage_tag "
-            + "(the same act as picking it in the System Tags pane; Apply lands it); set its project; "
-            + "write a reply or forward; raise records and to-dos from it in System Actions. Also the "
+            + "(the same act as picking it in the System Tags pane; Apply lands it); stage to-dos with "
+            + "stage_triage_todo (assignee, notes, due date; Apply raises them); set its project; "
+            + "write a reply or forward; raise records from it in System Actions. Also the "
             + "New email composer: the compose_email dialog opens HERE (open_modal compose_email) for "
             + "any email the user asks you to draft; they review and press Send on this page",
         ["/document-control"] =

@@ -38,6 +38,8 @@ public static class AiToolLabels
             "read_email_attachment" => "Reading an attachment",
             "stage_triage_tag" => Named(arguments, "reference", reference => $"Staging the {reference} tag")
                                   ?? "Staging the tag",
+            "stage_triage_todo" => Named(arguments, "title", title => $"Staging to-do: {title}")
+                                   ?? "Staging a to-do",
             "open_modal" => Named(arguments, "modal_key", key => key switch
                             {
                                 "compose_email" => "Opening the email composer",

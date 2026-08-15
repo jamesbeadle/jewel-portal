@@ -79,16 +79,21 @@ public static class AiToolCatalogue
         if (ModalCatalog.For(user.Roles).Count == 0)
             visible = visible.Where(tool => tool.Name != "open_modal").ToList();
 
-        // stage_triage_tag exists only where it can land: the Control Centre, whose System Tags
-        // pane is what it stages into. Anywhere else the action would arrive at a page with no
-        // handler — the ADR-002 rule again: a tool the user could not invoke is never described.
-        // Scope is rebuilt every hop, so navigating to the Control Centre mid-turn surfaces it.
+        // The stage_triage_* tools exist only where they can land: the Control Centre, whose
+        // System Tags and System Actions panes are what they stage into. Anywhere else the action
+        // would arrive at a page with no handler — the ADR-002 rule again: a tool the user could
+        // not invoke is never described. Scope is rebuilt every hop, so navigating to the Control
+        // Centre mid-turn surfaces them.
         var route = scope?.Route ?? "";
         var inControlCentre =
             route.StartsWith("/control-centre", StringComparison.OrdinalIgnoreCase)
             || route.StartsWith("/requests/triage", StringComparison.OrdinalIgnoreCase);
         if (!inControlCentre)
-            visible = visible.Where(tool => tool.Name != "stage_triage_tag").ToList();
+        {
+            visible = visible
+                .Where(tool => tool.Name != "stage_triage_tag" && tool.Name != "stage_triage_todo")
+                .ToList();
+        }
 
         // The agent's declared tool subset, when it declares one. switch_agent and the open-dialog
         // tool are never filtered out by it — the hand-over path must survive every configuration.
@@ -485,9 +490,11 @@ public static class AiToolCatalogue
             new(
                 "find_by_reference",
                 "Look up a single record by the reference a person would say out loud — V72, RFI-049, REQ-0122, "
-                + "NOD-003. Searches variations and requests across every project. Use this before saying you "
-                + "cannot find something.",
-                AiToolSchema.Object(("reference", "string", "For example V72 or RFI-049.", true)),
+                + "NOD-003. Searches variations and requests across every project. Tolerant of how people type: "
+                + "rfi001, RFI-001, vo80, VOQ-0080 and V80 all find their record, and a project-prefixed "
+                + "reference (JBB-2026-001-REQ-0113) matches too. Use this before saying you cannot find "
+                + "something — ONE call, not one per spelling.",
+                AiToolSchema.Object(("reference", "string", "For example V72, rfi001 or REQ-0122 — as the user said it.", true)),
                 AiToolKind.Read,
                 readers,
                 async (context, input, ct) =>
@@ -495,9 +502,15 @@ public static class AiToolCatalogue
                     var reference = AiToolSchema.Text(input, "reference")?.Trim();
                     if (string.IsNullOrWhiteSpace(reference)) return NotFound("A reference is required.");
 
-                    // V72 — the number a user reads, which is VariationOrderEntity.Number per project.
-                    if (reference.StartsWith("V", StringComparison.OrdinalIgnoreCase)
-                        && int.TryParse(reference[1..], out var variationNumber))
+                    // People say the same reference many ways — rfi001, RFI-001, vo80, VOQ-0080. Both
+                    // sides are compared stripped of dashes and spaces, lower-cased, so the model never
+                    // has to guess the house spelling (each miss used to cost a whole look-up round).
+                    var cleaned = reference.Replace("-", "").Replace(" ", "").ToLowerInvariant();
+
+                    // V72 / vo80 / VOQ-0080 — the number a user reads, which is
+                    // VariationOrderEntity.Number per project, however they prefixed it.
+                    var variationForm = System.Text.RegularExpressions.Regex.Match(cleaned, "^v(?:oq|o)?0*(\\d+)$");
+                    if (variationForm.Success && int.TryParse(variationForm.Groups[1].Value, out var variationNumber))
                     {
                         var matches = await context.Db.VariationOrders
                             .AsNoTracking()
@@ -538,14 +551,20 @@ public static class AiToolCatalogue
                         }
                     }
 
+                    // Normalised equality first, then suffix — so "REQ-0113" also finds a stored
+                    // project-prefixed "JBB-2026-001-REQ-0113". Replace/ToLower/EndsWith all
+                    // translate to SQL, so this stays one indexed-table scan, not a client fetch.
                     var requests = await context.Db.Requests
                         .AsNoTracking()
-                        .Where(row => row.Reference == reference)
+                        .Where(row =>
+                            row.Reference.Replace("-", "").Replace(" ", "").ToLower() == cleaned
+                            || row.Reference.Replace("-", "").Replace(" ", "").ToLower().EndsWith(cleaned))
                         .Select(row => new
                         {
                             row.RequestId, row.ProjectId, row.Reference, row.Title,
                             row.Kind, row.Status, row.Value, row.ResponseDue
                         })
+                        .Take(20)
                         .ToListAsync(ct);
 
                     if (requests.Count == 0)
@@ -742,6 +761,26 @@ public static class AiToolCatalogue
                 AiToolKind.Ui,
                 // Mirrors the Control Centre page's own gate (TriageRoles.AllowedToTriage): whoever
                 // can stage a tag by clicking is exactly who may stage one from here.
+                TriageRoles.AllowedToTriage,
+                (_, _, _) => Task.FromResult(Serialise(new { ok = true, handed_to_browser = true }))),
+
+            new(
+                "stage_triage_todo",
+                "Stage a to-do in the Control Centre's System Actions — the same act as the user adding a "
+                + "row to \"Create To-do Items\" themselves. It lands (one item per assignee, or unassigned) "
+                + "when the user presses Apply; until then NOTHING exists, so say \"staged — Apply lands "
+                + "it\", never that the to-do was created. The to-do goes on the selected email's project "
+                + "(company-wide when none is set). Name the assignee as the user said it — the page "
+                + "matches it against the real people and roles, and says so on screen if nobody matches. "
+                + "Confirm from the NEXT current-context block, which lists what is actually staged.",
+                AiToolSchema.Object(
+                    ("title", "string", "What is to be done, as the to-do list will show it.", true),
+                    ("notes", "string", "Optional detail — say which email or record it concerns.", false),
+                    ("assignee", "string",
+                        "Who it is for, as the user named them — \"Nigel Reilly\", \"the QS\". Leave out "
+                        + "for unassigned.", false),
+                    ("due", "string", "Due date as yyyy-MM-dd. Leave out for the house default (a week).", false)),
+                AiToolKind.Ui,
                 TriageRoles.AllowedToTriage,
                 (_, _, _) => Task.FromResult(Serialise(new { ok = true, handed_to_browser = true }))),
 

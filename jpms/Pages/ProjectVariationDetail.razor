@@ -438,7 +438,8 @@ else
                     {
                         <CorrespondenceThreadList Emails="emails" ExcludeTag="@($"JPMS/{order.Reference}")"
                                                   OnReply="email => StartCommsCompose(email, forward: false)"
-                                                  OnForward="email => StartCommsCompose(email, forward: true)" />
+                                                  OnForward="email => StartCommsCompose(email, forward: true)"
+                                                  OnUntagged="_ => LoadEmailsAsync()" />
                     }
                     </LoadGate>
                 </div>

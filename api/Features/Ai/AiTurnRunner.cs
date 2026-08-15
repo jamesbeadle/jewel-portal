@@ -243,6 +243,9 @@ public sealed class AiTurnRunner
         if (string.Equals(call.Name, "stage_triage_tag", StringComparison.OrdinalIgnoreCase))
             return await ValidateStageTagAsync(call, ct);
 
+        if (string.Equals(call.Name, "stage_triage_todo", StringComparison.OrdinalIgnoreCase))
+            return ValidateStageTodo(call);
+
         if (!string.Equals(call.Name, "open_modal", StringComparison.OrdinalIgnoreCase)) return null;
 
         string? modalKey = null;
@@ -293,6 +296,28 @@ public sealed class AiTurnRunner
         }
 
         return null;
+    }
+
+    /// <summary>stage_triage_todo needs a real title — an empty row would stage nothing and the
+    /// model would narrate a to-do that never appears.</summary>
+    private static string? ValidateStageTodo(ClaudeToolCall call)
+    {
+        try
+        {
+            using var arguments = JsonDocument.Parse(
+                string.IsNullOrWhiteSpace(call.ArgumentsJson) ? "{}" : call.ArgumentsJson);
+            if (arguments.RootElement.ValueKind == JsonValueKind.Object
+                && arguments.RootElement.TryGetProperty("title", out var title)
+                && title.ValueKind == JsonValueKind.String
+                && !string.IsNullOrWhiteSpace(title.GetString()))
+            {
+                return null;
+            }
+        }
+        catch (JsonException)
+        {
+        }
+        return Fail("stage_triage_todo needs a title — what is to be done, as the to-do list will show it.");
     }
 
     /// <summary>
