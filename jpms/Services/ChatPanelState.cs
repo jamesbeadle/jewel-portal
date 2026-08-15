@@ -88,6 +88,27 @@ public sealed class ChatPanelState
     {
         if (AssistantBusy == value) return;
         AssistantBusy = value;
+        // Busy ending always ends control too — one switch cannot be left on without the other,
+        // whatever path the turn ended by (completion, truncation, an exception, a failed send).
+        if (!value) AssistantControlling = false;
+        OnChange?.Invoke();
+    }
+
+    /// <summary>
+    /// True from the moment a turn's first UI action lands (navigate_to, open_modal,
+    /// update_open_modal) until the turn ends: the assistant is OPERATING the portal, not just
+    /// answering. MainLayout renders the takeover overlay while it is set — the screen dims behind
+    /// a green-edged vignette and the app stops taking input, so the user cannot fight the
+    /// assistant for the controls mid-action. The chat panel lifts above the overlay and stays
+    /// fully usable throughout. Set by ChatPanel when it applies a UI action; cleared by
+    /// <see cref="SetAssistantBusy"/>(false) so no error path can strand the screen dimmed.
+    /// </summary>
+    public bool AssistantControlling { get; private set; }
+
+    public void SetAssistantControlling(bool value)
+    {
+        if (AssistantControlling == value) return;
+        AssistantControlling = value;
         OnChange?.Invoke();
     }
 

@@ -509,7 +509,13 @@
             // Only from md up. Below that the panel is full-bleed, so lifting it above the overlay
             // would hide the very form it is meant to sit beside — and with the backdrop click
             // disabled there would be no way back to it. On a phone the modal wins.
-            var layer = Chat.CoexistingModalOpen ? "z-40 md:z-[60]" : "z-40";
+            //
+            // While the assistant is CONTROLLING the portal the panel lifts everywhere (including
+            // phones): the takeover overlay sits at z-[55] over the whole app, and the one thing
+            // that must stay usable through it is this conversation.
+            var layer = Chat.AssistantControlling
+                ? "z-[60]"
+                : Chat.CoexistingModalOpen ? "z-40 md:z-[60]" : "z-40";
             var baseClass = $"chat-panel fixed top-0 bottom-0 right-0 {layer} "
                 + "w-full md:w-[400px] lg:w-[440px] md:border-l border-line";
             return Chat.IsOpen ? $"{baseClass} chat-panel-open" : $"{baseClass} chat-panel-closed";
@@ -974,9 +980,13 @@
     {
         switch (action.Tool?.ToLowerInvariant())
         {
-            case "navigate_to": ApplyNavigate(action); break;
-            case "update_open_modal": ApplyModalUpdate(action); break;
-            case "open_modal": ApplyOpenModal(action); break;
+            // Every one of these is the assistant OPERATING the portal — from the first one until
+            // the turn ends, the takeover overlay (MainLayout) dims the app and blocks its input
+            // so the user and the assistant cannot fight over the same controls. Cleared by
+            // SetAssistantBusy(false) in Send's finally, whatever way the turn ends.
+            case "navigate_to": Chat.SetAssistantControlling(true); ApplyNavigate(action); break;
+            case "update_open_modal": Chat.SetAssistantControlling(true); ApplyModalUpdate(action); break;
+            case "open_modal": Chat.SetAssistantControlling(true); ApplyOpenModal(action); break;
         }
     }
 
