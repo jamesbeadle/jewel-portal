@@ -3487,7 +3487,7 @@ else
 
     private async Task StageTagFromAssistantAsync(string argumentsJson)
     {
-        string? typeText = null, recordId = null, reference = null;
+        string? typeText = null, recordId = null, reference = null, recordProjectId = null;
         try
         {
             using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
@@ -3496,6 +3496,7 @@ else
                 typeText = ReadDraftText(document.RootElement, "record_type");
                 recordId = ReadDraftText(document.RootElement, "record_id");
                 reference = ReadDraftText(document.RootElement, "reference");
+                recordProjectId = ReadDraftText(document.RootElement, "project_id");
             }
         }
         catch (System.Text.Json.JsonException)
@@ -3514,6 +3515,21 @@ else
         {
             actionError = "The assistant tried to stage a tag, but this email has no project set — "
                 + "pick its project first.";
+            StateHasChanged();
+            return;
+        }
+        // A record from ANOTHER project is refused with the two projects named — tagging follows
+        // the email's project, exactly as the System Tags pane does. Changing the email's project
+        // is a triage decision the user makes in the bar, never a side effect of a tag.
+        if (!string.IsNullOrEmpty(recordProjectId)
+            && !string.Equals(recordProjectId, triageProjectId, StringComparison.Ordinal))
+        {
+            var emailProject = ProjectOptionsFor(triageProjectId).FirstOrDefault(p => p.ProjectId == triageProjectId);
+            var recordProject = ProjectOptionsFor(recordProjectId).FirstOrDefault(p => p.ProjectId == recordProjectId);
+            actionError = $"The assistant asked to tag this email to {reference ?? "a record"} on "
+                + $"{recordProject?.Reference ?? recordProjectId}, but this email's project is "
+                + $"{emailProject?.Reference ?? triageProjectId}. Change the email's project in the bar "
+                + "above if that record really is the right one.";
             StateHasChanged();
             return;
         }

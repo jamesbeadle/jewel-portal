@@ -159,12 +159,16 @@ public sealed class ChatPanelState
         if (ReferenceEquals(pageActionHandler, handler)) pageActionHandler = null;
     }
 
-    /// <summary>Hands an action to the open page. False when no page is listening — the caller
-    /// says so out loud. Fire-and-forget by design: the page owns its own errors and repaints.</summary>
-    public bool DispatchPageAction(string tool, string argumentsJson)
+    /// <summary>Hands an action to the open page and WAITS for it. False when no page is listening
+    /// — the caller says so out loud. Awaited on purpose: the turn's next hop rebuilds the page
+    /// note, and the model must read what actually happened (a staged tag listed, or nothing plus
+    /// the page's on-screen refusal) — a fire-and-forget here is how the assistant ends up
+    /// narrating a tag that never staged. The page owns its own errors and repaints.</summary>
+    public async Task<bool> DispatchPageActionAsync(string tool, string argumentsJson)
     {
         if (pageActionHandler is null) return false;
-        _ = pageActionHandler(tool, argumentsJson);
+        try { await pageActionHandler(tool, argumentsJson); }
+        catch { /* the page reports its own failures; the dispatch itself never throws */ }
         return true;
     }
 

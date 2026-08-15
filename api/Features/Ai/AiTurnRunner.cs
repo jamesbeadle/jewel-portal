@@ -305,6 +305,7 @@ public sealed class AiTurnRunner
     {
         string? typeText = null;
         string? recordId = null;
+        string? projectId = null;
         try
         {
             using var arguments = JsonDocument.Parse(
@@ -317,34 +318,43 @@ public sealed class AiTurnRunner
                 if (arguments.RootElement.TryGetProperty("record_id", out var idElement)
                     && idElement.ValueKind == JsonValueKind.String)
                     recordId = idElement.GetString();
+                if (arguments.RootElement.TryGetProperty("project_id", out var projectElement)
+                    && projectElement.ValueKind == JsonValueKind.String)
+                    projectId = projectElement.GetString();
             }
         }
         catch (JsonException)
         {
         }
 
-        if (string.IsNullOrWhiteSpace(typeText) || string.IsNullOrWhiteSpace(recordId))
-            return Fail("stage_triage_tag needs record_type AND record_id — the real id from "
-                + "list_requests, list_variations or find_by_reference. Do not invent either.");
+        if (string.IsNullOrWhiteSpace(typeText) || string.IsNullOrWhiteSpace(recordId)
+            || string.IsNullOrWhiteSpace(projectId))
+        {
+            return Fail("stage_triage_tag needs record_type, record_id AND project_id — all from the "
+                + "tool result that found the record. Do not invent any of them.");
+        }
 
         if (!AiRecordTools.TryMapRecordType(typeText, out var recordType))
             return Fail($"\"{typeText}\" is not a taggable record type. Use one of: request, "
                 + "bid_package, variation, variation_quote, work_order, todo, lad, scheduling.");
 
+        // Where the record lives in a table this side, verify it exists ON THE PROJECT CLAIMED —
+        // a right id with the wrong project is exactly the V80-on-three-projects mistake.
         var recordExists = recordType switch
         {
             RecordType.Request => await context.Requests.AsNoTracking()
-                .AnyAsync(row => row.RequestId == recordId, ct),
+                .AnyAsync(row => row.RequestId == recordId && row.ProjectId == projectId, ct),
             RecordType.Variation or RecordType.VariationQuote => await context.VariationOrders.AsNoTracking()
-                .AnyAsync(row => row.VariationOrderId == recordId, ct),
+                .AnyAsync(row => row.VariationOrderId == recordId && row.ProjectId == projectId, ct),
             // Other types live behind their own providers — the page's own lookup is the check.
             _ => true
         };
 
         return recordExists
             ? null
-            : Fail($"No {recordType} exists with id \"{recordId}\" — that is not a real record id. Call "
-                + "list_requests, list_variations or find_by_reference for the actual id first.");
+            : Fail($"No {recordType} with id \"{recordId}\" exists on project \"{projectId}\". Use the "
+                + "id AND projectId from the same tool result — and remember the record must be on the "
+                + "email's own project (the current context names it).");
     }
 
     // ---- agents and skills -----------------------------------------------------------------

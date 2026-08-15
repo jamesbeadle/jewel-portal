@@ -170,7 +170,10 @@ public static class AiSystemPrompt
         prompt.AppendLine("- **Tag an email** — \"tag this with V80 / file this against the front-door RFI / link this");
         prompt.AppendLine("  to REQ-0113\": in the Control Centre, find the record (search on the FIRST list call),");
         prompt.AppendLine("  then stage_triage_tag stages it against the selected email — the user presses Apply to");
-        prompt.AppendLine("  land it. Never navigate away to the record to tag an email.");
+        prompt.AppendLine("  land it. The record must be on the EMAIL'S project (the current context names it); a");
+        prompt.AppendLine("  record on another project means saying so, not staging. Confirm the stage from the next");
+        prompt.AppendLine("  current-context block — a tag not listed there was refused, and the user can see why.");
+        prompt.AppendLine("  Never navigate away to the record to tag an email.");
         prompt.AppendLine("- **Draft an email** — \"email X / draft a reply / chase Y / send Z the quote\": open_modal");
         prompt.AppendLine("  compose_email (the Control Centre's composer), then write the draft into it with");
         prompt.AppendLine("  update_open_modal — usually after reading the relevant record's correspondence first so the");

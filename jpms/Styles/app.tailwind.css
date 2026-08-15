@@ -254,23 +254,22 @@
 }
 
 /* The assistant takeover (Layout/MainLayout.razor): while the chat is OPERATING the portal —
-   navigating, opening a dialog, writing into a form — the app dims behind a breathing
-   green-edged vignette and stops taking input, the same visual language as an agent taking over
-   a computer, in the house green. The overlay itself swallows every click (it is the blocker,
-   not just the look); the chat panel sits above it at z-[60] and stays fully usable. z-[55]
-   places it over the modal overlay (z-50) — a dialog the assistant is mid-way through filling is
-   exactly the thing the user should not be typing into — and under the panel. */
+   navigating, opening a dialog, writing into a form — the WHOLE viewport dims behind a breathing
+   green-edged frame and stops taking input, the same visual language as an agent taking over a
+   computer, in the house green. The overlay itself swallows every click (it is the blocker, not
+   just the look). z-[65] deliberately covers everything — the modal overlay (z-50) AND the chat
+   panel (z-60): while control is held nothing takes input anywhere, the frame runs edge to edge
+   with no seam at the panel, and it all releases the moment the turn ends. */
 .jpms-takeover {
     position: fixed;
     inset: 0;
-    z-index: 55;
+    z-index: 65;
     display: flex;
     align-items: center;
     justify-content: center;
     background: rgb(0 0 0 / 0.45);
     cursor: wait;
     animation: jpms-takeover-in 240ms ease-out;
-    transition: padding-right 300ms ease-out; /* tracks the chat panel's slide, like .chat-push */
 }
 
 /* The glowing frame: a hard inner ring plus a deep soft vignette, breathing. Drawn with inset
@@ -312,48 +311,73 @@
     to   { opacity: 1; }
 }
 
-/* The centre label: a glassy chip announcing who has the controls. Fades and lifts in a beat
-   after the dim so the sequence reads dim → frame → announcement. */
+/* The centre label: a glassy pill announcing who has the controls — the jewel mark in a softly
+   glowing ring, then "JEWEL ASSISTANT / AI Controlling" and the working dots. Lifts in on an
+   expo-out curve a beat after the dim, so the sequence reads dim → frame → announcement; the
+   ring's glow breathes on the same 2.8s clock as the screen edge, so the whole treatment
+   inhales and exhales together. */
 .jpms-takeover-label {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    gap: 0.25rem;
-    padding: 1rem 1.75rem;
-    border-radius: 1rem;
+    gap: 0.875rem;
+    padding: 0.75rem 1.625rem 0.75rem 0.875rem;
+    border-radius: 9999px;
     border: 1px solid rgb(87 224 138 / 0.30);
-    background: rgb(11 11 12 / 0.72); /* the canvas colour, translucent — house glass, not black */
-    backdrop-filter: blur(6px);
+    background: rgb(11 11 12 / 0.78); /* the canvas colour, translucent — house glass, not black */
+    backdrop-filter: blur(8px);
     box-shadow:
         0 0 18px 1px rgb(87 224 138 / 0.12),
-        0 8px 32px rgb(0 0 0 / 0.45);
-    animation: jpms-takeover-label-in 420ms ease-out both;
+        0 12px 40px rgb(0 0 0 / 0.50);
+    animation: jpms-takeover-label-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
     animation-delay: 120ms;
 }
 
+/* The jewel mark, held in its own breathing ring — the brand wearing the accent, not a logo
+   pasted on a box. */
+.jpms-takeover-jewel {
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    color: rgb(87 224 138 / 0.95);
+    background: rgb(87 224 138 / 0.08);
+    border: 1px solid rgb(87 224 138 / 0.30);
+    animation: jpms-takeover-jewel 2.8s ease-in-out infinite;
+}
+
+@keyframes jpms-takeover-jewel {
+    0%, 100% { box-shadow: 0 0 12px 0 rgb(87 224 138 / 0.16); }
+    50%      { box-shadow: 0 0 22px 3px rgb(87 224 138 / 0.32); }
+}
+
 .jpms-takeover-eyebrow {
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     font-weight: 600;
     color: rgb(87 224 138 / 0.85);
 }
 
 .jpms-takeover-title {
     font-size: 1.05rem;
+    line-height: 1.2;
     font-weight: 600;
     color: rgb(255 255 255 / 0.96);
 }
 
 @keyframes jpms-takeover-label-in {
-    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    from { opacity: 0; transform: translateY(14px) scale(0.94); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .jpms-takeover,
     .jpms-takeover-edge,
-    .jpms-takeover-label {
+    .jpms-takeover-label,
+    .jpms-takeover-jewel {
         animation: none;
     }
 }

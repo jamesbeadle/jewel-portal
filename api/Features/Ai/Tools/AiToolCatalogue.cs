@@ -369,6 +369,7 @@ public static class AiToolCatalogue
                     {
                         ok = true,
                         project = project.Reference,
+                        projectId = project.ProjectId,
                         count = rows.Count,
                         totalMatching = variationTotal,
                         // The cap said out loud — a silently clipped register reads as "not found".
@@ -452,6 +453,7 @@ public static class AiToolCatalogue
                     {
                         ok = true,
                         project = project.Reference,
+                        projectId = project.ProjectId,
                         count = rows.Count,
                         totalMatching = requestTotal,
                         // The cap said out loud — a silently clipped register reads as "not found",
@@ -524,6 +526,7 @@ public static class AiToolCatalogue
                                     number = $"V{row.Number}",
                                     row.VariationOrderId,
                                     project = projects.TryGetValue(row.ProjectId, out var reference1) ? reference1 : row.ProjectId,
+                                    projectId = row.ProjectId,
                                     row.Title,
                                     status = ((VariationOrderStatus)row.Status).ToString(),
                                     row.Value,
@@ -556,6 +559,7 @@ public static class AiToolCatalogue
                         {
                             row.Reference,
                             row.RequestId,
+                            projectId = row.ProjectId,
                             row.Title,
                             kind = ((RequestType)row.Kind).ToString(),
                             status = ((RequestStatus)row.Status).ToString(),
@@ -718,17 +722,22 @@ public static class AiToolCatalogue
                 "stage_triage_tag",
                 "Stage a record tag against the email SELECTED in the Control Centre — the same act as the "
                 + "user picking that record in the System Tags pane themselves. The \"current context\" block "
-                + "says which email is selected and its project. Staging changes NOTHING: the tag (with "
-                + "everything else staged) lands only when the user presses Apply, so say \"I've staged the "
-                + "tag — Apply lands it\", never that the email IS tagged. Use the real record id and "
-                + "reference from list_requests, list_variations or find_by_reference — never invent one. "
-                + "record_type takes: request, bid_package, variation, variation_quote, work_order, todo, "
-                + "lad, scheduling.",
+                + "says which email is selected and which project it is set to. **The record must be on that "
+                + "same project** — if the user names a record on a different project, do not stage it: say "
+                + "the email's project would need changing first, and ask which they mean. Staging changes "
+                + "NOTHING: the tag lands only when the user presses Apply. The result only means the page "
+                + "was asked — read the NEXT current-context block: a tag that staged is listed there, and "
+                + "one that is not listed was refused (the user can see why on screen). Never say the email "
+                + "IS tagged, and never claim a stage you have not seen listed. Use the real ids from "
+                + "list_requests, list_variations or find_by_reference — never invent them.",
                 AiToolSchema.Object(
                     ("record_type", "string",
                         "What kind of record — request, bid_package, variation, variation_quote, work_order, "
                         + "todo, lad, or scheduling.", true),
                     ("record_id", "string", "The record's real id, from a tool result.", true),
+                    ("project_id", "string",
+                        "The PROJECT the record belongs to, from the same tool result. It must match the "
+                        + "email's own project shown in the current context.", true),
                     ("reference", "string", "The reference the user reads — RFI-049, V80, BPI-0003.", true)),
                 AiToolKind.Ui,
                 // Mirrors the Control Centre page's own gate (TriageRoles.AllowedToTriage): whoever

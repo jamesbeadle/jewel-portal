@@ -510,12 +510,10 @@
             // would hide the very form it is meant to sit beside — and with the backdrop click
             // disabled there would be no way back to it. On a phone the modal wins.
             //
-            // While the assistant is CONTROLLING the portal the panel lifts everywhere (including
-            // phones): the takeover overlay sits at z-[55] over the whole app, and the one thing
-            // that must stay usable through it is this conversation.
-            var layer = Chat.AssistantControlling
-                ? "z-[60]"
-                : Chat.CoexistingModalOpen ? "z-40 md:z-[60]" : "z-40";
+            // The takeover overlay (z-[65]) deliberately covers this panel too: while the
+            // assistant is operating the portal NOTHING takes input — the frame runs the full
+            // viewport with no seam at the panel's edge, and typing resumes when control lifts.
+            var layer = Chat.CoexistingModalOpen ? "z-40 md:z-[60]" : "z-40";
             var baseClass = $"chat-panel fixed top-0 bottom-0 right-0 {layer} "
                 + "w-full md:w-[400px] lg:w-[440px] md:border-l border-line";
             return Chat.IsOpen ? $"{baseClass} chat-panel-open" : $"{baseClass} chat-panel-closed";
@@ -793,7 +791,7 @@
     }
 
     /// <summary>Folds one hop into the panel, then repaints so the status line moves.</summary>
-    private void Fold(AiTurnResult result)
+    private async Task FoldAsync(AiTurnResult result)
     {
         // Mid-turn assistant text is the model narrating its own next step ("Checking the
         // variations register…") — asked for in the system prompt precisely so the wait can say
@@ -813,7 +811,7 @@
         }
 
         foreach (var step in result.Steps) lastToolsUsed.Add(step.Tool);
-        foreach (var action in result.UiActions) Apply(action);
+        foreach (var action in result.UiActions) await ApplyAsync(action);
 
         agentKey = result.AgentKey;
         if (result.ModelNote is not null) modelNote = result.ModelNote;
@@ -909,7 +907,7 @@
             // The cap tracks AiTurnRunner.MaxHops (10) with headroom — the server is authoritative.
             for (var hop = 0; hop < 12; hop++)
             {
-                Fold(result);
+                await FoldAsync(result);
                 if (result.Status != AiTurnStatus.NeedsContinue) break;
 
                 // Scope is REBUILT per hop, not reused from the send: a navigate_to in the previous
@@ -976,7 +974,7 @@
     /// here — the worst a bad action can do is take the user to a page they can already open, or put
     /// a wrong word in a form they are looking at and have not submitted.
     /// </summary>
-    private void Apply(AiUiAction action)
+    private async Task ApplyAsync(AiUiAction action)
     {
         switch (action.Tool?.ToLowerInvariant())
         {
@@ -988,12 +986,13 @@
             case "update_open_modal": Chat.SetAssistantControlling(true); ApplyModalUpdate(action); break;
             case "open_modal": Chat.SetAssistantControlling(true); ApplyOpenModal(action); break;
             case "stage_triage_tag":
-                // Addressed to the open page (the Control Centre), not to the panel. The server
-                // only offers the tool on that route, so a missing handler means the builds have
-                // drifted — said out loud, per the open_modal lesson: a silent no-op here is the
-                // model narrating a tag that never staged.
+                // Addressed to the open page (the Control Centre), not to the panel — and AWAITED,
+                // so the next hop's page note reports what actually staged. The server only offers
+                // the tool on that route, so a missing handler means the builds have drifted —
+                // said out loud, per the open_modal lesson: a silent no-op here is the model
+                // narrating a tag that never staged.
                 Chat.SetAssistantControlling(true);
-                if (!Chat.DispatchPageAction("stage_triage_tag", action.ArgumentsJson ?? "{}"))
+                if (!await Chat.DispatchPageActionAsync("stage_triage_tag", action.ArgumentsJson ?? "{}"))
                     error = "The assistant tried to stage a tag, but this page can't take one. Tags "
                         + "are staged in the Control Centre — if you ARE there, hard-refresh the "
                         + "browser and restart the API (the builds have drifted).";
