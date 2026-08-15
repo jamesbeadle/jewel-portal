@@ -1940,6 +1940,7 @@ else
         AiTasks.OnDraftApplied += ApplyAssistantEmailDraft;
         Chat.OnChange += StateHasChanged; // repaints the "assistant is writing" banner
         Chat.SetPageNoteProvider(pageNoteProvider = BuildAssistantPageNote);
+        Chat.SetPageActionHandler(pageActionHandler = HandleAssistantPageActionAsync);
         // The sort preference has to land first — LoadAsync pages the mailbox in this order, so
         // reading it late would fetch the first page the wrong way round. It is a local-storage
         // read, so it costs almost nothing.
@@ -3462,9 +3463,118 @@ else
         }
 
         note.Append(" Tagging this email to a record (a variation, RFI, defect, bid package…) is done")
-            .Append(" ON THIS PAGE: the user picks the record in the System Tags pane — searchable by")
-            .Append(" reference — and presses Apply. Do not navigate away to the record for tagging.");
+            .Append(" ON THIS PAGE: find the record (search the register on the first call), stage it")
+            .Append(" with stage_triage_tag, and the user presses Apply to land it. Do not navigate")
+            .Append(" away to the record for tagging.");
         return note.ToString();
+    }
+
+    // ---- The assistant's page actions -------------------------------------------------------
+    //
+    // stage_triage_tag arrives here from the chat (ChatPanelState.DispatchPageAction): the
+    // assistant found the record and asks for it to be staged against the selected email — the
+    // same act as the user picking it in the System Tags pane. The pick is resolved through the
+    // SAME provider the pane uses (ListLinkableRecordsAsync), so anything staged from here is a
+    // real LinkableRecord that Apply's tagging loop already knows how to land. Nothing is tagged
+    // until the user presses Apply.
+
+    private Func<string, string, Task>? pageActionHandler;
+
+    private Task HandleAssistantPageActionAsync(string tool, string argumentsJson) =>
+        string.Equals(tool, "stage_triage_tag", StringComparison.OrdinalIgnoreCase)
+            ? InvokeAsync(() => StageTagFromAssistantAsync(argumentsJson))
+            : Task.CompletedTask;
+
+    private async Task StageTagFromAssistantAsync(string argumentsJson)
+    {
+        string? typeText = null, recordId = null, reference = null;
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
+            if (document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                typeText = ReadDraftText(document.RootElement, "record_type");
+                recordId = ReadDraftText(document.RootElement, "record_id");
+                reference = ReadDraftText(document.RootElement, "reference");
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+        }
+
+        // Every refusal is said out loud (actionError shows in the triage bar) — the open_modal
+        // lesson: a silently dropped action leaves the model narrating a tag that never staged.
+        if (selected is null)
+        {
+            actionError = "The assistant tried to stage a tag, but no email is open in the queue.";
+            StateHasChanged();
+            return;
+        }
+        if (string.IsNullOrEmpty(triageProjectId))
+        {
+            actionError = "The assistant tried to stage a tag, but this email has no project set — "
+                + "pick its project first.";
+            StateHasChanged();
+            return;
+        }
+        if (!TryMapAssistantRecordType(typeText, out var recordType) || string.IsNullOrWhiteSpace(recordId))
+        {
+            actionError = $"The assistant asked to stage a tag it didn't fully describe "
+                + $"({reference ?? typeText ?? "unknown record"}). Ask it to try again.";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var candidates = await Intake.ListLinkableRecordsAsync(triageProjectId, recordType);
+            var match = candidates.FirstOrDefault(record => record.RecordId == recordId)
+                ?? (string.IsNullOrWhiteSpace(reference)
+                    ? null
+                    : candidates.FirstOrDefault(record =>
+                        string.Equals(record.Reference, reference, StringComparison.OrdinalIgnoreCase)));
+            if (match is null)
+            {
+                actionError = $"The assistant asked to tag this email to {reference ?? recordId}, but "
+                    + "that record isn't on this email's project. Check the record and project match.";
+                StateHasChanged();
+                return;
+            }
+
+            if (!pickedRecords.Any(pick => pick.Type == match.Type && pick.RecordId == match.RecordId))
+                pickedRecords.Add(match);
+            StateHasChanged();
+        }
+        catch
+        {
+            actionError = "Couldn't load the records to stage that tag. Please try again.";
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>The assistant's vocabulary for a taggable type — mirrors the API's
+    /// AiRecordTools.TryMapRecordType (which validated the same value server-side first).</summary>
+    private static bool TryMapAssistantRecordType(string? value, out RecordType recordType)
+    {
+        recordType = RecordType.Request;
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        var normalised = value.Trim().ToLowerInvariant().Replace('-', ' ').Replace('_', ' ');
+        RecordType? mapped = normalised switch
+        {
+            "request" or "rfi" or "rfa" or "rfc" or "rfq" or "rfp" or "nod" or "eot" => RecordType.Request,
+            "bid package" or "bid package invite" or "bidpackage" or "bpi" => RecordType.BidPackageInvite,
+            "variation" or "variation order" or "vo" => RecordType.Variation,
+            "variation quote" or "voq" => RecordType.VariationQuote,
+            "work order" or "purchase order" or "po" => RecordType.WorkOrder,
+            "defect" => RecordType.Defect,
+            "todo" or "to do" => RecordType.Todo,
+            "lad" or "liquidated damages" => RecordType.Lad,
+            "scheduling" or "programme" => RecordType.Scheduling,
+            _ => null
+        };
+        if (mapped is null) return false;
+        recordType = mapped.Value;
+        return true;
     }
 
     // ---- The assistant's route in: open_modal → ?openModal=compose_email --------------------
@@ -4134,5 +4244,6 @@ else
         AiTasks.OnDraftApplied -= ApplyAssistantEmailDraft;
         Chat.OnChange -= StateHasChanged;
         if (pageNoteProvider is not null) Chat.ClearPageNoteProvider(pageNoteProvider);
+        if (pageActionHandler is not null) Chat.ClearPageActionHandler(pageActionHandler);
     }
 }

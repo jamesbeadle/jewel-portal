@@ -987,6 +987,17 @@
             case "navigate_to": Chat.SetAssistantControlling(true); ApplyNavigate(action); break;
             case "update_open_modal": Chat.SetAssistantControlling(true); ApplyModalUpdate(action); break;
             case "open_modal": Chat.SetAssistantControlling(true); ApplyOpenModal(action); break;
+            case "stage_triage_tag":
+                // Addressed to the open page (the Control Centre), not to the panel. The server
+                // only offers the tool on that route, so a missing handler means the builds have
+                // drifted — said out loud, per the open_modal lesson: a silent no-op here is the
+                // model narrating a tag that never staged.
+                Chat.SetAssistantControlling(true);
+                if (!Chat.DispatchPageAction("stage_triage_tag", action.ArgumentsJson ?? "{}"))
+                    error = "The assistant tried to stage a tag, but this page can't take one. Tags "
+                        + "are staged in the Control Centre — if you ARE there, hard-refresh the "
+                        + "browser and restart the API (the builds have drifted).";
+                break;
         }
     }
 

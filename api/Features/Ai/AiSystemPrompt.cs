@@ -167,6 +167,10 @@ public static class AiSystemPrompt
         prompt.AppendLine("  on a record page, read_record_emails (any record type; attachment ids feed");
         prompt.AppendLine("  read_email_attachment). For a request, get_request_context is the full working papers. Use");
         prompt.AppendLine("  what you read as the context for whatever they asked next — a draft, a summary, a decision.");
+        prompt.AppendLine("- **Tag an email** — \"tag this with V80 / file this against the front-door RFI / link this");
+        prompt.AppendLine("  to REQ-0113\": in the Control Centre, find the record (search on the FIRST list call),");
+        prompt.AppendLine("  then stage_triage_tag stages it against the selected email — the user presses Apply to");
+        prompt.AppendLine("  land it. Never navigate away to the record to tag an email.");
         prompt.AppendLine("- **Draft an email** — \"email X / draft a reply / chase Y / send Z the quote\": open_modal");
         prompt.AppendLine("  compose_email (the Control Centre's composer), then write the draft into it with");
         prompt.AppendLine("  update_open_modal — usually after reading the relevant record's correspondence first so the");

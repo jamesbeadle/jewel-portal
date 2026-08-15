@@ -310,8 +310,9 @@ internal static class AiRecordTools
 
     /// <summary>The model's (or the route's) name for a record type onto the enum the record-link
     /// layer keys on. Tolerant of spacing and underscores; strict about meaning — an unknown name
-    /// fails rather than guessing.</summary>
-    private static bool TryMapRecordType(string value, out RecordType recordType)
+    /// fails rather than guessing. Internal so AiTurnRunner's stage_triage_tag validation speaks
+    /// the same vocabulary — one mapping, not two that drift.</summary>
+    internal static bool TryMapRecordType(string value, out RecordType recordType)
     {
         var normalised = value.Trim().ToLowerInvariant().Replace('-', ' ').Replace('_', ' ');
         RecordType? mapped = normalised switch

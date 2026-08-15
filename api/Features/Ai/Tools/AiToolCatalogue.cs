@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Jewel.JPMS.Api.Features.Agents;
+using Jewel.JPMS.Api.Features.Requests; // TriageRoles (internal, same assembly)
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Models;
@@ -77,6 +78,17 @@ public static class AiToolCatalogue
         // would invite the model to promise a form and then route them to a page that has no button.
         if (ModalCatalog.For(user.Roles).Count == 0)
             visible = visible.Where(tool => tool.Name != "open_modal").ToList();
+
+        // stage_triage_tag exists only where it can land: the Control Centre, whose System Tags
+        // pane is what it stages into. Anywhere else the action would arrive at a page with no
+        // handler — the ADR-002 rule again: a tool the user could not invoke is never described.
+        // Scope is rebuilt every hop, so navigating to the Control Centre mid-turn surfaces it.
+        var route = scope?.Route ?? "";
+        var inControlCentre =
+            route.StartsWith("/control-centre", StringComparison.OrdinalIgnoreCase)
+            || route.StartsWith("/requests/triage", StringComparison.OrdinalIgnoreCase);
+        if (!inControlCentre)
+            visible = visible.Where(tool => tool.Name != "stage_triage_tag").ToList();
 
         // The agent's declared tool subset, when it declares one. switch_agent and the open-dialog
         // tool are never filtered out by it — the hand-over path must survive every configuration.
@@ -311,10 +323,14 @@ public static class AiToolCatalogue
             new(
                 "list_variations",
                 "Variations on a project. A user always reads the number as V72 — never say VOQ or VO. "
-                + "Status is one of Quoting, Issued, AwaitingArchitectInstruction (say \"Awaiting AI\"), Approved, Rejected.",
+                + "Status is one of Quoting, Issued, AwaitingArchitectInstruction (say \"Awaiting AI\"), Approved, Rejected. "
+                + "Looking for a variation by what it is about? Pass search — do not page through the register.",
                 AiToolSchema.Object(
                     ("projectId", "string", "Defaults to the project in view.", false),
-                    ("status", "string", "Optional filter: Quoting, Issued, AwaitingArchitectInstruction, Approved or Rejected.", false)),
+                    ("status", "string", "Optional filter: Quoting, Issued, AwaitingArchitectInstruction, Approved or Rejected.", false),
+                    ("search", "string",
+                        "Text matched against the variation titles — \"render\", \"front door\". Use it to find "
+                        + "the variation the user described instead of reading the whole book.", false)),
                 AiToolKind.Read,
                 readers,
                 async (context, input, ct) =>
@@ -333,6 +349,12 @@ public static class AiToolCatalogue
                         query = query.Where(row => row.Status == (int)status);
                     }
 
+                    var variationSearch = AiToolSchema.Text(input, "search")?.Trim();
+                    if (!string.IsNullOrWhiteSpace(variationSearch))
+                        query = query.Where(row => row.Title.Contains(variationSearch));
+
+                    var variationTotal = await query.CountAsync(ct);
+
                     var rows = await query
                         .OrderByDescending(row => row.Number)
                         .Take(100)
@@ -348,6 +370,12 @@ public static class AiToolCatalogue
                         ok = true,
                         project = project.Reference,
                         count = rows.Count,
+                        totalMatching = variationTotal,
+                        // The cap said out loud — a silently clipped register reads as "not found".
+                        note = variationTotal > rows.Count
+                            ? $"Only the highest-numbered {rows.Count} of {variationTotal} matching variations are "
+                              + "listed. Pass search to narrow instead of calling again blind."
+                            : null,
                         variations = rows.Select(row => new
                         {
                             number = $"V{row.Number}",
@@ -368,11 +396,17 @@ public static class AiToolCatalogue
                 "list_requests",
                 "Requests on a project. The lineage is Request → RFI → Variation, one document with one number "
                 + "through every stage. Kind is Rfi, Rfa, Rfc, NoticeOfDelay, Rfq, Rfp, ExtensionOfTime or General. "
-                + "Status is NeedsAction, Open, Closed or NeedsVariation.",
+                + "Status is NeedsAction, Open, Closed or NeedsVariation. "
+                + "Looking for a request by what it is about (\"the front door RFI\")? Pass search on the FIRST "
+                + "call — the register can be longer than one page, and paging it blind wastes your look-ups.",
                 AiToolSchema.Object(
                     ("projectId", "string", "Defaults to the project in view.", false),
                     ("kind", "string", "Optional filter on the request kind.", false),
-                    ("status", "string", "Optional filter on the request status.", false)),
+                    ("status", "string", "Optional filter on the request status.", false),
+                    ("search", "string",
+                        "Text matched against the request titles and references — \"front door\", \"render\", "
+                        + "\"REQ-0113\". Use it to find the request the user described instead of reading the "
+                        + "whole register.", false)),
                 AiToolKind.Read,
                 readers,
                 async (context, input, ct) =>
@@ -398,6 +432,12 @@ public static class AiToolCatalogue
                         query = query.Where(row => row.Status == (int)status);
                     }
 
+                    var requestSearch = AiToolSchema.Text(input, "search")?.Trim();
+                    if (!string.IsNullOrWhiteSpace(requestSearch))
+                        query = query.Where(row => row.Title.Contains(requestSearch) || row.Reference.Contains(requestSearch));
+
+                    var requestTotal = await query.CountAsync(ct);
+
                     var rows = await query
                         .OrderByDescending(row => row.RaisedAt)
                         .Take(100)
@@ -413,6 +453,13 @@ public static class AiToolCatalogue
                         ok = true,
                         project = project.Reference,
                         count = rows.Count,
+                        totalMatching = requestTotal,
+                        // The cap said out loud — a silently clipped register reads as "not found",
+                        // and the model then pages the register blind, one look-up at a time.
+                        note = requestTotal > rows.Count
+                            ? $"Only the newest {rows.Count} of {requestTotal} matching requests are listed. Pass "
+                              + "search to narrow to the one you want instead of calling again blind."
+                            : null,
                         requests = rows.Select(row => new
                         {
                             row.Reference,
@@ -666,6 +713,28 @@ public static class AiToolCatalogue
                 JpmsRoleSets.CommercialTeam,
                 (_, _, _) => Task.FromResult(NotFound(
                     "switch_agent must be handled by the turn runner. This is a wiring defect — tell the user."))),
+
+            new(
+                "stage_triage_tag",
+                "Stage a record tag against the email SELECTED in the Control Centre — the same act as the "
+                + "user picking that record in the System Tags pane themselves. The \"current context\" block "
+                + "says which email is selected and its project. Staging changes NOTHING: the tag (with "
+                + "everything else staged) lands only when the user presses Apply, so say \"I've staged the "
+                + "tag — Apply lands it\", never that the email IS tagged. Use the real record id and "
+                + "reference from list_requests, list_variations or find_by_reference — never invent one. "
+                + "record_type takes: request, bid_package, variation, variation_quote, work_order, todo, "
+                + "lad, scheduling.",
+                AiToolSchema.Object(
+                    ("record_type", "string",
+                        "What kind of record — request, bid_package, variation, variation_quote, work_order, "
+                        + "todo, lad, or scheduling.", true),
+                    ("record_id", "string", "The record's real id, from a tool result.", true),
+                    ("reference", "string", "The reference the user reads — RFI-049, V80, BPI-0003.", true)),
+                AiToolKind.Ui,
+                // Mirrors the Control Centre page's own gate (TriageRoles.AllowedToTriage): whoever
+                // can stage a tag by clicking is exactly who may stage one from here.
+                TriageRoles.AllowedToTriage,
+                (_, _, _) => Task.FromResult(Serialise(new { ok = true, handed_to_browser = true }))),
 
             new(
                 "open_modal",

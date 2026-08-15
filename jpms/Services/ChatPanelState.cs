@@ -142,6 +142,32 @@ public sealed class ChatPanelState
         catch { return null; }
     }
 
+    // ---- page actions ------------------------------------------------------------------------
+    // The reverse of the page note: a UI action the assistant addressed to the OPEN PAGE rather
+    // than to the panel (stage_triage_tag → the Control Centre stages the pick in System Tags).
+    // Same lifecycle discipline as the note provider: the page registers on init, clears on
+    // Dispose with a reference-equality guard, so a late-disposing page cannot wipe its successor.
+    // The server only offers page-scoped tools while the user is on the owning route, so a missing
+    // handler is a build-skew bug the panel reports loudly, never a silent drop.
+
+    private Func<string, string, Task>? pageActionHandler;
+
+    public void SetPageActionHandler(Func<string, string, Task> handler) => pageActionHandler = handler;
+
+    public void ClearPageActionHandler(Func<string, string, Task> handler)
+    {
+        if (ReferenceEquals(pageActionHandler, handler)) pageActionHandler = null;
+    }
+
+    /// <summary>Hands an action to the open page. False when no page is listening — the caller
+    /// says so out loud. Fire-and-forget by design: the page owns its own errors and repaints.</summary>
+    public bool DispatchPageAction(string tool, string argumentsJson)
+    {
+        if (pageActionHandler is null) return false;
+        _ = pageActionHandler(tool, argumentsJson);
+        return true;
+    }
+
     /// <summary>
     /// Reads the stored acknowledgement for the signed-in user, once per user. Deliberately a
     /// no-op while the user is unknown: the panel is instantiated by MainLayout on the very first

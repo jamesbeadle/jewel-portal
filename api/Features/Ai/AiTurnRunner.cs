@@ -240,6 +240,9 @@ public sealed class AiTurnRunner
     /// </summary>
     private async Task<string?> ValidateUiActionAsync(ClaudeToolCall call, CancellationToken ct)
     {
+        if (string.Equals(call.Name, "stage_triage_tag", StringComparison.OrdinalIgnoreCase))
+            return await ValidateStageTagAsync(call, ct);
+
         if (!string.Equals(call.Name, "open_modal", StringComparison.OrdinalIgnoreCase)) return null;
 
         string? modalKey = null;
@@ -290,6 +293,58 @@ public sealed class AiTurnRunner
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// stage_triage_tag before it reaches the browser: the type must be one the record-link layer
+    /// knows, and where the record lives in a table this side (requests, variations) it must
+    /// actually exist — an invented id staged into the System Tags pane would tag a real email to
+    /// nothing, and nobody would notice until the record read its mail back and found silence.
+    /// </summary>
+    private async Task<string?> ValidateStageTagAsync(ClaudeToolCall call, CancellationToken ct)
+    {
+        string? typeText = null;
+        string? recordId = null;
+        try
+        {
+            using var arguments = JsonDocument.Parse(
+                string.IsNullOrWhiteSpace(call.ArgumentsJson) ? "{}" : call.ArgumentsJson);
+            if (arguments.RootElement.ValueKind == JsonValueKind.Object)
+            {
+                if (arguments.RootElement.TryGetProperty("record_type", out var typeElement)
+                    && typeElement.ValueKind == JsonValueKind.String)
+                    typeText = typeElement.GetString();
+                if (arguments.RootElement.TryGetProperty("record_id", out var idElement)
+                    && idElement.ValueKind == JsonValueKind.String)
+                    recordId = idElement.GetString();
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        if (string.IsNullOrWhiteSpace(typeText) || string.IsNullOrWhiteSpace(recordId))
+            return Fail("stage_triage_tag needs record_type AND record_id — the real id from "
+                + "list_requests, list_variations or find_by_reference. Do not invent either.");
+
+        if (!AiRecordTools.TryMapRecordType(typeText, out var recordType))
+            return Fail($"\"{typeText}\" is not a taggable record type. Use one of: request, "
+                + "bid_package, variation, variation_quote, work_order, todo, lad, scheduling.");
+
+        var recordExists = recordType switch
+        {
+            RecordType.Request => await context.Requests.AsNoTracking()
+                .AnyAsync(row => row.RequestId == recordId, ct),
+            RecordType.Variation or RecordType.VariationQuote => await context.VariationOrders.AsNoTracking()
+                .AnyAsync(row => row.VariationOrderId == recordId, ct),
+            // Other types live behind their own providers — the page's own lookup is the check.
+            _ => true
+        };
+
+        return recordExists
+            ? null
+            : Fail($"No {recordType} exists with id \"{recordId}\" — that is not a real record id. Call "
+                + "list_requests, list_variations or find_by_reference for the actual id first.");
     }
 
     // ---- agents and skills -----------------------------------------------------------------
