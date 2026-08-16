@@ -152,7 +152,10 @@ else
 
             @if (suggestBusy)
             {
-                <LoadGate IsLoading="true" Label="Analysing the valuation report" />
+                @* Slow tiers answer in several continuation chunks — the part counter says the
+                   long wait is progress, not a hang. *@
+                <LoadGate IsLoading="true"
+                          Label="@(suggestHops <= 1 ? "Analysing the valuation report" : $"Analysing the valuation report — part {suggestHops}")" />
             }
             else if (suggestions is null)
             {
@@ -246,6 +249,7 @@ else
     private bool createBusy;
     private string? suggestError;
     private string suggestModelKey = AiModelCatalogue.DefaultKey;   // cheap by default, on purpose
+    private int suggestHops;
     private string suggestModelUsed = "";
     private string? suggestNote;
     private IReadOnlyList<BidPackageSuggestion>? suggestions;        // null = not run yet
@@ -320,6 +324,12 @@ else
         else selectedSuggestions.Remove(index);
     }
 
+    // One request = one bounded Claude chunk (the SWA gateway kills anything near 45s, which is
+    // what a whole Fable answer in one call hit). An incomplete result hands back PartialText
+    // and we immediately re-send it so the model continues mid-answer; the hop cap is a backstop
+    // against a model that never says it's finished.
+    private const int MaxSuggestionHops = 12;
+
     private async Task RunSuggestion()
     {
         if (suggestBusy || !CanManage) return;
@@ -330,8 +340,24 @@ else
         try
         {
             suggestBusy = true;
-            var result = await Commands.SendAsync(
-                new SuggestBidPackages(ProjectId, suggestModelKey), CancellationToken.None);
+            suggestHops = 0;
+            var partial = "";
+            BidPackageSuggestionResult result;
+            do
+            {
+                suggestHops++;
+                StateHasChanged();
+                result = await Commands.SendAsync(
+                    new SuggestBidPackages(ProjectId, suggestModelKey, partial), CancellationToken.None);
+                partial = result.PartialText;
+            } while (!result.IsComplete && suggestHops < MaxSuggestionHops);
+
+            if (!result.IsComplete)
+            {
+                suggestError = "The answer never finished — try again, or pick a different model.";
+                return;
+            }
+
             suggestions = result.Suggestions;
             suggestModelUsed = result.ModelUsed;
             suggestNote = result.Note;

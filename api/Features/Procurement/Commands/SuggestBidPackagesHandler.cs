@@ -25,14 +25,24 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 /// which become Draft packages via the ordinary CreateBidPackage command. Failure shape follows
 /// the triage-draft convention: unconfigured/failed AI degrades to an empty list with a plain
 /// Note, never a 500.
+///
+/// The answer is produced in CHUNKS, client-driven like ContinueAiTurn: one request = one
+/// bounded Claude call, and an incomplete result carries PartialText for the client to send
+/// straight back so the model continues via assistant prefill. One request waiting on the full
+/// 3–4k-token answer is exactly what the SWA gateway's ~45s ceiling killed on the slower tiers
+/// (Fable worked out 2026-08-16: Haiku finished in time, Fable got the gateway 500).
 /// </summary>
 public sealed class SuggestBidPackagesHandler
     : ICommandHandler<SuggestBidPackages, BidPackageSuggestionResult>
 {
-    // The proposal list is prose-heavy (scope bullets, rationale per package), so it needs far
-    // more headroom than the extraction default (AnthropicOptions.MaxTokens, ~1k). 4k is roomy
-    // for a dozen packages while still bounding a runaway response.
-    private const int SuggestionMaxTokens = 4096;
+    // Per-HOP output budget. Sized so even the slowest tier finishes a chunk comfortably inside
+    // the client's 35s per-call timeout (and the gateway's ~45s) — smaller means more hops, not
+    // a worse answer, because each hop continues the same text.
+    private const int HopMaxTokens = 700;
+
+    // Backstop against a runaway continuation loop: past this much accumulated text something
+    // is wrong (the whole answer should be well under 20k characters).
+    private const int MaxAccumulatedChars = 60_000;
 
     // Bounds the prompt on a pathological report. 400 priced lines is several times the largest
     // real bill; past that the tail is dropped and the prompt says so, because a silent cut would
@@ -84,14 +94,28 @@ public sealed class SuggestBidPackagesHandler
         var userPrompt = BuildUserPrompt(pricedLines, existingPackages
             .Select(p => (p.Title, p.Trade, (BidPackageStatus)p.Status)).ToList(), noClaimYet);
 
-        var responseText = await claude.CompleteAsync(
-            SystemPrompt, userPrompt, cancellationToken,
-            modelOverride: options.ModelForTier(tierKey),
-            maxTokensOverride: SuggestionMaxTokens);
+        // One bounded chunk per request; PartialText is what earlier hops produced. The prompt
+        // is rebuilt from live data each hop — identical unless the report changed mid-run,
+        // which is the same staleness any live query has.
+        var chunk = await claude.CompleteChunkAsync(
+            SystemPrompt, userPrompt, command.PartialText,
+            options.ModelForTier(tierKey), HopMaxTokens, cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(responseText))
+        if (chunk is null)
             return new BidPackageSuggestionResult(Array.Empty<BidPackageSuggestion>(), tierName,
                 "The AI call failed — nothing was produced. Try again, or pick a different model.");
+
+        var responseText = command.PartialText.TrimEnd() + chunk.Text;
+
+        if (!chunk.IsComplete)
+        {
+            if (responseText.Length > MaxAccumulatedChars)
+                return new BidPackageSuggestionResult(Array.Empty<BidPackageSuggestion>(), tierName,
+                    "The AI's answer ran far too long to be a real proposal list. Try again, or pick a different model.");
+            // Not done yet — hand the accumulated text back for the client to continue with.
+            return new BidPackageSuggestionResult(Array.Empty<BidPackageSuggestion>(), tierName,
+                null, IsComplete: false, PartialText: responseText);
+        }
 
         var suggestions = ParseSuggestions(responseText);
         if (suggestions is null)
@@ -126,10 +150,14 @@ public sealed class SuggestBidPackagesHandler
         "- Do NOT propose scope that an existing package already covers (any status except Closed). Closed packages ended " +
         "without an award, so their scope IS fair game — say so in the rationale if you re-propose it.\n" +
         "- Skip preliminaries, contingency allowances, overheads and other non-buildable lines — nobody tenders those.\n" +
+        "- As many packages as the remaining works genuinely justify — no fixed limit — but consolidate small " +
+        "related scopes into one sensible package: a package per report line is fragmentation, not procurement. " +
+        "One trade gets one package unless its works clearly split into separate phases.\n" +
         "- Titles are short and site-friendly (e.g. \"Second-fix carpentry\"); trade is the speciality that prices it " +
         "(e.g. \"Carpenter\").\n" +
-        "- scope: 2–5 short lines, newline-separated, stating what the package covers — written to be pasted into a " +
+        "- scope: 2–4 short lines, newline-separated, stating what the package covers — written to be pasted into a " +
         "tender's \"what this package covers\" summary.\n" +
+        "- rationale: ONE short sentence.\n" +
         "- materials_applicable: true when the trade would normally be asked whether they supply their own materials " +
         "(supply-and-fit trades); false for labour-only or client-supplied-materials scopes.\n" +
         "- approx_value: the sum of the remaining values of the report lines behind the package, as a plain number.\n" +
