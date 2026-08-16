@@ -100,6 +100,19 @@ else
                 </p>
             }
 
+            @* ---- Section tabs — the chip pattern the RFIs register uses; Summary leads.
+                   Local panes like the request page's tabs: one section renders at a time,
+                   nothing about each section's markup changes. ---- *@
+            <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
+                @foreach (var tab in SectionTabs)
+                {
+                    var key = tab.Key;
+                    <button type="button" class="@TabClass(key)" @onclick="() => activeTab = key">@tab.Label</button>
+                }
+            </div>
+
+            @if (activeTab == "tender-list")
+            {
             @* ---- Invited subcontractors ---- *@
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
@@ -216,29 +229,23 @@ else
                 }
                 </LoadGate>
             </section>
+            }
 
+            @if (activeTab == "summary")
+            {
             @* ---- Specification summary: the "what this package covers" bullets printed at the
-                   top of the pricing schedule workbook that travels with the invite. ---- *@
+                   top of the pricing schedule workbook that travels with the invite. Editing
+                   happens in a modal — the reading view never turns into a form. ---- *@
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Specification summary</h3>
-                    @if (CanEdit && !editingSpec)
+                    @if (CanEdit)
                     {
-                        <button type="button" class="text-xs text-content-muted hover:text-content" @onclick="EditSpec">Edit</button>
+                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy" @onclick="EditSpec">Edit</button>
                     }
                 </div>
 
-                @if (editingSpec)
-                {
-                    <textarea class="field w-full min-h-28" rows="5"
-                              placeholder="One point per line — e.g. All flat roofing to BS 6229:2018."
-                              @bind="specDraft"></textarea>
-                    <div class="flex gap-2 mt-2">
-                        <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveSpec">@(busy ? "Saving…" : "Save summary")</button>
-                        <button type="button" class="btn-neutral" disabled="@busy" @onclick="CancelSpec">Cancel</button>
-                    </div>
-                }
-                else if (!string.IsNullOrWhiteSpace(package.SpecificationSummary))
+                @if (!string.IsNullOrWhiteSpace(package.SpecificationSummary))
                 {
                     <ul class="space-y-1">
                         @foreach (var line in package.SpecificationSummary.Split('\n', StringSplitOptions.RemoveEmptyEntries))
@@ -255,65 +262,23 @@ else
                     </p>
                 }
             </section>
+            }
 
-            @* ---- Line items, grouped by trade ---- *@
+            @if (activeTab == "line-items")
+            {
+            @* ---- Line items, grouped by trade. Editing happens in a modal — the reading view
+                   never turns into a form. ---- *@
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Line items</h3>
-                    @if (CanEdit && !editingLines)
+                    @if (CanEdit)
                     {
-                        <button type="button" class="text-xs text-content-muted hover:text-content" @onclick="EditLines">Edit</button>
+                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy" @onclick="EditLines">Edit</button>
                     }
                 </div>
 
                 <LoadGate IsLoading="@(!LineItemsReady)" Prominent="true" Label="Loading line items">
-                @if (editingLines)
-                {
-                    <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh] mb-3">
-                        <table class="w-full text-sm">
-                            <thead class="bg-surface-raised border-b border-line">
-                                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Trade</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Cost code</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-line">
-                                @for (var i = 0; i < lineDrafts.Count; i++)
-                                {
-                                    var draft = lineDrafts[i];
-                                    <tr>
-                                        <td class="px-3 py-2"><input class="field" @bind="draft.Trade" placeholder="e.g. Electrical" /></td>
-                                        <td class="px-3 py-2"><input class="field" @bind="draft.Description" placeholder="Description" /></td>
-                                        <td class="px-3 py-2 hidden sm:table-cell"><input class="field" @bind="draft.Unit" placeholder="e.g. m²" /></td>
-                                        <td class="px-3 py-2"><input class="field" type="number" step="any" @bind="draft.Quantity" /></td>
-                                        <td class="px-3 py-2">
-                                            <select class="field min-w-[14rem]" @bind="draft.CostCode">
-                                                <option value="">Cost centre…</option>
-                                                @foreach (var centre in CostCenters.Alphabetical)
-                                                {
-                                                    <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
-                                                }
-                                            </select>
-                                        </td>
-                                        <td class="px-3 py-2 text-right">
-                                            <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => RemoveLine(draft)">Remove</button>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="AddLine">Add line</button>
-                        <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveLines">@(busy ? "Saving…" : "Save line items")</button>
-                        <button type="button" class="text-sm text-content-muted hover:text-content" disabled="@busy" @onclick="CancelLines">Cancel</button>
-                    </div>
-                }
-                else if (lineItems.Count == 0)
+                @if (lineItems.Count == 0)
                 {
                     @* Only once the fetch has answered — the banner above carries a failure. *@
                     @if (fetchedLineItems is not null)
@@ -387,6 +352,10 @@ else
                 </LoadGate>
             </section>
 
+            }
+
+            @if (activeTab == "submissions")
+            {
             @* ---- Tender submissions: quotes compared line by line ---- *@
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
@@ -538,6 +507,10 @@ else
                 </LoadGate>
             </section>
 
+            }
+
+            @if (activeTab == "documents")
+            {
             @* ---- Documents: project drawings linked to this package ---- *@
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
@@ -611,6 +584,10 @@ else
                 </LoadGate>
             </section>
 
+            }
+
+            @if (activeTab == "emails")
+            {
             @* ---- Tender responses & related emails (read live by the package's tag) ----
                    The shared thread list carries the consistent communications widget — threads,
                    full email on demand, attachments with preview/download, tag chips, and the
@@ -676,6 +653,7 @@ else
                 }
                 </LoadGate>
             </section>
+            }
         }
         </LoadGate>
     </ProjectPageShell>
@@ -1078,6 +1056,74 @@ else
             </p>
         </ChildContent>
     </Modal>
+
+    @* ---- Edit specification summary (modal — the reading view never becomes a form) ---- *@
+    <Modal IsOpen="showSpecModal" Title="Edit specification summary" ShowFooter="true"
+           ConfirmLabel="@(busy ? "Saving…" : "Save summary")" ConfirmDisabled="@busy" CancelLabel="Cancel"
+           OnCancel="CancelSpec" OnConfirm="SaveSpec" Class="max-w-2xl w-full">
+        <p class="text-xs text-content-subtle mb-2">
+            One point per line — it prints at the top of the pricing schedule each tenderer receives,
+            so say what the package covers and to what standard.
+        </p>
+        <textarea class="field w-full min-h-40" rows="10"
+                  placeholder="One point per line — e.g. All flat roofing to BS 6229:2018."
+                  @bind="specDraft"></textarea>
+    </Modal>
+
+    @* ---- Edit line items (modal). DismissOnOverlayClick off: a stray click must not throw
+         away a half-keyed schedule of lines. ---- *@
+    <Modal IsOpen="showLinesModal" Title="Edit line items" DismissOnOverlayClick="false"
+           OnCancel="CancelLines" Class="max-w-4xl w-full">
+        <FooterContent>
+            <button type="button" class="btn-secondary" disabled="@busy" @onclick="AddLine">Add line</button>
+            <button type="button" class="btn-neutral" disabled="@busy" @onclick="CancelLines">Cancel</button>
+            <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveLines">@(busy ? "Saving…" : "Save line items")</button>
+        </FooterContent>
+        <ChildContent>
+            @if (error is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+            }
+            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-3 py-2">Trade</th>
+                            <th class="px-3 py-2">Description</th>
+                            <th class="px-3 py-2 hidden sm:table-cell">Unit</th>
+                            <th class="px-3 py-2">Qty</th>
+                            <th class="px-3 py-2">Cost code</th>
+                            <th class="px-3 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @for (var i = 0; i < lineDrafts.Count; i++)
+                        {
+                            var draft = lineDrafts[i];
+                            <tr>
+                                <td class="px-3 py-2"><input class="field" @bind="draft.Trade" placeholder="e.g. Electrical" /></td>
+                                <td class="px-3 py-2"><input class="field" @bind="draft.Description" placeholder="Description" /></td>
+                                <td class="px-3 py-2 hidden sm:table-cell"><input class="field" @bind="draft.Unit" placeholder="e.g. m²" /></td>
+                                <td class="px-3 py-2"><input class="field" type="number" step="any" @bind="draft.Quantity" /></td>
+                                <td class="px-3 py-2">
+                                    <select class="field min-w-[14rem]" @bind="draft.CostCode">
+                                        <option value="">Cost centre…</option>
+                                        @foreach (var centre in CostCenters.Alphabetical)
+                                        {
+                                            <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
+                                        }
+                                    </select>
+                                </td>
+                                <td class="px-3 py-2 text-right">
+                                    <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40" @onclick="() => RemoveLine(draft)">Remove</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </ChildContent>
+    </Modal>
 }
 
 @code {
@@ -1087,6 +1133,25 @@ else
     // Session checked and the user is signed in — not "the package is here". The tab chrome and
     // the back link show straight away; each section waits behind its own gate.
     private bool sessionReady;
+
+    // ---- Section tabs (Summary leads) — local panes, the request page's pattern. ----
+
+    private string activeTab = "summary";
+
+    private static readonly (string Key, string Label)[] SectionTabs =
+    {
+        ("summary", "Summary"),
+        ("tender-list", "Tender list"),
+        ("line-items", "Line items"),
+        ("submissions", "Submissions"),
+        ("documents", "Documents"),
+        ("emails", "Emails"),
+    };
+
+    // The chip classes the RFIs register uses for its document-type tabs.
+    private string TabClass(string key) => key == activeTab
+        ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
+        : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
     // Every query in LoadAsync has had its turn. Some may have failed — that is the point: a gate
     // held open by a fetch that is never coming back is worse than an empty panel.
     private bool loadAttempted;
@@ -2072,17 +2137,21 @@ else
 
     // ---- Specification summary: prints at the top of the pricing schedule workbook. ----
 
-    private bool editingSpec;
+    private bool showSpecModal;
     private string specDraft = "";
 
     private void EditSpec()
     {
         if (!CanEdit || package is null) return;
         specDraft = package.SpecificationSummary;
-        editingSpec = true;
+        showSpecModal = true;
     }
 
-    private void CancelSpec() => editingSpec = false;
+    private void CancelSpec()
+    {
+        if (busy) return;
+        showSpecModal = false;
+    }
 
     private async Task SaveSpec()
     {
@@ -2095,22 +2164,24 @@ else
                 new UpdateBidPackageScope(package.BidPackageId, package.Title, package.Trade, package.Status,
                     package.OwnerEmail, package.MaterialsApplicable, specDraft.Trim()),
                 CancellationToken.None);
-            editingSpec = false;
+            showSpecModal = false;
         }
         catch { error = "Couldn't save the specification summary. Please try again."; }
         finally { busy = false; }
     }
 
-    private bool editingLines;
+    private bool showLinesModal;
     private List<LineDraft> lineDrafts = new();
 
     private void EditLines()
     {
+        if (!CanEdit) return;
         lineDrafts = lineItems
             .Select(item => new LineDraft { Trade = item.Trade, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity, CostCode = item.CostCode })
             .ToList();
         if (lineDrafts.Count == 0) lineDrafts.Add(new LineDraft());
-        editingLines = true;
+        error = null;
+        showLinesModal = true;
     }
 
     private void AddLine() => lineDrafts.Add(new LineDraft());
@@ -2119,7 +2190,8 @@ else
 
     private void CancelLines()
     {
-        editingLines = false;
+        if (busy) return;
+        showLinesModal = false;
         lineDrafts.Clear();
     }
 
@@ -2148,7 +2220,7 @@ else
                     draft.CostCode.Trim()))
                 .ToList();
             fetchedLineItems = await Commands.SendAsync(new SetBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
-            editingLines = false;
+            showLinesModal = false;
             lineDrafts.Clear();
         }
         catch { error = "Couldn't save the line items. Please try again."; }
