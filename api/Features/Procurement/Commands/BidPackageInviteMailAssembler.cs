@@ -21,7 +21,8 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 /// Exchange ceiling is copied to the email-shares container and travels as a 7-day download link
 /// appended to the body instead.
 /// </summary>
-internal sealed class BidPackageInviteMailAssembler
+// Public because the (public) handler constructors take it — CS0051 otherwise.
+public sealed class BidPackageInviteMailAssembler
 {
     private readonly JpmsContext context;
     private readonly IDrawingBlobStore blobStore;
