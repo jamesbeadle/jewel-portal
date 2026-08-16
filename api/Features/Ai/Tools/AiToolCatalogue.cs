@@ -796,12 +796,19 @@ public static class AiToolCatalogue
                 + "already has (an attached spreadsheet, the conversation) and takes NO record_id; "
                 + "\"compose_email\" opens the Control Centre's New email composer for ANY email the user asks "
                 + "you to draft — it takes NO record_id and NO project_id, and it is the ONLY way you draft "
-                + "email (the user reviews and presses Send in the Control Centre; you never send).",
+                + "email (the user reviews and presses Send in the Control Centre; you never send); "
+                + "\"bid_package_lines\" fills a bid package's Edit line items schedule and "
+                + "\"bid_package_summary\" its Edit specification summary — both need that bid package's id "
+                + "as record_id, and both are how you build a package out: read its context first "
+                + "(get_bid_package_context, read_record_emails, the attachments, list_cost_codes).",
                 AiToolSchema.Object(
-                    ("modal_key", "string", "One of: \"variation_draft\", \"manual_variation\", \"compose_email\".", true),
+                    ("modal_key", "string",
+                        "One of: \"variation_draft\", \"manual_variation\", \"compose_email\", "
+                        + "\"bid_package_lines\", \"bid_package_summary\".", true),
                     ("record_id", "string",
                         "The record the dialog works from — REQUIRED for variation_draft (the request id, from "
-                        + "find_by_reference or list_requests). Omit for manual_variation and compose_email.", false),
+                        + "find_by_reference or list_requests) and for bid_package_lines / bid_package_summary "
+                        + "(the bid package id). Omit for manual_variation and compose_email.", false),
                     ("project_id", "string", "Defaults to the project in view. Omit for compose_email.", false),
                     ("reason", "string", "One clause explaining why.", false)),
                 AiToolKind.Ui,

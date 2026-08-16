@@ -4,6 +4,8 @@
 @using Jewel.JPMS.Contracts.Boq
 @using Jewel.JPMS.Contracts.Drawings
 @using Jewel.JPMS.Contracts.Variations
+@using Jewel.JPMS.Contracts.Ai
+@using System.Text.Json
 @using Jewel.JPMS.Cqrs
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.Triage
@@ -18,6 +20,9 @@
 @inject IBidPackageAttachmentStore PackageAttachments
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel SubsReadModel
 @inject NavigationManager Nav
+@inject AiTaskState AiTasks
+@inject ChatPanelState Chat
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Bid Package Invite · JPMS</PageTitle>
@@ -78,18 +83,11 @@ else
                 </div>
                 @if (CanManage && package.Status != BidPackageStatus.Awarded)
                 {
-                    <Toolbar>
-                        @if (IsClosed)
-                        {
-                            <ToolbarButton Icon="rotate" Label="Reopen this bid package — puts the tender back in play" Busy="@busy" OnClick="ReopenPackage" />
-                        }
-                        else
-                        {
-                            <ToolbarButton Icon="close" Label="Close this bid package — ends the tender with no winner selected" Busy="@busy" OnClick="ClosePackage" />
-                        }
-                        <ToolbarDivider />
-                        <ToolbarButton Icon="trash" Label="Delete this bid package — removes it and its tender data for good" Busy="@busy" OnClick="OpenDeleteModal" />
-                    </Toolbar>
+                    @* The record's actions in one place — the same DropdownMenu the request page's
+                       Actions uses. Create with AI leads: the assistant reads the package's context
+                       (spec, lines, documents, tagged emails) and fills the editing dialogs for
+                       review — nothing saves until the user presses the dialog's own button. *@
+                    <DropdownMenu Label="Actions" Disabled="@busy" Items="@HeaderActions()" />
                 }
             </header>
 
@@ -1059,6 +1057,7 @@ else
 
     @* ---- Edit specification summary (modal — the reading view never becomes a form) ---- *@
     <Modal IsOpen="showSpecModal" Title="Edit specification summary" ShowFooter="true"
+           DismissOnOverlayClick="false"
            ConfirmLabel="@(busy ? "Saving…" : "Save summary")" ConfirmDisabled="@busy" CancelLabel="Cancel"
            OnCancel="CancelSpec" OnConfirm="SaveSpec" Class="max-w-2xl w-full">
         <p class="text-xs text-content-subtle mb-2">
@@ -1152,6 +1151,252 @@ else
     private string TabClass(string key) => key == activeTab
         ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
         : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+
+    // ---- The Actions menu (header) --------------------------------------------------------------
+
+    private IReadOnlyList<DropdownMenu.Item> HeaderActions()
+    {
+        var items = new List<DropdownMenu.Item>();
+        if (CanEdit && Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
+        {
+            items.Add(new DropdownMenu.Item("Create with AI",
+                OnSelect: EventCallback.Factory.Create(this, StartCreateWithAi),
+                Hint: "The assistant reads this package's summary, line items, documents and tagged "
+                    + "emails, then fills the editing dialogs beside the chat for your review — "
+                    + "nothing saves until you press the dialog's own button."));
+        }
+        items.Add(IsClosed
+            ? new DropdownMenu.Item("Reopen package",
+                OnSelect: EventCallback.Factory.Create(this, ReopenPackage),
+                Hint: "Puts the tender back in play.", Group: 1)
+            : new DropdownMenu.Item("Close package",
+                OnSelect: EventCallback.Factory.Create(this, ClosePackage),
+                Hint: "Ends the tender with no winner selected — the polite ending for a real tender.", Group: 1));
+        items.Add(new DropdownMenu.Item("Delete package…",
+            OnSelect: EventCallback.Factory.Create(this, OpenDeleteModal),
+            Hint: "Removes the package and its tender data for good.",
+            Destructive: true, Group: 2));
+        return items;
+    }
+
+    // ---- Create with AI: the assistant fills the editing dialogs over the conversation ----------
+    //
+    // The manual_variation pattern applied to this record: a dialog opens beside the chat, an
+    // AiTask carries its draft state, the kickoff (a user turn) says what to do, and the model's
+    // update_open_modal proposals land through AiTaskState.OnDraftApplied. Filling writes NOTHING —
+    // the user reads every field and presses the dialog's own Save. The takeover overlay
+    // (AssistantControlling) comes on whenever a turn's UI action lands, exactly as elsewhere.
+
+    private void StartCreateWithAi()
+    {
+        if (busy || package is null || !CanEdit) return;
+        if (Session.ActiveRole is not { } role || !DesktopNavigation.CanUseAssistant(role)) return;
+        activeTab = "line-items";
+        EditLines();
+        StartLinesTask(userInitiated: true);
+        StateHasChanged();
+    }
+
+    private void StartLinesTask(bool userInitiated)
+    {
+        if (package is null || Session.ActiveRole is not { } role || !DesktopNavigation.CanUseAssistant(role)) return;
+        AiTasks.Start(
+            new AiTask(
+                TaskKey: "bid-package-lines",
+                ModalKey: ModalCatalog.BidPackageLines.ModalKey,
+                BannerLabel: $"Building out {package.Reference}",
+                BusyLabel: "Reading the package, its documents and tagged emails…",
+                // A user turn, so it outranks the system prompt — it has to say the same thing.
+                KickoffMessage: userInitiated
+                    ? "Build out this bid package's line items in the \"Edit line items\" dialog open "
+                      + "beside me. First gather the context: get_bid_package_context for the title, "
+                      + "trade, specification summary, current lines and document names; "
+                      + "read_record_emails (record_type bid_package) for the tagged tender emails, and "
+                      + "read_email_attachment on any attachment that looks like a specification, "
+                      + "schedule or quote; list_cost_codes for the real cost codes. Then send the full "
+                      + "schedule with update_open_modal — measurable lines a subcontractor can price, "
+                      + "each with trade, unit, quantity and a cost code, keeping any existing lines "
+                      + "that are still right. Once I've saved the lines, if the specification summary "
+                      + "needs writing or improving, open the bid_package_summary dialog and fill that "
+                      + "too. Tell me in one line anything you could not establish."
+                    : "Fill in the \"Edit line items\" dialog open beside me from this bid package's "
+                      + "context — get_bid_package_context and its tagged emails, if you have not read "
+                      + "them already. Send the full schedule (it replaces the list), keep existing "
+                      + "lines that are still right, and tell me in one line anything you could not "
+                      + "establish.",
+                ProjectId: ProjectId,
+                RecordType: "bid_package",
+                RecordId: BidPackageId,
+                RecordReference: package.Reference),
+            CurrentLinesDraftJson());
+        Chat.Open();
+        Chat.SetCoexistence(true);
+    }
+
+    private void StartSummaryTask()
+    {
+        if (package is null || Session.ActiveRole is not { } role || !DesktopNavigation.CanUseAssistant(role)) return;
+        AiTasks.Start(
+            new AiTask(
+                TaskKey: "bid-package-summary",
+                ModalKey: ModalCatalog.BidPackageSummary.ModalKey,
+                BannerLabel: $"Writing {package.Reference}'s specification summary",
+                BusyLabel: "Reading the package and its lines…",
+                KickoffMessage:
+                    "Fill in the \"Edit specification summary\" dialog open beside me — one point per "
+                    + "line, plain text, what this package covers and to what standard, drawn from the "
+                    + "package's context (get_bid_package_context and its tagged emails, if you have "
+                    + "not read them already). Tell me in one line anything you could not establish.",
+                ProjectId: ProjectId,
+                RecordType: "bid_package",
+                RecordId: BidPackageId,
+                RecordReference: package.Reference),
+            CurrentSummaryDraftJson());
+        Chat.Open();
+        Chat.SetCoexistence(true);
+    }
+
+    private void EndPackageAiTask(string modalKey)
+    {
+        if (AiTasks.Active?.ModalKey != modalKey) return;
+        AiTasks.End();
+        Chat.SetCoexistence(false);
+    }
+
+    private string CurrentLinesDraftJson() => JsonSerializer.Serialize(new
+    {
+        lines = lineDrafts.Select(draft => new
+        {
+            trade = draft.Trade,
+            description = draft.Description,
+            unit = draft.Unit,
+            quantity = draft.Quantity,
+            costCode = draft.CostCode
+        })
+    });
+
+    private string CurrentSummaryDraftJson() => JsonSerializer.Serialize(new { summary = specDraft });
+
+    /// <summary>
+    /// The assistant's update_open_modal proposal, raw fields JSON. The open dialog decides what it
+    /// means: a full replacement schedule for the lines dialog, the summary text for the summary
+    /// dialog. Anything malformed costs the model its update, never the page.
+    /// </summary>
+    private void ApplyAssistantDraft(string fieldsJson)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(fieldsJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return;
+            var changed = false;
+
+            if (showLinesModal && root.TryGetProperty("lines", out var lines) && lines.ValueKind == JsonValueKind.Array)
+            {
+                var drafts = new List<LineDraft>();
+                foreach (var item in lines.EnumerateArray())
+                {
+                    if (item.ValueKind != JsonValueKind.Object) continue;
+                    var description = ReadJsonString(item, "description");
+                    if (string.IsNullOrWhiteSpace(description)) continue;
+                    drafts.Add(new LineDraft
+                    {
+                        Description = description,
+                        Trade = ReadJsonString(item, "trade") ?? package?.Trade ?? "",
+                        Unit = ReadJsonString(item, "unit") ?? "",
+                        Quantity = item.TryGetProperty("quantity", out var quantity)
+                                   && quantity.ValueKind == JsonValueKind.Number
+                                   && quantity.TryGetDecimal(out var parsed) ? parsed : 1m,
+                        CostCode = ReadJsonString(item, "costCode") ?? ""
+                    });
+                }
+                if (drafts.Count > 0) { lineDrafts = drafts; changed = true; }
+            }
+
+            if (showSpecModal && root.TryGetProperty("summary", out var summary) && summary.ValueKind == JsonValueKind.String)
+            {
+                specDraft = summary.GetString() ?? "";
+                changed = true;
+            }
+
+            if (changed)
+            {
+                AiTasks.UpdateDraft(showLinesModal ? CurrentLinesDraftJson() : CurrentSummaryDraftJson());
+                _ = InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (JsonException) { }
+    }
+
+    private static string? ReadJsonString(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString() : null;
+
+    // ---- The assistant's route in: open_modal → ?openModal=bid_package_lines / _summary ---------
+
+    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
+    // for the life of this component — the flag stops a later repaint re-honouring it. A REAL
+    // navigation carrying openModal= (the assistant's second dialog in one conversation) resets it
+    // in HandleLocationChanged.
+    private bool modalRequestHonoured;
+
+    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (!e.Location.Contains("openModal=", StringComparison.OrdinalIgnoreCase)) return;
+        modalRequestHonoured = false;
+        _ = InvokeAsync(async () =>
+        {
+            await HonourRequestedModalAsync();
+            StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Honoured only where this user could have opened the dialog by clicking — the assistant can
+    /// route somebody to a page; it cannot get them past a gate. The query is cleared first,
+    /// through history rather than the router, so F5 does not reopen the dialog and re-bill a
+    /// kick-off turn.
+    /// </summary>
+    private async Task HonourRequestedModalAsync()
+    {
+        if (modalRequestHonoured || package is null) return;
+        var query = new Uri(Nav.Uri).Query;
+        var requested =
+            query.Contains($"openModal={ModalCatalog.BidPackageLines.ModalKey}", StringComparison.OrdinalIgnoreCase)
+                ? ModalCatalog.BidPackageLines.ModalKey
+            : query.Contains($"openModal={ModalCatalog.BidPackageSummary.ModalKey}", StringComparison.OrdinalIgnoreCase)
+                ? ModalCatalog.BidPackageSummary.ModalKey
+                : null;
+        if (requested is null) return;
+
+        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
+        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
+        modalRequestHonoured = true;
+
+        if (!CanEdit)
+        {
+            // Said out loud — a silent no-op leaves the user (and the model) certain something
+            // deeper is broken.
+            error = "The assistant tried to open an editing dialog, but the role you are viewing as "
+                + (IsClosed ? "can't edit a closed package — reopen it first." : "can't edit this package.");
+            StateHasChanged();
+            return;
+        }
+
+        if (requested == ModalCatalog.BidPackageLines.ModalKey)
+        {
+            activeTab = "line-items";
+            EditLines();
+            StartLinesTask(userInitiated: false);
+        }
+        else
+        {
+            activeTab = "summary";
+            EditSpec();
+            StartSummaryTask();
+        }
+        StateHasChanged();
+    }
     // Every query in LoadAsync has had its turn. Some may have failed — that is the point: a gate
     // held open by a fetch that is never coming back is worse than an empty panel.
     private bool loadAttempted;
@@ -1248,6 +1493,10 @@ else
             sessionReady = true;
             Subs.OnChange += OnStoreChanged;
             CostCenters.OnChanged += OnStoreChanged;
+            // The assistant's proposals into the editing dialogs, and its route back onto this
+            // page carrying ?openModal= (same-page query navigation raises LocationChanged only).
+            AiTasks.OnDraftApplied += ApplyAssistantDraft;
+            Nav.LocationChanged += HandleLocationChanged;
             // The project list feeds the reply composer's attachment picker (drawings/photos by
             // project) — revalidated in the background like every other read model here.
             ProjectList.OnChanged += OnStoreChanged;
@@ -1256,6 +1505,9 @@ else
             // Cost centres feed the line-item cost-code selects — best-effort background refresh.
             try { _ = CostCenters.RefreshAsync(CancellationToken.None); } catch { }
             await LoadAsync();
+            // Only once the record is here — an openModal request against a package that failed
+            // to load has nothing to open.
+            await HonourRequestedModalAsync();
         }
         catch (Exception ex)
         {
@@ -1275,6 +1527,11 @@ else
         Subs.OnChange -= OnStoreChanged;
         CostCenters.OnChanged -= OnStoreChanged;
         ProjectList.OnChanged -= OnStoreChanged;
+        AiTasks.OnDraftApplied -= ApplyAssistantDraft;
+        Nav.LocationChanged -= HandleLocationChanged;
+        // Navigating away ends the dialogs' remit — a task can't outlive the form it fills.
+        EndPackageAiTask(ModalCatalog.BidPackageLines.ModalKey);
+        EndPackageAiTask(ModalCatalog.BidPackageSummary.ModalKey);
     }
 
     // Losing the project list should cost the composer its drawing/photo sources, not the page.
@@ -2151,6 +2408,7 @@ else
     {
         if (busy) return;
         showSpecModal = false;
+        EndPackageAiTask(ModalCatalog.BidPackageSummary.ModalKey);
     }
 
     private async Task SaveSpec()
@@ -2165,6 +2423,7 @@ else
                     package.OwnerEmail, package.MaterialsApplicable, specDraft.Trim()),
                 CancellationToken.None);
             showSpecModal = false;
+            EndPackageAiTask(ModalCatalog.BidPackageSummary.ModalKey);
         }
         catch { error = "Couldn't save the specification summary. Please try again."; }
         finally { busy = false; }
@@ -2184,15 +2443,24 @@ else
         showLinesModal = true;
     }
 
-    private void AddLine() => lineDrafts.Add(new LineDraft());
+    private void AddLine()
+    {
+        lineDrafts.Add(new LineDraft());
+        AiTasks.UpdateDraft(CurrentLinesDraftJson());
+    }
 
-    private void RemoveLine(LineDraft draft) => lineDrafts.Remove(draft);
+    private void RemoveLine(LineDraft draft)
+    {
+        lineDrafts.Remove(draft);
+        AiTasks.UpdateDraft(CurrentLinesDraftJson());
+    }
 
     private void CancelLines()
     {
         if (busy) return;
         showLinesModal = false;
         lineDrafts.Clear();
+        EndPackageAiTask(ModalCatalog.BidPackageLines.ModalKey);
     }
 
     private async Task SaveLines()
@@ -2222,6 +2490,9 @@ else
             fetchedLineItems = await Commands.SendAsync(new SetBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
             showLinesModal = false;
             lineDrafts.Clear();
+            // The lines task's remit ends with the save; if the assistant is mid-conversation it
+            // carries on and may open the summary dialog next (its own open_modal, a new task).
+            EndPackageAiTask(ModalCatalog.BidPackageLines.ModalKey);
         }
         catch { error = "Couldn't save the line items. Please try again."; }
         finally { busy = false; }
