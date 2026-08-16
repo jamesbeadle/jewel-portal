@@ -189,6 +189,14 @@ public static class ProcurementRouteRegistration
             new CommandRoute("POST", "/api/work-orders/{workOrderId}/send-po-email",
                 command => $"/api/work-orders/{((SendWorkOrderPoEmail)command).WorkOrderId}/send-po-email"));
 
+        commands.Register<ExtractTenderFromMessage, TenderExtraction>(
+            new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/extract-tender",
+                command => $"/api/bid-packages/{((ExtractTenderFromMessage)command).BidPackageId}/extract-tender"));
+
+        commands.Register<RecordTenderResponse, IReadOnlyList<BidPackageRecipient>>(
+            new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/tender-response",
+                command => $"/api/bid-packages/{((RecordTenderResponse)command).BidPackageId}/tender-response"));
+
         commands.Register<SaveExtractedQuote, Quote>(
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/extracted-quotes",
                 command => $"/api/bid-packages/{((SaveExtractedQuote)command).BidPackageId}/extracted-quotes"));

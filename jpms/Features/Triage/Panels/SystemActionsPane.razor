@@ -111,6 +111,10 @@
                                           StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
                                           EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
                 break;
+            case SystemActionKind.FileBidPackageTender:
+                <StageTenderResponseAction @key="kind" ProjectId="@ProjectId" SenderEmail="@SenderEmail"
+                                           OnStaged="StagedAsync" />
+                break;
             case SystemActionKind.RaiseDefect:
                 <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Defect"
                                           StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"

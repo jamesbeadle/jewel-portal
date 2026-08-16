@@ -316,6 +316,16 @@ public sealed class AiTurnRunner
             return null;
         }
 
+        // tender_reply is anchored to a specific tender EMAIL, which only the bid package page can
+        // supply — opening it by navigation would land on the page with no composer showing. When
+        // the task is live the composer is already open; there is nothing for open_modal to do.
+        if (string.Equals(modal.ModalKey, ModalCatalog.TenderReply.ModalKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return Fail("tender_reply can't be opened from here — the user opens it from a tender "
+                + "extraction's \"Draft supplier reply\", and it is already open beside you when that "
+                + "task is running. Use update_open_modal to fill it.");
+        }
+
         // A record dialog this validator doesn't know which table to check — let it through rather
         // than refuse a real id. The client still refuses loudly for anything actually wrong, and
         // a stale id lands on the record page's own not-found handling, never silently nowhere.

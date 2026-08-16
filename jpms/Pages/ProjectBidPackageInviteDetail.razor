@@ -358,6 +358,43 @@ else
                     }
                 </div>
 
+                @* ---- Tender responses: the filed tender emails, each one click from a reviewable
+                       submission. Filed from the Control Centre (System actions → File Bid Package
+                       Tender) or tagged by hand — the package tag is what lists them here. ---- *@
+                @if (emails.Count > 0)
+                {
+                    <div class="rounded-xl border border-line bg-surface mb-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b border-line">
+                            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tender responses</p>
+                            <span class="text-[11px] text-content-subtle">Extract a tender to review it against the line schedule and save it as a submission.</span>
+                        </div>
+                        <ul class="divide-y divide-line">
+                            @foreach (var email in emails)
+                            {
+                                <li class="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                                    <div class="min-w-0">
+                                        <p class="text-sm text-content truncate">
+                                            <span class="font-medium">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                                            <span class="text-content-subtle"> — @email.Subject</span>
+                                            @if (email.HasAttachments)
+                                            {
+                                                <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                            }
+                                        </p>
+                                        <p class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
+                                    </div>
+                                    @if (CanEdit)
+                                    {
+                                        <button type="button" class="btn-secondary px-2 py-1 text-xs shrink-0" disabled="@(busy || extractBusy)"
+                                                title="Read this email and its returned pricing schedule with AI, mapped against the package's line items, ready to review and save as a submission."
+                                                @onclick="() => OpenExtractFromEmail(email)">Extract information</button>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+
                 @if (awardNote is not null)
                 {
                     <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@awardNote</p>
@@ -403,8 +440,10 @@ else
                     @if (fetchedQuotes is not null)
                     {
                         <p class="text-sm text-content-subtle italic">
-                            No tender submissions yet. Use “Record tender manually” to enter each
-                            subcontractor's prices as their submissions come in.
+                            No tender submissions yet. File each returned tender email from the Control
+                            Centre (System actions → File Bid Package Tender) and it appears above ready
+                            to extract — or use “Record tender manually” for a tender phoned through or
+                            posted.
                         </p>
                     }
                 }
@@ -615,12 +654,12 @@ else
                             @(commsComposeIsForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyingTo.FromName) ? replyingTo.FromEmail : replyingTo.FromName)</span> —
                             <span class="italic">@replyingTo.Subject</span>
                         </p>
-                        <MailReplyComposer @key="@($"{replyingTo.Id}:{commsComposeIsForward}")" ReplyTo="replyingTo" Forward="commsComposeIsForward"
+                        <MailReplyComposer @ref="commsComposer" @key="@($"{replyingTo.Id}:{commsComposeIsForward}")" ReplyTo="replyingTo" Forward="commsComposeIsForward"
                                            Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@ProjectId"
                                            FooterNote="@(commsComposeIsForward
                                                ? "The forward sends now from the projects mailbox and files itself back into this list."
                                                : "The reply sends now from the projects mailbox and files itself back into this list.")"
-                                           OnSent="OnCommsReplySent" OnCancel="() => commsReplyTo = null" />
+                                           OnSent="OnCommsReplySent" OnCancel="CancelCommsCompose" />
                     </div>
                 }
                 @if (emails.Count == 0)
@@ -962,12 +1001,60 @@ else
 
     @* ---- Record a tender submission and save it as a quote ---- *@
     <Modal IsOpen="showExtractModal" Title="Tender submission" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Saving…" : "Save submission")" CancelLabel="Cancel"
+           ConfirmLabel="@(busy ? "Saving…" : "Save submission")" ConfirmDisabled="@(busy || extractBusy)" CancelLabel="Cancel"
            OnCancel="CloseExtractModal" OnConfirm="ConfirmSaveExtracted" Class="max-w-3xl w-full">
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-            Recording a tender as the subcontractor gave it — the package's line items are pre-filled;
-            enter the rates from their submission.
-        </p>
+        @if (extractSourceEmail is { } sourceEmail)
+        {
+            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+                Extracted from <span class="font-medium text-content">@(string.IsNullOrWhiteSpace(sourceEmail.FromName) ? sourceEmail.FromEmail : sourceEmail.FromName)</span>'s
+                email of @sourceEmail.ReceivedAt.LocalDateTime.ToString("d MMM yyyy") — the figures below are
+                THEIR submission as the AI read it. Review every line (and correct it where the read is
+                wrong) before saving; nothing is recorded until you do.
+            </p>
+        }
+        else
+        {
+            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+                Recording a tender as the subcontractor gave it — the package's line items are pre-filled;
+                enter the rates from their submission.
+            </p>
+        }
+
+        @if (extractBusy)
+        {
+            <div class="flex items-center gap-3 rounded-lg border border-line bg-surface-raised px-3 py-4 mb-3">
+                <JewelSpinner />
+                <p class="text-sm text-content-muted">Reading the tender — the email, its pricing schedule and the package's line items…</p>
+            </div>
+        }
+        else
+        {
+        @if (extractIssues.Count > 0)
+        {
+            <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-sm text-content mb-3">
+                <p class="font-medium mb-1">@(extractProposed ? "The extraction found gaps in this tender:" : "This tender couldn't be read automatically:")</p>
+                <ul class="list-disc pl-5 space-y-0.5">
+                    @foreach (var issue in extractIssues)
+                    {
+                        <li>@issue</li>
+                    }
+                </ul>
+                @if (extractSourceEmail is not null && CanUseAssistantForReply)
+                {
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        <button type="button" class="btn-secondary px-2 py-1 text-xs" @onclick="StartTenderReplyTask">Draft supplier reply</button>
+                        <span class="text-xs text-content-subtle">Opens the reply composer with the assistant drafting an email asking for what's missing — you review and press Send.</span>
+                    </div>
+                }
+            </div>
+        }
+        else if (extractSourceEmail is not null && extractComplete)
+        {
+            <p class="rounded-lg bg-positive/10 border border-positive/40 px-3 py-2 text-sm text-content mb-3">
+                The tender reads complete — every line item is priced and the sums reconcile. Review the
+                figures and save it as a submission.
+            </p>
+        }
 
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subcontractor</label>
         <select class="field mb-3" @bind="extractSubcontractorId">
@@ -978,6 +1065,10 @@ else
                 <option value="@recipient.SubcontractorId">@(sub?.CompanyName ?? recipient.SubcontractorId)</option>
             }
         </select>
+        @if (extractSourceEmail is not null && !string.IsNullOrWhiteSpace(extractSubcontractorNote))
+        {
+            <p class="text-xs text-content-subtle -mt-2 mb-3">@extractSubcontractorNote</p>
+        }
 
         <div class="rounded-xl border border-line bg-surface mb-3">
             <table class="w-full text-sm">
@@ -1015,6 +1106,7 @@ else
 
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Notes (exclusions, caveats, lead times)</label>
         <textarea class="field" rows="3" @bind="extractNotes"></textarea>
+        }
     </Modal>
 
     @* ---- Work-order email to the winning subcontractor (drafted, sent from Outlook) ---- *@
@@ -1241,6 +1333,57 @@ else
         Chat.SetCoexistence(false);
     }
 
+    // ---- Draft supplier reply: the assistant answers an incomplete tender ---------------------
+    //
+    // The extraction names the gaps; this opens the Emails tab's own Reply composer on the tender
+    // email (it sends from the projects mailbox and files back under the package by tag) and
+    // starts a tender_reply task so the assistant writes the ask-for-what's-missing reply into
+    // it. Same contract as every task dialog: filling writes nothing — the user reads the reply
+    // and presses Send themselves.
+
+    private MailReplyComposer? commsComposer;
+
+    private bool CanUseAssistantForReply =>
+        Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
+
+    private void StartTenderReplyTask()
+    {
+        if (package is null || extractSourceEmail is not { } email) return;
+        if (!CanUseAssistantForReply) return;
+
+        var issues = extractIssues.ToList();
+        showExtractModal = false;
+        activeTab = "emails";
+        StartCommsCompose(email, forward: false);
+
+        var sender = string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName;
+        AiTasks.Start(
+            new AiTask(
+                TaskKey: "tender-reply",
+                ModalKey: ModalCatalog.TenderReply.ModalKey,
+                BannerLabel: $"Replying about the {package.Reference} tender",
+                BusyLabel: "Reading the tender and drafting the reply…",
+                // A user turn, so it outranks the system prompt — it has to say the same thing.
+                KickoffMessage:
+                    $"{sender}'s tender submission on this bid package is missing information. The "
+                    + "Reply composer open beside me is anchored to their email with the recipients "
+                    + "and subject prefilled. Draft the reply body: thank them for their tender, list "
+                    + "exactly what's missing so they can complete it, and ask them to return the "
+                    + "completed pricing schedule workbook. The gaps found when extracting their tender:\n"
+                    + string.Join("\n", issues.Select(issue => $"- {issue}"))
+                    + "\nRead get_bid_package_context and the tagged emails (read_record_emails, "
+                    + "record_type bid_package) if you need the line schedule or their exact wording. "
+                    + "Then send the reply as PLAIN TEXT in ONE update_open_modal — body only, unless a "
+                    + "prefilled field is blank. I review it and press Send myself.",
+                ProjectId: ProjectId,
+                RecordType: "bid_package",
+                RecordId: BidPackageId,
+                RecordReference: package.Reference),
+            "{}");
+        Chat.Open();
+        Chat.SetCoexistence(true);
+    }
+
     private string CurrentDetailsDraftJson() => JsonSerializer.Serialize(new
     {
         summary = specDraft,
@@ -1261,6 +1404,19 @@ else
     /// </summary>
     private void ApplyAssistantDraft(string fieldsJson)
     {
+        // tender_reply: the proposal belongs to the Reply composer, not the details dialog. The
+        // composer owns its state; the page only forwards and mirrors the result into the task's
+        // draft so the model sees what the form now says.
+        if (AiTasks.Active?.ModalKey == ModalCatalog.TenderReply.ModalKey)
+        {
+            if (commsComposer is { } composer && composer.ApplyAssistantFields(fieldsJson))
+            {
+                AiTasks.UpdateDraft(composer.CurrentFieldsJson());
+                StateHasChanged();
+            }
+            return;
+        }
+
         if (!showDetailsModal) return;
         try
         {
@@ -1415,11 +1571,20 @@ else
         commsComposeIsForward = forward;
     }
 
+    private void CancelCommsCompose()
+    {
+        commsReplyTo = null;
+        // Closing the composer ends the assistant's remit over it (a plain reply has no task —
+        // EndPackageAiTask guards on the modal key, so this is a no-op then).
+        EndPackageAiTask(ModalCatalog.TenderReply.ModalKey);
+    }
+
     private async Task OnCommsReplySent(Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome outcome)
     {
         var wasForward = commsComposeIsForward;
         commsReplyTo = null;
         commsComposeIsForward = false;
+        EndPackageAiTask(ModalCatalog.TenderReply.ModalKey);
         commsReplySent = outcome.Sent
             ? $"{(wasForward ? "Forward" : "Reply")} sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
             : $"The {(wasForward ? "forward" : "reply")} was saved to the mailbox's Drafts — review and send it from Outlook.";
@@ -1495,6 +1660,7 @@ else
         Nav.LocationChanged -= HandleLocationChanged;
         // Navigating away ends the dialog's remit — a task can't outlive the form it fills.
         EndPackageAiTask(ModalCatalog.BidPackageDetails.ModalKey);
+        EndPackageAiTask(ModalCatalog.TenderReply.ModalKey);
     }
 
     // Losing the project list should cost the composer its drawing/photo sources, not the page.
@@ -2128,6 +2294,12 @@ else
     }
 
     private bool showExtractModal;
+    private bool extractBusy;
+    private bool extractProposed;
+    private bool extractComplete;
+    private MailboxMessage? extractSourceEmail;
+    private List<string> extractIssues = new();
+    private string extractSubcontractorNote = "";
     private string extractSubcontractorId = "";
     private string extractNotes = "";
     private List<ExtractDraft> extractDrafts = new();
@@ -2140,6 +2312,12 @@ else
     {
         if (busy || !CanEdit) return;
         showExtractModal = true;
+        extractBusy = false;
+        extractProposed = false;
+        extractComplete = false;
+        extractSourceEmail = null;
+        extractIssues = new();
+        extractSubcontractorNote = "";
         extractSubcontractorId = "";
         extractNotes = "";
         extractDrafts = lineItems
@@ -2150,6 +2328,69 @@ else
 
 
     private void CloseExtractModal() => showExtractModal = false;
+
+    /// <summary>
+    /// "Extract information" on a filed tender email: the AI reads the email (body + the returned
+    /// pricing-schedule spreadsheet, extracted server-side) against the package's line schedule and
+    /// pre-fills this modal with the submission it proposes plus every gap it found. The modal is
+    /// the review step — the extraction saves NOTHING, and however the read goes the form falls
+    /// back to the blank package schedule so the tender can always be keyed by hand.
+    /// </summary>
+    private async Task OpenExtractFromEmail(MailboxMessage email)
+    {
+        if (busy || extractBusy || !CanEdit) return;
+        showExtractModal = true;
+        extractBusy = true;
+        extractProposed = false;
+        extractComplete = false;
+        extractSourceEmail = email;
+        extractIssues = new();
+        extractSubcontractorNote = "";
+        extractSubcontractorId = "";
+        extractNotes = "";
+        extractDrafts = new();
+        StateHasChanged();
+        try
+        {
+            var proposal = await Commands.SendAsync(
+                new ExtractTenderFromMessage(BidPackageId, email.Id), CancellationToken.None);
+            extractProposed = proposal.Proposed;
+            extractComplete = proposal.Complete;
+            extractSubcontractorId = proposal.SubcontractorId ?? "";
+            extractSubcontractorNote = proposal.SubcontractorNote;
+            extractNotes = proposal.Notes;
+            extractIssues = proposal.Issues.ToList();
+            extractDrafts = proposal.Lines
+                .Select(line => new ExtractDraft
+                {
+                    BidPackageLineItemId = line.BidPackageLineItemId,
+                    Description = line.Description,
+                    Unit = line.Unit,
+                    Quantity = line.Quantity,
+                    Rate = line.Rate,
+                    Total = line.Total
+                })
+                .ToList();
+        }
+        catch (CommandFailedException ex)
+        {
+            extractIssues = new List<string> { ex.Message };
+        }
+        catch
+        {
+            extractIssues = new List<string> { "The tender couldn't be read just now — enter the submission manually, or close and try again." };
+        }
+        finally
+        {
+            if (extractDrafts.Count == 0)
+                extractDrafts = lineItems
+                    .Select(item => new ExtractDraft { BidPackageLineItemId = item.LineItemId, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity })
+                    .ToList();
+            if (extractDrafts.Count == 0) extractDrafts.Add(new ExtractDraft { Quantity = 1 });
+            extractBusy = false;
+            StateHasChanged();
+        }
+    }
 
     private void AddExtractLine() => extractDrafts.Add(new ExtractDraft { Quantity = 1 });
 

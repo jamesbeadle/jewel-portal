@@ -130,6 +130,16 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<SendWorkOrderPoEmailAuthorisation>();
         services.AddScoped<SendWorkOrderPoEmailValidation>();
 
+        // Tender return leg: Claude reads a filed tender email (body + returned pricing-schedule
+        // spreadsheet) into a reviewable proposal; filing marks the sender's recipient Responded.
+        services.AddScoped<ICommandHandler<ExtractTenderFromMessage, TenderExtraction>, ExtractTenderFromMessageHandler>();
+        services.AddScoped<ExtractTenderFromMessageAuthorisation>();
+        services.AddScoped<ExtractTenderFromMessageValidation>();
+
+        services.AddScoped<ICommandHandler<RecordTenderResponse, IReadOnlyList<BidPackageRecipient>>, RecordTenderResponseHandler>();
+        services.AddScoped<RecordTenderResponseAuthorisation>();
+        services.AddScoped<RecordTenderResponseValidation>();
+
         services.AddScoped<ICommandHandler<SaveExtractedQuote, Quote>, SaveExtractedQuoteHandler>();
         services.AddScoped<SaveExtractedQuoteAuthorisation>();
         services.AddScoped<SaveExtractedQuoteValidation>();

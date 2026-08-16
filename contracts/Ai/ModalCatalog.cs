@@ -267,8 +267,53 @@ public static class ModalCatalog
                 })
         });
 
+    /// <summary>
+    /// The Reply composer on a bid package's Emails tab, anchored to one tender email — the
+    /// "Draft supplier reply" leg of tender extraction: when an extraction finds gaps, the page
+    /// opens this composer on the tender email and the assistant writes the reply asking for what
+    /// is missing. Deliberately NOT openable via open_modal: the composer only exists anchored to
+    /// a specific email, which the page supplies when it starts the task — the assistant can only
+    /// update_open_modal it. The user reviews and presses Send themselves; the reply sends from
+    /// the projects mailbox and files itself back under the package by the thread's tags.
+    /// </summary>
+    public static readonly ModalDescriptor TenderReply = new(
+        "tender_reply",
+        "Reply",
+        "It drafts the reply to a subcontractor's tender submission asking for the information their "
+        + "tender is missing. The composer is already open beside the chat, anchored to their email "
+        + "with the recipients and subject prefilled — update the body (and the rest only if blank); "
+        + "the user reviews everything and presses Send themselves.",
+        "/projects/{project}/bid-package-invites/{record}",
+        // The composer sends through SendMailboxEmail, so exactly the API's triage roles.
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.FinanceDirector,
+            Role.ProjectManager
+        },
+        new ModalField[]
+        {
+            new("to", "string",
+                "The To recipients, semicolon-separated. Prefilled from the reply envelope — leave "
+                + "it out unless it is blank, and only ever use addresses you have actually read."),
+
+            new("cc", "string",
+                "Cc recipients, semicolon-separated. Same rule: only addresses you have actually read."),
+
+            new("subject", "string",
+                "Prefilled as \"RE: …\" from the tender email — leave it out unless it is blank."),
+
+            new("body", "string",
+                "The reply as PLAIN TEXT — blank lines between paragraphs, no HTML, no markdown. "
+                + "Plain UK English: thank them for their tender, list exactly what is missing or "
+                + "unclear (one line per gap), and ask them to return the completed pricing schedule. "
+                + "Never invent figures, dates or commitments that are not in what you have read.",
+                Required: true)
+        });
+
     public static IReadOnlyList<ModalDescriptor> All { get; } =
-        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails };
+        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails, TenderReply };
 
     public static ModalDescriptor? Find(string? modalKey) =>
         string.IsNullOrWhiteSpace(modalKey)

@@ -149,6 +149,66 @@ public partial class MailReplyComposer
         subject = MailCompose.ReplySubjectFor(loaded.Subject ?? replyTo.Subject);
     }
 
+    // ---- Assistant-draft plumbing (the bid package page's tender_reply task) -------------------
+    // The host holds this component by @ref and forwards the assistant's update_open_modal fields
+    // here; the composer stays the single owner of its state, and the user still reads every field
+    // and presses Send themselves. Only fields the proposal actually carries apply — an update
+    // naming just the body keeps the envelope the reply prefilled.
+
+    /// <summary>Applies an assistant proposal ({to, cc, subject, body} — any subset). The body
+    /// arrives as PLAIN TEXT (the dialog contract) and is converted to the composer's HTML
+    /// paragraphs. Returns true when anything changed; malformed JSON changes nothing.</summary>
+    public bool ApplyAssistantFields(string fieldsJson)
+    {
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(fieldsJson);
+            var root = document.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return false;
+
+            var changed = false;
+            if (ReadField(root, "to") is { } to) { toField = to; changed = true; }
+            if (ReadField(root, "cc") is { } cc) { ccField = cc; changed = true; }
+            if (ReadField(root, "subject") is { } newSubject) { subject = newSubject; changed = true; }
+            if (ReadField(root, "body") is { } newBody) { body = PlainTextToHtml(newBody); changed = true; }
+
+            if (changed) StateHasChanged();
+            return changed;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>The composer's current fields as the task's draft JSON — what the model sees as
+    /// the dialog's live state on each turn.</summary>
+    public string CurrentFieldsJson() =>
+        System.Text.Json.JsonSerializer.Serialize(new { to = toField, cc = ccField, subject, body });
+
+    private static string? ReadField(System.Text.Json.JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value)
+            && value.ValueKind == System.Text.Json.JsonValueKind.String
+            && !string.IsNullOrWhiteSpace(value.GetString())
+            ? value.GetString()
+            : null;
+
+    /// <summary>Blank-line-separated plain text → the composer's HTML: one &lt;p&gt; per paragraph,
+    /// &lt;br/&gt; within, everything encoded. A body that already looks like HTML passes through.</summary>
+    private static string PlainTextToHtml(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.StartsWith("<") && trimmed.EndsWith(">")) return trimmed;
+        var paragraphs = trimmed
+            .Replace("\r\n", "\n")
+            .Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
+            .Select(paragraph =>
+                "<p>" + string.Join("<br/>", paragraph
+                    .Split('\n')
+                    .Select(line => System.Net.WebUtility.HtmlEncode(line.TrimEnd()))) + "</p>");
+        return string.Join("", paragraphs);
+    }
+
     private Task ConfirmAsync() => StageMode ? StageAsync() : SendAsync();
 
     // Stage: snapshot the envelope into the (new or edited) Outbox entry — no network, no send.

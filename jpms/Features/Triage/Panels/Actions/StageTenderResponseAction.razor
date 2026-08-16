@@ -1,0 +1,112 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.Procurement
+@inject IIntakeQueue Intake
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+
+@* File Bid Package Tender: a subcontractor has sent their completed pricing back — pick the open
+   bid package it tenders for and stage the filing. The staged TARGET tags the email under the
+   package (the tag IS the filing: the email joins the package's Tender responses, where "Extract
+   information" reads it), and the deferred command marks the sender's recipient row Responded so
+   the Tender list says their tender is back. Extraction itself stays on the package page — filing
+   an email should never gate on an AI call. *@
+
+<div class="space-y-3">
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+
+    <SearchSelect Options="@CandidateOptions"
+                  WidthClass="w-full" InputClass="field"
+                  Disabled="@(candidates.Count == 0)"
+                  Placeholder="@(loading ? "Loading bid packages…"
+                                 : candidates.Count == 0 ? "No open bid packages on this project"
+                                 : "Select the bid package they tendered for…")"
+                  @bind-Value="bidPackageId" />
+
+    <p class="text-xs text-content-subtle">
+        Filing tags this email to the package (it appears under its Tender responses ready for
+        extraction) and marks the sender's tender as received on the Tender list.
+    </p>
+
+    <button type="button" class="btn-primary" disabled="@(bidPackageId == "")" @onclick="StageAsync">Stage action</button>
+</div>
+
+@code {
+    /// <summary>The email's project, set in the triage bar above the split.</summary>
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    /// <summary>The tender email's sender — how the recipient row is matched server-side.</summary>
+    [Parameter] public string? SenderEmail { get; set; }
+
+    [Parameter] public EventCallback<StagedSystemAction> OnStaged { get; set; }
+
+    private string loadedProjectId = "";
+    private string bidPackageId = "";
+    private bool loading;
+    private string? error;
+    private IReadOnlyList<BidPackage> candidates = Array.Empty<BidPackage>();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ProjectId == loadedProjectId) return;
+        loadedProjectId = ProjectId;
+        bidPackageId = "";
+        error = null;
+        candidates = Array.Empty<BidPackage>();
+        if (ProjectId == "") return;
+
+        loading = true;
+        try
+        {
+            // A tender can only come back on a package whose tender process is live — Inviting or
+            // already receiving quotes. Draft (nothing sent), Awarded and Closed don't take tenders.
+            candidates = (await Queries.AskAsync(new ListBidPackagesForProject(ProjectId), CancellationToken.None))
+                .Where(package => package.Status is BidPackageStatus.Inviting or BidPackageStatus.QuotesReceived)
+                .OrderBy(package => package.Number)
+                .ToList();
+        }
+        catch
+        {
+            error = "The project's bid packages couldn't be loaded — try again.";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private IReadOnlyList<SearchSelect.Option> CandidateOptions =>
+        candidates.Select(package => new SearchSelect.Option(
+            package.BidPackageId, $"{package.Reference} — {package.Title}")).ToList();
+
+    private async Task StageAsync()
+    {
+        error = null;
+        var picked = candidates.FirstOrDefault(package => package.BidPackageId == bidPackageId);
+        if (picked is null) { error = "Pick the bid package first."; return; }
+
+        var sender = SenderEmail ?? "";
+        var commands = Commands;
+        await OnStaged.InvokeAsync(new StagedSystemAction(
+            SystemActionKind.FileBidPackageTender,
+            $"file this email as a tender response on {picked.Reference} — {picked.Title}",
+            async () => await commands.SendAsync(
+                new RecordTenderResponse(picked.BidPackageId, sender), CancellationToken.None),
+            await TargetFor(picked)));
+        bidPackageId = "";
+    }
+
+    // The server's own linkable projection, never hand-built — tag stems are provider business.
+    // Losing it costs only the automatic tag; the recipient still flips on Apply.
+    private async Task<LinkableRecord?> TargetFor(BidPackage picked)
+    {
+        try
+        {
+            var records = await Intake.ListLinkableRecordsAsync(picked.ProjectId, RecordType.BidPackageInvite);
+            return records.FirstOrDefault(record => record.RecordId == picked.BidPackageId);
+        }
+        catch { return null; }
+    }
+}
