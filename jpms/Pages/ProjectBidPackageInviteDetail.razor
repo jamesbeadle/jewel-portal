@@ -1216,9 +1216,11 @@ else
                       + "schedule or quote; list_cost_codes for the real cost codes. Then send the full "
                       + "schedule with update_open_modal — measurable lines a subcontractor can price, "
                       + "each with trade, unit, quantity and a cost code, keeping any existing lines "
-                      + "that are still right. Once I've saved the lines, if the specification summary "
-                      + "needs writing or improving, open the bid_package_summary dialog and fill that "
-                      + "too. Tell me in one line anything you could not establish."
+                      + "that are still right. When I save the schedule, the specification summary "
+                      + "dialog opens automatically if the summary is blank — you fill that next. If a "
+                      + "summary already exists but no longer matches the works, say so and open the "
+                      + "bid_package_summary dialog to rewrite it. Tell me in one line anything you "
+                      + "could not establish."
                     : "Fill in the \"Edit line items\" dialog open beside me from this bid package's "
                       + "context — get_bid_package_context and its tagged emails, if you have not read "
                       + "them already. Send the full schedule (it replaces the list), keep existing "
@@ -1245,8 +1247,9 @@ else
                 KickoffMessage:
                     "Fill in the \"Edit specification summary\" dialog open beside me — one point per "
                     + "line, plain text, what this package covers and to what standard, drawn from the "
-                    + "package's context (get_bid_package_context and its tagged emails, if you have "
-                    + "not read them already). Tell me in one line anything you could not establish.",
+                    + "package's line-item schedule and context (get_bid_package_context returns the "
+                    + "saved lines; read its tagged emails too if you have not already). Tell me in "
+                    + "one line anything you could not establish.",
                 ProjectId: ProjectId,
                 RecordType: "bid_package",
                 RecordId: BidPackageId,
@@ -2487,12 +2490,28 @@ else
                     (draft.Trade ?? "").Trim(),
                     draft.CostCode.Trim()))
                 .ToList();
+            // Whether the ASSISTANT was driving this schedule — read before the task ends,
+            // because the summary hand-off below only makes sense for the AI flow: a user who
+            // edited lines by hand has not asked for anything else.
+            var assistantWasDriving = AiTasks.Active?.ModalKey == ModalCatalog.BidPackageLines.ModalKey;
+
             fetchedLineItems = await Commands.SendAsync(new SetBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
             showLinesModal = false;
             lineDrafts.Clear();
-            // The lines task's remit ends with the save; if the assistant is mid-conversation it
-            // carries on and may open the summary dialog next (its own open_modal, a new task).
             EndPackageAiTask(ModalCatalog.BidPackageLines.ModalKey);
+
+            // The deterministic half of "then do the summary": the model's turn is long over by
+            // the time the user presses Save, so following through cannot be left to its memory
+            // (lesson from the first live run, 2026-08-16 — the summary stayed blank). If the AI
+            // built the schedule and the package still has no summary, open the summary dialog
+            // and kick the assistant straight into it.
+            if (assistantWasDriving && package is not null
+                && string.IsNullOrWhiteSpace(package.SpecificationSummary) && CanEdit)
+            {
+                activeTab = "summary";
+                EditSpec();
+                StartSummaryTask();
+            }
         }
         catch { error = "Couldn't save the line items. Please try again."; }
         finally { busy = false; }
