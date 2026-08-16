@@ -1,4 +1,5 @@
 @page "/projects/{ProjectId}/bid-package-invites"
+@using Jewel.JPMS.Contracts.Ai
 @using Jewel.JPMS.Contracts.Procurement
 @inject AuthService Auth
 @inject SessionService Session
@@ -35,6 +36,7 @@ else
                                      BuildWorkbook="BuildExportWorkbook" />
                 @if (CanManage)
                 {
+                    <button type="button" class="btn-secondary" @onclick="OpenSuggestModal">Suggest bid packages</button>
                     <button type="button" class="btn-primary" @onclick="OpenCreateModal">New bid package</button>
                 }
             </div>
@@ -109,6 +111,122 @@ else
             subcontractors on the package's page — nothing is emailed until you draft the invite there.
         </p>
     </Modal>
+
+    @* ---- Suggest bid packages: Claude reads the valuation report and proposes what to tender.
+         Nothing is created until the user picks suggestions — each pick becomes an ordinary
+         Draft package via CreateBidPackage. Overlay-dismiss is off once results exist: a stray
+         click must not throw away an answer that cost a model call. ---- *@
+    <Modal IsOpen="showSuggestModal" Title="Suggest bid packages"
+           DismissOnOverlayClick="@(suggestions is null)"
+           OnCancel="CloseSuggestModal" Class="max-w-2xl w-full">
+        <FooterContent>
+            <button type="button" class="btn-neutral" @onclick="CloseSuggestModal">@(suggestions is null ? "Cancel" : "Close")</button>
+            @if (suggestions is null)
+            {
+                <button type="button" class="btn-primary" disabled="@suggestBusy" @onclick="RunSuggestion">
+                    @(suggestBusy ? "Analysing…" : "Suggest packages")
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn-secondary" disabled="@(suggestBusy || createBusy)" @onclick="RunSuggestion">Re-run</button>
+                @if (suggestions.Count > 0)
+                {
+                    <button type="button" class="btn-primary" disabled="@(createBusy || SelectedCount == 0)" @onclick="CreateSelectedSuggestions">
+                        @(createBusy ? "Creating…" : SelectedCount == 1 ? "Create 1 package" : $"Create {SelectedCount} packages")
+                    </button>
+                }
+            }
+        </FooterContent>
+        <ChildContent>
+            <p class="text-sm text-content-muted mb-3">
+                Claude reads this project's live valuation report — what's complete, what's left — and
+                proposes trade packages for the remaining works, grouped so each can be tendered and
+                delivered as its own phase. Only suggestions you tick are created, as Drafts.
+            </p>
+
+            @if (suggestError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@suggestError</p>
+            }
+
+            @if (suggestBusy)
+            {
+                <LoadGate IsLoading="true" Label="Analysing the valuation report" />
+            }
+            else if (suggestions is null)
+            {
+                <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Model</label>
+                @* Same cost lever as the chat panel: only a tier KEY leaves the browser — the
+                   server maps it to a model id, and unknown keys degrade to cheap. *@
+                <select class="field mb-1" @bind="suggestModelKey" aria-label="Model">
+                    @foreach (var choice in AiModelCatalogue.All)
+                    {
+                        <option value="@choice.Key">@choice.DisplayName</option>
+                    }
+                </select>
+                <p class="text-xs text-content-subtle">@SuggestModelHint</p>
+            }
+            else
+            {
+                <p class="text-xs text-content-subtle mb-3">
+                    Suggested by @suggestModelUsed.
+                    @if (suggestNote is not null)
+                    {
+                        <span> @suggestNote</span>
+                    }
+                </p>
+
+                @if (suggestions.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">
+                        Nothing worth tendering was found — the remaining works are already covered by
+                        existing packages or are too far complete.
+                    </p>
+                }
+                else
+                {
+                    <div class="space-y-3">
+                        @for (var i = 0; i < suggestions.Count; i++)
+                        {
+                            var index = i;
+                            var suggestion = suggestions[index];
+                            <label class="flex items-start gap-3 rounded-xl border border-line bg-surface-raised px-4 py-3 cursor-pointer @(selectedSuggestions.Contains(index) ? "border-accent/40" : "")">
+                                <input type="checkbox" class="mt-1"
+                                       checked="@selectedSuggestions.Contains(index)"
+                                       @onchange="e => ToggleSuggestion(index, e.Value is true)" />
+                                <span class="min-w-0">
+                                    <span class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                                        <span class="text-sm font-semibold text-content">@suggestion.Title</span>
+                                        <span class="inline-flex items-center rounded-full bg-surface border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@suggestion.Trade</span>
+                                        @if (suggestion.ApproxValue > 0)
+                                        {
+                                            <span class="text-xs text-content-subtle">~£@suggestion.ApproxValue.ToString("N0") remaining</span>
+                                        }
+                                    </span>
+                                    @if (!string.IsNullOrWhiteSpace(suggestion.Scope))
+                                    {
+                                        <span class="block text-sm text-content-muted whitespace-pre-wrap mt-1">@suggestion.Scope</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(suggestion.Rationale))
+                                    {
+                                        <span class="block text-xs text-content-subtle italic mt-1">@suggestion.Rationale</span>
+                                    }
+                                    @if (suggestion.SourceLines.Count > 0)
+                                    {
+                                        <span class="block text-[11px] text-content-faint mt-1"
+                                              title="@string.Join("\n", suggestion.SourceLines)">
+                                            Based on @suggestion.SourceLines.Count report line@(suggestion.SourceLines.Count == 1 ? "" : "s")
+                                        </span>
+                                    }
+                                </span>
+                            </label>
+                        }
+                    </div>
+                }
+            }
+        </ChildContent>
+    </Modal>
 }
 
 @code {
@@ -121,6 +239,17 @@ else
     private string createTitle = "";
     private string createTrade = "";
     private bool createMaterials;
+
+    // ---- Suggest bid packages (AI) ----
+    private bool showSuggestModal;
+    private bool suggestBusy;
+    private bool createBusy;
+    private string? suggestError;
+    private string suggestModelKey = AiModelCatalogue.DefaultKey;   // cheap by default, on purpose
+    private string suggestModelUsed = "";
+    private string? suggestNote;
+    private IReadOnlyList<BidPackageSuggestion>? suggestions;        // null = not run yet
+    private readonly HashSet<int> selectedSuggestions = new();
 
     // Closed packages are ordered last, not hidden — the record stays reachable (the same rule
     // as completed projects). OrderBy is stable, so the store's newest-first order holds within
@@ -161,6 +290,88 @@ else
         }
         catch { error = "Couldn't create the bid package. Please try again."; }
         finally { busy = false; }
+    }
+
+    // ---- Suggest bid packages (AI) ------------------------------------------------------------
+
+    private int SelectedCount => selectedSuggestions.Count;
+
+    private string SuggestModelHint =>
+        AiModelCatalogue.Find(suggestModelKey)?.Hint ?? "Which Claude model analyses the report";
+
+    private void OpenSuggestModal()
+    {
+        suggestError = null;
+        suggestions = null;
+        suggestNote = null;
+        selectedSuggestions.Clear();
+        showSuggestModal = true;
+    }
+
+    private void CloseSuggestModal()
+    {
+        if (createBusy) return;   // mid-create, closing would hide work still landing
+        showSuggestModal = false;
+    }
+
+    private void ToggleSuggestion(int index, bool selected)
+    {
+        if (selected) selectedSuggestions.Add(index);
+        else selectedSuggestions.Remove(index);
+    }
+
+    private async Task RunSuggestion()
+    {
+        if (suggestBusy || !CanManage) return;
+        suggestError = null;
+        suggestions = null;
+        suggestNote = null;
+        selectedSuggestions.Clear();
+        try
+        {
+            suggestBusy = true;
+            var result = await Commands.SendAsync(
+                new SuggestBidPackages(ProjectId, suggestModelKey), CancellationToken.None);
+            suggestions = result.Suggestions;
+            suggestModelUsed = result.ModelUsed;
+            suggestNote = result.Note;
+            // Everything starts ticked — unticking is the review act.
+            for (var i = 0; i < result.Suggestions.Count; i++) selectedSuggestions.Add(i);
+        }
+        catch { suggestError = "Couldn't get suggestions. Please try again."; }
+        finally { suggestBusy = false; }
+    }
+
+    // Each ticked suggestion becomes an ordinary Draft package (CreateBidPackage), with the
+    // suggested scope written on as the package's "what this covers" summary. Stops at the
+    // first failure so a partial batch is visible rather than silently incomplete.
+    private async Task CreateSelectedSuggestions()
+    {
+        if (createBusy || !CanManage || suggestions is null || selectedSuggestions.Count == 0) return;
+        suggestError = null;
+        try
+        {
+            createBusy = true;
+            foreach (var index in selectedSuggestions.OrderBy(i => i))
+            {
+                if (index >= suggestions.Count) continue;
+                var suggestion = suggestions[index];
+                var package = await Commands.SendAsync(
+                    new CreateBidPackage(ProjectId, suggestion.Title, suggestion.Trade,
+                        Auth.CurrentUser?.Email ?? "", suggestion.MaterialsApplicable), CancellationToken.None);
+                if (!string.IsNullOrWhiteSpace(suggestion.Scope))
+                {
+                    await Commands.SendAsync(
+                        new UpdateBidPackageScope(package.BidPackageId, package.Title, package.Trade,
+                            package.Status, package.OwnerEmail, package.MaterialsApplicable,
+                            suggestion.Scope), CancellationToken.None);
+                }
+            }
+            showSuggestModal = false;
+            ProcurementStore.Refresh(ProjectId);
+        }
+        catch { suggestError = "Couldn't create all the selected packages — the ones already created are in the list below. Please review and try again."; }
+        finally { createBusy = false; }
     }
 
     private ExcelWorkbook? BuildExportWorkbook(bool _)

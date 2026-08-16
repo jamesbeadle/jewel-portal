@@ -44,6 +44,12 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<CreateBidPackageAuthorisation>();
         services.AddScoped<CreateBidPackageValidation>();
 
+        // AI proposals for what to tender next, read from the live valuation report. Read-only:
+        // creating the chosen packages goes through CreateBidPackage like any other.
+        services.AddScoped<ICommandHandler<SuggestBidPackages, BidPackageSuggestionResult>, SuggestBidPackagesHandler>();
+        services.AddScoped<SuggestBidPackagesAuthorisation>();
+        services.AddScoped<SuggestBidPackagesValidation>();
+
         services.AddScoped<ICommandHandler<CreateBidPackageFromMessage, BidPackage>, CreateBidPackageFromMessageHandler>();
         services.AddScoped<CreateBidPackageFromMessageAuthorisation>();
         services.AddScoped<CreateBidPackageFromMessageValidation>();

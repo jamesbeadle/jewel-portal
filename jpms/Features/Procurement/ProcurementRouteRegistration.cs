@@ -95,6 +95,12 @@ public static class ProcurementRouteRegistration
             new CommandRoute("POST", "/api/projects/{projectId}/bid-packages",
                 command => $"/api/projects/{((CreateBidPackage)command).ProjectId}/bid-packages"));
 
+        // AI proposals for what to tender next (read-only — nothing is created until the user
+        // picks suggestions and CreateBidPackage runs for each).
+        commands.Register<SuggestBidPackages, BidPackageSuggestionResult>(
+            new CommandRoute("POST", "/api/projects/{projectId}/bid-packages/suggest",
+                command => $"/api/projects/{((SuggestBidPackages)command).ProjectId}/bid-packages/suggest"));
+
         commands.Register<CreateBidPackageFromMessage, BidPackage>(
             new CommandRoute("POST", "/api/mailbox/message/create-bid-package",
                 _ => "/api/mailbox/message/create-bid-package"));

@@ -13,15 +13,22 @@ public interface IClaudeClient
 {
     bool IsConfigured { get; }
 
-    /// <summary>Run one completion; returns the assistant text, or null if unconfigured/failed.</summary>
-    Task<string?> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken ct);
+    /// <summary>Run one completion; returns the assistant text, or null if unconfigured/failed.
+    /// <paramref name="modelOverride"/> / <paramref name="maxTokensOverride"/> let a caller run
+    /// this call on a specific model id (e.g. one resolved from the chat picker's tier key via
+    /// <see cref="AnthropicOptions.ModelForTier"/>) with a bigger response ceiling than the
+    /// default extraction budget; null keeps the configured defaults, so existing callers are
+    /// untouched.</summary>
+    Task<string?> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken ct,
+        string? modelOverride = null, int? maxTokensOverride = null);
 }
 
 /// <summary>No-op used when no Anthropic key is configured; always returns null.</summary>
 public sealed class NullClaudeClient : IClaudeClient
 {
     public bool IsConfigured => false;
-    public Task<string?> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken ct) =>
+    public Task<string?> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken ct,
+        string? modelOverride = null, int? maxTokensOverride = null) =>
         Task.FromResult<string?>(null);
 }
 
@@ -43,7 +50,8 @@ public sealed class ClaudeClient : IClaudeClient
 
     public bool IsConfigured => _options.IsConfigured;
 
-    public async Task<string?> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken ct)
+    public async Task<string?> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken ct,
+        string? modelOverride = null, int? maxTokensOverride = null)
     {
         if (!_options.IsConfigured)
             return null;
@@ -54,8 +62,8 @@ public sealed class ClaudeClient : IClaudeClient
             {
                 Content = JsonContent.Create(new
                 {
-                    model = _options.Model,
-                    max_tokens = _options.MaxTokens,
+                    model = string.IsNullOrWhiteSpace(modelOverride) ? _options.Model : modelOverride,
+                    max_tokens = maxTokensOverride is > 0 ? maxTokensOverride.Value : _options.MaxTokens,
                     system = systemPrompt,
                     messages = new[]
                     {
