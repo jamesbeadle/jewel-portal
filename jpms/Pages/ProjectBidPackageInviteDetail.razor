@@ -87,6 +87,8 @@ else
                         {
                             <ToolbarButton Icon="close" Label="Close this bid package — ends the tender with no winner selected" Busy="@busy" OnClick="ClosePackage" />
                         }
+                        <ToolbarDivider />
+                        <ToolbarButton Icon="trash" Label="Delete this bid package — removes it and its tender data for good" Busy="@busy" OnClick="OpenDeleteModal" />
                     </Toolbar>
                 }
             </header>
@@ -143,7 +145,7 @@ else
                                 <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                                     <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Subcontractor</th>
                                     <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Invited</th>
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Added</th>
                                     <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
                                     <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
                                 </tr>
@@ -166,7 +168,10 @@ else
                                         </td>
                                         <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.TradesLabel ?? "")</td>
                                         <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
-                                        <td class="px-4 py-3 @(recipient.Status == BidPackageRecipientStatus.Declined ? "text-content-subtle" : "text-content-muted")">@recipient.Status</td>
+                                        @* "Invited" as a word implies an email went out, which the system can't know
+                                           (sends happen in Outlook) — "On list" says exactly what is true. The other
+                                           statuses read fine as-is. *@
+                                        <td class="px-4 py-3 @(recipient.Status == BidPackageRecipientStatus.Declined ? "text-content-subtle" : "text-content-muted")">@(recipient.Status == BidPackageRecipientStatus.Invited ? "On list" : recipient.Status.ToString())</td>
                                         <td class="px-4 py-3 text-right">
                                             @if (CanEdit)
                                             {
@@ -665,8 +670,8 @@ else
     </ProjectPageShell>
 
     @* ---- Add-subcontractor modal: the directory, searchable ---- *@
-    <Modal IsOpen="showInviteModal" Title="Invite subcontractors" ShowFooter="true"
-           ConfirmLabel="@(InviteCount() == 0 ? "Invite" : $"Invite {InviteCount()}")" ConfirmDisabled="@(busy || InviteCount() == 0)" CancelLabel="Cancel"
+    <Modal IsOpen="showInviteModal" Title="Add subcontractors to the tender list" ShowFooter="true"
+           ConfirmLabel="@(InviteCount() == 0 ? "Add to tender list" : $"Add {InviteCount()} to tender list")" ConfirmDisabled="@(busy || InviteCount() == 0)" CancelLabel="Cancel"
            OnCancel="CloseInviteModal" OnConfirm="ConfirmInvite" Class="max-w-lg w-full">
         <div class="mb-3 flex gap-2">
             <input class="field flex-1" placeholder="Search by company, trade or contact…"
@@ -731,14 +736,16 @@ else
 
     @* ---- Find local subcontractors: Google Places search near the project's site ---- *@
     <Modal IsOpen="showFindModal" Title="Find local subcontractors" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Inviting…" : selectedPlaces.Count == 0 ? "Invite" : $"Invite {selectedPlaces.Count}")"
+           ConfirmLabel="@(busy ? "Adding…" : selectedPlaces.Count == 0 ? "Add to tender list" : $"Add {selectedPlaces.Count} to tender list")"
            ConfirmDisabled="@(busy || selectedPlaces.Count == 0)" CancelLabel="Close"
            OnCancel="CloseFindModal" OnConfirm="ConfirmFindInvite" Class="max-w-2xl w-full">
         <p class="text-xs text-content-subtle mb-3">
             Searches the web for companies of a trade near the project's site (its town and postcode —
             set under Edit details on the project). Email addresses and phone numbers are picked up
             from each company's own website; companies where no email could be found are left out.
-            Ticked companies are saved to the directory with their details and invited to this package.
+            Ticked companies are saved to the directory and added to this package's tender list.
+            <span class="text-content-muted">Nothing is emailed</span> — that happens later, when you
+            choose Draft invite email, and even then only as a mailbox draft you send from Outlook.
         </p>
 
         <div class="flex gap-2 mb-3">
@@ -1036,6 +1043,29 @@ else
 
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Body (HTML)</label>
         <textarea class="field font-mono text-xs" rows="14" @bind="woEmailBody"></textarea>
+    </Modal>
+
+    @* ---- Delete: for packages raised in error (or unwanted AI suggestions). Awarded packages
+         are refused server-side — the work order carries the committed money. ---- *@
+    <Modal IsOpen="showDeleteModal" Title="Delete bid package"
+           OnCancel="CloseDeleteModal" Class="max-w-lg w-full">
+        <FooterContent>
+            <button type="button" class="btn-neutral" disabled="@busy" @onclick="CloseDeleteModal">Keep it</button>
+            <button type="button" class="btn-neutral text-negative border-negative/40" disabled="@busy" @onclick="ConfirmDelete">
+                @(busy ? "Deleting…" : "Delete package")
+            </button>
+        </FooterContent>
+        <ChildContent>
+            <p class="text-sm text-content-muted mb-3">
+                This deletes <span class="font-medium text-content">@package?.Title</span> for good, along with
+                everything on it: invited subcontractors (the invites, not their directory entries), line items,
+                tender submissions, attachments and drawing links. Emails tagged to the package stay in the mailbox.
+            </p>
+            <p class="text-xs text-content-subtle">
+                If the tender simply ended with no winner, Close is the right record — deletion is for a package
+                that shouldn't exist at all. This can't be undone.
+            </p>
+        </ChildContent>
     </Modal>
 }
 
@@ -1530,7 +1560,7 @@ else
             selectedPlaces.Clear();
             showFindModal = false;
             package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
-            sendNote = $"Invited {ids.Count} compan{(ids.Count == 1 ? "y" : "ies")} from the local search. Their emails were picked up from their websites — worth a quick check in the Directory before drafting the invite email.";
+            sendNote = $"Added {ids.Count} compan{(ids.Count == 1 ? "y" : "ies")} from the local search to the tender list — nothing has been emailed. Their addresses were picked up from their websites, so worth a quick check in the Directory; when you're ready, Draft invite email stages the email in the mailbox for you to send.";
             draftWebLink = null;
         }
         catch (CommandFailedException ex) { error = $"Couldn't invite those companies: {ex.Message}"; }
@@ -1932,6 +1962,44 @@ else
         }
         catch { error = "Couldn't reopen the bid package. Please try again."; }
         finally { busy = false; }
+    }
+
+    // ---- Delete: removes the record and its tender data for good. Guarded by a confirm modal;
+    // the server refuses Awarded packages and anything a work order references. ----
+
+    private bool showDeleteModal;
+
+    private void OpenDeleteModal()
+    {
+        if (package is null || !CanManage || package.Status == BidPackageStatus.Awarded) return;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        if (busy) return;
+        showDeleteModal = false;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (busy || package is null || !CanManage || package.Status == BidPackageStatus.Awarded) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await Commands.SendAsync(new DeleteBidPackage(BidPackageId), CancellationToken.None);
+            showDeleteModal = false;
+            // Back to the register — this record no longer exists to stand on. busy stays true
+            // so nothing is clickable during the navigation.
+            Nav.NavigateTo($"/projects/{ProjectId}/bid-package-invites");
+        }
+        catch
+        {
+            error = "Couldn't delete the bid package — if it has a work order, cancel that first.";
+            showDeleteModal = false;
+            busy = false;
+        }
     }
 
     // ---- Tender-document attachments: uploaded files that travel with the invite. ----

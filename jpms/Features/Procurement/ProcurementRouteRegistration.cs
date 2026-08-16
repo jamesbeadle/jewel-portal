@@ -145,6 +145,12 @@ public static class ProcurementRouteRegistration
             new CommandRoute("PUT", "/api/bid-packages/{bidPackageId}",
                 command => $"/api/bid-packages/{((UpdateBidPackageScope)command).BidPackageId}"));
 
+        // Deletes a package raised in error (or an unwanted AI suggestion) with everything
+        // under it; refused server-side for Awarded packages and anything a work order names.
+        commands.Register<DeleteBidPackage, Contracts.Cqrs.Acknowledgement>(
+            new CommandRoute("DELETE", "/api/bid-packages/{bidPackageId}",
+                command => $"/api/bid-packages/{((DeleteBidPackage)command).BidPackageId}"));
+
         commands.Register<CloseBidPackage, BidPackage>(
             new CommandRoute("POST", "/api/bid-packages/{bidPackageId}/close",
                 command => $"/api/bid-packages/{((CloseBidPackage)command).BidPackageId}/close"));

@@ -82,6 +82,12 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<UpdateBidPackageScopeAuthorisation>();
         services.AddScoped<UpdateBidPackageScopeValidation>();
 
+        // Deletes a package raised in error (or an unwanted AI suggestion) with everything under
+        // it. The handler refuses Awarded packages and anything a work order references.
+        services.AddScoped<ICommandHandler<DeleteBidPackage, Jewel.JPMS.Contracts.Cqrs.Acknowledgement>, DeleteBidPackageHandler>();
+        services.AddScoped<DeleteBidPackageAuthorisation>();
+        services.AddScoped<DeleteBidPackageValidation>();
+
         // Ends the tender without a winner / puts it back in play. No reason is captured — closing
         // without incident needs no paperwork.
         services.AddScoped<ICommandHandler<CloseBidPackage, BidPackage>, CloseBidPackageHandler>();
