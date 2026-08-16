@@ -165,6 +165,13 @@ else
                                             {
                                                 <span class="block text-xs text-content-subtle">@sub.ContactEmail</span>
                                             }
+                                            @if (sub is not null && !string.IsNullOrWhiteSpace(sub.Website))
+                                            {
+                                                @* Their site in a new tab — the quickest sanity-check on who a
+                                                   search-found company actually is before the invite drafts. *@
+                                                <a class="block text-xs text-accent hover:underline truncate max-w-xs"
+                                                   href="@WebsiteHref(sub.Website)" target="_blank" rel="noopener">@WebsiteLabel(sub.Website)</a>
+                                            }
                                         </td>
                                         <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.TradesLabel ?? "")</td>
                                         <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
@@ -175,20 +182,24 @@ else
                                         <td class="px-4 py-3 text-right">
                                             @if (CanEdit)
                                             {
-                                                <span class="inline-flex items-center gap-3">
+                                                @* Row actions follow the button colour rule: acts are green
+                                                   (btn-secondary), the destructive one warns (btn-neutral +
+                                                   negative text/border) — compact paddings for a table row. *@
+                                                <span class="inline-flex items-center gap-2">
                                                     @if (recipient.Status == BidPackageRecipientStatus.Declined)
                                                     {
-                                                        <button type="button" class="text-xs text-content-muted hover:text-content" disabled="@busy"
-                                                                title="Put them back in the running — restores Responded if they have a tender in, otherwise Invited."
+                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
+                                                                title="Put them back in the running — restores Responded if they have a tender in, otherwise back on the list."
                                                                 @onclick="() => SetDeclined(recipient, false)">Undo decline</button>
                                                     }
                                                     else if (recipient.Status != BidPackageRecipientStatus.Won)
                                                     {
-                                                        <button type="button" class="text-xs text-content-muted hover:text-content" disabled="@busy"
+                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
                                                                 title="Record that they've declined to tender (e.g. told you by phone). Keeps them on the list for the record."
                                                                 @onclick="() => SetDeclined(recipient, true)">Mark declined</button>
                                                     }
-                                                    <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy" @onclick="() => RemoveRecipient(recipient)">Remove</button>
+                                                    <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40" disabled="@busy"
+                                                            @onclick="() => RemoveRecipient(recipient)">Remove</button>
                                                 </span>
                                             }
                                         </td>
@@ -1962,6 +1973,26 @@ else
         }
         catch { error = "Couldn't reopen the bid package. Please try again."; }
         finally { busy = false; }
+    }
+
+    // ---- Website links on the recipient list ----
+
+    // Directory websites arrive as the search stored them — sometimes bare domains. A missing
+    // scheme would make the browser treat the href as a relative path, so add one.
+    private static string WebsiteHref(string website)
+    {
+        var trimmed = website.Trim();
+        return trimmed.Contains("://") ? trimmed : $"https://{trimmed}";
+    }
+
+    // The label is the tidy form: no scheme, no www., no trailing slash — "fence-masters.co.uk".
+    private static string WebsiteLabel(string website)
+    {
+        var label = website.Trim();
+        var schemeAt = label.IndexOf("://", StringComparison.Ordinal);
+        if (schemeAt >= 0) label = label[(schemeAt + 3)..];
+        if (label.StartsWith("www.", StringComparison.OrdinalIgnoreCase)) label = label[4..];
+        return label.TrimEnd('/');
     }
 
     // ---- Delete: removes the record and its tender data for good. Guarded by a confirm modal;
