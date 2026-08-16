@@ -15,6 +15,7 @@ public static class ProcurementFeatureRegistration
     {
         RegisterAttachmentStore(services, configuration);
         RegisterBidPackageAttachmentStore(services, configuration);
+        RegisterCompanyTenderTermsStore(services, configuration);
 
         // Attachments kept on a work order for record keeping (never sent to the supplier).
         services.AddScoped<IQueryHandler<ListWorkOrderAttachments, IReadOnlyList<WorkOrderAttachment>>,
@@ -102,11 +103,21 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<SetBidPackageDrawingsAuthorisation>();
         services.AddScoped<SetBidPackageDrawingsValidation>();
 
-        // NOTE: there is deliberately no send-invite command — invites are only ever created as
-        // mailbox drafts (PrepareBidPackageInviteDraft) for a human to review and send from Outlook.
+        // One attachment plan for both invite paths — the Outlook-draft flow and the in-app send —
+        // so the two can never disagree about what a tenderer receives.
+        services.AddScoped<BidPackageInviteMailAssembler>();
+
         services.AddScoped<ICommandHandler<PrepareBidPackageInviteDraft, BidPackageInviteDraft>, PrepareBidPackageInviteDraftHandler>();
         services.AddScoped<PrepareBidPackageInviteDraftAuthorisation>();
         services.AddScoped<PrepareBidPackageInviteDraftValidation>();
+
+        // The in-app invite composer (2026-08-16): the invite is composed, persisted as a draft ON
+        // the package, and SENT from the projects mailbox — no trip to Outlook. Same review-then-
+        // send discipline, just reviewed here; the send still passes through the system's single
+        // Graph send chokepoint.
+        services.AddScoped<ICommandHandler<SendBidPackageInvite, BidPackageInviteSendOutcome>, SendBidPackageInviteHandler>();
+        services.AddScoped<IQueryHandler<GetBidPackageInviteComposerDraft, BidPackageInviteComposerDraft?>, GetBidPackageInviteComposerDraftHandler>();
+        services.AddScoped<ICommandHandler<SaveBidPackageInviteComposerDraft, Jewel.JPMS.Contracts.Cqrs.Acknowledgement>, SaveBidPackageInviteComposerDraftHandler>();
 
         // Same review-then-send-from-Outlook convention as the invite draft above.
         services.AddScoped<ICommandHandler<PrepareWorkOrderEmailDraft, WorkOrderEmailDraft>, PrepareWorkOrderEmailDraftHandler>();
@@ -188,6 +199,21 @@ public static class ProcurementFeatureRegistration
         else
             services.AddSingleton<IWorkOrderAttachmentStore>(
                 _ => new AzureBlobWorkOrderAttachmentStore(connectionString));
+    }
+
+    // The company's standard tender Terms & Conditions PDF — one blob, company-wide, attached to
+    // every invite. Same connection chain as the other document stores.
+    private static void RegisterCompanyTenderTermsStore(IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration["CompanyDocumentsStorage:ConnectionString"]
+            ?? configuration["DrawingsStorage:ConnectionString"]
+            ?? configuration["AzureWebJobsStorage"];
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+            services.AddSingleton<Attachments.ICompanyTenderTermsStore, Attachments.NullCompanyTenderTermsStore>();
+        else
+            services.AddSingleton<Attachments.ICompanyTenderTermsStore>(
+                _ => new Attachments.AzureBlobCompanyTenderTermsStore(connectionString));
     }
 
     // Bid-package attachments follow the same chain, with their own key first so they can be

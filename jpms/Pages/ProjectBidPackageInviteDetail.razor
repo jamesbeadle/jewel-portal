@@ -120,7 +120,7 @@ else
                         <div class="flex items-center gap-4">
                             @if (recipients.Count > 0)
                             {
-                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenComposeModal">Draft invite email</button>
+                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenComposeModal">Invite email</button>
                             }
                             <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenFindModal">Find subcontractors</button>
                             <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenInviteModal">+ Add subcontractor</button>
@@ -134,7 +134,7 @@ else
                         @sendNote
                         @if (draftWebLink is not null)
                         {
-                            <a class="text-accent underline ml-1" href="@draftWebLink" target="_blank" rel="noopener">Open the draft in Outlook</a>
+                            <a class="text-accent underline ml-1" href="@draftWebLink" target="_blank" rel="noopener">Open it in Outlook on the web</a>
                         }
                     </p>
                 }
@@ -220,9 +220,9 @@ else
                         </table>
                     </div>
                     <p class="text-xs text-content-subtle mt-2">
-                        Adding a subcontractor only builds the invite list — nothing is emailed until you use
-                        “Draft invite email” above, which creates a draft in the shared mailbox's Drafts folder
-                        for you to review and send.
+                        Adding a subcontractor only builds the invite list — nothing is emailed until you
+                        compose the “Invite email” above and press Send there. It sends from the projects
+                        mailbox, with everyone in BCC; a half-written invite is saved on the package.
                     </p>
                 }
                 </LoadGate>
@@ -724,7 +724,7 @@ else
             from each company's own website; companies where no email could be found are left out.
             Ticked companies are saved to the directory and added to this package's tender list.
             <span class="text-content-muted">Nothing is emailed</span> — that happens later, when you
-            choose Draft invite email, and even then only as a mailbox draft you send from Outlook.
+            compose the Invite email on the package's page, and only when you press Send there.
         </p>
 
         <div class="flex gap-2 mb-3">
@@ -804,36 +804,29 @@ else
         @if (linkingLine is not null)
         {
             <p class="text-sm text-content mb-1 font-medium">@linkingLine.Description</p>
-            <p class="text-xs text-content-subtle mb-4">A line is covered by a contract BoQ line (flows into the Valuation Report) or a Variation Order Quote — never both.</p>
+            <p class="text-xs text-content-subtle mb-4">A line is covered by a cost centre (the contract-side home its committed value charges to) or a variation order — never both.</p>
 
             <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Covered by</label>
             <select class="field" @bind="coverageChoice">
                 <option value="@BidPackageLineCoverage.Unassigned">Not linked</option>
-                <option value="@BidPackageLineCoverage.ContractLine">Contract BoQ line</option>
-                <option value="@BidPackageLineCoverage.Variation">Variation Order Quote</option>
+                <option value="@BidPackageLineCoverage.ContractLine">Cost centre</option>
+                <option value="@BidPackageLineCoverage.Variation">Variation order</option>
             </select>
 
             @if (coverageChoice == BidPackageLineCoverage.ContractLine)
             {
-                <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">BoQ line</label>
-                @if (boqLines.Count == 0)
-                {
-                    <p class="text-sm text-content-subtle italic">No BoQ lines on this project yet.</p>
-                }
-                else
-                {
-                    <select class="field" @bind="coverageBoqId">
-                        <option value="">Select a BoQ line…</option>
-                        @foreach (var b in boqLines)
-                        {
-                            <option value="@b.BoqLineItemId">@b.Description (@b.Unit)</option>
-                        }
-                    </select>
-                }
+                <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Cost centre</label>
+                <select class="field" @bind="coverageCostCode">
+                    <option value="">Select a cost centre…</option>
+                    @foreach (var centre in CostCenters.Alphabetical)
+                    {
+                        <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
+                    }
+                </select>
             }
             else if (coverageChoice == BidPackageLineCoverage.Variation)
             {
-                <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Variation Order Quote</label>
+                <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Variation order</label>
                 @if (variations.Count == 0)
                 {
                     <p class="text-sm text-content-subtle italic">No variation orders on this project yet.</p>
@@ -884,49 +877,64 @@ else
         }
     </Modal>
 
-    @* ---- Compose & send the tender-invite email (recipients BCC'd) ---- *@
-    <Modal IsOpen="showComposeModal" Title="Draft invite email" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Creating draft…" : BccPreview().Count == 0 ? "No one to send to" : $"Create draft for {BccPreview().Count} subcontractor{(BccPreview().Count == 1 ? "" : "s")}")"
-           ConfirmDisabled="@(busy || BccPreview().Count == 0)" CancelLabel="Cancel"
-           OnCancel="CloseComposeModal" OnConfirm="ConfirmSendInvite" Class="max-w-2xl w-full">
+    @* ---- The invite composer: compose, persist, SEND — all in here, like a triage reply.
+         The tender list is pre-filled into BCC (subcontractors never see each other) and the
+         whole envelope stays editable. The draft persists ON the package (Save draft, and
+         quietly on Cancel), so a half-written invite survives for anyone on the team.
+         Overlay-dismiss off: a stray click must not lose a composed email. ---- *@
+    <Modal IsOpen="showComposeModal" Title="Tender invite email" DismissOnOverlayClick="false"
+           OnCancel="CloseComposeModal" Class="max-w-3xl w-full">
+        <FooterContent>
+            <button type="button" class="btn-secondary" disabled="@(busy || savingDraft)" @onclick="SaveInviteDraft">
+                @(savingDraft ? "Saving…" : "Save draft")
+            </button>
+            <button type="button" class="btn-neutral" disabled="@busy" @onclick="CloseComposeModal">Close</button>
+            <button type="button" class="btn-primary" disabled="@(busy || ComposeRecipientCount() == 0)" @onclick="ConfirmSendInvite">
+                @(busy ? "Sending…" : ComposeRecipientCount() == 0 ? "No recipients" : $"Send to {ComposeRecipientCount()} recipient{(ComposeRecipientCount() == 1 ? "" : "s")}")
+            </button>
+        </FooterContent>
+        <ChildContent>
         <p class="text-xs text-content-subtle mb-3">
-            Creates a draft in the shared mailbox — nothing is sent until someone reviews and sends
-            it from Outlook. Every recipient goes in BCC, so subcontractors never see each other.
-            The email is tagged to this package, and tagged replies appear under
-            Tender responses below.
-            <span> The pricing schedule (@(package?.Reference ?? "BPI")&nbsp;- Pricing Schedule.xlsx) is generated from the line items and attached automatically.</span>
+            Sends now, from the projects mailbox — no trip to Outlook. Recipients are pre-filled into
+            BCC so subcontractors never see each other; the whole envelope is editable. The email is
+            tagged to this package, and tagged replies appear under Tender responses.
+            <span> Attached automatically: the pricing schedule (@(package?.Reference ?? "BPI")&nbsp;- Pricing Schedule.xlsx, generated from the line items) and the company terms &amp; conditions (when uploaded in Admin → System).</span>
             @if (packageAttachments.Count > 0 || packageDrawings.Count > 0)
             {
-                <span> @(packageAttachments.Count + packageDrawings.Count) tender document@(packageAttachments.Count + packageDrawings.Count == 1 ? "" : "s") will be attached — any that would push the email over the 25&nbsp;MB limit go out as 7-day download links instead.</span>
+                <span> Plus @(packageAttachments.Count + packageDrawings.Count) tender document@(packageAttachments.Count + packageDrawings.Count == 1 ? "" : "s") — any that would push the email over the 25&nbsp;MB limit go out as 7-day download links instead.</span>
             }
         </p>
 
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Recipients (BCC)</label>
-        @if (BccPreview().Count > 0)
+        @if (composeDraftSavedAt is { } savedAt)
         {
-            <div class="mb-2 flex flex-wrap gap-1.5">
-                @foreach (var name in BccPreview())
-                {
-                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] text-content-muted">@name</span>
-                }
-            </div>
-        }
-        @if (lineItems.Count == 0)
-        {
-            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
-                This package has no line items yet, so the pre-filled message has nothing for subcontractors
-                to price. You can still create the draft — or cancel, add line items, and reopen this window
-                to include them.
+            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content mb-3">
+                Picked up the saved draft from @savedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm").
             </p>
         }
         @if (MissingEmail().Count > 0)
         {
             <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
-                @(BccPreview().Count == 0 ? "None of the invited subcontractors has an email address, so this email can't be sent yet. " : "")
-                Won't receive it (no email address): @string.Join(", ", MissingEmail()).
+                Won't receive it (no email address in the directory): @string.Join(", ", MissingEmail()).
                 Add their email in the <a class="underline" href="/directory">Directory</a> and reopen this window.
             </p>
         }
+        @if (lineItems.Count == 0)
+        {
+            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
+                This package has no line items yet, so the pricing schedule has nothing to price.
+                You can still send — or close, add line items, and come back (the draft keeps).
+            </p>
+        }
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">To</label>
+        <input class="field mb-1" @bind="composeTo" placeholder="Leave empty — the projects mailbox addresses itself, recipients stay in BCC" />
+        <p class="text-[11px] text-content-subtle mb-3">Semicolon-separated addresses. Empty means the projects mailbox is the visible addressee — the norm for a BCC'd invite.</p>
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Cc</label>
+        <input class="field mb-3" @bind="composeCc" placeholder="Optional — internal people to copy in" />
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Bcc — the tender list</label>
+        <textarea class="field mb-3" rows="2" @bind="composeBcc"></textarea>
 
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
         <input class="field mb-3" @bind="composeSubject" />
@@ -947,8 +955,9 @@ else
             <div class="rounded-lg border border-line bg-white text-gray-900 p-4 text-sm max-h-80 overflow-y-auto">
                 @((MarkupString)composeBody)
             </div>
-            <p class="text-[11px] text-content-subtle mt-1">This is how the email will look. It includes the package's line items for the subcontractor to price, when there are any.</p>
+            <p class="text-[11px] text-content-subtle mt-1">This is how the email will look to a tenderer.</p>
         }
+        </ChildContent>
     </Modal>
 
     @* ---- Record a tender submission and save it as a quote ---- *@
@@ -1539,12 +1548,12 @@ else
     }
 
 
-    // ---- Line-item coverage (link to a contract BoQ line or a variation) ----
+    // ---- Line-item coverage (link to a cost centre or a variation order) ----
 
     private bool showCoverageModal;
     private BidPackageLineItem? linkingLine;
     private BidPackageLineCoverage coverageChoice = BidPackageLineCoverage.Unassigned;
-    private string? coverageBoqId;
+    private string? coverageCostCode;
     private string? coverageVariationId;
 
     private string CoverageLabel(BidPackageLineItem item)
@@ -1552,8 +1561,13 @@ else
         switch (item.Coverage)
         {
             case BidPackageLineCoverage.ContractLine:
-                var boq = boqLines.FirstOrDefault(b => b.BoqLineItemId == item.BoqLineItemId);
-                return boq is null ? "Contract line" : $"BoQ · {boq.Description}";
+                // Legacy BoQ links (retired 2026-08-16) keep displaying what they meant.
+                if (!string.IsNullOrWhiteSpace(item.BoqLineItemId))
+                {
+                    var boq = boqLines.FirstOrDefault(b => b.BoqLineItemId == item.BoqLineItemId);
+                    return boq is null ? "Contract line" : $"BoQ · {boq.Description}";
+                }
+                return string.IsNullOrWhiteSpace(item.CostCode) ? "Cost centre" : $"CC · {item.CostCode}";
             case BidPackageLineCoverage.Variation:
                 var variation = variations.FirstOrDefault(v => v.VariationOrderId == item.VariationOrderId);
                 return variation is null ? "Variation" : $"{variation.DisplayNumber} · {variation.Title}";
@@ -1566,7 +1580,7 @@ else
     {
         linkingLine = item;
         coverageChoice = item.Coverage;
-        coverageBoqId = item.BoqLineItemId;
+        coverageCostCode = item.CostCode;
         coverageVariationId = item.VariationOrderId;
         showCoverageModal = true;
     }
@@ -1584,14 +1598,15 @@ else
         try
         {
             busy = true;
-            var boqId = coverageChoice == BidPackageLineCoverage.ContractLine && !string.IsNullOrWhiteSpace(coverageBoqId) ? coverageBoqId : null;
+            var costCode = coverageChoice == BidPackageLineCoverage.ContractLine && !string.IsNullOrWhiteSpace(coverageCostCode) ? coverageCostCode : null;
             var variationId = coverageChoice == BidPackageLineCoverage.Variation && !string.IsNullOrWhiteSpace(coverageVariationId) ? coverageVariationId : null;
             fetchedLineItems = await Commands.SendAsync(
-                new SetBidPackageLineItemCoverage(linkingLine.LineItemId, coverageChoice, boqId, variationId), CancellationToken.None);
+                new SetBidPackageLineItemCoverage(linkingLine.LineItemId, coverageChoice,
+                    BoqLineItemId: null, VariationOrderId: variationId, CostCode: costCode), CancellationToken.None);
             showCoverageModal = false;
             linkingLine = null;
         }
-        catch { error = "Couldn't update coverage. Make sure a BoQ line or variation is selected, then try again."; }
+        catch { error = "Couldn't update coverage. Make sure a cost centre or variation order is selected, then try again."; }
         finally { busy = false; }
     }
 
@@ -1847,7 +1862,7 @@ else
             selectedPlaces.Clear();
             showFindModal = false;
             package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
-            sendNote = $"Added {ids.Count} compan{(ids.Count == 1 ? "y" : "ies")} from the local search to the tender list — nothing has been emailed. Their addresses were picked up from their websites, so worth a quick check in the Directory; when you're ready, Draft invite email stages the email in the mailbox for you to send.";
+            sendNote = $"Added {ids.Count} compan{(ids.Count == 1 ? "y" : "ies")} from the local search to the tender list — nothing has been emailed. Their addresses were picked up from their websites, so worth a quick check in the Directory; when you're ready, compose the Invite email and it sends when you press Send.";
             draftWebLink = null;
         }
         catch (CommandFailedException ex) { error = $"Couldn't invite those companies: {ex.Message}"; }
@@ -1923,23 +1938,19 @@ else
         finally { busy = false; }
     }
 
-    // ---- Compose & send the tender-invite email ----
+    // ---- The invite composer: compose, persist on the package, send from the mailbox ----
 
     private bool showComposeModal;
     private bool editingBody;
+    private bool savingDraft;
     private string composeSubject = "";
     private string composeBody = "";
+    private string composeTo = "";
+    private string composeCc = "";
+    private string composeBcc = "";
+    private DateTimeOffset? composeDraftSavedAt;
     private string? sendNote;
     private string? draftWebLink;
-
-    // The companies that will actually be BCC'd — invited recipients with a directory email.
-    private IReadOnlyList<string> BccPreview() =>
-        recipients
-            .Select(r => Subs.Find(r.SubcontractorId))
-            .Where(s => s is not null && !string.IsNullOrWhiteSpace(s.ContactEmail))
-            .Select(s => s!.CompanyName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
 
     // Invited but unreachable — no email address in the directory.
     private IReadOnlyList<string> MissingEmail() =>
@@ -1952,17 +1963,83 @@ else
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-    private void OpenComposeModal()
+    // The tender list's directory emails — the BCC the composer opens with.
+    private IReadOnlyList<string> TenderListEmails() =>
+        recipients
+            .Select(r => Subs.Find(r.SubcontractorId))
+            .Where(s => s is not null && !string.IsNullOrWhiteSpace(s.ContactEmail))
+            .Select(s => s!.ContactEmail.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static int CountAddresses(string raw) =>
+        raw.Split(new[] { ';', ',' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .Count(address => address.Contains('@'));
+
+    private int ComposeRecipientCount() =>
+        CountAddresses(composeTo) + CountAddresses(composeCc) + CountAddresses(composeBcc);
+
+    private async Task OpenComposeModal()
     {
         if (package is null) return;
-        composeSubject = $"Invitation to tender — {package.Title} ({package.Reference})";
-        composeBody = DefaultInviteBody();
         sendNote = null;
         editingBody = false;
+        composeDraftSavedAt = null;
+
+        // The persisted draft wins — a half-written invite picked up where it was left, by
+        // whoever picks it up. Only when none exists does the composer open on the defaults.
+        BidPackageInviteComposerDraft? saved = null;
+        try { saved = await Queries.AskAsync(new GetBidPackageInviteComposerDraft(BidPackageId), CancellationToken.None); }
+        catch { /* no draft is a fine answer; the defaults stand */ }
+
+        if (saved is not null)
+        {
+            composeSubject = saved.Subject;
+            composeBody = saved.Body;
+            composeTo = saved.To;
+            composeCc = saved.Cc;
+            composeBcc = saved.Bcc;
+            composeDraftSavedAt = saved.SavedAt;
+        }
+        else
+        {
+            composeSubject = $"Invitation to tender — {package.Title} ({package.Reference})";
+            composeBody = DefaultInviteBody();
+            composeTo = "";
+            composeCc = "";
+            composeBcc = string.Join("; ", TenderListEmails());
+        }
         showComposeModal = true;
+        StateHasChanged();
     }
 
-    private void CloseComposeModal() => showComposeModal = false;
+    private async Task SaveInviteDraft()
+    {
+        if (savingDraft || package is null || !CanEdit) return;
+        try
+        {
+            savingDraft = true;
+            await Commands.SendAsync(
+                new SaveBidPackageInviteComposerDraft(BidPackageId, composeSubject.Trim(), composeBody,
+                    composeTo.Trim(), composeCc.Trim(), composeBcc.Trim()), CancellationToken.None);
+            composeDraftSavedAt = DateTimeOffset.Now;
+        }
+        catch { error = "Couldn't save the invite draft. Please try again."; }
+        finally { savingDraft = false; }
+    }
+
+    private void CloseComposeModal()
+    {
+        if (busy) return;
+        showComposeModal = false;
+        // Closing keeps the work: the draft persists on the package quietly, best-effort — the
+        // user asked for exactly this ("it will be useful later"). A failed save costs a re-type,
+        // never an error dialog on the way out.
+        if (CanEdit && package is not null)
+            _ = Commands.SendAsync(
+                new SaveBidPackageInviteComposerDraft(BidPackageId, composeSubject.Trim(), composeBody,
+                    composeTo.Trim(), composeCc.Trim(), composeBcc.Trim()), CancellationToken.None);
+    }
 
     // The pre-filled HTML invite: scope summary plus the line items to price, grouped by trade.
     private string DefaultInviteBody()
@@ -1970,7 +2047,7 @@ else
         var sb = new System.Text.StringBuilder();
         sb.AppendLine("<p>Hello,</p>");
         if (lineItems.Count > 0)
-            sb.AppendLine($"<p>Jewel Bespoke Build invites you to tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}). Please price the items below and reply to this email with your rates, exclusions and lead times, quoting the reference in your reply.</p>");
+            sb.AppendLine($"<p>Jewel Bespoke Build invites you to tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}). Please complete and return the attached pricing schedule — the Rate and Total columns are left for you — and reply to this email with your exclusions and lead times, quoting the reference.</p>");
         else
             sb.AppendLine($"<p>Jewel Bespoke Build invites you to tender for the <strong>{package!.Title}</strong> package (ref {package.Reference}). Please price the works described in the attached documents and reply to this email with your rates, exclusions and lead times, quoting the reference in your reply.</p>");
         foreach (var group in lineItems.GroupBy(item => item.Trade).OrderBy(g => g.Key))
@@ -1994,6 +2071,7 @@ else
         sb.AppendLine("<li><strong>RAMS</strong> — confirmation that you will provide the required RAMS documentation.</li>");
         sb.AppendLine("<li><strong>Portfolio</strong> — examples of prior comparable work.</li>");
         sb.AppendLine("</ul>");
+        sb.AppendLine("<p>Our tender terms and conditions are attached; your tender will be taken as made on that basis unless it states otherwise.</p>");
         sb.AppendLine("<p>Please confirm receipt and let us know if you need any further information or drawings.</p>");
         sb.AppendLine("<p>Kind regards,<br/>Jewel Bespoke Build</p>");
         return sb.ToString();
@@ -2001,26 +2079,39 @@ else
 
     private async Task ConfirmSendInvite()
     {
-        if (busy || package is null || !CanEdit) return;
+        if (busy || package is null || !CanEdit || ComposeRecipientCount() == 0) return;
         error = null;
         try
         {
             busy = true;
-            var draft = await Commands.SendAsync(
-                new PrepareBidPackageInviteDraft(BidPackageId, composeSubject.Trim(), composeBody), CancellationToken.None);
-            package = draft.Package;
-            showComposeModal = false;
-            draftWebLink = draft.WebLink;
-            sendNote = $"Draft created in the shared mailbox with {draft.Bcc.Count} subcontractor(s) in BCC, tagged {package.Reference}. Review and send it from the mailbox's Drafts folder.";
-            if (draft.LinkedFiles is { Count: > 0 } linked)
+            var outcome = await Commands.SendAsync(
+                new SendBidPackageInvite(BidPackageId, composeSubject.Trim(), composeBody,
+                    composeTo.Trim(), composeCc.Trim(), composeBcc.Trim()), CancellationToken.None);
+            package = outcome.Package;
+            draftWebLink = outcome.WebLink;
+
+            if (outcome.Sent)
             {
-                sendNote += linked.Count == 1
-                    ? $" 1 drawing was too large to attach and travels as a download link in the email body (expires after 7 days): {linked[0]}."
-                    : $" {linked.Count} drawings were too large to attach and travel as download links in the email body (they expire after 7 days): {string.Join(", ", linked)}.";
+                showComposeModal = false;
+                composeDraftSavedAt = null;
+                sendNote = $"Invite sent from the projects mailbox to {outcome.RecipientCount} recipient{(outcome.RecipientCount == 1 ? "" : "s")}, tagged {package.Reference} — replies land under Tender responses.";
+                if (outcome.LinkedFiles is { Count: > 0 } linked)
+                {
+                    sendNote += linked.Count == 1
+                        ? $" 1 file was too large to attach and travels as a 7-day download link: {linked[0]}."
+                        : $" {linked.Count} files were too large to attach and travel as 7-day download links: {string.Join(", ", linked)}.";
+                }
+                // The sent copy appears in the Emails tab as the mailbox catches up.
+                _ = ReloadEmailsAsync();
+            }
+            else
+            {
+                // Staged but not sent — the email survives in Drafts; say so where the user is.
+                sendNote = outcome.FailureNote ?? "The send didn't go through — the invite is saved as a draft in the projects mailbox.";
             }
         }
-        catch (CommandFailedException ex) { error = $"Couldn't create the draft: {ex.Message}"; }
-        catch { error = "Couldn't create the draft. Check the recipients have email addresses and the mailbox connection, then try again."; }
+        catch (CommandFailedException ex) { error = $"Couldn't send the invite: {ex.Message}"; }
+        catch { error = "Couldn't send the invite. Check the recipients and the mailbox connection, then try again."; }
         finally { busy = false; }
     }
 

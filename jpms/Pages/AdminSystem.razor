@@ -1,7 +1,9 @@
 @page "/admin/system"
+@using Microsoft.AspNetCore.Components.Forms
 @inject AuthService Auth
 @inject SessionService Session
 @inject ISystemStore Store
+@inject ICompanyTenderTermsStore TenderTerms
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -107,6 +109,59 @@ else
                         </div>
                     }
                 </Panel>
+
+                @* ---- The company's standard tender Terms & Conditions: ONE PDF, attached
+                     automatically to every tender-invite email on every project. ---- *@
+                <div class="mt-6">
+                    <Panel Title="Tender terms &amp; conditions" IsLoading="@(termsStatus is null && !termsFailed)" LoadingLabel="Checking the stored document">
+                        @if (termsFailed)
+                        {
+                            <p class="text-sm text-negative">The stored document couldn't be checked — the error banner above has the detail.</p>
+                        }
+                        else if (termsStatus is { } terms)
+                        {
+                            @if (terms.Exists)
+                            {
+                                <p class="text-sm text-content">
+                                    <a class="text-accent hover:underline font-medium" href="@TenderTerms.FileUrl" download>@terms.FileName</a>
+                                    <span class="text-content-subtle"> · @FormatTermsSize(terms.FileSizeBytes)@(terms.UploadedAt is { } at ? $" · uploaded {at.LocalDateTime:d MMM yyyy, HH:mm}" : "")</span>
+                                </p>
+                                <p class="text-xs text-content-subtle mt-1">
+                                    Attached automatically to every tender-invite email, on every project, alongside the pricing schedule.
+                                    Uploading a replacement changes what every invite sends from that moment on.
+                                </p>
+                            }
+                            else if (!terms.Configured)
+                            {
+                                <p class="text-sm text-content-muted">
+                                    No file storage is configured on the API, so a terms document can't be kept.
+                                    Set <span class="font-mono text-xs">CompanyDocumentsStorage:ConnectionString</span> (or rely on the drawings storage account) and reload.
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="text-sm text-content-muted">
+                                    Nothing uploaded yet — tender invites currently go out without a terms document.
+                                </p>
+                            }
+
+                            @if (terms.Configured)
+                            {
+                                <div class="border-t border-line mt-4 pt-4">
+                                    @if (termsNote is not null)
+                                    {
+                                        <p class="text-sm text-content mb-3">@termsNote</p>
+                                    }
+                                    <label class="btn-secondary inline-flex items-center gap-2 cursor-pointer @(termsUploading ? "opacity-60 pointer-events-none" : "")">
+                                        @(termsUploading ? "Uploading…" : terms.Exists ? "Replace the document" : "Upload the document")
+                                        <InputFile OnChange="OnTermsFileSelected" accept=".pdf,application/pdf" class="hidden" disabled="@termsUploading" />
+                                    </label>
+                                    <p class="text-xs text-content-subtle mt-2">PDF only, up to 10&nbsp;MB. Directors and administrators can replace it.</p>
+                                </div>
+                            }
+                        }
+                    </Panel>
+                </div>
             </div>
         }
     </section>
@@ -119,6 +174,46 @@ else
     private bool confirming;
     private bool publishing;
     private string? publishedMessage;
+
+    // ---- Tender terms & conditions ----
+    private CompanyTenderTermsStatus? termsStatus;
+    private bool termsFailed;
+    private bool termsUploading;
+    private string? termsNote;
+
+    private static string FormatTermsSize(long bytes) => bytes switch
+    {
+        >= 1024 * 1024 => $"{bytes / (1024d * 1024d):0.#} MB",
+        >= 1024 => $"{bytes / 1024d:0.#} KB",
+        _ => $"{bytes} B"
+    };
+
+    private async Task LoadTermsAsync()
+    {
+        try { termsStatus = await TenderTerms.GetStatusAsync(CancellationToken.None); }
+        catch { termsFailed = true; }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnTermsFileSelected(InputFileChangeEventArgs e)
+    {
+        if (termsUploading || e.File is null) return;
+        termsNote = null;
+        try
+        {
+            termsUploading = true;
+            termsStatus = await TenderTerms.UploadAsync(e.File, CancellationToken.None);
+            termsNote = $"{termsStatus.FileName} uploaded — every tender invite drafted from now on attaches it.";
+        }
+        catch (Exception ex)
+        {
+            termsNote = $"The upload didn't land: {ex.Message}";
+        }
+        finally
+        {
+            termsUploading = false;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -134,6 +229,7 @@ else
 
         if (Session.ActiveRole == Role.Admin)
         {
+            _ = LoadTermsAsync();
             // Stale-while-revalidate: an already-loaded version paints immediately and refreshes
             // behind itself; a cold one is awaited so the panel's gate opens onto real data.
             if (!Store.IsLoaded)
@@ -157,6 +253,10 @@ else
         {
             fetchStarted = true;
             _ = FetchAfterRoleSwitchAsync();
+        }
+        if (Session.ActiveRole == Role.Admin && termsStatus is null && !termsFailed)
+        {
+            _ = LoadTermsAsync();
         }
         StateHasChanged();
     }

@@ -36,6 +36,15 @@ public sealed class BidPackageEntity
     // covers, to what standard" bullets at the top of the pricing schedule workbook. Optional.
     [MaxLength(4000)]    public string SpecificationSummary { get; set; } = "";
 
+    // ---- The invite composer's persisted draft (2026-08-16) — the half-written invite email,
+    //      saved on the package so anyone on the team can pick it up later. Cleared on send. ----
+    [MaxLength(512)]     public string? InviteDraftSubject { get; set; }
+    public string? InviteDraftBody { get; set; }
+    [MaxLength(2000)]    public string? InviteDraftTo { get; set; }
+    [MaxLength(2000)]    public string? InviteDraftCc { get; set; }
+    public string? InviteDraftBcc { get; set; }
+    public DateTimeOffset? InviteDraftSavedAt { get; set; }
+
     // Canonical reference this package's emails are tagged with ("JPMS/BPI-0001"). Falls back to an
     // id-derived stem for legacy rows that predate numbering. Computed, not stored.
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]

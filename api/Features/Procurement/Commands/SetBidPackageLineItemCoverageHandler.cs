@@ -32,10 +32,31 @@ public sealed class SetBidPackageLineItemCoverageHandler
         {
             case BidPackageLineCoverage.ContractLine:
             {
-                if (string.IsNullOrWhiteSpace(command.BoqLineItemId))
-                    throw new InvalidOperationException("A contract-line coverage needs a BoqLineItemId.");
                 if (!string.IsNullOrWhiteSpace(command.VariationOrderId))
-                    throw new InvalidOperationException("A line item is covered by a BoQ line OR a variation, not both.");
+                    throw new InvalidOperationException("A line item is covered by a cost centre OR a variation, not both.");
+
+                // The current shape: contract-side coverage homes on a COST CENTRE (2026-08-16).
+                // The code must be on the master list — a wrong cost code sends real money to the
+                // wrong place and nobody notices for a month.
+                if (!string.IsNullOrWhiteSpace(command.CostCode))
+                {
+                    var code = command.CostCode.Trim();
+                    var codeExists = await context.CostCenters.AnyAsync(
+                        c => c.Code == code && c.IsActive, cancellationToken);
+                    if (!codeExists)
+                        throw new InvalidOperationException($"Cost centre '{code}' is not on the master list.");
+
+                    lineItem.Coverage = (int)BidPackageLineCoverage.ContractLine;
+                    lineItem.CostCode = code;
+                    lineItem.BoqLineItemId = null;
+                    lineItem.VariationOrderId = null;
+                    break;
+                }
+
+                // Legacy path: a caller still linking by BoQ line (retired in the UI 2026-08-16,
+                // kept so an old client cannot corrupt a link mid-deploy).
+                if (string.IsNullOrWhiteSpace(command.BoqLineItemId))
+                    throw new InvalidOperationException("A contract-side coverage needs a cost centre code.");
 
                 var boqExists = await context.BoqLineItems.AnyAsync(
                     b => b.BoqLineItemId == command.BoqLineItemId && b.ProjectId == package.ProjectId, cancellationToken);
