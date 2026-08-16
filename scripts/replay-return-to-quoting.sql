@@ -30,9 +30,9 @@ INSERT @out VALUES ('2 qsaccruals-revised', DATEDIFF(ms, @t, SYSUTCDATETIME()), 
 SET @t = SYSUTCDATETIME();
 SELECT @lineId = MAX(ValuationLineItemId), @n = COUNT(*)
 FROM ValuationLineItems
-WHERE ProjectId = @projectId AND ElementType = 2 AND VariationRef = @vref;
+WHERE ProjectId = @projectId AND ElementType = 3 AND VariationRef = @vref;
 INSERT @out VALUES ('3 valuationlines', DATEDIFF(ms, @t, SYSUTCDATETIME()), @n,
-                    'assumes ElementType 2 = Variation');
+                    'ElementType 3 = Variation (corrected)');
 
 SET @t = SYSUTCDATETIME();
 SELECT @n = COUNT(*) FROM ClaimLines WHERE ValuationLineItemId = @lineId;

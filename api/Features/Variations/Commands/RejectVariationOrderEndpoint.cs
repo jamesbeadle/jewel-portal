@@ -39,12 +39,6 @@ public sealed class RejectVariationOrderEndpoint
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        // Consume the command envelope the client posts with every command — same repair as
-        // ReturnVariationOrderToQuoting (JPMS-C89747): a body left unread behind the SWA proxy
-        // stalled the request to the platform's 45-second kill. Route id stays authoritative.
-        try { _ = await request.ReadFromJsonAsync<RejectVariationOrder>(cancellationToken); }
-        catch (System.Text.Json.JsonException) { /* absent or malformed body — the route already names the order */ }
-
         var command = new RejectVariationOrder(voId);
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);

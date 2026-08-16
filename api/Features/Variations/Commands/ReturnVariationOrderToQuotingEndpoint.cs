@@ -39,14 +39,6 @@ public sealed class ReturnVariationOrderToQuotingEndpoint
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        // Consume the command envelope the client posts with every command (JPMS-C89747).
-        // The order id in the route is authoritative — the body is drained, not trusted —
-        // but it must be READ: every working sibling endpoint reads its body, and this
-        // endpoint (which didn't) was the one whose requests stalled to the platform's
-        // 45-second kill. Never leave a request body unconsumed behind the SWA proxy.
-        try { _ = await request.ReadFromJsonAsync<ReturnVariationOrderToQuoting>(cancellationToken); }
-        catch (System.Text.Json.JsonException) { /* absent or malformed body — the route already names the order */ }
-
         var command = new ReturnVariationOrderToQuoting(voId);
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
