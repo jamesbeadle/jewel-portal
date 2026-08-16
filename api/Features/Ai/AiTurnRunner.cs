@@ -280,21 +280,45 @@ public sealed class AiTurnRunner
 
         if (string.IsNullOrWhiteSpace(recordId))
         {
-            return Fail($"{modal.ModalKey} needs record_id — the request id from find_by_reference or "
-                + "list_requests. Do not invent one. For a variation with no RFI behind it, use "
-                + "manual_variation instead.");
+            return Fail($"{modal.ModalKey} needs record_id — the real id of the record it works from: "
+                + "the request id (find_by_reference or list_requests) for variation_draft, the bid "
+                + "package id (the record in view, or get_bid_package_context) for bid_package_details. "
+                + "Do not invent one.");
         }
 
-        // variation_draft works from a request; verify it actually exists before anyone navigates.
-        var exists = await context.Requests.AsNoTracking()
-            .AnyAsync(row => row.RequestId == recordId, ct);
-        if (!exists)
+        // The record must actually exist before anyone navigates — the failure the model must see
+        // is "no such record", not a user stranded on a dead page. Checked against the table the
+        // DIALOG works from, per dialog: assuming every record dialog meant a REQUEST is the bug
+        // that refused bid package ids on 2026-08-16.
+        if (string.Equals(modal.ModalKey, ModalCatalog.VariationDraft.ModalKey, StringComparison.OrdinalIgnoreCase))
         {
-            return Fail($"No request exists with id \"{recordId}\" — that is not a real record id. Call "
-                + "find_by_reference or list_requests for the actual id. For a variation with no RFI "
-                + "behind it, use manual_variation instead.");
+            var requestExists = await context.Requests.AsNoTracking()
+                .AnyAsync(row => row.RequestId == recordId, ct);
+            if (!requestExists)
+            {
+                return Fail($"No request exists with id \"{recordId}\" — that is not a real record id. Call "
+                    + "find_by_reference or list_requests for the actual id. For a variation with no RFI "
+                    + "behind it, use manual_variation instead.");
+            }
+            return null;
         }
 
+        if (string.Equals(modal.ModalKey, ModalCatalog.BidPackageDetails.ModalKey, StringComparison.OrdinalIgnoreCase))
+        {
+            var packageExists = await context.BidPackages.AsNoTracking()
+                .AnyAsync(row => row.BidPackageId == recordId, ct);
+            if (!packageExists)
+            {
+                return Fail($"No bid package exists with id \"{recordId}\" — that is not a real record id. "
+                    + "Use the id of the package on the page in view, or the one get_bid_package_context "
+                    + "answered for.");
+            }
+            return null;
+        }
+
+        // A record dialog this validator doesn't know which table to check — let it through rather
+        // than refuse a real id. The client still refuses loudly for anything actually wrong, and
+        // a stale id lands on the record page's own not-found handling, never silently nowhere.
         return null;
     }
 
