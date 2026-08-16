@@ -211,21 +211,27 @@ public static class ModalCatalog
         });
 
     /// <summary>
-    /// The bid package page's "Edit line items" dialog — the schedule of measurable scope items
-    /// subcontractors price. This is how the assistant BUILDS OUT a package: it reads the package's
-    /// context (get_bid_package_context, read_record_emails, the attachments) and proposes the
-    /// full schedule; the user reviews every line and presses Save line items themselves.
+    /// The bid package page's "Edit package details" dialog — the specification summary AND the
+    /// line-item schedule together, because they are one act of authorship: the summary says what
+    /// the package covers, the lines are the measurable scope behind it. This is how the assistant
+    /// BUILDS OUT a package: it reads the package's context (get_bid_package_context,
+    /// read_record_emails, the attachments) and proposes both in ONE update; the user reviews
+    /// everything and presses Save details themselves. (One dialog on purpose — a two-dialog
+    /// version relied on the model following through across turns, and it didn't: 2026-08-16.)
     /// </summary>
-    public static readonly ModalDescriptor BidPackageLines = new(
-        "bid_package_lines",
-        "Edit line items",
-        "It fills the bid package's schedule of line items — the measurable scope a subcontractor "
-        + "prices. The dialog opens pre-filled with the package's existing lines; what is sent back "
-        + "REPLACES the whole schedule, so keep every existing line that is still right and only "
-        + "drop one when the context says it is wrong. The user reviews the schedule and presses "
-        + "Save line items themselves; nothing is written until they do.",
+    public static readonly ModalDescriptor BidPackageDetails = new(
+        "bid_package_details",
+        "Edit package details",
+        "It fills the bid package's details in one go: the specification summary (the \"what this "
+        + "package covers\" points printed at the top of the pricing schedule each tenderer "
+        + "receives) and the schedule of line items (the measurable scope a subcontractor prices). "
+        + "The dialog opens pre-filled with what the package already has; the lines sent back "
+        + "REPLACE the whole schedule, so keep every existing line that is still right and only "
+        + "drop one when the context says it is wrong. Send BOTH fields together in one update. "
+        + "The user reviews everything and presses Save details themselves; nothing is written "
+        + "until they do.",
         "/projects/{project}/bid-package-invites/{record}",
-        // Exactly the page's own CanManage gate: whoever can press Edit on the section by hand.
+        // Exactly the page's own CanManage gate: whoever can press Edit on the tab by hand.
         new[]
         {
             Role.Admin,
@@ -234,6 +240,13 @@ public static class ModalCatalog
         },
         new ModalField[]
         {
+            new("summary", "string",
+                "The specification summary: one point per line, plain text, newline-separated — "
+                + "what the package covers and to what standard, as a tenderer needs to read it. "
+                + "No bullet characters (the page renders them), no markdown, no headings. Only "
+                + "what the package's context actually supports.",
+                Required: true),
+
             new("lines", "array",
                 "The complete schedule as it should stand — this replaces the dialog's list. Only "
                 + "lines the package's context actually supports: an invented line is a real line "
@@ -254,35 +267,8 @@ public static class ModalCatalog
                 })
         });
 
-    /// <summary>
-    /// The bid package page's "Edit specification summary" dialog — the "what this package covers"
-    /// bullets printed at the top of the pricing schedule each tenderer receives.
-    /// </summary>
-    public static readonly ModalDescriptor BidPackageSummary = new(
-        "bid_package_summary",
-        "Edit specification summary",
-        "It writes the bid package's specification summary — the \"what this package covers\" "
-        + "points printed at the top of the pricing schedule each tenderer receives. The user "
-        + "reviews the text and presses Save summary themselves; nothing is written until they do.",
-        "/projects/{project}/bid-package-invites/{record}",
-        new[]
-        {
-            Role.Admin,
-            Role.ManagingDirector,
-            Role.ProjectManager
-        },
-        new ModalField[]
-        {
-            new("summary", "string",
-                "One point per line, plain text, newline-separated — what the package covers and to "
-                + "what standard, as a tenderer needs to read it. No bullet characters (the page "
-                + "renders them), no markdown, no headings. Only what the package's context "
-                + "actually supports.",
-                Required: true)
-        });
-
     public static IReadOnlyList<ModalDescriptor> All { get; } =
-        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageLines, BidPackageSummary };
+        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails };
 
     public static ModalDescriptor? Find(string? modalKey) =>
         string.IsNullOrWhiteSpace(modalKey)

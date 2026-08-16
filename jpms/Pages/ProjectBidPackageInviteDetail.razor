@@ -98,7 +98,7 @@ else
                 </p>
             }
 
-            @* ---- Section tabs — the chip pattern the RFIs register uses; Summary leads.
+            @* ---- Section tabs — the chip pattern the RFIs register uses; Details leads.
                    Local panes like the request page's tabs: one section renders at a time,
                    nothing about each section's markup changes. ---- *@
             <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
@@ -229,17 +229,17 @@ else
             </section>
             }
 
-            @if (activeTab == "summary")
+            @if (activeTab == "details")
             {
             @* ---- Specification summary: the "what this package covers" bullets printed at the
-                   top of the pricing schedule workbook that travels with the invite. Editing
-                   happens in a modal — the reading view never turns into a form. ---- *@
+                   top of the pricing schedule workbook that travels with the invite. One Edit for
+                   the whole tab — summary and line items are edited together in one dialog. ---- *@
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Specification summary</h3>
                     @if (CanEdit)
                     {
-                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy" @onclick="EditSpec">Edit</button>
+                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy" @onclick="EditDetails">Edit details</button>
                     }
                 </div>
 
@@ -260,19 +260,11 @@ else
                     </p>
                 }
             </section>
-            }
 
-            @if (activeTab == "line-items")
-            {
-            @* ---- Line items, grouped by trade. Editing happens in a modal — the reading view
-                   never turns into a form. ---- *@
+            @* ---- Line items, grouped by trade — same tab, same Edit details dialog. ---- *@
             <section class="mb-8">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Line items</h3>
-                    @if (CanEdit)
-                    {
-                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy" @onclick="EditLines">Edit</button>
-                    }
                 </div>
 
                 <LoadGate IsLoading="@(!LineItemsReady)" Prominent="true" Label="Loading line items">
@@ -1055,34 +1047,31 @@ else
         </ChildContent>
     </Modal>
 
-    @* ---- Edit specification summary (modal — the reading view never becomes a form) ---- *@
-    <Modal IsOpen="showSpecModal" Title="Edit specification summary" ShowFooter="true"
-           DismissOnOverlayClick="false"
-           ConfirmLabel="@(busy ? "Saving…" : "Save summary")" ConfirmDisabled="@busy" CancelLabel="Cancel"
-           OnCancel="CancelSpec" OnConfirm="SaveSpec" Class="max-w-2xl w-full">
-        <p class="text-xs text-content-subtle mb-2">
-            One point per line — it prints at the top of the pricing schedule each tenderer receives,
-            so say what the package covers and to what standard.
-        </p>
-        <textarea class="field w-full min-h-40" rows="10"
-                  placeholder="One point per line — e.g. All flat roofing to BS 6229:2018."
-                  @bind="specDraft"></textarea>
-    </Modal>
-
-    @* ---- Edit line items (modal). DismissOnOverlayClick off: a stray click must not throw
-         away a half-keyed schedule of lines. ---- *@
-    <Modal IsOpen="showLinesModal" Title="Edit line items" DismissOnOverlayClick="false"
-           OnCancel="CancelLines" Class="max-w-4xl w-full">
+    @* ---- Edit package details (modal): summary + line schedule together, one Save.
+         DismissOnOverlayClick off: a stray click must not throw away a half-keyed schedule. ---- *@
+    <Modal IsOpen="showDetailsModal" Title="Edit package details" DismissOnOverlayClick="false"
+           OnCancel="CancelDetails" Class="max-w-4xl w-full">
         <FooterContent>
             <button type="button" class="btn-secondary" disabled="@busy" @onclick="AddLine">Add line</button>
-            <button type="button" class="btn-neutral" disabled="@busy" @onclick="CancelLines">Cancel</button>
-            <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveLines">@(busy ? "Saving…" : "Save line items")</button>
+            <button type="button" class="btn-neutral" disabled="@busy" @onclick="CancelDetails">Cancel</button>
+            <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveDetails">@(busy ? "Saving…" : "Save details")</button>
         </FooterContent>
         <ChildContent>
             @if (error is not null)
             {
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
             }
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Specification summary</label>
+            <p class="text-xs text-content-subtle mb-2">
+                One point per line — it prints at the top of the pricing schedule each tenderer receives,
+                so say what the package covers and to what standard.
+            </p>
+            <textarea class="field w-full min-h-28 mb-4" rows="6"
+                      placeholder="One point per line — e.g. All flat roofing to BS 6229:2018."
+                      @bind="specDraft"></textarea>
+
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Line items</label>
             <div class="rounded-xl border border-line bg-surface overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-surface-raised border-b border-line">
@@ -1133,15 +1122,17 @@ else
     // the back link show straight away; each section waits behind its own gate.
     private bool sessionReady;
 
-    // ---- Section tabs (Summary leads) — local panes, the request page's pattern. ----
+    // ---- Section tabs (Details leads) — local panes, the request page's pattern. ----
 
-    private string activeTab = "summary";
+    private string activeTab = "details";
 
     private static readonly (string Key, string Label)[] SectionTabs =
     {
-        ("summary", "Summary"),
+        // Details leads and holds BOTH the specification summary and the line items — they are
+        // one act of authorship, and splitting them across tabs is what broke the AI flow's
+        // follow-through (2026-08-16).
+        ("details", "Details"),
         ("tender-list", "Tender list"),
-        ("line-items", "Line items"),
         ("submissions", "Submissions"),
         ("documents", "Documents"),
         ("emails", "Emails"),
@@ -1191,70 +1182,45 @@ else
     {
         if (busy || package is null || !CanEdit) return;
         if (Session.ActiveRole is not { } role || !DesktopNavigation.CanUseAssistant(role)) return;
-        activeTab = "line-items";
-        EditLines();
-        StartLinesTask(userInitiated: true);
+        activeTab = "details";
+        EditDetails();
+        StartDetailsTask(userInitiated: true);
         StateHasChanged();
     }
 
-    private void StartLinesTask(bool userInitiated)
+    private void StartDetailsTask(bool userInitiated)
     {
         if (package is null || Session.ActiveRole is not { } role || !DesktopNavigation.CanUseAssistant(role)) return;
         AiTasks.Start(
             new AiTask(
-                TaskKey: "bid-package-lines",
-                ModalKey: ModalCatalog.BidPackageLines.ModalKey,
+                TaskKey: "bid-package-details",
+                ModalKey: ModalCatalog.BidPackageDetails.ModalKey,
                 BannerLabel: $"Building out {package.Reference}",
                 BusyLabel: "Reading the package, its documents and tagged emails…",
                 // A user turn, so it outranks the system prompt — it has to say the same thing.
                 KickoffMessage: userInitiated
-                    ? "Build out this bid package's line items in the \"Edit line items\" dialog open "
-                      + "beside me. First gather the context: get_bid_package_context for the title, "
-                      + "trade, specification summary, current lines and document names; "
-                      + "read_record_emails (record_type bid_package) for the tagged tender emails, and "
-                      + "read_email_attachment on any attachment that looks like a specification, "
-                      + "schedule or quote; list_cost_codes for the real cost codes. Then send the full "
-                      + "schedule with update_open_modal — measurable lines a subcontractor can price, "
-                      + "each with trade, unit, quantity and a cost code, keeping any existing lines "
-                      + "that are still right. When I save the schedule, the specification summary "
-                      + "dialog opens automatically if the summary is blank — you fill that next. If a "
-                      + "summary already exists but no longer matches the works, say so and open the "
-                      + "bid_package_summary dialog to rewrite it. Tell me in one line anything you "
-                      + "could not establish."
-                    : "Fill in the \"Edit line items\" dialog open beside me from this bid package's "
-                      + "context — get_bid_package_context and its tagged emails, if you have not read "
-                      + "them already. Send the full schedule (it replaces the list), keep existing "
-                      + "lines that are still right, and tell me in one line anything you could not "
-                      + "establish.",
+                    ? "Build out this bid package in the \"Edit package details\" dialog open beside "
+                      + "me. First gather the context: get_bid_package_context for the title, trade, "
+                      + "current summary, lines and document names; read_record_emails (record_type "
+                      + "bid_package) for the tagged tender emails, and read_email_attachment on any "
+                      + "attachment that looks like a specification, schedule or quote; "
+                      + "list_cost_codes for the real cost codes. Then send BOTH fields in ONE "
+                      + "update_open_modal: the specification summary (one point per line, what the "
+                      + "package covers and to what standard) and the full line schedule — "
+                      + "measurable lines a subcontractor can price, each with trade, unit, quantity "
+                      + "and a cost code, keeping any existing lines that are still right. Tell me "
+                      + "in one line anything you could not establish."
+                    : "Fill in the \"Edit package details\" dialog open beside me from this bid "
+                      + "package's context — get_bid_package_context and its tagged emails, if you "
+                      + "have not read them already. Send BOTH fields in one update: the "
+                      + "specification summary and the full line schedule (it replaces the list; "
+                      + "keep existing lines that are still right). Tell me in one line anything "
+                      + "you could not establish.",
                 ProjectId: ProjectId,
                 RecordType: "bid_package",
                 RecordId: BidPackageId,
                 RecordReference: package.Reference),
-            CurrentLinesDraftJson());
-        Chat.Open();
-        Chat.SetCoexistence(true);
-    }
-
-    private void StartSummaryTask()
-    {
-        if (package is null || Session.ActiveRole is not { } role || !DesktopNavigation.CanUseAssistant(role)) return;
-        AiTasks.Start(
-            new AiTask(
-                TaskKey: "bid-package-summary",
-                ModalKey: ModalCatalog.BidPackageSummary.ModalKey,
-                BannerLabel: $"Writing {package.Reference}'s specification summary",
-                BusyLabel: "Reading the package and its lines…",
-                KickoffMessage:
-                    "Fill in the \"Edit specification summary\" dialog open beside me — one point per "
-                    + "line, plain text, what this package covers and to what standard, drawn from the "
-                    + "package's line-item schedule and context (get_bid_package_context returns the "
-                    + "saved lines; read its tagged emails too if you have not already). Tell me in "
-                    + "one line anything you could not establish.",
-                ProjectId: ProjectId,
-                RecordType: "bid_package",
-                RecordId: BidPackageId,
-                RecordReference: package.Reference),
-            CurrentSummaryDraftJson());
+            CurrentDetailsDraftJson());
         Chat.Open();
         Chat.SetCoexistence(true);
     }
@@ -1266,8 +1232,9 @@ else
         Chat.SetCoexistence(false);
     }
 
-    private string CurrentLinesDraftJson() => JsonSerializer.Serialize(new
+    private string CurrentDetailsDraftJson() => JsonSerializer.Serialize(new
     {
+        summary = specDraft,
         lines = lineDrafts.Select(draft => new
         {
             trade = draft.Trade,
@@ -1278,15 +1245,14 @@ else
         })
     });
 
-    private string CurrentSummaryDraftJson() => JsonSerializer.Serialize(new { summary = specDraft });
-
     /// <summary>
-    /// The assistant's update_open_modal proposal, raw fields JSON. The open dialog decides what it
-    /// means: a full replacement schedule for the lines dialog, the summary text for the summary
-    /// dialog. Anything malformed costs the model its update, never the page.
+    /// The assistant's update_open_modal proposal, raw fields JSON. Summary and schedule arrive
+    /// together (the dialog holds both); either alone still applies, so a partial proposal keeps
+    /// what the user has. Anything malformed costs the model its update, never the page.
     /// </summary>
     private void ApplyAssistantDraft(string fieldsJson)
     {
+        if (!showDetailsModal) return;
         try
         {
             using var document = JsonDocument.Parse(fieldsJson);
@@ -1294,7 +1260,7 @@ else
             if (root.ValueKind != JsonValueKind.Object) return;
             var changed = false;
 
-            if (showLinesModal && root.TryGetProperty("lines", out var lines) && lines.ValueKind == JsonValueKind.Array)
+            if (root.TryGetProperty("lines", out var lines) && lines.ValueKind == JsonValueKind.Array)
             {
                 var drafts = new List<LineDraft>();
                 foreach (var item in lines.EnumerateArray())
@@ -1316,7 +1282,7 @@ else
                 if (drafts.Count > 0) { lineDrafts = drafts; changed = true; }
             }
 
-            if (showSpecModal && root.TryGetProperty("summary", out var summary) && summary.ValueKind == JsonValueKind.String)
+            if (root.TryGetProperty("summary", out var summary) && summary.ValueKind == JsonValueKind.String)
             {
                 specDraft = summary.GetString() ?? "";
                 changed = true;
@@ -1324,7 +1290,7 @@ else
 
             if (changed)
             {
-                AiTasks.UpdateDraft(showLinesModal ? CurrentLinesDraftJson() : CurrentSummaryDraftJson());
+                AiTasks.UpdateDraft(CurrentDetailsDraftJson());
                 _ = InvokeAsync(StateHasChanged);
             }
         }
@@ -1335,7 +1301,7 @@ else
         element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString() : null;
 
-    // ---- The assistant's route in: open_modal → ?openModal=bid_package_lines / _summary ---------
+    // ---- The assistant's route in: open_modal → ?openModal=bid_package_details ----------------
 
     // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
     // for the life of this component — the flag stops a later repaint re-honouring it. A REAL
@@ -1363,14 +1329,9 @@ else
     private async Task HonourRequestedModalAsync()
     {
         if (modalRequestHonoured || package is null) return;
-        var query = new Uri(Nav.Uri).Query;
-        var requested =
-            query.Contains($"openModal={ModalCatalog.BidPackageLines.ModalKey}", StringComparison.OrdinalIgnoreCase)
-                ? ModalCatalog.BidPackageLines.ModalKey
-            : query.Contains($"openModal={ModalCatalog.BidPackageSummary.ModalKey}", StringComparison.OrdinalIgnoreCase)
-                ? ModalCatalog.BidPackageSummary.ModalKey
-                : null;
-        if (requested is null) return;
+        if (!new Uri(Nav.Uri).Query.Contains(
+                $"openModal={ModalCatalog.BidPackageDetails.ModalKey}", StringComparison.OrdinalIgnoreCase))
+            return;
 
         try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
         catch { /* Address bar cosmetics. Never worth failing the page over. */ }
@@ -1380,24 +1341,15 @@ else
         {
             // Said out loud — a silent no-op leaves the user (and the model) certain something
             // deeper is broken.
-            error = "The assistant tried to open an editing dialog, but the role you are viewing as "
+            error = "The assistant tried to open the package-details dialog, but the role you are viewing as "
                 + (IsClosed ? "can't edit a closed package — reopen it first." : "can't edit this package.");
             StateHasChanged();
             return;
         }
 
-        if (requested == ModalCatalog.BidPackageLines.ModalKey)
-        {
-            activeTab = "line-items";
-            EditLines();
-            StartLinesTask(userInitiated: false);
-        }
-        else
-        {
-            activeTab = "summary";
-            EditSpec();
-            StartSummaryTask();
-        }
+        activeTab = "details";
+        EditDetails();
+        StartDetailsTask(userInitiated: false);
         StateHasChanged();
     }
     // Every query in LoadAsync has had its turn. Some may have failed — that is the point: a gate
@@ -1532,9 +1484,8 @@ else
         ProjectList.OnChanged -= OnStoreChanged;
         AiTasks.OnDraftApplied -= ApplyAssistantDraft;
         Nav.LocationChanged -= HandleLocationChanged;
-        // Navigating away ends the dialogs' remit — a task can't outlive the form it fills.
-        EndPackageAiTask(ModalCatalog.BidPackageLines.ModalKey);
-        EndPackageAiTask(ModalCatalog.BidPackageSummary.ModalKey);
+        // Navigating away ends the dialog's remit — a task can't outlive the form it fills.
+        EndPackageAiTask(ModalCatalog.BidPackageDetails.ModalKey);
     }
 
     // Losing the project list should cost the composer its drawing/photo sources, not the page.
@@ -2395,80 +2346,50 @@ else
         _ => $"{bytes} B"
     };
 
-    // ---- Specification summary: prints at the top of the pricing schedule workbook. ----
+    // ---- Package details: the specification summary + the line-item schedule, edited
+    // together in ONE dialog. One act of authorship, one save — and the one shape the AI flow
+    // can fill in a single update (splitting them across two dialogs relied on the model
+    // following through across turns, and it didn't: 2026-08-16). ----
 
-    private bool showSpecModal;
+    private bool showDetailsModal;
     private string specDraft = "";
+    private List<LineDraft> lineDrafts = new();
 
-    private void EditSpec()
+    private void EditDetails()
     {
         if (!CanEdit || package is null) return;
         specDraft = package.SpecificationSummary;
-        showSpecModal = true;
-    }
-
-    private void CancelSpec()
-    {
-        if (busy) return;
-        showSpecModal = false;
-        EndPackageAiTask(ModalCatalog.BidPackageSummary.ModalKey);
-    }
-
-    private async Task SaveSpec()
-    {
-        if (busy || package is null || !CanEdit) return;
-        error = null;
-        try
-        {
-            busy = true;
-            package = await Commands.SendAsync(
-                new UpdateBidPackageScope(package.BidPackageId, package.Title, package.Trade, package.Status,
-                    package.OwnerEmail, package.MaterialsApplicable, specDraft.Trim()),
-                CancellationToken.None);
-            showSpecModal = false;
-            EndPackageAiTask(ModalCatalog.BidPackageSummary.ModalKey);
-        }
-        catch { error = "Couldn't save the specification summary. Please try again."; }
-        finally { busy = false; }
-    }
-
-    private bool showLinesModal;
-    private List<LineDraft> lineDrafts = new();
-
-    private void EditLines()
-    {
-        if (!CanEdit) return;
         lineDrafts = lineItems
             .Select(item => new LineDraft { Trade = item.Trade, Description = item.Description, Unit = item.Unit, Quantity = item.Quantity, CostCode = item.CostCode })
             .ToList();
         if (lineDrafts.Count == 0) lineDrafts.Add(new LineDraft());
         error = null;
-        showLinesModal = true;
+        showDetailsModal = true;
     }
 
     private void AddLine()
     {
         lineDrafts.Add(new LineDraft());
-        AiTasks.UpdateDraft(CurrentLinesDraftJson());
+        AiTasks.UpdateDraft(CurrentDetailsDraftJson());
     }
 
     private void RemoveLine(LineDraft draft)
     {
         lineDrafts.Remove(draft);
-        AiTasks.UpdateDraft(CurrentLinesDraftJson());
+        AiTasks.UpdateDraft(CurrentDetailsDraftJson());
     }
 
-    private void CancelLines()
+    private void CancelDetails()
     {
         if (busy) return;
-        showLinesModal = false;
+        showDetailsModal = false;
         lineDrafts.Clear();
-        EndPackageAiTask(ModalCatalog.BidPackageLines.ModalKey);
+        EndPackageAiTask(ModalCatalog.BidPackageDetails.ModalKey);
     }
 
-    private async Task SaveLines()
+    private async Task SaveDetails()
     {
-        if (busy || !CanEdit) return;
+        if (busy || package is null || !CanEdit) return;
         error = null;
         try
         {
@@ -2482,6 +2403,15 @@ else
                 return;
             }
             busy = true;
+
+            // Summary first, then the schedule — two commands behind one Save. If the second
+            // fails the first has still landed; the catch says so and the dialog stays open with
+            // everything the user typed.
+            package = await Commands.SendAsync(
+                new UpdateBidPackageScope(package.BidPackageId, package.Title, package.Trade, package.Status,
+                    package.OwnerEmail, package.MaterialsApplicable, specDraft.Trim()),
+                CancellationToken.None);
+
             var inputs = kept
                 .Select(draft => new BidPackageLineItemInput(
                     draft.Description.Trim(),
@@ -2490,30 +2420,13 @@ else
                     (draft.Trade ?? "").Trim(),
                     draft.CostCode.Trim()))
                 .ToList();
-            // Whether the ASSISTANT was driving this schedule — read before the task ends,
-            // because the summary hand-off below only makes sense for the AI flow: a user who
-            // edited lines by hand has not asked for anything else.
-            var assistantWasDriving = AiTasks.Active?.ModalKey == ModalCatalog.BidPackageLines.ModalKey;
-
             fetchedLineItems = await Commands.SendAsync(new SetBidPackageLineItems(BidPackageId, inputs), CancellationToken.None);
-            showLinesModal = false;
-            lineDrafts.Clear();
-            EndPackageAiTask(ModalCatalog.BidPackageLines.ModalKey);
 
-            // The deterministic half of "then do the summary": the model's turn is long over by
-            // the time the user presses Save, so following through cannot be left to its memory
-            // (lesson from the first live run, 2026-08-16 — the summary stayed blank). If the AI
-            // built the schedule and the package still has no summary, open the summary dialog
-            // and kick the assistant straight into it.
-            if (assistantWasDriving && package is not null
-                && string.IsNullOrWhiteSpace(package.SpecificationSummary) && CanEdit)
-            {
-                activeTab = "summary";
-                EditSpec();
-                StartSummaryTask();
-            }
+            showDetailsModal = false;
+            lineDrafts.Clear();
+            EndPackageAiTask(ModalCatalog.BidPackageDetails.ModalKey);
         }
-        catch { error = "Couldn't save the line items. Please try again."; }
+        catch { error = "Couldn't save the package details — check what's on the record before retrying, the summary may have saved without the lines."; }
         finally { busy = false; }
     }
 }

@@ -146,8 +146,8 @@ public static class PortalMapCapabilities
             + "(read_record_emails works here)",
         "Bid package → /projects/{project}/bid-package-invites/{bidPackageId} — scope lines, invited "
             + "subcontractors, their quotes, and the tagged email thread (get_bid_package_context and "
-            + "read_record_emails read it; the bid_package_lines and bid_package_summary dialogs open "
-            + "here to build the package out)",
+            + "read_record_emails read it; the bid_package_details dialog opens here to build the "
+            + "package out — summary and line schedule in one update)",
         "Work order → /projects/{project}/work-orders/{workOrderId}/po — the purchase order as issued",
         "Drawing → /projects/{project}/drawings/{drawingId} — revision history and viewer",
         "To-do → /todos/{todoItemId} — one to-do with its notes and tagged mail",
