@@ -17,15 +17,19 @@ namespace Jewel.JPMS.Api.Features.Variations.Commands;
 ///
 /// Reversal is proportionate to what approval wrote, because seeded approvals were written by SQL,
 /// not the approve handler:
-///   - Valuation line: a single line for the V-ref reverts to a TBC placeholder (recorded, not
-///     priced into totals — the seeded-register convention for unapproved variations). Zero-amount
-///     claim rows against it are dropped; any claimed value blocks the return.
+///   - Valuation line(s): the lines for the V-ref collapse into a single TBC placeholder
+///     (recorded, not priced into totals — the register's convention for unapproved variations).
+///     An approval made through the line-item builder wrote one report line per priced line, so
+///     several lines are the normal shape of a build-up, not an anomaly; their per-centre amounts
+///     are read off before the collapse so the budgets release exactly what was committed —
+///     mirroring RejectVariationOrder. Zero-amount claim rows are dropped; any claimed value
+///     blocks the return.
 ///   - CVR accrual: the approval's accrual (recognised by its "{ref} — …" signature) is
 ///     deleted if present. Seeded approvals never wrote one, so nothing phantom is offset.
 ///   - Budget: commitment is released only when the approval accrual proved the approval committed
 ///     it in the first place.
 /// Refused when work orders instruct the variation, when its value has been revised (sort the CVR
-/// deltas out first), when it is priced as split detail lines, or when value has been claimed.
+/// deltas out first), or when value has been claimed.
 /// </summary>
 public sealed class ReturnVariationOrderToQuotingHandler : ICommandHandler<ReturnVariationOrderToQuoting, VariationOrder>
 {
@@ -69,30 +73,48 @@ public sealed class ReturnVariationOrderToQuotingHandler : ICommandHandler<Retur
             throw new InvalidOperationException("This variation's value has been revised since approval — its CVR history must be unwound manually.");
 
         // ---- Valuation Report line(s) for this V-ref ----
+        // Several lines are not a refusal: a build-up approval writes one line per priced line.
         var lines = await context.ValuationLineItems
             .Where(line => line.ProjectId == order.ProjectId
                            && line.ElementType == (int)ValuationElementType.Variation
                            && line.VariationRef == order.VariationRef)
+            .OrderBy(line => line.DisplayOrder)
             .ToListAsync(cancellationToken);
-        if (lines.Count > 1)
-            throw new InvalidOperationException("This variation is priced as split detail lines on the valuation report — revert it manually.");
 
-        if (lines.Count == 1)
+        var lineIds = lines.Select(line => line.ValuationLineItemId).ToList();
+        var lineClaims = await context.ClaimLines
+            .Where(claim => lineIds.Contains(claim.ValuationLineItemId))
+            .ToListAsync(cancellationToken);
+        if (lineClaims.Any(claim => claim.CumulativeClaimed != 0m || claim.PercentComplete != 0m))
+            throw new InvalidOperationException("Value has been claimed against this variation — it cannot be returned to quoting.");
+        // Zero rows are bookkeeping only; drop them so the placeholder starts clean.
+        context.ClaimLines.RemoveRange(lineClaims);
+
+        // A build-up committed each cost centre its own share, and those shares ARE the line
+        // amounts — read them off now, before the collapse, so the budget release below can mirror
+        // them exactly (the same read RejectVariationOrder makes). A single line is NOT read this
+        // way: a legacy approval committed order.Value against the primary code, and a re-priced
+        // seeded line can carry a quantity that makes its amount differ from what was committed —
+        // the release must match the commit, not the line.
+        var releaseByCentre = lines.Count > 1
+            ? lines
+                .GroupBy(line => line.CostCode)
+                .ToDictionary(group => group.Key, group => group.Sum(line => line.LineAmount))
+            : new Dictionary<string, decimal>();
+
+        if (lines.Count > 0)
         {
-            var line = lines[0];
-            var lineClaims = await context.ClaimLines
-                .Where(claim => claim.ValuationLineItemId == line.ValuationLineItemId)
-                .ToListAsync(cancellationToken);
-            if (lineClaims.Any(claim => claim.CumulativeClaimed != 0m || claim.PercentComplete != 0m))
-                throw new InvalidOperationException("Value has been claimed against this variation — it cannot be returned to quoting.");
-            // Zero rows are bookkeeping only; drop them so the placeholder starts clean.
-            context.ClaimLines.RemoveRange(lineClaims);
-
-            // Back to the register's "recorded, not priced" convention for unapproved work.
-            line.LineType = (int)ValuationLineType.Tbc;
-            line.Rate = 0m;
-            line.LineAmount = 0m;
-            line.Comments = $"Variation order {order.Reference} — returned to quoting";
+            // Back to the register's "recorded, not priced" convention for unapproved work: the
+            // first line survives as the placeholder, the rest of the build-up goes. The surviving
+            // line's description was one priced line of several, so the placeholder takes the
+            // variation's own title when it had siblings.
+            var placeholder = lines[0];
+            placeholder.LineType = (int)ValuationLineType.Tbc;
+            placeholder.Rate = 0m;
+            placeholder.LineAmount = 0m;
+            placeholder.Comments = $"Variation order {order.Reference} — returned to quoting";
+            if (lines.Count > 1) placeholder.Description = order.Title;
+            context.ValuationLineItems.RemoveRange(lines.Skip(1));
         }
 
         // ---- CVR accrual + budget: reverse only what the approval provably wrote ----
@@ -111,10 +133,7 @@ public sealed class ReturnVariationOrderToQuotingHandler : ICommandHandler<Retur
         if (approvalAccruals.Count > 0)
         {
             context.QsAccruals.RemoveRange(approvalAccruals);
-
-            var budget = await context.CostCodeBudgets.FirstOrDefaultAsync(
-                b => b.ProjectId == order.ProjectId && b.CostCode == order.CostCode, cancellationToken);
-            if (budget is not null) budget.CommittedAmount -= order.Value;
+            await ReleaseCommittedBudgetAsync(order.ProjectId, releaseByCentre, order.CostCode, order.Value, cancellationToken);
         }
         // else: a seeded approval — no accrual was ever written and no budget was committed, so
         // there is nothing to reverse beyond the valuation line above.
@@ -130,5 +149,31 @@ public sealed class ReturnVariationOrderToQuotingHandler : ICommandHandler<Retur
 
         await context.SaveChangesAsync(cancellationToken);
         return order.ToModel();
+    }
+
+    // A build-up committed each centre its own share, so release the same per centre; with no
+    // report lines to read (legacy/seeded) fall back to the whole value against the primary code —
+    // the same shape as RejectVariationOrder's release.
+    private async Task ReleaseCommittedBudgetAsync(
+        string projectId,
+        IReadOnlyDictionary<string, decimal> releaseByCentre,
+        string? primaryCostCode,
+        decimal wholeValue,
+        CancellationToken cancellationToken)
+    {
+        if (releaseByCentre.Count > 0)
+        {
+            foreach (var centre in releaseByCentre)
+            {
+                var centreBudget = await context.CostCodeBudgets.FirstOrDefaultAsync(
+                    b => b.ProjectId == projectId && b.CostCode == centre.Key, cancellationToken);
+                if (centreBudget is not null) centreBudget.CommittedAmount -= centre.Value;
+            }
+            return;
+        }
+
+        var budget = await context.CostCodeBudgets.FirstOrDefaultAsync(
+            b => b.ProjectId == projectId && b.CostCode == primaryCostCode, cancellationToken);
+        if (budget is not null) budget.CommittedAmount -= wholeValue;
     }
 }

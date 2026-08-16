@@ -46,6 +46,19 @@ public sealed class ReturnVariationOrderToQuotingEndpoint
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
-        return new OkObjectResult(await handler.HandleAsync(command, cancellationToken));
+        try
+        {
+            return new OkObjectResult(await handler.HandleAsync(command, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Every refusal in this handler is a sentence written for the person who pressed the
+            // button — "work orders instruct this variation", "value has been claimed against it".
+            // Left to escape, each one became an unhandled exception, and an unhandled exception in
+            // an Azure Function is a bodiless 500: the user got a red JPMS reference for what is
+            // really a normal answer, and the reason never left the server. Same catch as the two
+            // revise endpoints, for the same reason.
+            return new BadRequestObjectResult(ex.Message);
+        }
     }
 }
