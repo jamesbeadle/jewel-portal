@@ -1,0 +1,69 @@
+@using Jewel.JPMS.Features.CostCenters
+@inject CostCentersReadModel CostCenters
+
+@* The raise guardrail's confirmation. The order commits cost to cost centres the valuation
+   report has no priced line for — neither the contract nor any variation order gives the
+   project a sale to set that cost against. Raising is still allowed, but only after the user
+   ticks that they understand; the server records the override in the audit trail
+   (AuditEventType.WorkOrderSaleWarningOverridden). *@
+<Modal IsOpen="IsOpen"
+       Title="No matching sale on the valuation report"
+       ConfirmLabel="@(Busy ? "Saving…" : "Raise anyway")"
+       ConfirmDisabled="@(Busy || !understood)"
+       OnConfirm="OnConfirm"
+       OnCancel="OnCancel"
+       Class="max-w-lg">
+    <div class="space-y-3">
+        <p class="text-sm text-content">
+            @(Codes.Count == 1 ? "This cost centre has" : "These cost centres have") no priced
+            line on the valuation report — there is no contract or variation order sale to set
+            the order's cost against:
+        </p>
+        <ul class="space-y-1">
+            @foreach (var code in Codes)
+            {
+                <li class="flex items-center gap-2 text-sm">
+                    <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@code</span>
+                    <span class="text-content truncate">@NameFor(code)</span>
+                </li>
+            }
+        </ul>
+        <p class="text-sm text-content-muted">
+            You can still raise the order — the override will be recorded in the audit trail.
+        </p>
+        <label class="flex w-fit items-start gap-2 text-sm text-content cursor-pointer select-none">
+            <input type="checkbox" class="mt-1 cursor-pointer" disabled="@Busy" @bind="understood" />
+            <span>I understand this order commits cost with no matching sale to claim against.</span>
+        </label>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>The order's cost centres with no priced valuation report line.</summary>
+    [Parameter] public IReadOnlyList<string> Codes { get; set; } = Array.Empty<string>();
+
+    /// <summary>The user has ticked the box and chosen to raise anyway.</summary>
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool understood;
+    private bool wasOpen;
+
+    // Each opening starts unticked — the confirmation belongs to this raise, not a previous one.
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen) understood = false;
+        wasOpen = IsOpen;
+    }
+
+    // The master name beside the code, when the master has landed; the code alone is still an
+    // honest render, so no gate (never gate a single line of text).
+    private string NameFor(string code) =>
+        CostCenters.Current
+            .Concat(CostCenters.All)
+            .FirstOrDefault(centre => string.Equals(centre.Code, code, StringComparison.OrdinalIgnoreCase))
+            ?.Name ?? "";
+}

@@ -49,6 +49,17 @@ public partial class ManualWorkOrderModal
     // retry through this form can never email the supplier twice.
     private bool poEmailAttempted;
 
+    // ---- The no-matching-sale guardrail (raising only). A line's cost centre with no priced
+    // valuation report line means committing cost with no sale to claim against — the dialog
+    // asks for explicit confirmation, and the acknowledged command has the server record the
+    // override in the audit trail. ----
+    private bool saleWarningOpen;
+    // The centres the user has confirmed the warning FOR — a failed create leaves the form
+    // editable, so the gate re-checks each attempt's centres against this set rather than
+    // trusting a one-off tick that might predate a swap to a different uncovered centre.
+    private readonly HashSet<string> acknowledgedUncoveredCentres = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<string> uncoveredCostCentres = Array.Empty<string>();
+
     // ---- Attachments (record keeping only). Files picked here are STAGED and only uploaded once
     // the order exists (create) or the edit has saved. ----
     private readonly List<IBrowserFile> stagedAttachmentFiles = new();
@@ -74,6 +85,9 @@ public partial class ManualWorkOrderModal
         saveError = null;
         createdOrder = null;
         poEmailAttempted = false;
+        saleWarningOpen = false;
+        acknowledgedUncoveredCentres.Clear();
+        uncoveredCostCentres = Array.Empty<string>();
         stagedAttachmentFiles.Clear();
         existingAttachments = new List<WorkOrderAttachment>();
         attachmentNote = null;
@@ -168,6 +182,19 @@ public partial class ManualWorkOrderModal
         if (PackageValidationError is not null) return;
         var draft = form.TryBuildDraft();
         if (draft is null) return;
+        // The guardrail fires on raising only (drafts included — the commitment is intended the
+        // moment it's drafted), and never once the order itself has saved (the package-retry
+        // path). Any uncovered centre not yet confirmed reopens the dialog, so editing the
+        // lines after a failed attempt can't ride on an earlier acknowledgement.
+        if (!IsEditing && createdOrder is null)
+        {
+            uncoveredCostCentres = FindUncoveredCostCentres(draft.Lines);
+            if (uncoveredCostCentres.Any(code => !acknowledgedUncoveredCentres.Contains(code)))
+            {
+                saleWarningOpen = true;
+                return;
+            }
+        }
         busy = true;
         saveError = null;
         try
@@ -196,7 +223,8 @@ public partial class ManualWorkOrderModal
                 draft.ProgrammeStart, draft.TargetCompletion, draft.ProgrammeNotes,
                 SaveAsDraft: draft.SaveAsDraft,
                 DepositRequired: draft.DepositRequired,
-                DepositPercent: draft.DepositPercent), CancellationToken.None);
+                DepositPercent: draft.DepositPercent,
+                UncoveredCostCentresAcknowledged: uncoveredCostCentres.Count > 0), CancellationToken.None);
 
             // Step 1.5 — the staged record-keeping attachments, straight onto the fresh order.
             attachmentNote = await UploadStagedAttachmentsAsync(createdOrder.WorkOrderId) ?? attachmentNote;
@@ -278,6 +306,31 @@ public partial class ManualWorkOrderModal
         {
             busy = false;
         }
+    }
+
+    private async Task ConfirmSaleWarningAsync()
+    {
+        foreach (var code in uncoveredCostCentres) acknowledgedUncoveredCentres.Add(code);
+        saleWarningOpen = false;
+        await SaveAsync();
+    }
+
+    private void CancelSaleWarning() => saleWarningOpen = false;
+
+    /// <summary>The order's cost centres with no priced valuation report line — no contract or
+    /// variation order sale to set the committed cost against. Declined/TBC lines don't count
+    /// as cover (CountsTowardTotals); the server applies the same rule as the final word.</summary>
+    private IReadOnlyList<string> FindUncoveredCostCentres(IReadOnlyList<ManualWorkOrderLine> orderLines)
+    {
+        var pricedCodes = ValuationLines.Current(ProjectId)
+            .Where(line => line.CountsTowardTotals)
+            .Select(line => line.CostCode);
+        var pricedSet = new HashSet<string>(pricedCodes, StringComparer.OrdinalIgnoreCase);
+        return orderLines
+            .Select(line => line.CostCode)
+            .Where(code => !pricedSet.Contains(code))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     private void OnAttachmentFilesSelected(InputFileChangeEventArgs e)

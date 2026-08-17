@@ -46,7 +46,12 @@ public enum AuditEventType
     // Document Control (written since the attachment-triage split, 2026-08-12):
     SentToDocumentControl = 16, // an email attachment was copied into the Document Control queue
     DocumentFiled = 17,         // a Document Control item was filed to its destination record
-    DocumentDiscarded = 18      // a Document Control item was discarded (restorable, never deleted)
+    DocumentDiscarded = 18,     // a Document Control item was discarded (restorable, never deleted)
+    // Procurement guardrail (written since 2026-08-17): raising a work order whose cost centre
+    // has no priced valuation report line commits cost with no matching sale — the raise dialog
+    // warns, and this row records the user's deliberate decision to raise anyway. Not a
+    // client-facing event: Pathway is "", like CostCentreRecoded.
+    WorkOrderSaleWarningOverridden = 19 // a work order was raised against uncovered cost centre(s)
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

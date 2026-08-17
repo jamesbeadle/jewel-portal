@@ -159,3 +159,8 @@
         }
     </div>
 </Modal>
+
+@* The no-matching-sale guardrail — stacks over the form when a line's cost centre has no
+   priced valuation report line. Confirming resumes the save with the override acknowledged. *@
+<WorkOrderSaleWarningDialog IsOpen="saleWarningOpen" Busy="busy" Codes="uncoveredCostCentres"
+                            OnConfirm="ConfirmSaleWarningAsync" OnCancel="CancelSaleWarning" />

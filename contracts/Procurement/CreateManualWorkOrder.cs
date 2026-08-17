@@ -32,7 +32,14 @@ public sealed record CreateManualWorkOrder(
     // Deposit the supplier requires — a percentage of the order value only, printed at the
     // foot of the purchase order. DepositPercent travels null unless DepositRequired.
     bool DepositRequired = false,
-    decimal? DepositPercent = null) : ICommand<WorkOrder>;
+    decimal? DepositPercent = null,
+    // The raise guardrail: a line's cost centre with no priced valuation report line means
+    // committing cost against a centre with no matching sale (contract or variation). The
+    // HTTP endpoint refuses such an order unless this is true — the raise dialog sets it after
+    // the user has confirmed the warning, and the override lands in the audit trail. Internal
+    // delegations (the triage raise-from-email) call the handler directly and bypass the gate
+    // by design (scope decision 2026-08-17).
+    bool UncoveredCostCentresAcknowledged = false) : ICommand<WorkOrder>;
 
 /// <summary>One priced line: its cost centre, what it covers, and its £ amount. Description
 /// is the longer detail printed in the purchase order's Description column — optional, so the
