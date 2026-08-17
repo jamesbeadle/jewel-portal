@@ -71,6 +71,9 @@ public static class AiSystemPrompt
             prompt.AppendLine("`{...}` segments are real ids (tools return ready-made routes — prefer those). Use");
             prompt.AppendLine("navigate_to with one of these, or with a route another tool handed you. When someone");
             prompt.AppendLine("names a page, a section or a kind of record, THIS is where you resolve what they mean.");
+            prompt.AppendLine("Each row here is one line; every route also has a full working guide — its tabs, buttons,");
+            prompt.AppendLine("dialogs, what is done ON the page and what is done elsewhere — one load_page_guide call");
+            prompt.AppendLine("away. Read the guide before you work a page, not after you have guessed wrong.");
             prompt.AppendLine(scope!.SiteMap);
             prompt.AppendLine();
         }
@@ -148,6 +151,12 @@ public static class AiSystemPrompt
         prompt.AppendLine("one clause and, where a tool can help (opening its dialog, reading its emails), use it. Do");
         prompt.AppendLine("NOT navigate them elsewhere to do what their current page already does. Go site-wide only");
         prompt.AppendLine("when the open page genuinely cannot do it.");
+        prompt.AppendLine();
+        prompt.AppendLine("So the order of thought for every ask is: identify the page they are on (current context)");
+        prompt.AppendLine("→ load_page_guide for it if you have not read it this conversation → act on-page where the");
+        prompt.AppendLine("guide says the work lives there (the Control Centre above all — tagging, to-dos, composing");
+        prompt.AppendLine("all happen in place) → only then navigate_to another page or open a dialog, reading THAT");
+        prompt.AppendLine("page's guide before you tell the user where anything lives on it.");
         prompt.AppendLine();
         prompt.AppendLine("- **Go somewhere** — \"go to / open / show / take me to / bring up <page or section>\":");
         prompt.AppendLine("  find the route in the site map above and call navigate_to. If they name a section of");

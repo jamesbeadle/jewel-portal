@@ -1,0 +1,131 @@
+namespace Jewel.JPMS.Contracts.Ai;
+
+/// <summary>Programme, labour, drawings, site records and project pages. Data only.</summary>
+public static class SitePageGuides
+{
+    public static readonly IReadOnlyList<PageGuide> Guides = new PageGuide[]
+    {
+        new("/projects/{project}/programme", "Programme",
+            "The project programme tab: four sub-tabs — Programme (a Gantt of tasks measured "
+            + "against the latest baseline, with a movement banner when completion slips), Claims "
+            + "(Notices of Delay and Extensions of Time raised by Jewel, plus Liquidated Damages "
+            + "claims recorded against Jewel), Critical Path RFIs, and Relevant Events (emails "
+            + "tagged to the project's scheduling bucket, read live). Manually: Add task, Add "
+            + "dependency and Baselines forms build the programme; the slip banner offers Raise NOD "
+            + "per delay event; the Claims tab has Raise Notice of Delay, Raise Extension of Time "
+            + "and Record LADs claim forms; a Relevant Event email expands to its full body and "
+            + "\"Reply in thread\" creates a reply-all draft in the projects mailbox (sent from "
+            + "Outlook, not here). NODs, EOTs and critical-path RFIs live in the request register "
+            + "(list_requests, get_request_context). Emails become Relevant Events in the Control "
+            + "Centre, and an RFI is marked critical path from its own detail page — not here."),
+
+        new("/projects/{project}/labour", "Labour",
+            "This project's labour: the weekly timesheet approval grid plus the daily site register "
+            + "and subcontractor settlement. Manually: Prev/Next moves the week; submitted rows can "
+            + "be ticked and bulk-approved (only approved time posts to Financials as cost; a "
+            + "per-cost-code budget hard-block applies server-side), Adjusted (hours in half-hour "
+            + "steps, re-coded) or Rejected with a reason the worker sees; a manual-entry form "
+            + "covers missed sign-outs; workers from the registry are assigned to or removed from "
+            + "the project; \"Mark invoice lines as covered…\" reconciles Xero invoice lines "
+            + "against approved timesheet cost; Export to Excel covers timesheets, register and "
+            + "settlement. Workers log their own time on their My day page, and the worker records "
+            + "and rates are managed on /labour/workers, not here."),
+
+        new("/labour/workers", "Workers",
+            "The company-wide registry of day-rate site operatives the timesheets draw from, with "
+            + "their cost rates. Manually: Add worker opens a modal (name, portal email that links "
+            + "their user account, day rate — stored as hourly = day rate ÷ 8, phone, linked "
+            + "subcontractor); Edit reuses it with an Active toggle; Delete is two-click, and a "
+            + "worker with timesheet history can only be deactivated; Export to Excel exports the "
+            + "table. Rate changes apply to future approvals only — approved timesheets keep their "
+            + "snapshotted rate. Assigning workers to a project is done on that project's Labour "
+            + "tab, not here."),
+
+        new("/projects/{project}/progress", "Progress",
+            "The project's progress page: client-facing progress reports assembled from the "
+            + "progress updates below them — updates are titled groups of site photos with a "
+            + "description, optional work date and a recorded weather line. Manually: \"+ New "
+            + "report\" and Edit open the report form; Download PDF regenerates the report from the "
+            + "register on every download; \"+ Record progress\" opens the update form; photos can "
+            + "be added to an existing update or deleted, and reports/updates deleted (two-click "
+            + "confirm). You have no dialogs here; use navigate_to to bring the user to it."),
+
+        new("/projects/{project}/drawings", "Drawing register",
+            "The project's drawing register with revisions — each row is a drawing with its latest "
+            + "approved revision, pending/archived counts and pipeline status, plus an "
+            + "\"ambiguous\" count badge when uploads couldn't be auto-classified. Manually: a "
+            + "toggle switches between all drawings and approved-only; \"+ Upload drawing\" "
+            + "(Admin/MD/PM) opens the upload form; Export to Excel exports the register; opening a "
+            + "row goes to the drawing's detail page for revision history and the viewer. Incoming "
+            + "drawing files from correspondence are filed to this register from Document Triage, "
+            + "not uploaded here."),
+
+        new("/projects/{project}/drawings/{drawingId}", "Drawing detail",
+            "One drawing's page: revision history alongside an inline viewer (PDFs and images), "
+            + "previewing the approved revision if there is one, else the most recent revision with "
+            + "a file, with Previous/Next stepping through the register. Manually (Admin/MD/PM): "
+            + "\"+ Upload new version\" adds a revision; \"Delete drawing\" (confirm modal) "
+            + "permanently removes the drawing, all its revisions and files; the revision list "
+            + "carries each revision's approval and pipeline status. You have no dialogs here; "
+            + "navigate_to opens it (tools that return a drawing route are preferred)."),
+
+        new("/projects/{project}/drawings/ambiguous", "Ambiguous drawing revisions",
+            "The queue of uploaded drawing revisions JPMS couldn't auto-classify — filenames that "
+            + "didn't match the expected revision pattern, awaiting PM action. It renders the same "
+            + "revision list as the register; a breadcrumb links back to the drawing register, "
+            + "whose header badge shows the pending count. Reached by URL, not from the sidebar."),
+
+        new("/projects/{project}/communications", "Communications",
+            "The cross-cutting roll-up of ALL correspondence tagged to this project's records, read "
+            + "live from the mailbox, newest first with paging. Manually: a segmented control "
+            + "filters by pathway (Client / Subcontractor / Internal) and a \"Tagged to\" dropdown "
+            + "by record type; each row shows its pathway chip and the record(s) it is tagged to, "
+            + "and Reply / Forward opens the composer above the list — sending happens there and "
+            + "then from the projects mailbox, and the sent copy files back into this list by the "
+            + "thread's tags. Tagging itself is done in the Control Centre (stage_triage_tag), and "
+            + "a brand-new email is drafted there too (open_modal compose_email) — not here."),
+
+        new("/projects/{project}/defects", "Defects",
+            "The project's defect register — each defect carries a sequential DEF-#### reference "
+            + "which is also its mailbox tag stem, so every email filed to it reads back live under "
+            + "it here. Manually: \"Raise defect\" opens an inline form (location, assigned-to "
+            + "email, description); each row's Status dropdown walks Open → In progress → Resolved "
+            + "→ Verified; \"Emails\" expands a row to its tagged correspondence, fetched live. A "
+            + "defect can also be raised from a subcontractor email in the Control Centre (System "
+            + "Tags → Create new → Defect), and tagging further emails to one happens there "
+            + "(stage_triage_tag) — not on this page."),
+
+        new("/projects/{project}/useful-information", "Useful Information",
+            "Titled free-text notes for the office's own use — door codes, key safe locations, "
+            + "site access. Strictly internal: the API gates reads and writes to internal roles, so "
+            + "nothing here can reach a client, architect or subcontractor login."),
+
+        new("/projects/{project}/settings", "Project settings",
+            "The project's single settings page, in four panes: Details (stage, entity, project "
+            + "manager, client, site address and the Xero \"Sites\" mapping — \"Not set\" on Xero "
+            + "site blocks the Xero write-back), Deposits, retentions & valuation (the next "
+            + "valuation date and the retention profile), Contract (the executed contract document "
+            + "and terms — get_project_contract reads the same data), and Correspondence (the "
+            + "profile that routes documents the project issues). You read project facts with "
+            + "list_projects and the contract with get_project_contract; there are no registered "
+            + "dialogs here."),
+
+        new("/projects/{project}/todos", "Project to-dos",
+            "This project's to-do list (the master list across all projects is /todos). Items are "
+            + "added here directly or captured from an email at triage — you stage those in the "
+            + "Control Centre with stage_triage_todo, not on this page."),
+
+        new("/projects", "Projects",
+            "The project portfolio register: reference, name, client, entity and stage for every "
+            + "project, hiding completed ones unless \"Show completed\" is ticked. Manually: "
+            + "\"+ New project\" (MD/PM) opens the New project modal, though projects are normally "
+            + "created from a won lead; Export to Excel exports the portfolio. You read the same "
+            + "data with list_projects and use navigate_to to open a project, which lands on the "
+            + "role's first project tab."),
+
+        new("/projects/{project}", "Project (redirect)",
+            "A redirect hub, not a page: the bare project URL immediately forwards to the "
+            + "signed-in role's first project-scoped tab (Requests for full-access roles). Never "
+            + "send users here expecting content — navigate_to a specific tab instead."),
+    };
+}

@@ -55,7 +55,11 @@ public static class AiToolCatalogue
     /// 2026-08-14: assistant-drafted email now goes through the Control Centre's own composer —
     /// open_modal "compose_email" — so the user reviews and sends in the portal, never in Outlook.)</summary>
     public static IReadOnlyList<AiTool> All { get; } =
-        Build().Concat(AiRecordTools.Build()).Concat(AiSkillTools.Build()).ToList();
+        Build()
+            .Concat(AiRecordTools.Build())
+            .Concat(AiSkillTools.Build())
+            .Concat(AiPageGuideTools.Build())
+            .ToList();
 
     /// <summary>
     /// The catalogue this caller is told about, on this turn.

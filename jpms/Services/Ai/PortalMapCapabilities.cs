@@ -25,7 +25,7 @@ public static class PortalMapCapabilities
     {
         // ---- Project ----
         ["/projects/{project}/requests"] =
-            "the request/RFI register (tabs: all, general, RFIs). Open a request to read and work it",
+            "the RFI register (tabs: RFIs, legacy Requests). Open one to read and work it",
         ["/projects/{project}/variations"] =
             "the variation book, V1..Vn with status and value. The \"Add variation manually\" dialog "
             + "(manual_variation) lives here for a brand-new standalone variation",
