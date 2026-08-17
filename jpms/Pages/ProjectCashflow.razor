@@ -173,17 +173,20 @@ else
                        title="Practical completion cashflow plus the final retention release — the project's net cash movement to the end of the defects period">Project completion cashflow</p>
                     <p class="text-xl font-semibold @(ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(ProjectCompletionCashflow)</p>
                 </div>
+            </div>
 
-                @* ── The overspends, no longer netted off the drawdowns row: the statement above
-                   spends the full drawdown and assumes none of this comes back. Shown here as the
-                   buy back still available, with the position if every one of them is recovered. ── *@
-                @if (AvailableToBuyBack != 0m)
-                {
-                <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+            @* ── The buy back, in its own card (finance director, 2026-08-17): the statement
+               ends at the completion total, and these two rows are the upside sitting outside
+               it — spent in full above, recovered only if actually bought back. Solid border,
+               unlike the dashed potential card: overspends are real figures, not maybes. ── *@
+            @if (AvailableToBuyBack != 0m)
+            {
+            <div class="rounded-xl border border-line bg-surface mb-4">
+                <div class="flex items-baseline justify-between gap-4 px-4 py-3">
                     <div>
                         <p class="text-sm text-content"
-                           title="The Financials tab's overspend to the penny — committed cost already past target across the overspent centres. Recovered only where an overspend is actually bought back; the totals above never assume it.">Cost centre overspends — available to buy back</p>
-                        <p class="text-xs text-content-subtle mt-0.5">Committed cost past target — not assumed recouped in the figures above</p>
+                           title="The Financials tab's overspend to the penny — committed cost already past target across the overspent centres. Recovered only where an overspend is actually bought back; the statement above never assumes it.">Cost centre overspends — available to buy back</p>
+                        <p class="text-xs text-content-subtle mt-0.5">Committed cost past target — not assumed recouped in the statement above</p>
                     </div>
                     <p class="text-base font-semibold text-content whitespace-nowrap">@AddBack(AvailableToBuyBack)</p>
                 </div>
@@ -192,8 +195,8 @@ else
                        title="Project completion cashflow plus every overspend bought back — the position if the full buy back is achieved.">Position with overspends bought back</p>
                     <p class="text-xl font-semibold @(PositionWithOverspendsBoughtBack < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(PositionWithOverspendsBoughtBack)</p>
                 </div>
-                }
             </div>
+            }
 
             @* ── Potential — unapproved variations. A separate, dashed card BELOW the statement:
                nothing in it is confirmed, so it must never read as part of the position above.
@@ -269,10 +272,10 @@ else
             </p>
             <p class="text-xs text-content-subtle">
                 <span class="font-semibold text-content">Cost centre overspends</span> are the
-                other side of the same split: committed cost already past target. They sit under
-                the completion total as the buy back still available — the position improves by
-                an overspend only where it is actually bought back, so the completion cashflow
-                never assumes it.
+                other side of the same split: committed cost already past target. They sit in
+                their own card under the statement as the buy back still available — the
+                position improves by an overspend only where it is actually bought back, so the
+                completion cashflow never assumes it.
             </p>
             <p class="text-xs text-content-subtle">
                 <span class="font-semibold text-content">Uninvoiced work orders</span> are

@@ -154,6 +154,43 @@ public sealed class CashForecastPhasingTests
     }
 
     [Fact]
+    public void FutureValuations_landOnPaymentDates_theValuationDayPlusTheTerms()
+    {
+        // FD, 2026-08-17: cash lands on payment dates, not valuation dates. Valued the 25th
+        // of each month (Sep, Oct = PC) on 21-day terms: paid 16 Oct and 15 Nov. Anchoring
+        // to the 1st would have swallowed the lag inside the valuation month.
+        var forecast = CashForecastPhasing.Phase(
+            Inputs(futureValuations: 20_000m,
+                firstValuation: new DateTimeOffset(2026, 9, 25, 0, 0, 0, TimeSpan.Zero),
+                practicalCompletion: new DateTimeOffset(2026, 10, 20, 0, 0, 0, TimeSpan.Zero),
+                lagDays: 21),
+            AsOf, monthCount: 6);
+
+        var months = forecast.Categories[ForecastCategory.FutureValuations].Months;
+        Assert.Equal(0m, months[1]);          // Sep — valued on the 25th, not yet paid
+        Assert.Equal(10_000m, months[2]);     // Oct
+        Assert.Equal(10_000m, months[3]);     // Nov
+    }
+
+    [Fact]
+    public void MonthlyOverride_alsoCountsTheLag_fromTheValuationDay()
+    {
+        // The rate path follows the same payment-date rule: valued the 28th at £10k/month on
+        // 14-day terms — Sep 28 + 14d = Oct, Oct 28 + 14d = Nov.
+        var forecast = CashForecastPhasing.Phase(
+            Inputs(futureValuations: 20_000m,
+                firstValuation: new DateTimeOffset(2026, 9, 28, 0, 0, 0, TimeSpan.Zero),
+                lagDays: 14,
+                monthlyOverride: 10_000m),
+            AsOf, monthCount: 6);
+
+        var months = forecast.Categories[ForecastCategory.FutureValuations].Months;
+        Assert.Equal(0m, months[1]);          // Sep
+        Assert.Equal(10_000m, months[2]);     // Oct
+        Assert.Equal(10_000m, months[3]);     // Nov
+    }
+
+    [Fact]
     public void WorkOrders_spreadToCompletion_paidTheMonthAfter()
     {
         // Spread Aug–Oct (PC), paid one month later: Sep, Oct, Nov.

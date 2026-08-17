@@ -152,20 +152,24 @@ public static class CashForecastPhasing
                 Bucket(inputs.InvoiceReceipts, start, monthCount, undatedAllowed: false),
 
             // The remainder still to be valued. With no FD view: spread one slice per valuation
-            // month from the next expected valuation to practical completion, each slice
-            // received a payment-mechanism lag after its valuation month. With the FD's
+            // month from the next expected valuation to practical completion. With the FD's
             // per-project monthly rate set (2026-08-13): claim at that rate from the next
             // expected valuation until the money runs out — the rate dates every slice, so no
-            // practical-completion anchor is needed and nothing goes Undated.
+            // practical-completion anchor is needed and nothing goes Undated. Either way each
+            // slice lands on its PAYMENT date (FD, 2026-08-17): the valuation's actual day of
+            // month plus the contract's payment mechanism — anchoring to the 1st swallowed the
+            // lag inside the same month, which read as cash arriving on valuation dates.
             [ForecastCategory.FutureValuations] = inputs.MonthlyValuationOverride is { } monthlyRate && monthlyRate > 0m
                 ? ClaimAtRate(
                     inputs.FutureValuations,
                     inputs.FirstValuationMonth is { } firstAtRate ? MonthOf(firstAtRate) : start.AddMonths(1),
-                    monthlyRate, inputs.ReceiptLagDays, start, monthCount)
+                    monthlyRate, inputs.ReceiptLagDays, start, monthCount,
+                    ValuationDayOf(inputs.FirstValuationMonth))
                 : SpreadWithLag(
                     inputs.FutureValuations,
                     inputs.FirstValuationMonth is { } first ? MonthOf(first) : start.AddMonths(1),
-                    pcMonth, inputs.ReceiptLagDays, monthShift: 0, start, monthCount),
+                    pcMonth, inputs.ReceiptLagDays, monthShift: 0, start, monthCount,
+                    ValuationDayOf(inputs.FirstValuationMonth)),
 
             [ForecastCategory.RetentionReleases] =
                 Bucket(new[] { inputs.Release1, inputs.Release2 }, start, monthCount, undatedAllowed: true),
@@ -211,14 +215,26 @@ public static class CashForecastPhasing
         return new PhasedCategory(months, later, undated);
     }
 
+    /// <summary>The day of month a project's valuations actually happen on — the anchor the
+    /// payment lag counts from (FD, 2026-08-17). No expected date means no known day: the 1st,
+    /// the engine's original behaviour.</summary>
+    private static int ValuationDayOf(DateTimeOffset? expected) => expected?.Day ?? 1;
+
+    /// <summary>The given month on the given day, clamped to the month's length — so a
+    /// valuation day of the 31st lands on 28 Feb rather than spilling into March.</summary>
+    private static DateTime OnDay(DateTime month, int day) =>
+        new(month.Year, month.Month, Math.Min(day, DateTime.DaysInMonth(month.Year, month.Month)));
+
     /// <summary>Spreads a total evenly, one slice per month from <paramref name="fromMonth"/> to
     /// <paramref name="toMonth"/> inclusive, then places each slice <paramref name="monthShift"/>
-    /// months plus <paramref name="lagDays"/> days later. A null end month means the spread has
-    /// no honest anchor — the whole total goes to Undated. Penny remainders fold into the final
-    /// slice so the slices always sum exactly to the total.</summary>
+    /// months plus <paramref name="lagDays"/> days later, counted from the month's
+    /// <paramref name="anchorDay"/> — so a valuation on the 25th plus 30-day terms lands the
+    /// following month, a payment date rather than a valuation date. A null end month means the
+    /// spread has no honest anchor — the whole total goes to Undated. Penny remainders fold into
+    /// the final slice so the slices always sum exactly to the total.</summary>
     private static PhasedCategory SpreadWithLag(
         decimal total, DateTime fromMonth, DateTime? toMonth,
-        int lagDays, int monthShift, DateTime start, int monthCount)
+        int lagDays, int monthShift, DateTime start, int monthCount, int anchorDay = 1)
     {
         if (total == 0m) return PhasedCategory.Empty(monthCount);
         if (toMonth is not { } end) return new PhasedCategory(new decimal[monthCount], 0m, total);
@@ -234,7 +250,7 @@ public static class CashForecastPhasing
         {
             var amount = slice == slices - 1 ? total - allocated : perSlice;
             allocated += amount;
-            var lands = new DateTimeOffset(from.AddMonths(slice + monthShift), TimeSpan.Zero)
+            var lands = new DateTimeOffset(OnDay(from.AddMonths(slice + monthShift), anchorDay), TimeSpan.Zero)
                 .AddDays(lagDays);
             dated.Add(new DatedAmount(amount, lands));
         }
@@ -243,7 +259,8 @@ public static class CashForecastPhasing
 
     /// <summary>Claims a total at a fixed monthly rate from <paramref name="fromMonth"/> until it
     /// is exhausted — full slices of <paramref name="monthlyRate"/>, then one final partial slice,
-    /// each received a payment-mechanism lag after its valuation month. The FD's per-project
+    /// each received a payment-mechanism lag after its valuation date (the month's
+    /// <paramref name="anchorDay"/>). The FD's per-project
     /// override ("the architect will only certify about £X a month", 2026-08-13). Needs no
     /// practical-completion anchor: the rate itself dates every slice, so nothing goes Undated
     /// and the slices always sum exactly to the total. A negative total (invoices already issued
@@ -253,13 +270,13 @@ public static class CashForecastPhasing
     /// anything past the cap folds into the final slice rather than dropping.</summary>
     private static PhasedCategory ClaimAtRate(
         decimal total, DateTime fromMonth, decimal monthlyRate,
-        int lagDays, DateTime start, int monthCount)
+        int lagDays, DateTime start, int monthCount, int anchorDay = 1)
     {
         if (total == 0m) return PhasedCategory.Empty(monthCount);
 
         var from = fromMonth < start ? start : fromMonth;
         DateTimeOffset LandsOn(int slice) =>
-            new DateTimeOffset(from.AddMonths(slice), TimeSpan.Zero).AddDays(lagDays);
+            new DateTimeOffset(OnDay(from.AddMonths(slice), anchorDay), TimeSpan.Zero).AddDays(lagDays);
 
         var dated = new List<DatedAmount>();
         if (total < 0m)

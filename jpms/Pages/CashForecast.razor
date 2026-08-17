@@ -286,29 +286,57 @@ else
                             {
                                 @CategoryRow((forecast, row.Category, row.Label, row.Source))
                             }
+                            @* Project movement — the ticked projects' cash in less cash out,
+                               before company overheads (FD, 2026-08-17): what the selected jobs
+                               themselves move, so the jobs and the overheads read separately. *@
+                            <tr class="border-t-2 border-line border-b border-line font-medium">
+                                <td class="px-4 py-2.5">
+                                    <span class="text-content font-medium">Project movement</span>
+                                    <span class="block text-[11px] text-content-faint font-normal">cash in less cash out for the projects ticked — before company overheads</span>
+                                </td>
+                                @for (var index = 0; index < forecast.Axis.Length; index++)
+                                {
+                                    var movement = forecast.ProjectNet[index];
+                                    <td class="px-3 py-2.5 text-right whitespace-nowrap @(movement < 0m ? "text-negative" : "text-positive")">@Signed(movement)</td>
+                                }
+                                <td class="px-3 py-2.5 text-right whitespace-nowrap border-l border-line @(forecast.LaterNet < 0m ? "text-negative" : "text-positive")">@Signed(forecast.LaterNet)</td>
+                                <td class="px-3 py-2.5 text-right border-l border-line text-content-faint font-normal" title="Undated flows are excluded from the balance until they earn a date.">excluded</td>
+                            </tr>
                             @* Company overheads — the interim page-level figure (see the amber
-                               notice). The input is a control: never gated, and editable in place. *@
+                               notice). The inputs are controls: never gated, editable in place.
+                               The default fills every month; a month's own cell can be edited to
+                               override just that month (FD, 2026-08-17) — clear it to fall back. *@
                             <tr class="border-b border-line">
                                 <td class="px-4 py-2.5">
                                     <span class="text-content font-medium">Company overheads</span>
                                     <span class="block text-[11px] text-content-faint">
-                                        monthly ·
+                                        default ·
                                         <input type="number" min="0" step="500" value="@overheadsMonthly"
                                                @onchange="OnOverheadsChanged"
                                                class="w-24 rounded border border-line-strong bg-surface-field px-1.5 py-0.5 text-xs text-content" />
-                                        £/month — remembered in this browser, not yet a system setting
+                                        £/month — edit a month's cell to change just that month · remembered in this browser, not yet a system setting
                                     </span>
                                 </td>
-                                @foreach (var _ in forecast.Axis)
+                                @foreach (var month in forecast.Axis)
                                 {
-                                    <td class="px-3 py-2.5 text-right whitespace-nowrap text-content">@CellAmount(overheadsMonthly)</td>
+                                    var overheadsMonth = month;
+                                    var isOverridden = overheadsOverrides.ContainsKey(overheadsMonth);
+                                    <td class="px-3 py-2.5 text-right whitespace-nowrap">
+                                        <input type="number" min="0" step="500" value="@OverheadsFor(overheadsMonth)"
+                                               @onchange="args => OnOverheadMonthChangedAsync(overheadsMonth, args)"
+                                               title="@(isOverridden ? "Edited for this month — clear it to return to the default" : "The default — edit to override this month only")"
+                                               class="w-20 rounded border bg-surface-field px-1.5 py-0.5 text-xs text-content text-right @(isOverridden ? "border-accent" : "border-line-strong")" />
+                                    </td>
                                 }
                                 <td class="px-3 py-2.5 text-right border-l border-line text-content-faint">—</td>
                                 <td class="px-3 py-2.5 text-right border-l border-line text-content-faint">—</td>
                             </tr>
                             @* ── The running answer ── *@
                             <tr class="border-t-2 border-line border-b border-line font-semibold">
-                                <td class="px-4 py-3 text-content">Net movement</td>
+                                <td class="px-4 py-3 text-content">
+                                    Net movement
+                                    <span class="block text-[11px] text-content-faint font-normal">project movement less company overheads</span>
+                                </td>
                                 @for (var index = 0; index < forecast.Axis.Length; index++)
                                 {
                                     var net = forecast.Net[index];
@@ -612,8 +640,15 @@ else
     // or retry while the first batch is still in flight must share the same ceiling.
     private readonly SemaphoreSlim throttle = new(ProjectRefreshConcurrency);
 
-    // The interim overheads figure (see the amber notice and ForecastOverheadsStorage).
+    // The interim overheads figure (see the amber notice and ForecastOverheadsStorage), plus
+    // per-month overrides (FD, 2026-08-17: "happy with default but can we edit this monthly
+    // figure — only when edited it changes"). A month absent from the dictionary follows the
+    // default, including a default changed later; only edited months hold their own figure.
     private decimal overheadsMonthly;
+    private Dictionary<DateTime, decimal> overheadsOverrides = new();
+
+    private decimal OverheadsFor(DateTime month) =>
+        overheadsOverrides.TryGetValue(month, out var overridden) ? overridden : overheadsMonthly;
 
     // Which forecast category rows are expanded to their per-project lines.
     private readonly HashSet<ForecastCategory> expandedCategories = new();
@@ -784,7 +819,7 @@ else
         new(ForecastCategory.InvoicesOutstanding, "Valuation invoices outstanding",
             "already issued (or awaiting approval) · lands a payment-mechanism lag after issue"),
         new(ForecastCategory.FutureValuations, "Future valuations",
-            "left to claim — spread evenly to practical completion, or claimed at the project's expected £/month where set — lagged by payment terms"),
+            "left to claim — spread evenly to practical completion, or claimed at the project's expected £/month where set — each valuation paid its contract's payment terms after the valuation date"),
         new(ForecastCategory.RetentionReleases, "Retention releases",
             "R1 at practical completion · R2 after the defects period")
     };
@@ -867,6 +902,7 @@ else
         IReadOnlyDictionary<ForecastCategory, decimal> Later,
         IReadOnlyDictionary<ForecastCategory, decimal> Undated,
         IReadOnlyDictionary<ForecastCategory, List<(Project Project, PhasedCategory Phased)>> PerProject,
+        decimal[] ProjectNet,
         decimal[] Net,
         decimal LaterNet,
         decimal[] Closing,
@@ -911,12 +947,16 @@ else
             if (variance != 0m) variances.Add((project, variance));
         }
 
+        // Project movement first — the ticked projects' own cash in less cash out (FD,
+        // 2026-08-17) — then net movement, which is that less the month's company overheads.
+        var projectNet = new decimal[monthCount];
         var net = new decimal[monthCount];
         for (var index = 0; index < monthCount; index++)
         {
             var cashIn = InRows.Sum(row => cells[row.Category][index]);
-            var cashOut = OutRows.Sum(row => cells[row.Category][index]) + overheadsMonthly;
-            net[index] = cashIn - cashOut;
+            var cashOut = OutRows.Sum(row => cells[row.Category][index]);
+            projectNet[index] = cashIn - cashOut;
+            net[index] = projectNet[index] - OverheadsFor(axis[index]);
         }
         var laterNet = InRows.Sum(row => later[row.Category]) - OutRows.Sum(row => later[row.Category]);
 
@@ -935,7 +975,7 @@ else
             }
         }
 
-        return new ForecastView(axis, cells, later, undated, perProject, net, laterNet, closing, minIndex, variances);
+        return new ForecastView(axis, cells, later, undated, perProject, projectNet, net, laterNet, closing, minIndex, variances);
     }
 
     // One rendering for a forecast category row plus its per-project lines, shared by both
@@ -991,8 +1031,9 @@ else
                                refusal lands on the error toast like any failed command. *@
                             <span class="block mt-1 text-[10px] text-content-faint whitespace-nowrap">
                                 next valuation
-                                <input type="month" value="@(project.NextExpectedValuationDate?.ToString("yyyy-MM"))"
+                                <input type="date" value="@(project.NextExpectedValuationDate?.ToString("yyyy-MM-dd"))"
                                        @onchange="args => OnNextValuationChangedAsync(project, args)"
+                                       title="The full date matters: each valuation is paid the contract's payment terms after this day of the month, so cash lands on payment dates"
                                        class="rounded border border-line-strong bg-surface-field px-1 py-0.5 text-[10px] text-content mx-1" />
                                 · expects
                                 <input type="number" min="0" step="1000" placeholder="even"
@@ -1061,6 +1102,16 @@ else
         if (Auth.CurrentUser is { } user) await OverheadsStorage.WriteAsync(user.Email, overheadsMonthly);
     }
 
+    // One month's own figure. A cleared cell — or one set back to the default — drops the
+    // override, so the month follows the default again (including future default changes).
+    private async Task OnOverheadMonthChangedAsync(DateTime month, ChangeEventArgs args)
+    {
+        var isAmount = decimal.TryParse(args.Value?.ToString(), out var value) && value >= 0m;
+        if (isAmount && value != overheadsMonthly) overheadsOverrides[month] = value;
+        else overheadsOverrides.Remove(month);
+        if (Auth.CurrentUser is { } user) await OverheadsStorage.WriteOverridesAsync(user.Email, overheadsOverrides);
+    }
+
     // ---- The FD's inline forecast assumptions (2026-08-13) --------------------------------
     // The two knobs behind the Future valuations row: when the next valuation lands, and
     // roughly how much the architect is expected to certify per month. Each saves through its
@@ -1069,12 +1120,16 @@ else
     // of SelectedProjects see the same project. An empty (or zero) amount clears the view and
     // returns the project to the even spread.
 
+    // A full date since 2026-08-17 (was a month picker): the day is the anchor the payment
+    // lag counts from, so the forecast lands cash on payment dates rather than valuation
+    // dates. Dates saved by the old month picker parse as the 1st — the engine's old anchor —
+    // so nothing shifts until the FD sets a real valuation day.
     private async Task OnNextValuationChangedAsync(Project project, ChangeEventArgs args)
     {
         DateTimeOffset? next = DateTime.TryParseExact(
-                args.Value?.ToString(), "yyyy-MM", System.Globalization.CultureInfo.InvariantCulture,
-                System.Globalization.DateTimeStyles.None, out var month)
-            ? new DateTimeOffset(month, TimeSpan.Zero)
+                args.Value?.ToString(), "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var day)
+            ? new DateTimeOffset(day, TimeSpan.Zero)
             : null;
         await SaveForecastAssumptionAsync(new SetNextValuationDate(project.ProjectId, next));
     }
@@ -1158,7 +1213,10 @@ else
         if (IsDirector) _ = Cash.RefreshAsync();
 
         if (Auth.CurrentUser is { } user)
+        {
             overheadsMonthly = await OverheadsStorage.ReadAsync(user.Email) ?? 0m;
+            overheadsOverrides = new Dictionary<DateTime, decimal>(await OverheadsStorage.ReadOverridesAsync(user.Email));
+        }
 
         try
         {
@@ -1284,8 +1342,14 @@ else
             foreach (var row in InRows) AddCategoryRow(row.Label, row.Category, cashIn: true);
             foreach (var row in OutRows) AddCategoryRow(row.Label, row.Category, cashIn: false);
 
+            var movement = new List<object> { "Project movement" };
+            movement.AddRange(forecast.ProjectNet.Select(value => (object)value));
+            movement.Add(forecast.LaterNet);
+            movement.Add(0m);
+            sheet.AddRow(movement.ToArray());
+
             var overheads = new List<object> { "Company overheads" };
-            overheads.AddRange(forecast.Axis.Select(_ => (object)(-overheadsMonthly)));
+            overheads.AddRange(forecast.Axis.Select(month => (object)(-OverheadsFor(month))));
             overheads.Add(0m);
             overheads.Add(0m);
             sheet.AddRow(overheads.ToArray());
