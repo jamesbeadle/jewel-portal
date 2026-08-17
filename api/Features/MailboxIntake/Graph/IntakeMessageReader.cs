@@ -18,14 +18,25 @@ public sealed record IntakeMessageContent(
     IReadOnlyList<string>? To = null,
     IReadOnlyList<string>? Cc = null,
     string? ReplyTo = null,
-    string? Subject = null);
+    string? Subject = null,
+    // Images embedded in the HTML body (a pasted screenshot travels as an isInline attachment the
+    // body references by <img src="cid:{ContentId}">). Never shown as files — InboundEmailBodyBuilder
+    // uses these to put the pictures back into the rendered body. Null from older callers/caches.
+    IReadOnlyList<IntakeInlineImage>? InlineImages = null);
 
 // Id is the Graph attachment id, used to download the attachment's bytes on demand (e.g. saving a
 // drawing out of a triaged email). Optional so existing metadata-only callers are unchanged.
 public sealed record IntakeMessageAttachment(string Name, long Size, string? ContentType, string Id = "");
 
-/// <summary>One downloaded attachment: its bytes plus the metadata needed to store it elsewhere.</summary>
-public sealed record IntakeAttachmentContent(string Name, string ContentType, byte[] Content);
+/// <summary>One inline body image, known at list time only by its Graph attachment id — the cid the
+/// HTML references it by lives on the fileAttachment subtype, which the metadata read cannot select,
+/// so it is learned from the full attachment fetch. Size is Graph's reported size, used to respect
+/// the embed caps before downloading.</summary>
+public sealed record IntakeInlineImage(string AttachmentId, string? ContentType, long Size);
+
+/// <summary>One downloaded attachment: its bytes plus the metadata needed to store it elsewhere.
+/// ContentId is set for inline images — the cid the email's HTML references the picture by.</summary>
+public sealed record IntakeAttachmentContent(string Name, string ContentType, byte[] Content, string? ContentId = null);
 
 /// <summary>
 /// Reads a single mailbox message's full body and attachment metadata from Microsoft Graph, on
@@ -82,6 +93,8 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
         // attachment metadata in a single round trip.
         var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}"
             + "?$select=body,hasAttachments,subject,from,toRecipients,ccRecipients,replyTo"
+            // NB: contentId cannot join this $select — it lives on the fileAttachment subtype and
+            // Graph rejects derived-type properties here. The full per-attachment fetch carries it.
             + "&$expand=attachments($select=id,name,size,contentType,isInline)";
 
         try
@@ -116,19 +129,28 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
             }
 
             var attachments = new List<IntakeMessageAttachment>();
+            var inlineImages = new List<IntakeInlineImage>();
             if (root.TryGetProperty("attachments", out var atts) && atts.ValueKind == JsonValueKind.Array)
             {
                 foreach (var att in atts.EnumerateArray())
                 {
-                    // Skip inline attachments (embedded images etc.) — they're part of the body, not files.
-                    if (att.TryGetProperty("isInline", out var inline) && inline.ValueKind == JsonValueKind.True)
-                        continue;
-
                     var name = att.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
                     if (string.IsNullOrWhiteSpace(name)) name = "(unnamed attachment)";
                     long size = att.TryGetProperty("size", out var s) && s.TryGetInt64(out var sz) ? sz : 0;
                     string? type = att.TryGetProperty("contentType", out var t) ? t.GetString() : null;
                     var attachmentId = att.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+
+                    // An inline attachment (embedded image etc.) is part of the body, not a file:
+                    // it is kept out of the attachment list, but its cid → attachment-id mapping is
+                    // carried so the body builder can embed the picture where the sender put it.
+                    var isInline = att.TryGetProperty("isInline", out var inline) && inline.ValueKind == JsonValueKind.True;
+                    if (isInline)
+                    {
+                        if (!string.IsNullOrEmpty(attachmentId))
+                            inlineImages.Add(new IntakeInlineImage(attachmentId, type, size));
+                        continue;
+                    }
+
                     attachments.Add(new IntakeMessageAttachment(name, size, type, attachmentId));
                 }
             }
@@ -157,7 +179,7 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
             var replyTo = Addresses(root, "replyTo").FirstOrDefault();
             var subject = root.TryGetProperty("subject", out var subj) ? subj.GetString() : null;
 
-            return new IntakeMessageContent(body, isHtml, attachments, fromEmail, fromName, to, cc, replyTo, subject);
+            return new IntakeMessageContent(body, isHtml, attachments, fromEmail, fromName, to, cc, replyTo, subject, inlineImages);
         }
         catch (Exception ex)
         {
@@ -202,7 +224,8 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
             var name = root.TryGetProperty("name", out var n) ? n.GetString() ?? "attachment" : "attachment";
             var contentType = root.TryGetProperty("contentType", out var t) ? t.GetString() ?? "application/octet-stream" : "application/octet-stream";
             var content = Convert.FromBase64String(bytesEl.GetString() ?? "");
-            return new IntakeAttachmentContent(name, contentType, content);
+            var contentId = root.TryGetProperty("contentId", out var cid) ? cid.GetString() : null;
+            return new IntakeAttachmentContent(name, contentType, content, contentId);
         }
         catch (Exception ex)
         {

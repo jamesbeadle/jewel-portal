@@ -1,6 +1,6 @@
 // Rich-lite compose surface for the triage composer (RichTextEditor.razor).
 //
-// A contenteditable div with three behaviours the plain textarea couldn't give the PM team:
+// A contenteditable div with four behaviours the plain textarea couldn't give the PM team:
 //   • basic formatting (bold / italic / lists / text colour) via execCommand — deprecated but
 //     universally supported, and the server re-sanitises everything to a small allowlist anyway;
 //   • PASTED IMAGES: an image on the clipboard (a screenshot, a snip of a drawing) is inserted
@@ -8,7 +8,9 @@
 //     attachment before sending, so what the composer shows is what the recipient sees;
 //   • pasted HTML is flattened to the same small tag set client-side, so Outlook's kilobytes of
 //     span-soup never enter the editor (the server sanitises again regardless — this is for the
-//     editing experience, not for safety).
+//     editing experience, not for safety);
+//   • AUTO-CAPITALISATION as you type — sentence starts and the pronoun "i" — handled by
+//     rich-compose-autocapitalise.js (with rich-compose-caret.js underneath), wired up here.
 //
 // Interop surface: init(element, dotNetRef) wires input+paste and pushes HTML changes up via
 // dotNetRef.invokeMethodAsync('OnEditorHtmlChanged', html); setHtml/getHtml/clear do what they
@@ -122,6 +124,8 @@ window.jpmsRichCompose = (function () {
             const onInput = () => notify(element);
             element.addEventListener("input", onInput);
             element.addEventListener("paste", onPaste);
+            element.addEventListener("beforeinput", window.jpmsAutoCapitalise.onBeforeInput);
+            element.addEventListener("keydown", window.jpmsAutoCapitalise.onKeyDown);
             instances.set(element, { dotNetRef, onInput });
         },
         setHtml: function (element, html) {
@@ -158,6 +162,8 @@ window.jpmsRichCompose = (function () {
             if (entry && element) {
                 element.removeEventListener("input", entry.onInput);
                 element.removeEventListener("paste", onPaste);
+                element.removeEventListener("beforeinput", window.jpmsAutoCapitalise.onBeforeInput);
+                element.removeEventListener("keydown", window.jpmsAutoCapitalise.onKeyDown);
             }
             instances.delete(element);
         }

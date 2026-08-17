@@ -84,6 +84,10 @@ public static class MailboxIntakeFeatureRegistration
             services.AddSingleton<IMailboxGraphClient, NullMailboxGraphClient>();
         }
 
+        // Inbound body rendering: sanitises an opened email's HTML and embeds its inline images
+        // (pasted screenshots) so they show in the portal. Stateless over the reader, so singleton.
+        services.AddSingleton<InboundEmailBodyBuilder>();
+
         // Triage compose (POST mailbox/compose): send — or stage — an email from the projects
         // mailbox. The handler is registered by concrete type too so the multipart endpoint can
         // pass uploaded file bytes alongside the command.

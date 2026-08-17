@@ -1,5 +1,5 @@
-using Ganss.Xss;
 using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.Cqrs;
@@ -82,9 +82,11 @@ public sealed class ListConversationMessagesHandler : IQueryHandler<ListConversa
 public sealed class GetMailboxMessageDetailHandler : IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail>
 {
     private readonly IIntakeMessageReader reader;
-    private readonly Jewel.JPMS.Api.Features.MailboxIntake.MailboxIntakeOptions options;
-    public GetMailboxMessageDetailHandler(IIntakeMessageReader reader, Jewel.JPMS.Api.Features.MailboxIntake.MailboxIntakeOptions options)
-    { this.reader = reader; this.options = options; }
+    private readonly MailboxIntakeOptions options;
+    private readonly InboundEmailBodyBuilder bodyBuilder;
+    public GetMailboxMessageDetailHandler(
+        IIntakeMessageReader reader, MailboxIntakeOptions options, InboundEmailBodyBuilder bodyBuilder)
+    { this.reader = reader; this.options = options; this.bodyBuilder = bodyBuilder; }
 
     public async Task<MailboxMessageDetail> HandleAsync(GetMailboxMessageDetail query, CancellationToken cancellationToken)
     {
@@ -95,7 +97,7 @@ public sealed class GetMailboxMessageDetailHandler : IQueryHandler<GetMailboxMes
         if (content is null)
             return new MailboxMessageDetail(query.MessageId, "", false, Array.Empty<IntakeAttachment>());
 
-        var body = content.IsHtml ? Sanitise(content.Body) : content.Body;
+        var body = await bodyBuilder.BuildAsync(query.MessageId, content, cancellationToken);
         var attachments = content.Attachments
             .Select(a => new IntakeAttachment(a.Name, a.Size, a.ContentType, a.Id))
             .ToList()
@@ -106,6 +108,4 @@ public sealed class GetMailboxMessageDetailHandler : IQueryHandler<GetMailboxMes
             content.FromEmail, content.FromName, content.To, content.Cc, content.ReplyTo, content.Subject,
             MailboxAddress: string.IsNullOrWhiteSpace(options.Mailbox) ? null : options.Mailbox);
     }
-
-    private static string Sanitise(string html) => new HtmlSanitizer().Sanitize(html);
 }

@@ -117,8 +117,9 @@
                             @if (details.TryGetValue(message.MessageId, out var loadedDetail)
                                  && loadedDetail is { Attachments.Count: > 0 })
                             {
-                                @* Names and sizes only: request emails live in the requests mailbox, which has
-                                   no attachment-download endpoint (the projects-mailbox URL can't serve them). *@
+                                @* View opens the file in a new tab (types a browser renders); Download always
+                                   saves. Both stream through the request-scoped attachment endpoint, which
+                                   checks the email carries this request's tag — same gate as the body above. *@
                                 <div class="mt-2 rounded-lg bg-surface border border-line p-3">
                                     <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
                                         @loadedDetail.Attachments.Count attachment@(loadedDetail.Attachments.Count == 1 ? "" : "s")
@@ -128,10 +129,22 @@
                                         {
                                             <li class="flex items-center justify-between gap-3 text-sm text-content">
                                                 <span class="truncate">@attachment.Name</span>
-                                                @if (attachment.Size > 0)
-                                                {
-                                                    <span class="text-xs text-content-subtle whitespace-nowrap">@FormatSize(attachment.Size)</span>
-                                                }
+                                                <span class="flex items-center gap-3 whitespace-nowrap">
+                                                    @if (attachment.Size > 0)
+                                                    {
+                                                        <span class="text-xs text-content-subtle">@FormatSize(attachment.Size)</span>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(attachment.Id))
+                                                    {
+                                                        @if (RendersInBrowser(attachment))
+                                                        {
+                                                            <a href="@AttachmentUrl(message, attachment, viewInline: true)" target="_blank" rel="noopener"
+                                                               class="text-xs text-accent hover:underline">View</a>
+                                                        }
+                                                        <a href="@AttachmentUrl(message, attachment, viewInline: false)"
+                                                           class="text-xs text-accent hover:underline">Download</a>
+                                                    }
+                                                </span>
                                             </li>
                                         }
                                     </ul>
@@ -352,6 +365,23 @@
         if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
         return $"{bytes} B";
     }
+
+    // The request-scoped attachment stream. Both ids travel so the server can re-find the message
+    // by internetMessageId when its Graph id has gone stale — same re-find as the body fetch.
+    private string AttachmentUrl(RequestMessage message, IntakeAttachment attachment, bool viewInline) =>
+        $"/api/requests/{Uri.EscapeDataString(RequestId)}/messages/email-attachment"
+        + $"?id={Uri.EscapeDataString(message.MailboxId ?? "")}"
+        + $"&imid={Uri.EscapeDataString(message.EmailMessageId ?? "")}"
+        + $"&aid={Uri.EscapeDataString(attachment.Id)}"
+        + (viewInline ? "&inline=1" : "");
+
+    // "View" only offers what the endpoint will actually serve inline: raster images and PDFs.
+    // (Never SVG — served on the portal's origin it would run the sender's markup as the reader.)
+    private static readonly HashSet<string> InlineViewableTypes = new(StringComparer.OrdinalIgnoreCase)
+        { "image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp", "image/bmp", "application/pdf" };
+
+    private static bool RendersInBrowser(IntakeAttachment attachment) =>
+        attachment.ContentType is { } contentType && InlineViewableTypes.Contains(contentType);
 
     // Up to two initials for the author avatar: "Nigel Reilly" → NR, "plg@…" → P. Purely a scanning
     // aid, so anything unexpected degrades to a single character rather than throwing.

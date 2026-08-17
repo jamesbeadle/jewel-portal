@@ -1,5 +1,5 @@
-using Ganss.Xss;
 using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
@@ -21,11 +21,14 @@ public sealed class GetRequestEmailDetailHandler : IQueryHandler<GetRequestEmail
 {
     private readonly RequestEmailReader emails;
     private readonly IIntakeMessageReader reader;
+    private readonly InboundEmailBodyBuilder bodyBuilder;
 
-    public GetRequestEmailDetailHandler(RequestEmailReader emails, IIntakeMessageReader reader)
+    public GetRequestEmailDetailHandler(
+        RequestEmailReader emails, IIntakeMessageReader reader, InboundEmailBodyBuilder bodyBuilder)
     {
         this.emails = emails;
         this.reader = reader;
+        this.bodyBuilder = bodyBuilder;
     }
 
     public async Task<MailboxMessageDetail> HandleAsync(GetRequestEmailDetail query, CancellationToken cancellationToken)
@@ -49,7 +52,7 @@ public sealed class GetRequestEmailDetailHandler : IQueryHandler<GetRequestEmail
         if (content is null)
             return empty;
 
-        var body = content.IsHtml ? new HtmlSanitizer().Sanitize(content.Body) : content.Body;
+        var body = await bodyBuilder.BuildAsync(match.Id, content, cancellationToken);
         var attachments = content.Attachments
             .Select(a => new IntakeAttachment(a.Name, a.Size, a.ContentType, a.Id))
             .ToList()
