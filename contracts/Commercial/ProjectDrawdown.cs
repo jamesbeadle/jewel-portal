@@ -39,9 +39,11 @@ public static class ProjectDrawdown
                           group => group.Sum(line => line.LineTotal),
                           StringComparer.OrdinalIgnoreCase);
 
-    // The whole-project drawdown, netted: drawdown less overspend. Kept for the Cashflow tab's
-    // single "Cost centre drawdowns" row; the Financials tab shows the two sides separately
-    // (SplitForProject), and the two agree by construction: ForProject == Split.Net.
+    // The whole-project drawdown, netted: drawdown less overspend. No screen shows this any
+    // more (finance director, 2026-08-17: netting read as recouping every overspend, so the
+    // Cashflow tab and Cash Forecast spend the drawdown side only and surface the overspend
+    // as the buy back still available). Kept as the definitional check that the split's two
+    // sides always sum back to the old figure: ForProject == Split.Net.
     public static decimal ForProject(
         IEnumerable<ProjectFinancialSummaryRow> summaryRows,
         IReadOnlyDictionary<string, decimal> committedByCostCode,
@@ -127,8 +129,9 @@ public static class ProjectDrawdown
 /// <summary>
 /// The project's target-cost remainders split by sign: <see cref="Drawdown"/> is the budget
 /// still available to spend (positive only, summed per centre), <see cref="Overspend"/> what
-/// committed cost has already passed target (negative only). <see cref="Net"/> is the old
-/// netted drawdown figure — the Cashflow tab's row.
+/// committed cost has already passed target (negative only). The Cashflow tab and Cash
+/// Forecast spend <see cref="Drawdown"/> and show <see cref="Overspend"/> as the available
+/// buy back; <see cref="Net"/> is the retired netted figure, kept as the sum of the sides.
 /// </summary>
 public sealed record DrawdownSplit(decimal Drawdown, decimal Overspend)
 {

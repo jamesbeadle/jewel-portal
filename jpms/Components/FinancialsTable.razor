@@ -429,8 +429,8 @@
     //   Overspend            = the same remainder where NEGATIVE, summed per centre — committed
     //                          cost already past the line's target. Split per centre, not on the
     //                          netted line total, so one underspent centre in a roll-up cannot
-    //                          hide another's overspend; Drawdown + Overspend = the old netted
-    //                          drawdown, which is still what the Cashflow tab's row shows
+    //                          hide another's overspend. The Cashflow tab spends Drawdown only
+    //                          and shows Overspend as the available buy back — never netted
     //   Forecasted Cost of Sales = Committed Cost of Sales + Drawdown — the cost side's
     //                          subtotal: an underspent line is forecast to spend its full
     //                          target, an overspent one what is already committed
@@ -817,8 +817,8 @@
     private IEnumerable<string> AllCodes =>
         byCode.Keys.Union(WorkOrderCommittedByCode.Keys, StringComparer.OrdinalIgnoreCase);
 
-    // Delegated to the shared calculator so the Cashflow tab's netted row is always this
-    // pair's sum. The gross (packaged-scope-off) view keeps its per-centre sum — no package
+    // Delegated to the shared calculator so the Cashflow tab's drawdown and buy-back rows
+    // always agree with this pair. The gross (packaged-scope-off) view keeps its per-centre sum — no package
     // rows in play then. Split per centre either way, matching the line cells.
     private DrawdownSplit TotalDrawdownSplit =>
         hidePackagedScope

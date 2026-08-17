@@ -99,8 +99,8 @@ else
                 <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
                     <div>
                         <p class="text-sm text-content"
-                           title="The Financials tab's drawdown to the penny — each cost centre's unspent target cost, with finalised lines realised to profit / loss and reconciliation packages accounted for. Negative means overspent.">Cost centre drawdowns</p>
-                        <p class="text-xs text-content-subtle mt-0.5">Budget still expected to be spent, on top of orders and bills</p>
+                           title="The Financials tab's drawdown to the penny — each cost centre's unspent target cost, with finalised lines realised to profit / loss and reconciliation packages accounted for. Overspent centres are NOT netted off; their excess sits below the completion total as the available buy back.">Cost centre drawdowns</p>
+                        <p class="text-xs text-content-subtle mt-0.5">Budget still expected to be spent, on top of orders and bills — overspends counted separately below</p>
                     </div>
                     <p class="text-base font-semibold text-content whitespace-nowrap">@Money(-Drawdown)</p>
                 </div>
@@ -173,6 +173,26 @@ else
                        title="Practical completion cashflow plus the final retention release — the project's net cash movement to the end of the defects period">Project completion cashflow</p>
                     <p class="text-xl font-semibold @(ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(ProjectCompletionCashflow)</p>
                 </div>
+
+                @* ── The overspends, no longer netted off the drawdowns row: the statement above
+                   spends the full drawdown and assumes none of this comes back. Shown here as the
+                   buy back still available, with the position if every one of them is recovered. ── *@
+                @if (AvailableToBuyBack != 0m)
+                {
+                <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+                    <div>
+                        <p class="text-sm text-content"
+                           title="The Financials tab's overspend to the penny — committed cost already past target across the overspent centres. Recovered only where an overspend is actually bought back; the totals above never assume it.">Cost centre overspends — available to buy back</p>
+                        <p class="text-xs text-content-subtle mt-0.5">Committed cost past target — not assumed recouped in the figures above</p>
+                    </div>
+                    <p class="text-base font-semibold text-content whitespace-nowrap">@AddBack(AvailableToBuyBack)</p>
+                </div>
+                <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+                    <p class="text-sm font-semibold text-content"
+                       title="Project completion cashflow plus every overspend bought back — the position if the full buy back is achieved.">Position with overspends bought back</p>
+                    <p class="text-xl font-semibold @(PositionWithOverspendsBoughtBack < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(PositionWithOverspendsBoughtBack)</p>
+                </div>
+                }
             </div>
 
             @* ── Potential — unapproved variations. A separate, dashed card BELOW the statement:
@@ -241,9 +261,18 @@ else
             </p>
             <p class="text-xs text-content-subtle">
                 <span class="font-semibold text-content">Cost centre drawdowns</span> reuse the
-                Financials tab's figure to the penny, so the two always agree: each cost centre's
-                unspent target cost, with finalised lines realised to profit / loss and
-                reconciliation packages accounted for.
+                Financials tab's drawdown figure to the penny, so the two always agree: each cost
+                centre's unspent target cost, with finalised lines realised to profit / loss and
+                reconciliation packages accounted for. Overspent centres are not netted off —
+                netting read as recouping every overspend — so the statement spends the full
+                drawdown and shows the overspends on their own rows below.
+            </p>
+            <p class="text-xs text-content-subtle">
+                <span class="font-semibold text-content">Cost centre overspends</span> are the
+                other side of the same split: committed cost already past target. They sit under
+                the completion total as the buy back still available — the position improves by
+                an overspend only where it is actually bought back, so the completion cashflow
+                never assumes it.
             </p>
             <p class="text-xs text-content-subtle">
                 <span class="font-semibold text-content">Uninvoiced work orders</span> are
@@ -400,14 +429,23 @@ else
     // Whether the unpaid-invoices breakdown modal is open (the magnifier on its row).
     private bool showUnpaidInvoices;
 
-    // The Financials tab's project drawdown, to the penny — computed by the shared
+    // The Financials tab's drawdown split, to the penny — computed by the shared
     // calculator from the same inputs (finalised centres realised to profit / loss and
     // reconciliation packages accounted for there, not a flat target − orders − spend).
+    // The statement spends the DRAWDOWN side only (finance director, 2026-08-17): the old
+    // netted figure read as recouping every overspend, flattering the cashflow. The
+    // overspends surface below the completion total as the buy back still available.
     private IReadOnlyDictionary<string, decimal> WoCommittedByCode =>
         ProjectDrawdown.CommittedByCostCode(WorkOrders.Current(ProjectId));
 
-    private decimal Drawdown =>
-        ProjectDrawdown.ForProject(Summary.Current(ProjectId), WoCommittedByCode, PackageRows);
+    private DrawdownSplit DrawdownSplit =>
+        ProjectDrawdown.SplitForProject(Summary.Current(ProjectId), WoCommittedByCode, PackageRows);
+
+    private decimal Drawdown => DrawdownSplit.Drawdown;
+
+    // The overspend side, flipped positive: committed cost already past target. Cash that
+    // comes back only where an overspend is actually bought back — never assumed above.
+    private decimal AvailableToBuyBack => -DrawdownSplit.Overspend;
 
     // ── Retention releases — only a release still forecast is added back. A confirmed release
     // has left the retention pot (Schedule.Outstanding excludes it), so it already sits inside
@@ -437,6 +475,10 @@ else
         LeftToClaim - Drawdown - WoLeftToInvoice - BillsUnpaid + Release1AddBack;
 
     private decimal ProjectCompletionCashflow => PracticalCompletionCashflow + Release2AddBack;
+
+    // The old netted bottom line, reached honestly: the completion total spends the full
+    // drawdown, and only THEN is the buy back added — labelled as conditional on achieving it.
+    private decimal PositionWithOverspendsBoughtBack => ProjectCompletionCashflow + AvailableToBuyBack;
 
     // ── Potential — unapproved variations, kept apart from the statement above ──
     // Pre-approval only (quoting / issued / awaiting AI): approved variations are already
