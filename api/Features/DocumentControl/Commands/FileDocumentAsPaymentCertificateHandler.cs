@@ -32,7 +32,7 @@ public sealed class FileDocumentAsPaymentCertificateHandler
     {
         var item = await context.DocumentControlItems
             .FirstOrDefaultAsync(row => row.DocumentControlItemId == command.DocumentControlItemId, cancellationToken)
-            ?? throw new InvalidOperationException("That document is no longer in Document Control.");
+            ?? throw new InvalidOperationException("That document is no longer in Document Triage.");
         if (item.Status != (int)DocumentControlStatus.Pending)
             throw new InvalidOperationException("That document has already been filed or discarded — restore it to the queue first.");
 
@@ -50,7 +50,7 @@ public sealed class FileDocumentAsPaymentCertificateHandler
         }
 
         var sourceBlob = await blobStore.OpenAsync(item.BlobRef, cancellationToken)
-            ?? throw new InvalidOperationException("The stored file could not be found in Document Control's storage.");
+            ?? throw new InvalidOperationException("The stored file could not be found in Document Triage's storage.");
 
         var certificateId = DocumentControlIdentifierFactory.NextPaymentCertificateId();
         string certificateBlobRef;
@@ -89,7 +89,7 @@ public sealed class FileDocumentAsPaymentCertificateHandler
 
         await auditTrail.WriteAsync(
             AuditEventType.DocumentFiled,
-            $"Filed \"{item.FileName}\" from Document Control as {item.FiledLabel}",
+            $"Filed \"{item.FileName}\" from Document Triage as {item.FiledLabel}",
             projectId: command.ProjectId,
             emailMessageId: item.MessageId,
             internetMessageId: item.InternetMessageId,

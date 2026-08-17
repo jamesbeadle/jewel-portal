@@ -39,7 +39,7 @@ public static class PortalMap
         }
 
         // The folderless rows at the foot of the rail — the standing work queues (the Control
-        // Centre, Document Control, Xero Cost Allocation) and the live Valuation Report. They are
+        // Centre, Document Triage, Xero Cost Allocation) and the live Valuation Report. They are
         // real destinations exactly like the folder rows; leaving them out once left the assistant
         // not knowing the Control Centre existed.
         var standalone = DesktopNavigation.StandaloneItemsFor(role);

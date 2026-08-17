@@ -26,7 +26,7 @@ public sealed class DiscardDocumentControlItemHandler
     {
         var item = await context.DocumentControlItems
             .FirstOrDefaultAsync(row => row.DocumentControlItemId == command.DocumentControlItemId, cancellationToken)
-            ?? throw new InvalidOperationException("That document is no longer in Document Control.");
+            ?? throw new InvalidOperationException("That document is no longer in Document Triage.");
         if (item.Status == (int)DocumentControlStatus.Filed)
             throw new InvalidOperationException("A filed document can't be discarded — its destination record is the live copy.");
 
@@ -37,7 +37,7 @@ public sealed class DiscardDocumentControlItemHandler
 
         await auditTrail.WriteAsync(
             AuditEventType.DocumentDiscarded,
-            $"Discarded \"{item.FileName}\" in Document Control",
+            $"Discarded \"{item.FileName}\" in Document Triage",
             projectId: item.ProjectIdHint,
             emailMessageId: item.MessageId,
             internetMessageId: item.InternetMessageId,

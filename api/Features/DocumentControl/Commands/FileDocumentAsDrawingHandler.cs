@@ -35,7 +35,7 @@ public sealed class FileDocumentAsDrawingHandler
     {
         var item = await context.DocumentControlItems
             .FirstOrDefaultAsync(row => row.DocumentControlItemId == command.DocumentControlItemId, cancellationToken)
-            ?? throw new InvalidOperationException("That document is no longer in Document Control.");
+            ?? throw new InvalidOperationException("That document is no longer in Document Triage.");
         if (item.Status != (int)DocumentControlStatus.Pending)
             throw new InvalidOperationException("That document has already been filed or discarded — restore it to the queue first.");
 
@@ -64,7 +64,7 @@ public sealed class FileDocumentAsDrawingHandler
 
         await auditTrail.WriteAsync(
             AuditEventType.DocumentFiled,
-            $"Filed \"{item.FileName}\" from Document Control as {item.FiledLabel}",
+            $"Filed \"{item.FileName}\" from Document Triage as {item.FiledLabel}",
             projectId: command.ProjectId,
             emailMessageId: item.MessageId,
             internetMessageId: item.InternetMessageId,
@@ -76,7 +76,7 @@ public sealed class FileDocumentAsDrawingHandler
     private async Task<byte[]> ReadItemBytesAsync(string blobRef, CancellationToken cancellationToken)
     {
         var blob = await documentBlobs.OpenAsync(blobRef, cancellationToken)
-            ?? throw new InvalidOperationException("The stored file could not be found in Document Control's storage.");
+            ?? throw new InvalidOperationException("The stored file could not be found in Document Triage's storage.");
         await using var content = blob.Content;
         using var buffer = new MemoryStream();
         await content.CopyToAsync(buffer, cancellationToken);

@@ -96,7 +96,7 @@ public sealed class SendAttachmentsToDocumentControlHandler
         {
             await auditTrail.WriteAsync(
                 AuditEventType.SentToDocumentControl,
-                $"Sent \"{item.FileName}\" to Document Control",
+                $"Sent \"{item.FileName}\" to Document Triage",
                 projectId: item.ProjectIdHint,
                 emailMessageId: item.MessageId,
                 internetMessageId: item.InternetMessageId,

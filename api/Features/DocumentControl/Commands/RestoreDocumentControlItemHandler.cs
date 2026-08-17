@@ -20,7 +20,7 @@ public sealed class RestoreDocumentControlItemHandler
     {
         var item = await context.DocumentControlItems
             .FirstOrDefaultAsync(row => row.DocumentControlItemId == command.DocumentControlItemId, cancellationToken)
-            ?? throw new InvalidOperationException("That document is no longer in Document Control.");
+            ?? throw new InvalidOperationException("That document is no longer in Document Triage.");
         if (item.Status != (int)DocumentControlStatus.Discarded)
             throw new InvalidOperationException("Only a discarded document can be restored to the queue.");
 

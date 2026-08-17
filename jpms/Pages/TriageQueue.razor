@@ -85,7 +85,7 @@
     </div>;
 
     @*
-        Attachments: names, preview, download and the "Send to document control" tick for the
+        Attachments: names, preview, download and the "Send to document triage" tick for the
         open email. Rendered at the TOP of the email pane — above the body — so the attachments
         are dealt with first and can never scroll out of sight (decision 2026-08-12; the routing
         itself — drawings, payment certificates, subcontractor documents — lives in Document
@@ -122,11 +122,11 @@
                                     @if (view == QueueView.Active)
                                     {
                                         <label class="flex items-center gap-1.5 text-xs text-content-muted hover:text-content cursor-pointer select-none"
-                                               title="Copy this file into the Document Control queue when Apply runs — the email itself stays here">
+                                               title="Copy this file into the Document Triage queue when Apply runs — the email itself stays here">
                                             <input type="checkbox" checked="@stagedDocControlIds.Contains(att.Id)"
                                                    disabled="@busy"
                                                    @onchange="e => ToggleDocControl(att.Id, e.Value is true)" />
-                                            <span>Send to document control</span>
+                                            <span>Send to document triage</span>
                                         </label>
                                     }
                                 }
@@ -941,7 +941,7 @@
         The email's read-only twin (PanelKind.EmailMirror): the same header, attachments and body
         fragments rendered a SECOND time, so one window can sit on the email while the reply is
         typed at the bottom of the other — copying from the original without scrolling the composer
-        out of view. Both copies read the same live page fields, so the thread tabs, document-control
+        out of view. Both copies read the same live page fields, so the thread tabs, document-triage
         ticks and previews stay in step whichever side they're clicked on. The reply composer itself
         deliberately isn't mirrored: one editor, one draft, no two cursors fighting over it.
     *@
@@ -2331,7 +2331,7 @@ else
         // comes back still demanding an answer.
         public bool? RelevantEventStaged { get; init; }
         public bool? TriageEntireThread { get; init; }
-        // Attachment ids ticked "Send to document control" — drafted against ONE email's
+        // Attachment ids ticked "Send to document triage" — drafted against ONE email's
         // attachments, so they must travel with that email like every other draft (the same
         // rule that kept the old save-to-drawings form from leaking under the next email).
         public IReadOnlyList<string> DocControlIds { get; init; } = Array.Empty<string>();
@@ -2459,7 +2459,7 @@ else
         stagedCreate = null;
         relevantEventStaged = null;
         triageEntireThread = null;
-        // The document-control ticks are drafted against ONE email's attachments — leaving them
+        // The document-triage ticks are drafted against ONE email's attachments — leaving them
         // across a selection change would send another email's attachment ids against this
         // message. Parked above, reset here, restored below like every other per-email draft.
         stagedDocControlIds.Clear();
@@ -2773,8 +2773,8 @@ else
                     : $"link this email to {string.Join(", ", pickedRecords.Take(3).Select(r => r.Reference))}{(pickedRecords.Count > 3 ? $" +{pickedRecords.Count - 3} more" : "")}");
             if (stagedDocControlIds.Count > 0)
                 parts.Add(stagedDocControlIds.Count == 1
-                    ? "send 1 attachment to Document Control"
-                    : $"send {stagedDocControlIds.Count} attachments to Document Control");
+                    ? "send 1 attachment to Document Triage"
+                    : $"send {stagedDocControlIds.Count} attachments to Document Triage");
             if (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId))
                 parts.Add(stagedCreate!.Kind switch
                 {
@@ -3060,13 +3060,13 @@ else
         {
             var filed = false;
 
-            // ---- Document Control: ticked attachments copy out FIRST, so the files are safely
+            // ---- Document Triage: ticked attachments copy out FIRST, so the files are safely
             //      in the queue before anything else (a discard included) moves the email on.
             //      Never consumes the email — only the files are copied out; `filed` is
             //      deliberately not set. ----
             if (anchor is not null && stagedDocControlIds.Count > 0)
             {
-                busyLabel = "Sending to Document Control";
+                busyLabel = "Sending to Document Triage";
                 await Commands.SendAsync(
                     new SendAttachmentsToDocumentControl(
                         anchor.Id, anchor.InternetMessageId,
@@ -4006,12 +4006,12 @@ else
             anchor: PanelKind.Email);
     }
 
-    // ---- Send attachments to Document Control ----
+    // ---- Send attachments to Document Triage ----
     // Ticked per attachment on the open email and staged like every other triage draft — the
-    // email's Apply copies the files mailbox → Document Control server-side. Like the
+    // email's Apply copies the files mailbox → Document Triage server-side. Like the
     // save-to-drawings form this replaced (2026-08-12), it does NOT consume the email: the
     // message keeps its place in triage — only the files are copied out. Routing the files to
-    // their destinations happens in Document Control itself.
+    // their destinations happens in Document Triage itself.
 
     private readonly List<string> stagedDocControlIds = new();
 

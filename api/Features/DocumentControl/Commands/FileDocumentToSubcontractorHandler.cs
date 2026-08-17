@@ -39,7 +39,7 @@ public sealed class FileDocumentToSubcontractorHandler
     {
         var item = await context.DocumentControlItems
             .FirstOrDefaultAsync(row => row.DocumentControlItemId == command.DocumentControlItemId, cancellationToken)
-            ?? throw new InvalidOperationException("That document is no longer in Document Control.");
+            ?? throw new InvalidOperationException("That document is no longer in Document Triage.");
         if (item.Status != (int)DocumentControlStatus.Pending)
             throw new InvalidOperationException("That document has already been filed or discarded — restore it to the queue first.");
 
@@ -48,7 +48,7 @@ public sealed class FileDocumentToSubcontractorHandler
             ?? throw new InvalidOperationException("Select the subcontractor this document belongs to.");
 
         var sourceBlob = await documentBlobs.OpenAsync(item.BlobRef, cancellationToken)
-            ?? throw new InvalidOperationException("The stored file could not be found in Document Control's storage.");
+            ?? throw new InvalidOperationException("The stored file could not be found in Document Triage's storage.");
 
         // Pre-generated so the row id matches the blob path segment — same rule as the upload endpoints.
         var complianceDocumentId = SubcontractorIdentifierFactory.NextComplianceDocumentId();
@@ -77,7 +77,7 @@ public sealed class FileDocumentToSubcontractorHandler
 
         await auditTrail.WriteAsync(
             AuditEventType.DocumentFiled,
-            $"Filed \"{item.FileName}\" from Document Control as {item.FiledLabel}",
+            $"Filed \"{item.FileName}\" from Document Triage as {item.FiledLabel}",
             emailMessageId: item.MessageId,
             internetMessageId: item.InternetMessageId,
             cancellationToken: cancellationToken);

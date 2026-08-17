@@ -11,7 +11,7 @@ namespace Jewel.JPMS.Services.Navigation;
 /// screen), oversight (Audit) and finally the system itself (Admin). Folders mix scopes
 /// deliberately — project-scoped rows ("/projects/{project}/…" templates) and company rows sit
 /// side by side where the work does. A row that belongs to no folder at all — the Control Centre,
-/// Document Control, Xero Cost Allocation and the Valuation Report — lives in
+/// Document Triage, Xero Cost Allocation and the Valuation Report — lives in
 /// SidebarFolders.Standalone.
 ///
 /// The retired Client folder's rows (Requests, Architect's Instructions, Valuation Report
@@ -181,7 +181,7 @@ public static class SidebarFolders
                 new SidebarRow(new NavigationItem("WO Allocation", "/projects/{project}/work-order-allocation"),
                     DesktopNavigation.DirectorRoles),
                 // The payment certificate register — what the client is paying, certified, filed
-                // from Document Control. Company page with a project filter (viewable by project).
+                // from Document Triage. Company page with a project filter (viewable by project).
                 new SidebarRow(new NavigationItem("Payment Certificates", "/finance/payment-certificates"),
                     DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Cost Codes", "/cost-codes"),
@@ -295,7 +295,7 @@ public static class SidebarFolders
     /// <summary>Rows that belong to no folder — they render as top-level links at the FOOT of the
     /// sidebar, below every folder, with an icon, like Home. Gated per row exactly like folder
     /// rows. Two kinds of resident: whole-company destinations that answer to no one project —
-    /// the standing work queues (the Control Centre, Document Control and, since 2026-08-14,
+    /// the standing work queues (the Control Centre, Document Triage and, since 2026-08-14,
     /// Xero Cost Allocation) — and the one project record important enough to outrank its folder
     /// (the Valuation Report — the system's flagship output, elevated 2026-08-11; being a
     /// {project} template it follows the picker like any folder row).</summary>
@@ -306,10 +306,11 @@ public static class SidebarFolders
         // the nav row carries the 2026-08-11 directors-only clamp like every other row.
         new SidebarRow(new NavigationItem("Control Centre", "/control-centre"),
             DesktopNavigation.DirectorRoles),
-        // Document Control — the attachment triage queue for ALL projects: files sent in from the
+        // Document Triage (renamed from Document Control 2026-08-17 — one "Control" phrase in this
+        // section is enough) — the attachment triage queue for ALL projects: files sent in from the
         // Control Centre, filed out to Drawings, Payment Certificates or subcontractor records.
         // Same whole-company footing as the Control Centre it feeds from (decision 2026-08-12).
-        new SidebarRow(new NavigationItem("Document Control", "/document-control"),
+        new SidebarRow(new NavigationItem("Document Triage", "/document-triage"),
             DesktopNavigation.DirectorRoles),
         // Xero Cost Allocation — distributing allocated purchase lines to cost centres. Moved up
         // from the Xero folder (2026-08-14): like the two queues above it is standing work that

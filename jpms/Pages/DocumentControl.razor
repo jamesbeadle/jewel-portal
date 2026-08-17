@@ -1,3 +1,5 @@
+@page "/document-triage"
+@* The old route stays routable so pre-rename bookmarks still land. *@
 @page "/document-control"
 @using Jewel.JPMS.Models
 @inject AuthService Auth
@@ -11,11 +13,12 @@
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel Subcontractors
 @implements IDisposable
 
-<PageTitle>Document Control · JPMS</PageTitle>
+<PageTitle>Document Triage · JPMS</PageTitle>
 
 @*
-    Document Control — the attachment triage queue for ALL projects, fed by the Control Centre's
-    "Send to document control" ticks. Emails are triaged there; DOCUMENTS are triaged here: each
+    Document Triage (renamed from Document Control 2026-08-17; code identifiers, API routes and DB
+    tables keep the DocumentControl name) — the attachment triage queue for ALL projects, fed by the
+    Control Centre's "Send to document triage" ticks. Emails are triaged there; DOCUMENTS are triaged here: each
     item is a point-in-time copy of one attachment with its email's envelope snapshotted beside it,
     waiting to be filed to a destination — a project's Drawings, the Payment Certificates register,
     or a subcontractor's compliance documents — or discarded (restorable, never deleted).
@@ -40,7 +43,7 @@ else
     <section class="px-6 md:px-8 py-8 md:py-12">
         <header class="mb-6">
             <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · projects@@jewelbb.co.uk</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Document Control</h1>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Document Triage</h1>
             @* A count, not a description, so it waits for its own list — it simply does not
                render until the count is known (see the loading-states notes). *@
             @if (items is not null)
@@ -77,7 +80,7 @@ else
                                 @if (view == DocView.Queue)
                                 {
                                     <p class="text-xs text-content-subtle mt-1">
-                                        Tick "Send to document control" on an email's attachments in the Control Centre and they appear here.
+                                        Tick "Send to document triage" on an email's attachments in the Control Centre and they appear here.
                                     </p>
                                 }
                             </div>
@@ -144,7 +147,7 @@ else
                             </div>
                             <p class="text-xs text-content-subtle mt-1">
                                 @(item.FileSizeBytes > 0 ? $"{FormatSize(item.FileSizeBytes)} · " : "")Received @Date(item.ReceivedAt)
-                                · Sent to Document Control by @item.SentBy, @Date(item.SentAt)
+                                · Sent to Document Triage by @item.SentBy, @Date(item.SentAt)
                             </p>
                         </div>
 
@@ -444,7 +447,7 @@ else
     private enum DocView { Queue, Filed, Discarded }
     private enum FileDestination { Drawing, PaymentCertificate, Subcontractor }
 
-    // Suggested kinds — the three Document Control groupings first (RAMS, insurance,
+    // Suggested kinds — the three Document Triage groupings first (RAMS, insurance,
     // drawings/specs), then the portal upload's own insurance spellings so a filing here lands
     // in the same version history as a portal upload of the same document.
     private static readonly string[] SubcontractorDocumentKinds =
@@ -567,7 +570,7 @@ else
         catch
         {
             // The error toast carries the reference and the detail; this opens the gate honestly.
-            loadError = "Couldn't load Document Control. Refresh to try again.";
+            loadError = "Couldn't load Document Triage. Refresh to try again.";
         }
         StateHasChanged();
     }

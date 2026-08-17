@@ -122,7 +122,7 @@ public static class PortalMapCapabilities
             + "write a reply or forward; raise records from it in System Actions. Also the "
             + "New email composer: the compose_email dialog opens HERE (open_modal compose_email) for "
             + "any email the user asks you to draft; they review and press Send on this page",
-        ["/document-control"] =
+        ["/document-triage"] =
             "the attachment triage queue for all projects — files from the Control Centre, filed out to "
             + "Drawings, Payment Certificates or subcontractor records",
         ["/finance/allocation"] =
