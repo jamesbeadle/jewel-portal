@@ -20,11 +20,12 @@
             the order's cost against:
         </p>
         <ul class="space-y-1">
-            @foreach (var code in Codes)
+            @* Named costCode, not code — a bare @code in markup is Razor's code-block directive. *@
+            @foreach (var costCode in Codes)
             {
                 <li class="flex items-center gap-2 text-sm">
-                    <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@code</span>
-                    <span class="text-content truncate">@NameFor(code)</span>
+                    <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@costCode</span>
+                    <span class="text-content truncate">@NameFor(costCode)</span>
                 </li>
             }
         </ul>
