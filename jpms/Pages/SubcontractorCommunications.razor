@@ -11,12 +11,14 @@
 <PageTitle>Communications · JPMS</PageTitle>
 
 @*
-    The Subcontractor folder's Communications page: every email tagged "JPMS/SubComms" — general
-    subcontractor correspondence filed at triage with the Subcontractor tab's communication tick —
-    read live from the mailbox, newest first, in the shared thread list (threads group, any email
-    expands to its full body, and every email carries the consistent Reply and Forward widget —
-    sending from here SENDS there and then; the sent copy inherits the thread's tags and files
-    back into this list). Tagging (and untagging, from the Control Centre's Tagged view) stays in mailbox triage.
+    The Subcontractor folder's Communications page: every email tagged with the SubComms family —
+    general subcontractor correspondence plus its categories (Chaser / Info request / Materials /
+    H&S), filed at triage with the Subcontractor tab's communication ticks — read live from the
+    mailbox, newest first, in the shared thread list (threads group, any email expands to its full
+    body, and every email carries the consistent Reply and Forward widget — sending from here SENDS
+    there and then; the sent copy inherits the thread's tags and files back into this list). The
+    chip row narrows the list to one category. Tagging (and untagging, from the Control Centre's
+    Tagged view) stays in mailbox triage.
 *@
 
 @if (!sessionReady)
@@ -38,10 +40,25 @@ else
             @if (loaded && total > 0)
             {
                 <p class="text-sm text-content-muted mt-2">
-                    @total email@(total == 1 ? "" : "s") tagged as subcontractor communication.
+                    @total email@(total == 1 ? "" : "s") @(categoryTagFilter is null ? "tagged as subcontractor communication" : $"tagged {ActiveFilterLabel}").
                 </p>
             }
         </header>
+
+        @* The category chips — a filter control, so never gated: they render from the contracts
+           constant alone, usable before the first page lands, and stay put when a category comes
+           back empty. *@
+        <div class="flex flex-wrap items-center gap-1.5 mb-4">
+            <button type="button" class="@ChipClass(null)" title="Every subcontractor communication, whatever its category"
+                    @onclick="() => SetCategoryFilterAsync(null)">All</button>
+            @foreach (var familyRecord in SubcontractorComms.All)
+            {
+                var familyTag = $"JPMS/{familyRecord.TagReference}";
+                var chipLabel = familyRecord.RecordId == SubcontractorComms.RecordId ? "General" : familyRecord.Title;
+                <button type="button" @key="familyRecord.RecordId" class="@ChipClass(familyTag)" title="@familyRecord.Summary"
+                        @onclick="() => SetCategoryFilterAsync(familyTag)">@chipLabel</button>
+            }
+        </div>
 
         @if (loadError is not null)
         {
@@ -56,9 +73,9 @@ else
             @if (loadError is null)
             {
                 <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">No subcontractor communications yet.</p>
+                    <p class="text-sm text-content">@(categoryTagFilter is null ? "No subcontractor communications yet." : $"Nothing tagged {ActiveFilterLabel} yet.")</p>
                     <p class="text-xs text-content-subtle mt-1">
-                        Tick "Subcontractor communication" in the Control Centre's System Tags and the thread appears here.
+                        Tick "Subcontractor communication" — or one of its categories — in the Control Centre's System Tags and the thread appears here.
                     </p>
                 </div>
             }
@@ -88,7 +105,7 @@ else
                                        OnSent="OnReplySent" OnCancel="() => replyTo = null" />
                 </div>
             }
-            <CorrespondenceThreadList Emails="items" ExcludeTag="@SubcontractorComms.Tag"
+            <CorrespondenceThreadList Emails="items" ExcludeTag="@ImpliedTag"
                                       OnReply="email => StartCompose(email, forward: false)"
                                       OnForward="email => StartCompose(email, forward: true)" />
 

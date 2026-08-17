@@ -16,7 +16,7 @@ public enum RecordType
     VariationQuote = 7,    // a Variation Order Quote (VOQ) — the pre-approval quote a VO is raised from
     WorkOrder = 8,         // a work order (purchase order) awarded to a subcontractor — subcontract-side
     Defect = 9,            // a defect logged on the project — remediation chased with the subcontractor
-    SubcontractorComms = 10, // the single "subcontractor communication" tag — general subcontract-side correspondence tied to no record
+    SubcontractorComms = 10, // the record-less "subcontractor communication" tag family (general + categories) — subcontract-side correspondence tied to no record
     ValuationReportSnapshot = 11 // a frozen valuation report snapshot — the client-facing statement a valuation email travels with
 }
 

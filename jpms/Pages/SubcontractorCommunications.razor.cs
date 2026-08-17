@@ -18,6 +18,45 @@ public partial class SubcontractorCommunications
     private int total;
     private string? nextCursor;
 
+    // The category filter (2026-08-17): null = the whole family (general + every category), or one
+    // family tag ("JPMS/SubComms", "JPMS/SubComms-Chase", …) from the chip row. The chips read the
+    // family straight from the contracts constant, so a new category is one line there.
+    private string? categoryTagFilter;
+
+    private IReadOnlyList<string> TagsToRead =>
+        categoryTagFilter is null
+            ? SubcontractorComms.Tags
+            : new[] { categoryTagFilter };
+
+    // The tag a listed email's chip row may omit: it is this list's premise. Under "All" only the
+    // general tag is implied — a category tag on a card is information, not noise.
+    private string ImpliedTag => categoryTagFilter ?? SubcontractorComms.Tag;
+
+    // Switching chip resets the list BEFORE the fetch: a failed re-query must not leave the old
+    // filter's emails (or its Graph cursor — "Load more" would mix filters) under the new chip.
+    private async Task SetCategoryFilterAsync(string? tag)
+    {
+        if (categoryTagFilter == tag) return;
+        categoryTagFilter = tag;
+        loaded = false;
+        items.Clear();
+        total = 0;
+        nextCursor = null;
+        await LoadPageAsync(cursor: null);
+    }
+
+    private string ActiveFilterLabel =>
+        SubcontractorComms.All
+            .Where(record => $"JPMS/{record.TagReference}" == categoryTagFilter)
+            .Select(record => record.RecordId == SubcontractorComms.RecordId ? "General" : record.Title)
+            .FirstOrDefault() ?? "";
+
+    private string ChipClass(string? tag) =>
+        "rounded-full border px-3 py-1 text-xs font-medium transition "
+        + (categoryTagFilter == tag
+            ? "border-accent bg-accent/10 text-accent"
+            : "border-line text-content-muted hover:text-content hover:border-line-strong");
+
     // The email a Reply or Forward was pressed on (the shared composer opens above the list;
     // sending from this page sends immediately), which of the two it was, and the confirmation
     // left behind by the last send.
@@ -61,15 +100,21 @@ public partial class SubcontractorCommunications
         await LoadPageAsync(cursor: null);
     }
 
+    // Two quick chip clicks race their fetches; whichever response lands LAST would win, chip or
+    // not. The sequence number says which request is current — a stale response changes nothing.
+    private int loadSequence;
+
     // One live read of the tagged mail, newest first — the same query the Control Centre's Tagged
-    // view uses, narrowed to the one communication tag.
+    // view uses, narrowed to the communication family (or the one category the chip row picked).
     private async Task LoadPageAsync(string? cursor)
     {
+        var sequence = ++loadSequence;
         loadError = null;
         try
         {
             var page = await Intake.ListTaggedLiveAsync(
-                cursor, PageSize, new[] { SubcontractorComms.Tag }, newestFirst: true);
+                cursor, PageSize, TagsToRead, newestFirst: true);
+            if (sequence != loadSequence) return;
             if (cursor is null) items.Clear();
             items.AddRange(page.Items);
             total = page.Total;
@@ -77,11 +122,12 @@ public partial class SubcontractorCommunications
         }
         catch
         {
+            if (sequence != loadSequence) return;
             loadError = "Couldn't load the communications. Please try again.";
         }
         finally
         {
-            loaded = true;
+            if (sequence == loadSequence) loaded = true;
         }
     }
 

@@ -4,13 +4,14 @@
 @inject IIntakeQueue Intake
 
 @*
-    The subcontractor communications browser: every email tagged "JPMS/SubComms" — general
-    subcontractor correspondence filed at triage with the Subcontractor tab's communication tick —
-    read live from the mailbox, newest thread first. A workspace pane rather than the standalone
-    page so it reads SIDE BY SIDE with a compose or an open email: browse a subbie's thread one
-    window, copy and paste into the reply the other. Each email offers Reply and Forward, lined up
-    in the Outbox and sent by the triage's Apply. Tagging (and untagging, from the Tagged view) stays
-    in mailbox triage.
+    The subcontractor communications browser: every email tagged with the SubComms family — general
+    subcontractor correspondence plus its categories (Chaser / Info request / Materials / H&S),
+    filed at triage with the Subcontractor tab's communication ticks — read live from the mailbox,
+    newest thread first, narrowable to one category by the chip row. A workspace pane rather than
+    the standalone page so it reads SIDE BY SIDE with a compose or an open email: browse a subbie's
+    thread one window, copy and paste into the reply the other. Each email offers Reply and Forward,
+    lined up in the Outbox and sent by the triage's Apply. Tagging (and untagging, from the Tagged
+    view) stays in mailbox triage.
 *@
 
 <div class="space-y-3">
@@ -19,10 +20,24 @@
         @if (loaded && loadError is null && total > 0)
         {
             <p class="text-sm text-content-muted mt-1">
-                @total email@(total == 1 ? "" : "s") tagged as subcontractor communication.
+                @total email@(total == 1 ? "" : "s") @(categoryTagFilter is null ? "tagged as subcontractor communication" : $"tagged {ActiveFilterLabel}").
             </p>
         }
     </header>
+
+    @* The category chips — a filter control, so never gated: rendered from the contracts constant
+       alone, usable before the first page lands. *@
+    <div class="flex flex-wrap items-center gap-1.5">
+        <button type="button" class="@ChipClass(null)" title="Every subcontractor communication, whatever its category"
+                @onclick="() => SetCategoryFilterAsync(null)">All</button>
+        @foreach (var familyRecord in SubcontractorComms.All)
+        {
+            var familyTag = $"JPMS/{familyRecord.TagReference}";
+            var chipLabel = familyRecord.RecordId == SubcontractorComms.RecordId ? "General" : familyRecord.Title;
+            <button type="button" @key="familyRecord.RecordId" class="@ChipClass(familyTag)" title="@familyRecord.Summary"
+                    @onclick="() => SetCategoryFilterAsync(familyTag)">@chipLabel</button>
+        }
+    </div>
 
     @if (loadError is not null)
     {
@@ -40,9 +55,9 @@
         @if (loadError is null)
         {
             <div class="panel p-6 text-center">
-                <p class="text-sm text-content">No subcontractor communications yet.</p>
+                <p class="text-sm text-content">@(categoryTagFilter is null ? "No subcontractor communications yet." : $"Nothing tagged {ActiveFilterLabel} yet.")</p>
                 <p class="text-xs text-content-subtle mt-1">
-                    Tick "Subcontractor communication" in System Tags and the thread appears here.
+                    Tick "Subcontractor communication" — or one of its categories — in System Tags and the thread appears here.
                 </p>
             </div>
         }
@@ -60,7 +75,7 @@
         }
         else
         {
-            <CorrespondenceThreadList Emails="Filtered" ExcludeTag="@SubcontractorComms.Tag" OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward" />
+            <CorrespondenceThreadList Emails="Filtered" ExcludeTag="@ImpliedTag" OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward" />
         }
 
         @if (nextCursor is not null)
@@ -115,15 +130,60 @@
         }
     }
 
+    // The category filter (2026-08-17): null = the whole family (general + every category), or one
+    // family tag from the chip row.
+    private string? categoryTagFilter;
+
+    private IReadOnlyList<string> TagsToRead =>
+        categoryTagFilter is null
+            ? SubcontractorComms.Tags
+            : new[] { categoryTagFilter };
+
+    // The tag a listed email's chip row may omit: it is this list's premise. Under "All" only the
+    // general tag is implied — a category tag on a card is information, not noise.
+    private string ImpliedTag => categoryTagFilter ?? SubcontractorComms.Tag;
+
+    // Switching chip resets the list BEFORE the fetch: a failed re-query must not leave the old
+    // filter's emails (or its Graph cursor — "Load more" would mix filters) under the new chip.
+    private async Task SetCategoryFilterAsync(string? tag)
+    {
+        if (categoryTagFilter == tag) return;
+        categoryTagFilter = tag;
+        loaded = false;
+        items.Clear();
+        total = 0;
+        nextCursor = null;
+        await LoadPageAsync(cursor: null);
+    }
+
+    private string ActiveFilterLabel =>
+        SubcontractorComms.All
+            .Where(record => $"JPMS/{record.TagReference}" == categoryTagFilter)
+            .Select(record => record.RecordId == SubcontractorComms.RecordId ? "General" : record.Title)
+            .FirstOrDefault() ?? "";
+
+    private string ChipClass(string? tag) =>
+        "rounded-full border px-3 py-1 text-xs font-medium transition "
+        + (categoryTagFilter == tag
+            ? "border-accent bg-accent/10 text-accent"
+            : "border-line text-content-muted hover:text-content hover:border-line-strong");
+
+    // Two quick chip clicks race their fetches; whichever response lands LAST would win, chip or
+    // not. The sequence number says which request is current — a stale response changes nothing.
+    private int loadSequence;
+
     // One live read of the tagged mail, newest first — the same query the Tagged view and the
-    // Subcontractor folder's Communications page use, narrowed to the one communication tag.
+    // Subcontractor folder's Communications page use, narrowed to the communication family (or the
+    // one category the chip row picked).
     private async Task LoadPageAsync(string? cursor)
     {
+        var sequence = ++loadSequence;
         loadError = null;
         try
         {
             var page = await Intake.ListTaggedLiveAsync(
-                cursor, PageSize, new[] { SubcontractorComms.Tag }, newestFirst: true);
+                cursor, PageSize, TagsToRead, newestFirst: true);
+            if (sequence != loadSequence) return;
             if (cursor is null) items.Clear();
             items.AddRange(page.Items);
             total = page.Total;
@@ -131,11 +191,12 @@
         }
         catch
         {
+            if (sequence != loadSequence) return;
             loadError = "Couldn't load the communications. Please try again.";
         }
         finally
         {
-            loaded = true;
+            if (sequence == loadSequence) loaded = true;
         }
     }
 

@@ -53,18 +53,32 @@
             </div>
         }
 
-        @* The one record-less tag on the Subcontractor side: general correspondence. A tick, not
-           a search — no project needed, staged like every pick and applied by the same Apply; the
-           mail reads back under Subcontractor → Communications. *@
+        @* The record-less tags on the Subcontractor side: general correspondence plus its
+           categories (Chaser / Info request / Materials / H&S — decision 2026-08-17; defects file
+           against Defect records instead). Ticks, not a search — no project needed, staged like
+           every pick and applied by the same Apply; the mail reads back under Subcontractor →
+           Communications, filterable per category. *@
         @if (activeTab == "Subcontractor")
         {
-            <label class="flex items-start gap-2 cursor-pointer select-none">
-                <input type="checkbox" checked="@IsCommsPicked" @onchange="ToggleCommsPickAsync" />
-                <span class="text-sm text-content">
-                    Subcontractor communication
-                    <span class="block text-xs text-content-subtle">Tags the thread as general subcontractor correspondence — no record needed. It appears under Subcontractor → Communications.</span>
-                </span>
-            </label>
+            <div class="space-y-2">
+                <label class="flex items-start gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked="@IsCommsPicked" @onchange="ToggleCommsPickAsync" />
+                    <span class="text-sm text-content">
+                        Subcontractor communication
+                        <span class="block text-xs text-content-subtle">Tags the thread as general subcontractor correspondence — no record needed. It appears under Subcontractor → Communications.</span>
+                    </span>
+                </label>
+                <div class="pl-6 space-y-1.5">
+                    <p class="text-xs text-content-subtle">Or something more specific — files the same way, and reads back under its own filter:</p>
+                    @foreach (var category in SubcontractorComms.Categories)
+                    {
+                        <label @key="category.RecordId" class="flex items-center gap-2 cursor-pointer select-none" title="@category.Summary">
+                            <input type="checkbox" checked="@IsCategoryPicked(category)" @onchange="() => TogglePick(category)" />
+                            <span class="text-sm text-content">@category.Title</span>
+                        </label>
+                    }
+                </div>
+            </div>
         }
 
         @if (string.IsNullOrWhiteSpace(ProjectId))
@@ -203,10 +217,15 @@
         await OnStagingChanged.InvokeAsync();
     }
 
-    // The Subcontractor tab's "communication" tick — the constant record staged through the same
+    // The Subcontractor tab's "communication" ticks — constant records staged through the same
     // picks list as everything else, so the chips, the badge and the one Apply need nothing new.
+    // The general tick and each category are independent picks, matched by id: ticking Materials
+    // must not read as the general tick being on.
     private bool IsCommsPicked =>
-        Picked.Any(record => record.Type == RecordType.SubcontractorComms);
+        Picked.Any(record => record.RecordId == SubcontractorComms.RecordId);
+
+    private bool IsCategoryPicked(LinkableRecord category) =>
+        Picked.Any(record => record.RecordId == category.RecordId);
 
     private Task ToggleCommsPickAsync() => TogglePick(SubcontractorComms.Record);
 

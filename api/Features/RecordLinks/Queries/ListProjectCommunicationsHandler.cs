@@ -47,7 +47,7 @@ public sealed class ListProjectCommunicationsHandler
                 // Reference namespaces are asserted not to collide across providers, but use the
                 // indexer so a bad provider can't take the whole tab down.
                 labelsByTag[tag] = new ProjectCommunicationLink(record.Type, record.Reference, record.Title, tag);
-                if (includeInQuery)
+                if (includeInQuery && ShouldQuery(record, query.Type))
                     queryTags.Add(tag);
             }
         }
@@ -95,6 +95,19 @@ public sealed class ListProjectCommunicationsHandler
             .ToList();
 
         return new ProjectCommunicationsPage(items, page.NextCursor, total);
+    }
+
+    // The SubComms family is project-less, so every one of its tags would join EVERY project's
+    // all-types query set. Before the categories existed (2026-08-17) that cost one clause; five
+    // would push middling projects over MaxOrFilterTags and silently degrade them to the scan path.
+    // So the all-types read keeps only the general tag — matching what it always queried — while an
+    // explicit Type = SubcontractorComms query gets the whole family. The label map is unaffected:
+    // an email carrying a category tag still shows its category chip however it was matched.
+    private static bool ShouldQuery(LinkableRecord record, RecordType? requestedType)
+    {
+        if (record.Type != RecordType.SubcontractorComms) return true;
+        if (requestedType == RecordType.SubcontractorComms) return true;
+        return record.RecordId == SubcontractorComms.RecordId;
     }
 
     // Conservatively below Exchange's "restriction or sort order is too complex" threshold for
