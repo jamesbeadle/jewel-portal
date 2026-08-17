@@ -16,6 +16,11 @@
         {
             <span class="text-xs text-content-subtle">@emails.Count email@(emails.Count == 1 ? "" : "s")</span>
         }
+        @* Search the whole mailbox and tag what belongs to this item — the same Find & tag
+           affordance every other record page's correspondence header carries. *@
+        <EmailFinder Type="RecordType.Todo" RecordId="@Todo.TodoItemId"
+                     RecordReference="@Todo.Reference" ExcludeTag="@OwnTag"
+                     OnLinked="RefreshAsync" />
         <Toolbar>
             @if (CanSend)
             {
@@ -66,8 +71,8 @@
         @if (failed is null && emails.Count == 0 && !composingNew)
         {
             <p class="text-sm text-content-subtle italic">
-                No emails are linked to this item. Mail is linked by tagging it
-                <span class="font-mono">JPMS/@Todo.Reference</span> in the Control Centre@(CanSend ? ", or by sending a new email from here." : ".")
+                No emails are linked to this item. Mail is linked with Find &amp; tag emails above,
+                by tagging it <span class="font-mono">JPMS/@Todo.Reference</span> in the Control Centre@(CanSend ? ", or by sending a new email from here." : ".")
             </p>
         }
         else if (emails.Count > 0)
