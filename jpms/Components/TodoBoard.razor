@@ -13,7 +13,9 @@
     The stripe's colour is NAMED right on the card: the assignee badge (TodoAssigneeBadge) wears
     the same tint with the role (and any pinned person) written inside it, so the colours need no
     separate key. On boards that mix projects, each card also wears a project chip (Scope) —
-    reference and name, truncated when long; hover for the full label.
+    reference and name, truncated when long; hover for the full label. The title itself is never
+    truncated: the item's reference sits above it on its own line and the text wraps in full, so
+    the whole description reads from the board.
 
     Shared by the To-dos browser page, the project To-do tab and the dashboard My-todos panel
     (Compact) so the three surfaces can never lay the board out differently. The host passes the
@@ -67,9 +69,8 @@
                             @ondragend="() => dragging = null">
                         @* The assignee role's accent, worn on the card's leading edge. *@
                         <span class="absolute inset-y-0 left-0 w-1.5 rounded-l-lg @StripeClass(item)" aria-hidden="true"></span>
-                        <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
-                            <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
-                        </p>
+                        <p class="font-mono text-[11px] leading-4 @(item.IsComplete ? "text-content-subtle line-through" : "text-content-muted")">@item.Reference</p>
+                        <p class="mt-0.5 text-sm font-medium leading-snug break-words @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">@item.Title</p>
                         <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 overflow-hidden text-[11px] text-content-subtle">
                             @if (Scope is not null && Scope(item) is ScopeChip chip)
                             {
