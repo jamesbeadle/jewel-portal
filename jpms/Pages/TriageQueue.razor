@@ -1940,6 +1940,7 @@ else
         AiTasks.OnDraftApplied += ApplyAssistantEmailDraft;
         Chat.OnChange += StateHasChanged; // repaints the "assistant is writing" banner
         Chat.SetPageNoteProvider(pageNoteProvider = BuildAssistantPageNote);
+        Chat.SetPageProjectProvider(pageProjectProvider = CurrentTriageProjectId);
         Chat.SetPageActionHandler(pageActionHandler = HandleAssistantPageActionAsync);
         // The sort preference has to land first — LoadAsync pages the mailbox in this order, so
         // reading it late would fetch the first page the wrong way round. It is a local-storage
@@ -3433,6 +3434,14 @@ else
     // Apply — rather than by navigating to the record.
 
     private Func<string?>? pageNoteProvider;
+    private Func<string?>? pageProjectProvider;
+
+    // The note's structured sibling: the selected email's matched project as a ProjectId, published
+    // so the chat scope carries a real project on this project-less route. The prose note above
+    // still SAYS the project is set; this is what lets the turn context and the tools AGREE with it
+    // ("the project in view is…" instead of "no project is in view — ask which one").
+    private string? CurrentTriageProjectId() =>
+        string.IsNullOrWhiteSpace(triageProjectId) ? null : triageProjectId;
 
     private string? BuildAssistantPageNote()
     {
@@ -4348,6 +4357,7 @@ else
         AiTasks.OnDraftApplied -= ApplyAssistantEmailDraft;
         Chat.OnChange -= StateHasChanged;
         if (pageNoteProvider is not null) Chat.ClearPageNoteProvider(pageNoteProvider);
+        if (pageProjectProvider is not null) Chat.ClearPageProjectProvider(pageProjectProvider);
         if (pageActionHandler is not null) Chat.ClearPageActionHandler(pageActionHandler);
     }
 }

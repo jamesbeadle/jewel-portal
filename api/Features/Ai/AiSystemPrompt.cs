@@ -349,6 +349,12 @@ public static class AiSystemPrompt
             context.AppendLine($"- The route is {scope.Route}.");
         if (!string.IsNullOrWhiteSpace(projectReference))
             context.AppendLine($"- The project in view is {projectReference} — {projectName}. \"This project\" means that one.");
+        else if (!string.IsNullOrWhiteSpace(scope?.PageNote))
+            // A page that publishes a note may name a project in it (the Control Centre's matched
+            // email project). Telling the model to ask here would contradict the note two lines
+            // down — and the model obeys the instruction over the note. Defer to the page.
+            context.AppendLine("- The route names no project. If the open page's report below names one, that is the"
+                + " project in view; otherwise ask which one or call list_projects.");
         else
             context.AppendLine("- No project is in view. If the user says \"this project\", ask which one or call list_projects.");
         if (!string.IsNullOrWhiteSpace(scope?.PageNote))

@@ -775,8 +775,12 @@
     private AiScope BuildScope()
     {
         var (recordType, recordId) = RouteRecord.From(CurrentPath);
+        // The route's project wins; the page's published project fills the gap on routes with no
+        // /projects/{id} segment (the Control Centre's auto-matched email project, above all).
+        // Without the fallback the turn context says "no project is in view" on those routes while
+        // the page note names one — and the model believes the instruction over the note.
         return new AiScope(
-            PageProject?.ProjectId,
+            PageProject?.ProjectId ?? Chat.CurrentPageProjectId(),
             CurrentPath,
             PageContext.LabelFor(CurrentPath, Session.ActiveRole),
             Session.ActiveRole is { } role ? PortalMap.For(role) : null,

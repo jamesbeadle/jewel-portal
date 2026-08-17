@@ -142,6 +142,42 @@ public sealed class ChatPanelState
         catch { return null; }
     }
 
+    // ---- the page project --------------------------------------------------------------------
+    // The page note's structured sibling. The note is prose for the model to read; this is the
+    // ProjectId the open page has RESOLVED — the Control Centre's matched project for the selected
+    // email, on a route with no /projects/{id} segment for BuildScope to parse. Without it the
+    // scope's ProjectId stays null there, and the turn context tells the model "no project is in
+    // view — ask which one" while the note two lines later names the project: the model obeys the
+    // instruction and asks. Publishing the id, not just the name, also means tools get a usable
+    // project_id without spending a look-up round resolving the reference. Same provider
+    // lifecycle as the note: register on init, clear on Dispose, reference-equality guarded.
+
+    private Func<string?>? pageProjectProvider;
+
+    /// <summary>The page's live "the project I have resolved" callback. Last writer wins, same as
+    /// the note provider. The URL still outranks it in <c>ChatPanel.BuildScope</c> — a page can
+    /// fill the gap on a project-less route, never contradict the route the user is on.</summary>
+    public void SetPageProjectProvider(Func<string?> provider) => pageProjectProvider = provider;
+
+    /// <summary>Clears the provider, but only if it is still this caller's — a page disposing late
+    /// (Blazor disposes the old page after the new one initialises) must not wipe its successor's.</summary>
+    public void ClearPageProjectProvider(Func<string?> provider)
+    {
+        if (ReferenceEquals(pageProjectProvider, provider)) pageProjectProvider = null;
+    }
+
+    /// <summary>The page's resolved ProjectId right now, or null. Never throws — a broken provider
+    /// costs the model one project hint, not the user their message.</summary>
+    public string? CurrentPageProjectId()
+    {
+        try
+        {
+            var projectId = pageProjectProvider?.Invoke();
+            return string.IsNullOrWhiteSpace(projectId) ? null : projectId;
+        }
+        catch { return null; }
+    }
+
     // ---- page actions ------------------------------------------------------------------------
     // The reverse of the page note: a UI action the assistant addressed to the OPEN PAGE rather
     // than to the panel (stage_triage_tag → the Control Centre stages the pick in System Tags).

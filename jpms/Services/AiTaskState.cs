@@ -5,7 +5,9 @@ namespace Jewel.JPMS.Services;
 /// Started by the page that owns the dialog; read by the chat panel.
 /// </summary>
 public sealed record AiTask(
-    /// <summary>Also the conversation's CapabilityKey on the server, e.g. "variation-draft".</summary>
+    /// <summary>Names the task flow, e.g. "variation-draft". No longer the conversation's
+    /// CapabilityKey — since the agent registry (2026-08-12) the server picks the agent from the
+    /// route and switch_agent; this key only labels the dialog work.</summary>
     string TaskKey,
     /// <summary>A ModalCatalog key, e.g. "variation_draft".</summary>
     string ModalKey,
