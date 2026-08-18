@@ -124,7 +124,10 @@ public sealed class GetLabourOverviewHandler : IQueryHandler<GetLabourOverview, 
             {
                 if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) continue;
                 var weekStart = ForecastRules.WeekStartOf(date);
-                var bucket = weekBuckets.TryGetValue(weekStart, out var existing) ? existing : (0, 0, 0m);
+                // Explicitly typed: the ternary's untyped (0, 0, 0m) fallback would strip the
+                // tuple's element names and .Elapsed/.Confirmed/.Unconfirmed with them.
+                (int Elapsed, int Confirmed, decimal Unconfirmed) bucket =
+                    weekBuckets.TryGetValue(weekStart, out var existing) ? existing : default;
                 bucket.Elapsed++;
                 elapsedWorkerDays++;
                 var confirmed = sheetDates.Contains(date) || absenceDates.Contains(date);
