@@ -20,7 +20,7 @@ public static class DirectoryRouteRegistration
     public static void RegisterDirectoryRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
         queries.Register<ListDirectoryUsers, IReadOnlyList<DirectoryUser>>(QueryRoute.Static("/api/directory"));
-        queries.Register<ListRevokedDirectoryUsers, IReadOnlyList<RevokedDirectoryUser>>(QueryRoute.Static("/api/directory/revoked"));
+        queries.Register<ListRevokedDirectoryUsers, IReadOnlyList<RevokedDirectoryUser>>(QueryRoute.Static("/api/directory-revoked"));
         queries.Register<GetDirectoryUser, DirectoryUser?>(new QueryRoute(
             "/api/directory/{email}",
             query => $"/api/directory/{Uri.EscapeDataString(((GetDirectoryUser)query).Email)}"));

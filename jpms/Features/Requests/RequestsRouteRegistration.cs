@@ -48,8 +48,8 @@ public static class RequestsRouteRegistration
                 }));
 
         queries.Register<ListUnassignedRequests, IReadOnlyList<Request>>(
-            new QueryRoute("/api/requests/unassigned",
-                _ => "/api/requests/unassigned"));
+            new QueryRoute("/api/requests-unassigned",
+                _ => "/api/requests-unassigned"));
 
         // Cross-project RFI dashboard: every RFI on every live project in one register. The route
         // sits under /rfis (not /requests/rfis) so it can never be shadowed by "requests/{requestId}".

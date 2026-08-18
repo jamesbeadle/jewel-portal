@@ -60,7 +60,7 @@ work-orders, subcontractors (+ compliance), hs-records (+ attendance), mobilisat
 site-reports, programme, valuations, cost-code-budgets, timesheets, cvr-snapshots,
 forecast-components, qs-accruals, prelim-items (+ entries), eots, defects, settlement, vat.
 
-Admin-only queries: `GET /api/directory`, `GET /api/directory/revoked`, `GET /api/access-requests`.
+Admin-only queries: `GET /api/directory`, `GET /api/directory-revoked`, `GET /api/access-requests`.
 Self-or-admin: `GET /api/directory/{email}`.
 
 ## Notes

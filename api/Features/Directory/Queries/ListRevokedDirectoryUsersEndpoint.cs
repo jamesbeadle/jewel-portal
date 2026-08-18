@@ -9,7 +9,7 @@ using Microsoft.Azure.Functions.Worker;
 namespace Jewel.JPMS.Api.Features.Directory.Queries;
 
 /// <summary>
-/// GET /api/directory/revoked — the users whose access has been revoked, most recent first.
+/// GET /api/directory-revoked — the users whose access has been revoked, most recent first.
 /// Unlike the active list (which the wider Directory page reads), this is user administration
 /// and stays behind the admin gate with the upsert/remove commands.
 /// </summary>
@@ -28,7 +28,7 @@ public sealed class ListRevokedDirectoryUsersEndpoint
 
     [Function(nameof(ListRevokedDirectoryUsers))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "directory/revoked")] HttpRequest request)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "directory-revoked")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();

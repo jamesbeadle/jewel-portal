@@ -16,7 +16,7 @@ public sealed class ListUnassignedRequestsEndpoint
     public ListUnassignedRequestsEndpoint(SignedInUserResolver users, IQueryHandler<ListUnassignedRequests, IReadOnlyList<Request>> handler) { this.users = users; this.handler = handler; }
 
     [Function(nameof(ListUnassignedRequests))]
-    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "requests/unassigned")] HttpRequest request)
+    public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "requests-unassigned")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
