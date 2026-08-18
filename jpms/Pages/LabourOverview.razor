@@ -52,6 +52,7 @@ else
             </div>
         </div>
         <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+            Every JBB project in one view — this page ignores the project picked in the sidebar.
             Projected cost across every worker for the month, and where each day actually went.
             Contracted days multiplied by day rate, less every day recorded as holiday, a half day
             or not worked. Days not yet submitted stay at the full rate, so the figure is only as
@@ -142,8 +143,7 @@ else
                                     <th class="px-2 py-3 text-right">Worked</th>
                                     <th class="px-2 py-3 text-right">Off</th>
                                     <th class="px-2 py-3">Month</th>
-                                    <th class="px-2 py-3 text-right">Projected</th>
-                                    <th class="px-5 py-3 text-right">Due after CIS</th>
+                                    <th class="px-5 py-3 text-right">Projected</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -157,8 +157,7 @@ else
                                         <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.DaysWorked)</td>
                                         <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.DaysOff)</td>
                                         <td class="px-2 py-2.5">@PlacementStrip(worker)</td>
-                                        <td class="px-2 py-2.5 text-right tabular-nums text-content">@Pounds(worker.ProjectedCost)</td>
-                                        <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(worker.AmountDue)</td>
+                                        <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(worker.ProjectedCost)</td>
                                     </tr>
                                     @if (expandedWorkerId == worker.WorkerId)
                                     {
