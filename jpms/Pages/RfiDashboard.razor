@@ -103,7 +103,11 @@ else
                                     }
                                     else
                                     {
-                                        <span class="text-content-subtle">—</span>
+                                        @* On a closed row the dash means the close predates the
+                                           close-date field — backfill the date on the record
+                                           (Edit facts) to fix its days out. *@
+                                        <span class="text-content-subtle"
+                                              title="@(record.Status is RequestStatus.Closed ? "No close date recorded — open the record and set one via Edit facts to fix its days out" : null)">—</span>
                                     }
                                 </td>
                                 <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell whitespace-nowrap">

@@ -148,7 +148,10 @@ else
                     <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle mb-0.5">Days outstanding</p>
                     <p class="@(record.IsOverdue ? "text-negative font-semibold" : "text-content")">@(record.DaysOutstanding is int d ? d.ToString() : "—")</p>
                 </div>
-                @if (record.ClosedAt is not null)
+                @* A closed record always shows its Closed fact — a legacy close with no recorded
+                   date surfaces as a dash rather than hiding, so the gap is visible and fixable
+                   (Edit facts requires a date on a closed record). *@
+                @if (record.Status is RequestStatus.Closed || record.ClosedAt is not null)
                 {
                     <MetaCell Label="Closed" Value="@Date(record.ClosedAt)" />
                 }
@@ -754,7 +757,7 @@ else
 
             @if (editStatus == RequestStatus.Closed)
             {
-                <FormField Label="Date closed" Value="@editClosedAt" OnChange="v => editClosedAt = v" InputType="date" />
+                <FormField Label="Date closed" Value="@editClosedAt" OnChange="v => editClosedAt = v" InputType="date" Required="true" />
             }
 
             @if (record.Kind is RequestType.Rfi)
@@ -782,9 +785,12 @@ else
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField Label="Date issued" Value="@editIssuedAt" OnChange="v => editIssuedAt = v" InputType="date" />
                 <FormField Label="Response due" Value="@editResponseDue" OnChange="v => editResponseDue = v" InputType="date" />
-                @if (record.ClosedAt is not null)
+                @* Offered on every closed record — including legacy closes that predate the close
+                   date and so have none recorded yet. Required while closed: the date is what the
+                   frozen Days-out count is computed from. *@
+                @if (record.Status is RequestStatus.Closed || record.ClosedAt is not null)
                 {
-                    <FormField Label="Date closed" Value="@editClosedAt" OnChange="v => editClosedAt = v" InputType="date" />
+                    <FormField Label="Date closed" Value="@editClosedAt" OnChange="v => editClosedAt = v" InputType="date" Required="true" />
                 }
             </div>
 
@@ -2173,6 +2179,10 @@ else
     private void OnEditStatusChanged(ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out var raw)) editStatus = (RequestStatus)raw;
+        // Switching to Closed pre-fills today so the common case is one click — the date stays
+        // editable for closures recorded after the fact, and save refuses a blank one.
+        if (editStatus == RequestStatus.Closed && string.IsNullOrWhiteSpace(editClosedAt))
+            editClosedAt = DateTime.Today.ToString("yyyy-MM-dd");
     }
 
     private void OnEditDescriptionInput(ChangeEventArgs e) => editDescription = e.Value?.ToString() ?? "";
@@ -2185,8 +2195,11 @@ else
         if (string.IsNullOrWhiteSpace(editReference)) { editError = "A reference is required."; return; }
         if (string.IsNullOrWhiteSpace(editTitle)) { editError = "A subject is required."; return; }
 
-        // The close date only travels when the record is closed; backdating is fine, forward-dating isn't.
+        // The close date only travels when the record is closed; backdating is fine, forward-dating
+        // isn't, and a blank is refused — left to the server it would silently stamp today, which
+        // misdates closures recorded after the fact and skews the frozen Days-out count.
         var closedAt = editStatus == RequestStatus.Closed ? ParseDate(editClosedAt) : null;
+        if (editStatus == RequestStatus.Closed && closedAt is null) { editError = "A closed date is required — the days-out count is fixed from it."; return; }
         if (closedAt is { } closed && closed.Date > DateTime.Today) { editError = "The closed date cannot be in the future."; return; }
 
         var command = new UpdateRequestDetails(
@@ -2239,9 +2252,11 @@ else
         var issuedAt = ParseDate(editIssuedAt);
         if (issuedAt is { } issuedDate && issuedDate.Date > DateTime.Today) { editError = "The issued date cannot be in the future."; return; }
 
-        // The close date is only offered (and only shown in the strip) once the record has one;
-        // a blank means "not supplied" and keeps the recorded date. Never a future one.
-        var closedAt = record.ClosedAt is null ? null : ParseDate(editClosedAt);
+        // The close date is offered on every closed record — the way to backfill legacy closes
+        // that predate the field. Required while closed: a blank sent to the server would silently
+        // stamp today, misdating the close and skewing the frozen Days-out count. Never a future one.
+        var closedAt = record.Status is RequestStatus.Closed ? ParseDate(editClosedAt) : null;
+        if (record.Status is RequestStatus.Closed && closedAt is null) { editError = "A closed date is required — the days-out count is fixed from it."; return; }
         if (closedAt is { } closed && closed.Date > DateTime.Today) { editError = "The closed date cannot be in the future."; return; }
 
         var value = record.Value;
