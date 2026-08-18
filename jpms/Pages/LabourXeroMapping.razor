@@ -85,7 +85,7 @@ else
                     <button type="button" class="btn-secondary" disabled="@isSaving" @onclick="SaveSiteMappingAsync">Set mapping</button>
                 </div>
 
-                @{ var openSites = mappings.Sites.Where(row => row.EffectiveTo is null).ToList(); }
+                var openSites = mappings.Sites.Where(row => row.EffectiveTo is null).ToList();
                 @if (openSites.Count == 0)
                 {
                     <p class="text-sm text-content-subtle italic">No sites mapped yet — the coding run will skip every site until they are.</p>
@@ -150,7 +150,7 @@ else
                     line nature posts — CIS labour, CIS materials, travel.
                 </p>
 
-                @{ var openCodes = mappings.CostCodes.Where(row => row.EffectiveTo is null).ToList(); }
+                var openCodes = mappings.CostCodes.Where(row => row.EffectiveTo is null).ToList();
                 @if (openCodes.Count == 0)
                 {
                     <p class="text-sm text-content-subtle italic">No cost codes mapped yet.</p>

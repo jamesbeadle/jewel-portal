@@ -4,7 +4,7 @@
 @using Jewel.JPMS.Features.Registers
 @inject AuthService Auth
 @inject SessionService Session
-@inject PolicyDocumentsReadModel Policies
+@inject PolicyDocumentsReadModel PolicyDocs
 @inject MyPolicySignOffsReadModel Mine
 @inject IQueryClient Queries
 @inject ICommandSender Commands
@@ -106,7 +106,7 @@ else
         </Panel>
 
         @* ---- Admin: published documents and who has / hasn't signed. Conditional panel. ---- *@
-        @if (IsAdminView && Policies.Current is { } documents)
+        @if (IsAdminView && PolicyDocs.Current is { } documents)
         {
             <Panel Title="Published documents" Class="mb-6" BodyClass="p-0">
                 @if (documents.Count == 0)
@@ -222,14 +222,14 @@ else
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        Policies.OnChanged += StateHasChanged;
+        PolicyDocs.OnChanged += StateHasChanged;
         Mine.OnChanged += StateHasChanged;
         sessionReady = true;
         StateHasChanged();
         try
         {
             var refreshes = new List<Task> { Mine.RefreshAsync(CancellationToken.None) };
-            if (IsAdminView) refreshes.Add(Policies.RefreshAsync(CancellationToken.None));
+            if (IsAdminView) refreshes.Add(PolicyDocs.RefreshAsync(CancellationToken.None));
             await Task.WhenAll(refreshes);
         }
         catch { dataFailed = true; }
@@ -237,7 +237,7 @@ else
 
     public void Dispose()
     {
-        Policies.OnChanged -= StateHasChanged;
+        PolicyDocs.OnChanged -= StateHasChanged;
         Mine.OnChanged -= StateHasChanged;
     }
 
@@ -291,7 +291,7 @@ else
             await Commands.SendAsync(new PublishPolicyDocument(publishTitle.Trim(), publishSummary, recipients), CancellationToken.None);
             publishOpen = false;
             publishTitle = ""; publishSummary = ""; publishRecipients = "";
-            await Policies.RefreshAsync(CancellationToken.None);
+            await PolicyDocs.RefreshAsync(CancellationToken.None);
         }
         catch (Exception) { publishError = "Could not publish — try again."; }
         finally { publishing = false; }

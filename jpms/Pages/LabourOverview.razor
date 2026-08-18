@@ -253,18 +253,18 @@ else
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var code in snapshot.CostCodes)
+                            @foreach (var centre in snapshot.CostCodes)
                             {
                                 <tr class="border-b border-line/60">
-                                    <td class="px-5 py-2.5 font-medium text-content tabular-nums">@code.CostCode</td>
-                                    <td class="px-2 py-2.5 text-content-muted">@code.Trade</td>
+                                    <td class="px-5 py-2.5 font-medium text-content tabular-nums">@centre.CostCode</td>
+                                    <td class="px-2 py-2.5 text-content-muted">@centre.Trade</td>
                                     <td class="px-2 py-2.5">
                                         <div class="h-1.5 rounded-full bg-surface-field overflow-hidden">
-                                            <div class="h-full bg-accent/70" style="width:@BarWidth(code.CostRecorded, maxCodeCost)"></div>
+                                            <div class="h-full bg-accent/70" style="width:@BarWidth(centre.CostRecorded, maxCodeCost)"></div>
                                         </div>
                                     </td>
-                                    <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(code.DaysRecorded)</td>
-                                    <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(code.CostRecorded)</td>
+                                    <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(centre.DaysRecorded)</td>
+                                    <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(centre.CostRecorded)</td>
                                 </tr>
                             }
                         </tbody>
