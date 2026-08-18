@@ -72,8 +72,14 @@ public sealed class GetLabourOverviewHandler : IQueryHandler<GetLabourOverview, 
             .ToListAsync(cancellationToken);
         var projectNames = await context.Projects
             .ToDictionaryAsync(project => project.ProjectId, project => project.Name, cancellationToken);
-        var costCentreNames = await context.CostCenters
-            .ToDictionaryAsync(centre => centre.Code, centre => centre.Name, cancellationToken);
+        // Grouped, not ToDictionary: Code is not a primary key, and a code that was deactivated
+        // and re-added exists twice — a keyed dictionary throws on the duplicate and 500s the
+        // whole overview. Prefer the active row's name.
+        var costCentreNames = (await context.CostCenters.ToListAsync(cancellationToken))
+            .GroupBy(centre => centre.Code)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderByDescending(centre => centre.IsActive).First().Name);
 
         var timesheetsByWorker = timesheets.ToLookup(sheet => sheet.WorkerId);
         var absencesByWorker = absences.ToLookup(absence => absence.WorkerId);
