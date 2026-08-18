@@ -41,6 +41,33 @@ public static class LabourFeatureRegistration
             provider => provider.GetRequiredService<ApproveTimesheetsHandler>());
         services.AddScoped<ICommandHandler<RejectTimesheet, TimesheetDetail>, RejectTimesheetHandler>();
 
+        // Labour overview: forecast, placement grid, chase list (scope §4–§5).
+        services.AddScoped<IQueryHandler<GetLabourOverview, LabourOverviewSnapshot>, GetLabourOverviewHandler>();
+        services.AddScoped<ICommandHandler<SetWorkerContract, Acknowledgement>, SetWorkerContractHandler>();
+        services.AddScoped<ICommandHandler<SetWorkerCisStatus, Acknowledgement>, SetWorkerCisStatusHandler>();
+        services.AddScoped<RecordWorkerAbsenceHandler>();
+        services.AddScoped<ICommandHandler<RecordWorkerAbsence, WorkerAbsence>>(
+            provider => provider.GetRequiredService<RecordWorkerAbsenceHandler>());
+        services.AddScoped<ICommandHandler<RemoveWorkerAbsence, Acknowledgement>, RemoveWorkerAbsenceHandler>();
+        services.AddScoped<SignOffLabourWeekHandler>();
+        services.AddScoped<ICommandHandler<SignOffLabourWeek, LabourWeekSignOff>>(
+            provider => provider.GetRequiredService<SignOffLabourWeekHandler>());
+        services.AddScoped<ICommandHandler<RemoveLabourWeekSignOff, Acknowledgement>, RemoveLabourWeekSignOffHandler>();
+
+        // Settlement schedules, Xero mappings and the §6a coding run.
+        services.AddScoped<SettlementScheduleBuilder>();
+        services.AddScoped<IQueryHandler<GetSettlementSchedules, SettlementScheduleSnapshot>, GetSettlementSchedulesHandler>();
+        services.AddScoped<AddWorkerSettlementLineHandler>();
+        services.AddScoped<ICommandHandler<AddWorkerSettlementLine, Acknowledgement>>(
+            provider => provider.GetRequiredService<AddWorkerSettlementLineHandler>());
+        services.AddScoped<ICommandHandler<RemoveWorkerSettlementLine, Acknowledgement>, RemoveWorkerSettlementLineHandler>();
+        services.AddScoped<IQueryHandler<ListXeroMappings, XeroMappingsSnapshot>, ListXeroMappingsHandler>();
+        services.AddScoped<ICommandHandler<SetSiteXeroMapping, Acknowledgement>, SetSiteXeroMappingHandler>();
+        services.AddScoped<ICommandHandler<SetCostCodeXeroMapping, Acknowledgement>, SetCostCodeXeroMappingHandler>();
+        services.AddScoped<RunXeroCodingHandler>();
+        services.AddScoped<ICommandHandler<RunXeroCoding, IReadOnlyList<XeroCodingRunResult>>>(
+            provider => provider.GetRequiredService<RunXeroCodingHandler>());
+
         // Settlement reconciliation.
         services.AddScoped<IQueryHandler<ListLabourSettlementForProject, IReadOnlyList<LabourSettlementRow>>, ListLabourSettlementForProjectHandler>();
         services.AddScoped<SetXeroLineTimesheetCoverHandler>();

@@ -24,6 +24,7 @@ using Jewel.JPMS.Api.Features.DocumentControl;
 using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Api.Features.Hs;
 using Jewel.JPMS.Api.Features.Labour;
+using Jewel.JPMS.Api.Features.Registers;
 using Jewel.JPMS.Api.Features.Lads;
 using Jewel.JPMS.Api.Features.Leads;
 using Jewel.JPMS.Api.Features.MailboxIntake;
@@ -105,6 +106,7 @@ var host = new HostBuilder()
         services.AddSiteFeature();
         services.AddCommercialFeature();
         services.AddLabourFeature();
+        services.AddRegistersFeature();
         services.AddCommercialInputsFeature();
         services.AddRetentionFeature();
         services.AddCashflowFeature();

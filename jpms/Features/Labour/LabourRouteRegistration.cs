@@ -16,6 +16,9 @@ public static class LabourRouteRegistration
         services.AddScoped<SiteAttendanceReadModel>();
         services.AddScoped<MyLabourDayReadModel>();
         services.AddScoped<LabourSettlementReadModel>();
+        services.AddScoped<LabourOverviewReadModel>();
+        services.AddScoped<SettlementSchedulesReadModel>();
+        services.AddScoped<XeroMappingsReadModel>();
         return services;
     }
 
@@ -83,5 +86,30 @@ public static class LabourRouteRegistration
         commands.Register<AddLabourSettlementVariance, LabourSettlementVariance>(
             new CommandRoute("POST", "/api/projects/{projectId}/labour/settlement-variances",
                 command => $"/api/projects/{((AddLabourSettlementVariance)command).ProjectId}/labour/settlement-variances"));
+
+        // Labour overview: forecast, absence, weekly sign-off (scope §4–§5).
+        queries.Register<GetLabourOverview, LabourOverviewSnapshot>(
+            new QueryRoute("/api/labour/overview/{year}/{month}",
+                query => $"/api/labour/overview/{((GetLabourOverview)query).Year}/{((GetLabourOverview)query).Month}"));
+
+        commands.Register<SetWorkerContract, Acknowledgement>(CommandRoute.Post("/api/labour/workers/contract"));
+        commands.Register<SetWorkerCisStatus, Acknowledgement>(CommandRoute.Post("/api/labour/workers/cis"));
+        commands.Register<RecordWorkerAbsence, WorkerAbsence>(CommandRoute.Post("/api/labour/absences"));
+        commands.Register<RemoveWorkerAbsence, Acknowledgement>(CommandRoute.Post("/api/labour/absences/remove"));
+        commands.Register<SignOffLabourWeek, LabourWeekSignOff>(CommandRoute.Post("/api/labour/weeks/sign-off"));
+        commands.Register<RemoveLabourWeekSignOff, Acknowledgement>(CommandRoute.Post("/api/labour/weeks/remove-sign-off"));
+
+        // Settlement schedules, Xero mappings, and the §6a coding run.
+        queries.Register<GetSettlementSchedules, SettlementScheduleSnapshot>(
+            new QueryRoute("/api/labour/schedules/{year}/{month}",
+                query => $"/api/labour/schedules/{((GetSettlementSchedules)query).Year}/{((GetSettlementSchedules)query).Month}"));
+        queries.Register<ListXeroMappings, XeroMappingsSnapshot>(
+            QueryRoute.Static("/api/labour/xero-mappings"));
+
+        commands.Register<AddWorkerSettlementLine, Acknowledgement>(CommandRoute.Post("/api/labour/settlement-lines"));
+        commands.Register<RemoveWorkerSettlementLine, Acknowledgement>(CommandRoute.Post("/api/labour/settlement-lines/remove"));
+        commands.Register<SetSiteXeroMapping, Acknowledgement>(CommandRoute.Post("/api/labour/xero-mappings/site"));
+        commands.Register<SetCostCodeXeroMapping, Acknowledgement>(CommandRoute.Post("/api/labour/xero-mappings/cost-code"));
+        commands.Register<RunXeroCoding, IReadOnlyList<XeroCodingRunResult>>(CommandRoute.Post("/api/labour/xero-coding/run"));
     }
 }

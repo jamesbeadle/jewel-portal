@@ -50,6 +50,31 @@ public interface ILabourStore
     Task<LabourApprovalResult> ApproveTimesheetsAsync(string projectId, IReadOnlyList<string> timesheetIds);
     Task<TimesheetDetail> RejectTimesheetAsync(string projectId, string timesheetId, string reason);
 
+    // Labour overview: the company-wide month view (forecast, placement grid, chase, sign-off).
+    LabourOverviewSnapshot? Overview(int year, int month);
+    /// <summary>False until this month's overview has landed — see <see cref="WorkersLoaded"/>.</summary>
+    bool OverviewLoadedFor(int year, int month);
+    Task RefreshOverviewAsync(int year, int month);
+    Task SetWorkerContractAsync(int year, int month, string workerId, decimal contractedDaysPerMonth);
+    Task SetWorkerCisStatusAsync(int year, int month, string workerId, decimal cisRatePercent, string verifiedRef);
+    Task RecordAbsenceAsync(int year, int month, string workerId, DateTimeOffset date, AbsenceKind kind, string note);
+    Task RemoveAbsenceAsync(int year, int month, string workerAbsenceId);
+    Task SignOffWeekAsync(int year, int month, string workerId, DateTimeOffset weekStart);
+    Task RemoveWeekSignOffAsync(int year, int month, string workerId, DateTimeOffset weekStart);
+
+    // Settlement schedules (per worker-month), Xero mappings, and the coding run.
+    SettlementScheduleSnapshot? Schedules(int year, int month);
+    /// <summary>False until this month's schedules have landed — see <see cref="WorkersLoaded"/>.</summary>
+    bool SchedulesLoadedFor(int year, int month);
+    Task RefreshSchedulesAsync(int year, int month);
+    Task AddSettlementLineAsync(int year, int month, string workerId, string projectId, string costCode, SettlementLineNature nature, decimal amount, string note);
+    Task RemoveSettlementLineAsync(int year, int month, string workerSettlementLineId);
+    XeroMappingsSnapshot? XeroMappings();
+    Task RefreshXeroMappingsAsync();
+    Task SetSiteXeroMappingAsync(string projectId, string optionId, string optionName);
+    Task SetCostCodeXeroMappingAsync(string costCode, string optionId, string optionName, string labourAccount, string materialsAccount, string travelAccount);
+    Task<IReadOnlyList<XeroCodingRunResult>> RunXeroCodingAsync(int year, int month, IReadOnlyList<string>? workerIds);
+
     // Settlement reconciliation.
     IReadOnlyList<LabourSettlementRow> SettlementFor(string projectId);
     /// <summary>False until this project's settlement rows have landed — see <see cref="WorkersLoaded"/>.</summary>

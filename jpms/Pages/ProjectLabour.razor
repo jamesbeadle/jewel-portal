@@ -1,20 +1,27 @@
 @page "/projects/{ProjectId}/labour"
 @using Jewel.JPMS.Features.CostCenters
+@using Jewel.JPMS.Contracts.Ai
 @inject AuthService Auth
 @inject SessionService Session
 @inject ILabourStore Labour
 @inject CostCentersReadModel CostCenters
 @inject NavigationManager Nav
 @inject IQueryClient Queries
+@inject AiTaskState AiTasks
+@inject ChatPanelState Chat
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Labour · JPMS</PageTitle>
 
 @*
-    The Labour tab (docs/Labour-Time-Tracking-Scope.md): weekly timesheet approval grid,
-    site QR access, the daily site register and the subcontractor settlement view. Only
-    approved time becomes cost — the grid is where submitted hours get adjusted, re-coded,
-    approved (budget hard-block enforced server-side) or rejected back to the worker.
+    The Labour tab (docs/Labour-Time-Tracking-Scope.md, redesigned per
+    docs/Labour-Overview-Forecast-and-Xero-Mapping-Scope.md §4a): weekly timesheet approval grid,
+    the daily site register, worker assignment and the subcontractor settlement view — every block
+    a Panel, statuses as pills, manual entry as the Add a day dialog (which is also the chat's
+    manual_timesheet proposal card). Only approved time becomes cost — the grid is where submitted
+    hours get adjusted, re-coded, approved (budget hard-block enforced server-side) or rejected
+    back to the worker.
 *@
 
 @if (!sessionReady)
@@ -47,302 +54,230 @@ else
         }
 
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <h2 class="text-lg font-semibold text-content">Timesheets</h2>
+            <h2 class="text-lg font-semibold text-content">Labour</h2>
             <div class="flex items-center gap-3">
                 <div class="flex items-center gap-2 text-sm">
                     <button type="button" class="btn-secondary" @onclick="() => MoveWeek(-7)">‹ Prev</button>
                     <span class="text-content-subtle">w/c @weekStart.ToString("dd MMM yyyy")</span>
                     <button type="button" class="btn-secondary" @onclick="() => MoveWeek(7)">Next ›</button>
                 </div>
-                <ExportToExcelButton FileName="Labour"
-                                     ShowIncludeAllRows="true"
-                                     Disabled="@(!HasExportableLabourData())"
-                                     BuildWorkbook="BuildExportWorkbook" />
+                <Toolbar>
+                    <ExportToExcelButton FileName="Labour"
+                                         ShowIncludeAllRows="true"
+                                         Disabled="@(!HasExportableLabourData())"
+                                         BuildWorkbook="BuildExportWorkbook" />
+                </Toolbar>
+                <button type="button" class="btn-primary" @onclick="OpenAddDay">Add a day</button>
             </div>
         </div>
 
-        @* The week's rows, their hours and their approval state are one panel: an empty week is a
-           real answer here, and shown early it reads as "nobody logged any time". *@
-        <LoadGate IsLoading="@(!TimesheetsReady && !dataFailed)" Prominent="true" Label="Loading timesheets">
-        @{ var week = WeekTimesheets(); }
-        @if (dataFailed)
-        {
-            <p class="text-sm text-negative mb-6">Couldn't load the timesheets. The details are in the red bar at the top — reload to try again.</p>
-        }
-        else
-        {
-        @if (week.Count == 0)
-        {
-            <p class="text-sm text-content-subtle italic mb-6">No timesheets this week. Workers log time from their My day page; their submitted hours appear here for approval.</p>
-        }
-        else
-        {
-            <div class="overflow-x-auto mb-3">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="text-left text-content-subtle border-b border-line">
-                            <th class="py-2 pr-3"><input type="checkbox" checked="@AllSubmittedSelected(week)" @onchange="@(args => ToggleAll(week, (bool)args.Value!))" /></th>
-                            <th class="py-2 pr-3">Worker</th>
-                            <th class="py-2 pr-3">Day</th>
-                            <th class="py-2 pr-3">Cost code</th>
-                            <th class="py-2 pr-3">Hours</th>
-                            <th class="py-2 pr-3">£</th>
-                            <th class="py-2 pr-3">Status</th>
-                            <th class="py-2"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var timesheet in week)
-                        {
-                            var isEditing = editingId == timesheet.TimesheetId;
-                            <tr class="border-b border-line/60 align-middle">
-                                <td class="py-2 pr-3">
-                                    @if (timesheet.Status == TimesheetStatus.Submitted)
-                                    {
-                                        <input type="checkbox" checked="@selectedIds.Contains(timesheet.TimesheetId)"
-                                               @onchange="@(args => ToggleSelected(timesheet.TimesheetId, (bool)args.Value!))" />
-                                    }
-                                </td>
-                                <td class="py-2 pr-3 text-content font-medium">@timesheet.WorkerName</td>
-                                <td class="py-2 pr-3 text-content-subtle">@timesheet.WorkedOn.ToString("ddd dd MMM")</td>
-                                <td class="py-2 pr-3">
-                                    @if (isEditing)
-                                    {
-                                        <select class="field" @bind="editCostCode">
-                                            @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
-                                            {
-                                                <option value="@centre.Code">@centre.Code — @centre.Name</option>
-                                            }
-                                        </select>
-                                    }
-                                    else { @timesheet.CostCode }
-                                </td>
-                                <td class="py-2 pr-3">
-                                    @if (isEditing)
-                                    {
-                                        <input class="field w-20" type="number" step="0.5" min="0.5" @bind="editHours" />
-                                    }
-                                    else { @timesheet.Hours }
-                                </td>
-                                <td class="py-2 pr-3 text-content-subtle">
-                                    @(timesheet.Status == TimesheetStatus.Approved ? timesheet.CostAmount.ToString("N2") : "—")
-                                </td>
-                                <td class="py-2 pr-3">
-                                    @if (timesheet.Status == TimesheetStatus.Approved)
-                                    {
-                                        <span class="text-positive">Approved</span>
-                                    }
-                                    else if (timesheet.Status == TimesheetStatus.Rejected)
-                                    {
-                                        <span class="text-negative" title="@timesheet.RejectionReason">Rejected</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-content-subtle">Submitted</span>
-                                    }
-                                </td>
-                                <td class="py-2 text-right whitespace-nowrap">
-                                    @if (timesheet.Status == TimesheetStatus.Submitted)
-                                    {
+        @* ---- The week's timesheets: one panel, statuses as pills, approval at its foot. ---- *@
+        <Panel Title="Timesheets" Class="mb-6" BodyClass="p-0"
+               IsLoading="@(!TimesheetsReady && !dataFailed)" LoadingLabel="Loading timesheets">
+            @{ var week = WeekTimesheets(); }
+            @if (dataFailed)
+            {
+                <p class="p-5 text-sm text-negative">Couldn't load the timesheets. The details are in the red bar at the top — reload to try again.</p>
+            }
+            else if (week.Count == 0)
+            {
+                <p class="p-5 text-sm text-content-subtle italic">No timesheets this week. Workers log time from their My day page; their submitted hours appear here for approval.</p>
+            }
+            else
+            {
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                                <th class="px-5 py-3"><input type="checkbox" checked="@AllSubmittedSelected(week)" @onchange="@(args => ToggleAll(week, (bool)args.Value!))" /></th>
+                                <th class="px-2 py-3">Worker</th>
+                                <th class="px-2 py-3">Day</th>
+                                <th class="px-2 py-3">Cost code</th>
+                                <th class="px-2 py-3 text-right">Hours</th>
+                                <th class="px-2 py-3 text-right">£</th>
+                                <th class="px-2 py-3">Status</th>
+                                <th class="px-5 py-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var timesheet in week)
+                            {
+                                var isEditing = editingId == timesheet.TimesheetId;
+                                <tr class="border-b border-line/60 align-middle hover:bg-surface-raised/40">
+                                    <td class="px-5 py-2.5">
+                                        @if (timesheet.Status == TimesheetStatus.Submitted)
+                                        {
+                                            <input type="checkbox" checked="@selectedIds.Contains(timesheet.TimesheetId)"
+                                                   @onchange="@(args => ToggleSelected(timesheet.TimesheetId, (bool)args.Value!))" />
+                                        }
+                                    </td>
+                                    <td class="px-2 py-2.5 text-content font-medium whitespace-nowrap">@timesheet.WorkerName</td>
+                                    <td class="px-2 py-2.5 text-content-subtle whitespace-nowrap">@timesheet.WorkedOn.ToString("ddd dd MMM")</td>
+                                    <td class="px-2 py-2.5">
                                         @if (isEditing)
                                         {
-                                            <button type="button" class="btn-secondary mr-1" @onclick="SaveEditAsync">Save</button>
-                                            <button type="button" class="btn-neutral" @onclick="() => editingId = null">Cancel</button>
+                                            <select class="field" @bind="editCostCode">
+                                                @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
+                                                {
+                                                    <option value="@centre.Code">@centre.Code — @centre.Name</option>
+                                                }
+                                            </select>
+                                        }
+                                        else { <span class="tabular-nums">@timesheet.CostCode</span> }
+                                    </td>
+                                    <td class="px-2 py-2.5 text-right tabular-nums">
+                                        @if (isEditing)
+                                        {
+                                            <input class="field w-20" type="number" step="0.5" min="0.5" @bind="editHours" />
+                                        }
+                                        else { @timesheet.Hours }
+                                    </td>
+                                    <td class="px-2 py-2.5 text-right tabular-nums text-content-subtle">
+                                        @(timesheet.Status == TimesheetStatus.Approved ? timesheet.CostAmount.ToString("N2") : "—")
+                                    </td>
+                                    <td class="px-2 py-2.5">
+                                        @if (timesheet.Status == TimesheetStatus.Rejected)
+                                        {
+                                            <span title="@timesheet.RejectionReason"><StatusPill Status="@timesheet.Status" /></span>
                                         }
                                         else
                                         {
-                                            <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(timesheet)">Adjust</button>
-                                            <button type="button" class="btn-secondary" @onclick="() => StartReject(timesheet)">Reject</button>
+                                            <StatusPill Status="@timesheet.Status" />
                                         }
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div class="flex items-center gap-3 mb-6">
-                <button type="button" class="btn-primary" disabled="@(selectedIds.Count == 0 || isApproving)" @onclick="ApproveSelectedAsync">
-                    Approve @(selectedIds.Count > 0 ? $"{selectedIds.Count} " : "")selected
-                </button>
-                <span class="text-xs text-content-subtle">Only approved time posts to Financials as cost. Budget hard-block applies per cost code.</span>
-            </div>
-        }
-        }
-        </LoadGate>
-
-        @if (rejectingId is not null)
-        {
-            <div class="rounded-lg border border-line bg-surface-raised p-4 mb-6 max-w-lg">
-                <p class="text-sm text-content mb-2">Reason for rejection (the worker sees this):</p>
-                <input class="field w-full mb-2" @bind="rejectReason" placeholder="e.g. Hours look double-entered — please re-check Tuesday" />
-                @if (rejectError is not null)
-                {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-2">@rejectError</p>
-                }
-                <button type="button" class="btn-primary mr-2" @onclick="ConfirmRejectAsync">Reject timesheet</button>
-                <button type="button" class="btn-neutral" @onclick="() => rejectingId = null">Cancel</button>
-            </div>
-        }
-
-        <div class="grid sm:grid-cols-2 gap-6 mb-8">
-            <section>
-                <h3 class="text-base font-semibold text-content mb-2">Missed sign-outs / manual entry</h3>
-                <p class="text-xs text-content-subtle mb-3">For workers who forgot to sign out, enter their day here — it joins the approval queue as normal.</p>
-                @* The worker list and the cost codes are the whole form — offered half-populated it
-                   silently omits people and codes that exist. *@
-                <LoadGate IsLoading="@(!ManualEntryReady && !dataFailed)" Height="min-h-[56px]" Label="Loading workers">
-                @if (dataFailed)
-                {
-                    <p class="text-sm text-negative">Couldn't load the workers and cost codes — reload to try again.</p>
-                }
-                else
-                {
-                <div class="flex flex-wrap items-end gap-2">
-                    <select class="field" @bind="manualWorkerId">
-                        <option value="">Worker…</option>
-                        @foreach (var assignment in Labour.AssignmentsFor(ProjectId).Where(assignment => assignment.IsActive))
-                        {
-                            <option value="@assignment.WorkerId">@assignment.WorkerName</option>
-                        }
-                    </select>
-                    <input class="field w-36" type="date" @bind="manualDate" />
-                    <select class="field" @bind="manualCostCode">
-                        <option value="">Cost code…</option>
-                        @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
-                        {
-                            <option value="@centre.Code">@centre.Code — @centre.Name</option>
-                        }
-                    </select>
-                    <input class="field w-20" type="number" step="0.5" min="0.5" @bind="manualHours" placeholder="hrs" />
-                    <button type="button" class="btn-secondary" disabled="@isAddingManual" @onclick="AddManualAsync">@(isAddingManual ? "Adding…" : "Add")</button>
+                                    </td>
+                                    <td class="px-5 py-2.5 text-right whitespace-nowrap">
+                                        @if (timesheet.Status == TimesheetStatus.Submitted)
+                                        {
+                                            @if (isEditing)
+                                            {
+                                                <button type="button" class="btn-secondary mr-1" @onclick="SaveEditAsync">Save</button>
+                                                <button type="button" class="btn-neutral" @onclick="() => editingId = null">Cancel</button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(timesheet)">Adjust</button>
+                                                <button type="button" class="btn-secondary" @onclick="() => StartReject(timesheet)">Reject</button>
+                                            }
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
-                @* Under the button that caused it. This message used to go to actionError at the top
-                   of the tab — a full screen above this form, so pressing Add with a field unfilled
-                   still looked like nothing had happened. *@
-                @if (manualError is not null)
-                {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">@manualError</p>
-                }
-                @* The rule the server enforces, stated before it is broken rather than after. *@
-                <p class="text-xs text-content-subtle mt-2">Hours in half-hour steps — 0.5, 1, 1.5 and so on. A whole day is 8.</p>
-                }
-                </LoadGate>
-            </section>
+                <div class="flex items-center gap-3 px-5 py-3 border-t border-line">
+                    <button type="button" class="btn-primary" disabled="@(selectedIds.Count == 0 || isApproving)" @onclick="ApproveSelectedAsync">
+                        Approve @(selectedIds.Count > 0 ? $"{selectedIds.Count} " : "")selected
+                    </button>
+                    <span class="text-xs text-content-subtle">Only approved time posts to Financials as cost. Budget hard-block applies per cost code.</span>
+                </div>
+            }
+        </Panel>
 
-            <section>
-                <h3 class="text-base font-semibold text-content mb-2">How workers log time</h3>
-                <p class="text-xs text-content-subtle mb-2">
-                    Workers sign in to the portal like any other user and use their <span class="text-content">My day</span>
-                    page to sign in/out and log hours. To set one up: invite them as a user with the
-                    <span class="text-content">Site Operative</span> role, then add a worker record with the same
-                    email on the <a class="underline underline-offset-2" href="/labour/workers">Workers page</a>
-                    and assign them to this project below.
-                </p>
-                @* Who is offered depends on the registry minus who is already assigned, and the list
-                   below is the other half of the same answer — so both wait for both. *@
-                <LoadGate IsLoading="@(!AssignmentsReady && !dataFailed)" Height="min-h-[56px]" Label="Loading workers">
+        <div class="grid lg:grid-cols-2 gap-6 mb-6">
+            @* ---- Workers on this project: assignment + how they log time, one panel. ---- *@
+            <Panel Title="Workers on this project" BodyClass="p-5"
+                   IsLoading="@(!AssignmentsReady && !dataFailed)" LoadingLabel="Loading workers">
                 @if (dataFailed)
                 {
                     <p class="text-sm text-negative">Couldn't load the worker registry — reload to try again.</p>
                 }
                 else
                 {
-                <div class="flex flex-wrap items-end gap-2">
-                    <select class="field" @bind="assignWorkerId">
-                        <option value="">Add worker to project…</option>
-                        @foreach (var worker in UnassignedWorkers())
-                        {
-                            <option value="@worker.WorkerId">@worker.Name</option>
-                        }
-                    </select>
-                    <button type="button" class="btn-secondary" @onclick="AssignWorkerAsync">Assign</button>
-                </div>
-                @if (Labour.AssignmentsFor(ProjectId).Any(assignment => assignment.IsActive))
+                    <div class="flex flex-wrap items-end gap-2">
+                        <select class="field" @bind="assignWorkerId">
+                            <option value="">Add worker to project…</option>
+                            @foreach (var worker in UnassignedWorkers())
+                            {
+                                <option value="@worker.WorkerId">@worker.Name</option>
+                            }
+                        </select>
+                        <button type="button" class="btn-secondary" @onclick="AssignWorkerAsync">Assign</button>
+                    </div>
+                    @if (Labour.AssignmentsFor(ProjectId).Any(assignment => assignment.IsActive))
+                    {
+                        <ul class="mt-3 space-y-1 text-sm">
+                            @foreach (var assignment in Labour.AssignmentsFor(ProjectId).Where(assignment => assignment.IsActive))
+                            {
+                                <li class="flex items-center justify-between max-w-xs">
+                                    <span class="text-content">@assignment.WorkerName</span>
+                                    <button type="button" class="btn-ghost text-negative" @onclick="() => UnassignAsync(assignment.WorkerId)">Remove</button>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    <p class="text-xs text-content-subtle mt-4 pt-3 border-t border-line/60">
+                        Workers sign in to the portal like any other user and log time on their
+                        <span class="text-content">My day</span> page. To set one up: invite them as a
+                        user with the <span class="text-content">Site Operative</span> role, add a worker
+                        record with the same email on the
+                        <a class="underline underline-offset-2" href="/labour/workers">Workers page</a>,
+                        then assign them here. Missed a sign-out? Use <span class="text-content">Add a day</span> above.
+                    </p>
+                }
+            </Panel>
+
+            @* ---- Site register ---- *@
+            <Panel Title="Site register" BodyClass="p-0"
+                   IsLoading="@(!RegisterReady && !dataFailed)" LoadingLabel="Loading the site register">
+                @{ var register = Labour.AttendanceFor(ProjectId).Take(60).ToList(); }
+                @if (dataFailed)
                 {
-                    <ul class="mt-3 space-y-1 text-sm">
-                        @foreach (var assignment in Labour.AssignmentsFor(ProjectId).Where(assignment => assignment.IsActive))
-                        {
-                            <li class="flex items-center justify-between max-w-xs">
-                                <span class="text-content">@assignment.WorkerName</span>
-                                <button type="button" class="btn-ghost text-negative" @onclick="() => UnassignAsync(assignment.WorkerId)">Remove</button>
-                            </li>
-                        }
-                    </ul>
+                    <p class="p-5 text-sm text-negative">Couldn't load the site register — reload to try again.</p>
                 }
+                else if (register.Count == 0)
+                {
+                    <p class="p-5 text-sm text-content-subtle italic">No attendance recorded yet.</p>
                 }
-                </LoadGate>
-            </section>
+                else
+                {
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                                <th class="px-5 py-3">Date</th><th class="px-2 py-3">Worker</th>
+                                <th class="px-2 py-3">In</th><th class="px-5 py-3">Out</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in register)
+                            {
+                                <tr class="border-b border-line/60">
+                                    <td class="px-5 py-1.5 whitespace-nowrap">@row.WorkDate.ToString("ddd dd MMM")</td>
+                                    <td class="px-2 py-1.5 text-content whitespace-nowrap">@row.WorkerName</td>
+                                    <td class="px-2 py-1.5 text-content-subtle tabular-nums">@row.SignedInAt.ToLocalTime().ToString("HH:mm")</td>
+                                    <td class="px-5 py-1.5">
+                                        @if (row.SignedOutAt is { } signedOut)
+                                        {
+                                            <span class="text-content-subtle tabular-nums">@signedOut.ToLocalTime().ToString("HH:mm")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">no sign-out</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </Panel>
         </div>
 
-        <section class="mb-8">
-            <h3 class="text-base font-semibold text-content mb-2">Site register</h3>
-            <LoadGate IsLoading="@(!RegisterReady && !dataFailed)" Prominent="true" Label="Loading the site register">
-            @{ var register = Labour.AttendanceFor(ProjectId).Take(60).ToList(); }
-            @if (dataFailed)
-            {
-                <p class="text-sm text-negative">Couldn't load the site register — reload to try again.</p>
-            }
-            else
-            {
-            @if (register.Count == 0)
-            {
-                <p class="text-sm text-content-subtle italic">No attendance recorded yet.</p>
-            }
-            else
-            {
-                <table class="w-full text-sm max-w-2xl">
-                    <thead>
-                        <tr class="text-left text-content-subtle border-b border-line">
-                            <th class="py-2 pr-3">Date</th><th class="py-2 pr-3">Worker</th>
-                            <th class="py-2 pr-3">In</th><th class="py-2 pr-3">Out</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var row in register)
-                        {
-                            <tr class="border-b border-line/60">
-                                <td class="py-1.5 pr-3">@row.WorkDate.ToString("ddd dd MMM")</td>
-                                <td class="py-1.5 pr-3 text-content">@row.WorkerName</td>
-                                <td class="py-1.5 pr-3 text-content-subtle">@row.SignedInAt.ToLocalTime().ToString("HH:mm")</td>
-                                <td class="py-1.5 pr-3">
-                                    @if (row.SignedOutAt is { } signedOut)
-                                    {
-                                        <span class="text-content-subtle">@signedOut.ToLocalTime().ToString("HH:mm")</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-negative text-xs font-medium">no sign-out</span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
-            }
-            </LoadGate>
-        </section>
-
-        <section class="mb-8">
-            <h3 class="text-base font-semibold text-content mb-2">Subcontractor settlement</h3>
+        @* ---- Subcontractor settlement ---- *@
+        <Panel Title="Subcontractor settlement" Class="mb-8" BodyClass="p-5"
+               IsLoading="@(!SettlementReady && !dataFailed)" LoadingLabel="Loading settlement">
             <p class="text-xs text-content-subtle mb-3">
                 Approved timesheets are the actual cost; the subbie's invoice settles them — mark
-                the invoice lines as covered below. A non-zero unresolved variance
-                stays open until timesheets are corrected, the invoice is amended or split, or the
-                difference is posted as a settlement variance.
+                the invoice lines as covered below. A non-zero unresolved variance stays open until
+                timesheets are corrected, the invoice is amended or split, or the difference is
+                posted as a settlement variance.
             </p>
-            @* Approved cost, covered invoices and the unresolved variance are one reconciliation:
-               "nothing to reconcile" is a real answer and must not be guessed at. *@
-            <LoadGate IsLoading="@(!SettlementReady && !dataFailed)" Prominent="true" Label="Loading settlement">
             @{ var settlement = Labour.SettlementFor(ProjectId); }
             @if (dataFailed)
             {
                 <p class="text-sm text-negative">Couldn't load the settlement figures — reload to try again.</p>
             }
-            else
-            {
-            @if (settlement.Count == 0)
+            else if (settlement.Count == 0)
             {
                 <p class="text-sm text-content-subtle italic">Nothing to reconcile yet.</p>
             }
@@ -350,7 +285,7 @@ else
             {
                 <table class="w-full text-sm max-w-3xl">
                     <thead>
-                        <tr class="text-left text-content-subtle border-b border-line">
+                        <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
                             <th class="py-2 pr-3">Subcontractor</th>
                             <th class="py-2 pr-3 text-right">Approved £</th>
                             <th class="py-2 pr-3 text-right">Covered invoices £</th>
@@ -363,10 +298,10 @@ else
                         {
                             <tr class="border-b border-line/60">
                                 <td class="py-1.5 pr-3 text-content">@row.SubcontractorName</td>
-                                <td class="py-1.5 pr-3 text-right">@row.ApprovedCost.ToString("N2")</td>
-                                <td class="py-1.5 pr-3 text-right">@row.CoveredInvoiceTotal.ToString("N2")</td>
-                                <td class="py-1.5 pr-3 text-right">@row.PostedVarianceTotal.ToString("N2")</td>
-                                <td class="py-1.5 text-right @(row.UnresolvedVariance == 0m ? "text-positive" : "text-negative font-medium")">
+                                <td class="py-1.5 pr-3 text-right tabular-nums">@row.ApprovedCost.ToString("N2")</td>
+                                <td class="py-1.5 pr-3 text-right tabular-nums">@row.CoveredInvoiceTotal.ToString("N2")</td>
+                                <td class="py-1.5 pr-3 text-right tabular-nums">@row.PostedVarianceTotal.ToString("N2")</td>
+                                <td class="py-1.5 text-right tabular-nums @(row.UnresolvedVariance == 0m ? "text-positive" : "text-negative font-medium")">
                                     @row.UnresolvedVariance.ToString("N2")
                                 </td>
                             </tr>
@@ -374,8 +309,6 @@ else
                     </tbody>
                 </table>
             }
-            }
-            </LoadGate>
 
             <div class="mt-4">
                 @if (!showCoverPanel)
@@ -398,7 +331,7 @@ else
                     {
                         <table class="w-full text-sm max-w-3xl">
                             <thead>
-                                <tr class="text-left text-content-subtle border-b border-line">
+                                <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
                                     <th class="py-2 pr-3">Supplier</th><th class="py-2 pr-3">Date</th>
                                     <th class="py-2 pr-3">Description</th><th class="py-2 pr-3 text-right">Net £</th>
                                     <th class="py-2 pr-3">Settles timesheets of</th><th class="py-2"></th>
@@ -411,7 +344,7 @@ else
                                         <td class="py-1.5 pr-3 text-content">@line.ContactName</td>
                                         <td class="py-1.5 pr-3 text-content-subtle">@(line.Date?.ToString("dd MMM yy") ?? "—")</td>
                                         <td class="py-1.5 pr-3 text-content-subtle truncate max-w-xs" title="@line.Description">@line.Description</td>
-                                        <td class="py-1.5 pr-3 text-right">@line.Net.ToString("N2")</td>
+                                        <td class="py-1.5 pr-3 text-right tabular-nums">@line.Net.ToString("N2")</td>
                                         <td class="py-1.5 pr-3">
                                             <select class="field" @onchange="@(args => coverSubcontractorByLine[line.XeroLedgerLineId] = (string)args.Value!)">
                                                 <option value="">Subcontractor…</option>
@@ -431,8 +364,58 @@ else
                     }
                 }
             </div>
-        </section>
+        </Panel>
     </ProjectPageShell>
+
+    @* ---- Add a day: manual entry / missed sign-outs. Also the chat's manual_timesheet
+           proposal card — the assistant fills it, the user reads and presses Add day. ---- *@
+    <Modal IsOpen="@addDayOpen" Title="Add a day"
+           ConfirmLabel="@(isAddingManual ? "Adding…" : "Add day")" ConfirmDisabled="@isAddingManual"
+           OnCancel="CloseAddDay" OnConfirm="AddManualAsync">
+        <p class="text-xs text-content-subtle mb-3">For workers who forgot to sign out (or verbal reports), enter their day here — it joins the approval queue as normal.</p>
+        <div class="space-y-3">
+            <label class="block text-sm text-content-muted">Worker
+                <select class="field mt-1" @bind="manualWorkerId" @bind:after="PublishManualDraft">
+                    <option value="">Worker…</option>
+                    @foreach (var assignment in Labour.AssignmentsFor(ProjectId).Where(assignment => assignment.IsActive))
+                    {
+                        <option value="@assignment.WorkerId">@assignment.WorkerName</option>
+                    }
+                </select>
+            </label>
+            <label class="block text-sm text-content-muted">Date
+                <input class="field mt-1" type="date" @bind="manualDate" @bind:after="PublishManualDraft" />
+            </label>
+            <label class="block text-sm text-content-muted">Cost code
+                <select class="field mt-1" @bind="manualCostCode" @bind:after="PublishManualDraft">
+                    <option value="">Cost code…</option>
+                    @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
+                    {
+                        <option value="@centre.Code">@centre.Code — @centre.Name</option>
+                    }
+                </select>
+            </label>
+            <label class="block text-sm text-content-muted">Hours
+                <input class="field mt-1 w-24" type="number" step="0.5" min="0.5" @bind="manualHours" @bind:after="PublishManualDraft" />
+            </label>
+            @if (manualError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@manualError</p>
+            }
+            <p class="text-xs text-content-subtle">Hours in half-hour steps — 0.5, 1, 1.5 and so on. A whole day is 8.</p>
+        </div>
+    </Modal>
+
+    @* ---- Rejection: reason first, the worker reads it. ---- *@
+    <Modal IsOpen="@(rejectingId is not null)" Title="Reject timesheet"
+           ConfirmLabel="Reject timesheet" OnCancel="() => rejectingId = null" OnConfirm="ConfirmRejectAsync">
+        <p class="text-sm text-content mb-2">Reason for rejection (the worker sees this):</p>
+        <input class="field w-full mb-2" @bind="rejectReason" placeholder="e.g. Hours look double-entered — please re-check Tuesday" />
+        @if (rejectError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@rejectError</p>
+        }
+    </Modal>
 }
 
 @code {
@@ -467,6 +450,7 @@ else
     private string? rejectingId;
     private string rejectReason = "";
 
+    private bool addDayOpen;
     private string manualWorkerId = "";
     private DateTime manualDate = DateTime.Today;
     private string manualCostCode = "";
@@ -479,13 +463,6 @@ else
     private string? rejectError;
 
     // -- Failure reporting ------------------------------------------------------
-    // Every action below used to end in `catch (Exception) { actionError = "<a guess>"; }`, and the
-    // guess on the two hours-bearing actions was "hours must be in half-hour steps of at least 0.5"
-    // — printed for a 403, a 404, a dropped connection, anything. An administrator entering a
-    // perfectly valid 4 was told their hours were wrong, and the one fact that would have found the
-    // real fault (the labour gates never named Role.Admin) was the one thing the screen would not
-    // say. A message the code invented cannot be wrong about the server, because it never asked it.
-    //
     // CommandFailedException carries the endpoint's own words. Show those. `fallback` covers only
     // the case where nothing came back to show — a transport failure with no response at all.
     private static string DescribeFailure(Exception failure, string fallback) =>
@@ -512,13 +489,12 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Labour.OnChange += StateHasChanged;
         CostCenters.OnChanged += StateHasChanged;
+        AiTasks.OnDraftApplied += HandleAssistantDraft;
+        Nav.LocationChanged += HandleLocationChanged;
         sessionReady = true;
 
         // Revalidate cached data in the background on every visit (stale-while-revalidate —
         // see the front-end data-loading convention in CLAUDE.md).
-        // Fired together, awaited together: none of these read models records its own failures, so
-        // the awaits are what tell the panels the data is not coming. The registry is fetched here
-        // rather than lazily on read — behind a gate nothing reads it, so nothing would start it.
         try
         {
             await Task.WhenAll(
@@ -535,12 +511,16 @@ else
             // we only need to stop the panels waiting on data that is not coming.
             dataFailed = true;
         }
+
+        await HonourRequestedModalAsync();
     }
 
     public void Dispose()
     {
         Labour.OnChange -= StateHasChanged;
         CostCenters.OnChanged -= StateHasChanged;
+        AiTasks.OnDraftApplied -= HandleAssistantDraft;
+        Nav.LocationChanged -= HandleLocationChanged;
     }
 
     private static DateTimeOffset StartOfWeek(DateTimeOffset moment)
@@ -645,10 +625,22 @@ else
         }
     }
 
+    // ---- Add a day (manual entry) + the chat's manual_timesheet task ---------------------------
+
+    private void OpenAddDay()
+    {
+        manualError = null;
+        addDayOpen = true;
+    }
+
+    private void CloseAddDay()
+    {
+        addDayOpen = false;
+        EndManualTimesheetTask();
+    }
+
     private async Task AddManualAsync()
     {
-        // Previously a bare `return`: pressing Add with a field unfilled did nothing at all, no
-        // message, no movement. A button that silently declines reads as a broken button.
         manualError =
             manualWorkerId == "" ? "Pick which worker the day belongs to."
             : manualCostCode == "" ? "Pick a cost code for the hours."
@@ -660,6 +652,8 @@ else
         {
             await Labour.AddWorkerTimesheetAsync(ProjectId, manualWorkerId, new DateTimeOffset(DateTime.SpecifyKind(manualDate.Date, DateTimeKind.Unspecified), TimeSpan.Zero), manualHours, manualCostCode);
             manualHours = 0;
+            addDayOpen = false;
+            EndManualTimesheetTask();
         }
         catch (Exception failure)
         {
@@ -668,13 +662,128 @@ else
         finally { isAddingManual = false; }
     }
 
+    // The assistant's route in: open_modal → ?openModal=manual_timesheet. Same recipe as
+    // manual_variation on the Variations register — the query is cleared through history so F5
+    // does not reopen the dialog, and LocationChanged catches the already-on-this-page case.
+    private bool modalRequestHonoured;
+
+    private bool WantsManualTimesheetFromRoute() =>
+        !modalRequestHonoured
+        && new Uri(Nav.Uri).Query.Contains(
+            $"openModal={ModalCatalog.ManualTimesheet.ModalKey}", StringComparison.OrdinalIgnoreCase);
+
+    private async Task HonourRequestedModalAsync()
+    {
+        if (!WantsManualTimesheetFromRoute()) return;
+
+        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
+        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
+        modalRequestHonoured = true;
+
+        OpenAddDay();
+
+        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
+        {
+            AiTasks.Start(
+                new AiTask(
+                    TaskKey: "manual-timesheet",
+                    ModalKey: ModalCatalog.ManualTimesheet.ModalKey,
+                    BannerLabel: "Adding a worker's day",
+                    BusyLabel: "Working out the day…",
+                    KickoffMessage:
+                        "Fill in the \"Add a day\" form open beside me from what we were just "
+                        + "discussing: the worker (exactly as this project's list spells them), the "
+                        + "resolved date, the hours in half-hour steps, and the cost code only if "
+                        + "one clearly fits. Say the resolved date back to me in one line. I read "
+                        + "the form and press Add day myself.",
+                    ProjectId: ProjectId,
+                    RecordType: null,
+                    RecordId: null,
+                    RecordReference: null),
+                SerialiseManualState());
+
+            Chat.Open();
+            Chat.SetCoexistence(true);
+        }
+        StateHasChanged();
+    }
+
+    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
+        _ = InvokeAsync(async () =>
+        {
+            if (!sessionReady) return;
+            modalRequestHonoured = false; // a fresh navigation is a fresh request
+            await HonourRequestedModalAsync();
+        });
+
+    private void EndManualTimesheetTask()
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.ManualTimesheet.ModalKey) return;
+        AiTasks.End();
+        Chat.SetCoexistence(false);
+    }
+
+    private string SerialiseManualState()
+    {
+        var workerName = Labour.AssignmentsFor(ProjectId)
+            .FirstOrDefault(assignment => assignment.WorkerId == manualWorkerId)?.WorkerName ?? "";
+        return System.Text.Json.JsonSerializer.Serialize(new
+        {
+            workerName,
+            date = manualDate.ToString("yyyy-MM-dd"),
+            hours = manualHours,
+            costCode = manualCostCode,
+        });
+    }
+
+    private void PublishManualDraft()
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.ManualTimesheet.ModalKey) return;
+        AiTasks.UpdateDraft(SerialiseManualState());
+    }
+
+    /// <summary>The model's update_open_modal, landing in the form: merge, never replace — a field
+    /// the assistant did not mention keeps whatever the user chose.</summary>
+    private void HandleAssistantDraft(string fieldsJson)
+    {
+        if (!addDayOpen || AiTasks.Active?.ModalKey != ModalCatalog.ManualTimesheet.ModalKey) return;
+        try
+        {
+            using var parsed = System.Text.Json.JsonDocument.Parse(fieldsJson);
+            var root = parsed.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return;
+
+            if (root.TryGetProperty("workerName", out var workerName) && workerName.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                var match = Labour.AssignmentsFor(ProjectId).Where(assignment => assignment.IsActive)
+                    .FirstOrDefault(assignment => string.Equals(assignment.WorkerName, workerName.GetString(), StringComparison.OrdinalIgnoreCase));
+                if (match is not null) manualWorkerId = match.WorkerId;
+            }
+            if (root.TryGetProperty("date", out var date) && date.ValueKind == System.Text.Json.JsonValueKind.String
+                && DateTime.TryParse(date.GetString(), out var parsedDate))
+                manualDate = parsedDate.Date;
+            if (root.TryGetProperty("hours", out var hours) && hours.ValueKind == System.Text.Json.JsonValueKind.Number)
+                manualHours = hours.GetDecimal();
+            if (root.TryGetProperty("costCode", out var costCode) && costCode.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                var code = costCode.GetString() ?? "";
+                if (CostCenters.Alphabetical.Any(centre => centre.IsActive && centre.Code == code))
+                    manualCostCode = code;
+            }
+        }
+        catch (System.Text.Json.JsonException) { return; }
+
+        AiTasks.UpdateDraft(SerialiseManualState());
+        StateHasChanged();
+    }
+
+    // ---- Settlement cover sub-view --------------------------------------------------------------
+
     private bool showCoverPanel;
     private IReadOnlyList<Jewel.JPMS.Contracts.Xero.XeroLedgerLine>? ledgerLines;
     private readonly Dictionary<string, string> coverSubcontractorByLine = new();
 
-    // The hundred most recent allocated lines on THIS project. This used to ask for the whole
-    // company ledger and then filter it down here — every line the business had ever received,
-    // fetched to render at most a hundred rows for one project.
+    // The hundred most recent allocated lines on THIS project.
     private const int CoverableLedgerLines = 100;
 
     private async Task LoadLedgerAsync()
@@ -750,9 +859,6 @@ else
     }
 
     // -- Excel export -----------------------------------------------------------
-    // One workbook, one sheet per table on the page: the current week's timesheets,
-    // the site register (row-capped at 60 on screen — "Include all rows" exports the
-    // full attendance list instead) and the settlement reconciliation, when it has rows.
 
     private bool HasExportableLabourData() =>
         WeekTimesheets().Count > 0

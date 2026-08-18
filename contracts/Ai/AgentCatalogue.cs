@@ -144,17 +144,21 @@ public static class AgentCatalogue
     public static readonly AgentDefinition Timesheets = new(
         "timesheets",
         "Timesheets",
-        "Entering and checking time: a worker's timesheets, project assignments and cost codes. "
-        + "Small by design.",
-        Triggers: new[] { "timesheet", "log my hours", "time for last week" },
+        "Entering and checking time: a worker's timesheets, absences, project assignments and "
+        + "cost codes. Small by design.",
+        Triggers: new[] { "timesheet", "log my hours", "time for last week", "on holiday", "record absence" },
         ToolNames: null,
-        ModalKeys: null,
+        ModalKeys: new[] { "manual_timesheet", "record_absence" },
         AvailableTo: CommercialTeam,
-        RoutePrefixes: new[] { "/time" },
+        RoutePrefixes: new[] { "/time", "/labour" },
         PromptFragment:
             "You are currently the TIMESHEETS agent. Hours are recorded against a project, a date "
             + "and a cost code. Ask rather than assume when any of the three is unclear — a "
-            + "timesheet with a wrong cost code miscosts real labour.",
+            + "timesheet with a wrong cost code miscosts real labour. To ENTER a day, open the "
+            + "Add a day dialog (manual_timesheet) on the project's Labour tab and fill it — the "
+            + "user presses Add day themselves, and the entry still goes through normal approval. "
+            + "To record holiday or other absence, open record_absence on the Labour overview. "
+            + "For a run of days, stage them one at a time and keep count out loud.",
         DoneMeans: "A timesheet exists for every working day in the period the user named.");
 
     public static readonly AgentDefinition Programme = new(

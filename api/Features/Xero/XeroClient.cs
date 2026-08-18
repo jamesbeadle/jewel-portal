@@ -98,6 +98,20 @@ public interface IXeroClient
     Task<XeroApprovalResult> SetSiteTrackingAsync(XeroSiteTrackingRequest request, CancellationToken ct);
 
     /// <summary>
+    /// Recodes a DRAFT/SUBMITTED bill's whole line list to a settlement schedule
+    /// (docs/Labour-Overview-Forecast-and-Xero-Mapping-Scope.md §6a), leaving its status
+    /// untouched — the automation keys, the accountant approves in Xero. Refused for
+    /// AUTHORISED/PAID bills.
+    /// </summary>
+    Task<XeroApprovalResult> RecodeDraftBillAsync(XeroDraftCodingRequest request, CancellationToken ct);
+
+    /// <summary>
+    /// Stages a brand-new DRAFT ACCPAY bill matching a settlement schedule. FreshStatus carries
+    /// the new bill's InvoiceID on success so the run can record what it created.
+    /// </summary>
+    Task<XeroApprovalResult> CreateDraftBillAsync(XeroDraftBillRequest request, CancellationToken ct);
+
+    /// <summary>
     /// Lists the attachments Xero holds for one invoice or credit note — the supplier's
     /// document(s), typically published by Dext. Requires the custom connection's
     /// accounting.attachments scope; throws <see cref="XeroCallFailedException"/> (message
@@ -159,6 +173,14 @@ public sealed class NullXeroClient : IXeroClient
             "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
 
     public Task<XeroApprovalResult> SetSiteTrackingAsync(XeroSiteTrackingRequest request, CancellationToken ct) =>
+        Task.FromResult(XeroApprovalResult.Failed(
+            "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
+
+    public Task<XeroApprovalResult> RecodeDraftBillAsync(XeroDraftCodingRequest request, CancellationToken ct) =>
+        Task.FromResult(XeroApprovalResult.Failed(
+            "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
+
+    public Task<XeroApprovalResult> CreateDraftBillAsync(XeroDraftBillRequest request, CancellationToken ct) =>
         Task.FromResult(XeroApprovalResult.Failed(
             "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
 
@@ -1069,6 +1091,141 @@ public sealed class XeroClient : IXeroClient
             _cachedSnapshotAt = DateTimeOffset.MinValue;
 
             return XeroApprovalResult.Ok("AUTHORISED");
+        }
+        catch (XeroCallFailedException failure)
+        {
+            return XeroApprovalResult.Failed(failure.Message);
+        }
+    }
+
+    // -- §6a settlement-schedule coding: draft-only writes ------------------------------
+
+    /// <summary>
+    /// Shared validation + line building for the two §6a writes: every site option must already
+    /// exist in Xero (a missing one is a mapping fault, reported loudly), and missing cost-code
+    /// options are created (JPMS owns the master list, same as approval).
+    /// </summary>
+    private async Task<(JsonArray? Lines, string? Error)> BuildScheduleLineItemsAsync(
+        string token, IReadOnlyList<XeroScheduleLine> lines, CancellationToken ct)
+    {
+        var categories = await GetTrackingCategoriesAsync(token, ct);
+
+        var missingSites = lines.Select(line => line.SiteOption)
+            .Where(site => !categories.SiteOptions.Contains(site))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (missingSites.Count > 0)
+            return (null,
+                $"Xero's \"{_options.SiteTrackingCategory}\" tracking category has no option named "
+                + string.Join(", ", missingSites.Select(site => $"\"{site}\""))
+                + " — check the site's Xero mapping against Xero's tracking options.");
+
+        var missingCodes = lines.Select(line => line.CostCodeOption)
+            .Where(code => !categories.CostCodeOptions.Contains(code))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        foreach (var code in missingCodes)
+        {
+            var optionBody = new JsonObject { ["Name"] = code };
+            using var _ = await SendJsonAsync(HttpMethod.Put, token,
+                $"{TrackingCategoriesUrl}/{categories.CostCodeCategoryId}/Options",
+                optionBody, $"create Cost Code option {code}", ct);
+            categories.CostCodeOptions.Add(code);
+        }
+
+        var result = new JsonArray();
+        foreach (var line in lines)
+        {
+            result.Add(new JsonObject
+            {
+                ["Description"] = line.Description,
+                ["Quantity"] = 1m,
+                ["UnitAmount"] = line.Net,
+                ["LineAmount"] = line.Net,
+                ["AccountCode"] = line.AccountCode,
+                ["Tracking"] = TrackingFor(categories, line.SiteOption, line.CostCodeOption)
+            });
+        }
+        return (result, null);
+    }
+
+    public async Task<XeroApprovalResult> RecodeDraftBillAsync(XeroDraftCodingRequest request, CancellationToken ct)
+    {
+        if (!_options.IsConfigured)
+            return XeroApprovalResult.Failed(
+                "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings.");
+        try
+        {
+            var token = await GetAccessTokenAsync(ct);
+
+            using var doc = await GetJsonAsync(token, $"{InvoicesUrl}/{request.InvoiceId}", "invoices", ct);
+            if (!doc.RootElement.TryGetProperty("Invoices", out var items)
+                || items.ValueKind != JsonValueKind.Array || items.GetArrayLength() == 0)
+                return XeroApprovalResult.Failed("Xero returned no bill for this id — it may have been deleted.");
+
+            var invoice = items[0];
+            var status = StringOf(invoice, "Status") ?? "UNKNOWN";
+            // The automation only ever touches unapproved bills — approval stays human, in Xero.
+            if (!status.Equals("DRAFT", StringComparison.OrdinalIgnoreCase)
+                && !status.Equals("SUBMITTED", StringComparison.OrdinalIgnoreCase))
+                return XeroApprovalResult.Failed(
+                    $"The bill is {status} in Xero — the coding run only recodes DRAFT or SUBMITTED bills.");
+
+            var (lineItems, error) = await BuildScheduleLineItemsAsync(token, request.Lines, ct);
+            if (lineItems is null) return XeroApprovalResult.Failed(error!);
+
+            var payload = new JsonObject
+            {
+                ["InvoiceID"] = request.InvoiceId,
+                ["LineAmountTypes"] = "Exclusive",
+                ["LineItems"] = lineItems
+            };
+            using var response = await SendJsonAsync(HttpMethod.Post, token,
+                $"{InvoicesUrl}/{request.InvoiceId}", payload, "recode draft bill", ct);
+
+            _cachedSnapshot = null;
+            _cachedSnapshotAt = DateTimeOffset.MinValue;
+            return XeroApprovalResult.Ok(status.ToUpperInvariant());
+        }
+        catch (XeroCallFailedException failure)
+        {
+            return XeroApprovalResult.Failed(failure.Message);
+        }
+    }
+
+    public async Task<XeroApprovalResult> CreateDraftBillAsync(XeroDraftBillRequest request, CancellationToken ct)
+    {
+        if (!_options.IsConfigured)
+            return XeroApprovalResult.Failed(
+                "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings.");
+        try
+        {
+            var token = await GetAccessTokenAsync(ct);
+
+            var (lineItems, error) = await BuildScheduleLineItemsAsync(token, request.Lines, ct);
+            if (lineItems is null) return XeroApprovalResult.Failed(error!);
+
+            var payload = new JsonObject
+            {
+                ["Type"] = "ACCPAY",
+                ["Contact"] = new JsonObject { ["Name"] = request.ContactName },
+                ["Date"] = request.Date.ToString("yyyy-MM-dd"),
+                ["DueDate"] = request.DueDate.ToString("yyyy-MM-dd"),
+                ["Reference"] = request.Reference,
+                ["Status"] = "DRAFT",
+                ["LineAmountTypes"] = "Exclusive",
+                ["LineItems"] = lineItems
+            };
+            using var response = await SendJsonAsync(HttpMethod.Put, token, InvoicesUrl, payload, "stage draft bill", ct);
+
+            var billId = "";
+            if (response.RootElement.TryGetProperty("Invoices", out var created)
+                && created.ValueKind == JsonValueKind.Array && created.GetArrayLength() > 0)
+                billId = StringOf(created[0], "InvoiceID") ?? "";
+
+            _cachedSnapshot = null;
+            _cachedSnapshotAt = DateTimeOffset.MinValue;
+            return XeroApprovalResult.Ok(billId);
         }
         catch (XeroCallFailedException failure)
         {

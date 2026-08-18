@@ -55,6 +55,37 @@ public sealed record XeroSiteTrackingLine(string LineItemId, string? SiteOption)
 /// invoice was approved in Xero outside JPMS between allocation and now.
 /// FreshStatus is the invoice status as Xero reported it during the attempt.
 /// </summary>
+/// <summary>
+/// One line of a settlement-schedule coding (docs/Labour-Overview-Forecast-and-Xero-Mapping-Scope.md
+/// §6a): net amount, the account it lands on, and the Sites / Cost Code tracking options to stamp.
+/// </summary>
+public sealed record XeroScheduleLine(
+    string Description,
+    decimal Net,
+    string AccountCode,
+    string SiteOption,
+    string CostCodeOption);
+
+/// <summary>
+/// Recode a DRAFT (or SUBMITTED) bill's entire line list to a settlement schedule WITHOUT
+/// approving it — the §6a automation does the keying, the accountant's approval in Xero remains
+/// the human gate. Refused for AUTHORISED/PAID bills.
+/// </summary>
+public sealed record XeroDraftCodingRequest(
+    string InvoiceId,
+    IReadOnlyList<XeroScheduleLine> Lines);
+
+/// <summary>
+/// Stage a brand-new DRAFT ACCPAY bill matching a settlement schedule, for a worker-month whose
+/// invoice has not arrived yet — reconciled against the real one when it lands.
+/// </summary>
+public sealed record XeroDraftBillRequest(
+    string ContactName,
+    DateTime Date,
+    DateTime DueDate,
+    string Reference,
+    IReadOnlyList<XeroScheduleLine> Lines);
+
 public sealed record XeroApprovalResult(
     bool Succeeded,
     bool AlreadyApproved,

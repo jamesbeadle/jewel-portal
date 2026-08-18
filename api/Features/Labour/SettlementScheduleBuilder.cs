@@ -1,0 +1,132 @@
+using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Contracts.Labour;
+using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Jewel.JPMS.Api.Features.Labour;
+
+/// <summary>
+/// Builds the per-worker monthly settlement schedules (scope §6): approved timesheet cost split
+/// by site × cost code (labour), plus sign-off-level materials/travel lines, the CIS deduction,
+/// and the reconciliation verdict against covered Xero bills. Shared by the query slice and the
+/// §6a coding run so the automation codes EXACTLY what the screen shows.
+/// </summary>
+public sealed class SettlementScheduleBuilder
+{
+    private readonly JpmsContext context;
+    public SettlementScheduleBuilder(JpmsContext context) { this.context = context; }
+
+    public async Task<SettlementScheduleSnapshot> BuildAsync(int year, int month, CancellationToken cancellationToken)
+    {
+        var monthStart = new DateTimeOffset(new DateTime(year, month, 1), TimeSpan.Zero);
+        var monthEnd = monthStart.AddMonths(1);
+
+        var workers = await context.Workers.Where(worker => worker.IsActive)
+            .OrderBy(worker => worker.Name).ToListAsync(cancellationToken);
+        var approved = await context.Timesheets
+            .Where(sheet => sheet.WorkedOn >= monthStart && sheet.WorkedOn < monthEnd
+                && sheet.WorkerId != "" && sheet.Status == (int)TimesheetStatus.Approved)
+            .ToListAsync(cancellationToken);
+        var extraLines = await context.WorkerSettlementLines
+            .Where(line => line.Month == monthStart)
+            .ToListAsync(cancellationToken);
+        var cisStatuses = await context.WorkerCisStatuses
+            .Where(row => row.EffectiveFrom < monthEnd).OrderBy(row => row.EffectiveFrom)
+            .ToListAsync(cancellationToken);
+        var signOffs = await context.LabourWeekSignOffs
+            .Where(row => row.WeekStart >= monthStart.AddDays(-6) && row.WeekStart < monthEnd)
+            .ToListAsync(cancellationToken);
+        var covers = await context.XeroLineTimesheetCovers
+            .Where(cover => cover.PeriodStart < monthEnd && cover.PeriodEnd > monthStart)
+            .ToListAsync(cancellationToken);
+        var coveredLineIds = covers.Select(cover => cover.XeroLedgerLineId).Distinct().ToList();
+        var coveredLines = coveredLineIds.Count == 0
+            ? new List<Data.Entities.XeroLedgerLineEntity>()
+            : await context.XeroLedgerLines.Where(line => coveredLineIds.Contains(line.XeroLedgerLineId))
+                .ToListAsync(cancellationToken);
+        var runs = await context.XeroCodingRuns
+            .Where(run => run.Month == monthStart).OrderBy(run => run.RunAt)
+            .ToListAsync(cancellationToken);
+        var projectNames = await context.Projects
+            .ToDictionaryAsync(project => project.ProjectId, project => project.Name, cancellationToken);
+        var subcontractors = await context.Subcontractors
+            .ToDictionaryAsync(sub => sub.SubcontractorId, sub => sub.CompanyName, cancellationToken);
+
+        var approvedByWorker = approved.ToLookup(sheet => sheet.WorkerId);
+        var extraByWorker = extraLines.ToLookup(line => line.WorkerId);
+        var coversBySub = covers.ToLookup(cover => cover.SubcontractorId);
+        var coveredNetByLine = coveredLines.ToDictionary(line => line.XeroLedgerLineId, line => line.Net);
+        var runsByWorker = runs.ToLookup(run => run.WorkerId);
+
+        var rows = new List<WorkerSettlementSchedule>();
+        foreach (var worker in workers)
+        {
+            var sheets = approvedByWorker[worker.WorkerId].ToList();
+            var extras = extraByWorker[worker.WorkerId].ToList();
+            if (sheets.Count == 0 && extras.Count == 0) continue;
+
+            var lines = sheets
+                .GroupBy(sheet => (sheet.ProjectId, sheet.CostCode))
+                .Select(group => new ScheduleLine(
+                    group.Key.ProjectId,
+                    projectNames.TryGetValue(group.Key.ProjectId, out var name) ? name : group.Key.ProjectId,
+                    group.Key.CostCode,
+                    SettlementLineNature.CisLabour,
+                    group.Sum(sheet => sheet.CostAmount),
+                    null))
+                .Concat(extras.Select(extra => new ScheduleLine(
+                    extra.ProjectId,
+                    projectNames.TryGetValue(extra.ProjectId, out var name) ? name : extra.ProjectId,
+                    extra.CostCode,
+                    (SettlementLineNature)extra.Nature,
+                    extra.Amount,
+                    extra.WorkerSettlementLineId)))
+                .OrderBy(line => line.ProjectName).ThenBy(line => line.CostCode).ThenBy(line => line.Nature)
+                .ToList();
+
+            var grossLabour = lines.Where(line => line.Nature == SettlementLineNature.CisLabour).Sum(line => line.Amount);
+            var grossOther = lines.Where(line => line.Nature != SettlementLineNature.CisLabour).Sum(line => line.Amount);
+            var cisRate = cisStatuses.Where(row => row.WorkerId == worker.WorkerId)
+                .OrderBy(row => row.EffectiveFrom).LastOrDefault()?.CisRatePercent ?? 20m;
+            var cisDeduction = decimal.Round(grossLabour * cisRate / 100m, 2);
+
+            // Covered bills for this worker's subcontractor in the period. Workers without a
+            // subcontractor link cannot be reconciled against Xero — verdict says chase the link.
+            var coveredTotal = worker.SubcontractorId is null ? 0m
+                : coversBySub[worker.SubcontractorId]
+                    .Sum(cover => coveredNetByLine.TryGetValue(cover.XeroLedgerLineId, out var net) ? net : 0m);
+
+            var grossTotal = grossLabour + grossOther;
+            var difference = decimal.Round(coveredTotal - grossTotal, 2);
+            var verdict =
+                grossTotal == 0m && coveredTotal == 0m ? ScheduleVerdict.Nothing
+                : coveredTotal == 0m ? ScheduleVerdict.NoBillYet
+                : Math.Abs(difference) < 0.01m ? ScheduleVerdict.Matches
+                : ScheduleVerdict.VarianceOpen;
+
+            // Fully signed off = every week that carries approved time in this month has its
+            // sign-off marker. The §6a run refuses anything less.
+            var approvedWeeks = sheets
+                .Select(sheet => ForecastRules.WeekStartOf(sheet.WorkedOn.UtcDateTime.Date))
+                .Distinct().ToList();
+            var signedWeeks = signOffs.Where(row => row.WorkerId == worker.WorkerId)
+                .Select(row => row.WeekStart.UtcDateTime.Date).ToHashSet();
+            var fullySignedOff = approvedWeeks.Count > 0 && approvedWeeks.All(signedWeeks.Contains);
+
+            var lastRun = runsByWorker[worker.WorkerId].LastOrDefault();
+
+            rows.Add(new WorkerSettlementSchedule(
+                worker.WorkerId, worker.Name, worker.SubcontractorId,
+                worker.SubcontractorId is not null && subcontractors.TryGetValue(worker.SubcontractorId, out var sub) ? sub : "",
+                lines, grossLabour, grossOther, grossTotal, cisRate, cisDeduction,
+                decimal.Round(grossTotal - cisDeduction, 2),
+                coveredTotal, difference, verdict, fullySignedOff,
+                lastRun is null ? "" : ((XeroCodingOutcome)lastRun.Outcome).ToString(),
+                lastRun?.RunAt));
+        }
+
+        return new SettlementScheduleSnapshot(year, month, rows,
+            InvoicesToChase: rows.Count(row => row.Verdict == ScheduleVerdict.NoBillYet),
+            WorkersToReconcile: rows.Count(row => row.Verdict is ScheduleVerdict.NoBillYet or ScheduleVerdict.VarianceOpen));
+    }
+}

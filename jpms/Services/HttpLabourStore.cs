@@ -13,6 +13,9 @@ public sealed class HttpLabourStore : ILabourStore
     private readonly SiteAttendanceReadModel attendanceReadModel;
     private readonly MyLabourDayReadModel myDayReadModel;
     private readonly LabourSettlementReadModel settlementReadModel;
+    private readonly LabourOverviewReadModel overviewReadModel;
+    private readonly SettlementSchedulesReadModel schedulesReadModel;
+    private readonly XeroMappingsReadModel xeroMappingsReadModel;
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
 
@@ -24,10 +27,15 @@ public sealed class HttpLabourStore : ILabourStore
     private readonly HashSet<string> attendanceRequested = new();
     private bool myDayRequested;
     private readonly HashSet<string> settlementRequested = new();
+    private readonly HashSet<string> overviewRequested = new();
+    private readonly HashSet<string> schedulesRequested = new();
+    private bool mappingsRequested;
 
     public HttpLabourStore(WorkersReadModel workersReadModel, WorkerAssignmentsReadModel assignmentsReadModel,
         LabourTimesheetsReadModel timesheetsReadModel, SiteAttendanceReadModel attendanceReadModel,
         MyLabourDayReadModel myDayReadModel, LabourSettlementReadModel settlementReadModel,
+        LabourOverviewReadModel overviewReadModel,
+        SettlementSchedulesReadModel schedulesReadModel, XeroMappingsReadModel xeroMappingsReadModel,
         IQueryClient queries, ICommandSender commands)
     {
         this.workersReadModel = workersReadModel;
@@ -36,6 +44,9 @@ public sealed class HttpLabourStore : ILabourStore
         this.attendanceReadModel = attendanceReadModel;
         this.myDayReadModel = myDayReadModel;
         this.settlementReadModel = settlementReadModel;
+        this.overviewReadModel = overviewReadModel;
+        this.schedulesReadModel = schedulesReadModel;
+        this.xeroMappingsReadModel = xeroMappingsReadModel;
         this.queries = queries;
         this.commands = commands;
         workersReadModel.OnChanged += () => OnChange?.Invoke();
@@ -44,6 +55,9 @@ public sealed class HttpLabourStore : ILabourStore
         attendanceReadModel.OnChanged += () => OnChange?.Invoke();
         myDayReadModel.OnChanged += () => OnChange?.Invoke();
         settlementReadModel.OnChanged += () => OnChange?.Invoke();
+        overviewReadModel.OnChanged += () => OnChange?.Invoke();
+        schedulesReadModel.OnChanged += () => OnChange?.Invoke();
+        xeroMappingsReadModel.OnChanged += () => OnChange?.Invoke();
     }
 
     public event Action? OnChange;
@@ -179,6 +193,109 @@ public sealed class HttpLabourStore : ILabourStore
         var rejected = await commands.SendAsync(new RejectTimesheet(timesheetId, reason), CancellationToken.None);
         await timesheetsReadModel.RefreshAsync(projectId, CancellationToken.None);
         return rejected;
+    }
+
+    public LabourOverviewSnapshot? Overview(int year, int month)
+    {
+        var key = $"{year:0000}-{month:00}";
+        if (overviewRequested.Add(key)) _ = LoadAsync(() => overviewReadModel.RefreshAsync(year, month, CancellationToken.None), overviewRequested, key);
+        return overviewReadModel.Current(year, month);
+    }
+
+    public bool OverviewLoadedFor(int year, int month) => overviewReadModel.LoadedFor(year, month);
+
+    public Task RefreshOverviewAsync(int year, int month) => overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
+
+    public async Task SetWorkerContractAsync(int year, int month, string workerId, decimal contractedDaysPerMonth)
+    {
+        await commands.SendAsync(new SetWorkerContract(workerId, contractedDaysPerMonth), CancellationToken.None);
+        await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
+    }
+
+    public async Task SetWorkerCisStatusAsync(int year, int month, string workerId, decimal cisRatePercent, string verifiedRef)
+    {
+        await commands.SendAsync(new SetWorkerCisStatus(workerId, cisRatePercent, verifiedRef), CancellationToken.None);
+        await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
+    }
+
+    public async Task RecordAbsenceAsync(int year, int month, string workerId, DateTimeOffset date, AbsenceKind kind, string note)
+    {
+        await commands.SendAsync(new RecordWorkerAbsence(workerId, date, kind, note), CancellationToken.None);
+        await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
+    }
+
+    public async Task RemoveAbsenceAsync(int year, int month, string workerAbsenceId)
+    {
+        await commands.SendAsync(new RemoveWorkerAbsence(workerAbsenceId), CancellationToken.None);
+        await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
+    }
+
+    public async Task SignOffWeekAsync(int year, int month, string workerId, DateTimeOffset weekStart)
+    {
+        await commands.SendAsync(new SignOffLabourWeek(workerId, weekStart), CancellationToken.None);
+        await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
+    }
+
+    public async Task RemoveWeekSignOffAsync(int year, int month, string workerId, DateTimeOffset weekStart)
+    {
+        await commands.SendAsync(new RemoveLabourWeekSignOff(workerId, weekStart), CancellationToken.None);
+        await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
+    }
+
+    public SettlementScheduleSnapshot? Schedules(int year, int month)
+    {
+        var key = $"{year:0000}-{month:00}";
+        if (schedulesRequested.Add(key)) _ = LoadAsync(() => schedulesReadModel.RefreshAsync(year, month, CancellationToken.None), schedulesRequested, key);
+        return schedulesReadModel.Current(year, month);
+    }
+
+    public bool SchedulesLoadedFor(int year, int month) => schedulesReadModel.LoadedFor(year, month);
+
+    public Task RefreshSchedulesAsync(int year, int month) => schedulesReadModel.RefreshAsync(year, month, CancellationToken.None);
+
+    public async Task AddSettlementLineAsync(int year, int month, string workerId, string projectId, string costCode, SettlementLineNature nature, decimal amount, string note)
+    {
+        await commands.SendAsync(new AddWorkerSettlementLine(workerId, year, month, projectId, costCode, nature, amount, note), CancellationToken.None);
+        await schedulesReadModel.RefreshAsync(year, month, CancellationToken.None);
+    }
+
+    public async Task RemoveSettlementLineAsync(int year, int month, string workerSettlementLineId)
+    {
+        await commands.SendAsync(new RemoveWorkerSettlementLine(workerSettlementLineId), CancellationToken.None);
+        await schedulesReadModel.RefreshAsync(year, month, CancellationToken.None);
+    }
+
+    public XeroMappingsSnapshot? XeroMappings()
+    {
+        if (!mappingsRequested) { mappingsRequested = true; _ = LoadMappingsAsync(); }
+        return xeroMappingsReadModel.Current;
+    }
+
+    private async Task LoadMappingsAsync()
+    {
+        try { await xeroMappingsReadModel.RefreshAsync(CancellationToken.None); }
+        catch { mappingsRequested = false; }
+    }
+
+    public Task RefreshXeroMappingsAsync() => xeroMappingsReadModel.RefreshAsync(CancellationToken.None);
+
+    public async Task SetSiteXeroMappingAsync(string projectId, string optionId, string optionName)
+    {
+        await commands.SendAsync(new SetSiteXeroMapping(projectId, optionId, optionName), CancellationToken.None);
+        await xeroMappingsReadModel.RefreshAsync(CancellationToken.None);
+    }
+
+    public async Task SetCostCodeXeroMappingAsync(string costCode, string optionId, string optionName, string labourAccount, string materialsAccount, string travelAccount)
+    {
+        await commands.SendAsync(new SetCostCodeXeroMapping(costCode, optionId, optionName, labourAccount, materialsAccount, travelAccount), CancellationToken.None);
+        await xeroMappingsReadModel.RefreshAsync(CancellationToken.None);
+    }
+
+    public async Task<IReadOnlyList<XeroCodingRunResult>> RunXeroCodingAsync(int year, int month, IReadOnlyList<string>? workerIds)
+    {
+        var results = await commands.SendAsync(new RunXeroCoding(year, month, workerIds), CancellationToken.None);
+        await schedulesReadModel.RefreshAsync(year, month, CancellationToken.None);
+        return results;
     }
 
     public IReadOnlyList<LabourSettlementRow> SettlementFor(string projectId)

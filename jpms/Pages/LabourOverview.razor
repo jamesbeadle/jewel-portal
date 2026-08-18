@@ -1,0 +1,1159 @@
+@page "/labour/overview"
+@using Jewel.JPMS.Contracts.Labour
+@using Jewel.JPMS.Contracts.Ai
+@inject AuthService Auth
+@inject SessionService Session
+@inject ILabourStore Labour
+@inject NavigationManager Nav
+@inject AiTaskState AiTasks
+@inject ChatPanelState Chat
+@inject IJSRuntime JS
+@implements IDisposable
+
+<PageTitle>Labour overview · JPMS</PageTitle>
+
+@*
+    The company-wide Labour overview (docs/Labour-Overview-Forecast-and-Xero-Mapping-Scope.md §4):
+    projected labour spend for the month with the submission-confidence bar, the workers × days
+    placement grid, by-site and by-cost-code cuts, the chase list and weekly sign-off. Money rides
+    on everything here — the endpoint is gated to the managing roles, so nothing needs stripping
+    in the view.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    var snapshot = Labour.Overview(year, month);
+
+    <section class="px-6 md:px-8 py-8 max-w-7xl">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+            <h2 class="text-lg font-semibold text-content">Labour overview</h2>
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 text-sm">
+                    <button type="button" class="btn-secondary" disabled="@Loading" @onclick="() => MoveMonth(-1)">‹ Prev</button>
+                    <span class="text-content-subtle w-28 text-center">@MonthLabel</span>
+                    <button type="button" class="btn-secondary" disabled="@Loading" @onclick="() => MoveMonth(1)">Next ›</button>
+                </div>
+                <Toolbar>
+                    <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
+                    <ExportToExcelButton FileName="Labour-overview"
+                                         Disabled="@(snapshot is null)"
+                                         BuildWorkbook="BuildExportWorkbook" />
+                </Toolbar>
+            </div>
+        </div>
+        <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+            Projected cost across every worker for the month, and where each day actually went.
+            Contracted days multiplied by day rate, less every day recorded as holiday, a half day
+            or not worked. Days not yet submitted stay at the full rate, so the figure is only as
+            accurate as the submission rate below.
+        </p>
+
+        @if (actionError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+        }
+
+        @* ---- Forecast header: one leading figure, quiet secondaries, the confidence bar. ---- *@
+        <Panel Class="mb-6" BodyClass="p-5" IsLoading="@(Loading && !dataFailed)" LoadingLabel="Loading forecast">
+            @if (snapshot is null)
+            {
+                <p class="text-sm text-negative">Couldn't load the overview. The details are in the red bar at the top — refresh to try again.</p>
+            }
+            else
+            {
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
+                    <MetricStat Label="Projected labour spend" Value="@Pounds(snapshot.Totals.ProjectedSpend)" Class="md:col-span-2" />
+                    <article>
+                        <p class="text-sm text-content-subtle">Time off logged</p>
+                        <p class="mt-1 text-xl font-semibold text-content tracking-tight tabular-nums">− @Pounds(snapshot.Totals.TimeOffCost)</p>
+                        <p class="text-[11px] text-content-subtle">holiday and days not worked</p>
+                    </article>
+                    <article>
+                        <p class="text-sm text-content-subtle">Amount due after CIS</p>
+                        <p class="mt-1 text-xl font-semibold text-content tracking-tight tabular-nums">@Pounds(snapshot.Totals.AmountDueTotal)</p>
+                        <p class="text-[11px] text-content-subtle">net payable this month</p>
+                    </article>
+                </div>
+
+                @* The confidence bar is an instrument, not a progress bar: one segment per week. *@
+                <div class="mt-5">
+                    <div class="flex items-baseline justify-between text-xs text-content-subtle mb-1">
+                        <span>@ConfidenceLabel(snapshot.Totals) of elapsed days confirmed by timesheet</span>
+                        @if (snapshot.Totals.UnconfirmedCost > 0m)
+                        {
+                            <span class="tabular-nums">@Pounds(snapshot.Totals.UnconfirmedCost) unconfirmed</span>
+                        }
+                    </div>
+                    <div class="flex gap-1 h-2">
+                        @foreach (var week in snapshot.Totals.Weeks)
+                        {
+                            var share = week.ElapsedWorkerDays == 0 ? 0 : (double)week.ConfirmedWorkerDays / week.ElapsedWorkerDays;
+                            <div class="flex-1 rounded-full bg-surface-field overflow-hidden"
+                                 title="@($"w/c {week.WeekStart:dd MMM} — {week.ConfirmedWorkerDays}/{week.ElapsedWorkerDays} days confirmed{(week.UnconfirmedCost > 0m ? $", {Pounds(week.UnconfirmedCost)} unconfirmed" : "")}")">
+                                <div class="h-full bg-accent" style="width: @($"{share * 100:0}%")"></div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </Panel>
+
+        @* ---- View selector: local panes, not routes. ---- *@
+        <div class="flex items-center gap-1 mb-4">
+            @foreach (var (key, label) in Views)
+            {
+                <button type="button"
+                        class="@(view == key ? "btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
+                        @onclick="() => view = key">@label</button>
+            }
+        </div>
+
+        @if (view == "workers")
+        {
+            <Panel Title="By worker" Class="mb-6" BodyClass="p-0" IsLoading="@(Loading && !dataFailed)" LoadingLabel="Loading workers">
+                @if (snapshot is null)
+                {
+                    <p class="p-5 text-sm text-negative">Couldn't load the overview — refresh to try again.</p>
+                }
+                else if (snapshot.Workers.Count == 0)
+                {
+                    <p class="p-5 text-sm text-content-subtle italic">No active workers. Add them on the Workers page.</p>
+                }
+                else
+                {
+                    @* The hero: the placement grid — who was where, day by day. *@
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                                    <th class="px-5 py-3">Name</th>
+                                    <th class="px-2 py-3 text-right">Rate</th>
+                                    <th class="px-2 py-3 text-right">Contracted</th>
+                                    <th class="px-2 py-3 text-right">Worked</th>
+                                    <th class="px-2 py-3 text-right">Off</th>
+                                    <th class="px-2 py-3">Month</th>
+                                    <th class="px-2 py-3 text-right">Projected</th>
+                                    <th class="px-5 py-3 text-right">Due after CIS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var worker in snapshot.Workers)
+                                {
+                                    <tr class="border-b border-line/60 hover:bg-surface-raised/40 cursor-pointer"
+                                        @onclick="() => ToggleWorker(worker.WorkerId)">
+                                        <td class="px-5 py-2.5 font-medium text-content whitespace-nowrap">@worker.Name</td>
+                                        <td class="px-2 py-2.5 text-right tabular-nums text-content-muted whitespace-nowrap">@Pounds(worker.DayRate)</td>
+                                        <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.ContractedDays)</td>
+                                        <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.DaysWorked)</td>
+                                        <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.DaysOff)</td>
+                                        <td class="px-2 py-2.5">@PlacementStrip(worker)</td>
+                                        <td class="px-2 py-2.5 text-right tabular-nums text-content">@Pounds(worker.ProjectedCost)</td>
+                                        <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(worker.AmountDue)</td>
+                                    </tr>
+                                    @if (expandedWorkerId == worker.WorkerId)
+                                    {
+                                        <tr class="border-b border-line/60 bg-surface-raised/30">
+                                            <td colspan="8" class="px-5 py-4">@WorkerDetail(worker)</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="px-5 py-3 text-[11px] text-content-subtle border-t border-line">
+                        Chips are coloured by site; hatched = recorded absence, hollow = elapsed day with nothing recorded yet.
+                        Select a row for the day-by-day detail, absence recording and contract settings.
+                    </p>
+                }
+            </Panel>
+        }
+        else if (view == "sites")
+        {
+            <Panel Title="By site" Class="mb-6" BodyClass="p-0" IsLoading="@(Loading && !dataFailed)" LoadingLabel="Loading sites">
+                @if (snapshot is null)
+                {
+                    <p class="p-5 text-sm text-negative">Couldn't load the overview — refresh to try again.</p>
+                }
+                else if (snapshot.Sites.Count == 0)
+                {
+                    <p class="p-5 text-sm text-content-subtle italic">No labour recorded on any site this month yet.</p>
+                }
+                else
+                {
+                    var maxSiteCost = snapshot.Sites.Max(site => site.CostRecorded);
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                                <th class="px-5 py-3">Site</th>
+                                <th class="px-2 py-3 w-1/3"></th>
+                                <th class="px-2 py-3 text-right">Days</th>
+                                <th class="px-5 py-3 text-right">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var site in snapshot.Sites)
+                            {
+                                <tr class="border-b border-line/60 hover:bg-surface-raised/40 cursor-pointer"
+                                    @onclick="() => siteDetailProjectId = siteDetailProjectId == site.ProjectId ? null : site.ProjectId">
+                                    <td class="px-5 py-2.5 font-medium text-content">
+                                        <span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:@ColourOf(site.ProjectId)"></span>@site.ProjectName
+                                    </td>
+                                    <td class="px-2 py-2.5">
+                                        <div class="h-1.5 rounded-full bg-surface-field overflow-hidden">
+                                            <div class="h-full bg-accent/70" style="width:@BarWidth(site.CostRecorded, maxSiteCost)"></div>
+                                        </div>
+                                    </td>
+                                    <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(site.DaysRecorded)</td>
+                                    <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(site.CostRecorded)</td>
+                                </tr>
+                                @if (siteDetailProjectId == site.ProjectId)
+                                {
+                                    <tr class="border-b border-line/60 bg-surface-raised/30">
+                                        <td colspan="4" class="px-5 py-4">@SiteDetail(snapshot, site)</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                }
+            </Panel>
+        }
+        else if (view == "costcodes")
+        {
+            <Panel Title="By cost code" Class="mb-6" BodyClass="p-0" IsLoading="@(Loading && !dataFailed)" LoadingLabel="Loading cost codes">
+                @if (snapshot is null)
+                {
+                    <p class="p-5 text-sm text-negative">Couldn't load the overview — refresh to try again.</p>
+                }
+                else if (snapshot.CostCodes.Count == 0)
+                {
+                    <p class="p-5 text-sm text-content-subtle italic">No labour recorded against any cost code this month yet.</p>
+                }
+                else
+                {
+                    var maxCodeCost = snapshot.CostCodes.Max(code => code.CostRecorded);
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                                <th class="px-5 py-3">Cost code</th>
+                                <th class="px-2 py-3">Trade</th>
+                                <th class="px-2 py-3 w-1/3"></th>
+                                <th class="px-2 py-3 text-right">Days</th>
+                                <th class="px-5 py-3 text-right">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var code in snapshot.CostCodes)
+                            {
+                                <tr class="border-b border-line/60">
+                                    <td class="px-5 py-2.5 font-medium text-content tabular-nums">@code.CostCode</td>
+                                    <td class="px-2 py-2.5 text-content-muted">@code.Trade</td>
+                                    <td class="px-2 py-2.5">
+                                        <div class="h-1.5 rounded-full bg-surface-field overflow-hidden">
+                                            <div class="h-full bg-accent/70" style="width:@BarWidth(code.CostRecorded, maxCodeCost)"></div>
+                                        </div>
+                                    </td>
+                                    <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(code.DaysRecorded)</td>
+                                    <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(code.CostRecorded)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </Panel>
+        }
+        else if (view == "signoff")
+        {
+            @* ---- Weekly sign-off: a view over approval, never a second state machine. ---- *@
+            <Panel Title="Weekly sign-off" Class="mb-6" BodyClass="p-0" IsLoading="@(Loading && !dataFailed)" LoadingLabel="Loading sign-off">
+                @if (snapshot is null)
+                {
+                    <p class="p-5 text-sm text-negative">Couldn't load the overview — refresh to try again.</p>
+                }
+                else
+                {
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                                <th class="px-5 py-3">Name</th>
+                                @foreach (var weekStart in MonthWeeks())
+                                {
+                                    <th class="px-2 py-3 text-center">w/c @weekStart.ToString("dd MMM")</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var worker in snapshot.Workers)
+                            {
+                                <tr class="border-b border-line/60">
+                                    <td class="px-5 py-2.5 font-medium text-content whitespace-nowrap">@worker.Name</td>
+                                    @foreach (var weekStart in MonthWeeks())
+                                    {
+                                        <td class="px-2 py-2.5 text-center">@WeekCell(worker, weekStart)</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <p class="px-5 py-3 text-[11px] text-content-subtle border-t border-line">
+                        A week signs off only when every elapsed weekday is approved, rejected with a
+                        reason, or covered by a recorded absence. Approvals themselves live on each
+                        project's Labour tab — this marker records that the week was looked at whole.
+                    </p>
+                }
+            </Panel>
+        }
+        else
+        {
+            @* ---- Settlement: the per-worker monthly schedule, its verdict, and the §6a run. ---- *@
+            var schedules = Labour.Schedules(year, month);
+            <Panel Title="Settlement schedules" Class="mb-6" BodyClass="p-0"
+                   IsLoading="@(!Labour.SchedulesLoadedFor(year, month) && !dataFailed)" LoadingLabel="Loading schedules">
+                @if (schedules is null)
+                {
+                    <p class="p-5 text-sm text-negative">Couldn't load the schedules — refresh to try again.</p>
+                }
+                else
+                {
+                    <div class="flex flex-wrap items-center gap-3 px-5 py-3 border-b border-line">
+                        @if (schedules.InvoicesToChase > 0)
+                        {
+                            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">Invoices to chase: @schedules.InvoicesToChase</span>
+                        }
+                        @if (schedules.WorkersToReconcile > 0)
+                        {
+                            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle">To reconcile: @schedules.WorkersToReconcile</span>
+                        }
+                        <span class="flex-1"></span>
+                        <button type="button" class="btn-primary" disabled="@isRunningCoding"
+                                @onclick="RunCodingAsync">@(isRunningCoding ? "Coding into Xero…" : "Code month into Xero")</button>
+                    </div>
+                    <p class="px-5 pt-3 text-xs text-content-subtle">
+                        Each worker's signed-off month, split by site × cost code × nature — the exact
+                        totals the covering bill is coded to in Dext. The run writes DRAFT bills only:
+                        it recodes the covered bill (or stages one if none has arrived), and approval
+                        stays with the accountant in Xero. Anything unsigned, unmapped or in variance
+                        is skipped and reported, never guessed.
+                    </p>
+                    @if (codingResults is not null)
+                    {
+                        <div class="mx-5 mt-3 rounded-lg border border-line bg-surface-raised p-3 text-sm">
+                            <p class="font-medium text-content mb-1">Coding run finished:</p>
+                            @foreach (var result in codingResults)
+                            {
+                                <p class="text-content-muted">· <span class="font-medium text-content">@result.WorkerName</span> — @CodingOutcomeLabel(result.Outcome): @result.Detail</p>
+                            }
+                        </div>
+                    }
+                    @if (schedules.Workers.Count == 0)
+                    {
+                        <p class="p-5 text-sm text-content-subtle italic">No approved time or settlement lines this month yet.</p>
+                    }
+                    else
+                    {
+                        <table class="w-full text-sm mt-3">
+                            <thead>
+                                <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                                    <th class="px-5 py-3">Worker</th>
+                                    <th class="px-2 py-3 text-right">Gross</th>
+                                    <th class="px-2 py-3 text-right">CIS</th>
+                                    <th class="px-2 py-3 text-right">Net payable</th>
+                                    <th class="px-2 py-3 text-right">Covered bill</th>
+                                    <th class="px-2 py-3">Verdict</th>
+                                    <th class="px-5 py-3">Coding</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var schedule in schedules.Workers)
+                                {
+                                    <tr class="border-b border-line/60 hover:bg-surface-raised/40 cursor-pointer"
+                                        @onclick="() => expandedScheduleWorkerId = expandedScheduleWorkerId == schedule.WorkerId ? null : schedule.WorkerId">
+                                        <td class="px-5 py-2.5 font-medium text-content whitespace-nowrap">
+                                            @schedule.WorkerName
+                                            @if (!schedule.FullySignedOff)
+                                            {
+                                                <span class="ml-2 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle" title="Weeks with approved time are not all signed off">not signed off</span>
+                                            }
+                                        </td>
+                                        <td class="px-2 py-2.5 text-right tabular-nums text-content">@schedule.GrossTotal.ToString("N2")</td>
+                                        <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">− @schedule.CisDeduction.ToString("N2")</td>
+                                        <td class="px-2 py-2.5 text-right tabular-nums font-semibold text-content">@schedule.NetPayable.ToString("N2")</td>
+                                        <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@(schedule.CoveredBillTotal == 0m ? "—" : schedule.CoveredBillTotal.ToString("N2"))</td>
+                                        <td class="px-2 py-2.5">@VerdictPill(schedule)</td>
+                                        <td class="px-5 py-2.5 text-content-subtle text-xs whitespace-nowrap">
+                                            @(schedule.LastCodingOutcome == "" ? "—" : $"{schedule.LastCodingOutcome} · {schedule.LastCodedAt:dd MMM HH:mm}")
+                                        </td>
+                                    </tr>
+                                    @if (expandedScheduleWorkerId == schedule.WorkerId)
+                                    {
+                                        <tr class="border-b border-line/60 bg-surface-raised/30">
+                                            <td colspan="7" class="px-5 py-4">@ScheduleDetail(schedule)</td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    }
+                }
+            </Panel>
+        }
+
+        @* ---- Chase list: conditional panel — absent while loading, absent when clear. ---- *@
+        @if (snapshot is not null && snapshot.Chase.Count > 0)
+        {
+            <Panel Title="@($"Chase list ({snapshot.Chase.Count})")" Class="mb-6" BodyClass="p-0">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                            <th class="px-5 py-3">Name</th>
+                            <th class="px-2 py-3">Date</th>
+                            <th class="px-2 py-3">Why</th>
+                            <th class="px-5 py-3 text-right"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in snapshot.Chase.Take(chaseShowAll ? int.MaxValue : 8))
+                        {
+                            <tr class="border-b border-line/60">
+                                <td class="px-5 py-2 font-medium text-content whitespace-nowrap">@item.WorkerName</td>
+                                <td class="px-2 py-2 text-content-muted whitespace-nowrap">@item.Date.ToString("ddd dd MMM")</td>
+                                <td class="px-2 py-2 text-content-muted">
+                                    @(item.Reason == LabourChaseReason.OpenAttendance
+                                        ? $"Signed in at {item.ProjectName} — never signed out"
+                                        : "No timesheet and no recorded absence")
+                                </td>
+                                <td class="px-5 py-2 text-right">
+                                    <button type="button" class="text-xs text-content-subtle hover:text-content underline"
+                                            @onclick="() => OpenAbsence(item.WorkerId, item.WorkerName, item.Date)">Record absence</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (snapshot.Chase.Count > 8 && !chaseShowAll)
+                {
+                    <button type="button" class="px-5 py-3 text-xs text-content-subtle hover:text-content underline"
+                            @onclick="() => chaseShowAll = true">Show all @snapshot.Chase.Count</button>
+                }
+            </Panel>
+        }
+    </section>
+
+    @* ---- Absence modal ---- *@
+    <Modal IsOpen="@absenceOpen" Title="@($"Record absence — {absenceWorkerName}")"
+           ConfirmLabel="Record" ConfirmDisabled="@absenceSaving"
+           OnCancel="CloseAbsence" OnConfirm="SaveAbsenceAsync">
+        <div class="space-y-3">
+            <label class="block text-sm text-content-muted">Date
+                <input class="field mt-1" type="date" @bind="absenceDate" />
+            </label>
+            <label class="block text-sm text-content-muted">Kind
+                <select class="field mt-1" @bind="absenceKind">
+                    <option value="@AbsenceKind.Holiday">Holiday</option>
+                    <option value="@AbsenceKind.HalfDay">Half day</option>
+                    <option value="@AbsenceKind.NotWorked">Not worked</option>
+                    <option value="@AbsenceKind.Sick">Sick</option>
+                </select>
+            </label>
+            <label class="block text-sm text-content-muted">Note (optional)
+                <input class="field mt-1" @bind="absenceNote" placeholder="e.g. booked leave" />
+            </label>
+        </div>
+    </Modal>
+
+    @* ---- Add materials / travel settlement line ---- *@
+    <Modal IsOpen="@settleLineOpen" Title="@($"Add materials / travel — {settleLineWorkerName}")"
+           ConfirmLabel="Add line" ConfirmDisabled="@settleLineSaving"
+           OnCancel="() => settleLineOpen = false" OnConfirm="SaveSettlementLineAsync">
+        <p class="text-xs text-content-subtle mb-3">Labour comes from approved timesheets only. This adds a non-labour line to the worker's month — it changes the Xero account and is never CIS-deducted.</p>
+        <div class="space-y-3">
+            <label class="block text-sm text-content-muted">Nature
+                <select class="field mt-1" @bind="settleLineNature">
+                    <option value="@SettlementLineNature.CisMaterials">Materials</option>
+                    <option value="@SettlementLineNature.Travel">Travel</option>
+                </select>
+            </label>
+            <label class="block text-sm text-content-muted">Site (project id)
+                <input class="field mt-1" @bind="settleLineProjectId" placeholder="Project id" />
+            </label>
+            <label class="block text-sm text-content-muted">Cost code
+                <input class="field mt-1" @bind="settleLineCostCode" placeholder="e.g. 00010" />
+            </label>
+            <label class="block text-sm text-content-muted">Amount (£, net)
+                <input class="field mt-1 w-32" type="number" step="0.01" min="0" @bind="settleLineAmount" />
+            </label>
+            <label class="block text-sm text-content-muted">Note (optional)
+                <input class="field mt-1" @bind="settleLineNote" />
+            </label>
+            @if (settleLineError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@settleLineError</p>
+            }
+        </div>
+    </Modal>
+}
+
+@code {
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool refreshing;
+    private string? actionError;
+
+    private int year;
+    private int month;
+    private string view = "workers";
+    private static readonly (string Key, string Label)[] Views =
+    {
+        ("workers", "By worker"), ("sites", "By site"), ("costcodes", "By cost code"), ("signoff", "Sign-off"),
+        ("settlement", "Settlement"),
+    };
+
+    private string? expandedWorkerId;
+    private string? siteDetailProjectId;
+    private bool chaseShowAll;
+
+    // Absence modal state.
+    private bool absenceOpen;
+    private bool absenceSaving;
+    private string absenceWorkerId = "";
+    private string absenceWorkerName = "";
+    private DateTime absenceDate = DateTime.Today;
+    private AbsenceKind absenceKind = AbsenceKind.Holiday;
+    private string absenceNote = "";
+
+    // Contract editing (inside the worker detail row).
+    private decimal editContractedDays;
+    private decimal editCisRate;
+    private bool planSaving;
+
+    private bool Loading => !Labour.OverviewLoadedFor(year, month) && !dataFailed;
+    private string MonthLabel => new DateTime(year, month, 1).ToString("MMMM yyyy");
+
+    protected override async Task OnInitializedAsync()
+    {
+        var today = DateTime.Today;
+        year = today.Year; month = today.Month;
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Labour.OnChange += HandleChange;
+        AiTasks.OnDraftApplied += HandleAssistantDraft;
+        Nav.LocationChanged += HandleLocationChanged;
+        sessionReady = true;
+        // Paint the chrome before the fetch: Blazor re-renders OnInitializedAsync only at its
+        // FIRST await, which has already passed (Workers.razor has the full story).
+        StateHasChanged();
+        if (Session.IsApproved)
+        {
+            try { await Labour.RefreshOverviewAsync(year, month); }
+            catch { dataFailed = true; }
+        }
+
+        await HonourRequestedModalAsync();
+    }
+
+    private void HandleChange() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Labour.OnChange -= HandleChange;
+        AiTasks.OnDraftApplied -= HandleAssistantDraft;
+        Nav.LocationChanged -= HandleLocationChanged;
+    }
+
+    private async Task MoveMonth(int delta)
+    {
+        var moved = new DateTime(year, month, 1).AddMonths(delta);
+        year = moved.Year; month = moved.Month;
+        expandedWorkerId = null; siteDetailProjectId = null; chaseShowAll = false;
+        dataFailed = false;
+        if (!Labour.OverviewLoadedFor(year, month))
+        {
+            try { await Labour.RefreshOverviewAsync(year, month); }
+            catch { dataFailed = true; }
+        }
+    }
+
+    private async Task RefreshAsync()
+    {
+        refreshing = true; dataFailed = false; actionError = null;
+        try { await Labour.RefreshOverviewAsync(year, month); }
+        catch { dataFailed = true; }
+        finally { refreshing = false; }
+    }
+
+    private void ToggleWorker(string workerId)
+    {
+        if (expandedWorkerId == workerId) { expandedWorkerId = null; return; }
+        expandedWorkerId = workerId;
+        var worker = Labour.Overview(year, month)?.Workers.FirstOrDefault(row => row.WorkerId == workerId);
+        editContractedDays = worker?.ContractedDays ?? 0m;
+        editCisRate = worker?.CisRatePercent ?? 20m;
+    }
+
+    private void OpenAbsence(string workerId, string workerName, DateTimeOffset date)
+    {
+        absenceWorkerId = workerId; absenceWorkerName = workerName;
+        absenceDate = date.UtcDateTime.Date; absenceKind = AbsenceKind.Holiday; absenceNote = "";
+        absenceOpen = true;
+    }
+
+    private async Task SaveAbsenceAsync()
+    {
+        absenceSaving = true; actionError = null;
+        try
+        {
+            await Labour.RecordAbsenceAsync(year, month, absenceWorkerId,
+                new DateTimeOffset(absenceDate, TimeSpan.Zero), absenceKind, absenceNote);
+            absenceOpen = false;
+            EndAbsenceTask();
+        }
+        catch (Exception) { actionError = "Could not record the absence — try again."; }
+        finally { absenceSaving = false; }
+    }
+
+    private async Task SavePlanAsync(LabourOverviewWorker worker)
+    {
+        planSaving = true; actionError = null;
+        try
+        {
+            if (editContractedDays != worker.ContractedDays)
+                await Labour.SetWorkerContractAsync(year, month, worker.WorkerId, editContractedDays);
+            if (editCisRate != worker.CisRatePercent)
+                await Labour.SetWorkerCisStatusAsync(year, month, worker.WorkerId, editCisRate, "");
+        }
+        catch (Exception) { actionError = "Could not save the contract settings — try again."; }
+        finally { planSaving = false; }
+    }
+
+    private async Task SignOffAsync(string workerId, DateTime weekStart)
+    {
+        actionError = null;
+        try { await Labour.SignOffWeekAsync(year, month, workerId, new DateTimeOffset(weekStart, TimeSpan.Zero)); }
+        catch (Exception) { actionError = "Couldn't sign the week off — it may have unexplained days. Deal with those on the project's Labour tab first."; }
+    }
+
+    private async Task RemoveSignOffAsync(string workerId, DateTimeOffset weekStart)
+    {
+        actionError = null;
+        try { await Labour.RemoveWeekSignOffAsync(year, month, workerId, weekStart); }
+        catch (Exception) { actionError = "Couldn't remove the sign-off — try again."; }
+    }
+
+    // ---- Placement grid ----------------------------------------------------------------------
+
+    private IEnumerable<DateTime> MonthWeekdays()
+    {
+        var first = new DateTime(year, month, 1);
+        for (var date = first; date.Month == month; date = date.AddDays(1))
+            if (date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)) yield return date;
+    }
+
+    private IEnumerable<DateTime> MonthWeeks() =>
+        MonthWeekdays().Select(ForecastRules.WeekStartOf).Distinct().OrderBy(date => date);
+
+    private RenderFragment PlacementStrip(LabourOverviewWorker worker) => __builder =>
+    {
+        var byDate = worker.Days.ToLookup(day => day.Date.UtcDateTime.Date);
+        var today = DateTime.Today;
+        <div class="flex gap-[3px]">
+            @foreach (var date in MonthWeekdays())
+            {
+                var entries = byDate[date].ToList();
+                var absence = entries.FirstOrDefault(entry => entry.Absence is not null);
+                var sheet = entries.FirstOrDefault(entry => entry.Status is not null);
+                @if (absence is not null)
+                {
+                    <span class="inline-block w-3 h-3 rounded-[3px]"
+                          title="@($"{date:ddd dd MMM} — {AbsenceLabel(absence.Absence!.Value)}")"
+                          style="background: repeating-linear-gradient(45deg, #34373B 0 2px, transparent 2px 4px); border: 1px solid #34373B;"></span>
+                }
+                else if (sheet is not null)
+                {
+                    <span class="inline-block w-3 h-3 rounded-[3px] @(sheet.Status == TimesheetStatus.Rejected ? "ring-1 ring-negative" : "")"
+                          title="@($"{date:ddd dd MMM} — {sheet.ProjectName}, {sheet.Hours:0.#} h ({StatusLabel(sheet.Status!.Value)})")"
+                          style="background:@ColourOf(sheet.ProjectId)"></span>
+                }
+                else if (date <= today)
+                {
+                    <span class="inline-block w-3 h-3 rounded-[3px] border border-line-strong"
+                          title="@($"{date:ddd dd MMM} — nothing recorded")"></span>
+                }
+                else
+                {
+                    <span class="inline-block w-3 h-3 rounded-[3px] bg-surface-field/60"
+                          title="@date.ToString("ddd dd MMM")"></span>
+                }
+            }
+        </div>
+    };
+
+    private RenderFragment WorkerDetail(LabourOverviewWorker worker) => __builder =>
+    {
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2">
+                <h4 class="text-xs uppercase tracking-wide text-content-subtle mb-2">Day by day</h4>
+                @if (worker.Days.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">Nothing recorded this month yet.</p>
+                }
+                else
+                {
+                    <table class="w-full text-sm">
+                        <tbody>
+                            @foreach (var day in worker.Days)
+                            {
+                                <tr class="border-b border-line/40">
+                                    <td class="py-1.5 pr-3 text-content-muted whitespace-nowrap">@day.Date.ToString("ddd dd MMM")</td>
+                                    <td class="py-1.5 pr-3">
+                                        @if (day.Absence is not null)
+                                        {
+                                            <span class="text-content-subtle">@AbsenceLabel(day.Absence.Value)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:@ColourOf(day.ProjectId)"></span>
+                                            <span class="text-content">@day.ProjectName</span>
+                                        }
+                                    </td>
+                                    <td class="py-1.5 pr-3 text-right tabular-nums text-content-muted">@(day.Hours > 0 ? $"{day.Hours:0.#} h" : "")</td>
+                                    <td class="py-1.5 text-right">
+                                        @if (day.Status is not null)
+                                        {
+                                            <StatusPill Status="@day.Status.Value" />
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+            <div>
+                <h4 class="text-xs uppercase tracking-wide text-content-subtle mb-2">Forecast settings</h4>
+                <div class="space-y-3 max-w-[240px]">
+                    <label class="block text-sm text-content-muted">Contracted days / month
+                        <input class="field mt-1" type="number" step="0.5" min="0" max="31" @bind="editContractedDays" />
+                    </label>
+                    <label class="block text-sm text-content-muted">CIS rate
+                        <select class="field mt-1" @bind="editCisRate">
+                            <option value="20">20% — standard</option>
+                            <option value="30">30% — unverified</option>
+                            <option value="0">0% — gross status</option>
+                        </select>
+                    </label>
+                    <div class="flex items-center gap-2">
+                        <button type="button" class="btn-secondary" disabled="@planSaving" @onclick="() => SavePlanAsync(worker)">Save</button>
+                        <button type="button" class="btn-secondary" @onclick="() => OpenAbsence(worker.WorkerId, worker.Name, DateTimeOffset.UtcNow)">Record absence</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    };
+
+    private RenderFragment SiteDetail(LabourOverviewSnapshot snapshot, LabourOverviewSite site) => __builder =>
+    {
+        var visits = snapshot.Workers
+            .SelectMany(worker => worker.Days
+                .Where(day => day.ProjectId == site.ProjectId && day.Status is not null)
+                .Select(day => (worker.Name, day)))
+            .OrderBy(pair => pair.day.Date).ThenBy(pair => pair.Name)
+            .ToList();
+        <h4 class="text-xs uppercase tracking-wide text-content-subtle mb-2">Who worked here, day by day</h4>
+        @if (visits.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">No days recorded.</p>
+        }
+        else
+        {
+            <table class="w-auto text-sm">
+                <tbody>
+                    @foreach (var (name, day) in visits)
+                    {
+                        <tr class="border-b border-line/40">
+                            <td class="py-1.5 pr-6 text-content-muted whitespace-nowrap">@day.Date.ToString("ddd dd MMM")</td>
+                            <td class="py-1.5 pr-6 font-medium text-content whitespace-nowrap">@name</td>
+                            <td class="py-1.5 pr-6 text-right tabular-nums text-content-muted">@($"{day.Hours:0.#} h")</td>
+                            <td class="py-1.5"><StatusPill Status="@day.Status!.Value" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    };
+
+    private RenderFragment WeekCell(LabourOverviewWorker worker, DateTime weekStart) => __builder =>
+    {
+        var signOff = worker.SignOffs.FirstOrDefault(row => row.WeekStart.UtcDateTime.Date == weekStart);
+        var today = DateTime.Today;
+        @if (signOff is not null)
+        {
+            <button type="button"
+                    class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-positive/10 text-positive"
+                    title="@($"Signed off by {signOff.SignedOffByEmail} on {signOff.SignedOffAt:dd MMM HH:mm} — press to undo")"
+                    @onclick="() => RemoveSignOffAsync(worker.WorkerId, signOff.WeekStart)">Signed off</button>
+        }
+        else if (weekStart > today)
+        {
+            <span class="text-content-faint text-xs">—</span>
+        }
+        else
+        {
+            var settled = worker.Days
+                .Where(day => day.Status is TimesheetStatus.Approved or TimesheetStatus.Rejected)
+                .Select(day => day.Date.UtcDateTime.Date).ToHashSet();
+            var absent = worker.Days.Where(day => day.Absence is not null)
+                .Select(day => day.Date.UtcDateTime.Date).ToHashSet();
+            var signable = ForecastRules.WeekIsSignable(weekStart, today, settled, absent);
+            @if (signable)
+            {
+                <button type="button" class="btn-secondary text-xs py-0.5"
+                        @onclick="() => SignOffAsync(worker.WorkerId, weekStart)">Sign off</button>
+            }
+            else
+            {
+                <span class="text-[11px] text-content-subtle" title="Elapsed days still need approving, rejecting or an absence recording.">Open</span>
+            }
+        }
+    };
+
+    // ---- Settlement (scope §6, §6a) -------------------------------------------------------------
+
+    private string? expandedScheduleWorkerId;
+    private bool isRunningCoding;
+    private IReadOnlyList<XeroCodingRunResult>? codingResults;
+
+    private bool settleLineOpen;
+    private bool settleLineSaving;
+    private string? settleLineError;
+    private string settleLineWorkerId = "";
+    private string settleLineWorkerName = "";
+    private SettlementLineNature settleLineNature = SettlementLineNature.CisMaterials;
+    private string settleLineProjectId = "";
+    private string settleLineCostCode = "";
+    private decimal settleLineAmount;
+    private string settleLineNote = "";
+
+    private async Task RunCodingAsync()
+    {
+        isRunningCoding = true; actionError = null; codingResults = null;
+        try { codingResults = await Labour.RunXeroCodingAsync(year, month, null); }
+        catch (Exception) { actionError = "The coding run failed — nothing may have reached Xero. Check the error bar and try again."; }
+        finally { isRunningCoding = false; }
+    }
+
+    private void OpenSettleLine(WorkerSettlementSchedule schedule)
+    {
+        settleLineWorkerId = schedule.WorkerId;
+        settleLineWorkerName = schedule.WorkerName;
+        settleLineNature = SettlementLineNature.CisMaterials;
+        settleLineProjectId = schedule.Lines.FirstOrDefault()?.ProjectId ?? "";
+        settleLineCostCode = schedule.Lines.FirstOrDefault()?.CostCode ?? "";
+        settleLineAmount = 0m; settleLineNote = ""; settleLineError = null;
+        settleLineOpen = true;
+    }
+
+    private async Task SaveSettlementLineAsync()
+    {
+        settleLineError =
+            settleLineAmount <= 0m ? "The amount must be greater than zero."
+            : string.IsNullOrWhiteSpace(settleLineProjectId) ? "Say which site the line lands on."
+            : string.IsNullOrWhiteSpace(settleLineCostCode) ? "Pick the cost code." : null;
+        if (settleLineError is not null) return;
+        settleLineSaving = true;
+        try
+        {
+            await Labour.AddSettlementLineAsync(year, month, settleLineWorkerId, settleLineProjectId.Trim(),
+                settleLineCostCode.Trim(), settleLineNature, settleLineAmount, settleLineNote);
+            settleLineOpen = false;
+        }
+        catch (Exception) { settleLineError = "Could not add the line — try again."; }
+        finally { settleLineSaving = false; }
+    }
+
+    private async Task RemoveSettlementLineAsync(string workerSettlementLineId)
+    {
+        actionError = null;
+        try { await Labour.RemoveSettlementLineAsync(year, month, workerSettlementLineId); }
+        catch (Exception) { actionError = "Could not remove the line — try again."; }
+    }
+
+    private RenderFragment VerdictPill(WorkerSettlementSchedule schedule) => __builder =>
+    {
+        @switch (schedule.Verdict)
+        {
+            case ScheduleVerdict.Matches:
+                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-positive/10 text-positive">Matches</span>
+                break;
+            case ScheduleVerdict.VarianceOpen:
+                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative"
+                      title="@($"Covered bill differs by £{schedule.Difference:N2}")">Variance £@Math.Abs(schedule.Difference).ToString("N0")</span>
+                break;
+            case ScheduleVerdict.NoBillYet:
+                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle">No bill yet</span>
+                break;
+            default:
+                <span class="text-content-faint text-xs">—</span>
+                break;
+        }
+    };
+
+    private RenderFragment ScheduleDetail(WorkerSettlementSchedule schedule) => __builder =>
+    {
+        <div class="flex items-start justify-between gap-6">
+            <div class="flex-1">
+                <h4 class="text-xs uppercase tracking-wide text-content-subtle mb-2">Itemised schedule — code the bill to these totals</h4>
+                <table class="w-full text-sm max-w-2xl">
+                    <tbody>
+                        @foreach (var line in schedule.Lines)
+                        {
+                            <tr class="border-b border-line/40">
+                                <td class="py-1.5 pr-3 text-content">@line.ProjectName</td>
+                                <td class="py-1.5 pr-3 text-content-muted tabular-nums">@line.CostCode</td>
+                                <td class="py-1.5 pr-3 text-content-subtle">@(line.Nature == SettlementLineNature.CisLabour ? "CIS labour" : line.Nature == SettlementLineNature.CisMaterials ? "Materials" : "Travel")</td>
+                                <td class="py-1.5 pr-3 text-right tabular-nums text-content">@line.Amount.ToString("N2")</td>
+                                <td class="py-1.5 text-right">
+                                    @if (line.WorkerSettlementLineId is not null)
+                                    {
+                                        <button type="button" class="btn-ghost text-negative text-xs"
+                                                @onclick="() => RemoveSettlementLineAsync(line.WorkerSettlementLineId!)">Remove</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        <tr>
+                            <td colspan="3" class="py-1.5 pr-3 text-content-subtle text-right">CIS @schedule.CisRatePercent.ToString("0")% on labour @schedule.GrossLabour.ToString("N2")</td>
+                            <td class="py-1.5 pr-3 text-right tabular-nums text-content-muted">− @schedule.CisDeduction.ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3" class="py-1.5 pr-3 font-medium text-content text-right">Net payable</td>
+                            <td class="py-1.5 pr-3 text-right tabular-nums font-semibold text-content">@schedule.NetPayable.ToString("N2")</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="shrink-0">
+                <button type="button" class="btn-secondary" @onclick="() => OpenSettleLine(schedule)">Add materials / travel</button>
+            </div>
+        </div>
+    };
+
+    private static string CodingOutcomeLabel(XeroCodingOutcome outcome) => outcome switch
+    {
+        XeroCodingOutcome.BillRecoded => "bill recoded",
+        XeroCodingOutcome.DraftStaged => "draft staged",
+        XeroCodingOutcome.Skipped => "skipped",
+        _ => "failed",
+    };
+
+    // ---- The assistant's route in: open_modal → ?openModal=record_absence ----------------------
+    // Same recipe as manual_variation on the Variations register (and manual_timesheet on the
+    // Labour tab): the query is cleared through history so F5 does not reopen the dialog, and
+    // LocationChanged catches the already-on-this-page case.
+
+    private void CloseAbsence()
+    {
+        absenceOpen = false;
+        EndAbsenceTask();
+    }
+
+    private bool modalRequestHonoured;
+
+    private bool WantsAbsenceFromRoute() =>
+        !modalRequestHonoured
+        && new Uri(Nav.Uri).Query.Contains(
+            $"openModal={ModalCatalog.RecordAbsence.ModalKey}", StringComparison.OrdinalIgnoreCase);
+
+    private async Task HonourRequestedModalAsync()
+    {
+        if (!WantsAbsenceFromRoute()) return;
+
+        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
+        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
+        modalRequestHonoured = true;
+
+        absenceWorkerId = ""; absenceWorkerName = ""; absenceDate = DateTime.Today;
+        absenceKind = AbsenceKind.Holiday; absenceNote = "";
+        absenceOpen = true;
+
+        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
+        {
+            AiTasks.Start(
+                new AiTask(
+                    TaskKey: "record-absence",
+                    ModalKey: ModalCatalog.RecordAbsence.ModalKey,
+                    BannerLabel: "Recording an absence",
+                    BusyLabel: "Working out the day…",
+                    KickoffMessage:
+                        "Fill in the \"Record absence\" form open beside me from what we were just "
+                        + "discussing: the worker (exactly as the registry spells them), the resolved "
+                        + "date, and the kind (holiday, half-day, not-worked or sick). One date per "
+                        + "confirm — for a run of days, stage them one at a time and keep count. "
+                        + "I read the form and press Record myself.",
+                    ProjectId: null,
+                    RecordType: null,
+                    RecordId: null,
+                    RecordReference: null),
+                SerialiseAbsenceState());
+
+            Chat.Open();
+            Chat.SetCoexistence(true);
+        }
+        StateHasChanged();
+    }
+
+    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
+        _ = InvokeAsync(async () =>
+        {
+            if (!sessionReady) return;
+            modalRequestHonoured = false; // a fresh navigation is a fresh request
+            await HonourRequestedModalAsync();
+        });
+
+    private void EndAbsenceTask()
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.RecordAbsence.ModalKey) return;
+        AiTasks.End();
+        Chat.SetCoexistence(false);
+    }
+
+    private string SerialiseAbsenceState() =>
+        System.Text.Json.JsonSerializer.Serialize(new
+        {
+            workerName = absenceWorkerName,
+            date = absenceDate.ToString("yyyy-MM-dd"),
+            kind = absenceKind.ToString(),
+            note = absenceNote,
+        });
+
+    /// <summary>The model's update_open_modal, landing in the form: merge, never replace.</summary>
+    private void HandleAssistantDraft(string fieldsJson)
+    {
+        if (!absenceOpen || AiTasks.Active?.ModalKey != ModalCatalog.RecordAbsence.ModalKey) return;
+        try
+        {
+            using var parsed = System.Text.Json.JsonDocument.Parse(fieldsJson);
+            var root = parsed.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return;
+
+            if (root.TryGetProperty("workerName", out var workerName) && workerName.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                var name = workerName.GetString() ?? "";
+                var match = Labour.Overview(year, month)?.Workers
+                    .FirstOrDefault(row => string.Equals(row.Name, name, StringComparison.OrdinalIgnoreCase));
+                if (match is not null) { absenceWorkerId = match.WorkerId; absenceWorkerName = match.Name; }
+            }
+            if (root.TryGetProperty("date", out var date) && date.ValueKind == System.Text.Json.JsonValueKind.String
+                && DateTime.TryParse(date.GetString(), out var parsedDate))
+                absenceDate = parsedDate.Date;
+            if (root.TryGetProperty("kind", out var kind) && kind.ValueKind == System.Text.Json.JsonValueKind.String)
+                absenceKind = (kind.GetString() ?? "").ToLowerInvariant() switch
+                {
+                    "half-day" or "halfday" => AbsenceKind.HalfDay,
+                    "not-worked" or "notworked" => AbsenceKind.NotWorked,
+                    "sick" => AbsenceKind.Sick,
+                    _ => AbsenceKind.Holiday,
+                };
+            if (root.TryGetProperty("note", out var note) && note.ValueKind == System.Text.Json.JsonValueKind.String)
+                absenceNote = note.GetString() ?? "";
+        }
+        catch (System.Text.Json.JsonException) { return; }
+
+        AiTasks.UpdateDraft(SerialiseAbsenceState());
+        StateHasChanged();
+    }
+
+    // ---- Formatting & colours -----------------------------------------------------------------
+
+    private static string Pounds(decimal value) => value.ToString("£#,##0");
+    private static string Days(decimal value) => value == 0m ? "0" : value.ToString("0.##");
+
+    private static string ConfidenceLabel(LabourOverviewTotals totals) =>
+        totals.ElapsedWorkerDays == 0 ? "0%"
+            : $"{(double)totals.ConfirmedWorkerDays / totals.ElapsedWorkerDays:P0}";
+
+    private static string BarWidth(decimal value, decimal max) =>
+        max <= 0m ? "0%" : $"{(double)(value / max) * 100:0}%";
+
+    private static string StatusLabel(TimesheetStatus status) => status switch
+    {
+        TimesheetStatus.Approved => "approved",
+        TimesheetStatus.Rejected => "sent back",
+        _ => "waiting",
+    };
+
+    private static string AbsenceLabel(AbsenceKind kind) => kind switch
+    {
+        AbsenceKind.Holiday => "Holiday",
+        AbsenceKind.HalfDay => "Half day",
+        AbsenceKind.NotWorked => "Not worked",
+        _ => "Sick",
+    };
+
+    // A muted categorical palette for site chips; stable per project within the session.
+    private static readonly string[] SiteColours =
+    {
+        "#5B8DEF", "#57C4AD", "#C4884A", "#9C7BD8", "#D96C8A", "#6BA85E", "#4FA8C7", "#B0A24E",
+        "#D0805B", "#7E93A8",
+    };
+    private readonly Dictionary<string, string> colourByProject = new();
+
+    private string ColourOf(string projectId)
+    {
+        if (string.IsNullOrEmpty(projectId)) return "#34373B";
+        if (!colourByProject.TryGetValue(projectId, out var colour))
+        {
+            colour = SiteColours[colourByProject.Count % SiteColours.Length];
+            colourByProject[projectId] = colour;
+        }
+        return colour;
+    }
+
+    // ---- Export --------------------------------------------------------------------------------
+
+    private ExcelWorkbook? BuildExportWorkbook(bool includeAll)
+    {
+        var snapshot = Labour.Overview(year, month);
+        if (snapshot is null) return null;
+        var workbook = new ExcelWorkbook();
+
+        var workers = workbook.AddSheet($"By worker {MonthLabel}",
+            new ExcelColumn("Name"), new ExcelColumn("Day rate", ExcelFormat.Currency),
+            new ExcelColumn("Contracted days", ExcelFormat.Number), new ExcelColumn("Days worked", ExcelFormat.Number),
+            new ExcelColumn("Days off", ExcelFormat.Number), new ExcelColumn("CIS %", ExcelFormat.Number),
+            new ExcelColumn("Projected cost", ExcelFormat.Currency), new ExcelColumn("Amount due", ExcelFormat.Currency));
+        foreach (var worker in snapshot.Workers)
+            workers.AddRow(worker.Name, worker.DayRate, worker.ContractedDays, worker.DaysWorked,
+                worker.DaysOff, worker.CisRatePercent, worker.ProjectedCost, worker.AmountDue);
+
+        var sites = workbook.AddSheet("By site",
+            new ExcelColumn("Site"), new ExcelColumn("Days", ExcelFormat.Number), new ExcelColumn("Cost", ExcelFormat.Currency));
+        foreach (var site in snapshot.Sites) sites.AddRow(site.ProjectName, site.DaysRecorded, site.CostRecorded);
+
+        var codes = workbook.AddSheet("By cost code",
+            new ExcelColumn("Cost code"), new ExcelColumn("Trade"), new ExcelColumn("Days", ExcelFormat.Number),
+            new ExcelColumn("Cost", ExcelFormat.Currency));
+        foreach (var code in snapshot.CostCodes) codes.AddRow(code.CostCode, code.Trade, code.DaysRecorded, code.CostRecorded);
+
+        if (snapshot.Chase.Count > 0)
+        {
+            var chase = workbook.AddSheet("Chase list",
+                new ExcelColumn("Name"), new ExcelColumn("Date", ExcelFormat.Date), new ExcelColumn("Why"));
+            foreach (var item in snapshot.Chase)
+                chase.AddRow(item.WorkerName, item.Date.UtcDateTime,
+                    item.Reason == LabourChaseReason.OpenAttendance ? $"Open sign-in at {item.ProjectName}" : "No timesheet or absence");
+        }
+        return workbook;
+    }
+}

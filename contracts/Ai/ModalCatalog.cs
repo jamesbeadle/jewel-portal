@@ -312,8 +312,86 @@ public static class ModalCatalog
                 Required: true)
         });
 
+    /// <summary>
+    /// The manual timesheet entry dialog on a project's Labour tab — the chat's way into "put
+    /// Danny down for 8 hours on the Chiltern job yesterday, second fix"
+    /// (docs/Labour-Overview-Forecast-and-Xero-Mapping-Scope.md §4b). Filling it writes nothing:
+    /// the user reads worker, date, hours and cost code resolved on their own screen and presses
+    /// Add day themselves, which creates an ordinary Submitted timesheet — same validation, same
+    /// approval, same budget hard-block as any other entry.
+    /// </summary>
+    public static readonly ModalDescriptor ManualTimesheet = new(
+        "manual_timesheet",
+        "Add a day",
+        "It enters one worker's day on this project: who, the date, the hours and the cost code. "
+        + "Use it for missed sign-outs and verbal reports. The entry lands as a Submitted "
+        + "timesheet for normal approval — never approved by this dialog. Ask rather than assume "
+        + "when the worker, date or cost code is unclear; a wrong cost code miscosts real labour.",
+        "/projects/{project}/labour",
+        // Exactly LabourRoleSets.ApproveTimesheets — whoever the API will accept AddWorkerTimesheet
+        // from, and nobody else.
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.FinanceDirector,
+            Role.ProjectManager
+        },
+        new ModalField[]
+        {
+            new("workerName", "string",
+                "The worker's name exactly as the Workers registry spells it. If more than one "
+                + "worker could match what the user said, ask — never guess between two names.",
+                Required: true),
+            new("date", "string",
+                "The worked date as yyyy-MM-dd. Resolve relative dates (\"yesterday\", \"Monday\") "
+                + "against today and say the resolved date back in the chat.",
+                Required: true),
+            new("hours", "number",
+                "Hours worked, in half-hour steps of at least 0.5. A full day is 8.",
+                Required: true),
+            new("costCode", "string",
+                "A cost code from this project's list, spelled exactly. If none clearly fits, "
+                + "leave it out — the user picks from the dropdown.")
+        });
+
+    /// <summary>
+    /// The Record absence dialog on the Labour overview — "Frank's on holiday Thursday and
+    /// Friday" from the chat. One date per confirm; the assistant stages consecutive days one
+    /// after another. Absence explains a missing day (it leaves the chase list) and reduces the
+    /// month's projected labour spend at the day rate.
+    /// </summary>
+    public static readonly ModalDescriptor RecordAbsence = new(
+        "record_absence",
+        "Record absence",
+        "It records one worker's absence on one date: holiday, half day, not worked, or sick. "
+        + "The user confirms each day; for a run of days, stage them one at a time.",
+        "/labour/overview",
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.FinanceDirector,
+            Role.ProjectManager
+        },
+        new ModalField[]
+        {
+            new("workerName", "string",
+                "The worker's name exactly as the Workers registry spells it.",
+                Required: true),
+            new("date", "string",
+                "The absent date as yyyy-MM-dd. Resolve relative dates against today and say the "
+                + "resolved date back in the chat.",
+                Required: true),
+            new("kind", "string",
+                "One of: holiday, half-day, not-worked, sick. Defaults to holiday.",
+                Required: true),
+            new("note", "string",
+                "A short optional note — only what the user actually said.")
+        });
+
     public static IReadOnlyList<ModalDescriptor> All { get; } =
-        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails, TenderReply };
+        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails, TenderReply, ManualTimesheet, RecordAbsence };
 
     public static ModalDescriptor? Find(string? modalKey) =>
         string.IsNullOrWhiteSpace(modalKey)

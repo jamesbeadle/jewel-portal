@@ -1,0 +1,351 @@
+@page "/registers"
+@using Jewel.JPMS.Contracts.Registers
+@using Jewel.JPMS.Features.Registers
+@inject AuthService Auth
+@inject SessionService Session
+@inject RegisterItemsReadModel Items
+@inject ICommandSender Commands
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Registers · JPMS</PageTitle>
+
+@*
+    The company registers (docs/Labour-Overview-Forecast-and-Xero-Mapping-Scope.md §8 — the
+    Monday replacement): insurances, subscriptions, vans, trade accounts. One register pattern,
+    presented per kind because the kinds differ in what expires. Every dated field is renewal
+    visibility — the point of moving these out of Monday is that nothing lapses unseen.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 max-w-6xl">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-1">
+            <h2 class="text-lg font-semibold text-content">Registers</h2>
+            <div class="flex items-center gap-3">
+                <Toolbar>
+                    <ToolbarButton Icon="refresh" Label="Refresh" Busy="@refreshing" OnClick="RefreshAsync" />
+                    <ExportToExcelButton FileName="Registers"
+                                         Disabled="@(Items.Current is null or { Count: 0 })"
+                                         BuildWorkbook="BuildExportWorkbook" />
+                </Toolbar>
+                <button type="button" class="btn-primary" @onclick="() => StartEdit(null)">Add item</button>
+            </div>
+        </div>
+        <p class="text-sm text-content-subtle mb-5 max-w-3xl">
+            Insurances, subscriptions, vans and trade accounts, with the dates that matter.
+            Anything due inside 30 days is flagged; items deactivate rather than delete, so
+            history survives.
+        </p>
+
+        @if (actionError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+        }
+
+        <div class="flex items-center gap-1 mb-4">
+            @foreach (var (kind, label) in Kinds)
+            {
+                <button type="button"
+                        class="@(activeKind == kind ? "btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
+                        @onclick="() => activeKind = kind">@label</button>
+            }
+        </div>
+
+        <Panel Title="@KindLabel(activeKind)" Class="mb-6" BodyClass="p-0"
+               IsLoading="@(Items.Current is null && !dataFailed)" LoadingLabel="Loading the register">
+            @if (dataFailed)
+            {
+                <p class="p-5 text-sm text-negative">Couldn't load the register — refresh to try again.</p>
+            }
+            else
+            {
+                var rows = (Items.Current ?? Array.Empty<RegisterItem>())
+                    .Where(item => item.Kind == activeKind && item.IsActive).ToList();
+                @if (rows.Count == 0)
+                {
+                    <p class="p-5 text-sm text-content-subtle italic">Nothing on this register yet — use Add item above.</p>
+                }
+                else
+                {
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                                <th class="px-5 py-3">Name</th>
+                                <th class="px-2 py-3">@CounterpartyLabel(activeKind)</th>
+                                <th class="px-2 py-3">@ReferenceLabel(activeKind)</th>
+                                <th class="px-2 py-3 text-right">Cost</th>
+                                <th class="px-2 py-3">Cycle</th>
+                                <th class="px-2 py-3">@KeyDateLabel(activeKind)</th>
+                                <th class="px-2 py-3">@SecondaryDateLabel(activeKind)</th>
+                                <th class="px-5 py-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in rows)
+                            {
+                                <tr class="border-b border-line/60 hover:bg-surface-raised/40">
+                                    <td class="px-5 py-2.5 font-medium text-content">@item.Name</td>
+                                    <td class="px-2 py-2.5 text-content-muted">@item.Counterparty</td>
+                                    <td class="px-2 py-2.5 text-content-muted tabular-nums">@item.Reference</td>
+                                    <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@(item.Cost == 0m ? "—" : item.Cost.ToString("£#,##0"))</td>
+                                    <td class="px-2 py-2.5 text-content-subtle">@item.BillingCycle</td>
+                                    <td class="px-2 py-2.5">@DueCell(item.KeyDate)</td>
+                                    <td class="px-2 py-2.5">@DueCell(item.SecondaryDate)</td>
+                                    <td class="px-5 py-2.5 text-right whitespace-nowrap">
+                                        <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(item)">Edit</button>
+                                        <button type="button" class="btn-ghost text-negative" @onclick="() => DeactivateAsync(item)">Deactivate</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            }
+        </Panel>
+    </section>
+
+    <Modal IsOpen="@editOpen" Title="@(editId == "" ? $"Add — {KindLabel(activeKind)}" : "Edit item")"
+           ConfirmLabel="@(saving ? "Saving…" : "Save")" ConfirmDisabled="@saving"
+           OnCancel="() => editOpen = false" OnConfirm="SaveAsync">
+        <div class="grid sm:grid-cols-2 gap-3">
+            <label class="block text-sm text-content-muted sm:col-span-2">Name
+                <input class="field mt-1" @bind="editName" placeholder="@NamePlaceholder(activeKind)" />
+            </label>
+            <label class="block text-sm text-content-muted">@CounterpartyLabel(activeKind)
+                <input class="field mt-1" @bind="editCounterparty" />
+            </label>
+            <label class="block text-sm text-content-muted">@ReferenceLabel(activeKind)
+                <input class="field mt-1" @bind="editReference" />
+            </label>
+            <label class="block text-sm text-content-muted">Cost (£)
+                <input class="field mt-1" type="number" step="0.01" min="0" @bind="editCost" />
+            </label>
+            <label class="block text-sm text-content-muted">Billing cycle
+                <select class="field mt-1" @bind="editCycle">
+                    <option value="">—</option>
+                    <option>Monthly</option>
+                    <option>Quarterly</option>
+                    <option>Annual</option>
+                    <option>One-off</option>
+                </select>
+            </label>
+            <label class="block text-sm text-content-muted">@KeyDateLabel(activeKind)
+                <input class="field mt-1" type="date" @bind="editKeyDate" />
+            </label>
+            <label class="block text-sm text-content-muted">@SecondaryDateLabel(activeKind)
+                <input class="field mt-1" type="date" @bind="editSecondaryDate" />
+            </label>
+            <label class="block text-sm text-content-muted">Owner (email)
+                <input class="field mt-1" type="email" @bind="editOwner" />
+            </label>
+            <label class="block text-sm text-content-muted sm:col-span-2">Notes
+                <input class="field mt-1" @bind="editNotes" />
+            </label>
+            @if (editError is not null)
+            {
+                <p class="sm:col-span-2 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@editError</p>
+            }
+        </div>
+    </Modal>
+}
+
+@code {
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool refreshing;
+    private string? actionError;
+
+    private RegisterKind activeKind = RegisterKind.Insurance;
+    private static readonly (RegisterKind Kind, string Label)[] Kinds =
+    {
+        (RegisterKind.Insurance, "Insurances"), (RegisterKind.Subscription, "Subscriptions"),
+        (RegisterKind.Van, "Vans"), (RegisterKind.TradeAccount, "Trade accounts"),
+    };
+
+    private bool editOpen;
+    private bool saving;
+    private string? editError;
+    private string editId = "";
+    private string editName = "";
+    private string editCounterparty = "";
+    private string editReference = "";
+    private decimal editCost;
+    private string editCycle = "";
+    private DateTime? editKeyDate;
+    private DateTime? editSecondaryDate;
+    private string editOwner = "";
+    private string editNotes = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Items.OnChanged += StateHasChanged;
+        sessionReady = true;
+        StateHasChanged();
+        try { await Items.RefreshAsync(CancellationToken.None); }
+        catch { dataFailed = true; }
+    }
+
+    public void Dispose() => Items.OnChanged -= StateHasChanged;
+
+    private async Task RefreshAsync()
+    {
+        refreshing = true; dataFailed = false;
+        try { await Items.RefreshAsync(CancellationToken.None); }
+        catch { dataFailed = true; }
+        finally { refreshing = false; }
+    }
+
+    private void StartEdit(RegisterItem? item)
+    {
+        editId = item?.RegisterItemId ?? "";
+        editName = item?.Name ?? "";
+        editCounterparty = item?.Counterparty ?? "";
+        editReference = item?.Reference ?? "";
+        editCost = item?.Cost ?? 0m;
+        editCycle = item?.BillingCycle ?? "";
+        editKeyDate = item?.KeyDate?.UtcDateTime.Date;
+        editSecondaryDate = item?.SecondaryDate?.UtcDateTime.Date;
+        editOwner = item?.OwnerEmail ?? "";
+        editNotes = item?.Notes ?? "";
+        editError = null;
+        if (item is not null) activeKind = item.Kind;
+        editOpen = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        editError = string.IsNullOrWhiteSpace(editName) ? "Give the item a name." : null;
+        if (editError is not null) return;
+        saving = true;
+        try
+        {
+            await Commands.SendAsync(new SaveRegisterItem(new RegisterItem(
+                editId, activeKind, editName.Trim(), editCounterparty.Trim(), editReference.Trim(),
+                editOwner.Trim(), editCost, editCycle,
+                editKeyDate is { } key ? new DateTimeOffset(key, TimeSpan.Zero) : null,
+                editSecondaryDate is { } second ? new DateTimeOffset(second, TimeSpan.Zero) : null,
+                editNotes, true)), CancellationToken.None);
+            editOpen = false;
+            await Items.RefreshAsync(CancellationToken.None);
+        }
+        catch (Exception) { editError = "Could not save the item — try again."; }
+        finally { saving = false; }
+    }
+
+    private async Task DeactivateAsync(RegisterItem item)
+    {
+        actionError = null;
+        try
+        {
+            await Commands.SendAsync(new DeactivateRegisterItem(item.RegisterItemId), CancellationToken.None);
+            await Items.RefreshAsync(CancellationToken.None);
+        }
+        catch (Exception) { actionError = "Could not deactivate the item — try again."; }
+    }
+
+    private RenderFragment DueCell(DateTimeOffset? date) => __builder =>
+    {
+        @if (date is null)
+        {
+            <span class="text-content-faint">—</span>
+        }
+        else
+        {
+            var days = (date.Value.UtcDateTime.Date - DateTime.Today).Days;
+            @if (days < 0)
+            {
+                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">@date.Value.ToString("dd MMM yyyy") · lapsed</span>
+            }
+            else if (days <= 30)
+            {
+                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">@date.Value.ToString("dd MMM yyyy") · @days d</span>
+            }
+            else
+            {
+                <span class="text-content-muted tabular-nums">@date.Value.ToString("dd MMM yyyy")</span>
+            }
+        }
+    };
+
+    private static string KindLabel(RegisterKind kind) => kind switch
+    {
+        RegisterKind.Insurance => "Insurances",
+        RegisterKind.Subscription => "Subscriptions",
+        RegisterKind.Van => "Vans",
+        _ => "Trade accounts",
+    };
+
+    private static string CounterpartyLabel(RegisterKind kind) => kind switch
+    {
+        RegisterKind.Insurance => "Insurer",
+        RegisterKind.Subscription => "Provider",
+        RegisterKind.Van => "Driver",
+        _ => "Merchant",
+    };
+
+    private static string ReferenceLabel(RegisterKind kind) => kind switch
+    {
+        RegisterKind.Insurance => "Policy no.",
+        RegisterKind.Subscription => "Account",
+        RegisterKind.Van => "Registration",
+        _ => "Account no.",
+    };
+
+    private static string KeyDateLabel(RegisterKind kind) => kind switch
+    {
+        RegisterKind.Insurance => "Renewal",
+        RegisterKind.Subscription => "Next renewal",
+        RegisterKind.Van => "MOT due",
+        _ => "Review date",
+    };
+
+    private static string SecondaryDateLabel(RegisterKind kind) => kind switch
+    {
+        RegisterKind.Subscription => "Cancel notice by",
+        RegisterKind.Van => "Tax due",
+        _ => "Other date",
+    };
+
+    private static string NamePlaceholder(RegisterKind kind) => kind switch
+    {
+        RegisterKind.Insurance => "e.g. Public liability",
+        RegisterKind.Subscription => "e.g. Adobe Creative Cloud",
+        RegisterKind.Van => "e.g. Transit — LV21 XYZ",
+        _ => "e.g. Travis Perkins",
+    };
+
+    private ExcelWorkbook? BuildExportWorkbook(bool includeAll)
+    {
+        var items = Items.Current;
+        if (items is null || items.Count == 0) return null;
+        var workbook = new ExcelWorkbook();
+        foreach (var (kind, label) in Kinds)
+        {
+            var rows = items.Where(item => item.Kind == kind && (includeAll || item.IsActive)).ToList();
+            if (rows.Count == 0) continue;
+            var sheet = workbook.AddSheet(label,
+                new ExcelColumn("Name"), new ExcelColumn(CounterpartyLabel(kind)), new ExcelColumn(ReferenceLabel(kind)),
+                new ExcelColumn("Cost", ExcelFormat.Currency), new ExcelColumn("Cycle"),
+                new ExcelColumn(KeyDateLabel(kind), ExcelFormat.Date), new ExcelColumn(SecondaryDateLabel(kind), ExcelFormat.Date),
+                new ExcelColumn("Owner"), new ExcelColumn("Notes"), new ExcelColumn("Active"));
+            foreach (var item in rows)
+                sheet.AddRow(item.Name, item.Counterparty, item.Reference, item.Cost, item.BillingCycle,
+                    item.KeyDate?.UtcDateTime, item.SecondaryDate?.UtcDateTime, item.OwnerEmail, item.Notes,
+                    item.IsActive ? "Yes" : "No");
+        }
+        return workbook;
+    }
+}

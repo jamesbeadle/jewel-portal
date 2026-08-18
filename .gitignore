@@ -62,3 +62,15 @@ scripts/seed-subcontractors.sql
 
 # Local scratch area for files the Claude bridge cannot delete
 _to_delete/
+
+# Claude build-staging artifacts (safe to delete)
+_nuget/
+_nuget.zip
+_stage_repo.zip
+_stage_src.zip
+_stage_src_*.zip
+_copy-nuget-cache.sh
+zi1qoCk6
+zi84tD84
+ziB7Ad8l
+ziB7Ad8I

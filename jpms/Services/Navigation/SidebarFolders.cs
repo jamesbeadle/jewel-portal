@@ -149,6 +149,12 @@ public static class SidebarFolders
                     DesktopNavigation.DirectorRoles),
                 // Everyone the company deals with — Clients · Architects · Subcontractors · Staff.
                 new SidebarRow(new NavigationItem("Directory", "/directory"),
+                    DesktopNavigation.DirectorRoles),
+                // The Monday replacement: insurances, subscriptions, vans, trade accounts.
+                new SidebarRow(new NavigationItem("Registers", "/registers"),
+                    DesktopNavigation.DirectorRoles),
+                // Staff sign-off forms: NDAs, policies, H&S acknowledgements.
+                new SidebarRow(new NavigationItem("Policies", "/policies"),
                     DesktopNavigation.DirectorRoles)
             }),
 
@@ -160,9 +166,13 @@ public static class SidebarFolders
             "#time",
             new[]
             {
+                new SidebarRow(new NavigationItem("Labour overview", "/labour/overview"),
+                    DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Labour", "/projects/{project}/labour"),
                     DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Workers", "/labour/workers"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Xero mapping", "/labour/xero-mapping"),
                     DesktopNavigation.DirectorRoles)
             }),
 

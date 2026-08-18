@@ -136,6 +136,17 @@ public sealed class JpmsContext : DbContext
     public DbSet<SiteAttendanceEntity> SiteAttendances => Set<SiteAttendanceEntity>();
     public DbSet<XeroLineTimesheetCoverEntity> XeroLineTimesheetCovers => Set<XeroLineTimesheetCoverEntity>();
     public DbSet<LabourSettlementVarianceEntity> LabourSettlementVariances => Set<LabourSettlementVarianceEntity>();
+    public DbSet<WorkerContractEntity> WorkerContracts => Set<WorkerContractEntity>();
+    public DbSet<WorkerAbsenceEntity> WorkerAbsences => Set<WorkerAbsenceEntity>();
+    public DbSet<WorkerCisStatusEntity> WorkerCisStatuses => Set<WorkerCisStatusEntity>();
+    public DbSet<LabourWeekSignOffEntity> LabourWeekSignOffs => Set<LabourWeekSignOffEntity>();
+    public DbSet<WorkerSettlementLineEntity> WorkerSettlementLines => Set<WorkerSettlementLineEntity>();
+    public DbSet<SiteXeroMappingEntity> SiteXeroMappings => Set<SiteXeroMappingEntity>();
+    public DbSet<CostCodeXeroMappingEntity> CostCodeXeroMappings => Set<CostCodeXeroMappingEntity>();
+    public DbSet<XeroCodingRunEntity> XeroCodingRuns => Set<XeroCodingRunEntity>();
+    public DbSet<CompanyRegisterItemEntity> CompanyRegisterItems => Set<CompanyRegisterItemEntity>();
+    public DbSet<PolicyDocumentEntity> PolicyDocuments => Set<PolicyDocumentEntity>();
+    public DbSet<PolicySignOffEntity> PolicySignOffs => Set<PolicySignOffEntity>();
     public DbSet<CashflowSnapshotEntity> CashflowSnapshots => Set<CashflowSnapshotEntity>();
     public DbSet<ValuationInvoiceEntity> ValuationInvoices => Set<ValuationInvoiceEntity>();
     public DbSet<ValuationInvoiceEventEntity> ValuationInvoiceEvents => Set<ValuationInvoiceEventEntity>();
@@ -324,6 +335,39 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<SiteAttendanceEntity>()
             .HasIndex(row => new { row.ProjectId, row.WorkDate })
             .HasDatabaseName("IX_SiteAttendances_ProjectId_WorkDate");
+        modelBuilder.Entity<WorkerAbsenceEntity>()
+            .HasIndex(row => new { row.WorkerId, row.Date })
+            .IsUnique()
+            .HasDatabaseName("IX_WorkerAbsences_WorkerId_Date");
+        modelBuilder.Entity<LabourWeekSignOffEntity>()
+            .HasIndex(row => new { row.WorkerId, row.WeekStart })
+            .IsUnique()
+            .HasDatabaseName("IX_LabourWeekSignOffs_WorkerId_WeekStart");
+        modelBuilder.Entity<WorkerContractEntity>()
+            .HasIndex(row => row.WorkerId)
+            .HasDatabaseName("IX_WorkerContracts_WorkerId");
+        modelBuilder.Entity<WorkerCisStatusEntity>()
+            .HasIndex(row => row.WorkerId)
+            .HasDatabaseName("IX_WorkerCisStatuses_WorkerId");
+        modelBuilder.Entity<WorkerSettlementLineEntity>()
+            .HasIndex(row => new { row.WorkerId, row.Month })
+            .HasDatabaseName("IX_WorkerSettlementLines_WorkerId_Month");
+        modelBuilder.Entity<SiteXeroMappingEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_SiteXeroMappings_ProjectId");
+        modelBuilder.Entity<CostCodeXeroMappingEntity>()
+            .HasIndex(row => row.CostCode)
+            .HasDatabaseName("IX_CostCodeXeroMappings_CostCode");
+        modelBuilder.Entity<XeroCodingRunEntity>()
+            .HasIndex(row => new { row.WorkerId, row.Month })
+            .HasDatabaseName("IX_XeroCodingRuns_WorkerId_Month");
+        modelBuilder.Entity<CompanyRegisterItemEntity>()
+            .HasIndex(row => row.Kind)
+            .HasDatabaseName("IX_CompanyRegisterItems_Kind");
+        modelBuilder.Entity<PolicySignOffEntity>()
+            .HasIndex(row => new { row.PolicyDocumentId, row.RecipientEmail })
+            .IsUnique()
+            .HasDatabaseName("IX_PolicySignOffs_PolicyDocumentId_RecipientEmail");
 
         // ---- Project-scoped registers -----------------------------------------------------------
         modelBuilder.Entity<DrawingEntity>()
