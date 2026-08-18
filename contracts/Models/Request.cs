@@ -75,14 +75,18 @@ public sealed record Request(
     // The itemised queries, never null (Items is nullable so old payloads deserialize cleanly).
     public IReadOnlyList<RequestItem> ItemList => Items ?? Array.Empty<RequestItem>();
 
-    // Days a not-yet-closed request has been outstanding since it was issued. The clock ticks
-    // until the request is Closed — a recorded response (RespondedAt) does NOT stop it, since a
-    // responded-but-open request is still outstanding work. IssuedAt is the one visible date
-    // (RaisedAt is only the internal created-on stamp, kept as a fallback for rows predating the
-    // IssuedAt backfill).
+    // Days a request has been outstanding since it was issued. While open the clock ticks daily —
+    // a recorded response (RespondedAt) does NOT stop it, since a responded-but-open request is
+    // still outstanding work. At Closed the count FREEZES at the close date rather than vanishing:
+    // "how long was it out?" stays a fact of the record after the fact. ClosedAt is the user-chosen
+    // close date; RespondedAt is the fallback stamp for closed rows predating it, and a closed row
+    // with neither shows a dash. IssuedAt is the one visible date (RaisedAt is only the internal
+    // created-on stamp, kept as a fallback for rows predating the IssuedAt backfill).
     public int? DaysOutstanding =>
         Status is RequestStatus.Closed
-            ? null
+            ? (ClosedAt ?? RespondedAt) is { } closed
+                ? Math.Max(0, (int)(closed.Date - (IssuedAt ?? RaisedAt).Date).TotalDays)
+                : null
             : Math.Max(0, (int)(DateTimeOffset.UtcNow.Date - (IssuedAt ?? RaisedAt).Date).TotalDays);
 
     // Overdue is a question about THEM, not us: the correspondent has not come back by the date we

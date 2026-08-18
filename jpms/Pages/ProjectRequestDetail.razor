@@ -2097,11 +2097,14 @@ else
 
     // The two-week nudge shows on an RFI that is still outstanding a fortnight after issue and
     // carries no answer to the question yet — not tagged, not previously dismissed. The clock is
-    // the record's own DaysOutstanding (Issued date, falling back to the created-on stamp; stops
-    // at Closed), so the banner and the "Days outstanding" fact can never disagree.
+    // the record's own DaysOutstanding (Issued date, falling back to the created-on stamp), so the
+    // banner and the "Days outstanding" fact can never disagree. Closed is gated explicitly here:
+    // DaysOutstanding no longer nulls out at Closed (it freezes at the close date so the register
+    // keeps the how-long-was-it-out fact), and a closed RFI has nothing left to nudge about.
     private bool ShowCriticalPathNudge =>
         CanEditDetails // both answers write to the request, so viewers aren't asked
         && record is { Kind: RequestType.Rfi, CriticalPath: false, CriticalPathNudgeDismissed: false }
+        && record.Status is not RequestStatus.Closed
         && record.DaysOutstanding is >= 14;
 
     // Yes tags the RFI critical path; No records the dismissal so the nudge never re-asks. Both
