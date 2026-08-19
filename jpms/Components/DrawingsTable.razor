@@ -1,5 +1,10 @@
 @inject NavigationManager Nav
 
+@* The drawing register table. With folders present the rows group into collapsible sections —
+   one per folder (A–Z, as supplied), Ungrouped last — inside a single table so the sticky
+   column headers hold across sections. With no folders it renders the flat register it always
+   was. Collapse state is per-visit; the register reopens fully expanded. *@
+
 <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
     <table class="w-full text-sm">
         <thead class="bg-surface-raised border-b border-line">
@@ -12,90 +17,197 @@
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Added</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-line">
-            @foreach (var drawing in Drawings)
+        @if (Folders.Count == 0)
+        {
+            <tbody class="divide-y divide-line">
+                @foreach (var drawing in Drawings)
+                {
+                    @DrawingRow(drawing)
+                }
+            </tbody>
+        }
+        else
+        {
+            @foreach (var section in Sections)
             {
-                <tr class="hover:bg-surface-raised cursor-pointer transition"
-                    @onclick="() => OpenDrawing(drawing)">
-                    <td class="px-4 py-3 font-mono text-xs text-content-muted">@drawing.DrawingCode</td>
-                    <td class="px-4 py-3 text-content font-medium">@drawing.Title</td>
-                    <td class="px-4 py-3 text-center">
-                        @if (string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
+                <tbody class="divide-y divide-line border-t border-line">
+                    <tr class="bg-surface-raised/70 cursor-pointer select-none hover:bg-surface-raised transition"
+                        @onclick="() => ToggleCollapse(section.Key)">
+                        <td colspan="6" class="px-4 py-2">
+                            <div class="flex items-center gap-2">
+                                <ActionIcon Name="chevron-down"
+                                            Class="@(IsCollapsed(section.Key) ? "w-3.5 h-3.5 text-content-subtle -rotate-90 transition-transform" : "w-3.5 h-3.5 text-content-subtle transition-transform")" />
+                                @if (section.Folder is not null)
+                                {
+                                    <ActionIcon Name="folder" Class="w-4 h-4 text-content-subtle" />
+                                    <span class="font-medium text-content">@section.Folder.Name</span>
+                                }
+                                else
+                                {
+                                    <span class="font-medium text-content-muted italic">Ungrouped</span>
+                                }
+                                <span class="text-xs text-content-subtle tabular-nums">@section.Drawings.Count</span>
+                                @if (CanManage && section.Folder is { } folder)
+                                {
+                                    <span class="ml-auto flex items-center gap-1">
+                                        <button type="button" title="Rename folder" aria-label="Rename folder"
+                                                @onclick="() => OnRenameFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
+                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
+                                            <ActionIcon Name="pencil" Class="w-3.5 h-3.5" />
+                                        </button>
+                                        <button type="button" title="Delete folder (drawings become ungrouped)" aria-label="Delete folder"
+                                                @onclick="() => OnDeleteFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
+                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-red-700 hover:bg-red-50 transition">
+                                            <ActionIcon Name="trash" Class="w-3.5 h-3.5" />
+                                        </button>
+                                    </span>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                    @if (!IsCollapsed(section.Key))
+                    {
+                        @if (section.Drawings.Count == 0)
                         {
-                            <span class="text-xs text-content-subtle italic">—</span>
+                            <tr>
+                                <td colspan="6" class="px-4 py-3 pl-10 text-xs text-content-subtle italic">No drawings in this folder yet.</td>
+                            </tr>
                         }
                         else
                         {
-                            <span class="inline-flex items-center justify-center rounded bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-mono font-medium text-emerald-800">
-                                Rev @drawing.CurrentApprovedRevisionLabel
-                            </span>
+                            @foreach (var drawing in section.Drawings)
+                            {
+                                @DrawingRow(drawing)
+                            }
                         }
-                    </td>
-                    <td class="px-4 py-3 text-center whitespace-nowrap">
-                        @if (drawing.UnapprovedCount > 0)
-                        {
-                            <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
-                                @drawing.UnapprovedCount pending
-                            </span>
-                        }
-                        @if (drawing.ArchivedCount > 0)
-                        {
-                            <span class="ml-1 inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">
-                                @drawing.ArchivedCount archived
-                            </span>
-                        }
-                        @if (drawing.UnapprovedCount == 0 && drawing.ArchivedCount == 0 && !string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
-                        {
-                            <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
-                                Approved
-                            </span>
-                        }
-                    </td>
-                    <td class="px-4 py-3 text-center whitespace-nowrap">
-                        @* Pipeline status of the latest revision: has Bluebeam extracted its
-                           metadata, and has the change analysis run? Pending states are shown
-                           just as loudly so un-analysed drawings can't be silently missed. *@
-                        @if (drawing.LatestMetadataExtractedAt is { } extractedAt)
-                        {
-                            <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800"
-                                  title="Metadata extracted @extractedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">
-                                Metadata ✓
-                            </span>
-                        }
-                        else
-                        {
-                            <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
-                                  title="The latest revision's metadata has not been extracted yet">
-                                Not extracted
-                            </span>
-                        }
-                        @if (drawing.LatestAnalysedAt is { } analysedAt)
-                        {
-                            <span class="ml-1 inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800"
-                                  title="Change analysis run @analysedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">
-                                Analysed ✓
-                            </span>
-                        }
-                        else
-                        {
-                            <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
-                                  title="The latest revision has not been analysed yet">
-                                Not analysed
-                            </span>
-                        }
-                    </td>
-                    <td class="px-4 py-3 text-content-muted hidden md:table-cell">
-                        @drawing.CreatedAt.LocalDateTime.ToString("d MMM yyyy")
-                    </td>
-                </tr>
+                    }
+                </tbody>
             }
-        </tbody>
+        }
     </table>
 </div>
 
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Drawing> Drawings { get; set; } = Array.Empty<Drawing>();
 
+    /// <summary>The project's folders, in display order (A–Z from the store). Empty = flat table.</summary>
+    [Parameter] public IReadOnlyList<DrawingFolder> Folders { get; set; } = Array.Empty<DrawingFolder>();
+
+    [Parameter] public bool CanManage { get; set; }
+    [Parameter] public EventCallback<DrawingFolder> OnRenameFolder { get; set; }
+    [Parameter] public EventCallback<DrawingFolder> OnDeleteFolder { get; set; }
+
+    private readonly HashSet<string> collapsed = new();
+
+    private const string UngroupedKey = "";
+
+    private sealed record Section(string Key, DrawingFolder? Folder, IReadOnlyList<Drawing> Drawings);
+
+    // Every folder gets a section even when empty (so it can be renamed/deleted and shows it
+    // exists); Ungrouped renders last and only when something is actually ungrouped.
+    private IEnumerable<Section> Sections
+    {
+        get
+        {
+            var byFolder = Drawings
+                .GroupBy(drawing => drawing.DrawingFolderId ?? UngroupedKey)
+                .ToDictionary(group => group.Key, group => (IReadOnlyList<Drawing>)group.ToList());
+
+            foreach (var folder in Folders)
+            {
+                byFolder.TryGetValue(folder.DrawingFolderId, out var drawings);
+                yield return new Section(folder.DrawingFolderId, folder, drawings ?? Array.Empty<Drawing>());
+            }
+
+            if (byFolder.TryGetValue(UngroupedKey, out var ungrouped) && ungrouped.Count > 0)
+                yield return new Section(UngroupedKey, null, ungrouped);
+        }
+    }
+
+    private bool IsCollapsed(string key) => collapsed.Contains(key);
+
+    private void ToggleCollapse(string key)
+    {
+        if (!collapsed.Add(key)) collapsed.Remove(key);
+    }
+
     private void OpenDrawing(Drawing drawing) =>
         Nav.NavigateTo($"/projects/{drawing.ProjectId}/drawings/{drawing.DrawingId}");
+
+    private RenderFragment DrawingRow(Drawing drawing) => __builder =>
+    {
+        <tr class="hover:bg-surface-raised cursor-pointer transition"
+            @onclick="() => OpenDrawing(drawing)">
+            <td class="px-4 py-3 font-mono text-xs text-content-muted">@drawing.DrawingCode</td>
+            <td class="px-4 py-3 text-content font-medium">@drawing.Title</td>
+            <td class="px-4 py-3 text-center">
+                @if (string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
+                {
+                    <span class="text-xs text-content-subtle italic">—</span>
+                }
+                else
+                {
+                    <span class="inline-flex items-center justify-center rounded bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-mono font-medium text-emerald-800">
+                        Rev @drawing.CurrentApprovedRevisionLabel
+                    </span>
+                }
+            </td>
+            <td class="px-4 py-3 text-center whitespace-nowrap">
+                @if (drawing.UnapprovedCount > 0)
+                {
+                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                        @drawing.UnapprovedCount pending
+                    </span>
+                }
+                @if (drawing.ArchivedCount > 0)
+                {
+                    <span class="ml-1 inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">
+                        @drawing.ArchivedCount archived
+                    </span>
+                }
+                @if (drawing.UnapprovedCount == 0 && drawing.ArchivedCount == 0 && !string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
+                {
+                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                        Approved
+                    </span>
+                }
+            </td>
+            <td class="px-4 py-3 text-center whitespace-nowrap">
+                @* Pipeline status of the latest revision: has Bluebeam extracted its
+                   metadata, and has the change analysis run? Pending states are shown
+                   just as loudly so un-analysed drawings can't be silently missed. *@
+                @if (drawing.LatestMetadataExtractedAt is { } extractedAt)
+                {
+                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800"
+                          title="Metadata extracted @extractedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">
+                        Metadata ✓
+                    </span>
+                }
+                else
+                {
+                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                          title="The latest revision's metadata has not been extracted yet">
+                        Not extracted
+                    </span>
+                }
+                @if (drawing.LatestAnalysedAt is { } analysedAt)
+                {
+                    <span class="ml-1 inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800"
+                          title="Change analysis run @analysedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">
+                        Analysed ✓
+                    </span>
+                }
+                else
+                {
+                    <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                          title="The latest revision has not been analysed yet">
+                        Not analysed
+                    </span>
+                }
+            </td>
+            <td class="px-4 py-3 text-content-muted hidden md:table-cell">
+                @drawing.CreatedAt.LocalDateTime.ToString("d MMM yyyy")
+            </td>
+        </tr>
+    };
 }

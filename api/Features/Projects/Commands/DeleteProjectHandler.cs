@@ -87,6 +87,7 @@ public sealed class DeleteProjectHandler : ICommandHandler<DeleteProject, Acknow
             var revisionIds = context.DrawingRevisions.Where(r => drawingIds.Contains(r.DrawingId)).Select(r => r.DrawingRevisionId);
             await context.DrawingIssueRecords.Where(x => revisionIds.Contains(x.DrawingRevisionId)).ExecuteDeleteAsync(cancellationToken);
             await context.DrawingRevisions.Where(x => drawingIds.Contains(x.DrawingId)).ExecuteDeleteAsync(cancellationToken);
+            await context.DrawingFolders.Where(x => x.ProjectId == projectId).ExecuteDeleteAsync(cancellationToken);
 
             var bidPackageIds = context.BidPackages.Where(p => p.ProjectId == projectId).Select(p => p.BidPackageId);
             var quoteIds = context.Quotes.Where(q => bidPackageIds.Contains(q.BidPackageId)).Select(q => q.QuoteId);

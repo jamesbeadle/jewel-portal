@@ -76,9 +76,9 @@
     {
         @* Everything on this panel is the reader's own (ListMyTodoItems), and the API lets a
            role-holder tick their role's items off even outside the manage gate — so every card
-           drags. The Done column is capped: this is a dashboard glance, the full pile lives on
-           the To-dos page behind View all. *@
-        <TodoBoard Items="@BoardItems" Busy="@busy" Compact="true" DoneCap="6"
+           drags. The Done column is capped HARD (no Load more): this is a dashboard glance, the
+           full pile lives on the To-dos page behind View all. *@
+        <TodoBoard Items="@BoardItems" Busy="@busy" Compact="true" DoneCap="6" DoneCapFixed="true"
                    OnOpen="OpenItem"
                    OnSetComplete="args => SetComplete(args.Item, args.IsComplete)"
                    CanDrag="_ => true"

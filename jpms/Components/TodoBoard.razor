@@ -21,6 +21,11 @@
     (Compact) so the three surfaces can never lay the board out differently. The host passes the
     already-FILTERED items — scope/role/person filters and keyword search stay the host's job.
 
+    The Done column opens on only the latest completions (DoneCap, newest-done-first) — a done
+    pile only ever grows, and a board that renders all of it is mostly history. A Load more
+    button pages the rest in; the dashboard glance fixes its cap instead (DoneCapFixed) because
+    its full pile lives behind View all. The Open column always renders in full.
+
     While a drag is in flight the one valid destination (the OTHER column) shows a dashed accent
     border — a drop anywhere else, or of a card onto its own column, is a no-op. Drops are ignored
     while Busy so a slow command can't be stacked on.
@@ -36,7 +41,8 @@
     @foreach (var done in Columns)
     {
         var all = ItemsFor(done);
-        var shown = done && DoneCap is int cap && all.Count > cap ? all.Take(cap).ToList() : all;
+        var capNow = done && DoneCap is int cap ? cap + (DoneCapFixed ? 0 : doneExtra) : (int?)null;
+        var shown = capNow is int c && all.Count > c ? all.Take(c).ToList() : all;
         var isTarget = dragging is TodoItem drag && drag.IsComplete != done;
 
         <div class="rounded-lg border p-2.5 flex flex-col @(isTarget ? "border-dashed border-accent/60 bg-accent/5" : "border-line bg-canvas/40")"
@@ -91,8 +97,22 @@
                 }
                 @if (shown.Count < all.Count)
                 {
-                    @* Never a silent cap: the column says how much of the pile it is showing. *@
-                    <p class="text-[11px] text-content-subtle px-0.5">Showing @shown.Count of @all.Count done items.</p>
+                    @* Never a silent cap: the column says how much of the pile it is showing. On
+                       fixed-cap boards (the dashboard glance) that is a line — the full pile lives
+                       elsewhere. Everywhere else it is a Load more button, so the history stays a
+                       click away without the column opening at full length. *@
+                    @if (DoneCapFixed)
+                    {
+                        <p class="text-[11px] text-content-subtle px-0.5">Showing @shown.Count of @all.Count done items.</p>
+                    }
+                    else
+                    {
+                        <div class="pt-1 text-center">
+                            <button type="button" class="btn-secondary text-xs" @onclick="() => doneExtra += LoadMoreStep">
+                                Load more (showing @shown.Count of @all.Count)
+                            </button>
+                        </div>
+                    }
                 }
             </div>
         </div>
@@ -135,10 +155,26 @@
     /// <summary>Tighter paddings and column heights for the dashboard panel.</summary>
     [Parameter] public bool Compact { get; set; }
 
-    /// <summary>Cap on the Done column's rendered cards (null = all) — the column says when it caps.</summary>
-    [Parameter] public int? DoneCap { get; set; }
+    /// <summary>
+    /// Initial cap on the Done column's rendered cards (null = no cap). Done cards read
+    /// newest-done-first, so the cap keeps the latest completions in view; by default a Load more
+    /// button walks back through the rest a page at a time. The column never caps silently.
+    /// </summary>
+    [Parameter] public int? DoneCap { get; set; } = 10;
+
+    /// <summary>
+    /// The cap is a hard window with no Load more (the dashboard glance, where the full pile
+    /// lives on the To-dos page behind View all) — a "Showing x of y" line stands in for the button.
+    /// </summary>
+    [Parameter] public bool DoneCapFixed { get; set; }
 
     private static readonly bool[] Columns = { false, true };
+
+    // How many further done cards each Load more click reveals, on top of DoneCap. The extra
+    // survives a filter change on the host — collapsing a pile the reader just opened is worse
+    // than a long column they scrolled past.
+    private const int LoadMoreStep = 25;
+    private int doneExtra;
 
     // The card mid-drag (null = no drag). Set on dragstart, cleared on drop/dragend — dragend
     // still fires when the drop lands outside any column, so the highlight can't stick.

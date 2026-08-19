@@ -64,6 +64,38 @@ else
                             <span class="font-mono">Rev @drawing.CurrentApprovedRevisionLabel</span>
                         }
                     </p>
+                    <div class="mt-2 flex items-center gap-2 text-sm text-content-muted">
+                        <ActionIcon Name="folder" Class="w-4 h-4 text-content-subtle" />
+                        @if (CanManage)
+                        {
+                            @* Moving is a single act — pick a folder, the drawing moves. Disabled with a
+                               loading placeholder until the folder list has landed (never gate a control). *@
+                            <select value="@(drawing.DrawingFolderId ?? "")" disabled="@(!FoldersReady || moveBusy)"
+                                    @onchange="MoveToFolderAsync"
+                                    class="rounded-lg border border-line-strong bg-surface px-2 py-1 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent disabled:opacity-60">
+                                @if (!FoldersReady)
+                                {
+                                    <option value="">Loading…</option>
+                                }
+                                else
+                                {
+                                    <option value="">No folder (ungrouped)</option>
+                                    @foreach (var folder in Folders)
+                                    {
+                                        <option value="@folder.DrawingFolderId">@folder.Name</option>
+                                    }
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <span>@(FolderName ?? "Ungrouped")</span>
+                        }
+                    </div>
+                    @if (moveError is not null)
+                    {
+                        <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@moveError</p>
+                    }
                 </div>
                 @if (CanManage)
                 {
@@ -176,6 +208,8 @@ else
     private bool confirmingDelete;
     private bool deleteBusy;
     private string? deleteError;
+    private bool moveBusy;
+    private string? moveError;
     private Drawing? drawing;
 
     private bool CanManage =>
@@ -183,6 +217,33 @@ else
 
     // The register landing says nothing about this drawing's revisions — they are a separate fetch.
     private bool RevisionsReady => DrawingStore.RevisionsLoadedFor(DrawingId);
+
+    private bool FoldersReady => DrawingStore.FoldersLoadedFor(ProjectId);
+    private IReadOnlyList<DrawingFolder> Folders => DrawingStore.FoldersFor(ProjectId);
+
+    private string? FolderName =>
+        Folders.FirstOrDefault(folder => folder.DrawingFolderId == drawing?.DrawingFolderId)?.Name;
+
+    private async Task MoveToFolderAsync(ChangeEventArgs args)
+    {
+        if (drawing is null || moveBusy) return;
+        var folderId = string.IsNullOrEmpty(args.Value?.ToString()) ? null : args.Value.ToString();
+        if (folderId == drawing.DrawingFolderId) return;
+        moveBusy = true;
+        moveError = null;
+        try
+        {
+            await DrawingStore.MoveToFolderAsync(ProjectId, drawing.DrawingId, folderId, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            moveError = $"Move failed: {ex.Message}";
+        }
+        finally
+        {
+            moveBusy = false;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

@@ -1771,6 +1771,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<string>("DrawingFolderId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("ProjectId")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -1787,6 +1791,33 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasDatabaseName("IX_Drawings_ProjectId");
 
                     b.ToTable("Drawings");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.DrawingFolderEntity", b =>
+                {
+                    b.Property<string>("DrawingFolderId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("DrawingFolderId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_DrawingFolders_ProjectId");
+
+                    b.ToTable("DrawingFolders");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.DrawingIssueRecordEntity", b =>
@@ -4518,9 +4549,6 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
-
-                    b.Property<bool>("IsProspect")
-                        .HasColumnType("bit");
 
                     b.Property<string>("MobileNumber")
                         .IsRequired()

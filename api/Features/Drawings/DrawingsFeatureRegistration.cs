@@ -44,6 +44,24 @@ public static class DrawingsFeatureRegistration
         services.AddScoped<DeleteDrawingRevisionAuthorisation>();
         services.AddScoped<DeleteDrawingRevisionValidation>();
 
+        services.AddScoped<IQueryHandler<ListDrawingFoldersForProject, IReadOnlyList<DrawingFolder>>, ListDrawingFoldersForProjectHandler>();
+
+        services.AddScoped<ICommandHandler<CreateDrawingFolder, DrawingFolder>, CreateDrawingFolderHandler>();
+        services.AddScoped<CreateDrawingFolderAuthorisation>();
+        services.AddScoped<CreateDrawingFolderValidation>();
+
+        services.AddScoped<ICommandHandler<RenameDrawingFolder, DrawingFolder>, RenameDrawingFolderHandler>();
+        services.AddScoped<RenameDrawingFolderAuthorisation>();
+        services.AddScoped<RenameDrawingFolderValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteDrawingFolder, Acknowledgement>, DeleteDrawingFolderHandler>();
+        services.AddScoped<DeleteDrawingFolderAuthorisation>();
+        services.AddScoped<DeleteDrawingFolderValidation>();
+
+        services.AddScoped<ICommandHandler<MoveDrawingToFolder, Drawing>, MoveDrawingToFolderHandler>();
+        services.AddScoped<MoveDrawingToFolderAuthorisation>();
+        services.AddScoped<MoveDrawingToFolderValidation>();
+
         return services;
     }
 

@@ -9,12 +9,14 @@ public sealed class DrawingsReadModel
     private readonly IQueryClient queries;
     private readonly Dictionary<string, IReadOnlyList<Drawing>> drawingsByProject = new();
     private readonly Dictionary<string, IReadOnlyList<DrawingRevision>> revisionsByDrawing = new();
+    private readonly Dictionary<string, IReadOnlyList<DrawingFolder>> foldersByProject = new();
 
     // Tracks which keys have had a fetch started, so an *empty* result does not
     // keep re-triggering a refresh on every re-render. Add() returns false when the
     // key is already present, which also guards against duplicate in-flight fetches.
     private readonly HashSet<string> drawingsRequested = new();
     private readonly HashSet<string> revisionsRequested = new();
+    private readonly HashSet<string> foldersRequested = new();
 
     public DrawingsReadModel(IQueryClient queries) { this.queries = queries; }
 
@@ -35,6 +37,12 @@ public sealed class DrawingsReadModel
     public IReadOnlyList<DrawingRevision> RevisionsCurrent(string drawingId) =>
         revisionsByDrawing.TryGetValue(drawingId, out var list) ? list : Array.Empty<DrawingRevision>();
 
+    /// <summary>True once the project's drawing folders have been fetched at least once.</summary>
+    public bool FoldersLoaded(string projectId) => foldersByProject.ContainsKey(projectId);
+
+    public IReadOnlyList<DrawingFolder> FoldersCurrent(string projectId) =>
+        foldersByProject.TryGetValue(projectId, out var list) ? list : Array.Empty<DrawingFolder>();
+
     /// <summary>
     /// Fires a one-time background load for the project's drawings. Safe to call from
     /// render: it fetches at most once per project (until a mutation forces a refresh)
@@ -52,6 +60,12 @@ public sealed class DrawingsReadModel
         _ = LoadRevisionsAsync(drawingId, cancellationToken);
     }
 
+    public void EnsureFolders(string projectId, CancellationToken cancellationToken)
+    {
+        if (!foldersRequested.Add(projectId)) return;
+        _ = LoadFoldersAsync(projectId, cancellationToken);
+    }
+
     private async Task LoadDrawingsAsync(string projectId, CancellationToken cancellationToken)
     {
         try { await RefreshDrawingsAsync(projectId, cancellationToken); }
@@ -62,6 +76,12 @@ public sealed class DrawingsReadModel
     {
         try { await RefreshRevisionsAsync(drawingId, cancellationToken); }
         catch { revisionsRequested.Remove(drawingId); }
+    }
+
+    private async Task LoadFoldersAsync(string projectId, CancellationToken cancellationToken)
+    {
+        try { await RefreshFoldersAsync(projectId, cancellationToken); }
+        catch { foldersRequested.Remove(projectId); }
     }
 
     /// <summary>Marks every cached revision list stale: the values stay readable, but the next
@@ -80,6 +100,13 @@ public sealed class DrawingsReadModel
     {
         revisionsByDrawing[drawingId] = await queries.AskAsync(new ListRevisionsForDrawing(drawingId), cancellationToken);
         revisionsRequested.Add(drawingId);
+        OnChanged?.Invoke();
+    }
+
+    public async Task RefreshFoldersAsync(string projectId, CancellationToken cancellationToken)
+    {
+        foldersByProject[projectId] = await queries.AskAsync(new ListDrawingFoldersForProject(projectId), cancellationToken);
+        foldersRequested.Add(projectId);
         OnChanged?.Invoke();
     }
 }

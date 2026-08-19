@@ -42,6 +42,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<DrawingEntity> Drawings => Set<DrawingEntity>();
     public DbSet<DrawingRevisionEntity> DrawingRevisions => Set<DrawingRevisionEntity>();
     public DbSet<DrawingIssueRecordEntity> DrawingIssueRecords => Set<DrawingIssueRecordEntity>();
+    public DbSet<DrawingFolderEntity> DrawingFolders => Set<DrawingFolderEntity>();
 
     public DbSet<DocumentControlItemEntity> DocumentControlItems => Set<DocumentControlItemEntity>();
     public DbSet<PaymentCertificateEntity> PaymentCertificates => Set<PaymentCertificateEntity>();
@@ -376,6 +377,9 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<DrawingRevisionEntity>()
             .HasIndex(row => row.DrawingId)
             .HasDatabaseName("IX_DrawingRevisions_DrawingId");
+        modelBuilder.Entity<DrawingFolderEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_DrawingFolders_ProjectId");
         modelBuilder.Entity<HsRecordEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_HsRecords_ProjectId");

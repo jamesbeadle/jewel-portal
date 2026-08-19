@@ -44,7 +44,15 @@ public sealed class RegisterDrawingEndpoint
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
-        var drawing = await handler.HandleAsync(command, request.HttpContext.RequestAborted);
-        return new OkObjectResult(drawing);
+        try
+        {
+            var drawing = await handler.HandleAsync(command, request.HttpContext.RequestAborted);
+            return new OkObjectResult(drawing);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // e.g. a folder id that does not exist on this project.
+            return new BadRequestObjectResult(ex.Message);
+        }
     }
 }

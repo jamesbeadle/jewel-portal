@@ -52,6 +52,14 @@ public sealed class HttpDrawingStore : IDrawingStore
     {
         readModel.MarkRevisionsStale();
         RefreshInBackground(projectId, null);
+        // Folders revalidate alongside the register they group.
+        _ = RunFolderRefreshAsync(projectId);
+    }
+
+    private async Task RunFolderRefreshAsync(string projectId)
+    {
+        try { await readModel.RefreshFoldersAsync(projectId, CancellationToken.None); }
+        catch { /* OnChanged-driven views recover on the next interaction */ }
     }
 
     public IReadOnlyList<DrawingRevision> AmbiguousFor(string projectId) =>
@@ -61,12 +69,47 @@ public sealed class HttpDrawingStore : IDrawingStore
             .ToList()
             .AsReadOnly();
 
-    public async Task<Drawing> RegisterDrawingAsync(string projectId, string drawingCode, string title, CancellationToken cancellationToken)
+    public bool FoldersLoadedFor(string projectId) => readModel.FoldersLoaded(projectId);
+
+    public IReadOnlyList<DrawingFolder> FoldersFor(string projectId)
+    {
+        readModel.EnsureFolders(projectId, CancellationToken.None);
+        return readModel.FoldersCurrent(projectId);
+    }
+
+    public async Task<Drawing> RegisterDrawingAsync(string projectId, string drawingCode, string title, string? drawingFolderId, CancellationToken cancellationToken)
     {
         var drawing = await commands.SendAsync(
-            new RegisterDrawing(projectId, drawingCode, title), cancellationToken);
+            new RegisterDrawing(projectId, drawingCode, title, drawingFolderId), cancellationToken);
         RefreshInBackground(projectId, null);
         return drawing;
+    }
+
+    public async Task<DrawingFolder> CreateFolderAsync(string projectId, string name, CancellationToken cancellationToken)
+    {
+        var folder = await commands.SendAsync(new CreateDrawingFolder(projectId, name), cancellationToken);
+        await readModel.RefreshFoldersAsync(projectId, cancellationToken);
+        return folder;
+    }
+
+    public async Task RenameFolderAsync(string projectId, string folderId, string name, CancellationToken cancellationToken)
+    {
+        await commands.SendAsync(new RenameDrawingFolder(folderId, name), cancellationToken);
+        await readModel.RefreshFoldersAsync(projectId, cancellationToken);
+    }
+
+    public async Task DeleteFolderAsync(string projectId, string folderId, CancellationToken cancellationToken)
+    {
+        await commands.SendAsync(new DeleteDrawingFolder(folderId), cancellationToken);
+        // The folder's drawings drop back to Ungrouped — refresh both lists.
+        await readModel.RefreshFoldersAsync(projectId, cancellationToken);
+        RefreshInBackground(projectId, null);
+    }
+
+    public async Task MoveToFolderAsync(string projectId, string drawingId, string? folderId, CancellationToken cancellationToken)
+    {
+        await commands.SendAsync(new MoveDrawingToFolder(drawingId, folderId), cancellationToken);
+        RefreshInBackground(projectId, null);
     }
 
     public async Task UploadRevisionAsync(

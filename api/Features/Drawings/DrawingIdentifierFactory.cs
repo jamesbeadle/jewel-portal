@@ -6,4 +6,5 @@ internal static class DrawingIdentifierFactory
 
     public static string NextDrawingId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextDrawingRevisionId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextDrawingFolderId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }

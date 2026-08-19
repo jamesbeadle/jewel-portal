@@ -6,4 +6,6 @@ namespace Jewel.JPMS.Contracts.Drawings;
 public sealed record RegisterDrawing(
     string ProjectId,
     string DrawingCode,
-    string Title) : ICommand<Drawing>;
+    string Title,
+    // Optional folder to file the new drawing under; null = ungrouped.
+    string? DrawingFolderId = null) : ICommand<Drawing>;

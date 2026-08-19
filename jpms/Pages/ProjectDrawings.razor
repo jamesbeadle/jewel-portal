@@ -25,6 +25,10 @@ else
                 <h2 class="text-lg font-semibold text-content">Drawing register</h2>
                 <p class="text-sm text-content-muted">
                     @Drawings.Count drawings
+                    @if (Folders.Count > 0)
+                    {
+                        <span class="text-content-subtle">· @Folders.Count folders</span>
+                    }
                     @if (Ambiguous.Count > 0)
                     {
                         <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
@@ -45,6 +49,10 @@ else
                 </button>
                 @if (CanManage)
                 {
+                    <button type="button" @onclick="OpenNewFolder"
+                            class="rounded-lg border border-line-strong text-sm px-3 py-2 text-content-muted hover:bg-surface-raised transition">
+                        + New folder
+                    </button>
                     <button type="button" @onclick="() => isUploading = !isUploading"
                             class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
                         @(isUploading ? "Cancel" : "+ Upload drawing")
@@ -60,7 +68,7 @@ else
             </div>
         }
 
-        @if (VisibleDrawings.Count == 0)
+        @if (VisibleDrawings.Count == 0 && Folders.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">
                 @(approvedOnly ? "No approved drawings yet." : "No drawings uploaded yet.")
@@ -68,8 +76,44 @@ else
         }
         else
         {
-            <DrawingsTable Drawings="VisibleDrawings" />
+            <DrawingsTable Drawings="VisibleDrawings"
+                           Folders="Folders"
+                           CanManage="CanManage"
+                           OnRenameFolder="OpenRenameFolder"
+                           OnDeleteFolder="OpenDeleteFolder" />
         }
+
+        @* New folder / rename share one name dialog — which command runs depends on renamingFolder. *@
+        <Modal IsOpen="folderDialogOpen"
+               Title="@(renamingFolder is null ? "New folder" : $"Rename “{renamingFolder.Name}”")"
+               ConfirmLabel="@(folderBusy ? "Saving…" : renamingFolder is null ? "Create folder" : "Rename folder")"
+               ConfirmDisabled="@(folderBusy || string.IsNullOrWhiteSpace(folderName))"
+               OnCancel="CloseFolderDialog"
+               OnConfirm="SaveFolderAsync">
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Folder name *</label>
+            <input type="text" @bind="folderName" @bind:event="oninput" placeholder="Architectural, Structural, M&E…"
+                   class="field" />
+            @if (folderError is not null)
+            {
+                <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@folderError</p>
+            }
+        </Modal>
+
+        <Modal IsOpen="deletingFolder is not null"
+               Title="Delete folder?"
+               ConfirmLabel="@(folderBusy ? "Deleting…" : "Delete folder")"
+               ConfirmDisabled="@folderBusy"
+               OnCancel="() => deletingFolder = null"
+               OnConfirm="DeleteFolderAsync">
+            <p class="text-sm text-content-muted">
+                This deletes the folder <strong>@deletingFolder?.Name</strong>. The drawings inside it are
+                not deleted — they move back to the register's Ungrouped section.
+            </p>
+            @if (folderError is not null)
+            {
+                <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@folderError</p>
+            }
+        </Modal>
     </ProjectPageShell>
 }
 
@@ -80,7 +124,16 @@ else
     private bool isUploading;
     private bool approvedOnly;
 
+    // Folder dialogs: one name dialog for create/rename, one confirm for delete.
+    private bool folderDialogOpen;
+    private DrawingFolder? renamingFolder;
+    private DrawingFolder? deletingFolder;
+    private string folderName = "";
+    private string? folderError;
+    private bool folderBusy;
+
     private IReadOnlyList<Drawing> Drawings => DrawingStore.DrawingsFor(ProjectId);
+    private IReadOnlyList<DrawingFolder> Folders => DrawingStore.FoldersFor(ProjectId);
     private IReadOnlyList<DrawingRevision> Ambiguous => DrawingStore.AmbiguousFor(ProjectId);
 
     private IReadOnlyList<Drawing> VisibleDrawings =>
@@ -100,6 +153,7 @@ else
 
         var workbook = new ExcelWorkbook();
         var sheet = workbook.AddSheet("Drawings",
+            new ExcelColumn("Folder"),
             new ExcelColumn("Code"),
             new ExcelColumn("Title"),
             new ExcelColumn("Latest approved"),
@@ -107,9 +161,11 @@ else
             new ExcelColumn("Pipeline"),
             new ExcelColumn("Added", ExcelFormat.Date));
 
-        foreach (var drawing in drawings)
+        // Rows in register order: each folder A–Z, then Ungrouped — the same shape as the table.
+        foreach (var drawing in InRegisterOrder(drawings))
         {
             sheet.AddRow(
+                FolderNameFor(drawing),
                 drawing.DrawingCode,
                 drawing.Title,
                 LatestApprovedText(drawing),
@@ -119,6 +175,19 @@ else
         }
         return workbook;
     }
+
+    private IEnumerable<Drawing> InRegisterOrder(IReadOnlyList<Drawing> drawings)
+    {
+        foreach (var folder in Folders)
+            foreach (var drawing in drawings.Where(candidate => candidate.DrawingFolderId == folder.DrawingFolderId))
+                yield return drawing;
+        foreach (var drawing in drawings.Where(candidate => candidate.DrawingFolderId is null
+            || Folders.All(folder => folder.DrawingFolderId != candidate.DrawingFolderId)))
+            yield return drawing;
+    }
+
+    private string? FolderNameFor(Drawing drawing) =>
+        Folders.FirstOrDefault(folder => folder.DrawingFolderId == drawing.DrawingFolderId)?.Name;
 
     // Mirrors DrawingsTable's "Latest approved" cell (the em-dash there becomes a blank export cell).
     private static string? LatestApprovedText(Drawing drawing) =>
@@ -141,6 +210,78 @@ else
     private static string PipelineText(Drawing drawing) =>
         $"{(drawing.LatestMetadataExtractedAt is not null ? "Metadata ✓" : "Not extracted")} · "
         + $"{(drawing.LatestAnalysedAt is not null ? "Analysed ✓" : "Not analysed")}";
+
+    private void OpenNewFolder()
+    {
+        renamingFolder = null;
+        folderName = "";
+        folderError = null;
+        folderDialogOpen = true;
+    }
+
+    private void OpenRenameFolder(DrawingFolder folder)
+    {
+        renamingFolder = folder;
+        folderName = folder.Name;
+        folderError = null;
+        folderDialogOpen = true;
+    }
+
+    private void OpenDeleteFolder(DrawingFolder folder)
+    {
+        folderError = null;
+        deletingFolder = folder;
+    }
+
+    private void CloseFolderDialog()
+    {
+        folderDialogOpen = false;
+        renamingFolder = null;
+        folderError = null;
+    }
+
+    private async Task SaveFolderAsync()
+    {
+        if (folderBusy || string.IsNullOrWhiteSpace(folderName)) return;
+        folderBusy = true;
+        folderError = null;
+        try
+        {
+            if (renamingFolder is null)
+                await DrawingStore.CreateFolderAsync(ProjectId, folderName.Trim(), CancellationToken.None);
+            else
+                await DrawingStore.RenameFolderAsync(ProjectId, renamingFolder.DrawingFolderId, folderName.Trim(), CancellationToken.None);
+            CloseFolderDialog();
+        }
+        catch (Exception ex)
+        {
+            folderError = ex.Message;
+        }
+        finally
+        {
+            folderBusy = false;
+        }
+    }
+
+    private async Task DeleteFolderAsync()
+    {
+        if (folderBusy || deletingFolder is null) return;
+        folderBusy = true;
+        folderError = null;
+        try
+        {
+            await DrawingStore.DeleteFolderAsync(ProjectId, deletingFolder.DrawingFolderId, CancellationToken.None);
+            deletingFolder = null;
+        }
+        catch (Exception ex)
+        {
+            folderError = ex.Message;
+        }
+        finally
+        {
+            folderBusy = false;
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {

@@ -9,7 +9,11 @@ internal static class DrawingEntityMapping
         DateTimeOffset? latestMetadataExtractedAt = null, DateTimeOffset? latestAnalysedAt = null) =>
         new(entity.DrawingId, entity.ProjectId, entity.DrawingCode, entity.Title,
             string.IsNullOrEmpty(entity.CurrentApprovedRevisionLabel) ? null : entity.CurrentApprovedRevisionLabel,
-            entity.CreatedAt, unapprovedCount, archivedCount, latestMetadataExtractedAt, latestAnalysedAt);
+            entity.CreatedAt, unapprovedCount, archivedCount, latestMetadataExtractedAt, latestAnalysedAt,
+            string.IsNullOrEmpty(entity.DrawingFolderId) ? null : entity.DrawingFolderId);
+
+    public static DrawingFolder ToModel(this DrawingFolderEntity entity) =>
+        new(entity.DrawingFolderId, entity.ProjectId, entity.Name, entity.CreatedAt);
 
     public static DrawingRevision ToModel(this DrawingRevisionEntity entity) =>
         new(entity.DrawingRevisionId, entity.DrawingId, entity.RevisionLabel, entity.FileName, entity.IssuedByEmail,

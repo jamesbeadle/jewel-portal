@@ -50,6 +50,21 @@ public sealed class DrawingEntity
     // The latest APPROVED revision label; null until a revision has been approved.
     [MaxLength(16)]      public string? CurrentApprovedRevisionLabel { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    // The register folder this drawing sits in; null = ungrouped. No FK — deleting a folder
+    // nulls this out (DeleteDrawingFolderHandler) rather than cascading into the drawings.
+    [MaxLength(64)]      public string? DrawingFolderId { get; set; }
+}
+
+/// <summary>
+/// A named group on a project's drawing register — one flat level, no nesting. Drawings point at a
+/// folder via <see cref="DrawingEntity.DrawingFolderId"/>; deleting a folder ungroups its drawings.
+/// </summary>
+public sealed class DrawingFolderEntity
+{
+    [Key, MaxLength(64)] public string DrawingFolderId { get; set; } = "";
+    [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    [MaxLength(128)]     public string Name { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 public sealed class DrawingRevisionEntity

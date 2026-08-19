@@ -12,7 +12,20 @@ public sealed record Drawing(
     // Pipeline status of the LATEST revision (Bluebeam metadata extraction / change analysis),
     // rolled up so the drawing register can flag un-extracted or un-analysed drawings at a glance.
     DateTimeOffset? LatestMetadataExtractedAt = null,
-    DateTimeOffset? LatestAnalysedAt = null);
+    DateTimeOffset? LatestAnalysedAt = null,
+    // The folder this drawing sits in on the register; null = ungrouped.
+    string? DrawingFolderId = null);
+
+/// <summary>
+/// A named group on a project's drawing register — one flat level (no nesting), typically a
+/// discipline or package split ("Architectural", "Structural", "M&amp;E"). Drawings reference a
+/// folder via <see cref="Drawing.DrawingFolderId"/>; a drawing without one is ungrouped.
+/// </summary>
+public sealed record DrawingFolder(
+    string DrawingFolderId,
+    string ProjectId,
+    string Name,
+    DateTimeOffset CreatedAt);
 
 public sealed record DrawingRevision(
     string DrawingRevisionId,
