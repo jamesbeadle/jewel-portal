@@ -55,6 +55,11 @@ public sealed class AwardBidPackageHandler
         await AddCostCodedLinesAsync(entity, command, cancellationToken);
         package.Status = (int)BidPackageStatus.Awarded;
 
+        // Awarding IS the quality judgement: a winner still marked as a tender-only prospect joins
+        // the directory now, so the company holding a live work order is never invisible there.
+        var winner = await context.Subcontractors.FindAsync(new object[] { command.SubcontractorId }, cancellationToken);
+        if (winner is { IsProspect: true }) winner.IsProspect = false;
+
         var recipients = await context.BidPackageRecipients
             .Where(r => r.BidPackageId == command.BidPackageId)
             .ToListAsync(cancellationToken);

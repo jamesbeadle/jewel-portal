@@ -37,6 +37,18 @@ public static class SubcontractorsFeatureRegistration
         services.AddScoped<AddTradeAuthorisation>();
         services.AddScoped<AddTradeValidation>();
 
+        services.AddScoped<ICommandHandler<RenameTrade, Trade>, RenameTradeHandler>();
+        services.AddScoped<RenameTradeAuthorisation>();
+        services.AddScoped<RenameTradeValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteTrade, Acknowledgement>, DeleteTradeHandler>();
+        services.AddScoped<DeleteTradeAuthorisation>();
+        services.AddScoped<DeleteTradeValidation>();
+
+        services.AddScoped<ICommandHandler<PromoteSubcontractorToDirectory, Subcontractor>, PromoteSubcontractorToDirectoryHandler>();
+        services.AddScoped<PromoteSubcontractorToDirectoryAuthorisation>();
+        services.AddScoped<PromoteSubcontractorToDirectoryValidation>();
+
         services.AddScoped<ICommandHandler<UploadComplianceDocument, ComplianceDocument>, UploadComplianceDocumentHandler>();
         services.AddScoped<UploadComplianceDocumentAuthorisation>();
         services.AddScoped<UploadComplianceDocumentValidation>();

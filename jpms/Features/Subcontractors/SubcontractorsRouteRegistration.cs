@@ -24,6 +24,14 @@ public static class SubcontractorsRouteRegistration
 
         commands.Register<AddTrade, Trade>(CommandRoute.Post("/api/trades"));
 
+        commands.Register<RenameTrade, Trade>(
+            new CommandRoute("PUT", "/api/trades/{tradeId}",
+                command => $"/api/trades/{((RenameTrade)command).TradeId}"));
+
+        commands.Register<DeleteTrade, Acknowledgement>(
+            new CommandRoute("DELETE", "/api/trades/{tradeId}",
+                command => $"/api/trades/{((DeleteTrade)command).TradeId}"));
+
         queries.Register<ListComplianceDocumentsForSubcontractor, IReadOnlyList<ComplianceDocument>>(
             new QueryRoute("/api/subcontractors/{subcontractorId}/compliance",
                 query => $"/api/subcontractors/{((ListComplianceDocumentsForSubcontractor)query).SubcontractorId}/compliance"));
@@ -37,6 +45,10 @@ public static class SubcontractorsRouteRegistration
                 command => $"/api/subcontractors/{((PrepareSubcontractorStatementEmailDraft)command).SubcontractorId}/statement/draft-email"));
 
         commands.Register<AddSubcontractorToDirectory, Subcontractor>(CommandRoute.Post("/api/subcontractors"));
+
+        commands.Register<PromoteSubcontractorToDirectory, Subcontractor>(
+            new CommandRoute("POST", "/api/subcontractors/{subcontractorId}/promote",
+                command => $"/api/subcontractors/{((PromoteSubcontractorToDirectory)command).SubcontractorId}/promote"));
 
         // Xero import + consolidation (the duplicate-resolution flow) + company contacts.
         commands.Register<ImportXeroSupplier, Subcontractor>(CommandRoute.Post("/api/subcontractors/import-from-xero"));

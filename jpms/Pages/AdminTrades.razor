@@ -1,0 +1,342 @@
+@page "/admin/trades"
+@using Jewel.JPMS.Contracts.Subcontractors
+@using Jewel.JPMS.Cqrs
+@inject AuthService Auth
+@inject SessionService Session
+@inject ISubcontractorStore SubcontractorStore
+@inject ICommandSender Commands
+@inject Jewel.JPMS.Features.Subcontractors.TradesReadModel TradesModel
+@inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel SubsModel
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Trades · JPMS</PageTitle>
+
+@*
+    Admin → Trades: the curated master list of trades. Directory records link to these by id, and
+    bid packages pick from the same list at creation, so this page is where the vocabulary is
+    tidied — add, rename, delete. Deleting is refused (409, shown inline) while any directory
+    record still carries the trade; bid packages hold the trade NAME as a snapshot and never block.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (Session.ActiveRole != Role.Admin)
+{
+    <section class="px-6 md:px-8 py-12 max-w-2xl">
+        <div class="panel p-6">
+            <p class="text-sm text-content-muted">
+                This area is for administrators. If you hold the Administrator role, switch to it to manage trades.
+            </p>
+        </div>
+    </section>
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <WorkspaceSectionNav />
+        <header class="mb-6 md:mb-8">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Trades</h1>
+            <p class="text-sm text-content-muted mt-1">
+                The curated list every directory record and bid package picks its trade from.
+                Renaming updates every directory record carrying the trade; deleting is only
+                possible once no record carries it.
+            </p>
+        </header>
+
+        @if (dataFailed && !Loaded)
+        {
+            <div class="panel p-5 max-w-2xl">
+                <p class="text-sm text-negative">
+                    The trade list couldn't be loaded. The error banner above has the detail — fix or retry, then reload this page.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="max-w-2xl">
+                <Panel Title="Curated trades" IsLoading="@(!Loaded)" LoadingLabel="Loading trades">
+                    @* Add: same normalisation and de-duplication as everywhere else — adding an
+                       existing name (any casing) answers with the existing trade. *@
+                    <div class="flex items-center gap-2 mb-4">
+                        <input class="field flex-1" placeholder="e.g. Electrician" @bind="newTradeName" @bind:event="oninput"
+                               @onkeydown="@(e => { if (e.Key == "Enter") _ = AddTradeAsync(); })" />
+                        <button type="button" class="btn-primary shrink-0" disabled="@(busy || string.IsNullOrWhiteSpace(newTradeName))"
+                                @onclick="AddTradeAsync">Add trade</button>
+                    </div>
+
+                    @if (actionError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+                    }
+                    @if (actionNote is not null)
+                    {
+                        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@actionNote</p>
+                    }
+
+                    @if (TradesModel.Current is { Count: 0 })
+                    {
+                        <p class="text-sm text-content-subtle italic">No trades yet — add the first above.</p>
+                    }
+                    else
+                    {
+                        <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-surface-raised border-b border-line">
+                                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                        <th class="px-4 py-3">Trade</th>
+                                        <th class="px-4 py-3">In use by</th>
+                                        <th class="px-4 py-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-line">
+                                    @foreach (var trade in Sorted)
+                                    {
+                                        var usage = UsageCount(trade.TradeId);
+                                        <tr>
+                                            <td class="px-4 py-2.5">
+                                                @if (renamingId == trade.TradeId)
+                                                {
+                                                    <input class="field" @bind="renameValue" @bind:event="oninput"
+                                                           @onkeydown="@(e => { if (e.Key == "Enter") _ = ConfirmRenameAsync(); })" />
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-content font-medium">@trade.Name</span>
+                                                }
+                                            </td>
+                                            <td class="px-4 py-2.5 text-content-muted">
+                                                @(usage == 0 ? "—" : $"{usage} compan{(usage == 1 ? "y" : "ies")}")
+                                            </td>
+                                            <td class="px-4 py-2.5 text-right">
+                                                @* Row actions follow the button colour rule: acts are green
+                                                   (btn-secondary), the destructive one warns. *@
+                                                @if (renamingId == trade.TradeId)
+                                                {
+                                                    <span class="inline-flex items-center gap-2">
+                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs"
+                                                                disabled="@(busy || string.IsNullOrWhiteSpace(renameValue))"
+                                                                @onclick="ConfirmRenameAsync">Save</button>
+                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs" disabled="@busy"
+                                                                @onclick="CancelRename">Cancel</button>
+                                                    </span>
+                                                }
+                                                else if (deletingId == trade.TradeId)
+                                                {
+                                                    <span class="inline-flex items-center gap-2">
+                                                        <span class="text-xs text-content-muted">Delete “@trade.Name”?</span>
+                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
+                                                                disabled="@busy" @onclick="() => ConfirmDeleteAsync(trade)">Delete now</button>
+                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs" disabled="@busy"
+                                                                @onclick="() => deletingId = null">Cancel</button>
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="inline-flex items-center gap-2">
+                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
+                                                                title="Rename the trade — every directory record carrying it shows the new name at once."
+                                                                @onclick="() => StartRename(trade)">Rename</button>
+                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
+                                                                disabled="@(busy || usage > 0)"
+                                                                title="@DeleteTitle(usage)"
+                                                                @onclick="() => StartDelete(trade)">Delete</button>
+                                                    </span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-content-subtle mt-2">
+                            “In use by” counts every company record carrying the trade — including tender-only
+                            prospects that aren't shown in the Directory. Existing bid packages keep the trade
+                            name they were created with, so renames and deletes never rewrite tender history.
+                        </p>
+                    }
+                </Panel>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool fetchStarted;
+    private bool busy;
+    private string? actionError;
+    private string? actionNote;
+
+    private string newTradeName = "";
+    private string? renamingId;
+    private string renameValue = "";
+    private string? deletingId;
+
+    // The panel reveals in one piece: trade names AND their usage counts together.
+    private bool Loaded => TradesModel.Current is not null && SubsModel.Current is not null;
+
+    private IReadOnlyList<Trade> Sorted =>
+        (TradesModel.Current ?? Array.Empty<Trade>())
+            .OrderBy(trade => trade.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    // How many company records carry the trade — prospects included, because their links block
+    // deletion server-side just the same.
+    private int UsageCount(string tradeId) =>
+        (SubsModel.Current ?? Array.Empty<Subcontractor>()).Count(sub => sub.HasTrade(tradeId));
+
+    private static string DeleteTitle(int usage) => usage > 0
+        ? $"In use by {usage} compan{(usage == 1 ? "y" : "ies")} — reassign {(usage == 1 ? "it" : "them")} first."
+        : "Remove the trade from the curated list.";
+
+    private async Task AddTradeAsync()
+    {
+        if (busy || string.IsNullOrWhiteSpace(newTradeName)) return;
+        actionError = null;
+        actionNote = null;
+        try
+        {
+            busy = true;
+            var trade = await SubcontractorStore.AddTradeAsync(newTradeName.Trim());
+            actionNote = $"“{trade.Name}” is on the list.";
+            newTradeName = "";
+        }
+        catch (CommandFailedException ex) { actionError = $"Couldn't add the trade: {ex.Message}"; }
+        catch { actionError = "Couldn't add the trade. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private void StartRename(Trade trade)
+    {
+        renamingId = trade.TradeId;
+        renameValue = trade.Name;
+        deletingId = null;
+        actionError = null;
+        actionNote = null;
+    }
+
+    private void CancelRename() => renamingId = null;
+
+    private async Task ConfirmRenameAsync()
+    {
+        if (busy || renamingId is null || string.IsNullOrWhiteSpace(renameValue)) return;
+        actionError = null;
+        actionNote = null;
+        try
+        {
+            busy = true;
+            var renamed = await Commands.SendAsync(new RenameTrade(renamingId, renameValue.Trim()), CancellationToken.None);
+            renamingId = null;
+            actionNote = $"Renamed to “{renamed.Name}” — every directory record carrying it now shows the new name.";
+            await TradesModel.RefreshAsync(CancellationToken.None);
+            await SubsModel.RefreshAsync(CancellationToken.None); // records carry trade names too
+        }
+        catch (CommandFailedException ex) { actionError = $"Couldn't rename the trade: {ex.Message}"; }
+        catch { actionError = "Couldn't rename the trade. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private void StartDelete(Trade trade)
+    {
+        deletingId = trade.TradeId;
+        renamingId = null;
+        actionError = null;
+        actionNote = null;
+    }
+
+    private async Task ConfirmDeleteAsync(Trade trade)
+    {
+        if (busy || deletingId != trade.TradeId) return;
+        actionError = null;
+        actionNote = null;
+        try
+        {
+            busy = true;
+            await Commands.SendAsync(new DeleteTrade(trade.TradeId), CancellationToken.None);
+            deletingId = null;
+            actionNote = $"“{trade.Name}” removed from the list.";
+            await TradesModel.RefreshAsync(CancellationToken.None);
+        }
+        catch (CommandFailedException ex) { actionError = $"Couldn't delete the trade: {ex.Message}"; }
+        catch { actionError = "Couldn't delete the trade. Please try again."; }
+        finally { busy = false; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+        Session.OnChange += OnSessionChanged;
+        TradesModel.OnChanged += StateHasChanged;
+        SubsModel.OnChanged += StateHasChanged;
+        sessionReady = true;
+
+        if (Session.ActiveRole == Role.Admin)
+        {
+            fetchStarted = true;
+            await FetchAsync();
+        }
+    }
+
+    private void OnSessionChanged()
+    {
+        // Switching to the Administrator role happens in place (no navigation), so the fetch the
+        // admin branch gates on may never have started — start it now or the gate pulses forever.
+        if (Session.ActiveRole == Role.Admin && !fetchStarted)
+        {
+            fetchStarted = true;
+            _ = FetchAndRepaintAsync();
+        }
+        StateHasChanged();
+    }
+
+    private async Task FetchAsync()
+    {
+        // Stale-while-revalidate: already-loaded lists paint immediately and refresh behind
+        // themselves; cold ones are awaited so the panel's gate opens onto real data.
+        try
+        {
+            var refreshes = new List<Task>();
+            if (TradesModel.Current is null) refreshes.Add(TradesModel.RefreshAsync(CancellationToken.None));
+            else refreshes.Add(RevalidateAsync(TradesModel.RefreshAsync));
+            if (SubsModel.Current is null) refreshes.Add(SubsModel.RefreshAsync(CancellationToken.None));
+            else refreshes.Add(RevalidateAsync(SubsModel.RefreshAsync));
+            await Task.WhenAll(refreshes);
+        }
+        catch { dataFailed = true; }
+    }
+
+    private static async Task RevalidateAsync(Func<CancellationToken, Task> refresh)
+    {
+        try { await refresh(CancellationToken.None); }
+        catch { /* background revalidation — the toast already reported it and the stale list stands */ }
+    }
+
+    private async Task FetchAndRepaintAsync()
+    {
+        await FetchAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Session.OnChange -= OnSessionChanged;
+        TradesModel.OnChanged -= StateHasChanged;
+        SubsModel.OnChanged -= StateHasChanged;
+    }
+}

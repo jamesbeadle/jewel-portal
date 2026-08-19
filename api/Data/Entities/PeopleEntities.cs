@@ -30,6 +30,11 @@ public sealed class SubcontractorEntity
     // print the supplier's full address letter-style in its Sub/Vendor block.
     [MaxLength(256)]     public string AddressLine { get; set; } = "";
     [MaxLength(32)]      public string Postcode { get; set; } = "";
+
+    // True for a record minted only so a bid-package tender list could hold the company (quick-add
+    // or the local web search). Hidden from the Directory until promoted — by the "Add to
+    // directory" act on a submitted tender, or automatically when a package is awarded to them.
+    public bool IsProspect { get; set; }
 }
 
 // A link between a directory record and a Xero contact, written when a supplier is imported from

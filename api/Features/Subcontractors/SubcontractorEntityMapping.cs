@@ -11,7 +11,7 @@ internal static class SubcontractorEntityMapping
     public static Subcontractor ToModel(this SubcontractorEntity entity, IReadOnlyList<Trade> trades, bool xeroLinked = false) =>
         new(entity.SubcontractorId, entity.CompanyName, trades, entity.ContactName, entity.ContactEmail, entity.ContactPhone, entity.CisStatus, entity.OnboardedAt,
             (DirectoryCategory)entity.Category, entity.MobileNumber, entity.Town, entity.County, entity.Website, entity.Pli, entity.PliExpiry,
-            entity.PaymentTermsDays, xeroLinked, entity.AddressLine, entity.Postcode);
+            entity.PaymentTermsDays, xeroLinked, entity.AddressLine, entity.Postcode, entity.IsProspect);
 
     public static Trade ToModel(this TradeEntity entity) => new(entity.TradeId, entity.Name);
 

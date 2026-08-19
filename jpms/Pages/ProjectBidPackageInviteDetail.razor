@@ -169,6 +169,13 @@ else
                                     <tr>
                                         <td class="px-4 py-3">
                                             <span class="text-content font-medium">@(sub?.CompanyName ?? recipient.SubcontractorId)</span>
+                                            @if (sub is { IsProspect: true })
+                                            {
+                                                @* Tender-only prospect: on this list but deliberately NOT in the
+                                                   Directory — promotion happens from their submitted tender. *@
+                                                <span class="ml-2 inline-flex items-center rounded-full bg-surface border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle"
+                                                      title="Only on tender lists — not in the Directory. Add them from their submitted tender if they're worth keeping.">Not in directory</span>
+                                            }
                                             @if (sub is not null && string.IsNullOrWhiteSpace(sub.ContactEmail))
                                             {
                                                 <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No email address</span>
@@ -198,6 +205,13 @@ else
                                                    (btn-secondary), the destructive one warns (btn-neutral +
                                                    negative text/border) — compact paddings for a table row. *@
                                                 <span class="inline-flex items-center gap-2">
+                                                    @if (recipient.Status == BidPackageRecipientStatus.Responded
+                                                        && sub is { IsProspect: true } && CanAddToDirectory)
+                                                    {
+                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
+                                                                title="Their tender is in and this company isn't in the Directory yet — add it if they're worth keeping for future work."
+                                                                @onclick="() => AddToDirectory(sub!.SubcontractorId)">Add to directory</button>
+                                                    }
                                                     @if (recipient.Status == BidPackageRecipientStatus.Declined)
                                                     {
                                                         <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
@@ -477,6 +491,16 @@ else
                                             {
                                                 <span class="ml-1.5 inline-flex items-center rounded-full bg-positive/10 border border-positive/30 px-1.5 py-0.5 text-[10px] font-medium text-positive normal-case tracking-normal">Won</span>
                                             }
+                                            @if (sub is { IsProspect: true } && CanAddToDirectory)
+                                            {
+                                                @* A submitted tender is the moment to judge quality — this is the
+                                                   deliberate act that puts a tender-only prospect in the Directory. *@
+                                                <span class="block mt-1">
+                                                    <button type="button" class="btn-secondary px-2 py-0.5 text-[11px] normal-case tracking-normal font-medium" disabled="@busy"
+                                                            title="This company isn't in the Directory — it was only added to this tender list. Add it if the tender's worth keeping them for."
+                                                            @onclick="() => AddToDirectory(sub!.SubcontractorId)">Add to directory</button>
+                                                </span>
+                                            }
                                         </th>
                                     }
                                 </tr>
@@ -740,10 +764,11 @@ else
             </div>
         }
 
-        @* Ad-hoc invite: saved to the directory, then included in this invite list. *@
+        @* Ad-hoc invite: saved as a tender-only prospect, then included in this invite list.
+           They only reach the Directory if promoted from a submitted tender (or by winning). *@
         <div class="mt-4 pt-4 border-t border-line">
             <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Not in the directory?</p>
-            <p class="text-xs text-content-subtle mb-2">Add their details — they're saved to the directory and included in this invite.</p>
+            <p class="text-xs text-content-subtle mb-2">Add their details — they're included in this invite without joining the Directory. If their tender's good, add them to the Directory from it.</p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <input class="field" placeholder="Company or name *" @bind="quickAddName" @bind:event="oninput" />
                 <input class="field" type="email" placeholder="Email address *" @bind="quickAddEmail" @bind:event="oninput" />
@@ -771,7 +796,8 @@ else
             Searches the web for companies of a trade near the project's site (its town and postcode —
             set under Edit details on the project). Email addresses and phone numbers are picked up
             from each company's own website; companies where no email could be found are left out.
-            Ticked companies are saved to the directory and added to this package's tender list.
+            Ticked companies are added to this package's tender list only — they do NOT join the
+            Directory (add the ones worth keeping from their submitted tenders).
             <span class="text-content-muted">Nothing is emailed</span> — that happens later, when you
             compose the Invite email on the package's page, and only when you press Send there.
         </p>
@@ -1724,6 +1750,31 @@ else
     private bool IsClosed => package?.Status == BidPackageStatus.Closed;
     private bool CanEdit => CanManage && !IsClosed;
 
+    // Who may promote a tender-only prospect into the Directory — mirrors the API's
+    // PromoteSubcontractorToDirectoryAuthorisation (directory curators; admins pass everything),
+    // so the button never offers an act the server would refuse.
+    private bool CanAddToDirectory => Session.AvailableRoles.Any(r =>
+        r is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
+            or Role.OfficeComplianceCoordinator or Role.OfficeAdmin);
+
+    // The "Add to directory" act on a submitted tender: promotes a tender-only prospect into the
+    // Directory proper. Available even on a closed package — judging a company worth keeping is
+    // directory curation, not tender editing.
+    private async Task AddToDirectory(string subcontractorId)
+    {
+        if (busy) return;
+        error = null;
+        try
+        {
+            busy = true;
+            await Commands.SendAsync(new PromoteSubcontractorToDirectory(subcontractorId), CancellationToken.None);
+            await SubsReadModel.RefreshAsync(CancellationToken.None);
+        }
+        catch (CommandFailedException ex) { error = $"Couldn't add that company to the directory: {ex.Message}"; }
+        catch { error = "Couldn't add that company to the directory. Please try again."; }
+        finally { busy = false; }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -1907,10 +1958,12 @@ else
         showInviteModal = true;
     }
 
-    // The distinct trade names among companies that could be invited (never clients/architects).
+    // The distinct trade names among companies that could be invited (never clients/architects,
+    // never tender-only prospects — the picker is the curated directory).
     // A company with several trades appears under each of them.
     private IReadOnlyList<string> InvitableTrades() =>
         Subs.All()
+            .Where(s => !s.IsProspect)
             .Where(s => s.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier)
             .SelectMany(s => s.Trades)
             .Select(t => t.Name.Trim())
@@ -1943,8 +1996,11 @@ else
         var invited = recipients.Select(r => r.SubcontractorId).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var q = (subSearch ?? "").Trim();
         return Subs.All()
-            // Only companies we tender to — never clients or architects.
+            // Only companies we tender to — never clients or architects, and never tender-only
+            // prospects: the picker offers the curated directory, prospects are re-found via the
+            // local search (which reuses their record rather than duplicating it).
             .Where(s => s.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier)
+            .Where(s => !s.IsProspect)
             .Where(s => !invited.Contains(s.SubcontractorId))
             // Any of the company's trades counts — "Boarding" and "Plastering" both surface a
             // company that carries both, where the old free-text compound string never matched.
@@ -1988,14 +2044,16 @@ else
             var ids = selected.ToList();
             if (QuickAddReady)
             {
-                // Save the ad-hoc contact to the directory first, then invite like any other.
-                // The directory requires a trade — fall back to the package's, then "General".
+                // Save the ad-hoc contact as a tender-only PROSPECT (not a directory entry), then
+                // invite like any other. The record requires a trade — fall back to the package's,
+                // then "General". They join the Directory only if promoted from a submitted tender
+                // (or by winning the package) — quality is judged on the tender, not the invite.
                 var tradeId = !string.IsNullOrWhiteSpace(quickAddTradeId) ? quickAddTradeId
                     : await EnsureTradeIdAsync(package?.Trade);
                 var created = await Commands.SendAsync(
                     new AddSubcontractorToDirectory(
                         quickAddName.Trim(), new[] { tradeId }, quickAddName.Trim(),
-                        quickAddEmail.Trim(), "", ""), CancellationToken.None);
+                        quickAddEmail.Trim(), "", "", IsProspect: true), CancellationToken.None);
                 ids.Add(created.SubcontractorId);
                 await SubsReadModel.RefreshAsync(CancellationToken.None);
             }
@@ -2088,7 +2146,9 @@ else
         else selectedPlaces.Remove(place.PlaceId);
     }
 
-    // Save each ticked company to the directory (unless it's already there), then invite them all.
+    // Save each ticked company as a tender-only prospect (unless the directory already knows it),
+    // then invite them all. Prospects stay OUT of the Directory until promoted from a submitted
+    // tender or by winning the package — only companies judged worth keeping get added.
     private async Task ConfirmFindInvite()
     {
         if (busy || selectedPlaces.Count == 0 || !CanEdit) return;
@@ -2127,7 +2187,7 @@ else
                 var created = await Commands.SendAsync(
                     new AddSubcontractorToDirectory(
                         place.Name, new[] { await EnsureTradeIdAsync(findTrade) }, "", place.Email ?? "", place.Phone ?? "", "",
-                        DirectoryCategory.Subcontractor, "", "", "", place.Website ?? ""),
+                        DirectoryCategory.Subcontractor, "", "", "", place.Website ?? "", IsProspect: true),
                     CancellationToken.None);
                 ids.Add(created.SubcontractorId);
                 directoryChanged = true;
@@ -2139,7 +2199,7 @@ else
             selectedPlaces.Clear();
             showFindModal = false;
             package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
-            sendNote = $"Added {ids.Count} compan{(ids.Count == 1 ? "y" : "ies")} from the local search to the tender list — nothing has been emailed. Their addresses were picked up from their websites, so worth a quick check in the Directory; when you're ready, compose the Invite email and it sends when you press Send.";
+            sendNote = $"Added {ids.Count} compan{(ids.Count == 1 ? "y" : "ies")} from the local search to the tender list — nothing has been emailed, and they are NOT in the Directory (add the good ones from their submitted tenders). Their addresses were picked up from their websites, so worth a quick check on the list above; when you're ready, compose the Invite email and it sends when you press Send.";
             draftWebLink = null;
         }
         catch (CommandFailedException ex) { error = $"Couldn't invite those companies: {ex.Message}"; }

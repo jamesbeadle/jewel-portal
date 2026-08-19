@@ -109,6 +109,7 @@ public static class PortalMapCapabilities
         // ---- Admin ----
         ["/admin/users"] = "user administration",
         ["/admin/system"] = "the announced app version",
+        ["/admin/trades"] = "the curated trade list (add, rename, delete)",
         ["/admin/agents"] = "the assistant's agent registry, live",
         ["/admin/skills"] = "the assistant's editable domain skills",
 

@@ -4519,6 +4519,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<bool>("IsProspect")
+                        .HasColumnType("bit");
+
                     b.Property<string>("MobileNumber")
                         .IsRequired()
                         .HasMaxLength(64)

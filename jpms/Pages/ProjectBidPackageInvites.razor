@@ -4,6 +4,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IProcurementStore ProcurementStore
+@inject ISubcontractorStore SubcontractorStore
 @inject ICommandSender Commands
 @inject NavigationManager Nav
 @implements IDisposable
@@ -92,13 +93,33 @@ else
     @* ---- New bid package: title + trade now, everything else on the detail page ---- *@
     <Modal IsOpen="showCreateModal" Title="New bid package" ShowFooter="true"
            ConfirmLabel="@(busy ? "Creating…" : "Create package")"
-           ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(createTitle))" CancelLabel="Cancel"
+           ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(createTitle) || string.IsNullOrWhiteSpace(createTrade))" CancelLabel="Cancel"
            OnCancel="CloseCreateModal" OnConfirm="ConfirmCreate" Class="max-w-lg w-full">
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Title</label>
         <input class="field mb-3" placeholder="e.g. Ground-floor electrical works" @bind="createTitle" @bind:event="oninput" />
 
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Trade</label>
-        <input class="field mb-3" placeholder="e.g. Electrician" @bind="createTrade" />
+        @* The curated trade list (Admin → Trades), not free text — packages carry the same trade
+           names the directory filters on. Loading convention: a control is never gated — it
+           renders disabled with a "Loading…" placeholder until the list has landed. *@
+        <select class="field mb-3" @bind="createTrade" disabled="@(!SubcontractorStore.TradesLoaded)">
+            @if (!SubcontractorStore.TradesLoaded)
+            {
+                <option value="">Loading trades…</option>
+            }
+            else
+            {
+                <option value="">Select a trade…</option>
+                @foreach (var trade in SubcontractorStore.Trades())
+                {
+                    <option value="@trade.Name">@trade.Name</option>
+                }
+            }
+        </select>
+        @if (SubcontractorStore.TradesLoaded && SubcontractorStore.Trades().Count == 0)
+        {
+            <p class="text-xs text-content-subtle -mt-2 mb-3">No trades yet — an administrator can add them under Admin → Trades.</p>
+        }
 
         <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer mb-1"
                title="When ticked, the tender-invite email asks each subcontractor to state whether they will supply their own materials or price labour-only.">
@@ -280,7 +301,7 @@ else
     // drawings and recipients are managed.
     private async Task ConfirmCreate()
     {
-        if (busy || !CanManage || string.IsNullOrWhiteSpace(createTitle)) return;
+        if (busy || !CanManage || string.IsNullOrWhiteSpace(createTitle) || string.IsNullOrWhiteSpace(createTrade)) return;
         error = null;
         try
         {
@@ -428,11 +449,17 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         ProcurementStore.OnChange += StateHasChanged;
+        SubcontractorStore.OnChange += StateHasChanged;
         // Refresh on entry: cached packages render immediately, then update when the
         // background reload lands — so navigating back to this tab never shows stale data.
         ProcurementStore.Refresh(ProjectId);
+        _ = SubcontractorStore.Trades(); // the create modal's trade dropdown (async; raises OnChange)
         isLoaded = true;
     }
 
-    public void Dispose() => ProcurementStore.OnChange -= StateHasChanged;
+    public void Dispose()
+    {
+        ProcurementStore.OnChange -= StateHasChanged;
+        SubcontractorStore.OnChange -= StateHasChanged;
+    }
 }

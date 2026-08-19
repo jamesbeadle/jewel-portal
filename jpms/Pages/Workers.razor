@@ -147,7 +147,9 @@ else
             <label class="text-xs text-content-subtle sm:col-span-2">Subcontractor
                 <select class="field mt-1" @bind="formSubcontractorId" disabled="@(!Subcontractors.IsLoaded)">
                     <option value="">@(Subcontractors.IsLoaded ? "— none —" : "Loading…")</option>
-                    @foreach (var subcontractor in Subcontractors.All())
+                    @* Directory companies only — tender-only prospects (IsProspect) aren't offered
+                       as an employer until they're promoted into the Directory. *@
+                    @foreach (var subcontractor in Subcontractors.All().Where(s => !s.IsProspect))
                     {
                         <option value="@subcontractor.SubcontractorId">@subcontractor.CompanyName</option>
                     }

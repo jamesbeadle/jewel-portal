@@ -66,7 +66,9 @@ public static class WorkspaceSections
             // system/version endpoints.
             new WorkspaceTab("Users", "/admin/users", Array.Empty<Role>()),
             new WorkspaceTab("Revoked", "/admin/users/revoked", Array.Empty<Role>()),
-            new WorkspaceTab("System", "/admin/system", Array.Empty<Role>())
+            new WorkspaceTab("System", "/admin/system", Array.Empty<Role>()),
+            // The curated trade list every directory record and bid package picks from.
+            new WorkspaceTab("Trades", "/admin/trades", Array.Empty<Role>())
         });
 
     public static readonly IReadOnlyList<WorkspaceSectionInfo> All =

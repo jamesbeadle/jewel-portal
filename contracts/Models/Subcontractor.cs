@@ -53,7 +53,13 @@ public sealed record Subcontractor(
     // Street line(s) and postcode of the company's postal address (with Town/County above they
     // complete the letter block printed at the top of its purchase orders).
     string AddressLine = "",
-    string Postcode = "")
+    string Postcode = "",
+    // True for a record minted only so a bid-package tender list could hold the company (quick-add
+    // or the local web search) — a prospect, not a vetted directory entry. Prospects are hidden
+    // from the Directory and its pickers until promoted ("Add to directory" on a submitted tender,
+    // or automatically when a package is awarded to them), so the directory stays a curated list
+    // of companies judged worth working with rather than everyone ever invited to price a job.
+    bool IsProspect = false)
 {
     // The letter-style address block for the purchase order's Sub/Vendor panel: street line(s),
     // town, county, postcode — blanks skipped.
