@@ -28,14 +28,20 @@ public sealed record GetXeroSitePnl : IQuery<XeroSitePnlSnapshot>;
 /// What JPMS holds from the last site P&L sync. <see cref="IsConfigured"/> is false when the
 /// Xero client id/secret app settings are missing (the UI explains rather than erroring);
 /// <see cref="LastSyncedAtUtc"/> is null until the first sync lands.
+/// <see cref="LabourAccruals"/> is the portal-side companion read (computed fresh on every
+/// query, not synced): approved timesheet cost that has NOT yet reached Xero's P&L, per
+/// project per month — see <see cref="XeroSiteMonthlyLabourAccrual"/>. The stored Xero rows
+/// stay pure Xero; the accrual is a separate list so the Profit Summary can overlay it as a
+/// clearly-marked basis switch and always fall back to the auditable invoiced figures.
 /// </summary>
 public sealed record XeroSitePnlSnapshot(
     bool IsConfigured,
     DateTimeOffset? LastSyncedAtUtc,
-    IReadOnlyList<XeroSiteMonthlyPnl> Rows)
+    IReadOnlyList<XeroSiteMonthlyPnl> Rows,
+    IReadOnlyList<XeroSiteMonthlyLabourAccrual> LabourAccruals)
 {
     public static XeroSitePnlSnapshot Empty(bool isConfigured) =>
-        new(isConfigured, null, Array.Empty<XeroSiteMonthlyPnl>());
+        new(isConfigured, null, Array.Empty<XeroSiteMonthlyPnl>(), Array.Empty<XeroSiteMonthlyLabourAccrual>());
 }
 
 /// <summary>
@@ -51,6 +57,22 @@ public sealed record XeroSiteMonthlyPnl(
     decimal Income,
     decimal CostOfSales,
     decimal OperatingExpenses);
+
+/// <summary>
+/// One month of one project's approved-but-unsettled labour — the accrual the Profit Summary
+/// can overlay on the Xero months (docs/Labour-Overview-Forecast-and-Xero-Mapping-Scope.md §6).
+/// Approved timesheet cost is the portal's timely actual, but it reaches Xero's site P&L only
+/// when the covering bill is approved there (AUTHORISED/PAID) — a draft bill is invisible to
+/// Xero's reports. This row is the approved timesheet cost for the month (by worked date) that
+/// no approved bill yet settles, so overlay + synced rows never double-count: the moment the
+/// bill is approved in Xero the cost enters the synced rows AND drops out of here, because the
+/// timesheet-cover marking identifies exactly which timesheets that bill settles. Only approved
+/// time accrues — submitted days are pending, not cost, the same rule as everywhere else.
+/// </summary>
+public sealed record XeroSiteMonthlyLabourAccrual(
+    string ProjectId,
+    DateTime Month,
+    decimal Amount);
 
 /// <summary>One month's figures as read off Xero's report, before a project is attached.</summary>
 public sealed record XeroSitePnlMonthFigures(

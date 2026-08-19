@@ -155,13 +155,26 @@ else
                  && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } movement)
             {
                 <div class="rounded-xl border border-line bg-surface p-5 mb-6">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        Running profit by month
-                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— the whole job's % profit to date at each month end, that month's movement beneath · Xero site P&L, invoiced basis</span>
-                    </p>
-                    <p class="text-xs text-content-muted mt-1 mb-3">
-                        The main figure is the trend of the whole project; the small print is what the month did to it — spikes and falls live there, so they can't get lost. The last column is where the job stands to date.
-                    </p>
+                    <div class="flex items-start justify-between gap-x-6 gap-y-1 flex-wrap">
+                        <div>
+                            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                Running profit by month
+                                <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— the whole job's % profit to date at each month end, that month's movement beneath · Xero site P&L, @BasisLabel</span>
+                            </p>
+                            <p class="text-xs text-content-muted mt-1 mb-3">
+                                The main figure is the trend of the whole project; the small print is what the month did to it — spikes and falls live there, so they can't get lost. The last column is where the job stands to date.
+                            </p>
+                        </div>
+                        @* The basis switch for every Xero panel on the page (grid, trajectory, cumulative
+                           charts) — a control, so never gated. Default OFF: pure Xero, exactly what the
+                           accountant reconciles. ON overlays approved timesheet cost that no Xero-approved
+                           bill settles yet, so the current month reads the portal's live labour position. *@
+                        <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none whitespace-nowrap"
+                               title="Adds approved timesheet cost that no Xero-approved bill settles yet — the portal's live labour, marked • per cell. It drops out automatically as bills are approved in Xero, so closed months always converge back to Xero's own figures.">
+                            <input type="checkbox" class="cursor-pointer align-middle" @bind="includeLabourAccrual" />
+                            Include approved labour not yet billed
+                        </label>
+                    </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm" style="border-collapse:separate;border-spacing:3px">
                             <thead>
@@ -196,7 +209,7 @@ else
                                             {
                                                 @* Costs have moved but nothing has EVER been invoiced — no honest running %; the £ is in the hover. *@
                                                 <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c"
-                                                    title="@($"{cellMonth:MMM yy} — nothing invoiced to date · profit to date {SignedMoneyCompact(cell.CumProfit)}")">n/a</td>
+                                                    title="@($"{cellMonth:MMM yy} — nothing invoiced to date · profit to date {SignedMoneyCompact(cell.CumProfit)}{AccrualHover(row.Project.ProjectId, cellMonth)}")">n/a</td>
                                             }
                                             else
                                             {
@@ -204,8 +217,9 @@ else
                                                    The shade follows the MOVEMENT (the month's news), the number carries the level. *@
                                                 <td class="text-center rounded-md py-1.5 px-2 text-xs tabular-nums"
                                                     style="@(move is decimal shadePp ? MovementCellStyle(shadePp, movement.ShadeMax) : "background:#12151c")"
-                                                    title="@RunningCellHover(cellMonth, cell)">
-                                                    <span class="font-medium @ProfitClass(runningLevel)">@PctCell(runningLevel)</span>
+                                                    title="@(RunningCellHover(cellMonth, cell) + AccrualHover(row.Project.ProjectId, cellMonth))">
+                                                    <span class="font-medium @ProfitClass(runningLevel)">@PctCell(runningLevel)</span>@if (AccrualOwnFor(row.Project.ProjectId, cellMonth) > 0m)
+                                                    {<span class="text-amber-400 ml-0.5" aria-hidden="true">•</span>}
                                                     <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(move)</span>
                                                 </td>
                                             }
@@ -217,6 +231,10 @@ else
                                         <td class="text-center rounded-md py-2 px-3 text-xs font-semibold whitespace-nowrap border border-line bg-surface-raised @ProfitClass(row.RunningPercent ?? 0m)">
                                             @(row.RunningPercent is decimal runningPct ? PctCell(runningPct) : "—")
                                             <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(row.PositionMoney)</span>
+                                            @if (AccrualToDateFor(row.Project.ProjectId) is > 0m and var accruedToDate)
+                                            {
+                                                <span class="block font-normal text-[10px] text-amber-400 mt-0.5">incl. @MoneyCompact(accruedToDate) accrued</span>
+                                            }
                                             @if (row.Stale)
                                             {
                                                 <span class="block font-normal text-[10px] text-amber-400 mt-0.5">⚠ no movement 6 mo</span>
@@ -255,6 +273,10 @@ else
                                         <td class="text-center py-2.5 px-2 text-xs border-t border-line whitespace-nowrap @ProfitClass(movement.TotalRunningPercent ?? 0m)">
                                             @(movement.TotalRunningPercent is decimal totalRunningPct ? PctCell(totalRunningPct) : "—")
                                             <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(movement.TotalPositionMoney)</span>
+                                            @if (movement.Rows.Sum(gridRow => AccrualToDateFor(gridRow.Project.ProjectId)) is > 0m and var totalAccrued)
+                                            {
+                                                <span class="block font-normal text-[10px] text-amber-400 mt-0.5">incl. @MoneyCompact(totalAccrued) accrued</span>
+                                            }
                                         </td>
                                     </tr>
                                 }
@@ -279,6 +301,15 @@ else
                         <span class="text-content-muted">certified</span> figures in the table below — a job with
                         salaries tracked to its site reads lower here, and one with deposits invoiced ahead of
                         certification reads higher.
+                        @if (includeLabourAccrual)
+                        {
+                            <text>The basis switch is ON: months marked <span class="text-amber-400">•</span> include
+                            approved labour not yet billed — approved timesheet cost from the portal that no
+                            Xero-approved bill settles yet. It is an accrual, not a Xero figure: as each labourer's
+                            bill is approved in Xero the cost enters the synced P&L and leaves the accrual in the
+                            same moment, so nothing double-counts and closed months converge back to exactly what
+                            Xero says. Switch it off before reconciling against Xero itself. </text>
+                        }
                         @if (movement.Rows.Any(row => row.Stale))
                         {
                             <text>⚠ A job with no movement for six months usually means stalled or unbilled, not that nothing is happening on site. </text>
@@ -602,7 +633,7 @@ else
                 <div class="rounded-xl border border-line bg-surface p-5 mt-6">
                     <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                         Trajectory by job
-                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— cumulative profit £, each job on its own scale · Xero site P&L</span>
+                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— cumulative profit £, each job on its own scale · Xero site P&L, @BasisLabel</span>
                     </p>
                     <p class="text-xs text-content-muted mt-1 mb-3">
                         One mini-chart per job — shape is comparable, scale is per-job, so one big job can't squash the others flat.
@@ -662,11 +693,11 @@ else
                         <div>
                             <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                                 Cumulative position
-                                <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— invoiced vs cost, job start to date (Xero)</span>
+                                <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— invoiced vs cost, job start to date · Xero site P&L, @BasisLabel</span>
                             </p>
                             <div class="flex items-center gap-4 mt-2 text-[11px] text-content-muted flex-wrap">
                                 <span class="flex items-center gap-1.5"><span class="inline-block w-3.5 h-[3px] rounded-full" style="background:@InvoicedColor"></span>Cumulative invoiced</span>
-                                <span class="flex items-center gap-1.5"><span class="inline-block w-3.5 h-[3px] rounded-full" style="background:@CostColor"></span>Cumulative cost (incl. site overheads)</span>
+                                <span class="flex items-center gap-1.5"><span class="inline-block w-3.5 h-[3px] rounded-full" style="background:@CostColor"></span>Cumulative cost (incl. site overheads@(includeLabourAccrual ? " + accrued labour" : ""))</span>
                                 <span class="text-content-faint">· hover for month values</span>
                             </div>
                         </div>
@@ -773,6 +804,12 @@ else
                                 <span class="text-content-muted">invoiced</span> rung of the ladder — it sits near, not on, the
                                 table's <span class="text-content-muted">certified</span> figures, and retention appears only
                                 where it is tracked to the site in Xero.
+                                @if (includeLabourAccrual)
+                                {
+                                    <text>The basis switch (top of the page) is ON, so the cost line also carries
+                                    approved labour not yet billed — portal timesheet cost that drops out as each
+                                    bill is approved in Xero. </text>
+                                }
                                 @if (SitePnl.Current.LastSyncedAtUtc is DateTimeOffset syncedAt)
                                 {
                                     <text>Synced from Xero @syncedAt.ToLocalTime().ToString("d MMM HH:mm").</text>
@@ -1026,6 +1063,61 @@ else
             rows.Sum(entry => entry.Row.WorksComplete),
             rows.Sum(entry => entry.Row.RetentionOutstanding));
 
+    // ---- Labour accrual overlay (the basis switch) --------------------------
+    // OFF (default): every Xero panel reads the stored Xero months only — the auditable
+    // invoiced basis the accountant reconciles against, untouched. ON: the snapshot's
+    // LabourAccruals (approved timesheet cost that no Xero-approved bill settles yet — the
+    // API computes it against the timesheet-cover marking, so it can never double-count)
+    // joins the same months as cost-only pseudo-rows, and the running grid, trajectory and
+    // cumulative charts all read the portal's live labour position. The overlay is applied
+    // at read time and never written anywhere: switching off is always exactly Xero again,
+    // and a fully-settled month carries no accrual, so history converges by construction.
+
+    private bool includeLabourAccrual;
+
+    private IReadOnlyList<XeroSiteMonthlyLabourAccrual> ActiveAccruals =>
+        includeLabourAccrual
+            ? SitePnl.Current?.LabourAccruals ?? Array.Empty<XeroSiteMonthlyLabourAccrual>()
+            : Array.Empty<XeroSiteMonthlyLabourAccrual>();
+
+    // The rows every Xero panel actually reads: the stored Xero months, plus (switch on) the
+    // accrual as cost-only pseudo-months. Null while the store hasn't answered — the same
+    // "not fetched yet" contract as the snapshot's own Rows.
+    private IReadOnlyList<XeroSiteMonthlyPnl>? EffectivePnlRows()
+    {
+        var stored = SitePnl.Current?.Rows;
+        if (stored is null) return null;
+        var accruals = ActiveAccruals;
+        if (accruals.Count == 0) return stored;
+        return stored
+            .Concat(accruals.Select(accrual =>
+                new XeroSiteMonthlyPnl(accrual.ProjectId, accrual.Month, 0m, accrual.Amount, 0m)))
+            .ToList();
+    }
+
+    /// <summary>The accrual sitting in ONE month of one project — the grid cell's • marker and hover. Zero when the switch is off.</summary>
+    private decimal AccrualOwnFor(string projectId, DateTime month) =>
+        ActiveAccruals
+            .Where(accrual => string.Equals(accrual.ProjectId, projectId, StringComparison.OrdinalIgnoreCase)
+                              && accrual.Month.Year == month.Year && accrual.Month.Month == month.Month)
+            .Sum(accrual => accrual.Amount);
+
+    /// <summary>The project's whole accrued position — the "Position now" memo line. Zero when the switch is off.</summary>
+    private decimal AccrualToDateFor(string projectId) =>
+        ActiveAccruals
+            .Where(accrual => string.Equals(accrual.ProjectId, projectId, StringComparison.OrdinalIgnoreCase))
+            .Sum(accrual => accrual.Amount);
+
+    /// <summary>The hover suffix a cell gains when its month carries accrual — empty otherwise, so hovers stay clean on the pure-Xero basis.</summary>
+    private string AccrualHover(string projectId, DateTime month)
+    {
+        var amount = AccrualOwnFor(projectId, month);
+        return amount > 0m ? $" · incl. {MoneyCompact(amount)} approved labour not yet billed" : "";
+    }
+
+    /// <summary>The basis tag every Xero panel's subtitle carries, so the page always says which rung it is reading.</summary>
+    private string BasisLabel => includeLabourAccrual ? "invoiced + labour accrual" : "invoiced basis";
+
     // ---- Cumulative position (Xero site P&L) --------------------------------
     // One card per selected job: cumulative invoiced vs cumulative cost (cost of sales plus
     // overheads tracked to the site — the gap is then the accountant's operating profit for
@@ -1064,7 +1156,7 @@ else
 
     private List<CumulativeCard> CumulativeCardsFor(IReadOnlyList<Project> projects)
     {
-        var rowsByProject = (SitePnl.Current?.Rows ?? (IReadOnlyList<XeroSiteMonthlyPnl>)Array.Empty<XeroSiteMonthlyPnl>())
+        var rowsByProject = (EffectivePnlRows() ?? Array.Empty<XeroSiteMonthlyPnl>())
             .GroupBy(row => row.ProjectId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.OrderBy(row => row.Month).ToList(), StringComparer.OrdinalIgnoreCase);
 
@@ -1206,7 +1298,7 @@ else
 
     private MovementModel? MovementFor(IReadOnlyList<Project> projects)
     {
-        var all = SitePnl.Current?.Rows;
+        var all = EffectivePnlRows();
         if (all is null || all.Count == 0) return null;
         var byProject = all
             .GroupBy(row => row.ProjectId, StringComparer.OrdinalIgnoreCase)
@@ -1364,7 +1456,7 @@ else
 
     private List<TrajectoryCard> TrajectoriesFor(MovementModel movement)
     {
-        var all = SitePnl.Current?.Rows ?? (IReadOnlyList<XeroSiteMonthlyPnl>)Array.Empty<XeroSiteMonthlyPnl>();
+        var all = EffectivePnlRows() ?? Array.Empty<XeroSiteMonthlyPnl>();
         var byProject = all
             .GroupBy(row => row.ProjectId, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
