@@ -59,6 +59,12 @@ public static class ProcurementRouteRegistration
                         : $"{path}&pageToken={Uri.EscapeDataString(search.PageToken)}";
                 }));
 
+        // The search's front door: the trade term worked out from the package's own title and
+        // details (plus the readiness gate on inviting subcontractors at all).
+        queries.Register<ResolveBidPackageTrade, BidPackageTradeResolution>(
+            new QueryRoute("/api/bid-packages/{bidPackageId}/trade-resolution",
+                query => $"/api/bid-packages/{((ResolveBidPackageTrade)query).BidPackageId}/trade-resolution"));
+
         // Attachments kept on a work order for record keeping (uploads travel as multipart
         // through HttpWorkOrderAttachmentStore, not through this table).
         queries.Register<ListWorkOrderAttachments, IReadOnlyList<WorkOrderAttachment>>(

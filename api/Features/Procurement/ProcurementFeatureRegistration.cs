@@ -40,6 +40,9 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<IQueryHandler<ListQuoteLineItemsForBidPackage, IReadOnlyList<QuoteLineItem>>, ListQuoteLineItemsForBidPackageHandler>();
         services.AddScoped<IQueryHandler<ListBidPackageDrawings, IReadOnlyList<Drawing>>, ListBidPackageDrawingsHandler>();
         services.AddScoped<IQueryHandler<SearchLocalSubcontractors, LocalSubcontractorSearchResult>, SearchLocalSubcontractorsHandler>();
+        // Works out the search trade from the package's own title and details (one cheap AI call),
+        // and carries the readiness gate on inviting subcontractors at all.
+        services.AddScoped<IQueryHandler<ResolveBidPackageTrade, BidPackageTradeResolution>, ResolveBidPackageTradeHandler>();
 
         services.AddScoped<ICommandHandler<CreateBidPackage, BidPackage>, CreateBidPackageHandler>();
         services.AddScoped<CreateBidPackageAuthorisation>();

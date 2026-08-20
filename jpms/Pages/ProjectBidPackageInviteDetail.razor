@@ -123,8 +123,20 @@ else
                             {
                                 <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenComposeModal">Invite email</button>
                             }
-                            <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenFindModal">Find subcontractors</button>
-                            <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenInviteModal">+ Add subcontractor</button>
+                            @if (PackageReadyForInvites)
+                            {
+                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenFindModalAsync">Find subcontractors</button>
+                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenInviteModal">+ Add subcontractor</button>
+                            }
+                            else
+                            {
+                                @* Inviting is gated on the package saying what it is: the details are what
+                                   the invite, the pricing schedule and the trade match all work from. *@
+                                <span class="text-xs text-content-subtle italic"
+                                      title="A title plus a specification summary or line items — set under Details — are what the invite email, the pricing schedule and the trade match all work from.">
+                                    Add the package's details to invite subcontractors
+                                </span>
+                            }
                         </div>
                     }
                 </div>
@@ -802,20 +814,35 @@ else
             compose the Invite email on the package's page, and only when you press Send there.
         </p>
 
-        <div class="flex gap-2 mb-3">
-            <select class="field flex-1" @bind="findTrade">
-                <option value="">Select a trade…</option>
-                @foreach (var trade in FindTradeOptions())
-                {
-                    <option value="@trade">@trade</option>
-                }
-            </select>
-            <button type="button" class="btn-primary shrink-0"
-                    disabled="@(findBusy || string.IsNullOrWhiteSpace(findTrade))"
-                    @onclick="() => RunFindSearch(loadMore: false)">
-                @(findBusy ? "Searching…" : "Search")
-            </button>
-        </div>
+        @* No trade dropdown: the trade is worked out from the package's own title and details by
+           one cheap AI call when the modal opens, and the search runs itself. The term stays in an
+           editable field so a wrong guess is a one-line correction, never a dropdown hunt
+           (decision 2026-08-20 — the manual pick was pure friction, and on generic package trades
+           like "Specialist" it produced a useless search term anyway). *@
+        @if (findResolving)
+        {
+            <p class="text-sm text-content-subtle mb-3">Working out the trade from the package's title and details…</p>
+        }
+        else if (findNotReadyReason is not null)
+        {
+            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800 mb-3">@findNotReadyReason</p>
+        }
+        else
+        {
+            <div class="flex gap-2 mb-3">
+                <input class="field flex-1" placeholder="Trade to search for…"
+                       @bind="findTrade" @bind:event="oninput" />
+                <button type="button" class="btn-primary shrink-0"
+                        disabled="@(findBusy || string.IsNullOrWhiteSpace(findTrade))"
+                        @onclick="() => RunFindSearch(loadMore: false)">
+                    @(findBusy ? "Searching…" : "Search")
+                </button>
+            </div>
+            @if (findTradeNote is not null)
+            {
+                <p class="text-xs text-content-subtle -mt-1 mb-3">@findTradeNote</p>
+            }
+        }
 
         @if (findError is not null)
         {
@@ -1964,6 +1991,8 @@ else
 
     private void OpenInviteModal()
     {
+        // Same readiness gate as the button that opens this — belt for a stale render.
+        if (!PackageReadyForInvites) return;
         selected.Clear();
         subSearch = "";
         // Trade is required by the directory — prefill with the package's trade so quick-add just works.
@@ -2091,37 +2120,72 @@ else
     private bool showFindModal;
     private bool findBusy;
     private bool findSearched;
+    private bool findResolving;
     private string findTrade = "";
     private string? findError;
+    private string? findTradeNote;
+    private string? findNotReadyReason;
     private string? findNextPageToken;
     private readonly List<LocalSubcontractor> findResults = new();
     private readonly Dictionary<string, LocalSubcontractor> selectedPlaces = new(StringComparer.Ordinal);
 
-    // The curated trade list, with the package's own trade offered even if the curated list
-    // doesn't know it yet (searching can precede curating).
-    private IReadOnlyList<string> FindTradeOptions()
-    {
-        var trades = Subs.Trades()
-            .Select(t => t.Name)
-            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
-            .ToList();
-        if (!string.IsNullOrWhiteSpace(package?.Trade)
-            && !trades.Contains(package!.Trade, StringComparer.OrdinalIgnoreCase))
-        {
-            trades.Insert(0, package.Trade);
-        }
-        return trades;
-    }
+    // Inviting subcontractors is gated on the package actually saying what it is: a title plus
+    // details (a specification summary or line items). The details are what the invite email, the
+    // pricing schedule and the AI trade match all work from — inviting before they exist sends
+    // people a tender for nothing. Mirrors the server's rule in ResolveBidPackageTradeHandler:
+    // the buttons stand down here, the endpoint refuses there, so the gate holds both ways round.
+    private bool PackageReadyForInvites =>
+        !string.IsNullOrWhiteSpace(package?.Title)
+        && (!string.IsNullOrWhiteSpace(package?.SpecificationSummary) || lineItems.Count > 0);
 
-    private void OpenFindModal()
+    // Opens the modal and resolves the search trade FROM the package (title + details, one cheap
+    // AI call) instead of asking the user to pick one — then runs the search itself. The resolved
+    // term lands in an editable field, so a wrong guess costs one correction. Every failure path
+    // degrades to the package's own stored trade rather than stranding the modal.
+    private async Task OpenFindModalAsync()
     {
-        findTrade = package?.Trade ?? "";
+        findTrade = "";
         findResults.Clear();
         selectedPlaces.Clear();
         findNextPageToken = null;
         findError = null;
         findSearched = false;
+        findTradeNote = null;
+        findNotReadyReason = null;
         showFindModal = true;
+        findResolving = true;
+        StateHasChanged();
+
+        try
+        {
+            var resolution = await Queries.AskAsync(
+                new ResolveBidPackageTrade(BidPackageId), CancellationToken.None);
+            if (resolution is null || !resolution.Ready)
+            {
+                findNotReadyReason = resolution?.Reason
+                    ?? "This package needs its details (under Details) before subcontractors are invited.";
+            }
+            else
+            {
+                findTrade = resolution.Trade ?? package?.Trade ?? "";
+                findTradeNote = resolution.UsedAi
+                    ? "Worked out from the package's title and details — edit it and press Search if it's off."
+                    : resolution.Reason;
+            }
+        }
+        catch
+        {
+            findTrade = package?.Trade ?? "";
+            findTradeNote = "The trade couldn't be worked out just now — using the package's own trade.";
+        }
+        finally
+        {
+            findResolving = false;
+        }
+
+        if (findNotReadyReason is null && !string.IsNullOrWhiteSpace(findTrade))
+            await RunFindSearch(loadMore: false);
+        StateHasChanged();
     }
 
     private void CloseFindModal() => showFindModal = false;
