@@ -1131,7 +1131,7 @@
                             ActivePathwayChanged="OnModalPathwayChanged"
                             Picked="pickedRecords"
                             OnStagingChanged="StateHasChanged"
-                            OnClose="() => workspace.Close(PanelKind.SystemTags)" />
+                            OnClose="CloseSystemTags" />
         }
     </div>;
 
@@ -1941,6 +1941,7 @@ else
         Chat.OnChange += StateHasChanged; // repaints the "assistant is writing" banner
         Chat.SetPageNoteProvider(pageNoteProvider = BuildAssistantPageNote);
         Chat.SetPageProjectProvider(pageProjectProvider = CurrentTriageProjectId);
+        Chat.SetPageMailProvider(pageMailProvider = CurrentSelectedMailId);
         Chat.SetPageActionHandler(pageActionHandler = HandleAssistantPageActionAsync);
         // The sort preference has to land first — LoadAsync pages the mailbox in this order, so
         // reading it late would fetch the first page the wrong way round. It is a local-storage
@@ -2821,6 +2822,24 @@ else
             : $"{label} (keeping {attachmentCount} attachment{(attachmentCount == 1 ? "" : "s")} on the order — not emailed)";
     }
 
+    // Done on the System Tags window: confirm the picks and land that window back on the open
+    // email — the same place every time. The plain pane-history fallback ("whatever this window
+    // showed before") read as a bug in practice: with System Actions earlier in the history,
+    // Done appeared to open the RFI form out of nowhere (reported 2026-08-20). Close() first so
+    // SystemTags leaves the history entirely — closing the email later must not resurface a
+    // confirmed tags window and silently re-block Apply. When the email is already on show in
+    // the other window, the plain close is enough — no point opening a mirror copy over here.
+    private void CloseSystemTags()
+    {
+        var side = workspace.SideShowing(PanelKind.SystemTags);
+        workspace.Close(PanelKind.SystemTags);
+        if (side is not { } tagsSide || selected is null) return;
+        // On mobile only the left pane is on screen, so the right pane "showing" the email
+        // doesn't count as the email being visible — bring it to the one real window.
+        var emailVisible = workspace.IsDesktop && workspace.SideShowing(PanelKind.Email) is not null;
+        if (!emailVisible) workspace.Show(PanelKind.Email, tagsSide);
+    }
+
     // True while the System Tags window is on show for the open email — a pick in progress.
     // Apply stands down until the pane's Done confirms the staged list (the pane closes on Done),
     // so a half-made tagging can't be applied by accident. Same "decision not yet made" rule as
@@ -3435,6 +3454,7 @@ else
 
     private Func<string?>? pageNoteProvider;
     private Func<string?>? pageProjectProvider;
+    private Func<string?>? pageMailProvider;
 
     // The note's structured sibling: the selected email's matched project as a ProjectId, published
     // so the chat scope carries a real project on this project-less route. The prose note above
@@ -3442,6 +3462,13 @@ else
     // ("the project in view is…" instead of "no project is in view — ask which one").
     private string? CurrentTriageProjectId() =>
         string.IsNullOrWhiteSpace(triageProjectId) ? null : triageProjectId;
+
+    // The second structured sibling: the SELECTED email's Graph message id, published so the
+    // server's read_selected_email tool can fetch the exact email in front of the user — full body,
+    // envelope, attachment ids — without the model transcribing an opaque id out of the prose note.
+    // This is the wire that was missing when "is the below correct?" about an untagged queue email
+    // sent the assistant off to a record's tagged thread and it read the wrong email (2026-08-20).
+    private string? CurrentSelectedMailId() => selected?.Id;
 
     private string? BuildAssistantPageNote()
     {
@@ -3478,6 +3505,13 @@ else
                 .Append(string.Join("; ", todoDrafts.Select(draft => $"\"{draft.Title}\"")))
                 .Append('.');
         }
+
+        note.Append(" THIS is the email \"this email\", \"the one I'm on\" and \"the open email\" mean.")
+            .Append(" Its full body, envelope and attachment ids are ONE read_selected_email call away")
+            .Append(" — read it before answering anything about its contents or drafting a reply to it.");
+        if (view == QueueView.Active)
+            note.Append(" It is still in the triage queue, so no record's tagged correspondence")
+                .Append(" contains it yet — read_selected_email is the ONLY way to read it.");
 
         note.Append(" Tagging this email to a record (a variation, RFI, defect, bid package…) is done")
             .Append(" ON THIS PAGE: find the record (search the register on the first call), stage it")
@@ -4358,6 +4392,7 @@ else
         Chat.OnChange -= StateHasChanged;
         if (pageNoteProvider is not null) Chat.ClearPageNoteProvider(pageNoteProvider);
         if (pageProjectProvider is not null) Chat.ClearPageProjectProvider(pageProjectProvider);
+        if (pageMailProvider is not null) Chat.ClearPageMailProvider(pageMailProvider);
         if (pageActionHandler is not null) Chat.ClearPageActionHandler(pageActionHandler);
     }
 }

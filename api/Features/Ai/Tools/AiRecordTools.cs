@@ -233,14 +233,16 @@ internal static class AiRecordTools
 
             new(
                 "read_email_attachment",
-                "One attachment from a tagged email, by the messageId and attachment id "
-                + "read_record_emails returned. Text-based files (txt, csv, json, xml, html, eml, md) "
+                "One attachment from an email you have read, by the messageId and attachment id "
+                + "read_record_emails or read_selected_email returned. Text-based files (txt, csv, "
+                + "json, xml, html, eml, md) "
                 + "come back as text. PDFs, images and spreadsheets cannot be converted to text on "
                 + "this environment yet — you will be told so when you try; then name the file that "
                 + "holds the answer and ask the user for the figures rather than guessing.",
                 AiToolSchema.Object(
-                    ("messageId", "string", "The email's messageId from read_record_emails.", true),
-                    ("attachmentId", "string", "The attachment's id from read_record_emails.", true)),
+                    ("messageId", "string",
+                        "The email's messageId from read_record_emails or read_selected_email.", true),
+                    ("attachmentId", "string", "The attachment's id from the same tool result.", true)),
                 AiToolKind.Read,
                 readers,
                 async (context, input, ct) =>

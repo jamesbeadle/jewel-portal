@@ -791,7 +791,11 @@
                     task.TaskKey, task.ModalKey, task.RecordType,
                     task.RecordId, task.RecordReference, AiTasks.DraftJson)
                 : null,
-            Chat.CurrentPageNote());
+            Chat.CurrentPageNote(),
+            // The selected email's message id (the Control Centre's open queue email), so
+            // read_selected_email can default to "the one in front of them" instead of the model
+            // transcribing an opaque Graph id out of the prose note.
+            Chat.CurrentPageMailId());
     }
 
     /// <summary>Folds one hop into the panel, then repaints so the status line moves.</summary>

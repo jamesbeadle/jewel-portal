@@ -45,7 +45,7 @@
                 @foreach (var picked in Picked.ToList())
                 {
                     <span @key="picked.RecordId" class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs" title="@picked.Title">
-                        <span>🔗 @picked.Reference</span>
+                        <span>🔗 @ChipLabel(picked)</span>
                         <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Unpick"
                                 @onclick="() => TogglePick(picked)">&times;</button>
                     </span>
@@ -99,7 +99,7 @@
 
     <div class="flex items-center justify-end pt-4">
         <button type="button" class="btn-primary" @onclick="CloseAsync"
-                title="Tidies the staged list and hands this window back to what it showed before — nothing is applied until the inbox's Apply">Done</button>
+                title="Confirms the staged list and hands this window back to the open email — nothing is applied until the inbox's Apply">Done</button>
     </div>
 </div>
 }
@@ -120,7 +120,7 @@
     /// selected email (keyed on the message id), so a fresh selection starts a fresh pane.</summary>
     [Parameter] public bool IsOpen { get; set; }
 
-    /// <summary>Done pressed — the page hands this window back to what it showed before.</summary>
+    /// <summary>Done pressed — the page lands this window back on the open email.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string EmailSubject { get; set; } = "";
@@ -291,14 +291,34 @@
     private RenderFragment RecordRow(LinkableRecord record, bool candidate) => __builder =>
     {
         <button type="button" @key="record.RecordId" @onclick="() => TogglePick(record)" class="@RowClass(record, candidate)">
-            <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
-            <span class="text-sm text-content truncate flex-1" title="@record.Summary">@record.Title</span>
+            @if (ShowReference(record))
+            {
+                <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
+            }
+            <span class="text-sm text-content truncate flex-1" title="@RowHint(record)">@record.Title</span>
             @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
             {
                 <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
             }
         </button>
     };
+
+    // Valuation snapshots' VRS-… reference is a minted mail-tag stem, not a name any triager
+    // recognises (decision 2026-08-20) — their rows lead with the valuation's own name (the
+    // provider's title) and the stem retreats to the hover hint. Every other type's reference
+    // ("RFI-001", "WO-0003") IS its everyday name, so those rows keep it.
+    private static bool ShowReference(LinkableRecord record) =>
+        record.Type != RecordType.ValuationReportSnapshot;
+
+    private static string RowHint(LinkableRecord record) =>
+        ShowReference(record)
+            ? record.Summary ?? ""
+            : string.IsNullOrWhiteSpace(record.Summary) ? record.Reference : $"{record.Reference} — {record.Summary}";
+
+    // The staged chip reads the same way: the everyday name — the title for a valuation
+    // snapshot, the reference for everything else.
+    private static string ChipLabel(LinkableRecord record) =>
+        ShowReference(record) ? record.Reference : record.Title;
 
     private string RowClass(LinkableRecord record, bool candidate)
     {

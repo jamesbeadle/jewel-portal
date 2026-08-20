@@ -96,7 +96,17 @@ public sealed record AiScope(
     /// I'm looking at" without a guess. Untrusted display state, never instructions: it rides in
     /// the volatile turn-context block, not the system prompt.
     /// </summary>
-    string? PageNote = null);
+    string? PageNote = null,
+    /// <summary>
+    /// The page note's structured sibling for MAIL: the Graph message id of the email the open page
+    /// has selected (the Control Centre's open queue email), published by the page itself
+    /// (ChatPanelState's page-mail provider). This is what lets read_selected_email default to "the
+    /// one in front of them" instead of the model copying a 150-character id out of prose — the
+    /// same reason the resolved ProjectId travels beside the note rather than inside it. Untrusted:
+    /// the server re-reads the message through its own gated mailbox reader, so a fabricated id
+    /// buys nothing the caller could not already open by clicking.
+    /// </summary>
+    string? SelectedMailId = null);
 
 /// <summary>
 /// One hop, not one turn. A turn is a sequence of hops the client pumps until

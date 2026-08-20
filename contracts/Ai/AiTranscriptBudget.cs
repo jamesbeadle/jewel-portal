@@ -22,9 +22,13 @@ public static class AiTranscriptBudget
     /// Tools whose result is large and whose earlier copies are pure cost — a second call WITH THE
     /// SAME ARGUMENTS supersedes the first. Keyed on name + arguments, not name alone: two
     /// different requests' working papers, or two different skills, are both worth keeping.
+    /// (read_selected_email is usually called with no arguments, so a re-read after the user
+    /// changes selection supersedes the old email's body too — right for cost, and the model is
+    /// told to trust only the newest current-context block anyway.)
     /// </summary>
     private static readonly HashSet<string> ReplayLatestOnly =
-        new(StringComparer.OrdinalIgnoreCase) { "get_request_context", "load_skill", "load_skill_reference" };
+        new(StringComparer.OrdinalIgnoreCase)
+        { "get_request_context", "load_skill", "load_skill_reference", "read_selected_email" };
 
     /// <summary>
     /// The ceiling on a replayed transcript, in characters. Well inside the model's context

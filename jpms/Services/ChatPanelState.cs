@@ -178,6 +178,39 @@ public sealed class ChatPanelState
         catch { return null; }
     }
 
+    // ---- the page mail -------------------------------------------------------------------------
+    // The note's structured sibling for MAIL: the Graph message id of the email the open page has
+    // SELECTED — the Control Centre's open queue email. The prose note says an email is open; this
+    // is what lets the server's read_selected_email tool fetch that exact message without the model
+    // copying a long opaque id out of prose (a miscopied id reads the wrong email or nothing).
+    // Same provider lifecycle as the note and the project: register on init, clear on Dispose,
+    // reference-equality guarded so a late-disposing page cannot wipe its successor's.
+
+    private Func<string?>? pageMailProvider;
+
+    /// <summary>The page's live "the email I have selected" callback. Last writer wins (one page
+    /// owns the middle of the screen at a time).</summary>
+    public void SetPageMailProvider(Func<string?> provider) => pageMailProvider = provider;
+
+    /// <summary>Clears the provider, but only if it is still this caller's — a page disposing late
+    /// (Blazor disposes the old page after the new one initialises) must not wipe its successor's.</summary>
+    public void ClearPageMailProvider(Func<string?> provider)
+    {
+        if (ReferenceEquals(pageMailProvider, provider)) pageMailProvider = null;
+    }
+
+    /// <summary>The selected email's message id right now, or null. Never throws — a broken
+    /// provider costs the model one read, not the user their message.</summary>
+    public string? CurrentPageMailId()
+    {
+        try
+        {
+            var mailId = pageMailProvider?.Invoke();
+            return string.IsNullOrWhiteSpace(mailId) ? null : mailId;
+        }
+        catch { return null; }
+    }
+
     // ---- page actions ------------------------------------------------------------------------
     // The reverse of the page note: a UI action the assistant addressed to the OPEN PAGE rather
     // than to the panel (stage_triage_tag → the Control Centre stages the pick in System Tags).

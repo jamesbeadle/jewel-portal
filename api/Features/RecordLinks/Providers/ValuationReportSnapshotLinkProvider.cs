@@ -41,7 +41,8 @@ public sealed class ValuationReportSnapshotLinkProvider : ILinkableRecordProvide
             .OrderByDescending(s => s.TakenAt)
             .ToListAsync(ct);
 
-        return snapshots.Select(s => ToLinkable(projectRef, s)).ToList().AsReadOnly();
+        var claimNames = await ClaimNamesAsync(snapshots.Select(s => s.ValuationClaimId), ct);
+        return snapshots.Select(s => ToLinkable(projectRef, s, ClaimNameFor(claimNames, s))).ToList().AsReadOnly();
     }
 
     public async Task<LinkableRecord?> FindAsync(string recordId, CancellationToken ct)
@@ -51,8 +52,28 @@ public sealed class ValuationReportSnapshotLinkProvider : ILinkableRecordProvide
         if (snapshot is null) return null;
 
         var projectRef = await ProjectRefAsync(snapshot.ProjectId, ct);
-        return ToLinkable(projectRef, snapshot);
+        var claimNames = await ClaimNamesAsync(new[] { snapshot.ValuationClaimId }, ct);
+        return ToLinkable(projectRef, snapshot, ClaimNameFor(claimNames, snapshot));
     }
+
+    // The display names of the claims the snapshots were frozen from, keyed by claim id — the
+    // valuation's own name ("Valuation 14", "June 2026"), or the register's "Claim n" fallback
+    // for pre-name claims (the same one rule as ValuationClaim.DisplayName).
+    private async Task<Dictionary<string, string>> ClaimNamesAsync(IEnumerable<string?> claimIds, CancellationToken ct)
+    {
+        var ids = claimIds.Where(id => !string.IsNullOrWhiteSpace(id)).Select(id => id!).Distinct().ToList();
+        if (ids.Count == 0) return new Dictionary<string, string>();
+        var claims = await context.ValuationClaims.AsNoTracking()
+            .Where(c => ids.Contains(c.ValuationClaimId))
+            .Select(c => new { c.ValuationClaimId, c.Name, c.ClaimNumber })
+            .ToListAsync(ct);
+        return claims.ToDictionary(
+            c => c.ValuationClaimId,
+            c => string.IsNullOrWhiteSpace(c.Name) ? $"Claim {c.ClaimNumber}" : c.Name.Trim());
+    }
+
+    private static string? ClaimNameFor(Dictionary<string, string> claimNames, ValuationReportSnapshotEntity snapshot) =>
+        snapshot.ValuationClaimId is { } claimId && claimNames.TryGetValue(claimId, out var name) ? name : null;
 
     private async Task<string> ProjectRefAsync(string projectId, CancellationToken ct)
     {
@@ -65,18 +86,23 @@ public sealed class ValuationReportSnapshotLinkProvider : ILinkableRecordProvide
         return string.IsNullOrWhiteSpace(reference) ? projectId : reference.Trim();
     }
 
-    private static LinkableRecord ToLinkable(string projectRef, ValuationReportSnapshotEntity snapshot)
+    private static LinkableRecord ToLinkable(string projectRef, ValuationReportSnapshotEntity snapshot, string? claimName)
     {
         var reference = $"VRS-{projectRef}-{snapshot.Number}";
+        var stage = string.IsNullOrWhiteSpace(snapshot.Label) ? "Valuation report snapshot" : snapshot.Label;
         return new LinkableRecord(
             Type:         RecordType.ValuationReportSnapshot,
             RecordId:     snapshot.ValuationReportSnapshotId,
             ProjectId:    snapshot.ProjectId,
             Reference:    reference,
             TagReference: reference,
-            // The label is what a triager reads first ("VI-0007 submission", "June 2026 period
-            // end"); the reference alone means nothing without it.
-            Title:        string.IsNullOrWhiteSpace(snapshot.Label) ? "Valuation report snapshot" : snapshot.Label,
+            // Led by the valuation's own name — "Valuation 14 — VI-0004 raise" — because that is
+            // the name a triager knows the report by (decision 2026-08-20); the capture label
+            // alone ("VI-0004 raise") only says which invoice event froze it, and the VRS
+            // reference is a mail-tag stem nobody recognises. Claim-less snapshots (none in
+            // practice — every capture stamps the latest claim when one exists) fall back to
+            // the label alone.
+            Title:        claimName is null ? stage : $"{claimName} — {stage}",
             StatusLabel:  snapshot.IsSuperseded ? "Superseded" : null,
             Summary:      $"Taken {snapshot.TakenAt:dd MMM yyyy} — payment due £{snapshot.PaymentDueExVat:N2}",
             // Superseded rows stay linkable (a late reply about the statement that was actually

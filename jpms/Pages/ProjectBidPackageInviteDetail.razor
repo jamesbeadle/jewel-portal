@@ -1282,6 +1282,22 @@ else
                 own). Sale values are internal figures shown for context only — they are not saved
                 on the package and never appear on anything a tenderer sees.
             </p>
+            @* Search narrows the VIEW only — ticks made before narrowing survive it (the confirm
+               reads valuationSelection against the full report, not the filtered rows). *@
+            <input class="field w-full mb-3" placeholder="Search by description, cost code or section…"
+                   value="@valuationSearch" @oninput="OnValuationSearchInput" />
+            @if (FilteredValuationLines.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">
+                    No report lines match "@valuationSearch.Trim()" — clear the search to see every line.
+                    @if (valuationSelection.Count > 0)
+                    {
+                        <text> Your @(valuationSelection.Count == 1 ? "ticked line is" : $"{valuationSelection.Count} ticked lines are") still selected.</text>
+                    }
+                </p>
+            }
+            else
+            {
             <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[60vh]">
                 <table class="w-full text-sm">
                     <thead class="bg-surface-raised border-b border-line">
@@ -1295,14 +1311,14 @@ else
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
-                        @foreach (var group in SelectableValuationLines.GroupBy(ValuationGroupLabel))
+                        @foreach (var group in FilteredValuationLines.GroupBy(ValuationGroupLabel))
                         {
                             var groupIds = group.Where(l => !string.IsNullOrWhiteSpace(l.CostCode)).Select(l => l.ValuationLineItemId).ToList();
                             var allTicked = groupIds.Count > 0 && groupIds.All(valuationSelection.Contains);
                             <tr class="bg-surface-raised/60">
                                 <td class="px-3 py-1.5">
                                     <input type="checkbox" checked="@allTicked" disabled="@(busy || groupIds.Count == 0)"
-                                           title="Select every line in this section"
+                                           title="Select every line shown in this section"
                                            @onchange="() => ToggleValuationGroup(group)" />
                                 </td>
                                 <td colspan="5" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-content-subtle">@group.Key</td>
@@ -1343,6 +1359,7 @@ else
                     </tbody>
                 </table>
             </div>
+            }
             <p class="text-xs text-content-subtle mt-2">
                 Lines are appended — nothing already on the package changes. Adjust descriptions,
                 units and quantities afterwards under Edit details, and link coverage from the
@@ -2861,6 +2878,27 @@ else
     private IReadOnlyList<ValuationLineItem>? valuationLines;   // null = no fetch has landed
     private bool valuationLinesFailed;
     private readonly HashSet<string> valuationSelection = new();
+    private string valuationSearch = "";
+
+    private void OnValuationSearchInput(ChangeEventArgs e) => valuationSearch = e.Value?.ToString() ?? "";
+
+    // The search narrows what's LISTED, never what's SELECTED: ticks made under one search
+    // survive the next, and the confirm reads valuationSelection against the full report.
+    // Matches description (as the package line will carry it), cost code and section header,
+    // so "SUB-PIL", "standing charge" and "PC sums" all narrow the way you'd expect.
+    private IReadOnlyList<ValuationLineItem> FilteredValuationLines
+    {
+        get
+        {
+            var q = valuationSearch.Trim();
+            if (q.Length == 0) return SelectableValuationLines;
+            return SelectableValuationLines
+                .Where(line => ValuationLineDescription(line).Contains(q, StringComparison.OrdinalIgnoreCase)
+                    || (line.CostCode ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
+                    || ValuationGroupLabel(line).Contains(q, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
 
     // Declined rows are recorded on the report but priced into nothing — not scope to tender.
     // Order mirrors the report: element blocks in bill order, DisplayOrder within.
@@ -2874,6 +2912,7 @@ else
     {
         if (busy || package is null || !CanEdit) return;
         valuationSelection.Clear();
+        valuationSearch = "";
         error = null;
         showValuationPicker = true;
         // Stale-while-revalidate: rows already fetched keep showing while the fresh fetch lands,
@@ -2891,6 +2930,7 @@ else
         if (busy) return;
         showValuationPicker = false;
         valuationSelection.Clear();
+        valuationSearch = "";
     }
 
     private void ToggleValuationLine(ValuationLineItem line)
