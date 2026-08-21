@@ -7,8 +7,10 @@ namespace Jewel.JPMS.Api.Features.Ai;
 /// Turns an uploaded chat attachment into text the model can read. Extraction happens ONCE, at
 /// upload — the text is what gets persisted (as a Context row), the bytes are discarded. Kept
 /// deliberately narrow: spreadsheets and plain text, the formats the boss's tracker actually comes
-/// in. PDFs and Word documents are refused with a plain sentence rather than half-read — the same
-/// honesty rule as read_email_attachment (ADR-007: declared, not hidden).
+/// in — plus images (pasted screenshots, site photos), which are the one kind persisted as BYTES
+/// because the model reads them as image blocks, not text. PDFs and Word documents are refused
+/// with a plain sentence rather than half-read — the same honesty rule as read_email_attachment
+/// (ADR-007: declared, not hidden).
 /// </summary>
 internal static class AiAttachmentReader
 {
@@ -23,10 +25,68 @@ internal static class AiAttachmentReader
 
     private static readonly string[] SupportedExtensions = { ".xlsx", ".csv", ".tsv", ".txt" };
 
-    public static bool IsSupported(string fileName) =>
-        SupportedExtensions.Contains(Path.GetExtension(fileName).ToLowerInvariant());
+    /// <summary>
+    /// Image formats reach the model as IMAGE blocks, not extracted text — the one attachment kind
+    /// where the bytes themselves are what gets persisted (base64, on the Context row) and replayed.
+    /// The list is exactly what the Anthropic Messages API accepts as image media types.
+    /// </summary>
+    private static readonly Dictionary<string, string> ImageMediaTypes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            [".png"] = "image/png",
+            [".jpg"] = "image/jpeg",
+            [".jpeg"] = "image/jpeg",
+            [".gif"] = "image/gif",
+            [".webp"] = "image/webp"
+        };
 
-    public static string SupportedList => "xlsx, csv, tsv or txt";
+    public static bool IsSupported(string fileName) =>
+        SupportedExtensions.Contains(Path.GetExtension(fileName).ToLowerInvariant())
+        || IsImage(fileName);
+
+    public static bool IsImage(string fileName) =>
+        ImageMediaTypes.ContainsKey(Path.GetExtension(fileName));
+
+    public static string ImageMediaType(string fileName) =>
+        ImageMediaTypes[Path.GetExtension(fileName)];
+
+    public static string SupportedList => "xlsx, csv, tsv, txt — or an image (png, jpg, gif, webp)";
+
+    /// <summary>
+    /// Checks an image upload actually IS the image its name claims (magic bytes, not extension —
+    /// a renamed .exe must not ride into the transcript as a "png") and returns the one-line human
+    /// summary for the pill. Throws <see cref="InvalidDataException"/> when the bytes don't match.
+    /// </summary>
+    public static string ValidateImage(string fileName, byte[] content)
+    {
+        var mediaType = ImageMediaType(fileName);
+        var looksRight = mediaType switch
+        {
+            "image/png" => StartsWith(content, 0x89, 0x50, 0x4E, 0x47),
+            "image/jpeg" => StartsWith(content, 0xFF, 0xD8, 0xFF),
+            "image/gif" => StartsWith(content, 0x47, 0x49, 0x46, 0x38),
+            "image/webp" => StartsWith(content, 0x52, 0x49, 0x46, 0x46)
+                            && content.Length > 11
+                            && content[8] == 0x57 && content[9] == 0x45
+                            && content[10] == 0x42 && content[11] == 0x50,
+            _ => false
+        };
+        if (!looksRight)
+            throw new InvalidDataException(
+                $"\"{fileName}\" doesn't look like a real {Path.GetExtension(fileName).TrimStart('.')} image — re-save it and attach again.");
+
+        return content.Length >= 1_048_576
+            ? $"image · {content.Length / 1_048_576.0:0.#} MB"
+            : $"image · {Math.Max(1, content.Length / 1024)} KB";
+    }
+
+    private static bool StartsWith(byte[] content, params byte[] signature)
+    {
+        if (content.Length < signature.Length) return false;
+        for (var i = 0; i < signature.Length; i++)
+            if (content[i] != signature[i]) return false;
+        return true;
+    }
 
     /// <summary>Extracts <paramref name="content"/> to prompt-ready text plus a one-line human
     /// summary. Throws <see cref="NotSupportedException"/> for a format outside the list and

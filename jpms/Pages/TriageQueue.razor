@@ -26,6 +26,7 @@
 @inject ICommandSender Commands
 @inject IWorkOrderAttachmentStore WorkOrderAttachments
 @inject IQueryClient Queries
+@inject ControlCentreOpenEmail OpenEmail
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel Subcontractors
 @inject AiTaskState AiTasks
@@ -479,16 +480,35 @@
         }
         else
         {
+            @* Search the tagged pile — one box, two answers. A record reference ("WO-0045",
+               "TODO-0011", "RFI-012") resolves to its tag (ResolveRecordTags) and becomes the
+               server-side tag filter, so the list below IS that record's mail — paging, selection
+               and the tags pane all as normal. Anything else free-text searches the whole mailbox
+               (SearchMailboxMessages — subjects, senders, bodies, attachment names) and shows the
+               tagged matches in the list's place. While a query is live the pathway/tag controls
+               render disabled (never hidden): the search owns the one server-side filter slot. *@
+            <div class="relative mb-3 max-w-xl">
+                <input type="search" class="field w-full text-sm pr-8"
+                       placeholder="Search tagged emails — subject or sender, or a record reference (WO-0045)"
+                       value="@taggedSearch" @oninput="OnTaggedSearchInput" />
+                @if (taggedSearch.Trim().Length > 0)
+                {
+                    <button type="button" title="Clear search"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-content-faint hover:text-content-muted text-sm leading-none"
+                            @onclick="ClearTaggedSearchAsync">✕</button>
+                }
+            </div>
+
             @* Pathway filter: one chip per pathway, read server-side as an exact bucket-category
                filter. Kept separate from (and mutually exclusive with) the tag filter below — Graph
                composes category filters with OR only, so combining them would show a union, not the
                intersection the combination looks like. *@
             <div class="flex flex-wrap items-center gap-2 mb-3">
                 <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Pathway</span>
-                <button type="button" class="@PathwayFilterChipClass(null)" @onclick="() => SetPathwayFilter(null)">All</button>
-                <button type="button" class="@PathwayFilterChipClass(ClientBucket)" @onclick="() => SetPathwayFilter(ClientBucket)">Client</button>
-                <button type="button" class="@PathwayFilterChipClass(SubcontractorBucket)" @onclick="() => SetPathwayFilter(SubcontractorBucket)">Subcontractor</button>
-                <button type="button" class="@PathwayFilterChipClass(InternalBucket)" @onclick="() => SetPathwayFilter(InternalBucket)">Internal</button>
+                <button type="button" class="@PathwayFilterChipClass(null) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(null)">All</button>
+                <button type="button" class="@PathwayFilterChipClass(ClientBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(ClientBucket)">Client</button>
+                <button type="button" class="@PathwayFilterChipClass(SubcontractorBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(SubcontractorBucket)">Subcontractor</button>
+                <button type="button" class="@PathwayFilterChipClass(InternalBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(InternalBucket)">Internal</button>
             </div>
 
             @* The tag list accrues from the emails that have loaded, so before the first page lands
@@ -499,7 +519,8 @@
                 <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
                 <div class="relative">
                     <button type="button"
-                            class="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5"
+                            class="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5 disabled:opacity-50"
+                            disabled="@TaggedSearchActive" title="@PathwayDisabledTitle"
                             @onclick="ToggleFilterMenu">
                         @FilterButtonLabel
                         <span class="text-[9px] leading-none">▾</span>
@@ -527,32 +548,63 @@
                 {
                     <span class="inline-flex items-center gap-1.5 rounded-full border border-accent bg-surface-raised px-2.5 py-1 text-xs text-content">
                         @TagLabel(tag)
-                        <button type="button" class="text-content-subtle hover:text-negative" @onclick="() => ToggleTag(tag)" title="Remove filter">✕</button>
+                        <button type="button" class="text-content-subtle hover:text-negative disabled:opacity-50" disabled="@TaggedSearchActive" @onclick="() => ToggleTag(tag)" title="Remove filter">✕</button>
                     </span>
                 }
             </div>
             }
+            @* What the search box is currently answering — the resolved record, the in-flight
+               read, or the free-text match count. A line of text, so it renders only once known. *@
+            @if (taggedSearchRecord is LinkableRecord searchRecord)
+            {
+                <p class="text-xs text-content-subtle mb-3">
+                    Showing emails tagged to <span class="font-mono">@searchRecord.Reference</span> — @searchRecord.Title.
+                    @if (ExplorerRecordTypes.FullPageHref(searchRecord) is string searchHref)
+                    {
+                        <a class="underline underline-offset-2 hover:text-content" href="@searchHref">Open @searchRecord.Reference</a>
+                    }
+                </p>
+            }
+            else if (taggedSearching)
+            {
+                <p class="text-xs text-content-subtle mb-3">Searching the mailbox…</p>
+            }
+            else if (taggedSearchResults is not null)
+            {
+                <p class="text-xs text-content-subtle mb-3">
+                    @taggedSearchResults.Count email@(taggedSearchResults.Count == 1 ? "" : "s") match@(taggedSearchResults.Count == 1 ? "es" : "") "@taggedSearchPending" — best matches first, untagged queue emails included.
+                </p>
+            }
+
             <LoadGate IsLoading="@(!taggedArrived)" Prominent="true" Label="Loading tagged emails">
-            @if (loadError is not null && taggedItems.Count == 0)
+            @if (loadError is not null && taggedItems.Count == 0 && taggedSearchResults is null)
             {
                 @* A failed page has nothing to report; "no tagged emails" would read as an answer. *@
                 <p class="text-sm text-negative">Couldn't load the tagged emails. The reason is in the red bar above — reload to try again.</p>
             }
-            else if (taggedTotal == 0)
+            else if (taggedSearchResults is { Count: 0 })
             {
                 <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">@(selectedTags.Count == 0 ? "No tagged emails." : "No emails with the selected tags.")</p>
+                    <p class="text-sm text-content">No emails match "@taggedSearchPending".</p>
+                    <p class="text-xs text-content-subtle mt-1">The search covers subjects, senders, bodies and attachment names across the whole mailbox — or type a record reference like WO-0045 to list that record's mail.</p>
+                </div>
+            }
+            else if (taggedTotal == 0 && taggedSearchResults is null)
+            {
+                <div class="panel p-8 text-center">
+                    <p class="text-sm text-content">@(taggedSearchRecord is not null ? $"No emails are tagged to {taggedSearchRecord.Reference} yet." : selectedTags.Count == 0 ? "No tagged emails." : "No emails with the selected tags.")</p>
                     <p class="text-xs text-content-subtle mt-1">Emails linked to a request (or discarded) appear here. Open one to add it to another request or remove a tag.</p>
                 </div>
             }
             else
             {
+                var taggedRows = taggedSearchResults ?? taggedItems;
                 <div class="relative space-y-2">
                         @if (listLoading)
                         {
                             <JewelSpinner Overlay="true" Label="Loading" />
                         }
-                        @foreach (var item in taggedItems)
+                        @foreach (var item in taggedRows)
                         {
                             <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
                                 <div class="flex items-baseline justify-between gap-2">
@@ -590,10 +642,20 @@
                                         }
                                     </div>
                                 }
+                                else
+                                {
+                                    @* Only reachable from a free-text search hit — the paged pile is
+                                       tagged by definition. Selecting it opens it for tagging. *@
+                                    <div class="flex flex-wrap items-center gap-1 mt-1">
+                                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line text-content-subtle text-[10px] font-medium px-2 py-0.5">Untagged — still in the queue</span>
+                                    </div>
+                                }
                             </button>
                         }
 
-                        @if (TaggedPageCount > 1)
+                        @* Free-text results are one relevance-ordered page, not the cursor-paged
+                           pile, so the pager stands down while they're up. *@
+                        @if (taggedSearchResults is null && TaggedPageCount > 1)
                         {
                             <div class="flex items-center justify-between gap-2 pt-2">
                                 @if (taggedIndex > 0)
@@ -1591,6 +1653,24 @@ else
     private bool filterOpen;
     private readonly SortedSet<string> knownTags = new(StringComparer.OrdinalIgnoreCase) { "JPMS/Discarded", "JPMS/Replied" };
 
+    // The Tagged tab's search box (see the markup comment). A resolved reference lives in
+    // taggedSearchRecord + taggedSearchTag (the "JPMS/…" category LoadTaggedAsync filters by,
+    // taking the one server-side filter slot); free-text results live in taggedSearchResults
+    // (null = not in free-text mode) and render in the list's place, unpaged.
+    private string taggedSearch = "";
+    private string taggedSearchPending = "";
+    private bool taggedSearching;
+    private LinkableRecord? taggedSearchRecord;
+    private string? taggedSearchTag;
+    private IReadOnlyList<MailboxMessage>? taggedSearchResults;
+    private CancellationTokenSource? taggedSearchDebounce;
+
+    private bool TaggedSearchActive =>
+        taggedSearching || taggedSearchTag is not null || taggedSearchResults is not null;
+
+    private string? PathwayDisabledTitle =>
+        TaggedSearchActive ? "The search owns the filter — clear it to use these" : null;
+
     // The Tagged tab's pathway filter: one of the three bucket tags, or null = all pathways. Sent to
     // the server through the same tags parameter as the record-tag filter (the bucket IS a category,
     // and ListByTagsAsync filters by exact category). Mutually exclusive with the record-tag
@@ -1975,6 +2055,16 @@ else
         // shared task. Honoured after the loads so CanTriage is decided from real session state.
         await HonourRequestedModalAsync();
 
+        // A finder elsewhere (the to-do searches' email results) may have sent one specific email
+        // here to be opened — select THAT, on the pile it lives in, instead of the default landing.
+        if (OpenEmail.Take() is MailboxMessage handedOver)
+        {
+            if (handedOver.Categories.Count > 0 || handedOver.Bucket is not null)
+                await SwitchView(QueueView.Tagged);
+            await Select(handedOver);
+            return;
+        }
+
         // Land straight in the first email: opening the top of the queue is what a triager does
         // first every time, so the page does it for them. Initial load only — after an action the
         // deliberately-cleared pane is where the outcome banners (reply draft, partial link) show.
@@ -2007,7 +2097,15 @@ else
         composeOutcome = null;
         crossFileMessage = null;
         if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
-        else if (next == QueueView.Tagged) { selectedTags.Clear(); pathwayBucketFilter = null; filterOpen = false; ResetTaggedPaging(); await LoadTaggedAsync(); }
+        else if (next == QueueView.Tagged)
+        {
+            selectedTags.Clear(); pathwayBucketFilter = null; filterOpen = false;
+            // Entering the tab starts from the unfiltered pile — the search resets with the rest.
+            taggedSearchDebounce?.Cancel();
+            taggedSearch = ""; taggedSearchPending = ""; taggedSearching = false;
+            taggedSearchRecord = null; taggedSearchTag = null; taggedSearchResults = null;
+            ResetTaggedPaging(); await LoadTaggedAsync();
+        }
         else { ResetQueuePaging(); await Task.WhenAll(LoadAsync(), LoadRecentTriageAsync()); }
     }
 
@@ -2176,11 +2274,15 @@ else
         StateHasChanged(); // paint the spinner before the fetch — see LoadAsync
         try
         {
-            // The pathway chip and the record-tag multi-select are mutually exclusive (see the
-            // pathwayBucketFilter note), so exactly one of them feeds the server's tags filter.
-            var filter = pathwayBucketFilter is not null
-                ? new List<string> { pathwayBucketFilter }
-                : selectedTags.Count == 0 ? null : selectedTags.ToList();
+            // The search's resolved record tag, the pathway chip and the record-tag multi-select
+            // are mutually exclusive (see the pathwayBucketFilter note), so exactly one of them
+            // feeds the server's tags filter — the search first, since the others render disabled
+            // while it is live.
+            var filter = taggedSearchTag is not null
+                ? new List<string> { taggedSearchTag }
+                : pathwayBucketFilter is not null
+                    ? new List<string> { pathwayBucketFilter }
+                    : selectedTags.Count == 0 ? null : selectedTags.ToList();
             var result = await Intake.ListTaggedLiveAsync(taggedCursors[taggedIndex], PageSize, filter, newestFirst);
             taggedItems = result.Items;
             taggedTotal = result.Total;
@@ -2207,6 +2309,108 @@ else
     }
 
     private void ToggleFilterMenu() => filterOpen = !filterOpen;
+
+    // ---- Tagged tab search ---------------------------------------------------------------------
+
+    private void OnTaggedSearchInput(ChangeEventArgs e)
+    {
+        taggedSearch = e.Value?.ToString() ?? "";
+        var query = taggedSearch.Trim();
+        if (query == taggedSearchPending) return;
+        taggedSearchPending = query;
+        taggedSearchDebounce?.Cancel();
+        if (query.Length < 2)
+        {
+            // Typed back below the threshold: drop out of search mode but keep the box's text —
+            // the user may still be typing.
+            _ = ResetTaggedSearchModeAsync();
+            return;
+        }
+        var cts = taggedSearchDebounce = new CancellationTokenSource();
+        _ = RunTaggedSearchAsync(query, cts.Token);
+    }
+
+    // The ✕ button: empty the box and fall back to the ordinary filtered list.
+    private async Task ClearTaggedSearchAsync()
+    {
+        taggedSearchDebounce?.Cancel();
+        taggedSearch = "";
+        taggedSearchPending = "";
+        await ResetTaggedSearchModeAsync();
+    }
+
+    // Leave search mode: clear its state and, if a resolved tag was filtering the server read,
+    // reload the ordinary list. Selection is left alone — an email opened from the search stays
+    // open, exactly as it does when a tag filter is cleared.
+    private async Task ResetTaggedSearchModeAsync()
+    {
+        taggedSearching = false;
+        taggedSearchResults = null;
+        taggedSearchRecord = null;
+        var hadTagFilter = taggedSearchTag is not null;
+        taggedSearchTag = null;
+        if (hadTagFilter)
+        {
+            ResetTaggedPaging();
+            await LoadTaggedAsync();
+        }
+        StateHasChanged();
+    }
+
+    private async Task RunTaggedSearchAsync(string query, CancellationToken token)
+    {
+        try { await Task.Delay(500, token); } catch (TaskCanceledException) { return; }
+        taggedSearching = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            // A reference-shaped query (one token with a dash) is first offered to the tag
+            // resolver — the same ResolveRecordTags behind the to-do search's chips. A hit turns
+            // the search into that record's exact server-side tag filter, so paging, selection
+            // and the tags pane all behave exactly as with the dropdown filter.
+            if (!query.Contains(' ') && query.Contains('-'))
+            {
+                var records = await Queries.AskAsync(new ResolveRecordTags(new[] { query }), token);
+                if (token.IsCancellationRequested) return;
+                if (records.FirstOrDefault() is LinkableRecord record)
+                {
+                    taggedSearchRecord = record;
+                    taggedSearchTag = $"JPMS/{record.TagReference}";
+                    taggedSearchResults = null;
+                    ResetTaggedPaging();
+                    taggedSearching = false;
+                    await LoadTaggedAsync();
+                    return;
+                }
+            }
+            // Otherwise free-text: one relevance-ordered page of the whole mailbox. Untagged
+            // matches are INCLUDED, marked as still-in-the-queue — "find that past email" is the
+            // question being asked, and an email hidden for not being tagged yet is exactly the
+            // one that needs finding (selecting it opens it for tagging like any queue email).
+            var found = await Queries.AskAsync(new SearchMailboxMessages(query, 25), token);
+            if (token.IsCancellationRequested) return;
+            taggedSearchRecord = null;
+            taggedSearchTag = null;
+            taggedSearchResults = found;
+        }
+        catch (OperationCanceledException) { }
+        catch
+        {
+            if (token.IsCancellationRequested) return;
+            taggedSearchResults = Array.Empty<MailboxMessage>();
+            loadError = "The mailbox couldn't be searched just then. Try again in a moment.";
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested)
+            {
+                taggedSearching = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    // --------------------------------------------------------------------------------------------
 
     private string FilterButtonLabel => selectedTags.Count == 0 ? "All tags" : $"{selectedTags.Count} selected";
 
@@ -3475,7 +3679,9 @@ else
     private string? BuildAssistantPageNote()
     {
         if (selected is null)
-            return "The Control Centre queue is open; no email is selected yet.";
+            return "The Control Centre queue is open; no email is selected yet. To work on a "
+                 + "specific email, SELECT IT YOURSELF with select_email (search words: sender, "
+                 + "subject wording, an amount) — never ask the user to click an email for you.";
 
         var note = new System.Text.StringBuilder();
         note.Append("The email being triaged: \"").Append(selected.Subject).Append("\" from ")
@@ -3518,7 +3724,9 @@ else
         note.Append(" Tagging this email to a record (a variation, RFI, defect, bid package…) is done")
             .Append(" ON THIS PAGE: find the record (search the register on the first call), stage it")
             .Append(" with stage_triage_tag, and the user presses Apply to land it. To-dos are staged")
-            .Append(" the same way with stage_triage_todo. Do not navigate away to do either.");
+            .Append(" the same way with stage_triage_todo. Do not navigate away to do either.")
+            .Append(" A different email is one select_email call away — never ask the user to click")
+            .Append(" one for you.");
         return note.ToString();
     }
 
@@ -3537,8 +3745,62 @@ else
     {
         "stage_triage_tag" => InvokeAsync(() => StageTagFromAssistantAsync(argumentsJson)),
         "stage_triage_todo" => InvokeAsync(() => StageTodoFromAssistant(argumentsJson)),
+        "select_email" => InvokeAsync(() => SelectEmailFromAssistantAsync(argumentsJson)),
         _ => Task.CompletedTask
     };
+
+    /// <summary>
+    /// select_email from the chat: the assistant's own click on an email row. The search words go
+    /// through the same whole-mailbox search the Find-emails dialogs use; the best match is
+    /// SELECTED — reading pane, staging, the context block, everything — switching to the pile
+    /// (queue or Tagged) the email actually lives in. The assistant is told to verify the
+    /// selection from the next context block, so a near-miss costs one refined retry, not a wrong
+    /// answer. Misses land in the red bar exactly like a failed stage, so the user sees why the
+    /// assistant is stuck instead of watching it do nothing.
+    /// </summary>
+    private async Task SelectEmailFromAssistantAsync(string argumentsJson)
+    {
+        string? search = null;
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
+            if (document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+                search = ReadDraftText(document.RootElement, "search");
+        }
+        catch (System.Text.Json.JsonException)
+        {
+        }
+
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            actionError = "The assistant tried to open an email without saying which.";
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            var matches = await Queries.AskAsync(new SearchMailboxMessages(search.Trim(), 5), CancellationToken.None);
+            if (matches.Count == 0)
+            {
+                actionError = $"The assistant looked for an email matching \"{search}\" but nothing in the mailbox matched.";
+                StateHasChanged();
+                return;
+            }
+            var match = matches[0];
+            // Land on the pile the email lives in: tagged mail's pane manages its tags, queue
+            // mail's pane triages it. Only switch when needed — SwitchView clears staged work.
+            var isTagged = match.Categories.Count > 0 || match.Bucket is not null;
+            if (isTagged && view != QueueView.Tagged) await SwitchView(QueueView.Tagged);
+            else if (!isTagged && view != QueueView.Active) await SwitchView(QueueView.Active);
+            await Select(match);
+        }
+        catch
+        {
+            actionError = "The mailbox couldn't be searched for the assistant's email just then.";
+        }
+        StateHasChanged();
+    }
 
     /// <summary>
     /// stage_triage_todo from the chat: adds a row to the SAME createTodoRows the System Actions
@@ -4386,6 +4648,8 @@ else
 
     public void Dispose()
     {
+        taggedSearchDebounce?.Cancel();
+        taggedSearchDebounce?.Dispose();
         StageFilter.OnChange -= StageFilterChanged;
         RequestRegister.OnChange -= StateHasChanged;
         workspace.OnChange -= StateHasChanged;

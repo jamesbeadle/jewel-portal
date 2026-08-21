@@ -13,10 +13,8 @@ namespace Jewel.JPMS.Services;
 public sealed class ChatPanelState
 {
     private const string StorageKeyPrefix = "jpms.chatCostAcknowledged";
-    private const string ConversationKeyPrefix = "jpms.chatConversation";
     private const string GetItem = "localStorage.getItem";
     private const string SetItem = "localStorage.setItem";
-    private const string RemoveItem = "localStorage.removeItem";
     private const string AcknowledgedValue = "true";
 
     private readonly IJSRuntime js;
@@ -279,40 +277,9 @@ public sealed class ChatPanelState
         catch { } // Failing to persist only costs the user one extra acknowledgement.
     }
 
-    // ---- the resumable conversation ----------------------------------------------------------
-    // The server holds every transcript; what the browser forgets on a refresh is only WHICH
-    // conversation this panel was in. Remembering that one id (same per-user localStorage idiom as
-    // the acknowledgement) is what lets the panel pick the thread back up via ListAiConversation.
-
-    /// <summary>The conversation this user's panel was last in, or null. Never a guess: cleared by
-    /// New chat and whenever a stored id turns out not to replay.</summary>
-    public async Task<string?> LoadStoredConversationIdAsync()
-    {
-        if (auth.CurrentUser is null) return null;
-        try
-        {
-            var stored = await js.InvokeAsync<string?>(GetItem, ConversationKey);
-            return string.IsNullOrWhiteSpace(stored) ? null : stored;
-        }
-        catch
-        {
-            return null; // No storage means no resume — the safe direction to fail.
-        }
-    }
-
-    public async Task RememberConversationAsync(string? conversationId)
-    {
-        if (auth.CurrentUser is null || string.IsNullOrWhiteSpace(conversationId)) return;
-        try { await js.InvokeVoidAsync(SetItem, ConversationKey, conversationId); }
-        catch { } // Failing to persist only costs the user one resume.
-    }
-
-    public async Task ForgetConversationAsync()
-    {
-        if (auth.CurrentUser is null) return;
-        try { await js.InvokeVoidAsync(RemoveItem, ConversationKey); }
-        catch { }
-    }
+    // The last-open conversation id is deliberately NOT stored any more: every load starts a
+    // fresh chat, and the panel's history list (ListAiConversations) is how a past thread is
+    // picked back up. The old jpms.chatConversation.* localStorage keys are simply orphaned.
 
     // ---- the model choice --------------------------------------------------------------------
     // Cheap by default; the user's own pick is remembered per browser and wins from then on. Only
@@ -344,9 +311,6 @@ public sealed class ChatPanelState
 
     private string ModelKey =>
         $"{ModelKeyPrefix}.{auth.CurrentUser?.Email.Trim().ToLowerInvariant() ?? "anonymous"}";
-
-    private string ConversationKey =>
-        $"{ConversationKeyPrefix}.{auth.CurrentUser?.Email.Trim().ToLowerInvariant() ?? "anonymous"}";
 
     private string StorageKey =>
         $"{StorageKeyPrefix}.{auth.CurrentUser?.Email.Trim().ToLowerInvariant() ?? "anonymous"}";

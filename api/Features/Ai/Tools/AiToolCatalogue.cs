@@ -100,6 +100,7 @@ public static class AiToolCatalogue
             visible = visible
                 .Where(tool => tool.Name != "stage_triage_tag"
                                && tool.Name != "stage_triage_todo"
+                               && tool.Name != "select_email"
                                && tool.Name != "read_selected_email")
                 .ToList();
         }
@@ -875,6 +876,26 @@ public static class AiToolCatalogue
                         + "for unassigned.", false),
                     ("due", "string", "Due date as yyyy-MM-dd. Leave out for the house default (a week).", false)),
                 AiToolKind.Ui,
+                TriageRoles.AllowedToTriage,
+                (_, _, _) => Task.FromResult(Serialise(new { ok = true, handed_to_browser = true }))),
+
+            new(
+                "select_email",
+                "SELECT an email in the Control Centre — the same act as the user clicking its row, and how "
+                + "YOU take hold of an email they have described (\"the £1800 one from Nigel\", a forwarded "
+                + "chain, an email found on another page). Never ask the user to click an email for you: "
+                + "call this instead. The page searches the whole mailbox (subjects, bodies, senders, "
+                + "attachment names) and selects the best match — tagged or still in the queue — switching "
+                + "to the right tab itself. The result only means the page was asked: read the NEXT "
+                + "current-context block to see which email is actually selected (and say so if it is the "
+                + "wrong one — refine the search words and call again). Once selected, read it with "
+                + "read_selected_email and stage tags or to-dos as normal.",
+                AiToolSchema.Object(
+                    ("search", "string",
+                        "Words that pin the email down — sender name, distinctive subject or body wording. "
+                        + "More words narrow: \"nigel render colour 1800\" beats \"nigel\".", true)),
+                AiToolKind.Ui,
+                // Selecting is the Control Centre's own act — same gate as the page and its other tools.
                 TriageRoles.AllowedToTriage,
                 (_, _, _) => Task.FromResult(Serialise(new { ok = true, handed_to_browser = true }))),
 

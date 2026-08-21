@@ -60,6 +60,19 @@
                         </span>
                     </div>
                     <div class="shrink-0 flex items-center gap-1">
+                        @if (Chat.HasAcknowledgedCost)
+                        {
+                            @* Past conversations. A toggle, not a page — the list swaps in where
+                               the transcript sits and one more press (or a pick) swaps back. *@
+                            <button type="button" @onclick="ToggleHistory" aria-label="Chat history"
+                                    aria-expanded="@(historyOpen ? "true" : "false")"
+                                    title="Past chats — pick one up where you left off"
+                                    class="inline-flex items-center justify-center w-8 h-8 rounded-md @(historyOpen ? "text-accent bg-surface-raised" : "text-content-subtle") hover:text-content hover:bg-surface-raised">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></svg>
+                            </button>
+                        }
                         @if (Chat.HasAcknowledgedCost && messages.Count > 0)
                         {
                             @* Disabled mid-turn: clearing the transcript while a reply is in flight
@@ -171,18 +184,86 @@
                     </p>
                 </div>
 
-                @if (messages.Count == 0 && !busy && AiTasks.Active is null)
+                @if (historyOpen)
+                {
+                    @* ---- Past chats. Swaps in where the transcript sits; picking one replays it
+                       and carries straight on in that conversation. ---- *@
+                    <div class="grow overflow-y-auto px-3 py-3">
+                        <p class="eyebrow text-content-subtle px-2 mb-2">Past chats</p>
+                        @if (historyError is not null)
+                        {
+                            <p class="px-2 text-xs leading-snug text-content-muted">@historyError</p>
+                        }
+                        else if (!historyLoaded)
+                        {
+                            <p class="px-2 text-xs text-content-faint">Loading…</p>
+                        }
+                        else if (HistoryRows.Count == 0)
+                        {
+                            <p class="px-2 text-xs leading-relaxed text-content-muted">
+                                No past chats yet — they'll collect here as you use the assistant.
+                            </p>
+                        }
+                        else
+                        {
+                            <div class="space-y-0.5">
+                                @foreach (var row in HistoryRows)
+                                {
+                                    <button type="button" @onclick="() => ResumeConversationAsync(row.ConversationId)"
+                                            disabled="@(busy || resumingId is not null)"
+                                            class="w-full text-left rounded-lg px-2 py-2 hover:bg-surface-raised disabled:opacity-50 transition">
+                                        <span class="block text-xs leading-snug text-content truncate">@HistoryTitle(row)</span>
+                                        <span class="block text-[10px] text-content-faint truncate">
+                                            @HistoryMeta(row)@(resumingId == row.ConversationId ? " · opening…" : "")
+                                        </span>
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else if (messages.Count == 0 && !busy && AiTasks.Active is null)
                 {
                     @* Suppressed during a task: the kick-off turn is on its way, and a greeting is
                        the panel not paying attention at the exact moment it was asked to do one
                        specific job. Deliberately just the one line — the header already names the
                        page in view, and the conversation itself is where the assistant shows what
                        it can do. *@
-                    <div class="grow overflow-y-auto px-5 py-6 flex flex-col items-center justify-center text-center">
-                        <span class="w-11 h-11 rounded-xl border border-line bg-surface-raised flex items-center justify-center text-accent mb-3">
-                            <ChatIcon Class="w-5 h-5" />
-                        </span>
-                        <p class="text-sm font-semibold text-content">How can I help you today?</p>
+                    <div class="grow overflow-y-auto px-5 py-6 flex flex-col items-center text-center">
+                        <div class="grow flex flex-col items-center justify-center">
+                            <span class="w-11 h-11 rounded-xl border border-line bg-surface-raised flex items-center justify-center text-accent mb-3">
+                                <ChatIcon Class="w-5 h-5" />
+                            </span>
+                            <p class="text-sm font-semibold text-content">How can I help you today?</p>
+                        </div>
+                        @if (RecentRows.Count > 0)
+                        {
+                            @* Every load is a fresh chat on purpose; the last few threads sit here
+                               so carrying one on is a single press rather than a hunt. *@
+                            <div class="shrink-0 w-full max-w-[19rem] text-left pb-1">
+                                <p class="eyebrow text-content-subtle px-2 mb-1.5">Pick up where you left off</p>
+                                <div class="space-y-0.5">
+                                    @foreach (var row in RecentRows)
+                                    {
+                                        <button type="button" @onclick="() => ResumeConversationAsync(row.ConversationId)"
+                                                disabled="@(busy || resumingId is not null)"
+                                                class="w-full text-left rounded-lg px-2 py-1.5 hover:bg-surface-raised disabled:opacity-50 transition">
+                                            <span class="block text-xs leading-snug text-content truncate">@HistoryTitle(row)</span>
+                                            <span class="block text-[10px] text-content-faint truncate">
+                                                @HistoryMeta(row)@(resumingId == row.ConversationId ? " · opening…" : "")
+                                            </span>
+                                        </button>
+                                    }
+                                </div>
+                                @if (history.Count > RecentRows.Count)
+                                {
+                                    <button type="button" @onclick="ToggleHistory"
+                                            class="mt-1 px-2 text-[11px] text-content-subtle hover:text-content underline underline-offset-2">
+                                        See all past chats
+                                    </button>
+                                }
+                            </div>
+                        }
                     </div>
                 }
                 else
@@ -284,6 +365,8 @@
                     </div>
                 }
 
+                @if (!historyOpen)
+                {
                 <footer class="shrink-0 border-t border-line px-3 py-3">
                     @* The STAGED file (goes up with Send, like any chat app) and transient upload
                        states. A landed attachment shows in the TRANSCRIPT, under the message it
@@ -294,6 +377,13 @@
                             @if (stagedFileName is not null && uploadingFileName is null)
                             {
                                 <div class="flex items-center gap-1.5">
+                                    @if (StagedImageDataUrl is not null)
+                                    {
+                                        @* The pasted screenshot, seen before it goes — a clipboard
+                                           paste is invisible until something shows it back. *@
+                                        <img src="@StagedImageDataUrl" alt="Staged image preview"
+                                             class="h-9 max-w-[4.5rem] shrink-0 rounded-md border border-line object-cover" />
+                                    }
                                     <span class="inline-flex items-center gap-1 rounded-md border border-line bg-surface-raised px-2 py-0.5 text-[10px] text-content-muted">
                                         <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -328,15 +418,18 @@
                             <div class="min-w-0 flex items-center gap-1.5">
                                 @* Attach a spreadsheet and the assistant reads it — the bridge for
                                    work still living in the boss's tracker. Extracted server-side
-                                   once; the file itself is never stored. *@
-                                <label for="jpms-chat-attachment" title="Attach a spreadsheet or text file (xlsx, csv, tsv, txt)"
+                                   once; the file itself is never stored. Images (attached, dropped
+                                   or pasted from the clipboard) are the exception: the assistant
+                                   SEES those, so the image itself persists on the conversation. *@
+                                <label for="jpms-chat-attachment" title="Attach a spreadsheet, text file or image (xlsx, csv, tsv, txt, png, jpg, gif, webp)"
                                        class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-md cursor-pointer text-content-subtle hover:text-content hover:bg-surface-raised @(busy || uploadingFileName is not null ? "pointer-events-none opacity-40" : "")">
                                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <path d="M21 12.5l-8.5 8.5a5.66 5.66 0 0 1-8-8l9-9a3.77 3.77 0 0 1 5.3 5.3l-9 9a1.89 1.89 0 0 1-2.7-2.7l8.3-8.3" />
                                     </svg>
                                 </label>
-                                <InputFile id="jpms-chat-attachment" OnChange="OnFileSelected" accept=".xlsx,.csv,.tsv,.txt" class="hidden" />
+                                <InputFile id="jpms-chat-attachment" OnChange="OnFileSelected"
+                                           accept=".xlsx,.csv,.tsv,.txt,.png,.jpg,.jpeg,.gif,.webp" class="hidden" />
                                 <span class="min-w-0 truncate pl-0.5 text-[10px] text-content-faint">@ComposerFootnote</span>
                             </div>
                             <div class="shrink-0 flex items-center gap-2">
@@ -361,6 +454,7 @@
                         </div>
                     </div>
                 </footer>
+                }
             }
         </div>
     </aside>
@@ -383,18 +477,53 @@
     // A task kick-off hands the previous conversation's id to the server so its tail can follow
     // the user into the fresh one (the handover Context row). Consumed by the next Send.
     private string? pendingPreviousConversationId;
-    private bool resumeAttempted;
+    // ---- past chats -------------------------------------------------------------------------
+    // Every load starts a fresh chat on purpose; these are what make "carry on with the one from
+    // yesterday" a single press. Loaded once the session lands, refreshed whenever the list is
+    // opened or a chat is put down.
+    private List<AiConversationSummary> history = new();
+    private bool historyLoaded;
+    private bool historyLoadStarted;
+    private string? historyError;
+    private bool historyOpen;
+    // The row being replayed right now — disables the list so two picks cannot race.
+    private string? resumingId;
     private string modelKey = AiModelCatalogue.DefaultKey;
     private bool modelLoaded;
     private string? uploadingFileName;
     private string? attachError;
-    // The staged file: picked with the paperclip, sent WITH the next message — like any chat app.
-    // Nothing reaches the server until Send, so removing the chip costs nothing.
+    // The staged file: picked with the paperclip, dropped, or pasted — sent WITH the next message,
+    // like any chat app. Nothing reaches the server until Send, so removing the chip costs nothing.
     private string? stagedFileName;
     private string? stagedFileBase64;
+    // Set only when the staged file is an image — drives the thumbnail beside the pill.
+    private string? stagedFileMediaType;
+
+    private const long MaxAttachmentBytes = 10 * 1024 * 1024;
+    // Above this an image is downscaled in the browser before staging: Claude reads nothing above
+    // ~1568px, so a 12-megapixel site photo is pure upload weight. Below it the original bytes go
+    // as-is — a small PNG screenshot stays pixel-crisp instead of picking up JPEG artefacts.
+    private const long MaxOriginalImageBytes = 1_500_000;
+
+    private static readonly Dictionary<string, string> ImageMediaTypes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            [".png"] = "image/png",
+            [".jpg"] = "image/jpeg",
+            [".jpeg"] = "image/jpeg",
+            [".gif"] = "image/gif",
+            [".webp"] = "image/webp"
+        };
+
+    private string? StagedImageDataUrl =>
+        stagedFileMediaType is null || stagedFileBase64 is null
+            ? null
+            : $"data:{stagedFileMediaType};base64,{stagedFileBase64}";
 
     /// <summary>Stages the picked file locally. The upload happens on Send, attachment first so
-    /// the model reads it with that very message.</summary>
+    /// the model reads it with that very message. Oversized images are downscaled in the browser
+    /// first (canvas, via RequestImageFileAsync) rather than refused — the paste that arrives here
+    /// is usually a screenshot the user cannot easily make smaller.</summary>
     private async Task OnFileSelected(InputFileChangeEventArgs e)
     {
         var file = e.File;
@@ -403,18 +532,33 @@
         attachError = null;
         try
         {
-            if (file.Size > 10 * 1024 * 1024)
+            var isImage = ImageMediaTypes.TryGetValue(Path.GetExtension(file.Name), out var mediaType);
+
+            var toRead = file;
+            var name = file.Name;
+            if (isImage && file.Size > MaxOriginalImageBytes)
+            {
+                // JPEG on purpose: what arrives this big is photographs, and 1568px JPEG keeps a
+                // drawing or a defect photo perfectly readable at a fraction of the bytes. (An
+                // animated gif flattens to its first frame — the model only ever saw one anyway.)
+                toRead = await file.RequestImageFileAsync("image/jpeg", 1568, 1568);
+                mediaType = "image/jpeg";
+                name = Path.ChangeExtension(name, ".jpg");
+            }
+
+            if (toRead.Size > MaxAttachmentBytes)
             {
                 attachError = $"\"{file.Name}\" is too big — the limit is 10 MB.";
                 return;
             }
 
-            await using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+            await using var stream = toRead.OpenReadStream(maxAllowedSize: MaxAttachmentBytes);
             using var buffer = new MemoryStream();
             await stream.CopyToAsync(buffer);
 
-            stagedFileName = file.Name;
+            stagedFileName = name;
             stagedFileBase64 = Convert.ToBase64String(buffer.ToArray());
+            stagedFileMediaType = isImage ? mediaType : null;
         }
         catch (Exception ex)
         {
@@ -426,6 +570,7 @@
     {
         stagedFileName = null;
         stagedFileBase64 = null;
+        stagedFileMediaType = null;
     }
 
     /// <summary>
@@ -446,7 +591,6 @@
                 CancellationToken.None);
 
             conversationId = receipt.ConversationId;
-            _ = Chat.RememberConversationAsync(conversationId);
             ClearStagedFile();
             return receipt;
         }
@@ -586,13 +730,13 @@
         Nav.LocationChanged += HandleLocationChanged;
         await Chat.EnsureAcknowledgementLoadedAsync();
         await TryLoadModelChoiceAsync();
-        await TryResumeAsync();
+        await TryLoadHistoryAsync();
     }
 
     // Wired once the panel's element actually exists (it renders only when the session grants the
     // assistant, which lands after the first render). The JS answers false until then; true stops
-    // the retries. Dropping a file anywhere on the panel then feeds the same hidden InputFile the
-    // paperclip uses — one upload path.
+    // the retries. Dropping a file anywhere on the panel — or pasting an image from the clipboard
+    // with focus in it — then feeds the same hidden InputFile the paperclip uses: one upload path.
     private bool dropZoneWired;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -614,47 +758,116 @@
     {
         _ = Chat.EnsureAcknowledgementLoadedAsync();
         _ = TryLoadModelChoiceAsync();
-        _ = TryResumeAsync();
+        _ = TryLoadHistoryAsync();
         StateHasChanged();
     }
 
-    /// <summary>
-    /// Picks the thread back up after a refresh or a new tab. The server holds every transcript;
-    /// all the browser forgets is WHICH conversation this panel was in, so the stored id plus
-    /// ListAiConversation is a full resume. Once, only into an empty panel, and never over a turn
-    /// in flight. A stored id that will not replay (deleted, or another environment's) is
-    /// forgotten so it cannot fail on every load.
-    /// </summary>
-    private async Task TryResumeAsync()
-    {
-        if (resumeAttempted) return;
-        if (!CanUseAssistant) return; // Also guarantees the session — and the storage key — are known.
-        resumeAttempted = true;
+    // ---- past chats ------------------------------------------------------------------------
 
-        if (conversationId is not null || messages.Count > 0 || busy) return;
-        var stored = await Chat.LoadStoredConversationIdAsync();
-        if (string.IsNullOrWhiteSpace(stored)) return;
+    /// <summary>The full list, minus the chat that is open right now — offering to "resume" the
+    /// conversation already on screen would be noise.</summary>
+    private IReadOnlyList<AiConversationSummary> HistoryRows =>
+        history.Where(row => row.ConversationId != conversationId).ToList();
+
+    /// <summary>The empty state's short list — enough to recognise yesterday's thread, not a wall.</summary>
+    private IReadOnlyList<AiConversationSummary> RecentRows => HistoryRows.Take(5).ToList();
+
+    /// <summary>
+    /// Loads the history list once the session is known. Deliberately not once-only: callers that
+    /// want fresh data (opening the list, putting a chat down) clear <c>historyLoadStarted</c>
+    /// first. Failure costs a list, never the panel — the composer works with no history at all.
+    /// </summary>
+    private async Task TryLoadHistoryAsync()
+    {
+        if (historyLoadStarted) return;
+        if (!CanUseAssistant) return; // Also guarantees the session is known.
+        historyLoadStarted = true;
+        historyError = null;
 
         try
         {
-            var replay = await Queries.AskAsync(new ListAiConversation(stored), CancellationToken.None);
-
-            // A turn may have started while the replay was in flight — its conversation wins.
-            if (conversationId is not null || messages.Count > 0 || busy) return;
-            if (replay.Count == 0)
-            {
-                await Chat.ForgetConversationAsync();
-                return;
-            }
-
-            conversationId = stored;
-            messages.AddRange(replay);
-            StateHasChanged();
+            var rows = await Queries.AskAsync(new ListAiConversations(30), CancellationToken.None);
+            history = rows.ToList();
+            historyLoaded = true;
         }
         catch
         {
-            await Chat.ForgetConversationAsync();
+            historyError = "Couldn't load past chats just now.";
         }
+        StateHasChanged();
+    }
+
+    /// <summary>The header's clock button. Opening always refetches — the list is cheap and stale
+    /// history that omits the chat just put down looks like data loss.</summary>
+    private void ToggleHistory()
+    {
+        historyOpen = !historyOpen;
+        if (historyOpen)
+        {
+            historyLoadStarted = false;
+            _ = TryLoadHistoryAsync();
+        }
+    }
+
+    /// <summary>
+    /// Carries a past conversation on: replays it from the server and makes it the live one — the
+    /// next message continues that thread. Ends any task in force first (its dialog belongs to the
+    /// conversation being put down, and its contents would ride along with every turn of the
+    /// resumed one). Never over a turn in flight, and one at a time.
+    /// </summary>
+    private async Task ResumeConversationAsync(string id)
+    {
+        if (busy || resumingId is not null) return;
+
+        resumingId = id;
+        StateHasChanged();
+        try
+        {
+            var replay = await Queries.AskAsync(new ListAiConversation(id), CancellationToken.None);
+            if (busy) return; // A kick-off may have started a turn while the replay was in flight.
+            if (replay.Count == 0)
+            {
+                // Deleted, or another environment's id. Drop the dead row rather than failing on
+                // every press.
+                history.RemoveAll(row => row.ConversationId == id);
+                historyError = "That chat couldn't be loaded — it may have been removed.";
+                return;
+            }
+
+            if (AiTasks.Active is not null) AiTasks.End();
+            StartNewChat();
+            conversationId = id;
+            messages.AddRange(replay);
+        }
+        catch
+        {
+            historyError = "That chat couldn't be loaded just now.";
+        }
+        finally
+        {
+            resumingId = null;
+            StateHasChanged();
+        }
+    }
+
+    private string HistoryTitle(AiConversationSummary row) =>
+        string.IsNullOrWhiteSpace(row.Title) ? "Untitled chat" : row.Title;
+
+    /// <summary>"JB-042 · Tue 14:32" — the project when the thread had one, then when it last moved.</summary>
+    private string HistoryMeta(AiConversationSummary row)
+    {
+        var when = FormatWhen(row.LastMessageAt.ToLocalTime());
+        return row.ProjectId is { } projectId && Projects.Find(projectId) is { } project
+            ? $"{project.Reference} · {when}"
+            : when;
+    }
+
+    private static string FormatWhen(DateTimeOffset local)
+    {
+        var today = DateTimeOffset.Now.Date;
+        if (local.Date == today) return $"today {local:HH:mm}";
+        if (local.Date == today.AddDays(-1)) return $"yesterday {local:HH:mm}";
+        return local.Year == today.Year ? local.ToString("d MMM HH:mm") : local.ToString("d MMM yyyy");
     }
 
     private void HandleLocationChanged(object? sender, EventArgs args) => StateHasChanged();
@@ -730,9 +943,9 @@
     /// <summary>
     /// The header's New chat: a TRUE clean slate. Ends any task in force (otherwise the banner
     /// stays up and the dialog's contents keep riding along with every turn of the "fresh" chat),
-    /// drops the staged file, forgets the stored conversation id, and empties the panel. Nothing
-    /// is destroyed — every past conversation stays persisted server-side; the model just cannot
-    /// see any of it from here.
+    /// drops the staged file, and empties the panel. Nothing is destroyed — every past
+    /// conversation stays persisted server-side and sits in the history list, one press from
+    /// being carried on; the model just cannot see any of it from here.
     /// </summary>
     private void StartFresh()
     {
@@ -744,6 +957,10 @@
 
     private void StartNewChat()
     {
+        // The chat being put down belongs in the history list from this moment — refresh it so
+        // "the one I was just in" is the first row, not a mystery absence.
+        var hadConversation = conversationId is not null;
+
         messages.Clear();
         lastToolsUsed = new List<string>();
         conversationId = null;
@@ -754,8 +971,14 @@
         showCarryOn = false;
         pendingPreviousConversationId = null;
         attachError = null;
+        historyOpen = false;
         ClearStagedFile();
-        _ = Chat.ForgetConversationAsync();
+
+        if (hadConversation)
+        {
+            historyLoadStarted = false;
+            _ = TryLoadHistoryAsync();
+        }
     }
 
     /// <summary>The specialist agent in force, when one is — the orchestrator is the resting state
@@ -902,7 +1125,6 @@
                 CancellationToken.None);
 
             conversationId = result.ConversationId;
-            _ = Chat.RememberConversationAsync(conversationId);
 
             // The optimistic user bubble STAYS. The server never echoes the user's message back in
             // NewMessages (a hop's result carries only what the hop created), so the old

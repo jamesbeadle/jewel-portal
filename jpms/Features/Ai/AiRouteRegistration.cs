@@ -13,6 +13,11 @@ public static class AiRouteRegistration
             new QueryRoute("/api/ai/conversations/{conversationId}",
                 query => $"/api/ai/conversations/{((ListAiConversation)query).ConversationId}"));
 
+        // The panel's history list — the caller's own past conversations, newest first.
+        queries.Register<ListAiConversations, IReadOnlyList<AiConversationSummary>>(
+            new QueryRoute("/api/ai/conversations",
+                query => $"/api/ai/conversations?take={((ListAiConversations)query).Take}"));
+
         queries.Register<ListAgentActivity, IReadOnlyList<AgentActivity>>(
             new QueryRoute("/api/agents/activity", BuildAgentActivityPath));
 

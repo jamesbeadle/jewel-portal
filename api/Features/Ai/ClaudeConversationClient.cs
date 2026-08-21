@@ -86,6 +86,49 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
     private const int EstimateHeadroomTokens = ConversationMaxTokens + 4_000;
 
     /// <summary>
+    /// What one image block is counted as. Anthropic charges (width × height) / 750 and downsizes
+    /// anything above ~1568px itself, so ~1,600 tokens is the per-image ceiling — and the composer
+    /// downscales big images to that bound before upload anyway. A flat ceiling errs high, the
+    /// same direction as the rest of the estimate.
+    /// </summary>
+    private const int TokensPerImage = 1_600;
+
+    /// <summary>
+    /// The images riding in <paramref name="messages"/>: their base64 length in characters and how
+    /// many there are. Base64 is EXCLUDED from the chars-per-token estimate — a 400 KB screenshot
+    /// is ~550k characters but ~1,600 tokens, and counted as prose it would step every hop up to a
+    /// 1M-window model for nothing — and replaced with <see cref="TokensPerImage"/> each.
+    /// </summary>
+    private static (long Base64Chars, int Count) MeasureImages(IReadOnlyList<object> messages)
+    {
+        long chars = 0;
+        var count = 0;
+        foreach (var message in messages)
+        {
+            if (message is not Dictionary<string, object?> dictionary
+                || !dictionary.TryGetValue("content", out var content)
+                || content is not List<Dictionary<string, object?>> blocks)
+            {
+                continue;
+            }
+
+            foreach (var block in blocks)
+            {
+                if (!block.TryGetValue("type", out var type) || !Equals(type, "image")) continue;
+                if (block.TryGetValue("source", out var source)
+                    && source is Dictionary<string, object?> sourceDictionary
+                    && sourceDictionary.TryGetValue("data", out var data)
+                    && data is string base64)
+                {
+                    chars += base64.Length;
+                    count++;
+                }
+            }
+        }
+        return (chars, count);
+    }
+
+    /// <summary>
     /// The tier this request will actually run on. Starts from what the user chose and STEPS UP —
     /// never down — to the cheapest tier whose context window fits the estimated request, so a
     /// conversation that has outgrown Haiku's 200k window carries on seamlessly on a bigger model
@@ -176,7 +219,9 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
             // prompt cache is per model, so a step-up re-pays the prefix once — correct, and cheap
             // next to a failed turn.)
             var payloadJson = JsonSerializer.Serialize(payload);
-            var estimatedTokens = payloadJson.Length / CharsPerToken + EstimateHeadroomTokens;
+            var (imageChars, imageCount) = MeasureImages(messages);
+            var estimatedTokens = (int)((payloadJson.Length - imageChars) / CharsPerToken)
+                                  + imageCount * TokensPerImage + EstimateHeadroomTokens;
             var (tier, escalationNote) = FitTier(modelTier, estimatedTokens);
             if (escalationNote is not null)
             {

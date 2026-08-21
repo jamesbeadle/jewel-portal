@@ -1,6 +1,8 @@
 @using Jewel.JPMS.Contracts.RecordLinks
 @inject IQueryClient Queries
 @inject SessionService Session
+@inject ControlCentreOpenEmail OpenEmail
+@inject NavigationManager Nav
 @implements IDisposable
 
 @*
@@ -244,8 +246,15 @@
     }
 
     // One email row — shared by the record group and the keyword list so the two can never drift.
+    // The ROW opens the email in the Control Centre with it selected (ControlCentreOpenEmail):
+    // reading it, tagging it to a record, and the assistant's page context all live there — an
+    // email a search can show but not open is a dead end, worst of all for the untagged ones,
+    // which have no chips and no other way in. Chips stay their own links (stopPropagation).
     private RenderFragment<MailboxMessage> EmailRow => email =>
-        @<div @key="email.Id" class="rounded-lg border border-line px-3 py-2">
+        @<div @key="email.Id" role="button" tabindex="0"
+              class="rounded-lg border border-line px-3 py-2 cursor-pointer hover:border-line-strong hover:bg-surface-raised"
+              title="Open in the Control Centre — read the email and manage its tags"
+              @onclick="() => OpenInControlCentre(email)">
             <div class="flex items-baseline justify-between gap-2">
                 <span class="text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
                 <span class="text-[11px] text-content-subtle shrink-0">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
@@ -273,7 +282,7 @@
                         @if (resolved.TryGetValue(stem, out var record) && HrefFor(record) is string href)
                         {
                             <a class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5 hover:bg-accent/20 hover:underline"
-                               href="@href" title="@ChipTitle(record)">@record.Reference</a>
+                               href="@href" title="@ChipTitle(record)" @onclick:stopPropagation="true">@record.Reference</a>
                         }
                         else
                         {
@@ -284,6 +293,14 @@
                 }
             </div>
         </div>;
+
+    // Hand the email to the Control Centre and go there — it arrives selected, whichever pile
+    // (queue or tagged) it lives in.
+    private void OpenInControlCentre(MailboxMessage email)
+    {
+        OpenEmail.Set(email);
+        Nav.NavigateTo("/control-centre");
+    }
 
     private static string TagStem(string tag) =>
         tag.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? tag["JPMS/".Length..] : tag;

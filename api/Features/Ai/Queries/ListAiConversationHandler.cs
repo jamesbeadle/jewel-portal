@@ -26,11 +26,12 @@ public sealed class ListAiConversationHandler
                           // Tool results and carried-over context are the model's reading, not the
                           // user's conversation; assistant rows that carried tool calls are working
                           // narration shown as a status line at the time, not bubbles — replaying
-                          // them would rewrite what the user actually saw. The one Context row
-                          // that DOES replay is an attachment (ToolName marks it): the panel shows
-                          // "Attached file.xlsx" in the transcript, never the extracted contents.
+                          // them would rewrite what the user actually saw. The Context rows that
+                          // DO replay are attachments (ToolName marks them, image or text): the
+                          // panel shows "Attached file.xlsx" in the transcript, never the contents.
                           && row.Role != (int)AiChatRole.Tool
-                          && (row.Role != (int)AiChatRole.Context || row.ToolName == "attachment")
+                          && (row.Role != (int)AiChatRole.Context
+                              || row.ToolName == "attachment" || row.ToolName == "attachment-image")
                           && (row.Role != (int)AiChatRole.Assistant || row.ToolCallsJson == null)
                           && row.Body != null && row.Body != "")
             .OrderBy(row => row.Sequence)

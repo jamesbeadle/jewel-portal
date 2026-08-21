@@ -124,6 +124,8 @@ public static class PortalMapCapabilities
         ["/control-centre"] =
             "the mailbox intake queue and router for ALL correspondence across every project. "
             + "Everything about the SELECTED email is done on this page, never by navigating away: "
+            + "select any email yourself with select_email (search words — never ask the user to "
+            + "click one for you); "
             + "tag it to any record — variations, RFIs, defects, bid packages — with stage_triage_tag "
             + "(the same act as picking it in the System Tags pane; Apply lands it); stage to-dos with "
             + "stage_triage_todo (assignee, notes, due date; Apply raises them); set its project; "

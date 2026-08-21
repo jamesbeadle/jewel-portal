@@ -624,6 +624,16 @@ public sealed class AiTurnRunner
         var bodies = new string[rows.Count];
         for (var i = 0; i < rows.Count; i++) bodies[i] = rows[i].Body ?? "";
 
+        // Image attachments stand in as a short line for the BUDGET only: their base64 is hundreds
+        // of KB of characters but ~1,600 tokens of image at most (the composer downscales to
+        // ≤1568px), and counted raw it would blow MaxTranscriptChars on its own and stub every
+        // tool row in the conversation forever after. The replay below reads the row's real Body.
+        for (var i = 0; i < rows.Count; i++)
+        {
+            if ((AiChatRole)rows[i].Role == AiChatRole.Context && IsImageAttachment(rows[i]))
+                bodies[i] = "(image attachment — replays as an image block)";
+        }
+
         // A tool row's identity for the supersede rule is name + the arguments that produced it,
         // and the arguments live on the assistant row's stored tool_use blocks — pair them back up.
         var argumentsByToolUseId = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -675,7 +685,34 @@ public sealed class AiTurnRunner
             switch ((AiChatRole)row.Role)
             {
                 case AiChatRole.Context:
-                    if (!string.IsNullOrWhiteSpace(bodies[index])) pendingContext.Add(Text(bodies[index]));
+                    if (IsImageAttachment(row))
+                    {
+                        // An image attachment: line 1 the human sentence, line 2 the media type,
+                        // the base64 after — see AddAiAttachmentHandler. The sentence rides as a
+                        // text block so the model knows WHICH file the pixels are, then the image
+                        // block itself. Read from row.Body, not bodies[index] — the budget pass
+                        // swapped that for a stand-in. A malformed row degrades to its first line
+                        // as text rather than taking the turn down.
+                        var parts = (row.Body ?? "").Split('\n', 3);
+                        pendingContext.Add(Text(parts[0]));
+                        if (parts.Length == 3 && !string.IsNullOrWhiteSpace(parts[2]))
+                        {
+                            pendingContext.Add(new Dictionary<string, object?>
+                            {
+                                ["type"] = "image",
+                                ["source"] = new Dictionary<string, object?>
+                                {
+                                    ["type"] = "base64",
+                                    ["media_type"] = parts[1].Trim(),
+                                    ["data"] = parts[2].Trim()
+                                }
+                            });
+                        }
+                    }
+                    else if (!string.IsNullOrWhiteSpace(bodies[index]))
+                    {
+                        pendingContext.Add(Text(bodies[index]));
+                    }
                     index++;
                     break;
 
@@ -762,6 +799,10 @@ public sealed class AiTurnRunner
 
         return transcript.Cast<object>().ToList();
     }
+
+    /// <summary>A Context row holding an image attachment (AddAiAttachmentHandler's marker).</summary>
+    private static bool IsImageAttachment(AiConversationMessageEntity row) =>
+        string.Equals(row.ToolName, "attachment-image", StringComparison.Ordinal);
 
     private sealed record StoredToolCall(string? Id, string? Name, string? Input);
 

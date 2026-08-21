@@ -154,6 +154,8 @@ builder.Services.AddScoped<AllocationTabStorage>();
 builder.Services.AddScoped<WorkOrderGroupingStorage>();
 builder.Services.AddScoped<TriageSortStorage>();
 builder.Services.AddScoped<TodoViewStorage>();
+// The "open this email in the Control Centre" handoff from the to-do searches' email results.
+builder.Services.AddScoped<ControlCentreOpenEmail>();
 // INTERIM (2026-08-11): the Cash Forecast's per-browser overheads figure — replaced by an
 // FD-owned server setting once the forecast's phasing rules are signed off.
 builder.Services.AddScoped<ForecastOverheadsStorage>();

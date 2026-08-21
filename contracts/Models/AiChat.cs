@@ -22,6 +22,16 @@ public sealed record AiChatMessage(
     DateTimeOffset PostedAt);
 
 /// <summary>
+/// One row of the panel's history list. <see cref="Title"/> is the conversation's first message,
+/// clipped when the conversation was started — enough to recognise a thread, never the transcript.
+/// </summary>
+public sealed record AiConversationSummary(
+    string ConversationId,
+    string Title,
+    string? ProjectId,
+    DateTimeOffset LastMessageAt);
+
+/// <summary>
 /// What the assistant asked the browser to do. Executed client-side; nothing security-relevant is
 /// asserted by the client, so the result is advisory.
 /// </summary>

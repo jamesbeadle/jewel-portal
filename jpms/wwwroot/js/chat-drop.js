@@ -1,8 +1,9 @@
-// Drag-and-drop onto the assistant panel. Blazor's <InputFile> only reacts to drops landing on
-// the input element itself — ours is hidden behind the paperclip, so dropping a file anywhere on
-// the panel did nothing. This makes the WHOLE panel the drop target and hands the dropped file to
-// that same hidden input (files + a synthetic change event), so the one upload path — stage,
-// then send with the message — handles it exactly as if the paperclip had been used.
+// Drag-and-drop AND clipboard paste onto the assistant panel. Blazor's <InputFile> only reacts to
+// drops landing on the input element itself — ours is hidden behind the paperclip, so dropping a
+// file anywhere on the panel did nothing, and a pasted screenshot had nowhere to land at all.
+// This makes the WHOLE panel the drop/paste target and hands the file to that same hidden input
+// (files + a synthetic change event), so the one upload path — stage, then send with the
+// message — handles it exactly as if the paperclip had been used.
 window.jpmsChatDropZone = function (zoneId, inputId) {
     const zone = document.getElementById(zoneId);
     if (!zone) return false;                       // panel not rendered yet — caller retries
@@ -51,6 +52,32 @@ window.jpmsChatDropZone = function (zoneId, inputId) {
 
         const transfer = new DataTransfer();
         transfer.items.add(e.dataTransfer.files[0]); // one file per message, same as the paperclip
+        input.files = transfer.files;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    // Paste, for the screenshot on the clipboard (Cmd/Ctrl+Shift+4, Snipping Tool, a copied
+    // image). Fires when focus is anywhere in the panel — the composer, usually. Only pastes that
+    // CARRY a file are intercepted; ordinary text pastes fall through to the textarea untouched.
+    zone.addEventListener("paste", (e) => {
+        const files = e.clipboardData ? e.clipboardData.files : null;
+        if (!files || files.length === 0) return;
+
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        e.preventDefault();
+
+        let file = files[0]; // one file per message, same as the paperclip
+        if (file.type && file.type.indexOf("image/") === 0) {
+            // Clipboard images all arrive named "image.png" — stamp the name so two pastes into
+            // one conversation read back as two attachments, not the same one twice.
+            const extension = (file.type.split("/")[1] || "png").replace("jpeg", "jpg");
+            const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
+            file = new File([file], "pasted-" + stamp + "." + extension, { type: file.type });
+        }
+
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
         input.files = transfer.files;
         input.dispatchEvent(new Event("change", { bubbles: true }));
     });
