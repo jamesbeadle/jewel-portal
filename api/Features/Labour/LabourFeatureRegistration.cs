@@ -36,6 +36,9 @@ public static class LabourFeatureRegistration
             provider => provider.GetRequiredService<ListTimesheetDetailsForProjectHandler>());
         services.AddScoped<ICommandHandler<AdjustTimesheet, TimesheetDetail>, AdjustTimesheetHandler>();
         services.AddScoped<ICommandHandler<AddWorkerTimesheet, TimesheetDetail>, AddWorkerTimesheetHandler>();
+        services.AddScoped<SubmitWorkerWeekHandler>();
+        services.AddScoped<ICommandHandler<SubmitWorkerWeek, WorkerWeekResult>>(
+            provider => provider.GetRequiredService<SubmitWorkerWeekHandler>());
         services.AddScoped<ApproveTimesheetsHandler>();
         services.AddScoped<ICommandHandler<ApproveTimesheets, LabourApprovalResult>>(
             provider => provider.GetRequiredService<ApproveTimesheetsHandler>());

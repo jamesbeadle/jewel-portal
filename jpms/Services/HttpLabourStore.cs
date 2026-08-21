@@ -174,6 +174,18 @@ public sealed class HttpLabourStore : ILabourStore
         return added;
     }
 
+    public async Task<WorkerWeekResult> SubmitWorkerWeekAsync(string workerId, DateTimeOffset weekStart, IReadOnlyList<WorkerWeekDayEntry> days)
+    {
+        var result = await commands.SendAsync(new SubmitWorkerWeek(workerId, weekStart, days), CancellationToken.None);
+        // A week can straddle two months — refresh the overview for every month it touches, but
+        // only ones already fetched (a refresh of a month nobody is looking at is a wasted query).
+        var months = days.Select(day => (day.Date.Year, day.Date.Month)).Distinct();
+        foreach (var (year, month) in months)
+            if (overviewReadModel.LoadedFor(year, month))
+                await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
+        return result;
+    }
+
     public async Task<TimesheetDetail> AdjustTimesheetAsync(string projectId, string timesheetId, decimal hours, string costCode)
     {
         var adjusted = await commands.SendAsync(new AdjustTimesheet(timesheetId, hours, costCode), CancellationToken.None);

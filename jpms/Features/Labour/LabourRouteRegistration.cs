@@ -68,6 +68,10 @@ public static class LabourRouteRegistration
             new CommandRoute("POST", "/api/projects/{projectId}/labour/timesheets",
                 command => $"/api/projects/{((AddWorkerTimesheet)command).ProjectId}/labour/timesheets"));
 
+        // The accountant's weekly entry — one worker's week of site days in one command.
+        commands.Register<SubmitWorkerWeek, WorkerWeekResult>(
+            CommandRoute.Post("/api/labour/weeks/timesheets"));
+
         commands.Register<AdjustTimesheet, TimesheetDetail>(
             new CommandRoute("PUT", "/api/labour/timesheets/{timesheetId}",
                 command => $"/api/labour/timesheets/{((AdjustTimesheet)command).TimesheetId}"));

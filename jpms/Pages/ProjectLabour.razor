@@ -117,11 +117,18 @@ else
                                         @if (isEditing)
                                         {
                                             <select class="field" @bind="editCostCode">
+                                                <option value="">Cost code…</option>
                                                 @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
                                                 {
                                                     <option value="@centre.Code">@centre.Code — @centre.Name</option>
                                                 }
                                             </select>
+                                        }
+                                        else if (timesheet.CostCode == "")
+                                        {
+                                            @* Weekly entries arrive uncoded on purpose — the approver codes the day via Adjust. *@
+                                            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle"
+                                                  title="Entered without a cost code — Adjust the row to code it before approving.">uncoded</span>
                                         }
                                         else { <span class="tabular-nums">@timesheet.CostCode</span> }
                                     </td>

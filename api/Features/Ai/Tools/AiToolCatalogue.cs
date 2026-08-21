@@ -894,16 +894,26 @@ public static class AiToolCatalogue
                 + "\"bid_package_details\" fills a bid package's Edit package details dialog — specification "
                 + "summary AND line-item schedule together, in one update — and needs that bid package's id "
                 + "as record_id; it is how you build a package out: read its context first "
-                + "(get_bid_package_context, read_record_emails, the attachments, list_cost_codes).",
+                + "(get_bid_package_context, read_record_emails, the attachments, list_cost_codes); "
+                + "\"worker_week\" opens the Labour overview's Enter a worker's week dialog — ONE worker's "
+                + "whole week of site days in ONE update, transcribed from a WhatsApp attendance message or "
+                + "the conversation (several workers = one fill each, reopened after every save) — it takes "
+                + "NO record_id and NO project_id; \"manual_timesheet\" enters one worker's single day on a "
+                + "project's Labour tab (missed sign-outs, verbal reports) and takes project_id but NO "
+                + "record_id; \"record_absence\" records one worker's absence on one date on the Labour "
+                + "overview (holiday, half day, not worked, sick) and takes NO record_id and NO project_id.",
                 AiToolSchema.Object(
                     ("modal_key", "string",
                         "One of: \"variation_draft\", \"manual_variation\", \"compose_email\", "
-                        + "\"bid_package_details\".", true),
+                        + "\"bid_package_details\", \"worker_week\", \"manual_timesheet\", "
+                        + "\"record_absence\".", true),
                     ("record_id", "string",
                         "The record the dialog works from — REQUIRED for variation_draft (the request id, from "
                         + "find_by_reference or list_requests) and for bid_package_details (the bid package id). "
-                        + "Omit for manual_variation and compose_email.", false),
-                    ("project_id", "string", "Defaults to the project in view. Omit for compose_email.", false),
+                        + "Omit for every other dialog.", false),
+                    ("project_id", "string",
+                        "Defaults to the project in view. Omit for the whole-company dialogs: compose_email, "
+                        + "worker_week, record_absence.", false),
                     ("reason", "string", "One clause explaining why.", false)),
                 AiToolKind.Ui,
                 JpmsRoleSets.CommercialTeam,

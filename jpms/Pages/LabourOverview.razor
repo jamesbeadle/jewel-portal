@@ -1,9 +1,13 @@
 @page "/labour/overview"
 @using Jewel.JPMS.Contracts.Labour
 @using Jewel.JPMS.Contracts.Ai
+@using Jewel.JPMS.Features.CostCenters
+@using Jewel.JPMS.Features.Projects
 @inject AuthService Auth
 @inject SessionService Session
 @inject ILabourStore Labour
+@inject CostCentersReadModel CostCenters
+@inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 @inject AiTaskState AiTasks
 @inject ChatPanelState Chat
@@ -49,6 +53,7 @@ else
                                          Disabled="@(snapshot is null)"
                                          BuildWorkbook="BuildExportWorkbook" />
                 </Toolbar>
+                <button type="button" class="btn-primary" @onclick="OpenWeekEntryAsync">Enter a week</button>
             </div>
         </div>
         <p class="text-sm text-content-subtle mb-5 max-w-3xl">
@@ -62,6 +67,15 @@ else
         @if (actionError is not null)
         {
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+        }
+        @if (weekSummaryLines is not null)
+        {
+            <div class="rounded-lg bg-positive/10 border border-positive/30 px-3 py-2 text-sm text-positive mb-3">
+                @foreach (var line in weekSummaryLines)
+                {
+                    <p>@line</p>
+                }
+            </div>
         }
 
         @* ---- Forecast header: one leading figure, quiet secondaries, the confidence bar. ---- *@
@@ -500,6 +514,111 @@ else
             }
         </div>
     </Modal>
+
+    @* ---- Enter a week: the accountant's weekly entry. Also the chat's worker_week proposal
+           card — the assistant fills the whole week in one update, the user reads and presses
+           Save. Each day lands as a Submitted timesheet on its site; the MD codes and approves
+           on that project's Labour tab. ---- *@
+    <Modal IsOpen="@weekOpen" Title="Enter a worker's week" Class="max-w-2xl"
+           ConfirmLabel="@(weekSaving ? "Saving…" : "Save week")" ConfirmDisabled="@weekSaving"
+           OnCancel="CloseWeekEntry" OnConfirm="SaveWeekAsync"
+           ChatAware="true" DismissOnOverlayClick="false">
+        <p class="text-xs text-content-subtle mb-3">
+            A site per day, straight from how the crews report. Every filled day lands as a
+            Submitted timesheet in that site's approval queue — the MD codes the cost code and
+            approves on the project's Labour tab. Days already recorded are locked here.
+        </p>
+        <div class="flex flex-wrap items-end gap-3 mb-4">
+            <label class="block text-sm text-content-muted">Worker
+                <select class="field mt-1" @bind="weekWorkerId" @bind:after="WeekWorkerChangedAsync">
+                    <option value="">Worker…</option>
+                    @foreach (var worker in Labour.Workers().Where(worker => worker.IsActive).OrderBy(worker => worker.Name))
+                    {
+                        <option value="@worker.WorkerId">@worker.Name</option>
+                    }
+                </select>
+            </label>
+            <div class="flex items-center gap-2 text-sm pb-0.5">
+                <button type="button" class="btn-secondary" disabled="@weekSaving" @onclick="() => MoveEntryWeekAsync(-7)">‹ Prev</button>
+                <span class="text-content-subtle w-36 text-center">w/c @entryWeekStart.ToString("ddd dd MMM yyyy")</span>
+                <button type="button" class="btn-secondary" disabled="@weekSaving" @onclick="() => MoveEntryWeekAsync(7)">Next ›</button>
+            </div>
+            <span class="flex-1"></span>
+            <button type="button" class="btn-secondary" title="Copies the first filled day's site, hours and cost code over the other unlocked weekdays."
+                    @onclick="CopyFirstDayDown">Copy down (Mon–Fri)</button>
+        </div>
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                    <th class="py-2 pr-3">Day</th>
+                    <th class="py-2 pr-3">Site</th>
+                    <th class="py-2 pr-3 w-20">Hours</th>
+                    <th class="py-2">Cost code</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in weekRows)
+                {
+                    var isWeekend = row.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                    <tr class="border-b border-line/40 align-middle">
+                        <td class="py-1.5 pr-3 whitespace-nowrap @(isWeekend ? "text-content-subtle" : "text-content-muted")">@row.Date.ToString("ddd dd MMM")</td>
+                        @if (row.Locked)
+                        {
+                            <td colspan="3" class="py-1.5 text-content-subtle">
+                                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised mr-2">recorded</span>@row.LockedDetail
+                            </td>
+                        }
+                        else
+                        {
+                            <td class="py-1.5 pr-3">
+                                @if (Projects.Current is null)
+                                {
+                                    <select class="field w-full" disabled><option>Loading projects…</option></select>
+                                }
+                                else
+                                {
+                                    <select class="field w-full" value="@row.ProjectId"
+                                            @onchange="@(args => SetRowProject(row, (string)args.Value!))">
+                                        <option value="">— not on site</option>
+                                        @foreach (var project in Projects.Current.InWorkOrder())
+                                        {
+                                            <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                        }
+                                    </select>
+                                }
+                                @if (row.UnmatchedSite != "")
+                                {
+                                    <p class="text-[11px] text-negative mt-0.5">Couldn't match "@row.UnmatchedSite" to a project — pick it from the list.</p>
+                                }
+                            </td>
+                            <td class="py-1.5 pr-3">
+                                <input class="field w-20" type="number" step="0.5" min="0.5" max="24"
+                                       @bind="row.Hours" @bind:after="PublishWeekDraft" />
+                            </td>
+                            <td class="py-1.5">
+                                <select class="field w-full" @bind="row.CostCode" @bind:after="PublishWeekDraft"
+                                        disabled="@(!CostCenters.IsLoaded)">
+                                    <option value="">MD codes at approval…</option>
+                                    @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
+                                    {
+                                        <option value="@centre.Code">@centre.Code — @centre.Name</option>
+                                    }
+                                </select>
+                            </td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (weekError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-3">@weekError</p>
+        }
+        <p class="text-xs text-content-subtle mt-3">
+            Hours in half-hour steps — a whole day is 8. Leave a day's site as "— not on site" to
+            skip it; record holidays and sick days with Record absence instead.
+        </p>
+    </Modal>
 }
 
 @code {
@@ -545,6 +664,8 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Labour.OnChange += HandleChange;
+        Projects.OnChanged += HandleChange;
+        CostCenters.OnChanged += HandleChange;
         AiTasks.OnDraftApplied += HandleAssistantDraft;
         Nav.LocationChanged += HandleLocationChanged;
         sessionReady = true;
@@ -555,6 +676,15 @@ else
         {
             try { await Labour.RefreshOverviewAsync(year, month); }
             catch { dataFailed = true; }
+            // The weekly-entry pickers' sources. Best-effort: a failure leaves the selects
+            // disabled at "Loading…" and the error toast already carries the reference.
+            try
+            {
+                await Task.WhenAll(
+                    Projects.RefreshAsync(CancellationToken.None),
+                    CostCenters.RefreshAsync(CancellationToken.None));
+            }
+            catch { /* reported by the query client; the overview itself is unaffected */ }
         }
 
         await HonourRequestedModalAsync();
@@ -565,6 +695,8 @@ else
     public void Dispose()
     {
         Labour.OnChange -= HandleChange;
+        Projects.OnChanged -= HandleChange;
+        CostCenters.OnChanged -= HandleChange;
         AiTasks.OnDraftApplied -= HandleAssistantDraft;
         Nav.LocationChanged -= HandleLocationChanged;
     }
@@ -956,10 +1088,236 @@ else
         _ => "failed",
     };
 
-    // ---- The assistant's route in: open_modal → ?openModal=record_absence ----------------------
+    // ---- Enter a week (the accountant's weekly entry + the chat's worker_week task) ------------
+
+    private bool weekOpen;
+    private bool weekSaving;
+    private string? weekError;
+    private IReadOnlyList<string>? weekSummaryLines;
+    private string weekWorkerId = "";
+    private DateTime entryWeekStart = ForecastRules.WeekStartOf(DateTime.Today);
+
+    private sealed class WeekDayRow
+    {
+        public DateTime Date;
+        public string ProjectId = "";
+        public decimal Hours = 8m;
+        public string CostCode = "";
+        public bool Locked;
+        public string LockedDetail = "";
+        /// <summary>A site name the assistant sent that matched no project — shown so the user
+        /// picks it themselves rather than the mismatch vanishing silently.</summary>
+        public string UnmatchedSite = "";
+    }
+
+    private List<WeekDayRow> weekRows = new();
+
+    /// <summary>The server's rule (LabourRules.IsValidHours), answered in the form instead of
+    /// after a round trip. The server remains the authority.</summary>
+    private static string? HoursProblem(decimal hours) =>
+        hours < 0.5m ? "Hours must be at least 0.5."
+        : hours % 0.5m != 0m ? $"Hours must be in half-hour steps — {hours} isn't." : null;
+
+    private async Task OpenWeekEntryAsync()
+    {
+        weekError = null; weekSummaryLines = null;
+        weekWorkerId = "";
+        entryWeekStart = ForecastRules.WeekStartOf(DateTime.Today);
+        await RebuildWeekRowsAsync();
+        weekOpen = true;
+    }
+
+    private void CloseWeekEntry()
+    {
+        weekOpen = false;
+        EndWeekTask();
+    }
+
+    private async Task WeekWorkerChangedAsync()
+    {
+        await RebuildWeekRowsAsync();
+        PublishWeekDraft();
+    }
+
+    private async Task MoveEntryWeekAsync(int days)
+    {
+        entryWeekStart = entryWeekStart.AddDays(days);
+        await RebuildWeekRowsAsync();
+        PublishWeekDraft();
+    }
+
+    /// <summary>Fresh rows for the current worker + week. A day the month snapshot already shows
+    /// as recorded (a timesheet in any status, or an absence) renders locked — the weekly entry
+    /// never overwrites; corrections live on the project's Labour tab.</summary>
+    private async Task RebuildWeekRowsAsync()
+    {
+        var days = Enumerable.Range(0, 7).Select(offset => entryWeekStart.AddDays(offset)).ToList();
+        foreach (var (weekYear, weekMonth) in days.Select(date => (date.Year, date.Month)).Distinct())
+        {
+            if (!Labour.OverviewLoadedFor(weekYear, weekMonth))
+            {
+                try { await Labour.RefreshOverviewAsync(weekYear, weekMonth); }
+                catch { /* Locks just won't show; the server still skips recorded days on save. */ }
+            }
+        }
+
+        weekRows = days.Select(date =>
+        {
+            var row = new WeekDayRow { Date = date };
+            if (weekWorkerId != "" && RecordedDayFor(weekWorkerId, date) is { } recorded)
+            {
+                row.Locked = true;
+                row.LockedDetail = recorded.Absence is not null
+                    ? AbsenceLabel(recorded.Absence.Value)
+                    : $"{recorded.ProjectName}, {recorded.Hours:0.#} h ({StatusLabel(recorded.Status!.Value)})";
+            }
+            return row;
+        }).ToList();
+    }
+
+    private LabourOverviewDay? RecordedDayFor(string workerId, DateTime date) =>
+        Labour.Overview(date.Year, date.Month)?.Workers
+            .FirstOrDefault(worker => worker.WorkerId == workerId)?
+            .Days.FirstOrDefault(day =>
+                day.Date.UtcDateTime.Date == date && (day.Status is not null || day.Absence is not null));
+
+    private void SetRowProject(WeekDayRow row, string projectId)
+    {
+        row.ProjectId = projectId;
+        row.UnmatchedSite = "";
+        PublishWeekDraft();
+    }
+
+    /// <summary>Copies the first filled day's site, hours and cost code over the other unlocked
+    /// weekdays — the common case is the same site all week. Weekends stay manual.</summary>
+    private void CopyFirstDayDown()
+    {
+        var source = weekRows.FirstOrDefault(row => !row.Locked && row.ProjectId != "");
+        if (source is null) return;
+        foreach (var row in weekRows.Where(row => !row.Locked && row != source
+                     && row.Date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)))
+        {
+            row.ProjectId = source.ProjectId;
+            row.Hours = source.Hours;
+            row.CostCode = source.CostCode;
+            row.UnmatchedSite = "";
+        }
+        PublishWeekDraft();
+    }
+
+    private async Task SaveWeekAsync()
+    {
+        var filled = weekRows.Where(row => !row.Locked && row.ProjectId != "").ToList();
+        weekError =
+            weekWorkerId == "" ? "Pick whose week this is."
+            : filled.Count == 0 ? "Give at least one day a site."
+            : filled.Select(row => HoursProblem(row.Hours)).FirstOrDefault(problem => problem is not null);
+        if (weekError is not null) return;
+
+        weekSaving = true;
+        try
+        {
+            // SpecifyKind before the offset: DateTime.Today is Kind.Local, and a Local date with
+            // a zero offset throws outside GMT (the AddManualAsync lesson on the Labour tab).
+            var entries = filled
+                .Select(row => new WorkerWeekDayEntry(
+                    new DateTimeOffset(DateTime.SpecifyKind(row.Date.Date, DateTimeKind.Unspecified), TimeSpan.Zero),
+                    row.ProjectId, row.Hours, row.CostCode))
+                .ToList();
+            var result = await Labour.SubmitWorkerWeekAsync(
+                weekWorkerId,
+                new DateTimeOffset(DateTime.SpecifyKind(entryWeekStart.Date, DateTimeKind.Unspecified), TimeSpan.Zero),
+                entries);
+
+            var lines = new List<string>
+            {
+                $"{result.WorkerName}, w/c {entryWeekStart:dd MMM} — "
+                + $"{result.Outcomes.Count(outcome => outcome.Created)} day(s) submitted for approval"
+                + (result.Outcomes.Any(outcome => !outcome.Created)
+                    ? $", {result.Outcomes.Count(outcome => !outcome.Created)} skipped" : "")
+            };
+            lines.AddRange(result.Outcomes.Select(outcome =>
+                $"· {outcome.Date.UtcDateTime:ddd dd MMM} — {outcome.Detail}"));
+            weekSummaryLines = lines;
+
+            weekOpen = false;
+            EndWeekTask();
+        }
+        catch (Exception failure)
+        {
+            weekError = failure is CommandFailedException rejection && !string.IsNullOrWhiteSpace(rejection.Message)
+                ? rejection.Message
+                : "Could not save the week — check your connection and try again.";
+        }
+        finally { weekSaving = false; }
+    }
+
+    private void EndWeekTask()
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.WorkerWeek.ModalKey) return;
+        AiTasks.End();
+        Chat.SetCoexistence(false);
+    }
+
+    private string SiteNameOf(string projectId) =>
+        (Projects.Current ?? Array.Empty<Project>())
+            .FirstOrDefault(project => project.ProjectId == projectId)?.Name ?? "";
+
+    /// <summary>The assistant's site names are what the crews type ("Guildford", "by france") —
+    /// matched against the live project list: exact name, then a unique contains-match either
+    /// way round, then the reference. No match = the row says so and the user picks.</summary>
+    private string MatchProjectId(string siteName)
+    {
+        var list = Projects.Current ?? Array.Empty<Project>();
+        var trimmed = siteName.Trim();
+        if (trimmed.Length == 0) return "";
+
+        var exact = list.FirstOrDefault(project =>
+            string.Equals(project.Name, trimmed, StringComparison.OrdinalIgnoreCase));
+        if (exact is not null) return exact.ProjectId;
+
+        var contains = list.Where(project =>
+            project.Name.Contains(trimmed, StringComparison.OrdinalIgnoreCase)
+            || trimmed.Contains(project.Name, StringComparison.OrdinalIgnoreCase)).ToList();
+        if (contains.Count == 1) return contains[0].ProjectId;
+
+        var byReference = list.FirstOrDefault(project =>
+            string.Equals(project.Reference, trimmed, StringComparison.OrdinalIgnoreCase));
+        return byReference?.ProjectId ?? "";
+    }
+
+    private string SerialiseWeekState()
+    {
+        var workerName = Labour.Workers()
+            .FirstOrDefault(worker => worker.WorkerId == weekWorkerId)?.Name ?? "";
+        return System.Text.Json.JsonSerializer.Serialize(new
+        {
+            workerName,
+            weekStart = entryWeekStart.ToString("yyyy-MM-dd"),
+            days = weekRows.Select(row => new
+            {
+                date = row.Date.ToString("yyyy-MM-dd"),
+                siteName = row.Locked ? "" : SiteNameOf(row.ProjectId),
+                hours = row.Hours,
+                costCode = row.CostCode,
+                locked = row.Locked,
+                lockedDetail = row.LockedDetail,
+                unmatchedSite = row.UnmatchedSite,
+            }),
+        });
+    }
+
+    private void PublishWeekDraft()
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.WorkerWeek.ModalKey) return;
+        AiTasks.UpdateDraft(SerialiseWeekState());
+    }
+
+    // ---- The assistant's route in: open_modal → ?openModal=record_absence / worker_week --------
     // Same recipe as manual_variation on the Variations register (and manual_timesheet on the
     // Labour tab): the query is cleared through history so F5 does not reopen the dialog, and
-    // LocationChanged catches the already-on-this-page case.
+    // LocationChanged catches the already-on-this-page case — which is also how the model reopens
+    // worker_week for the next worker after a save.
 
     private void CloseAbsence()
     {
@@ -969,18 +1327,27 @@ else
 
     private bool modalRequestHonoured;
 
-    private bool WantsAbsenceFromRoute() =>
+    private bool RouteWantsModal(string modalKey) =>
         !modalRequestHonoured
         && new Uri(Nav.Uri).Query.Contains(
-            $"openModal={ModalCatalog.RecordAbsence.ModalKey}", StringComparison.OrdinalIgnoreCase);
+            $"openModal={modalKey}", StringComparison.OrdinalIgnoreCase);
 
     private async Task HonourRequestedModalAsync()
     {
-        if (!WantsAbsenceFromRoute()) return;
+        if (RouteWantsModal(ModalCatalog.RecordAbsence.ModalKey)) { await HonourAbsenceModalAsync(); return; }
+        if (RouteWantsModal(ModalCatalog.WorkerWeek.ModalKey)) await HonourWeekModalAsync();
+    }
 
+    private async Task StripModalQueryAsync()
+    {
         try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
         catch { /* Address bar cosmetics. Never worth failing the page over. */ }
         modalRequestHonoured = true;
+    }
+
+    private async Task HonourAbsenceModalAsync()
+    {
+        await StripModalQueryAsync();
 
         absenceWorkerId = ""; absenceWorkerName = ""; absenceDate = DateTime.Today;
         absenceKind = AbsenceKind.Holiday; absenceNote = "";
@@ -1012,6 +1379,42 @@ else
         StateHasChanged();
     }
 
+    private async Task HonourWeekModalAsync()
+    {
+        await StripModalQueryAsync();
+        await OpenWeekEntryAsync();
+
+        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
+        {
+            AiTasks.Start(
+                new AiTask(
+                    TaskKey: "worker-week",
+                    ModalKey: ModalCatalog.WorkerWeek.ModalKey,
+                    BannerLabel: "Entering a worker's week",
+                    BusyLabel: "Working out the week…",
+                    KickoffMessage:
+                        "Fill in the \"Enter a worker's week\" form open beside me from what we were "
+                        + "just discussing — a WhatsApp attendance message, an attached list, the "
+                        + "conversation. ONE worker per fill: their name exactly as the registry "
+                        + "spells it, the resolved w/c Monday (say it back to me in one line), and "
+                        + "one item per worked day with the site named as the crew said it. Hours "
+                        + "default to 8; leave cost codes out unless the data clearly names the work "
+                        + "— the MD codes days when he approves them. Send the WHOLE week in ONE "
+                        + "update. Days marked as recorded are locked — leave them out. I read the "
+                        + "form and press Save myself; when several workers are listed, open this "
+                        + "dialog again for the next one after I save, and keep count.",
+                    ProjectId: null,
+                    RecordType: null,
+                    RecordId: null,
+                    RecordReference: null),
+                SerialiseWeekState());
+
+            Chat.Open();
+            Chat.SetCoexistence(true);
+        }
+        StateHasChanged();
+    }
+
     private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
         _ = InvokeAsync(async () =>
         {
@@ -1036,8 +1439,19 @@ else
             note = absenceNote,
         });
 
-    /// <summary>The model's update_open_modal, landing in the form: merge, never replace.</summary>
+    /// <summary>The model's update_open_modal, landing in whichever form is live: merge, never
+    /// replace. This page hosts two assistant dialogs, so dispatch on the active task's key.</summary>
     private void HandleAssistantDraft(string fieldsJson)
+    {
+        if (AiTasks.Active?.ModalKey == ModalCatalog.WorkerWeek.ModalKey)
+        {
+            _ = InvokeAsync(() => ApplyWeekDraftAsync(fieldsJson));
+            return;
+        }
+        ApplyAbsenceDraft(fieldsJson);
+    }
+
+    private void ApplyAbsenceDraft(string fieldsJson)
     {
         if (!absenceOpen || AiTasks.Active?.ModalKey != ModalCatalog.RecordAbsence.ModalKey) return;
         try
@@ -1070,6 +1484,83 @@ else
         catch (System.Text.Json.JsonException) { return; }
 
         AiTasks.UpdateDraft(SerialiseAbsenceState());
+        StateHasChanged();
+    }
+
+    /// <summary>The worker_week draft: worker and week first (they re-derive the locked days),
+    /// then each named day merged into its row. Unmatched site names stay visible on the row —
+    /// a transcription the user can't see failing is worse than no transcription.</summary>
+    private async Task ApplyWeekDraftAsync(string fieldsJson)
+    {
+        if (!weekOpen || AiTasks.Active?.ModalKey != ModalCatalog.WorkerWeek.ModalKey) return;
+        try
+        {
+            using var parsed = System.Text.Json.JsonDocument.Parse(fieldsJson);
+            var root = parsed.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return;
+
+            var scaffoldChanged = false;
+            if (root.TryGetProperty("workerName", out var workerName)
+                && workerName.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                var match = Labour.Workers().Where(worker => worker.IsActive)
+                    .FirstOrDefault(worker => string.Equals(worker.Name, workerName.GetString(), StringComparison.OrdinalIgnoreCase));
+                if (match is not null && match.WorkerId != weekWorkerId)
+                {
+                    weekWorkerId = match.WorkerId;
+                    scaffoldChanged = true;
+                }
+            }
+            if (root.TryGetProperty("weekStart", out var week)
+                && week.ValueKind == System.Text.Json.JsonValueKind.String
+                && DateTime.TryParse(week.GetString(), out var parsedWeek))
+            {
+                var snapped = ForecastRules.WeekStartOf(parsedWeek.Date);
+                if (snapped != entryWeekStart)
+                {
+                    entryWeekStart = snapped;
+                    scaffoldChanged = true;
+                }
+            }
+            if (scaffoldChanged) await RebuildWeekRowsAsync();
+
+            if (root.TryGetProperty("days", out var days)
+                && days.ValueKind == System.Text.Json.JsonValueKind.Array)
+            {
+                foreach (var item in days.EnumerateArray())
+                {
+                    if (item.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+                    if (!item.TryGetProperty("date", out var dateElement)
+                        || dateElement.ValueKind != System.Text.Json.JsonValueKind.String
+                        || !DateTime.TryParse(dateElement.GetString(), out var parsedDate)) continue;
+                    var row = weekRows.FirstOrDefault(candidate => candidate.Date == parsedDate.Date);
+                    if (row is null || row.Locked) continue;
+
+                    if (item.TryGetProperty("siteName", out var site)
+                        && site.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        var name = site.GetString() ?? "";
+                        var projectId = MatchProjectId(name);
+                        if (projectId != "") { row.ProjectId = projectId; row.UnmatchedSite = ""; }
+                        else if (name.Trim() != "") row.UnmatchedSite = name.Trim();
+                    }
+                    if (item.TryGetProperty("hours", out var hours)
+                        && hours.ValueKind == System.Text.Json.JsonValueKind.Number
+                        && LabourRules.IsValidHours(hours.GetDecimal()))
+                        row.Hours = hours.GetDecimal();
+                    if (item.TryGetProperty("costCode", out var costCode)
+                        && costCode.ValueKind == System.Text.Json.JsonValueKind.String)
+                    {
+                        var code = costCode.GetString() ?? "";
+                        if (CostCenters.Alphabetical.Any(centre => centre.IsActive && centre.Code == code))
+                            row.CostCode = code;
+                    }
+                }
+            }
+        }
+        catch (System.Text.Json.JsonException) { return; }
+
+        AiTasks.UpdateDraft(SerialiseWeekState());
         StateHasChanged();
     }
 

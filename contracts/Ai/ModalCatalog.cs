@@ -390,8 +390,72 @@ public static class ModalCatalog
                 "A short optional note — only what the user actually said.")
         });
 
+    /// <summary>
+    /// The "Enter a worker's week" dialog on the Labour overview — the accountant's transcription
+    /// path for how the crews actually report: a WhatsApp message naming a site per day. One
+    /// worker, one week, all seven days in ONE update (the one-dialog-one-update rule from
+    /// bid_package_details: never a flow that relies on the model acting again after a save).
+    /// Days land as Submitted timesheets on each site's approval queue; the MD codes the cost
+    /// code and approves on the project's Labour tab. Days already recorded show locked in the
+    /// dialog and are skipped on save — never overwritten.
+    /// </summary>
+    public static readonly ModalDescriptor WorkerWeek = new(
+        "worker_week",
+        "Enter a worker's week",
+        "It enters ONE worker's whole week — a site (and hours) per day, transcribed from what "
+        + "the user has: a WhatsApp attendance message, the conversation, an attached list. Send "
+        + "the whole week in ONE update. Each day lands as a Submitted timesheet on its site for "
+        + "normal approval — the MD codes and approves it on the project's Labour tab, so leave "
+        + "cost codes out unless one clearly applies. Days shown as already recorded are locked; "
+        + "leave them alone. For several workers, do one worker per fill: after the user presses "
+        + "Save, open this dialog again for the next and keep count out loud.",
+        "/labour/overview",
+        // Exactly LabourRoleSets.ApproveTimesheets — whoever the API will accept SubmitWorkerWeek
+        // from, and nobody else.
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.FinanceDirector,
+            Role.ProjectManager
+        },
+        new ModalField[]
+        {
+            new("workerName", "string",
+                "The worker's name exactly as the Workers registry spells it. If more than one "
+                + "worker could match what the user said, ask — never guess between two names.",
+                Required: true),
+            new("weekStart", "string",
+                "The MONDAY of the week as yyyy-MM-dd. Resolve what the user gave: \"wk ending "
+                + "16/08\" is the Sunday, so the Monday is the 10th; \"last week\" resolves "
+                + "against today. Say the resolved w/c date back in the chat.",
+                Required: true),
+            new("days", "array",
+                "One item per day the worker worked — weekends included when the message names "
+                + "them. Leave out days with nothing reported; days the dialog shows as already "
+                + "recorded stay out too. Send the whole week in one update.",
+                Required: true,
+                ItemFields: new ModalField[]
+                {
+                    new("date", "string", "The day as yyyy-MM-dd, inside the stated week.", Required: true),
+                    new("siteName", "string",
+                        "The site as the user said it (\"Guildford\", \"by france\"). The page "
+                        + "matches it against the live project list and shows what it could not "
+                        + "match, so pass the name through rather than guessing an id — the user "
+                        + "picks unmatched sites from the list themselves.",
+                        Required: true),
+                    new("hours", "number",
+                        "Hours worked, in half-hour steps. Leave out for a normal full day — the "
+                        + "form defaults to 8."),
+                    new("costCode", "string",
+                        "A cost code, spelled exactly as list_cost_codes returns it — but ONLY "
+                        + "when the user's data actually names the work. Normally leave it out: "
+                        + "the MD codes the day when he approves it.")
+                })
+        });
+
     public static IReadOnlyList<ModalDescriptor> All { get; } =
-        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails, TenderReply, ManualTimesheet, RecordAbsence };
+        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails, TenderReply, ManualTimesheet, RecordAbsence, WorkerWeek };
 
     public static ModalDescriptor? Find(string? modalKey) =>
         string.IsNullOrWhiteSpace(modalKey)

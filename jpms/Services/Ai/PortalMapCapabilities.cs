@@ -66,7 +66,12 @@ public static class PortalMapCapabilities
 
         // ---- Time ----
         ["/projects/{project}/labour"] =
-            "labour recorded on this site — timesheet days per worker",
+            "labour recorded on this site — timesheet days per worker; approve/adjust/reject here, "
+            + "and the manual_timesheet dialog enters one worker's single day",
+        ["/labour/overview"] =
+            "the company labour month: projected spend, who was where day by day, chase list, weekly "
+            + "sign-off. The worker_week dialog enters one worker's WHOLE week of site days here "
+            + "(the WhatsApp-transcription path), and record_absence logs holiday/sick days",
         ["/labour/workers"] =
             "the company-wide worker registry the timesheets draw from",
 

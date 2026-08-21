@@ -91,6 +91,11 @@ public sealed class ApproveTimesheetsHandler : ICommandHandler<ApproveTimesheets
             { failures.Add(new LabourApprovalFailure(timesheet.TimesheetId, "Rejected — the worker must resubmit first.")); continue; }
             if (timesheet.WorkerId == "" || !workers.TryGetValue(timesheet.WorkerId, out var worker))
             { failures.Add(new LabourApprovalFailure(timesheet.TimesheetId, "No worker record — legacy timesheets need a worker before costed approval.")); continue; }
+            // Weekly entries arrive uncoded on purpose (the accountant records WHERE, the approver
+            // codes WHAT). Say so plainly — the "" budget lookup below would refuse it anyway, but
+            // with a message about budgets that sends the approver hunting in the wrong place.
+            if (string.IsNullOrWhiteSpace(timesheet.CostCode))
+            { failures.Add(new LabourApprovalFailure(timesheet.TimesheetId, $"{timesheet.WorkedOn:ddd dd MMM} has no cost code yet — Adjust the row to code it, then approve.")); continue; }
 
             var history = rateHistory
                 .Where(row => row.WorkerId == timesheet.WorkerId)

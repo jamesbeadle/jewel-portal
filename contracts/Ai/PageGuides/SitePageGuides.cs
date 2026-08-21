@@ -31,6 +31,21 @@ public static class SitePageGuides
             + "settlement. Workers log their own time on their My day page, and the worker records "
             + "and rates are managed on /labour/workers, not here."),
 
+        new("/labour/overview", "Labour overview",
+            "The company-wide labour month: projected spend with the submission-confidence bar, "
+            + "the workers × days placement grid (chips coloured by site), by-site and by-cost-code "
+            + "cuts, the chase list, weekly sign-off and the settlement schedules. Manually: "
+            + "Prev/Next moves the month; \"Enter a week\" opens the weekly entry dialog — one "
+            + "worker's whole week of site days, hours defaulting to 8, cost codes optional "
+            + "(each day lands as a Submitted timesheet on its site; the MD codes and approves on "
+            + "that project's Labour tab); Record absence logs holiday/half-day/not-worked/sick; "
+            + "expanding a worker row edits contracted days and CIS rate; Sign-off marks a week "
+            + "looked-at-whole; \"Code month into Xero\" stages draft bills from signed-off "
+            + "schedules. Your dialogs here: worker_week (a whole week in ONE update — the "
+            + "WhatsApp-transcription path; one worker per fill, reopen for the next) and "
+            + "record_absence (one date per confirm). Approval itself lives on each project's "
+            + "Labour tab, not here."),
+
         new("/labour/workers", "Workers",
             "The company-wide registry of day-rate site operatives the timesheets draw from, with "
             + "their cost rates. Manually: Add worker opens a modal (name, portal email that links "

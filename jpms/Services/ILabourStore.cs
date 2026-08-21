@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Labour;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
@@ -46,6 +47,9 @@ public interface ILabourStore
     Task RefreshAttendanceAsync(string projectId);
 
     Task<TimesheetDetail> AddWorkerTimesheetAsync(string projectId, string workerId, DateTimeOffset workedOn, decimal hours, string costCode);
+    /// <summary>The accountant's weekly entry: one worker's week of site days in one command.
+    /// Refreshes the overview for every month the days touch (a week can straddle two).</summary>
+    Task<WorkerWeekResult> SubmitWorkerWeekAsync(string workerId, DateTimeOffset weekStart, IReadOnlyList<WorkerWeekDayEntry> days);
     Task<TimesheetDetail> AdjustTimesheetAsync(string projectId, string timesheetId, decimal hours, string costCode);
     Task<LabourApprovalResult> ApproveTimesheetsAsync(string projectId, IReadOnlyList<string> timesheetIds);
     Task<TimesheetDetail> RejectTimesheetAsync(string projectId, string timesheetId, string reason);
