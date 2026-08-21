@@ -73,10 +73,11 @@ public partial class ManualWorkOrderModal : IDisposable
     private string? attachmentNote;
     private string? attachmentError;
 
-    // ---- The dialog ⇄ assistant pipe (work_order_edit) ------------------------------------------
+    // ---- The dialog ⇄ assistant pipe (work_order_edit / work_order_create) ----------------------
 
     private bool AssistantTaskActive =>
-        AiTasks.Active?.ModalKey == ModalCatalog.WorkOrderEdit.ModalKey;
+        AiTasks.Active?.ModalKey == ModalCatalog.WorkOrderEdit.ModalKey
+        || AiTasks.Active?.ModalKey == ModalCatalog.WorkOrderCreate.ModalKey;
 
     // The form's opening state has been published to the task once for this opening — so the
     // model's first read sees the order as the dialog pre-filled it, not "{}".

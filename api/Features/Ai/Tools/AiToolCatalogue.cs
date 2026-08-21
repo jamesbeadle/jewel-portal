@@ -500,11 +500,12 @@ public static class AiToolCatalogue
             new(
                 "find_by_reference",
                 "Look up a single record by the reference a person would say out loud — V72, RFI-049, REQ-0122, "
-                + "NOD-003. Searches variations and requests across every project. Tolerant of how people type: "
-                + "rfi001, RFI-001, vo80, VOQ-0080 and V80 all find their record, and a project-prefixed "
+                + "NOD-003, TODO-0074, WO-0045, BPI-0003, DEF-0012. Searches variations, requests, to-dos, work "
+                + "orders, bid packages and defects across every project. Tolerant of how people type: "
+                + "rfi001, RFI-001, vo80, VOQ-0080, V80 and todo 74 all find their record, and a project-prefixed "
                 + "reference (JBB-2026-001-REQ-0113) matches too. Use this before saying you cannot find "
                 + "something — ONE call, not one per spelling.",
-                AiToolSchema.Object(("reference", "string", "For example V72, rfi001 or REQ-0122 — as the user said it.", true)),
+                AiToolSchema.Object(("reference", "string", "For example V72, rfi001, TODO-0074 or WO-0045 — as the user said it.", true)),
                 AiToolKind.Read,
                 readers,
                 async (context, input, ct) =>
@@ -559,6 +560,149 @@ public static class AiToolCatalogue
                                 })
                             });
                         }
+                    }
+
+                    // TODO-0074 / WO-0045 / BPI-0003 / DEF-0012 — the flat global stems (the
+                    // mailbox-tag grammar: "PREFIX-{Number:0000}"; each Reference is computed, so
+                    // the lookup is by Number). 2026-08-21: TODO-0074 came back "not found" and the
+                    // model told the user to click the card it could not reach — a reference a
+                    // person can read out loud must resolve here, whatever the record type.
+                    var stemForm = System.Text.RegularExpressions.Regex.Match(cleaned, "^(todo|wo|bpi|def)0*(\\d+)$");
+                    if (stemForm.Success && int.TryParse(stemForm.Groups[2].Value, out var stemNumber))
+                    {
+                        switch (stemForm.Groups[1].Value)
+                        {
+                            case "todo":
+                            {
+                                var items = await context.Db.TodoItems
+                                    .AsNoTracking()
+                                    .Where(row => row.Number == stemNumber)
+                                    .ToListAsync(ct);
+                                if (items.Count > 0)
+                                {
+                                    var projects = await ProjectReferenceMapAsync(context, items.Select(row => row.ProjectId), ct);
+                                    return Serialise(new
+                                    {
+                                        ok = true,
+                                        kind = "todo",
+                                        matches = items.Select(row => new
+                                        {
+                                            reference = row.Reference,
+                                            todoItemId = row.TodoItemId,
+                                            row.Title,
+                                            notes = string.IsNullOrWhiteSpace(row.Notes) ? null : row.Notes,
+                                            status = row.IsComplete ? "Done" : "Open",
+                                            assignee = row.AssigneeRole is { } assigneeRole
+                                                ? ((Role)assigneeRole).ToString()
+                                                  + (string.IsNullOrWhiteSpace(row.AssigneePersonEmail) ? "" : $" — {row.AssigneePersonEmail}")
+                                                : "Unassigned",
+                                            due = row.DueAt,
+                                            project = string.IsNullOrWhiteSpace(row.ProjectId)
+                                                ? "company-wide"
+                                                : projects.TryGetValue(row.ProjectId, out var todoProject) ? todoProject : row.ProjectId,
+                                            projectId = string.IsNullOrWhiteSpace(row.ProjectId) ? null : row.ProjectId,
+                                            route = $"/todos/{row.TodoItemId}"
+                                        }),
+                                        note = "Its tagged emails: read_record_emails record_type todo with this id. "
+                                            + "Actioning an item usually means doing the work it names, not just opening "
+                                            + "it — e.g. a \"raise this WO\" item: read its tagged emails, then open_modal "
+                                            + "work_order_create with the item's projectId."
+                                    });
+                                }
+                                break;
+                            }
+                            case "wo":
+                            {
+                                var orders = await context.Db.WorkOrders
+                                    .AsNoTracking()
+                                    .Where(row => row.Number == stemNumber)
+                                    .ToListAsync(ct);
+                                if (orders.Count > 0)
+                                {
+                                    var projects = await ProjectReferenceMapAsync(context, orders.Select(row => row.ProjectId), ct);
+                                    return Serialise(new
+                                    {
+                                        ok = true,
+                                        kind = "work_order",
+                                        matches = orders.Select(row => new
+                                        {
+                                            reference = row.Reference,
+                                            row.WorkOrderId,
+                                            row.Title,
+                                            status = ((WorkOrderStatus)row.Status).ToString(),
+                                            row.Value,
+                                            project = projects.TryGetValue(row.ProjectId, out var orderProject) ? orderProject : row.ProjectId,
+                                            projectId = row.ProjectId,
+                                            route = $"/projects/{row.ProjectId}/work-orders"
+                                        }),
+                                        note = "get_work_order_context reads the order's origin, lines and attachments; "
+                                            + "read_record_emails record_type work_order reads its correspondence; the "
+                                            + "work_order_edit dialog corrects it."
+                                    });
+                                }
+                                break;
+                            }
+                            case "bpi":
+                            {
+                                var packages = await context.Db.BidPackages
+                                    .AsNoTracking()
+                                    .Where(row => row.Number == stemNumber)
+                                    .ToListAsync(ct);
+                                if (packages.Count > 0)
+                                {
+                                    var projects = await ProjectReferenceMapAsync(context, packages.Select(row => row.ProjectId), ct);
+                                    return Serialise(new
+                                    {
+                                        ok = true,
+                                        kind = "bid_package",
+                                        matches = packages.Select(row => new
+                                        {
+                                            reference = row.Reference,
+                                            row.BidPackageId,
+                                            row.Title,
+                                            status = ((BidPackageStatus)row.Status).ToString(),
+                                            project = projects.TryGetValue(row.ProjectId, out var packageProject) ? packageProject : row.ProjectId,
+                                            projectId = row.ProjectId,
+                                            route = $"/projects/{row.ProjectId}/bid-package-invites/{row.BidPackageId}"
+                                        }),
+                                        note = "get_bid_package_context reads the package's detail; read_record_emails "
+                                            + "record_type bid_package reads its tender correspondence."
+                                    });
+                                }
+                                break;
+                            }
+                            case "def":
+                            {
+                                var defects = await context.Db.Defects
+                                    .AsNoTracking()
+                                    .Where(row => row.Number == stemNumber)
+                                    .ToListAsync(ct);
+                                if (defects.Count > 0)
+                                {
+                                    var projects = await ProjectReferenceMapAsync(context, defects.Select(row => row.ProjectId), ct);
+                                    return Serialise(new
+                                    {
+                                        ok = true,
+                                        kind = "defect",
+                                        matches = defects.Select(row => new
+                                        {
+                                            reference = row.Reference,
+                                            row.DefectId,
+                                            row.Description,
+                                            row.Location,
+                                            status = ((DefectStatus)row.Status).ToString(),
+                                            project = projects.TryGetValue(row.ProjectId, out var defectProject) ? defectProject : row.ProjectId,
+                                            projectId = row.ProjectId,
+                                            route = $"/projects/{row.ProjectId}/defects"
+                                        }),
+                                        note = "read_record_emails record_type defect reads its tagged mail."
+                                    });
+                                }
+                                break;
+                            }
+                        }
+
+                        return NotFound($"Nothing found with reference {reference}. Say so — do not guess at a similar record.");
                     }
 
                     // Normalised equality first, then suffix — so "REQ-0113" also finds a stored
@@ -928,12 +1072,19 @@ public static class AiToolCatalogue
                 + "(get_work_order_context resolves \"WO-0045\" to the id); read the order's context and its "
                 + "tagged emails first (get_work_order_context, read_record_emails record_type work_order), "
                 + "send everything in one update, and remember the user downloads and sends the updated PO "
-                + "themselves — saving never emails the supplier.",
+                + "themselves — saving never emails the supplier; \"work_order_create\" opens the Add work "
+                + "order dialog to raise a brand-NEW manual order (a \"raise this WO\" to-do, a supplier's "
+                + "priced email with no order behind it yet) — it takes NO record_id but DOES need "
+                + "project_id on a whole-company page (a to-do's projectId comes back from "
+                + "find_by_reference); read the correspondence first (read_record_emails on the to-do or "
+                + "record that holds it), then send supplier, title, scope and the priced lines in one "
+                + "update — saving a LIVE order mints the WO number and emails the purchase order to the "
+                + "supplier at once, so propose saveAsDraft true unless the figures are confirmed.",
                 AiToolSchema.Object(
                     ("modal_key", "string",
                         "One of: \"variation_draft\", \"manual_variation\", \"compose_email\", "
                         + "\"bid_package_details\", \"worker_week\", \"manual_timesheet\", "
-                        + "\"record_absence\", \"work_order_edit\".", true),
+                        + "\"record_absence\", \"work_order_edit\", \"work_order_create\".", true),
                     ("record_id", "string",
                         "The record the dialog works from — REQUIRED for variation_draft (the request id, from "
                         + "find_by_reference or list_requests), for bid_package_details (the bid package id) "
@@ -951,6 +1102,18 @@ public static class AiToolCatalogue
                 JpmsRoleSets.CommercialTeam,
                 (_, _, _) => Task.FromResult(Serialise(new { ok = true, handed_to_browser = true }))),
         };
+    }
+
+    /// <summary>Project reference per id, for labelling cross-project matches. Blank ids (a
+    /// company-wide to-do) are skipped rather than queried.</summary>
+    private static async Task<Dictionary<string, string>> ProjectReferenceMapAsync(
+        AiToolContext context, IEnumerable<string> projectIds, CancellationToken ct)
+    {
+        var ids = projectIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct().ToList();
+        if (ids.Count == 0) return new Dictionary<string, string>();
+        return await context.Db.Projects.AsNoTracking()
+            .Where(row => ids.Contains(row.ProjectId))
+            .ToDictionaryAsync(row => row.ProjectId, row => row.Reference, ct);
     }
 
     /// <summary>The named project, else the one in scope, else null.</summary>

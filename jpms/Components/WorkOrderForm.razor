@@ -31,6 +31,10 @@
                     <option value="@sub.SubcontractorId" selected="@(subcontractorId == sub.SubcontractorId)">@sub.CompanyName</option>
                 }
             </select>
+            @if (assistantSupplierNote is not null)
+            {
+                <p class="text-xs text-negative mt-1">@assistantSupplierNote</p>
+            }
         </div>
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Order title</label>

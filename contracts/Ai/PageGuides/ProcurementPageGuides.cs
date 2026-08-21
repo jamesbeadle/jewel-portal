@@ -39,7 +39,10 @@ public static class ProcurementPageGuides
             + "mailbox) or Reject (terminal); each issued line offers PO (the printable purchase "
             + "order page), Re-code (move or split a line across cost centres without changing the "
             + "order's value) and Cancel (MD/FD only, refused while bills are linked or money "
-            + "paid). You can navigate_to here; no dialog or work-order tool is registered. "
+            + "paid). You can navigate_to here, and two dialogs are registered: work_order_create "
+            + "raises a new manual order (Add work order, empty) and work_order_edit corrects an "
+            + "existing one (get_work_order_context resolves \"WO-0045\" to the id and reads its "
+            + "lines; read_record_emails record_type work_order reads its correspondence). "
             + "Awarding a tender happens on the bid package page; linking invoices happens on WO "
             + "Allocation."),
 

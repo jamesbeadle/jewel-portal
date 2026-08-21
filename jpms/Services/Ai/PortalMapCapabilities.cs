@@ -54,15 +54,19 @@ public static class PortalMapCapabilities
         ["/projects/{project}/bid-package-invites"] =
             "bid packages inviting subcontractor prices; open one for its invites, quotes and tagged emails",
         ["/projects/{project}/work-orders"] =
-            "work orders placed with subcontractors; open one for its detail and purchase order. The "
-            + "\"Edit work order\" dialog (work_order_edit) lives here — correcting an order's title, "
-            + "scope and priced lines, MD/FD/admin for issued orders",
+            "work orders placed with subcontractors; open one for its detail and purchase order. Two "
+            + "dialogs live here: \"Add work order\" (work_order_create) raises a new manual order — "
+            + "MD/FD/PM/estimator — and \"Edit work order\" (work_order_edit) corrects an order's "
+            + "title, scope and priced lines, MD/FD/admin for issued orders",
         ["/subcontractors/communications"] =
             "subcontractor correspondence (everything tagged with the JPMS/SubComms family at triage — general plus the Chaser / Info request / Materials / H&S categories), read live with a per-category filter",
 
         // ---- Internal ----
         ["/todos"] =
-            "the master to-do list across every project, with a project filter",
+            "the master to-do list across every project, with a project filter. find_by_reference "
+            + "resolves a spoken \"TODO-0074\" to the item — its notes, project and route — and "
+            + "read_record_emails (record_type todo) reads its tagged mail, so action an item's work "
+            + "yourself rather than sending the user clicking",
         ["/directory"] =
             "everyone the company deals with — clients, architects, subcontractors, staff; open an entry for its record",
 

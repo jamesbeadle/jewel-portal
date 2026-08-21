@@ -523,8 +523,85 @@ public static class ModalCatalog
                 })
         });
 
+    /// <summary>
+    /// The "Add work order" dialog on a project's Work Orders tab — raising a brand-NEW manual
+    /// order. Registered 2026-08-21 after the "Raise this WO" to-do: the assistant read Nigel's
+    /// £1,800 email end to end and then had to tell the user to press the button itself, because
+    /// only EDITING was registered. Same modal as work_order_edit, opened empty; no <c>{record}</c>
+    /// in the route because this dialog CREATES. Saving a live order mints the WO number and
+    /// emails the purchase order to the supplier from the projects mailbox at once; a draft sends
+    /// nothing until its two-click Approve on the tab.
+    /// </summary>
+    public static readonly ModalDescriptor WorkOrderCreate = new(
+        "work_order_create",
+        "Add work order",
+        "It raises a NEW manual work order — supplier, title, scope of works and the priced lines "
+        + "— from correspondence the user already has: a supplier's priced email, a \"raise this "
+        + "WO\" to-do, the conversation. Read that correspondence first (read_record_emails on the "
+        + "to-do or record that holds it) and send the fields in ONE update. The user reviews "
+        + "everything and presses the button themselves; nothing exists until they do. Saving a "
+        + "LIVE order mints the WO number and emails the purchase order to the supplier at once — "
+        + "propose saveAsDraft true unless the correspondence clearly confirms the figures.",
+        "/projects/{project}/work-orders",
+        // Exactly the API's gate for raising a manual order (CreateManualWorkOrderAuthorisation):
+        // Admin, the MD, the FD, project managers and estimators (the Estimator seat is the
+        // QuantitySurveyor role).
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.FinanceDirector,
+            Role.ProjectManager,
+            Role.QuantitySurveyor
+        },
+        new ModalField[]
+        {
+            new("supplier", "string",
+                "The subcontractor the order is raised to, named as the correspondence says it — "
+                + "\"MGN Drywall\". The dialog matches the name against the live directory and "
+                + "says on screen when nothing matches, so pass it through rather than guessing — "
+                + "the user picks an unmatched supplier from the list themselves.",
+                Required: true),
+
+            new("title", "string",
+                "The order's title, at most 256 characters, in the house style — "
+                + "\"Render materials — WH89 colour change\". Not a sentence.",
+                Required: true),
+
+            new("scope", "string",
+                "The scope of works printed on the purchase order, plain text (it prints "
+                + "pre-wrap, so an itemised breakdown can sit one charge per line). Only what the "
+                + "correspondence actually supports."),
+
+            new("saveAsDraft", "boolean",
+                "true stores a draft — no WO number, no email to the supplier — awaiting the "
+                + "two-click Approve on the Work Orders tab; false or left out releases on save, "
+                + "which mints the number and emails the purchase order at once. Propose true "
+                + "unless the correspondence clearly confirms the figures."),
+
+            new("lines", "array",
+                "The priced schedule. Only lines the correspondence actually prices — an invented "
+                + "figure ends up on a purchase order.",
+                ItemFields: new ModalField[]
+                {
+                    new("title", "string",
+                        "The line as the purchase order prints it — a short label.", Required: true),
+                    new("description", "string",
+                        "The longer detail for the PO's Description column — optional."),
+                    new("costCode", "string",
+                        "The cost centre this line's committed value lands on. It must be a Code "
+                        + "returned by list_cost_codes, spelled exactly as that tool returned it. "
+                        + "If no code clearly fits, leave this out — the user picks it from a "
+                        + "list. A wrong cost code sends real money to the wrong place."),
+                    new("amount", "number",
+                        "The line's value in GBP as a plain number, NET of VAT. Only figures the "
+                        + "correspondence actually states.",
+                        Required: true)
+                })
+        });
+
     public static IReadOnlyList<ModalDescriptor> All { get; } =
-        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails, TenderReply, ManualTimesheet, RecordAbsence, WorkerWeek, WorkOrderEdit };
+        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails, TenderReply, ManualTimesheet, RecordAbsence, WorkerWeek, WorkOrderEdit, WorkOrderCreate };
 
     public static ModalDescriptor? Find(string? modalKey) =>
         string.IsNullOrWhiteSpace(modalKey)

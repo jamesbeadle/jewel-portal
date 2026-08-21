@@ -874,7 +874,8 @@ else
         await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
     }
 
-    // ---- The assistant's route in: open_modal → ?openModal=work_order_edit&record={id} --------
+    // ---- The assistant's route in: open_modal → ?openModal=work_order_edit&record={id}, or ----
+    // ---- ?openModal=work_order_create with no record (the dialog opens empty) ------------------
     //
     // The accountant's flow from the chat: "open WO-0045, add the £80 line from the email" — the
     // assistant routes here, this page opens the Edit dialog on that order, and the task tells the
@@ -885,10 +886,26 @@ else
     // for the life of this component. This is what stops a later repaint re-honouring it.
     private bool modalRequestHonoured;
 
-    private bool WantsWorkOrderEditFromRoute() =>
-        !modalRequestHonoured
-        && new Uri(Nav.Uri).Query.Contains(
-            $"openModal={ModalCatalog.WorkOrderEdit.ModalKey}", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Which of this page's registered dialogs the query asks for — work_order_edit,
+    /// work_order_create, or null. Parsed as a real query value, not a Contains, so one key can
+    /// never match inside the other's name.</summary>
+    private string? RequestedModalKeyFromRoute()
+    {
+        if (modalRequestHonoured) return null;
+        var query = new Uri(Nav.Uri).Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            if (separator <= 0) continue;
+            if (!pair[..separator].Equals("openModal", StringComparison.OrdinalIgnoreCase)) continue;
+            var value = Uri.UnescapeDataString(pair[(separator + 1)..]);
+            if (value.Equals(ModalCatalog.WorkOrderEdit.ModalKey, StringComparison.OrdinalIgnoreCase))
+                return ModalCatalog.WorkOrderEdit.ModalKey;
+            if (value.Equals(ModalCatalog.WorkOrderCreate.ModalKey, StringComparison.OrdinalIgnoreCase))
+                return ModalCatalog.WorkOrderCreate.ModalKey;
+        }
+        return null;
+    }
 
     /// <summary>The ?record= value carried alongside ?openModal — the work order to open.
     /// Parsed by hand: System.Web's helper isn't worth trusting to WASM trimming.</summary>
@@ -914,12 +931,64 @@ else
     /// </summary>
     private async Task HonourRequestedModalAsync()
     {
-        if (!WantsWorkOrderEditFromRoute()) return;
+        if (RequestedModalKeyFromRoute() is not { } requestedModalKey) return;
 
         var requestedId = RequestedRecordFromRoute();
         try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
         catch { /* Address bar cosmetics. Never worth failing the page over. */ }
         modalRequestHonoured = true;
+
+        // ---- Add work order: no record — the dialog opens empty and the task points the model
+        // at the correspondence it came from. Gate exactly as ModalCatalog declares (the API's
+        // CreateManualWorkOrder gate), said out loud on refusal like every branch below.
+        if (requestedModalKey == ModalCatalog.WorkOrderCreate.ModalKey)
+        {
+            if (Session.ActiveRole is not { } activeRole
+                || !ModalCatalog.CanOpen(ModalCatalog.WorkOrderCreate, new[] { activeRole }))
+            {
+                assistantRouteError = "The assistant tried to open the Add work order dialog, but the role "
+                    + "you are viewing as can't raise orders — the MD, FD, a project manager, an estimator "
+                    + "or an administrator can.";
+                StateHasChanged();
+                return;
+            }
+
+            OpenAdd();
+
+            if (DesktopNavigation.CanUseAssistant(activeRole))
+            {
+                AiTasks.Start(
+                    new AiTask(
+                        TaskKey: "work-order-create",
+                        ModalKey: ModalCatalog.WorkOrderCreate.ModalKey,
+                        BannerLabel: "Raising a work order",
+                        BusyLabel: "Reading the correspondence…",
+                        // A user turn, so it outranks the system prompt — it has to say the same thing.
+                        KickoffMessage:
+                            "The \"Add work order\" dialog is open beside me, empty. Work from the "
+                            + "correspondence behind this order — if you have not already read it this "
+                            + "turn, read_record_emails on the to-do or record it came from, and "
+                            + "read_email_attachment on any file that holds the figures — then propose "
+                            + "the fields in ONE update: the supplier exactly as the correspondence names "
+                            + "them, a title in the house style, the scope the purchase order should "
+                            + "print, and only lines the correspondence actually prices (leave a cost "
+                            + "code out where none clearly fits — I pick it from the list). Tell me in "
+                            + "one line what you filled in and from where. I review everything and press "
+                            + "the save button myself — saving a live order emails the purchase order to "
+                            + "the supplier at once, so propose saveAsDraft true unless the figures are "
+                            + "confirmed.",
+                        ProjectId: ProjectId,
+                        RecordType: null,
+                        RecordId: null,
+                        RecordReference: null),
+                    "{}");
+
+                Chat.Open();
+                Chat.SetCoexistence(true);
+            }
+            StateHasChanged();
+            return;
+        }
 
         if (string.IsNullOrWhiteSpace(requestedId))
         {
@@ -992,7 +1061,9 @@ else
 
     private void EndWorkOrderEditTask()
     {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.WorkOrderEdit.ModalKey) return;
+        var activeKey = AiTasks.Active?.ModalKey;
+        if (activeKey != ModalCatalog.WorkOrderEdit.ModalKey
+            && activeKey != ModalCatalog.WorkOrderCreate.ModalKey) return;
         AiTasks.End();
         Chat.SetCoexistence(false);
     }

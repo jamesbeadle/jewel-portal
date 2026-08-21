@@ -153,8 +153,11 @@ public partial class WorkOrderForm : IDisposable
     /// <summary>The form's live state as the JSON the assistant task carries with every turn.</summary>
     public string SerialiseState() => JsonSerializer.Serialize(new
     {
+        supplier = SelectedSupplier?.CompanyName ?? "",
+        supplierUnmatched = assistantSupplierNote,
         title,
         scope,
+        saveAsDraft,
         lines = lines.Select(line => new
         {
             title = line.Title,
@@ -183,8 +186,16 @@ public partial class WorkOrderForm : IDisposable
             var root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return;
 
+            if (ReadText(root, "supplier") is { } proposedSupplier && !string.IsNullOrWhiteSpace(proposedSupplier))
+                ApplySupplierProposal(proposedSupplier);
             if (ReadText(root, "title") is { } proposedTitle) title = proposedTitle;
             if (ReadText(root, "scope") is { } proposedScope) scope = proposedScope;
+            if (root.TryGetProperty("saveAsDraft", out var proposedDraft)
+                && proposedDraft.ValueKind is JsonValueKind.True or JsonValueKind.False
+                && !DraftTickLocked && !IsEditing)
+            {
+                saveAsDraft = proposedDraft.ValueKind == JsonValueKind.True;
+            }
 
             if (root.TryGetProperty("lines", out var proposedLines) && proposedLines.ValueKind == JsonValueKind.Array)
             {
@@ -216,6 +227,32 @@ public partial class WorkOrderForm : IDisposable
         catch (JsonException)
         {
             // A malformed proposal is the model's problem, not the user's. The form stands.
+        }
+    }
+
+    // The manual_timesheet siteName rule, applied to suppliers: the model passes the NAME through
+    // and the form does the matching against the live directory — an invented id would raise an
+    // order to the wrong firm. An unmatched name is said out loud under the picker and in the
+    // republished state, so both the user and the model can see the choice still stands open.
+    private string? assistantSupplierNote;
+
+    private void ApplySupplierProposal(string proposed)
+    {
+        var candidates = Subcontractors.Current ?? Array.Empty<Subcontractor>();
+        var trimmed = proposed.Trim();
+        var match = candidates.FirstOrDefault(sub =>
+                        string.Equals(sub.CompanyName.Trim(), trimmed, StringComparison.OrdinalIgnoreCase))
+                    ?? candidates.FirstOrDefault(sub =>
+                        sub.CompanyName.Contains(trimmed, StringComparison.OrdinalIgnoreCase)
+                        || trimmed.Contains(sub.CompanyName.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (match is not null)
+        {
+            subcontractorId = match.SubcontractorId;
+            assistantSupplierNote = null;
+        }
+        else
+        {
+            assistantSupplierNote = $"\"{trimmed}\" isn't in the subcontractor directory — pick the supplier from the list.";
         }
     }
 
@@ -308,6 +345,7 @@ public partial class WorkOrderForm : IDisposable
     private async Task SetSubcontractorAsync(string? value)
     {
         subcontractorId = value ?? "";
+        assistantSupplierNote = null; // the user's own pick settles it
         await OnChanged.InvokeAsync();
     }
 

@@ -13,8 +13,13 @@ public static class OfficePageGuides
             + "Open/Done/All tabs; filters for project scope, role and — for MD/admin — person; "
             + "\"Add to-do\" opens a modal with Project picker (blank = company-wide, MD/admin "
             + "only), title, assignee, due date and notes. Clicking an item opens its detail page. "
-            + "You navigate_to here; no dialog opens here. To-dos staged from an email "
-            + "(stage_triage_todo) happen in the Control Centre, not here."),
+            + "find_by_reference resolves a spoken \"TODO-0074\" to the item (title, notes, "
+            + "project, route), and read_record_emails (record_type todo) reads its tagged mail — "
+            + "so ACTION an item yourself rather than telling the user to click it: e.g. a "
+            + "\"raise this WO\" item means read its emails, then open_modal work_order_create "
+            + "with the item's projectId. You navigate_to here; no dialog opens on this page "
+            + "itself. To-dos staged from an email (stage_triage_todo) happen in the Control "
+            + "Centre, not here."),
 
         new("/todos/{todoItemId}", "To-do detail",
             "One to-do item's own page — its full facts, multiline notes, the to-dos linked to it "
@@ -23,9 +28,12 @@ public static class OfficePageGuides
             + "done / Reopen; a two-click armed Delete; the reassign editor (role, optionally "
             + "pinned to a person) and the move editor (to another project, or company-wide for "
             + "MD/admin). Reassign, move and delete need the manage gate; completing needs manage "
-            + "or the item being the reader's own. You navigate_to with the ready-made route; no "
-            + "dialog opens here. Items are added on /todos or a project's To-do tab, not on this "
-            + "page."),
+            + "or the item being the reader's own. You navigate_to with the ready-made route "
+            + "(find_by_reference resolves \"TODO-0074\" to it), and read_record_emails "
+            + "(record_type todo) reads this item's communications; no dialog opens here, but "
+            + "actioning the item's work often opens one elsewhere — e.g. work_order_create for a "
+            + "\"raise this WO\" item. Items are added on /todos or a project's To-do tab, not "
+            + "on this page."),
 
         new("/architects", "Architect practices",
             "The register of architect practices — when an architect is a project's party, RFIs "

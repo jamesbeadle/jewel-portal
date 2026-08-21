@@ -48,6 +48,8 @@ public static class AiToolLabels
                                 "compose_email" => "Opening the email composer",
                                 "manual_variation" => "Opening the Add-variation form",
                                 "variation_draft" => "Opening the variation draft",
+                                "work_order_edit" => "Opening the work order for editing",
+                                "work_order_create" => "Opening the Add work order form",
                                 _ => "Opening a dialog"
                             }) ?? "Opening a dialog",
             "update_open_modal" => "Writing into the form",
