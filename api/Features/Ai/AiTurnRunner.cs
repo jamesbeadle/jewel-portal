@@ -176,7 +176,7 @@ public sealed class AiTurnRunner
                 // "posted" — so an open_modal with an invented record id navigated the user to a
                 // dead page while the model narrated success. Refusing here puts the failure in
                 // front of the model instead, and it corrects course.
-                var refusal = await ValidateUiActionAsync(call, cancellationToken);
+                var refusal = await ValidateUiActionAsync(call, scope, cancellationToken);
                 if (refusal is not null)
                 {
                     output = refusal;
@@ -184,7 +184,16 @@ public sealed class AiTurnRunner
                 }
                 else
                 {
-                    uiActions.Add(new AiUiAction(call.Name, call.ArgumentsJson));
+                    // open_modal only: complete the arguments the server can KNOW — a record
+                    // dialog's project comes from the record's own row, so the client-side route
+                    // never depends on which page the user happens to be on. (Live failure
+                    // 2026-08-21: work_order_edit opened from the To-dos page — no project in
+                    // view, the model omitted project_id, the browser refused AFTER the turn had
+                    // ended, and the model narrated success.)
+                    var argumentsJson = string.Equals(call.Name, "open_modal", StringComparison.OrdinalIgnoreCase)
+                        ? await CompleteOpenModalArgumentsAsync(call.ArgumentsJson, cancellationToken)
+                        : call.ArgumentsJson;
+                    uiActions.Add(new AiUiAction(call.Name, argumentsJson));
                     output = JsonSerializer.Serialize(new { ok = true, handed_to_browser = true });
                 }
             }
@@ -238,7 +247,7 @@ public sealed class AiTurnRunner
     /// record must be given a record id, and for variation_draft that id must be a REAL request —
     /// the failure the model must see is "no such request", not a user stranded on a dead page.
     /// </summary>
-    private async Task<string?> ValidateUiActionAsync(ClaudeToolCall call, CancellationToken ct)
+    private async Task<string?> ValidateUiActionAsync(ClaudeToolCall call, AiScope? scope, CancellationToken ct)
     {
         if (string.Equals(call.Name, "stage_triage_tag", StringComparison.OrdinalIgnoreCase))
             return await ValidateStageTagAsync(call, ct);
@@ -250,6 +259,7 @@ public sealed class AiTurnRunner
 
         string? modalKey = null;
         string? recordId = null;
+        string? projectId = null;
         try
         {
             using var arguments = JsonDocument.Parse(
@@ -262,6 +272,9 @@ public sealed class AiTurnRunner
                 if (arguments.RootElement.TryGetProperty("record_id", out var recordElement)
                     && recordElement.ValueKind == JsonValueKind.String)
                     recordId = recordElement.GetString();
+                if (arguments.RootElement.TryGetProperty("project_id", out var projectElement)
+                    && projectElement.ValueKind == JsonValueKind.String)
+                    projectId = projectElement.GetString();
             }
         }
         catch (JsonException)
@@ -275,6 +288,22 @@ public sealed class AiTurnRunner
                 + string.Join(", ", ModalCatalog.All.Select(candidate => candidate.ModalKey)) + ".");
         }
 
+        // A project dialog the BROWSER cannot place must be refused HERE, in front of the model —
+        // the client's own refusal happens after this turn has ended, so the model narrates a
+        // dialog that never opened (exactly the 2026-08-21 work_order_edit live failure). Record
+        // dialogs are exempt: their project is derived from the record's own row when the action
+        // is handed over (CompleteOpenModalArgumentsAsync), which also protects the user who is
+        // standing on a DIFFERENT project's page.
+        if (modal.RouteTemplate.Contains("{project}", StringComparison.Ordinal)
+            && !ProjectDerivableFromRecord(modal.ModalKey)
+            && string.IsNullOrWhiteSpace(projectId)
+            && string.IsNullOrWhiteSpace(scope?.ProjectId))
+        {
+            return Fail($"{modal.ModalKey} needs project_id — the user is not on one of that project's "
+                + "pages, so the browser cannot tell which project to open it in. Pass the project's id "
+                + "(list_projects returns ids); never guess one.");
+        }
+
         var needsRecord = modal.RouteTemplate.Contains("{record}", StringComparison.Ordinal);
         if (!needsRecord) return null;
 
@@ -282,8 +311,9 @@ public sealed class AiTurnRunner
         {
             return Fail($"{modal.ModalKey} needs record_id — the real id of the record it works from: "
                 + "the request id (find_by_reference or list_requests) for variation_draft, the bid "
-                + "package id (the record in view, or get_bid_package_context) for bid_package_details. "
-                + "Do not invent one.");
+                + "package id (the record in view, or get_bid_package_context) for bid_package_details, "
+                + "the work order id (get_work_order_context, which resolves \"WO-0045\") for "
+                + "work_order_edit. Do not invent one.");
         }
 
         // The record must actually exist before anyone navigates — the failure the model must see
@@ -343,6 +373,71 @@ public sealed class AiTurnRunner
         // than refuse a real id. The client still refuses loudly for anything actually wrong, and
         // a stale id lands on the record page's own not-found handling, never silently nowhere.
         return null;
+    }
+
+    /// <summary>The record dialogs whose project the server derives from the record's own row —
+    /// keep in step with <see cref="CompleteOpenModalArgumentsAsync"/>.</summary>
+    private static bool ProjectDerivableFromRecord(string modalKey) =>
+        string.Equals(modalKey, ModalCatalog.VariationDraft.ModalKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(modalKey, ModalCatalog.BidPackageDetails.ModalKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(modalKey, ModalCatalog.WorkOrderEdit.ModalKey, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Completes a validated open_modal's arguments with what the server KNOWS: a record dialog's
+    /// project is the record's own ProjectId, so it is stamped in (overwriting whatever the model
+    /// sent — the row is the truth, a mistyped project_id would 404 the route). Without this the
+    /// client fell back to "the project in view", which is null on whole-company pages (the
+    /// To-dos page, the Control Centre) and WRONG when the user is standing on another project.
+    /// Best-effort: anything unparseable goes through unchanged and the client's own loud
+    /// refusals still apply.
+    /// </summary>
+    private async Task<string> CompleteOpenModalArgumentsAsync(string argumentsJson, CancellationToken ct)
+    {
+        try
+        {
+            if (System.Text.Json.Nodes.JsonNode.Parse(
+                    string.IsNullOrWhiteSpace(argumentsJson) ? "{}" : argumentsJson)
+                is not System.Text.Json.Nodes.JsonObject root)
+                return argumentsJson;
+
+            var modalKey = root["modal_key"] is System.Text.Json.Nodes.JsonValue keyValue
+                           && keyValue.TryGetValue<string>(out var keyText) ? keyText : null;
+            var recordId = root["record_id"] is System.Text.Json.Nodes.JsonValue recordValue
+                           && recordValue.TryGetValue<string>(out var recordText) ? recordText : null;
+            if (string.IsNullOrWhiteSpace(modalKey) || string.IsNullOrWhiteSpace(recordId))
+                return argumentsJson;
+
+            string? projectId = null;
+            if (string.Equals(modalKey, ModalCatalog.VariationDraft.ModalKey, StringComparison.OrdinalIgnoreCase))
+            {
+                projectId = await context.Requests.AsNoTracking()
+                    .Where(row => row.RequestId == recordId)
+                    .Select(row => row.ProjectId)
+                    .FirstOrDefaultAsync(ct);
+            }
+            else if (string.Equals(modalKey, ModalCatalog.BidPackageDetails.ModalKey, StringComparison.OrdinalIgnoreCase))
+            {
+                projectId = await context.BidPackages.AsNoTracking()
+                    .Where(row => row.BidPackageId == recordId)
+                    .Select(row => row.ProjectId)
+                    .FirstOrDefaultAsync(ct);
+            }
+            else if (string.Equals(modalKey, ModalCatalog.WorkOrderEdit.ModalKey, StringComparison.OrdinalIgnoreCase))
+            {
+                projectId = await context.WorkOrders.AsNoTracking()
+                    .Where(row => row.WorkOrderId == recordId)
+                    .Select(row => row.ProjectId)
+                    .FirstOrDefaultAsync(ct);
+            }
+            if (string.IsNullOrWhiteSpace(projectId)) return argumentsJson;
+
+            root["project_id"] = projectId;
+            return root.ToJsonString();
+        }
+        catch (JsonException)
+        {
+            return argumentsJson;
+        }
     }
 
     /// <summary>stage_triage_todo needs a real title — an empty row would stage nothing and the

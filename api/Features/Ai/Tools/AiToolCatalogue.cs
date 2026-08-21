@@ -919,8 +919,12 @@ public static class AiToolCatalogue
                         + "and for work_order_edit (the work order id, from get_work_order_context). "
                         + "Omit for every other dialog.", false),
                     ("project_id", "string",
-                        "Defaults to the project in view. Omit for the whole-company dialogs: compose_email, "
-                        + "worker_week, record_absence.", false),
+                        "Defaults to the project in view — but on a whole-company page (the To-dos page, the "
+                        + "Control Centre, the Labour overview) there IS no project in view, so a project "
+                        + "dialog opened from one needs it passed explicitly (list_projects returns ids). For "
+                        + "the record dialogs (variation_draft, bid_package_details, work_order_edit) the "
+                        + "server fills it in from the record itself, so record_id is what matters there. "
+                        + "Omit for the whole-company dialogs: compose_email, worker_week, record_absence.", false),
                     ("reason", "string", "One clause explaining why.", false)),
                 AiToolKind.Ui,
                 JpmsRoleSets.CommercialTeam,
