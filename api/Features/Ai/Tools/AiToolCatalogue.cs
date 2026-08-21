@@ -901,15 +901,22 @@ public static class AiToolCatalogue
                 + "NO record_id and NO project_id; \"manual_timesheet\" enters one worker's single day on a "
                 + "project's Labour tab (missed sign-outs, verbal reports) and takes project_id but NO "
                 + "record_id; \"record_absence\" records one worker's absence on one date on the Labour "
-                + "overview (holiday, half day, not worked, sick) and takes NO record_id and NO project_id.",
+                + "overview (holiday, half day, not worked, sick) and takes NO record_id and NO project_id; "
+                + "\"work_order_edit\" edits a work order — title, scope and the priced lines, e.g. adding "
+                + "the line a supplier's email priced — and needs that order's id as record_id "
+                + "(get_work_order_context resolves \"WO-0045\" to the id); read the order's context and its "
+                + "tagged emails first (get_work_order_context, read_record_emails record_type work_order), "
+                + "send everything in one update, and remember the user downloads and sends the updated PO "
+                + "themselves — saving never emails the supplier.",
                 AiToolSchema.Object(
                     ("modal_key", "string",
                         "One of: \"variation_draft\", \"manual_variation\", \"compose_email\", "
                         + "\"bid_package_details\", \"worker_week\", \"manual_timesheet\", "
-                        + "\"record_absence\".", true),
+                        + "\"record_absence\", \"work_order_edit\".", true),
                     ("record_id", "string",
                         "The record the dialog works from — REQUIRED for variation_draft (the request id, from "
-                        + "find_by_reference or list_requests) and for bid_package_details (the bid package id). "
+                        + "find_by_reference or list_requests), for bid_package_details (the bid package id) "
+                        + "and for work_order_edit (the work order id, from get_work_order_context). "
                         + "Omit for every other dialog.", false),
                     ("project_id", "string",
                         "Defaults to the project in view. Omit for the whole-company dialogs: compose_email, "

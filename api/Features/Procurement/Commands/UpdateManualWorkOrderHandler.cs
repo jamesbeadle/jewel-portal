@@ -8,13 +8,20 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 
 /// <summary>
-/// Edits a manually raised work order wholesale — supplier, title, scope and priced
-/// lines — recomputing the order's value as the sum of its lines. Only orders raised
-/// directly in JPMS qualify (no bid package, no variation, no seed source): awarded,
-/// variation and seeded orders are owned by their source flow. Lines keep their ids
+/// Edits a work order wholesale — supplier, title, scope and priced lines —
+/// recomputing the order's value as the sum of its lines. Orders raised directly in
+/// JPMS (no bid package, no variation, no seed source) are editable by everyone the
+/// authorisation admits, as they always were. Orders a source flow owns — a tender
+/// award, a variation instruction, a Buildertrend seed — are editable only when the
+/// endpoint stamped EditorMayEditAnyOrder (MD / FD / Admin): correcting a live order
+/// against what was actually agreed (2026-08-21, the accountant's add-a-line flow)
+/// is a directors' decision, and the edit deliberately does NOT write back to the
+/// source record — the order becomes the truth of what was instructed. Rejected and
+/// Cancelled orders are terminal records and never editable. Lines keep their ids
 /// where the edit keeps them, so paid-to-date and invoice history stay attached; a
 /// line can only be removed while nothing has been paid against it, and a kept line
-/// can't be priced below what has already been paid.
+/// can't be priced below what has already been paid. Saving never re-emails the
+/// supplier — the updated PO is sent from the PO page by hand.
 /// </summary>
 public sealed class UpdateManualWorkOrderHandler
     : ICommandHandler<UpdateManualWorkOrder, WorkOrder>
@@ -29,14 +36,24 @@ public sealed class UpdateManualWorkOrderHandler
         if (entity is null || !string.Equals(entity.ProjectId, command.ProjectId, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("This work order does not belong to this project.");
 
-        if (entity.BidPackageId is not null)
-            throw new InvalidOperationException("This order was awarded from a tender — its value and lines are owned by the bid package.");
-        if (entity.VariationOrderId is not null)
-            throw new InvalidOperationException("This order instructs a variation — edit the variation order instead.");
-        if (entity.SourceReference is not null)
-            throw new InvalidOperationException("This order was seeded from the source system and can't be edited here.");
+        // Terminal records first: they stand as the written history of a decision, whoever asks.
         if (entity.Status == (int)WorkOrderStatus.Rejected)
             throw new InvalidOperationException("This work order was rejected — it can't be edited. Raise a fresh order instead.");
+        if (entity.Status == (int)WorkOrderStatus.Cancelled)
+            throw new InvalidOperationException("This work order was cancelled — it stands as the record of the voided purchase order and can't be edited.");
+
+        // Orders a source flow owns are a directors' correction only (the endpoint stamps the
+        // flag from the sign-in — MD / FD / Admin). The messages keep pointing everyone else at
+        // the flow that owns the order.
+        if (!command.EditorMayEditAnyOrder)
+        {
+            if (entity.BidPackageId is not null)
+                throw new InvalidOperationException("This order was awarded from a tender — its value and lines are owned by the bid package. Only the MD, FD or an administrator can correct it here.");
+            if (entity.VariationOrderId is not null)
+                throw new InvalidOperationException("This order instructs a variation — edit the variation order instead. Only the MD, FD or an administrator can correct the order itself here.");
+            if (entity.SourceReference is not null)
+                throw new InvalidOperationException("This order was seeded from the source system — only the MD, FD or an administrator can edit it here.");
+        }
 
         var subcontractor = await context.Subcontractors.FindAsync(new object[] { command.SubcontractorId }, cancellationToken);
         if (subcontractor is null) throw new InvalidOperationException("Choose a subcontractor from the directory.");

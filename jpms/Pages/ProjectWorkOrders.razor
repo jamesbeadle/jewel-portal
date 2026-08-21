@@ -1,4 +1,5 @@
 @page "/projects/{ProjectId}/work-orders"
+@using Jewel.JPMS.Contracts.Ai
 @using Jewel.JPMS.Contracts.Commercial
 @using Jewel.JPMS.Contracts.Procurement
 @using Jewel.JPMS.Features.CostCenters
@@ -16,6 +17,9 @@
 @inject ICommandSender Commands
 @inject IQueryClient Queries
 @inject NavigationManager Nav
+@inject AiTaskState AiTasks
+@inject ChatPanelState Chat
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>Work Orders · JPMS</PageTitle>
@@ -71,6 +75,17 @@ else
                 @poEmailNote
                 <button type="button" class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                         @onclick="() => poEmailNote = null">Dismiss</button>
+            </p>
+        }
+
+        @* An assistant open_modal request this page had to refuse — said out loud, because a
+           silently dropped open_modal leaves the model narrating a dialog that never appeared. *@
+        @if (assistantRouteError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+                @assistantRouteError
+                <button type="button" class="text-xs text-content-subtle underline underline-offset-4 ml-2"
+                        @onclick="() => assistantRouteError = null">Dismiss</button>
             </p>
         }
 
@@ -254,7 +269,10 @@ else
             }
             else
             {
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
+            @* While a row's Actions menu is open the overflow cap is lifted: the menu positions
+               absolutely inside this container, so with the overflow active its bottom entries
+               would be cut off at the container's edge (same fix as the valuation invoices table). *@
+            <div class="rounded-xl border border-line bg-surface @(openRowMenuKey is null ? "overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
@@ -357,11 +375,12 @@ else
                                                         <td class="px-3 py-2 text-right">@Money(line.Line.LineTotal)</td>
                                                         <td class="px-3 py-2 text-right @(PaymentKnown(line.Detail) ? "" : "text-content-subtle")"
                                                             title="@(PaymentKnown(line.Detail) ? "" : UnknownPaidHint)">@(PaymentKnown(line.Detail) ? Money(line.Line.PaidToDate) : Dash)</td>
-                                                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                        <td class="px-3 py-2 text-right whitespace-nowrap" @onclick:stopPropagation>
                                                             @if (CancelPendingFor(line.Detail))
                                                             {
                                                                 @* Two clicks on purpose: cancelling voids an order the supplier
-                                                                   has already been sent, and there is no undo. *@
+                                                                   has already been sent, and there is no undo. Choosing Cancel…
+                                                                   from the menu swaps it for this inline confirm pair. *@
                                                                 <button type="button"
                                                                         class="mr-3 text-xs font-medium text-negative underline underline-offset-4"
                                                                         title="@($"Void {Reference(line.Detail.Order)} — it keeps its number as a record, but its value stops counting everywhere and there is no undo")"
@@ -378,36 +397,16 @@ else
                                                             }
                                                             else
                                                             {
-                                                            <a class="mr-3 text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                                               title="View / print the purchase order sent to the supplier"
-                                                               href="@($"/projects/{ProjectId}/work-orders/{line.Detail.Order.WorkOrderId}/po")"
-                                                               @onclick:stopPropagation>
-                                                                PO
-                                                            </a>
-                                                            @if (line.Detail.Order.IsManual)
-                                                            {
-                                                                <button type="button"
-                                                                        class="mr-3 text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                                                        title="This order was raised manually — edit its supplier, title, scope and priced lines"
-                                                                        @onclick="() => OpenEdit(line.Detail)" @onclick:stopPropagation>
-                                                                    Edit…
-                                                                </button>
-                                                            }
-                                                            <button type="button"
-                                                                    class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                                                    title="Move this line to another cost centre, or split its amount across several — the order's value never changes"
-                                                                    @onclick="() => OpenRecode(line)" @onclick:stopPropagation>
-                                                                Re-code…
-                                                            </button>
-                                                            @if (CanCancelOrders)
-                                                            {
-                                                                <button type="button"
-                                                                        class="ml-3 text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4"
-                                                                        title="Cancel this issued order — void the whole order (not just this line); it keeps its number as a record but stops counting everywhere. Refused while bills are linked or money is paid against it."
-                                                                        @onclick="() => SetCancelPending(line.Detail)" @onclick:stopPropagation>
-                                                                    Cancel…
-                                                                </button>
-                                                            }
+                                                                @* One menu per row instead of a run of text links — the row was
+                                                                   getting crowded (PO / Edit / Re-code / Cancel). Edit is offered
+                                                                   on manual orders (as before) and on ANY order for the MD, FD
+                                                                   and administrators (2026-08-21). *@
+                                                                <DropdownMenu Label="Actions" WidthClass="w-72"
+                                                                              Disabled="@cancelBusy"
+                                                                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                                                                              Class="inline-block text-left"
+                                                                              OnOpenChanged="open => openRowMenuKey = open ? line.Line.WorkOrderLineId : (openRowMenuKey == line.Line.WorkOrderLineId ? null : openRowMenuKey)"
+                                                                              Items="LineMenuItems(line)" />
                                                             }
                                                         </td>
                                                     </tr>
@@ -473,29 +472,13 @@ else
                             }
                             else
                             {
-                            <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                               title="View / print the purchase order sent to the supplier"
-                               href="@($"/projects/{ProjectId}/work-orders/{detail.Order.WorkOrderId}/po")">
-                                PO
-                            </a>
-                            @if (detail.Order.IsManual)
-                            {
-                                <button type="button"
-                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                        title="This order was raised manually — edit its supplier, title, scope and priced lines"
-                                        @onclick="() => OpenEdit(detail)">
-                                    Edit…
-                                </button>
-                            }
-                            @if (CanCancelOrders)
-                            {
-                                <button type="button"
-                                        class="text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4"
-                                        title="Cancel this issued order — void it; it keeps its number as a record but stops counting everywhere. Refused while bills are linked or money is paid against it."
-                                        @onclick="() => SetCancelPending(detail)">
-                                    Cancel…
-                                </button>
-                            }
+                                @* Same Actions menu as the table's rows (minus Re-code, which
+                                   needs a priced line to move). *@
+                                <DropdownMenu Label="Actions" WidthClass="w-72"
+                                              Disabled="@cancelBusy"
+                                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                                              Class="inline-block text-left"
+                                              Items="OrderMenuItems(detail)" />
                             }
                         </li>
                     }
@@ -880,14 +863,155 @@ else
     {
         manualOrderOpen = false;
         editingOrder = null;
+        EndWorkOrderEditTask();
     }
 
     private async Task HandleManualOrderSavedAsync()
     {
         manualOrderOpen = false;
         editingOrder = null;
+        EndWorkOrderEditTask();
         await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
     }
+
+    // ---- The assistant's route in: open_modal → ?openModal=work_order_edit&record={id} --------
+    //
+    // The accountant's flow from the chat: "open WO-0045, add the £80 line from the email" — the
+    // assistant routes here, this page opens the Edit dialog on that order, and the task tells the
+    // model to read the order's tagged emails (read_record_emails) for the context before
+    // proposing the changed fields. The user still reads every field and presses Save changes.
+
+    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
+    // for the life of this component. This is what stops a later repaint re-honouring it.
+    private bool modalRequestHonoured;
+
+    private bool WantsWorkOrderEditFromRoute() =>
+        !modalRequestHonoured
+        && new Uri(Nav.Uri).Query.Contains(
+            $"openModal={ModalCatalog.WorkOrderEdit.ModalKey}", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The ?record= value carried alongside ?openModal — the work order to open.
+    /// Parsed by hand: System.Web's helper isn't worth trusting to WASM trimming.</summary>
+    private string? RequestedRecordFromRoute()
+    {
+        var query = new Uri(Nav.Uri).Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            if (separator <= 0) continue;
+            if (!pair[..separator].Equals("record", StringComparison.OrdinalIgnoreCase)) continue;
+            var value = Uri.UnescapeDataString(pair[(separator + 1)..]);
+            return string.IsNullOrWhiteSpace(value) ? null : value;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Honoured only where this user could have opened the dialog by clicking — the assistant can
+    /// route somebody to a page; it cannot get them past a gate. The query is cleared first,
+    /// through history rather than the router, so F5 does not reopen the dialog and re-bill a
+    /// kick-off turn.
+    /// </summary>
+    private async Task HonourRequestedModalAsync()
+    {
+        if (!WantsWorkOrderEditFromRoute()) return;
+
+        var requestedId = RequestedRecordFromRoute();
+        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
+        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
+        modalRequestHonoured = true;
+
+        if (string.IsNullOrWhiteSpace(requestedId))
+        {
+            assistantRouteError = "The assistant tried to open the Edit work order dialog without saying which order.";
+            StateHasChanged();
+            return;
+        }
+
+        // The dialog seeds itself from the order's detail, so the orders must actually be here —
+        // ensure the fetch has landed rather than racing the fire-and-forget refresh.
+        try { await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None); }
+        catch (OperationCanceledException) { throw; }
+        catch { /* Already toasted; the not-found message below says what to check. */ }
+
+        var detail = Orders.FirstOrDefault(candidate =>
+            string.Equals(candidate.Order.WorkOrderId, requestedId, StringComparison.OrdinalIgnoreCase));
+        if (detail is null)
+        {
+            // Said out loud — a silently dropped open_modal is the worst failure this feature has.
+            assistantRouteError = $"The assistant tried to open a work order (\"{requestedId}\") that isn't on this project.";
+            StateHasChanged();
+            return;
+        }
+        if (!CanEditOrder(detail.Order))
+        {
+            assistantRouteError = $"The assistant tried to open {Reference(detail.Order)} for editing, but the role "
+                + "you are viewing as can't edit it — only the MD, FD or an administrator can edit issued orders.";
+            StateHasChanged();
+            return;
+        }
+        if (detail.Order.IsRejected || detail.Order.IsCancelled)
+        {
+            assistantRouteError = $"{Reference(detail.Order)} is {(detail.Order.IsRejected ? "rejected" : "cancelled")} — a terminal record that can't be edited.";
+            StateHasChanged();
+            return;
+        }
+
+        OpenEdit(detail);
+
+        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
+        {
+            AiTasks.Start(
+                new AiTask(
+                    TaskKey: "work-order-edit",
+                    ModalKey: ModalCatalog.WorkOrderEdit.ModalKey,
+                    BannerLabel: $"Editing {Reference(detail.Order)}",
+                    BusyLabel: $"Reading {Reference(detail.Order)} and the emails tagged to it…",
+                    // A user turn, so it outranks the system prompt — it has to say the same thing.
+                    KickoffMessage:
+                        "The \"Edit work order\" dialog is open beside me, pre-filled with the order as it "
+                        + "stands. Gather the context first — get_work_order_context for the order and its "
+                        + "priced lines, then read_record_emails (record_type work_order) for the "
+                        + "correspondence, and read_email_attachment on any file that holds the figures — "
+                        + "then propose the corrected fields in ONE update: keep every existing line that "
+                        + "still stands (spelled exactly as the dialog shows it, so its payment history "
+                        + "stays attached), add or change only what the correspondence actually supports, "
+                        + "and tell me in one line what you changed and why. I review everything and press "
+                        + "Save changes myself.",
+                    ProjectId: ProjectId,
+                    RecordType: "work order",
+                    RecordId: detail.Order.WorkOrderId,
+                    RecordReference: Reference(detail.Order)),
+                "{}");
+
+            Chat.Open();
+            Chat.SetCoexistence(true);
+        }
+        StateHasChanged();
+    }
+
+    private void EndWorkOrderEditTask()
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.WorkOrderEdit.ModalKey) return;
+        AiTasks.End();
+        Chat.SetCoexistence(false);
+    }
+
+    /// <summary>
+    /// Braces: the case the lifecycle hooks MISS. When the panel's open_modal fires while the user
+    /// is ALREADY on this tab, the navigation changes only the query string — the route parameter
+    /// values are identical, so Blazor re-renders nothing and neither OnInitializedAsync nor
+    /// OnParametersSetAsync runs. This event is the one signal that always fires.
+    /// history.replaceState does not raise it, so honouring cannot loop. (The rule from
+    /// ProjectVariations: every ModalCatalog hosting page honours ?openModal from LocationChanged.)
+    /// </summary>
+    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
+        _ = InvokeAsync(async () =>
+        {
+            if (!sessionReady) return;
+            modalRequestHonoured = false; // a fresh navigation is a fresh request
+            await HonourRequestedModalAsync();
+        });
 
     private void Toggle(string key)
     {
@@ -917,6 +1041,78 @@ else
     // else's way. Admin expands to every role at sign-in, so checking the two roles is enough.
     private bool CanCancelOrders =>
         Auth.CurrentRoles.Contains(Role.ManagingDirector) || Auth.CurrentRoles.Contains(Role.FinanceDirector);
+
+    // ── Editing an order: manual orders as before; ANY order for the directors ──
+    // The accountant's flow (2026-08-21): open WO-0045, add the £80 line from the email, save,
+    // download the updated PO and send it back by hand. The API is the real gate (the endpoint
+    // stamps the director flag onto UpdateManualWorkOrder); this just keeps Edit out of everyone
+    // else's menus. Admin expands to every role at sign-in, so checking the two roles is enough.
+    private bool CanEditAllOrders =>
+        Auth.CurrentRoles.Contains(Role.ManagingDirector) || Auth.CurrentRoles.Contains(Role.FinanceDirector);
+
+    private bool CanEditOrder(WorkOrder order) => order.IsManual || CanEditAllOrders;
+
+    // The table row whose Actions menu is open — while set, the table container's overflow cap
+    // is lifted so the menu isn't clipped (see the container's comment).
+    private string? openRowMenuKey;
+
+    private IReadOnlyList<DropdownMenu.Item> LineMenuItems(OrderLine line)
+    {
+        var items = new List<DropdownMenu.Item>
+        {
+            new("View PO",
+                Href: $"/projects/{ProjectId}/work-orders/{line.Detail.Order.WorkOrderId}/po",
+                Hint: "View / print the purchase order sent to the supplier")
+        };
+        if (CanEditOrder(line.Detail.Order))
+        {
+            items.Add(new DropdownMenu.Item("Edit…",
+                OnSelect: EventCallback.Factory.Create(this, () => OpenEdit(line.Detail)),
+                Hint: line.Detail.Order.IsManual
+                    ? "This order was raised manually — edit its supplier, title, scope and priced lines"
+                    : "Correct this order's supplier, title, scope and priced lines — directors only; the updated PO is downloaded and sent by hand"));
+        }
+        items.Add(new DropdownMenu.Item("Re-code this line…",
+            OnSelect: EventCallback.Factory.Create(this, () => OpenRecode(line)),
+            Hint: "Move this line to another cost centre, or split its amount across several — the order's value never changes",
+            Group: 1));
+        if (CanCancelOrders)
+        {
+            items.Add(new DropdownMenu.Item("Cancel order…",
+                OnSelect: EventCallback.Factory.Create(this, () => SetCancelPending(line.Detail)),
+                Hint: "Cancel this issued order — void the whole order (not just this line); it keeps its number as a record but stops counting everywhere. Refused while bills are linked or money is paid against it.",
+                Destructive: true,
+                Group: 2));
+        }
+        return items;
+    }
+
+    private IReadOnlyList<DropdownMenu.Item> OrderMenuItems(ProjectWorkOrderDetail detail)
+    {
+        var items = new List<DropdownMenu.Item>
+        {
+            new("View PO",
+                Href: $"/projects/{ProjectId}/work-orders/{detail.Order.WorkOrderId}/po",
+                Hint: "View / print the purchase order sent to the supplier")
+        };
+        if (CanEditOrder(detail.Order))
+        {
+            items.Add(new DropdownMenu.Item("Edit…",
+                OnSelect: EventCallback.Factory.Create(this, () => OpenEdit(detail)),
+                Hint: detail.Order.IsManual
+                    ? "This order was raised manually — edit its supplier, title, scope and priced lines"
+                    : "Correct this order's supplier, title, scope and priced lines — directors only; the updated PO is downloaded and sent by hand"));
+        }
+        if (CanCancelOrders)
+        {
+            items.Add(new DropdownMenu.Item("Cancel order…",
+                OnSelect: EventCallback.Factory.Create(this, () => SetCancelPending(detail)),
+                Hint: "Cancel this issued order — void it; it keeps its number as a record but stops counting everywhere. Refused while bills are linked or money is paid against it.",
+                Destructive: true,
+                Group: 1));
+        }
+        return items;
+    }
 
     private string? pendingCancelId;
     private bool cancelBusy;
@@ -964,6 +1160,10 @@ else
     // What happened to the automatic purchase-order email after a release (modal creation or
     // draft approval) — shown at the top of the page until dismissed.
     private string? poEmailNote;
+
+    // An assistant open_modal request this page refused (unknown order, role gate, terminal
+    // status) — shown at the top of the page until dismissed.
+    private string? assistantRouteError;
 
     private void ShowPoEmailNote(string note) => poEmailNote = note;
 
@@ -1176,6 +1376,7 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         CostCenters.OnChanged += StateHasChanged;
         WorkOrders.OnChanged += StateHasChanged;
+        Nav.LocationChanged += HandleLocationChanged;
         sessionReady = true;
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
         // data-loading convention) — cached figures render immediately, then update.
@@ -1204,11 +1405,24 @@ else
             // we only need to stop the table waiting on data that is not coming.
             dataFailed = true;
         }
+
+        await HonourRequestedModalAsync();
+    }
+
+    // Belt: covers arrivals where the router does re-set parameters. (LocationChanged is the
+    // braces — see HandleLocationChanged.)
+    protected override async Task OnParametersSetAsync()
+    {
+        if (sessionReady) await HonourRequestedModalAsync();
     }
 
     public void Dispose()
     {
         CostCenters.OnChanged -= StateHasChanged;
         WorkOrders.OnChanged -= StateHasChanged;
+        Nav.LocationChanged -= HandleLocationChanged;
+        // Leaving the tab ends the dialog task — the conversation must not keep a remit over a
+        // form that no longer exists.
+        EndWorkOrderEditTask();
     }
 }

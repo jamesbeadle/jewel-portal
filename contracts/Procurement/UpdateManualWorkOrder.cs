@@ -4,12 +4,19 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Contracts.Procurement;
 
 /// <summary>
-/// Edits a work order that was raised directly in JPMS (no bid package, no seed source,
-/// not a variation instruction). The whole editable surface travels together — supplier,
-/// title, scope and the priced lines — mirroring what CreateManualWorkOrder captured.
-/// The order's value is recomputed as the sum of its lines. Orders that came from a
-/// tender award, a variation, or a Buildertrend seed are refused: their value and lines
-/// are owned by their source flow.
+/// Edits a work order. The whole editable surface travels together — supplier, title,
+/// scope and the priced lines — mirroring what CreateManualWorkOrder captured. The
+/// order's value is recomputed as the sum of its lines.
+///
+/// <para>Who may edit WHAT is two gates (2026-08-21, the accountant's add-a-line flow):
+/// orders raised directly in JPMS (no bid package, no seed source, not a variation
+/// instruction) stay editable by everyone the authorisation admits, as before; orders
+/// owned by a source flow — a tender award, a variation instruction, a Buildertrend
+/// seed — and any RELEASED order's correction are a directors' decision, admitted only
+/// when the endpoint has stamped <see cref="EditorMayEditAnyOrder"/> from the signed-in
+/// user's roles (MD / FD / Admin). Rejected and Cancelled orders are terminal records
+/// and never editable. Saving an edit NEVER re-emails the supplier — the updated
+/// purchase order is downloaded and sent from the PO page by hand.</para>
 /// </summary>
 public sealed record UpdateManualWorkOrder(
     string ProjectId,
@@ -26,7 +33,12 @@ public sealed record UpdateManualWorkOrder(
     // Deposit the supplier requires — a percentage of the order value only, printed at the
     // foot of the purchase order. DepositPercent travels null unless DepositRequired.
     bool DepositRequired = false,
-    decimal? DepositPercent = null) : ICommand<WorkOrder>;
+    decimal? DepositPercent = null,
+    // SERVER-SET. The endpoint overwrites this from the signed-in user's roles (MD / FD /
+    // Admin) before the handler runs — whatever the client sent is discarded, so it can
+    // never be a way to smuggle authority. True admits editing non-manual orders (awarded,
+    // variation-instructed, seeded).
+    bool EditorMayEditAnyOrder = false) : ICommand<WorkOrder>;
 
 /// <summary>
 /// One priced line as edited. WorkOrderLineId ties it to an existing line — preserving

@@ -25,7 +25,9 @@
     keyword must match somewhere on a record (AND across keywords, case-insensitive), so
     "canopy rfi" narrows rather than widens. Requests and drawings come from their cached
     registers (refreshed on entry, stale-while-revalidate per the store convention); variations
-    are fetched once in the background when the tab loads.
+    are fetched once in the background when the tab loads. For the triage roles the same keywords
+    also search the projects mailbox (TaggedEmailSearch, under the related records): each email
+    hit shows the records it is tagged to as chips that click through to those records.
 *@
 
 <div class="panel p-5">
@@ -279,6 +281,12 @@
                     }
                 }
             </div>
+
+            @* The same keywords searched against the projects mailbox — an email's record-tag
+               chips link through to the records it feeds. Mailbox-wide on purpose (the email
+               being hunted is often filed against another project's record, or none); renders
+               only for the triage roles — the gate lives in the component. *@
+            <TaggedEmailSearch Query="@search" />
         }
     }
 </div>
@@ -508,7 +516,8 @@
             fields.Any(field => field is not null && field.Contains(token, StringComparison.OrdinalIgnoreCase)));
     }
 
-    private bool MatchesTodo(TodoItem item) => MatchesKeywords(item.Reference, item.Title, item.Notes);
+    private bool MatchesTodo(TodoItem item) =>
+        MatchesKeywords(item.Reference, item.Title, item.Notes, item.AssigneePersonName);
 
     private IReadOnlyList<Request> MatchedRequests =>
         Requests.ForProject(ProjectId)

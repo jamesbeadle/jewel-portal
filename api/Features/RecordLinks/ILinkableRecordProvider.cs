@@ -24,3 +24,28 @@ public interface ILinkableRecordProvider
     // Resolve a single record (for linking + reading its mail), or null if it no longer exists.
     Task<LinkableRecord?> FindAsync(string recordId, CancellationToken ct);
 }
+
+// The REVERSE lookup: a mailbox tag stem ("TODO-0011", "JBB-2026-001-RFI-012") back to the record
+// it names. Optional — a provider implements this only when its tag grammar supports it, and
+// ResolveRecordTagsHandler simply skips the rest, so a stem from an unimplemented family renders
+// as a plain (unlinked) chip rather than failing. Each implementation must recognise its OWN
+// grammar cheaply (a prefix/shape check) before touching the database: the handler offers every
+// stem to every implementing provider, first non-null answer wins.
+public interface ITagResolvingProvider
+{
+    // The record a stem names, or null when the stem isn't this provider's shape or names nothing.
+    Task<LinkableRecord?> FindByTagAsync(string tagReference, CancellationToken ct);
+}
+
+// Shared parse for the simple global-sequence stems ("TODO-0011" -> 11). Project-qualified
+// families (requests, variations) carry their own grammar in their providers instead.
+internal static class TagReferenceParsing
+{
+    public static bool TryParseNumber(string tagReference, string prefix, out int number)
+    {
+        number = 0;
+        return tagReference.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase)
+            && int.TryParse(tagReference[(prefix.Length + 1)..], out number)
+            && number > 0;
+    }
+}

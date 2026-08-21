@@ -7,8 +7,9 @@
    only (2026-08-10): CREATING records from the email — requests, bid packages, work orders,
    defects, to-dos — lives in System Actions, the one home for every creation. Everything here is
    STAGED: picked records go back to the page as pending work, applied (and tagged, verified) by
-   the page's single Apply. A thread already filed under a pathway opens locked to its own tab —
-   the client wall in tab form. *@
+   the page's single Apply. A thread already filed under a pathway opens on its own tab, but every
+   tab stays choosable (the hard client wall was removed 2026-08-21) — filing to another side goes
+   through the server's cross-filing confirm at Apply. *@
 
 @if (IsOpen)
 {
@@ -25,17 +26,17 @@
         <div class="flex items-center gap-2 border-b border-line">
             @foreach (var tab in Tabs)
             {
-                var locked = LockedPathway is { } fixedTab && fixedTab != tab;
-                <button type="button" @key="tab" disabled="@locked"
-                        title="@(locked ? $"This thread is already filed under {LockedPathway} — its routing was decided at first filing" : TabHint(tab))"
-                        class="@TabClass(tab, locked)" @onclick="() => SwitchTab(tab)">
+                var crossing = LockedPathway is { } fixedTab && fixedTab != tab;
+                <button type="button" @key="tab"
+                        title="@(crossing ? $"This thread is filed under {LockedPathway} — tags from this tab also file it under {tab} (you'll be asked to confirm)" : TabHint(tab))"
+                        class="@TabClass(tab)" @onclick="() => SwitchTab(tab)">
                     @tab
                 </button>
             }
         </div>
-        @if (LockedPathway is { } lockedPathway)
+        @if (LockedPathway is { } filedPathway)
         {
-            <p class="text-xs text-content-subtle -mt-2">Already filed under <span class="font-medium text-content">@lockedPathway</span> — tags here work within it.</p>
+            <p class="text-xs text-content-subtle -mt-2">Filed under <span class="font-medium text-content">@filedPathway</span> — tags from another tab file the thread under both (with a confirm).</p>
         }
 
         @* What's staged so far, across every tab — the running total. *@
@@ -125,8 +126,9 @@
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string EmailSubject { get; set; } = "";
 
-    /// <summary>The thread's fixed pathway label ("Client"/"Subcontractor"/"Internal"), when it is
-    /// already filed — locks the tabs to that side (the wall in tab form). Null = free choice.</summary>
+    /// <summary>The thread's filed pathway label ("Client"/"Subcontractor"/"Internal"), when it is
+    /// already filed — picks the opening tab and drives the cross-filing hints. Tabs are no longer
+    /// locked to it (the hard client wall was removed 2026-08-21). Null = not yet filed.</summary>
     [Parameter] public string? LockedPathway { get; set; }
 
     /// <summary>The tab in use — the pathway decision, reported up so the page files the thread
@@ -384,13 +386,11 @@
         _ => type.ToString()
     };
 
-    private string TabClass(string tab, bool locked) =>
+    private string TabClass(string tab) =>
         "px-4 py-2 text-sm border-b-2 -mb-px transition "
         + (activeTab == tab
             ? "border-accent text-content font-semibold"
-            : locked
-                ? "border-transparent text-content-faint cursor-not-allowed"
-                : "border-transparent text-content-muted hover:text-content");
+            : "border-transparent text-content-muted hover:text-content");
 
     private static string TabHint(string tab) => tab switch
     {

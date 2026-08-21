@@ -13,7 +13,7 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 // Subcontract-side by construction: the remediation is chased with the subcontractor, so
 // TriageCategories.BucketFor maps the type to JPMS/Subcontractor — a defect can never be reached
 // from a Client thread (the wall rejects it).
-public sealed class DefectLinkProvider : ILinkableRecordProvider
+public sealed class DefectLinkProvider : ILinkableRecordProvider, ITagResolvingProvider
 {
     private readonly JpmsContext context;
 
@@ -37,6 +37,15 @@ public sealed class DefectLinkProvider : ILinkableRecordProvider
     {
         var entity = await context.Defects.AsNoTracking()
             .FirstOrDefaultAsync(d => d.DefectId == recordId, ct);
+        return entity is null ? null : ToLinkable(entity);
+    }
+
+    // "DEF-0004" -> the defect numbered 4 (global sequence, same flat-tag-space rule as to-dos).
+    public async Task<LinkableRecord?> FindByTagAsync(string tagReference, CancellationToken ct)
+    {
+        if (!TagReferenceParsing.TryParseNumber(tagReference, "DEF", out var number)) return null;
+        var entity = await context.Defects.AsNoTracking()
+            .FirstOrDefaultAsync(d => d.Number == number, ct);
         return entity is null ? null : ToLinkable(entity);
     }
 

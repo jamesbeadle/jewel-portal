@@ -1098,7 +1098,9 @@
                 route = route.Replace("{record}", recordId, StringComparison.Ordinal);
             }
 
-            Navigate(route + "?openModal=" + modal.ModalKey);
+            // A route template may already carry a query of its own (work_order_edit's ?record=,
+            // because work orders have no detail page) — append with & rather than a second ?.
+            Navigate(route + (route.Contains('?') ? "&openModal=" : "?openModal=") + modal.ModalKey);
         }
         catch (JsonException)
         {

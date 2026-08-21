@@ -58,6 +58,16 @@ public static class RecordLinksRouteRegistration
                     return $"/api/mailbox/search?q={Uri.EscapeDataString(q.Query)}&take={q.Take}";
                 }));
 
+        // Mailbox tag stems back to the records they name — the tagged-email search's record
+        // chips. Stems never contain commas, so a comma-joined list travels safely in one param.
+        queries.Register<ResolveRecordTags, IReadOnlyList<LinkableRecord>>(
+            new QueryRoute("/api/mailbox/tags/resolve",
+                query =>
+                {
+                    var q = (ResolveRecordTags)query;
+                    return $"/api/mailbox/tags/resolve?tags={Uri.EscapeDataString(string.Join(',', q.Tags))}";
+                }));
+
         // One call per project page view feeds every activity badge on it (register rows, record
         // tab dots) — derived server-side from the audit trail's link events, never the mailbox.
         queries.Register<ListRecordActivity, IReadOnlyList<RecordActivitySummary>>(

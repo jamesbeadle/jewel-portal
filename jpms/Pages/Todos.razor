@@ -86,6 +86,22 @@ else
         }
 
         <div class="flex flex-wrap items-center gap-2 mb-4">
+            @* Keyword search, the project tab's idiom brought to the master list: filters the
+               to-dos (reference, title, notes, pinned assignee — "todo-0011" finds the item) and
+               drives the tagged-email lookup at the foot of the panel. A query looks across EVERY
+               status — the whole point of searching is finding the thing wherever it is filed —
+               so the status tabs stand down while one is typed. *@
+            <div class="relative flex-1 min-w-[220px]">
+                <input type="search" class="field w-full text-sm pr-8" placeholder="Search to-dos — reference (TODO-0011), title or notes"
+                       value="@search" @oninput="OnSearchInput" />
+                @if (HasQuery)
+                {
+                    <button type="button" title="Clear search"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 text-content-faint hover:text-content-muted text-sm leading-none"
+                            @onclick="ClearSearch">✕</button>
+                }
+            </div>
+
             @* Board or list — one preference shared by every to-do surface (TodoViewStorage). The
                board lays Open and Done side by side, so the status tabs are the LIST's own control
                and step aside while the board is up rather than sitting there answering nothing. *@
@@ -96,9 +112,17 @@ else
 
             @if (!boardView)
             {
-                <button type="button" class="@StatusTabClass(StatusFilter.Open)" @onclick="() => statusFilter = StatusFilter.Open">Open</button>
-                <button type="button" class="@StatusTabClass(StatusFilter.Done)" @onclick="() => statusFilter = StatusFilter.Done">Done</button>
-                <button type="button" class="@StatusTabClass(StatusFilter.All)" @onclick="() => statusFilter = StatusFilter.All">All</button>
+                @* Disabled (never hidden) while a query is live — the search looks across every
+                   status, and a tab that quietly did nothing would read as a broken filter. *@
+                <button type="button" class="@StatusTabClass(StatusFilter.Open) disabled:opacity-60" disabled="@HasQuery"
+                        title="@(HasQuery ? "Search looks across every status — clear it to use the tabs" : null)"
+                        @onclick="() => statusFilter = StatusFilter.Open">Open</button>
+                <button type="button" class="@StatusTabClass(StatusFilter.Done) disabled:opacity-60" disabled="@HasQuery"
+                        title="@(HasQuery ? "Search looks across every status — clear it to use the tabs" : null)"
+                        @onclick="() => statusFilter = StatusFilter.Done">Done</button>
+                <button type="button" class="@StatusTabClass(StatusFilter.All) disabled:opacity-60" disabled="@HasQuery"
+                        title="@(HasQuery ? "Search looks across every status — clear it to use the tabs" : null)"
+                        @onclick="() => statusFilter = StatusFilter.All">All</button>
             }
 
             @* The selects are built from data — the scope filter from the projects that have
@@ -200,7 +224,10 @@ else
                 @if (visible.Count == 0)
                 {
                     <p class="text-sm text-content-subtle italic">
-                        @(items.Count == 0 ? (CanSeeAll ? "No to-do items yet." : "Nothing is assigned to your role right now.") : "Nothing matches these filters.")
+                        @(items.Count == 0
+                            ? (CanSeeAll ? "No to-do items yet." : "Nothing is assigned to your role right now.")
+                            : HasQuery ? $"No to-dos match \"{search}\"."
+                            : "Nothing matches these filters.")
                     </p>
                 }
                 else if (boardView)
@@ -244,6 +271,23 @@ else
                             </button>
                         }
                     </div>
+                }
+
+                @* A match standing outside the scope/assignee filters is invisible above, which
+                   reads as "not found" — the one wrong answer a search must never give. Said
+                   rather than silently overriding the filters: they were picked on purpose. *@
+                @if (HiddenMatchCount > 0)
+                {
+                    <p class="text-[11px] text-content-subtle mt-2">
+                        @HiddenMatchCount matching to-do@(HiddenMatchCount == 1 ? " is" : "s are") hidden by the project/assignee filters.
+                    </p>
+                }
+
+                @* The same keywords searched against the projects mailbox — renders only for the
+                   triage roles (the gate lives in the component). *@
+                @if (HasQuery)
+                {
+                    <TaggedEmailSearch Query="@search" />
                 }
             </div>
         }
@@ -327,6 +371,10 @@ else
     private IReadOnlyList<TodoAssignablePerson> assignablePeople = Array.Empty<TodoAssignablePerson>();
 
     private StatusFilter statusFilter = StatusFilter.Open;
+    // Keyword search (the project tab's idiom): filters the to-dos client-side and drives the
+    // tagged-email lookup. While a query is live the status tabs are bypassed — search looks
+    // across Open and Done alike, so a completed item is always findable.
+    private string search = "";
     // Board (the default) or flat list — read from TodoViewStorage per user, written back on
     // toggle, and shared with the project tab and the dashboard panel.
     private bool boardView = true;
@@ -421,8 +469,8 @@ else
         finally { loading = false; }
     }
 
-    // Everything the scope and assignee filters leave standing — the BOARD's item set (it shows
-    // both statuses as columns, so the status filter is not applied here).
+    // Everything the scope and assignee filters — and the search — leave standing: the BOARD's
+    // item set (it shows both statuses as columns, so the status filter is not applied here).
     private IReadOnlyList<TodoItem> FilteredItems =>
         items
             .Where(item => scopeFilter switch
@@ -432,18 +480,48 @@ else
                 _ => item.ProjectId == scopeFilter
             })
             .Where(item => MatchesAssigneeFilter(item))
+            .Where(item => !HasQuery || MatchesTodo(item))
             .ToList();
 
-    // The LIST's item set: the filtered items narrowed further by the Open/Done/All tabs.
+    // The LIST's item set: the filtered items narrowed further by the Open/Done/All tabs — except
+    // while a query is live, when the search looks across every status (the tabs render disabled).
     private IReadOnlyList<TodoItem> VisibleItems =>
         FilteredItems
-            .Where(item => statusFilter switch
+            .Where(item => HasQuery || statusFilter switch
             {
                 StatusFilter.Open => !item.IsComplete,
                 StatusFilter.Done => item.IsComplete,
                 _ => true
             })
             .ToList();
+
+    // ---- Keyword search (same rules as ProjectTodoList's) --------------------------------------
+
+    private bool HasQuery => !string.IsNullOrWhiteSpace(search);
+
+    private void OnSearchInput(ChangeEventArgs e) => search = e.Value?.ToString() ?? "";
+
+    private void ClearSearch() => search = "";
+
+    // Every whitespace-separated keyword must appear in at least one of the item's fields
+    // (case-insensitive) — AND across keywords so extra words narrow the results. "todo-0011"
+    // matches the Reference; a pinned assignee's name matches too.
+    private bool MatchesKeywords(params string?[] fields)
+    {
+        var tokens = search.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return tokens.All(token =>
+            fields.Any(field => field is not null && field.Contains(token, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private bool MatchesTodo(TodoItem item) =>
+        MatchesKeywords(item.Reference, item.Title, item.Notes, item.AssigneePersonName);
+
+    // Matches the search but not the scope/assignee filters — announced under the list so a
+    // filtered-out hit never reads as "not found".
+    private int HiddenMatchCount =>
+        !HasQuery ? 0 : items.Count(MatchesTodo) - (boardView ? FilteredItems : VisibleItems).Count;
+
+    // --------------------------------------------------------------------------------------------
 
     // Role and person are independent narrowings: a role alone matches every item assigned to it
     // — pinned or not — a person alone matches everything pinned to them under ANY role they

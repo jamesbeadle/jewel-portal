@@ -873,10 +873,10 @@
                                     <div>
                                         <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Link to another record</p>
                                         <div class="space-y-3">
-                                            @* Each type shows the pathway it files under, and the pool is cut by the
-                                               thread's own pathway so the client wall can't even be expressed here: a
-                                               Client thread is never offered subcontract-side types and vice versa.
-                                               Todo is always offered — to-do links are neutral. *@
+                                            @* Each type shows the pathway it files under. Every type is offered
+                                               whatever the thread's pathway (the hard client wall was removed
+                                               2026-08-21) — a link that would add a second pathway gets a heads-up
+                                               below and the server's cross-filing confirm on submit. *@
                                             <select class="field" value="@((int)linkRecordType)" @onchange="OnLinkRecordTypeChanged">
                                                 @foreach (var recordType in TaggedLinkTypeOptions)
                                                 {
@@ -910,12 +910,12 @@
                                                 }
                                             }
 
-                                            @* The lane heads-up: a bid package on an Internal thread would file it under
-                                               both non-client pathways, which the server asks to confirm. (No client-side
-                                               type can appear here on a non-client thread, so this is the only case.) *@
-                                            @if (FixedPathway == TriagePathway.Internal && linkRecordType == RecordType.BidPackageInvite)
+                                            @* The cross-filing heads-up: a type whose pathway differs from the thread's
+                                               would file it under both, which the server asks to confirm. Applies to any
+                                               crossing — Client↔Subcontractor/Internal included, now the wall is gone. *@
+                                            @if (FixedPathway is { } fixedPw && ImpliedPathway(linkRecordType) is { } linkPw && linkPw != fixedPw)
                                             {
-                                                <p class="text-xs text-amber-600">This would file the thread under Subcontractor as well as Internal — you'll be asked to confirm.</p>
+                                                <p class="text-xs text-amber-600">This would file the thread under @PathwayLabel(linkPw) as well as @PathwayLabel(fixedPw) — you'll be asked to confirm.</p>
                                             }
 
                                             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRecordId))" @onclick="DoAddTagLink">
@@ -1461,16 +1461,10 @@ else
     };
     private static readonly RecordType[] InternalLinkTypes = { RecordType.Todo };
 
-    // The Tagged tab's "link to another record" pool per THREAD pathway. The client wall is
-    // structural here: a Client thread is never offered subcontract-side types and vice versa, so
-    // the picker can't even express a wall crossing (the server guard remains the enforcement).
-    // Todo is always offered — to-do links are pathway-neutral. A non-client thread still sees the
-    // other non-client side's types (the lane): linking one triggers the cross-filing confirm.
-    private static readonly RecordType[] ClientTaggedLinkTypes =
-    {
-        RecordType.Request, RecordType.Variation, RecordType.Scheduling, RecordType.Lad, RecordType.Todo
-    };
-    private static readonly RecordType[] NonClientTaggedLinkTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Todo };
+    // The Tagged tab's "link to another record" pool: since the hard client wall was removed
+    // (2026-08-21) every type is offered whatever the thread's pathway. Each option's label shows
+    // the pathway it files under, and a link that would file the thread under a second pathway
+    // goes through the server's cross-filing confirm ("File under both anyway").
 
     private IReadOnlyList<RecordType> QueueLinkTypeOptions => pathway switch
     {
@@ -1480,11 +1474,18 @@ else
         _                           => Array.Empty<RecordType>()
     };
 
-    private IReadOnlyList<RecordType> TaggedLinkTypeOptions => FixedPathway switch
+    private IReadOnlyList<RecordType> TaggedLinkTypeOptions => RecordTypeOptions;
+
+    // The pathway a record type files a thread under, as a TriagePathway — mirrors the server's
+    // TriageCategories.BucketFor. Null = pathway-neutral (Todo) or per-email choice (CostCentre).
+    // Drives the Tagged picker's cross-filing heads-up.
+    private static TriagePathway? ImpliedPathway(RecordType type) => type switch
     {
-        TriagePathway.Client => ClientTaggedLinkTypes,
-        TriagePathway.Subcontractor or TriagePathway.Internal => NonClientTaggedLinkTypes,
-        _ => RecordTypeOptions
+        RecordType.Request or RecordType.Variation or RecordType.VariationQuote
+            or RecordType.Scheduling or RecordType.Lad => TriagePathway.Client,
+        RecordType.BidPackageInvite or RecordType.WorkOrder
+            or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
+        _ => null
     };
 
     // The pathway a record type files a thread under, for the Tagged picker's labels — mirrors the
@@ -1502,8 +1503,9 @@ else
 
     // The optional "link these to-dos to an open request" picker, offered on every pathway EXCEPT
     // Subcontractor. A request is a Client record: tagging one files the thread under Client, which is
-    // right for an internal thread that turns out to be client business but is a wall crossing for
-    // subcontract mail. Hiding the control means the Subcontractor → To-dos action is always neutral.
+    // right for an internal thread that turns out to be client business. (The hard client wall was
+    // removed 2026-08-21 — the hiding is kept so the Subcontractor → To-dos action stays neutral by
+    // default; subcontract mail that is really client business files via the Tagged picker's confirm.)
 
     private static string RecordTypeLabel(RecordType type) => type switch
     {
@@ -1596,11 +1598,11 @@ else
     // a union rather than the intersection a user would expect — picking one clears the other.
     private string? pathwayBucketFilter;
 
-    // Cross-filing confirm (the LANE — Subcontractor↔Internal, plan §2.3): when the server answers a
-    // link with its "Confirm the cross-filing" rejection, the message is shown with a "File under
-    // both anyway" button that retries the same link(s) with AllowCrossPathway. The client-wall
-    // rejection carries no such marker and surfaces as a plain error — the wall has no override, so
-    // no retry is ever offered for it.
+    // Cross-filing confirm (plan §2.3): when the server answers a link with its "Confirm the
+    // cross-filing" rejection, the message is shown with a "File under both anyway" button that
+    // retries the same link(s) with AllowCrossPathway. Since the hard client wall was removed
+    // (2026-08-21) EVERY pathway crossing — Client↔Subcontractor/Internal included — takes this
+    // confirm route; no crossing is a dead end any more.
     private string? crossFileMessage;
 
     private static bool IsCrossFilePrompt(string message) =>
@@ -4131,9 +4133,9 @@ else
 
     // Add another workflow tag by linking this already-tagged email to a second record (so it feeds
     // more than one record). Reuses the same generic link command as the queue's "Link to existing",
-    // but NOT RunTaggedAction — the pathway guards need their own error handling: the server's
-    // cross-filing prompt becomes an inline confirm (retry with consent), while a client-wall
-    // rejection is shown verbatim with no retry (the wall has no override).
+    // but NOT RunTaggedAction — the pathway guard needs its own error handling: the server's
+    // cross-filing prompt becomes an inline confirm (retry with consent). Any crossing — the former
+    // client wall included (removed 2026-08-21) — takes this confirm route.
     private async Task DoAddTagLink() => await DoAddTagLinkCore(allowCrossPathway: false);
 
     private async Task DoAddTagLinkConfirmCross() => await DoAddTagLinkCore(allowCrossPathway: true);

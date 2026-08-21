@@ -454,8 +454,77 @@ public static class ModalCatalog
                 })
         });
 
+    /// <summary>
+    /// The "Edit work order" dialog on a project's Work Orders tab — the accountant's correction
+    /// path (2026-08-21): a live order needs an extra line the supplier's email priced, the FD
+    /// edits the order, saves, and downloads the updated purchase order from the PO page to send
+    /// back by hand — saving never re-emails the supplier. The route carries the order in the
+    /// query (?record=): work orders have no detail page of their own, the dialog lives on the
+    /// register. Directors only, matching the API's gate for editing issued orders; the dialog
+    /// opens pre-filled with the order as it stands.
+    /// </summary>
+    public static readonly ModalDescriptor WorkOrderEdit = new(
+        "work_order_edit",
+        "Edit work order",
+        "It edits a work order — title, scope of works and the priced lines — pre-filled with the "
+        + "order as it stands. Read the order's context first (get_work_order_context, then "
+        + "read_record_emails record_type work_order for the correspondence) and send the corrected "
+        + "fields in ONE update. The lines sent back REPLACE the schedule, so keep every existing "
+        + "line that is still right, spelled exactly as the dialog shows it — that is what keeps "
+        + "its payment history attached; a line with money paid against it can never be removed or "
+        + "priced below what has been paid. The user reviews everything and presses Save changes "
+        + "themselves; nothing is written until they do, and saving never emails the supplier — "
+        + "the updated purchase order is downloaded from the PO page and sent by hand.",
+        "/projects/{project}/work-orders?record={record}",
+        // Exactly the API's gate for editing issued orders (UpdateManualWorkOrderAuthorisation
+        // .MayEditAnyOrder): the MD, the FD and administrators. The wider team can edit manual
+        // orders by hand, but offering this dialog to them would route some of them into a 400
+        // on orders a source flow owns.
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.FinanceDirector
+        },
+        new ModalField[]
+        {
+            new("title", "string",
+                "The order's title, at most 256 characters, in the house style. Leave it out to "
+                + "keep what the dialog already shows."),
+
+            new("scope", "string",
+                "The scope of works printed on the purchase order, plain text. Itemised £ "
+                + "breakdowns belong here too (it prints pre-wrap). Only what the order's "
+                + "correspondence actually supports; leave it out to keep what stands."),
+
+            new("lines", "array",
+                "The complete priced schedule as it should stand — this replaces the dialog's "
+                + "list. Keep every existing line that is still right, with its title spelled "
+                + "EXACTLY as the dialog shows it (that match is what preserves the line's payment "
+                + "history); add only lines the correspondence actually prices. A line with money "
+                + "paid against it can't be removed and can't drop below what has been paid — the "
+                + "dialog's state says paidToDate per line.",
+                ItemFields: new ModalField[]
+                {
+                    new("title", "string",
+                        "The line as the purchase order prints it — an existing line's title "
+                        + "verbatim to keep it, or a new line's short label.", Required: true),
+                    new("description", "string",
+                        "The longer detail for the PO's Description column — optional."),
+                    new("costCode", "string",
+                        "The cost centre this line's committed value lands on. It must be a Code "
+                        + "returned by list_cost_codes, spelled exactly as that tool returned it. "
+                        + "If no code clearly fits, leave this out — the user picks it from a "
+                        + "list. A wrong cost code sends real money to the wrong place."),
+                    new("amount", "number",
+                        "The line's value in GBP as a plain number, NET of VAT. Negative only for "
+                        + "a credit line. Only figures the correspondence actually states.",
+                        Required: true)
+                })
+        });
+
     public static IReadOnlyList<ModalDescriptor> All { get; } =
-        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails, TenderReply, ManualTimesheet, RecordAbsence, WorkerWeek };
+        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails, TenderReply, ManualTimesheet, RecordAbsence, WorkerWeek, WorkOrderEdit };
 
     public static ModalDescriptor? Find(string? modalKey) =>
         string.IsNullOrWhiteSpace(modalKey)

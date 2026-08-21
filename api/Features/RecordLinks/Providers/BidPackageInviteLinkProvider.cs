@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 // Linkable-record provider for Bid Package Invites. Wraps the BidPackages table so a tagged email can
 // be linked to a bid package and the package can read its mail back live by tag (RecordEmailReader) —
 // the same mechanism the Request family uses, with no changes to the link/read layer or triage UI.
-public sealed class BidPackageInviteLinkProvider : ILinkableRecordProvider
+public sealed class BidPackageInviteLinkProvider : ILinkableRecordProvider, ITagResolvingProvider
 {
     private readonly JpmsContext context;
 
@@ -32,6 +32,16 @@ public sealed class BidPackageInviteLinkProvider : ILinkableRecordProvider
     {
         var entity = await context.BidPackages.AsNoTracking()
             .FirstOrDefaultAsync(p => p.BidPackageId == recordId, ct);
+        return entity is null ? null : ToLinkable(entity);
+    }
+
+    // "BPI-0004" -> the package numbered 4. Legacy rows with no Number carry id-derived stems the
+    // parse rejects, so they simply don't resolve — their chips render unlinked.
+    public async Task<LinkableRecord?> FindByTagAsync(string tagReference, CancellationToken ct)
+    {
+        if (!TagReferenceParsing.TryParseNumber(tagReference, "BPI", out var number)) return null;
+        var entity = await context.BidPackages.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Number == number, ct);
         return entity is null ? null : ToLinkable(entity);
     }
 

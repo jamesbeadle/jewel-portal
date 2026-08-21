@@ -46,6 +46,15 @@ public sealed class UpdateManualWorkOrderEndpoint
             return new ObjectResult("Your role doesn't have permission to edit work orders.")
             { StatusCode = StatusCodes.Status403Forbidden };
 
+        // SERVER-SET, whatever the client sent: the wider edit power (non-manual orders —
+        // awarded, variation-instructed, seeded) belongs to the MD, FD and administrators,
+        // and only the resolved sign-in can say so. The handler holds the entity and
+        // enforces it there.
+        command = command with
+        {
+            EditorMayEditAnyOrder = UpdateManualWorkOrderAuthorisation.MayEditAnyOrder(signedInUser)
+        };
+
         var validationOutcome = validation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 

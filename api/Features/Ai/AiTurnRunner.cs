@@ -316,6 +316,19 @@ public sealed class AiTurnRunner
             return null;
         }
 
+        if (string.Equals(modal.ModalKey, ModalCatalog.WorkOrderEdit.ModalKey, StringComparison.OrdinalIgnoreCase))
+        {
+            var orderExists = await context.WorkOrders.AsNoTracking()
+                .AnyAsync(row => row.WorkOrderId == recordId, ct);
+            if (!orderExists)
+            {
+                return Fail($"No work order exists with id \"{recordId}\" — that is not a real record id. "
+                    + "get_work_order_context (by reference, e.g. WO-0045) returns the actual id. Do not "
+                    + "invent one.");
+            }
+            return null;
+        }
+
         // tender_reply is anchored to a specific tender EMAIL, which only the bid package page can
         // supply — opening it by navigation would land on the page with no composer showing. When
         // the task is live the composer is already open; there is nothing for open_modal to do.

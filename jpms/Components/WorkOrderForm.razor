@@ -36,7 +36,7 @@
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Order title</label>
             <input type="text" maxlength="256" placeholder="e.g. Groundworks package — BVMH"
                    class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
-                   disabled="@Busy" @bind="title" @bind:event="oninput" />
+                   disabled="@Busy" @bind="title" @bind:event="oninput" @bind:after="NotifyChangedAsync" />
         </div>
     </div>
     <div>
@@ -47,7 +47,7 @@
            (2026-08-13): two rows invited one-line scopes and hid that multi-line lists work. *@
         <textarea rows="6" maxlength="4000" placeholder="What the order instructs (optional) — line breaks print as typed, e.g.&#10;£350 - Urgent delivery surcharge&#10;£1,540 - Floor protection"
                   class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
-                  disabled="@Busy" @bind="scope" @bind:event="oninput"></textarea>
+                  disabled="@Busy" @bind="scope" @bind:event="oninput" @bind:after="NotifyChangedAsync"></textarea>
         <p class="text-xs text-content-subtle mt-1">Prints in the purchase order's "Works Order info" section exactly as typed — each line keeps its own line, aligned left.</p>
     </div>
 

@@ -13,7 +13,7 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 // Subcontract-side by construction: docs/Pathway-Split-Platform-Flow-Plan.md §2.2 lists "link work
 // order" in the Subcontractor pathway's action set, and TriageCategories.BucketFor maps the type to
 // JPMS/Subcontractor — so an order can never be reached from a Client thread (the wall rejects it).
-public sealed class WorkOrderLinkProvider : ILinkableRecordProvider
+public sealed class WorkOrderLinkProvider : ILinkableRecordProvider, ITagResolvingProvider
 {
     private readonly JpmsContext context;
 
@@ -54,6 +54,25 @@ public sealed class WorkOrderLinkProvider : ILinkableRecordProvider
     {
         var row = await context.WorkOrders.AsNoTracking()
             .Where(o => o.WorkOrderId == recordId)
+            .Select(o => new
+            {
+                Order = o,
+                CompanyName = context.Subcontractors.AsNoTracking()
+                    .Where(s => s.SubcontractorId == o.SubcontractorId)
+                    .Select(s => s.CompanyName)
+                    .FirstOrDefault()
+            })
+            .FirstOrDefaultAsync(ct);
+        return row is null ? null : ToLinkable(row.Order, row.CompanyName);
+    }
+
+    // "WO-0007" -> the order numbered 7. Drafts have no number so their (unstable) id-derived
+    // stems never parse here — the same reason ForProjectAsync excludes them.
+    public async Task<LinkableRecord?> FindByTagAsync(string tagReference, CancellationToken ct)
+    {
+        if (!TagReferenceParsing.TryParseNumber(tagReference, "WO", out var number)) return null;
+        var row = await context.WorkOrders.AsNoTracking()
+            .Where(o => o.Number == number)
             .Select(o => new
             {
                 Order = o,

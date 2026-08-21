@@ -22,7 +22,7 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 // identity — the stable VOQ- tag stem — because the V-ref is only minted at approval and a guessed
 // stem would silently detach mail the moment the real one lands. The variation page already reads
 // both tags' mail, so either identity surfaces on the same record.
-public sealed class VariationOrderLinkProvider : ILinkableRecordProvider
+public sealed class VariationOrderLinkProvider : ILinkableRecordProvider, ITagResolvingProvider
 {
     private readonly JpmsContext context;
 
@@ -53,6 +53,29 @@ public sealed class VariationOrderLinkProvider : ILinkableRecordProvider
 
         var projectRef = await ProjectRefAsync(entity.ProjectId, ct);
         return ToLinkable(entity, projectRef);
+    }
+
+    // Reverse lookup for the tagged-email search: "VO-{projectRef}-{variationRef}". The variation
+    // ref is the last segment ("V18"); candidates carrying it are verified against their own full
+    // project-qualified stem, which is what disambiguates two projects' V18.
+    public async Task<LinkableRecord?> FindByTagAsync(string tagReference, CancellationToken ct)
+    {
+        if (!tagReference.StartsWith("VO-", StringComparison.OrdinalIgnoreCase)) return null;
+        var lastDash = tagReference.LastIndexOf('-');
+        if (lastDash < 3 || lastDash == tagReference.Length - 1) return null;
+        var variationRef = tagReference[(lastDash + 1)..];
+
+        var candidates = await context.VariationOrders.AsNoTracking()
+            .Where(v => v.VariationRef == variationRef)
+            .Take(10)
+            .ToListAsync(ct);
+        foreach (var entity in candidates)
+        {
+            var record = ToLinkable(entity, await ProjectRefAsync(entity.ProjectId, ct));
+            if (record.TagReference.Equals(tagReference, StringComparison.OrdinalIgnoreCase))
+                return record;
+        }
+        return null;
     }
 
     private async Task<string> ProjectRefAsync(string projectId, CancellationToken ct)

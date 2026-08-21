@@ -1,15 +1,20 @@
+using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Models;
+using Jewel.JPMS.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 
 namespace Jewel.JPMS.Components;
 
-public partial class ManualWorkOrderModal
+public partial class ManualWorkOrderModal : IDisposable
 {
+    [Inject] private AiTaskState AiTasks { get; set; } = default!;
+    [Inject] private ChatPanelState Chat { get; set; } = default!;
+
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public string ProjectId { get; set; } = "";
 
@@ -23,7 +28,8 @@ public partial class ManualWorkOrderModal
     [Parameter] public EventCallback<string> OnPoEmailNote { get; set; }
 
     /// <summary>The order being edited, with its lines — null when raising a new order.
-    /// Only manually raised orders (Order.IsManual) may be passed here.</summary>
+    /// Manual orders for the whole team; awarded/variation/seeded orders open here too for the
+    /// MD, FD and administrators (the API enforces the split and refuses everyone else).</summary>
     [Parameter] public ProjectWorkOrderDetail? Editing { get; set; }
 
     private WorkOrderForm? form;
@@ -67,11 +73,64 @@ public partial class ManualWorkOrderModal
     private string? attachmentNote;
     private string? attachmentError;
 
+    // ---- The dialog ⇄ assistant pipe (work_order_edit) ------------------------------------------
+
+    private bool AssistantTaskActive =>
+        AiTasks.Active?.ModalKey == ModalCatalog.WorkOrderEdit.ModalKey;
+
+    // The form's opening state has been published to the task once for this opening — so the
+    // model's first read sees the order as the dialog pre-filled it, not "{}".
+    private bool initialDraftPublished;
+
+    protected override void OnInitialized()
+    {
+        // The assistant's proposals, when a task is in force. Subscribed for the component's life —
+        // the handler itself checks the task matches, so another dialog's task never writes here.
+        AiTasks.OnDraftApplied += HandleAssistantDraft;
+        // Repaints the working banner as the assistant's turn starts and finishes.
+        Chat.OnChange += StateHasChanged;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // The Modal renders children only while open, so the form exists (and has seeded itself
+        // from the order) only after the first open render — publish its state to the task then.
+        if (IsOpen && AssistantTaskActive && !initialDraftPublished && form is not null)
+        {
+            initialDraftPublished = true;
+            AiTasks.UpdateDraft(form.SerialiseState());
+        }
+    }
+
+    /// <summary>The model's update_open_modal, landing in the form. Merge, republish, repaint.</summary>
+    private void HandleAssistantDraft(string fieldsJson)
+    {
+        if (!IsOpen || !AssistantTaskActive || form is null) return;
+        form.ApplyAssistant(fieldsJson);
+        AiTasks.UpdateDraft(form.SerialiseState());
+        StateHasChanged();
+    }
+
+    /// <summary>Every human edit republishes the live state, so the model reasons from the form as
+    /// it stands NOW — the same merge-never-replace contract as the other dialogs.</summary>
+    private void HandleFormChanged()
+    {
+        if (AssistantTaskActive && form is not null) AiTasks.UpdateDraft(form.SerialiseState());
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        AiTasks.OnDraftApplied -= HandleAssistantDraft;
+        Chat.OnChange -= StateHasChanged;
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         if (!IsOpen)
         {
             seeded = false;
+            initialDraftPublished = false;
             return;
         }
         if (seeded) return;

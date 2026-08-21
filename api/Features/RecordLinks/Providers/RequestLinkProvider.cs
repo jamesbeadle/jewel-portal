@@ -13,7 +13,7 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 // The tag stem is project-qualified (see RequestTags): request references are only unique per
 // project (every project runs its own RFI-001…), while JPMS mailbox tags share one flat category
 // space — so the stem carries the project reference, e.g. "JBB-2026-001-RFI-012".
-public sealed class RequestLinkProvider : ILinkableRecordProvider
+public sealed class RequestLinkProvider : ILinkableRecordProvider, ITagResolvingProvider
 {
     private readonly JpmsContext context;
 
@@ -74,6 +74,41 @@ public sealed class RequestLinkProvider : ILinkableRecordProvider
 
         var projectRef = await RequestTags.ProjectRefAsync(context, entity.ProjectId, ct);
         return ToLinkable(entity, projectRef);
+    }
+
+    // Reverse lookup for the tagged-email search. Request stems are project-qualified
+    // ("JBB-2026-001-RFI-012" — see RequestTags), so the request-reference tail is found by
+    // scanning for the first segment that is one of the family prefixes; candidates matching the
+    // tail are then verified against their own full project-qualified stem, which is what makes
+    // two projects' "RFI-012" unambiguous. Legacy pre-qualification tags were the bare reference —
+    // accepted only when exactly one request carries it.
+    public async Task<LinkableRecord?> FindByTagAsync(string tagReference, CancellationToken ct)
+    {
+        var segments = tagReference.Split('-');
+        var start = Array.FindIndex(segments, s => ReferencePrefixes.Contains(s, StringComparer.OrdinalIgnoreCase));
+        if (start < 0) return null;
+        var tail = string.Join('-', segments[start..]);
+
+        var candidates = await context.Requests.AsNoTracking()
+            .Where(r => r.Reference == tail)
+            .Take(10)
+            .ToListAsync(ct);
+        // The REQ-NNNN fallback stem belongs to requests with no human reference of their own.
+        if (candidates.Count == 0 && TagReferenceParsing.TryParseNumber(tail, "REQ", out var number))
+            candidates = await context.Requests.AsNoTracking()
+                .Where(r => r.Number == number && r.Reference == "")
+                .Take(10)
+                .ToListAsync(ct);
+
+        foreach (var entity in candidates)
+        {
+            var stem = await RequestTags.StemAsync(context, entity, ct);
+            if (stem.Equals(tagReference, StringComparison.OrdinalIgnoreCase))
+                return ToLinkable(entity, await RequestTags.ProjectRefAsync(context, entity.ProjectId, ct));
+        }
+        if (start == 0 && candidates.Count == 1)
+            return ToLinkable(candidates[0], await RequestTags.ProjectRefAsync(context, candidates[0].ProjectId, ct));
+        return null;
     }
 
     private static LinkableRecord ToLinkable(RequestEntity entity, string? projectRef) => new(

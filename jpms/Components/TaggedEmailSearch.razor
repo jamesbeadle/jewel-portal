@@ -1,0 +1,209 @@
+@using Jewel.JPMS.Contracts.RecordLinks
+@inject IQueryClient Queries
+@inject SessionService Session
+@implements IDisposable
+
+@*
+    The tagged-email half of the to-do searches (Pages/Todos.razor and ProjectTodoList.razor):
+    the same keywords that filter the to-do list also search the projects mailbox (subjects,
+    bodies, senders, attachment names — SearchMailboxMessages), so "that email about the canopy"
+    is findable from the same box as the to-do it produced. Each hit renders with its record-tag
+    chips resolved to links (ResolveRecordTags): a chip is the record the email is tagged to, and
+    clicking it opens the record's own page, where the email sits in its communications.
+
+    The mailbox search is a live Graph call, so it is debounced rather than run per keystroke,
+    and it renders only for the roles the api lets search the mailbox at large
+    (TriageRoles.AllowedToTriage — mirrored below, like DesktopNavigation.TriageRoles): for
+    everyone else the whole section simply doesn't exist, rather than existing and 403ing.
+*@
+
+@if (CanSearchMailbox && Active)
+{
+    <div class="border-t border-line pt-4 mt-2">
+        <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Emails</h3>
+
+        @if (results is null)
+        {
+            <p class="text-sm text-content-subtle italic">Searching the mailbox…</p>
+        }
+        else if (error is not null)
+        {
+            <p class="text-sm text-negative">@error</p>
+        }
+        else if (results.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">No mailbox emails match "@lastQuery".</p>
+        }
+        else
+        {
+            <p class="text-xs text-content-subtle mb-2">
+                Mailbox emails matching the keywords — each chip is a record the email is tagged to;
+                click one to open that record. Tags themselves are managed in the
+                <a class="underline underline-offset-2 hover:text-content" href="/control-centre">Control Centre</a>.
+            </p>
+            <div class="space-y-2">
+                @foreach (var email in results)
+                {
+                    <div @key="email.Id" class="rounded-lg border border-line px-3 py-2">
+                        <div class="flex items-baseline justify-between gap-2">
+                            <span class="text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                            <span class="text-[11px] text-content-subtle shrink-0">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 mt-0.5">
+                            <p class="text-sm text-content truncate flex-1">@email.Subject</p>
+                            @if (email.HasAttachments)
+                            {
+                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle shrink-0">attachment</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(email.BodyPreview))
+                        {
+                            <p class="text-xs text-content-subtle truncate mt-0.5">@email.BodyPreview</p>
+                        }
+                        <div class="flex flex-wrap items-center gap-1 mt-1">
+                            @if (email.Categories.Count == 0)
+                            {
+                                <span class="inline-flex items-center rounded-full bg-surface-raised border border-line text-content-subtle text-[10px] font-medium px-2 py-0.5">Not tagged to a record</span>
+                            }
+                            else
+                            {
+                                @foreach (var stem in email.Categories.Select(TagStem))
+                                {
+                                    @if (resolved.TryGetValue(stem, out var record) && HrefFor(record) is string href)
+                                    {
+                                        <a class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5 hover:bg-accent/20 hover:underline"
+                                           href="@href" title="@ChipTitle(record)">@record.Reference</a>
+                                    }
+                                    else
+                                    {
+                                        @* A workflow tag (Discarded, Replied) or a stem no provider claimed. *@
+                                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@stem</span>
+                                    }
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The host search box's current text — the component debounces it itself.</summary>
+    [Parameter, EditorRequired] public string Query { get; set; } = "";
+
+    private const int Take = 15;
+    private const int DebounceMs = 500;
+    private const int MinQueryLength = 2;
+
+    private string pendingQuery = "";
+    // The query the current results answer — shown in the empty state so a stale "no match" can
+    // never be read against newer keystrokes.
+    private string lastQuery = "";
+    private string? error;
+    private IReadOnlyList<MailboxMessage>? results;
+    // Stem -> record, accumulated across searches; stems that resolved to nothing are remembered
+    // too, so workflow tags aren't re-asked on every search.
+    private readonly Dictionary<string, LinkableRecord> resolved = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<string> unresolvable = new(StringComparer.OrdinalIgnoreCase);
+    private CancellationTokenSource? debounce;
+
+    private bool Active => (Query ?? "").Trim().Length >= MinQueryLength;
+
+    // Mirrors the api's TriageRoles.AllowedToTriage (and DesktopNavigation.TriageRoles — keep the
+    // three in step): searching the mailbox at large is a triage power. Administrators hold every
+    // role server-side, so they pass via Role.Admin.
+    private bool CanSearchMailbox =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector
+            or Role.ProjectManager or Role.FinanceDirector);
+
+    protected override void OnParametersSet()
+    {
+        if (!CanSearchMailbox) return;
+        var query = (Query ?? "").Trim();
+        if (query == pendingQuery) return;
+        pendingQuery = query;
+        debounce?.Cancel();
+        error = null;
+        // Below the threshold nothing renders (Active is false); null also means "in flight", so
+        // the next visible state is honest either way.
+        results = null;
+        if (query.Length < MinQueryLength) return;
+        var cts = debounce = new CancellationTokenSource();
+        _ = SearchSoonAsync(query, cts.Token);
+    }
+
+    private async Task SearchSoonAsync(string query, CancellationToken token)
+    {
+        try { await Task.Delay(DebounceMs, token); } catch (TaskCanceledException) { return; }
+        try
+        {
+            var found = await Queries.AskAsync(new SearchMailboxMessages(query, Take), token);
+            if (token.IsCancellationRequested) return;
+            results = found;
+            lastQuery = query;
+            // The emails render at once; the chips upgrade to links as the resolve lands.
+            await InvokeAsync(StateHasChanged);
+            await ResolveTagsAsync(found, token);
+        }
+        catch (OperationCanceledException) { return; }
+        catch
+        {
+            if (token.IsCancellationRequested) return;
+            results = Array.Empty<MailboxMessage>();
+            lastQuery = query;
+            error = "The mailbox couldn't be searched just then. Try again in a moment.";
+        }
+        finally
+        {
+            if (!token.IsCancellationRequested) await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task ResolveTagsAsync(IReadOnlyList<MailboxMessage> emails, CancellationToken token)
+    {
+        var stems = emails
+            .SelectMany(email => email.Categories)
+            .Select(TagStem)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(stem => !resolved.ContainsKey(stem) && !unresolvable.Contains(stem))
+            .ToList();
+        if (stems.Count == 0) return;
+        try
+        {
+            var records = await Queries.AskAsync(new ResolveRecordTags(stems), token);
+            foreach (var record in records) resolved[record.TagReference] = record;
+            foreach (var stem in stems.Where(stem => !resolved.ContainsKey(stem))) unresolvable.Add(stem);
+        }
+        catch (OperationCanceledException) { }
+        catch { /* the emails are already on screen; unresolved chips just render unlinked */ }
+    }
+
+    private static string TagStem(string tag) =>
+        tag.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? tag["JPMS/".Length..] : tag;
+
+    // Where each record family's own page lives — mirrors ExplorerRecordTypes.FullPageHref, except
+    // a to-do links to the ITEM's page (/todos/{id}) rather than a list it would then need finding
+    // on again. Null = no page to offer; the chip renders unlinked.
+    private static string? HrefFor(LinkableRecord record) => record.Type switch
+    {
+        RecordType.Todo => $"/todos/{record.RecordId}",
+        RecordType.Request => $"/projects/{record.ProjectId}/requests/view/{record.RecordId}",
+        RecordType.Variation or RecordType.VariationQuote => $"/projects/{record.ProjectId}/variations/{record.RecordId}",
+        RecordType.BidPackageInvite => $"/projects/{record.ProjectId}/bid-package-invites/{record.RecordId}",
+        RecordType.WorkOrder => $"/projects/{record.ProjectId}/work-orders",
+        RecordType.Defect => $"/projects/{record.ProjectId}/defects",
+        RecordType.Scheduling or RecordType.Lad => $"/projects/{record.ProjectId}/programme",
+        _ => null
+    };
+
+    private static string ChipTitle(LinkableRecord record) =>
+        $"Open {record.Reference}{(string.IsNullOrWhiteSpace(record.StatusLabel) ? "" : $" ({record.StatusLabel})")} — {record.Title}";
+
+    public void Dispose()
+    {
+        debounce?.Cancel();
+        debounce?.Dispose();
+    }
+}

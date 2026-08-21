@@ -14,12 +14,10 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Commands;
 //
 // This is also where the thread's communication PATHWAY is decided and guarded (the pathway split —
 // docs/Pathway-Split-Platform-Flow-Plan.md §2.3). The record type implies a pathway (BucketFor);
-// pathway-neutral types (CostCentre) take the triager's explicit choice from command.Pathway. Two
-// tiers of protection:
-//   • THE CLIENT WALL (hard): a thread can never carry Client and a non-Client pathway together.
-//     Any link that would cross it is rejected — no override exists.
-//   • THE LANES (soft): Subcontractor↔Internal dual filing is rejected by default but allowed with
-//     an explicit AllowCrossPathway (the UI warns first).
+// pathway-neutral types (CostCentre) take the triager's explicit choice from command.Pathway.
+// One tier of protection (soft): ANY dual filing — Client↔Subcontractor/Internal included, since
+// the hard "client wall" was removed 2026-08-21 — is rejected by default but allowed with an
+// explicit AllowCrossPathway (the UI shows the message with a "File under both anyway" confirm).
 public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRecord, Acknowledgement>
 {
     private readonly RecordProviderRegistry providers;
@@ -64,30 +62,12 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
             .ToList();
         var hadBucket = existingBuckets.Count > 0;
 
+        // Any dual filing — including Client↔Subcontractor/Internal, since the hard client wall was
+        // removed (2026-08-21) — asks for one explicit confirmation, then proceeds. The UI catches
+        // this "Confirm the cross-filing" message and retries with AllowCrossPathway.
         if (bucket is not null)
             foreach (var existing in existingBuckets.Where(e => !e.Equals(bucket, StringComparison.OrdinalIgnoreCase)))
             {
-                if (TriageCategories.CrossesClientWall(existing, bucket))
-                {
-                    // The one combination that is never allowed, with no override: nothing filed on
-                    // the client side may share a thread with subcontractor/internal correspondence.
-                    await audit.WriteAsync(
-                        AuditEventType.WallRejected,
-                        $"Refused: linking {record.Reference} would file this thread under {AuditTrail.PathwayLabel(bucket)} but it is filed under {AuditTrail.PathwayLabel(existing)}.",
-                        pathway: AuditTrail.PathwayLabel(existing),
-                        projectId: NullIfEmpty(record.ProjectId),
-                        recordType: record.Type,
-                        recordId: record.RecordId,
-                        recordReference: record.Reference,
-                        conversationId: snapshot.ConversationId,
-                        emailMessageId: command.MessageId,
-                        internetMessageId: snapshot.InternetMessageId,
-                        cancellationToken: cancellationToken);
-                    throw new InvalidOperationException(
-                        $"This thread is filed under {AuditTrail.PathwayLabel(existing)}; {record.Reference} would file it under {AuditTrail.PathwayLabel(bucket)}. "
-                        + "Client correspondence is never mixed with subcontractor or internal correspondence — start a new thread, or forward the relevant content.");
-                }
-
                 if (!command.AllowCrossPathway)
                     throw new InvalidOperationException(
                         $"This thread is filed under {AuditTrail.PathwayLabel(existing)}; {record.Reference} would also file it under {AuditTrail.PathwayLabel(bucket)}. "

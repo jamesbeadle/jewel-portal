@@ -32,9 +32,10 @@ public static class TriageCategories
     // --- Communication pathways (buckets) ---
     // Every triaged thread is filed under exactly one pathway: who the correspondence is with.
     // The pathway is a category tag stamped thread-wide alongside the record tag, so each pathway
-    // view is one cheap exact-match Graph filter (same trick as the marker). The hard invariant is
-    // the CLIENT WALL: a thread can never carry Client and a non-Client pathway together, so no
-    // client-visible surface can ever meet subcontractor or internal correspondence.
+    // view is one cheap exact-match Graph filter (same trick as the marker). A thread CAN be filed
+    // under more than one pathway — any dual filing (the former hard "client wall" included,
+    // removed 2026-08-21) is a soft check: refused once, allowed with an explicit confirm
+    // (AllowCrossPathway).
 
     /// <summary>Pathway tag: correspondence with the client side (client, architect).</summary>
     public const string Client = "JPMS/Client";
@@ -77,9 +78,10 @@ public static class TriageCategories
         _ => null
     };
 
-    /// <summary>True when the two categories are pathway tags on opposite sides of the client wall —
-    /// one is <see cref="Client"/> and the other is a non-client pathway. This combination is the one
-    /// that is never allowed on a thread, with no override.</summary>
+    /// <summary>True when the two categories are pathway tags on opposite sides of the former client
+    /// wall — one is <see cref="Client"/> and the other is a non-client pathway. Since 2026-08-21 this
+    /// combination is no longer specially blocked: like any dual filing, it goes through the standard
+    /// cross-filing confirm. Kept for reporting/diagnostics.</summary>
     public static bool CrossesClientWall(string bucketA, string bucketB) =>
         !bucketA.Equals(bucketB, StringComparison.OrdinalIgnoreCase)
         && (bucketA.Equals(Client, StringComparison.OrdinalIgnoreCase)

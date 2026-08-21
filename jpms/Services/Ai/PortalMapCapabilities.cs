@@ -54,7 +54,9 @@ public static class PortalMapCapabilities
         ["/projects/{project}/bid-package-invites"] =
             "bid packages inviting subcontractor prices; open one for its invites, quotes and tagged emails",
         ["/projects/{project}/work-orders"] =
-            "work orders placed with subcontractors; open one for its detail and purchase order",
+            "work orders placed with subcontractors; open one for its detail and purchase order. The "
+            + "\"Edit work order\" dialog (work_order_edit) lives here — correcting an order's title, "
+            + "scope and priced lines, MD/FD/admin for issued orders",
         ["/subcontractors/communications"] =
             "subcontractor correspondence (everything tagged with the JPMS/SubComms family at triage — general plus the Chaser / Info request / Materials / H&S categories), read live with a per-category filter",
 

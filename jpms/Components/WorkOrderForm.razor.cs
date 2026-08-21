@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Components;
@@ -142,6 +143,98 @@ public partial class WorkOrderForm : IDisposable
         StateHasChanged();
     }
 
+    // ---- The dialog ⇄ assistant pipe (the work_order_edit AiTask) --------------------------------
+    // Out: SerialiseState is republished by the hosting modal on every edit (AiTaskState.UpdateDraft)
+    // — the model always reasons from what is on screen NOW, payment locks included. In:
+    // ApplyAssistant merges the model's proposals — a field it did not send keeps what the user
+    // typed, and the lines it sends are MATCHED back to the rows on screen by title so a kept
+    // line's identity (and the paid-to-date history hanging off it) survives the proposal.
+
+    /// <summary>The form's live state as the JSON the assistant task carries with every turn.</summary>
+    public string SerialiseState() => JsonSerializer.Serialize(new
+    {
+        title,
+        scope,
+        lines = lines.Select(line => new
+        {
+            title = line.Title,
+            description = line.Description,
+            costCode = line.CostCode,
+            amount = line.AmountText,
+            // Says which lines are anchored: a paid line can't be removed and can't drop below this.
+            paidToDate = line.PaidToDate
+        })
+    });
+
+    /// <summary>
+    /// The assistant's proposals, merged in. The lines array is the schedule as it should stand:
+    /// each proposed line is matched to an existing row by title (case-insensitive) so the row
+    /// keeps its WorkOrderLineId and payment history; unmatched proposals become new rows. A paid
+    /// row the proposal dropped is kept anyway — the API would refuse its removal, and a silent
+    /// drop here would turn that refusal into a mystery. Validation is unchanged: whatever lands
+    /// here still passes CanSave/TryBuildDraft when the user presses the button.
+    /// </summary>
+    public void ApplyAssistant(string fieldsJson)
+    {
+        if (string.IsNullOrWhiteSpace(fieldsJson)) return;
+        try
+        {
+            using var document = JsonDocument.Parse(fieldsJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return;
+
+            if (ReadText(root, "title") is { } proposedTitle) title = proposedTitle;
+            if (ReadText(root, "scope") is { } proposedScope) scope = proposedScope;
+
+            if (root.TryGetProperty("lines", out var proposedLines) && proposedLines.ValueKind == JsonValueKind.Array)
+            {
+                var unmatched = new List<LineRow>(lines);
+                var next = new List<LineRow>();
+                foreach (var element in proposedLines.EnumerateArray())
+                {
+                    if (element.ValueKind != JsonValueKind.Object) continue;
+                    var lineTitle = ReadText(element, "title") ?? "";
+                    if (string.IsNullOrWhiteSpace(lineTitle)) continue;
+                    var match = unmatched.FirstOrDefault(row =>
+                        !string.IsNullOrWhiteSpace(row.Title)
+                        && string.Equals(row.Title.Trim(), lineTitle.Trim(), StringComparison.OrdinalIgnoreCase));
+                    if (match is not null) unmatched.Remove(match);
+                    var row = match ?? new LineRow();
+                    row.Title = lineTitle;
+                    if (ReadText(element, "description") is { } lineDescription) row.Description = lineDescription;
+                    if (ReadText(element, "costCode") is { } lineCode && !string.IsNullOrWhiteSpace(lineCode)) row.CostCode = lineCode;
+                    if (ReadNumberText(element, "amount") is { } lineAmount) row.AmountText = lineAmount;
+                    next.Add(row);
+                }
+                foreach (var anchored in unmatched.Where(row => row.PaidToDate != 0m)) next.Add(anchored);
+                if (next.Count > 0) lines = next;
+            }
+
+            StateHasChanged();
+            if (OnChanged.HasDelegate) _ = OnChanged.InvokeAsync();
+        }
+        catch (JsonException)
+        {
+            // A malformed proposal is the model's problem, not the user's. The form stands.
+        }
+    }
+
+    private static string? ReadText(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static string? ReadNumberText(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty(name, out var value)) return null;
+        return value.ValueKind switch
+        {
+            JsonValueKind.Number => value.GetDecimal().ToString(System.Globalization.CultureInfo.InvariantCulture),
+            JsonValueKind.String when !string.IsNullOrWhiteSpace(value.GetString()) => value.GetString(),
+            _ => null
+        };
+    }
+
     // ---- Lifecycle ----
 
     protected override async Task OnInitializedAsync()
@@ -235,6 +328,10 @@ public partial class WorkOrderForm : IDisposable
         lines.RemoveAt(index);
         await OnChanged.InvokeAsync();
     }
+
+    // @bind:after on the title and scope inputs — the assistant task republishes the draft on
+    // OnChanged, and those two fields travel in it, so their edits must raise it too.
+    private Task NotifyChangedAsync() => OnChanged.InvokeAsync();
 
     private void SetLineCode(LineRow line, string? value) { line.CostCode = value ?? ""; _ = OnChanged.InvokeAsync(); }
     private void SetLineTitle(LineRow line, string? value) { line.Title = value ?? ""; _ = OnChanged.InvokeAsync(); }

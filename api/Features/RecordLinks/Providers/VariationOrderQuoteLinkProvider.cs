@@ -17,7 +17,7 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;
 // mailbox-category space — so the tag stem is project-qualified the same way VO tags are, using the
 // bare number to avoid stuttering the VOQ prefix:
 //   TagReference = "VOQ-{projectRef}-{number}"  ->  category "JPMS/VOQ-JBB-2026-002-0004".
-public sealed class VariationOrderQuoteLinkProvider : ILinkableRecordProvider
+public sealed class VariationOrderQuoteLinkProvider : ILinkableRecordProvider, ITagResolvingProvider
 {
     private readonly JpmsContext context;
 
@@ -47,6 +47,33 @@ public sealed class VariationOrderQuoteLinkProvider : ILinkableRecordProvider
 
         var projectRef = await ProjectRefAsync(entity.ProjectId, ct);
         return ToLinkable(entity, projectRef);
+    }
+
+    // Reverse lookup for the tagged-email search: "VOQ-{projectRef}-{number}". The bare number is
+    // the last segment; candidates carrying it are verified against their own full
+    // project-qualified stem, which is what disambiguates two projects' 0004.
+    public async Task<LinkableRecord?> FindByTagAsync(string tagReference, CancellationToken ct)
+    {
+        if (!tagReference.StartsWith("VOQ-", StringComparison.OrdinalIgnoreCase)) return null;
+        var lastDash = tagReference.LastIndexOf('-');
+        if (lastDash < 3 || !int.TryParse(tagReference[(lastDash + 1)..], out var number) || number <= 0)
+            return null;
+
+        var candidates = await context.VariationOrders.AsNoTracking()
+            .Where(v => v.Number == number)
+            .Take(10)
+            .ToListAsync(ct);
+        foreach (var entity in candidates)
+        {
+            var record = ToLinkable(entity, await ProjectRefAsync(entity.ProjectId, ct));
+            if (record.TagReference.Equals(tagReference, StringComparison.OrdinalIgnoreCase))
+                return record;
+        }
+        // Historic pre-qualification tags were the bare "VOQ-0072" — accepted when unambiguous
+        // (variation numbers were a single global-ish sequence back then, so they usually are).
+        if (lastDash == 3 && candidates.Count == 1)
+            return ToLinkable(candidates[0], await ProjectRefAsync(candidates[0].ProjectId, ct));
+        return null;
     }
 
     private async Task<string> ProjectRefAsync(string projectId, CancellationToken ct)
