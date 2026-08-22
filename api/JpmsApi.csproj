@@ -11,6 +11,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The test project pins the AI transcript shape (BuildTranscript) and other internals. -->
+    <InternalsVisibleTo Include="Jewel.JPMS.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Azure.Communication.Email" Version="1.0.1" />
     <!--
       Azure.Identity provides the app-only Graph token (client-credentials) used by the on-demand

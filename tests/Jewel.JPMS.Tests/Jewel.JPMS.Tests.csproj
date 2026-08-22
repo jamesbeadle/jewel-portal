@@ -16,6 +16,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\contracts\Jewel.JPMS.Contracts.csproj" />
+    <!-- The AI transcript tests reach api internals (BuildTranscript, AiImageToolResult) via
+         InternalsVisibleTo. This pulls the Functions/EF deps in, but the transcript logic itself
+         is pure, so the tests construct entity rows directly and never touch a database. -->
+    <ProjectReference Include="..\..\api\JpmsApi.csproj" />
   </ItemGroup>
 
 </Project>

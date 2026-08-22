@@ -17,9 +17,18 @@ public sealed record ClaudeReply(
     IReadOnlyList<ClaudeToolCall> ToolCalls,
     string? StopReason,
     string? Error,
-    /// <summary>Reported by Anthropic per call. Summed across a turn's steps for the activity log.</summary>
+    /// <summary>Reported by Anthropic per call. Summed across a turn's steps for the activity log.
+    /// InputTokens is the UNCACHED input only — Anthropic reports cache writes and cache reads in
+    /// their own fields (below), each billed at a different rate, so an honest cost needs all
+    /// three, not input_tokens alone.</summary>
     int InputTokens = 0,
     int OutputTokens = 0,
+    /// <summary>Tokens written to the prompt cache this call (Anthropic bills these at ~1.25× the
+    /// input rate). Large on the first hop of a conversation, ~0 thereafter.</summary>
+    int CacheWriteTokens = 0,
+    /// <summary>Tokens served from the prompt cache this call (billed at ~0.1× the input rate).
+    /// Most of the input on every continuation hop — omitting it understated cost the most.</summary>
+    int CacheReadTokens = 0,
     /// <summary>Set when the call ran on a bigger tier than asked for because the request had
     /// outgrown the chosen model's context window. One human sentence, surfaced by the panel.</summary>
     string? EscalationNote = null);
@@ -379,15 +388,24 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
                 ? stopElement.GetString()
                 : null;
 
-            // { usage: { input_tokens, output_tokens } } — the only honest source of spend.
+            // { usage: { input_tokens, output_tokens, cache_creation_input_tokens,
+            // cache_read_input_tokens } } — the only honest source of spend. input_tokens is the
+            // UNCACHED input; the two cache figures are billed at their own rates, and on a
+            // continuation hop the cache read is most of the input — so cost needs all four.
             var inputTokens = 0;
             var outputTokens = 0;
+            var cacheWriteTokens = 0;
+            var cacheReadTokens = 0;
             if (root.TryGetProperty("usage", out var usage) && usage.ValueKind == JsonValueKind.Object)
             {
                 if (usage.TryGetProperty("input_tokens", out var inElement) && inElement.TryGetInt32(out var parsedIn))
                     inputTokens = parsedIn;
                 if (usage.TryGetProperty("output_tokens", out var outElement) && outElement.TryGetInt32(out var parsedOut))
                     outputTokens = parsedOut;
+                if (usage.TryGetProperty("cache_creation_input_tokens", out var cwElement) && cwElement.TryGetInt32(out var parsedCw))
+                    cacheWriteTokens = parsedCw;
+                if (usage.TryGetProperty("cache_read_input_tokens", out var crElement) && crElement.TryGetInt32(out var parsedCr))
+                    cacheReadTokens = parsedCr;
             }
 
             string? text = null;
@@ -420,6 +438,6 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
             }
 
             return new ClaudeReply(true, text, toolCalls, stopReason, null, inputTokens, outputTokens,
-                escalationNote);
+                cacheWriteTokens, cacheReadTokens, escalationNote);
     }
 }

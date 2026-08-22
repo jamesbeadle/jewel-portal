@@ -93,6 +93,15 @@ public sealed class ClaudeClient : IClaudeClient
             request.Headers.Add("x-api-key", _options.ApiKey);
             request.Headers.Add("anthropic-version", _options.ApiVersion);
 
+            // A hard 35s deadline, exactly like CompleteChunkAsync: this call runs under the
+            // Static Web Apps ~45s gateway, and the HttpClient's own default is 100s, so a slow
+            // Anthropic response would take the whole request past the gateway and hand the user a
+            // raw 500 — defeating the "degrade to manual, never error" contract every caller
+            // documents. Expiring here returns null into that degrade path instead.
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(35));
+            ct = timeout.Token;
+
             using var response = await _http.SendAsync(request, ct);
             if (!response.IsSuccessStatusCode)
             {

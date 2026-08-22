@@ -76,7 +76,16 @@ public sealed class AnthropicOptions
     public bool IsCostRateConfigured => InputPencePerMillion > 0 || OutputPencePerMillion > 0;
 
     public decimal CostPence(int inputTokens, int outputTokens) =>
+        CostPence(inputTokens, outputTokens, 0, 0);
+
+    /// <summary>Cost with the prompt cache priced honestly: Anthropic bills a cache WRITE at ~1.25×
+    /// the input rate and a cache READ at ~0.1×. input_tokens already excludes both, so summing all
+    /// three at their own multipliers is the true spend — and on a caching-heavy conversation the
+    /// read term is most of it, which the old two-argument form dropped entirely.</summary>
+    public decimal CostPence(int inputTokens, int outputTokens, int cacheWriteTokens, int cacheReadTokens) =>
         (inputTokens * InputPencePerMillion / 1_000_000m)
+        + (cacheWriteTokens * InputPencePerMillion * 1.25m / 1_000_000m)
+        + (cacheReadTokens * InputPencePerMillion * 0.10m / 1_000_000m)
         + (outputTokens * OutputPencePerMillion / 1_000_000m);
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(ApiKey);

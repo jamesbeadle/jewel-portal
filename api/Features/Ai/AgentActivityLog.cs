@@ -48,7 +48,9 @@ public sealed class AgentActivityLog
         IEnumerable<string>? toolsUsed = null,
         int durationMs = 0,
         int inputTokens = 0,
-        int outputTokens = 0)
+        int outputTokens = 0,
+        int cacheWriteTokens = 0,
+        int cacheReadTokens = 0)
     {
         try
         {
@@ -68,9 +70,12 @@ public sealed class AgentActivityLog
                 Route = Clamp(route, 512),
                 ToolsUsed = toolsUsed is null ? null : Clamp(string.Join(", ", toolsUsed), 512),
                 DurationMs = durationMs,
-                InputTokens = inputTokens,
+                // The stored InputTokens folds the cache figures back in, so the column is the
+                // real total input processed (uncached + written + read) rather than the sliver
+                // Anthropic labels input_tokens; CostPence prices each slice at its own rate.
+                InputTokens = inputTokens + cacheWriteTokens + cacheReadTokens,
                 OutputTokens = outputTokens,
-                CostPence = options.CostPence(inputTokens, outputTokens),
+                CostPence = options.CostPence(inputTokens, outputTokens, cacheWriteTokens, cacheReadTokens),
                 OccurredAt = DateTimeOffset.UtcNow
             };
 
