@@ -25,7 +25,17 @@ public static class RouteRecord
         if (segments.Length < 3) return (null, null);
 
         var type = Singular(segments[1]);
-        return type is null ? (null, null) : (type, segments[2]);
+        if (type is null) return (null, null);
+
+        // The request detail route is /requests/view/{id} — "view" is a literal segment, not the
+        // id (without this the scope stamped RecordId "view"); and /requests/{kind} is the
+        // register's tab (all, general, rfis…), never a record.
+        if (string.Equals(segments[2], "view", StringComparison.OrdinalIgnoreCase))
+            return segments.Length >= 4 ? (type, segments[3]) : (null, null);
+        if (string.Equals(segments[1], "requests", StringComparison.OrdinalIgnoreCase))
+            return (null, null);
+
+        return (type, segments[2]);
     }
 
     /// <summary>Null for a section that is not a record register — settings, financials and so on.</summary>
@@ -41,6 +51,7 @@ public static class RouteRecord
         "bid-package-invites" => "bid package",
         "work-orders" => "work order",
         "drawings" => "drawing",
+        "defects" => "defect",
         "valuations" => "valuation",
         "valuation-invoices" => "valuation invoice",
         _ => null

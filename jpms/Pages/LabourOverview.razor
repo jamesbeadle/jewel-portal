@@ -463,15 +463,26 @@ else
     </section>
 
     @* ---- Absence modal ---- *@
-    <Modal IsOpen="@absenceOpen" Title="@($"Record absence — {absenceWorkerName}")"
-           ConfirmLabel="Record" ConfirmDisabled="@absenceSaving"
-           OnCancel="CloseAbsence" OnConfirm="SaveAbsenceAsync">
+    <Modal IsOpen="@absenceOpen"
+           Title="@(string.IsNullOrWhiteSpace(absenceWorkerName) ? "Record absence" : $"Record absence — {absenceWorkerName}")"
+           ConfirmLabel="Record" ConfirmDisabled="@(absenceSaving || string.IsNullOrWhiteSpace(absenceWorkerId))"
+           OnCancel="CloseAbsence" OnConfirm="SaveAbsenceAsync"
+           ChatAware="true" DismissOnOverlayClick="false">
         <div class="space-y-3">
+            <label class="block text-sm text-content-muted">Worker
+                <select class="field mt-1" @bind="absenceWorkerId" @bind:after="AbsenceWorkerChanged">
+                    <option value="">Worker…</option>
+                    @foreach (var worker in Labour.Workers().Where(worker => worker.IsActive).OrderBy(worker => worker.Name))
+                    {
+                        <option value="@worker.WorkerId">@worker.Name</option>
+                    }
+                </select>
+            </label>
             <label class="block text-sm text-content-muted">Date
-                <input class="field mt-1" type="date" @bind="absenceDate" />
+                <input class="field mt-1" type="date" @bind="absenceDate" @bind:after="PublishAbsenceDraft" />
             </label>
             <label class="block text-sm text-content-muted">Kind
-                <select class="field mt-1" @bind="absenceKind">
+                <select class="field mt-1" @bind="absenceKind" @bind:after="PublishAbsenceDraft">
                     <option value="@AbsenceKind.Holiday">Holiday</option>
                     <option value="@AbsenceKind.HalfDay">Half day</option>
                     <option value="@AbsenceKind.NotWorked">Not worked</option>
@@ -479,7 +490,7 @@ else
                 </select>
             </label>
             <label class="block text-sm text-content-muted">Note (optional)
-                <input class="field mt-1" @bind="absenceNote" placeholder="e.g. booked leave" />
+                <input class="field mt-1" @bind="absenceNote" @bind:after="PublishAbsenceDraft" placeholder="e.g. booked leave" />
             </label>
         </div>
     </Modal>
@@ -694,6 +705,10 @@ else
 
     public void Dispose()
     {
+        // Leaving the page ends its task — a dangling task ships the dialog's stale JSON with
+        // every later turn and leaves the chat panel lifted above every future modal.
+        EndWeekTask();
+        EndAbsenceTask();
         Labour.OnChange -= HandleChange;
         Projects.OnChanged -= HandleChange;
         CostCenters.OnChanged -= HandleChange;
@@ -1340,14 +1355,30 @@ else
 
     private async Task StripModalQueryAsync()
     {
+        // Latched BEFORE the first await: two entry paths (a lifecycle hook and LocationChanged,
+        // which resets the flag) can both enter for one navigation, and both used to cross the
+        // replaceState await before the flag was set — two AiTasks.Start calls, two billed
+        // kick-off turns.
+        modalRequestHonoured = true;
         try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
         catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-        modalRequestHonoured = true;
     }
 
     private async Task HonourAbsenceModalAsync()
     {
         await StripModalQueryAsync();
+
+        // Honoured only where this user could have opened the dialog by clicking — the same
+        // gate ModalCatalog declares, said out loud on refusal: a silently dropped open_modal
+        // is the worst failure this feature has.
+        if (Session.ActiveRole is not { } absenceRole
+            || !ModalCatalog.CanOpen(ModalCatalog.RecordAbsence, new[] { absenceRole }))
+        {
+            actionError = "The assistant tried to open the Record-absence dialog, but the role "
+                + "you are viewing as can't record absences.";
+            StateHasChanged();
+            return;
+        }
 
         absenceWorkerId = ""; absenceWorkerName = ""; absenceDate = DateTime.Today;
         absenceKind = AbsenceKind.Holiday; absenceNote = "";
@@ -1382,6 +1413,16 @@ else
     private async Task HonourWeekModalAsync()
     {
         await StripModalQueryAsync();
+
+        if (Session.ActiveRole is not { } weekRole
+            || !ModalCatalog.CanOpen(ModalCatalog.WorkerWeek, new[] { weekRole }))
+        {
+            actionError = "The assistant tried to open the Enter-a-week dialog, but the role you "
+                + "are viewing as can't enter timesheets.";
+            StateHasChanged();
+            return;
+        }
+
         await OpenWeekEntryAsync();
 
         if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
@@ -1435,9 +1476,35 @@ else
         {
             workerName = absenceWorkerName,
             date = absenceDate.ToString("yyyy-MM-dd"),
-            kind = absenceKind.ToString(),
+            // The schema's own vocabulary (holiday, half-day, not-worked, sick) — the enum's
+            // "HalfDay" round-tripped through a model that echoes state back used to fall
+            // through the apply's default arm and silently become Holiday.
+            kind = AbsenceKindWord(absenceKind),
             note = absenceNote,
         });
+
+    private static string AbsenceKindWord(AbsenceKind kind) => kind switch
+    {
+        AbsenceKind.HalfDay => "half-day",
+        AbsenceKind.NotWorked => "not-worked",
+        AbsenceKind.Sick => "sick",
+        _ => "holiday",
+    };
+
+    /// <summary>Every user edit reaches the task's draft — a dialog the model cannot see the
+    /// user's corrections in gets them silently overwritten by the next proposal.</summary>
+    private void PublishAbsenceDraft()
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.RecordAbsence.ModalKey) return;
+        AiTasks.UpdateDraft(SerialiseAbsenceState());
+    }
+
+    private void AbsenceWorkerChanged()
+    {
+        absenceWorkerName = Labour.Workers()
+            .FirstOrDefault(worker => worker.WorkerId == absenceWorkerId)?.Name ?? "";
+        PublishAbsenceDraft();
+    }
 
     /// <summary>The model's update_open_modal, landing in whichever form is live: merge, never
     /// replace. This page hosts two assistant dialogs, so dispatch on the active task's key.</summary>
@@ -1476,7 +1543,10 @@ else
                     "half-day" or "halfday" => AbsenceKind.HalfDay,
                     "not-worked" or "notworked" => AbsenceKind.NotWorked,
                     "sick" => AbsenceKind.Sick,
-                    _ => AbsenceKind.Holiday,
+                    "holiday" => AbsenceKind.Holiday,
+                    // An unrecognised word keeps what the form already says rather than silently
+                    // rewriting it to Holiday.
+                    _ => absenceKind,
                 };
             if (root.TryGetProperty("note", out var note) && note.ValueKind == System.Text.Json.JsonValueKind.String)
                 absenceNote = note.GetString() ?? "";

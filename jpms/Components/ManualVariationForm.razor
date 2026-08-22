@@ -119,13 +119,16 @@
         if (OnEdited.HasDelegate) _ = OnEdited.InvokeAsync();
     }
 
-    /// <summary>The form's live state as the JSON the assistant task carries with every turn.</summary>
+    /// <summary>The form's live state as the JSON the assistant task carries with every turn.
+    /// number and estimatedValue go out as NUMBERS (null while blank or unparseable) — the
+    /// schema declares them numeric, and serialising the raw text ("" included) taught the model
+    /// the wrong shape and read as a value someone had set.</summary>
     public string SerialiseState() => JsonSerializer.Serialize(new
     {
-        number = numberText,
+        number = ParsedNumber,
         title,
         description,
-        estimatedValue = valueText,
+        estimatedValue = CurrentEstimatedValue,
         commercialBasis,
         programmeImpact,
         exclusions
@@ -162,8 +165,11 @@
         }
     }
 
+    // Whitespace-only counts as not sent: the schema promises "leave it out to keep what
+    // stands", and an empty string used to wipe what the user had typed.
     private static string? ReadText(JsonElement root, string name) =>
         root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
+            && !string.IsNullOrWhiteSpace(value.GetString())
             ? value.GetString()
             : null;
 
@@ -183,6 +189,9 @@
     {
         if (!string.IsNullOrWhiteSpace(numberText) || suggested <= 0) return;
         numberText = suggested.ToString();
+        // The seed is field state — published like any edit, so the model sees the project's
+        // next number instead of proposing one that may already exist.
+        if (OnEdited.HasDelegate) _ = OnEdited.InvokeAsync();
         StateHasChanged();
     }
 

@@ -362,6 +362,17 @@
                                 Carry on
                             </button>
                         }
+
+                        @if (showRetryContinue && !busy)
+                        {
+                            @* A network blip mid-turn. Continuing is always safe — the server
+                               rebuilds the turn from its own transcript — so the turn is offered
+                               back, never abandoned. *@
+                            <button type="button" @onclick="RetryContinue"
+                                    class="rounded-lg border border-line bg-surface-raised px-3 py-1.5 text-xs leading-snug text-content-muted hover:text-content hover:border-line-strong transition">
+                                Retry
+                            </button>
+                        }
                     </div>
                 }
 
@@ -421,7 +432,7 @@
                                    once; the file itself is never stored. Images (attached, dropped
                                    or pasted from the clipboard) are the exception: the assistant
                                    SEES those, so the image itself persists on the conversation. *@
-                                <label for="jpms-chat-attachment" title="Attach a spreadsheet, text file or image (xlsx, csv, tsv, txt, png, jpg, gif, webp)"
+                                <label for="jpms-chat-attachment" title="Attach a spreadsheet, PDF, Word document, text file or image (xlsx, csv, tsv, txt, pdf, docx, png, jpg, gif, webp)"
                                        class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-md cursor-pointer text-content-subtle hover:text-content hover:bg-surface-raised @(busy || uploadingFileName is not null ? "pointer-events-none opacity-40" : "")">
                                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -429,7 +440,7 @@
                                     </svg>
                                 </label>
                                 <InputFile id="jpms-chat-attachment" OnChange="OnFileSelected"
-                                           accept=".xlsx,.csv,.tsv,.txt,.png,.jpg,.jpeg,.gif,.webp" class="hidden" />
+                                           accept=".xlsx,.csv,.tsv,.txt,.pdf,.docx,.png,.jpg,.jpeg,.gif,.webp" class="hidden" />
                                 <span class="min-w-0 truncate pl-0.5 text-[10px] text-content-faint">@ComposerFootnote</span>
                             </div>
                             <div class="shrink-0 flex items-center gap-2">
@@ -474,6 +485,13 @@
     private string? error;
     private string? modelNote;
     private bool showCarryOn;
+    // A continuation hop failed to reach the server (after one quiet retry). Continuing is always
+    // safe — the server rebuilds the turn from its own transcript — so a Retry chip is offered.
+    private bool showRetryContinue;
+    // What the hop just applied — read by the hop loop to give the destination page a beat to
+    // initialise before the next hop's scope is built from it.
+    private bool hopNavigated;
+    private bool hopOpenedModal;
     // A task kick-off hands the previous conversation's id to the server so its tail can follow
     // the user into the fresh one (the handover Context row). Consumed by the next Send.
     private string? pendingPreviousConversationId;
@@ -870,7 +888,55 @@
         return local.Year == today.Year ? local.ToString("d MMM HH:mm") : local.ToString("d MMM yyyy");
     }
 
-    private void HandleLocationChanged(object? sender, EventArgs args) => StateHasChanged();
+    private void HandleLocationChanged(object? sender, EventArgs args)
+    {
+        EndTaskIfPageGone();
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// The safety net under every page's own Dispose: a task whose owning page is no longer the
+    /// one on screen is over, whatever the page did or didn't clean up. Without this, navigating
+    /// away mid-task left <c>AiTasks.Active</c> dangling for the rest of the session — every later
+    /// turn shipped stale form JSON for a dialog that no longer existed, assistant updates fell
+    /// into a subscriber-less event, and the panel stayed lifted above every future modal
+    /// (CoexistingModalOpen was never cleared).
+    /// </summary>
+    private void EndTaskIfPageGone()
+    {
+        if (AiTasks.Active is not { } task) return;
+        var modal = ModalCatalog.Find(task.ModalKey);
+        if (modal is not null && RouteMatchesTemplate(CurrentPath, modal.RouteTemplate)) return;
+        AiTasks.End();
+        Chat.SetCoexistence(false);
+    }
+
+    /// <summary>Whether a live path is an instance of a ModalCatalog route template — same
+    /// segment count, literal segments equal, <c>{...}</c> segments matching anything. The
+    /// template's own query string (work_order_edit's <c>?record=</c>) is ignored, and the
+    /// Control Centre's legacy route counts as its canonical one.</summary>
+    private static bool RouteMatchesTemplate(string path, string template)
+    {
+        var stem = template;
+        var query = stem.IndexOf('?');
+        if (query >= 0) stem = stem[..query];
+
+        if (string.Equals(stem, "/control-centre", StringComparison.OrdinalIgnoreCase)
+            && path.StartsWith("/requests/triage", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        var wanted = stem.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var actual = path.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (wanted.Length != actual.Length) return false;
+        for (var i = 0; i < wanted.Length; i++)
+        {
+            if (wanted[i].StartsWith('{')) continue;
+            if (!string.Equals(wanted[i], actual[i], StringComparison.OrdinalIgnoreCase)) return false;
+        }
+        return true;
+    }
 
     private void CloseChat() => Chat.Close();
 
@@ -915,6 +981,14 @@
         // TakePendingKickoff clears as it reads, so this is what makes the send exactly-once.
         var kickoff = AiTasks.TakePendingKickoff();
         if (string.IsNullOrWhiteSpace(kickoff)) return;
+
+        // Give the dialog a beat to publish its REAL state before the kick-off's scope is built.
+        // A task started with "{}" while the dialog was still rendering (work_order_edit's
+        // pre-filled lines, the composer's prefilled envelope) otherwise tells the model the form
+        // is empty — and it then "helpfully" overwrites what was already there.
+        for (var i = 0; i < 10 && !AiTasks.DraftPublishedSinceStart && AiTasks.Active is not null; i++)
+            await Task.Delay(60);
+        if (AiTasks.Active is null) return; // Ended while waiting (page navigated away).
 
         // A task gets a fresh conversation, but the one the user was just in follows them across
         // as a handover: the server copies its tail into the new conversation as background, so
@@ -969,6 +1043,7 @@
         error = null;
         modelNote = null;
         showCarryOn = false;
+        showRetryContinue = false;
         pendingPreviousConversationId = null;
         attachError = null;
         historyOpen = false;
@@ -1090,6 +1165,9 @@
         busy = true;
         Chat.SetAssistantBusy(true);
         showCarryOn = false;
+        showRetryContinue = false;
+        hopNavigated = false;
+        hopOpenedModal = false;
         activityLabel = null;
         modelNote = null;
         lastToolsUsed = new List<string>();
@@ -1100,9 +1178,11 @@
         pendingPreviousConversationId = null;
 
         // Show the user's own message straight away rather than waiting on the round trip. A
-        // kick-off carries its marker, so it renders as a task badge, never as their words.
-        messages.Add(new AiChatMessage(
-            Guid.NewGuid().ToString("N"), AiChatRole.User, text, isKickoff ? "kickoff" : null, DateTimeOffset.UtcNow));
+        // kick-off carries its marker, so it renders as a task badge, never as their words. Kept
+        // by reference so a send that never reached the server can take it back out.
+        var optimistic = new AiChatMessage(
+            Guid.NewGuid().ToString("N"), AiChatRole.User, text, isKickoff ? "kickoff" : null, DateTimeOffset.UtcNow);
+        messages.Add(optimistic);
         // The attachment pill sits UNDER the message it went with — sent together, shown together.
         if (attached is not null)
         {
@@ -1132,35 +1212,26 @@
             // from the panel the moment the first hop landed, though the server had them all along
             // (which is why a refresh brought them back).
 
-            // A turn is a sequence of hops. Each one is a single Claude call server-side, so the
-            // panel can say what it is doing between them instead of sitting on one long request.
-            // The cap tracks AiTurnRunner.MaxHops (10) with headroom — the server is authoritative.
-            for (var hop = 0; hop < 12; hop++)
-            {
-                await FoldAsync(result);
-                if (result.Status != AiTurnStatus.NeedsContinue) break;
-
-                // Scope is REBUILT per hop, not reused from the send: a navigate_to in the previous
-                // hop changed the page (and the page note), and the next hop must reason from where
-                // the user is NOW — that is what makes navigate-then-act chains work.
-                result = await Commands.SendAsync(
-                    new ContinueAiTurn(conversationId, BuildScope(), string.Empty, modelKey), CancellationToken.None);
-                conversationId = result.ConversationId;
-            }
-
-            if (result.Status == AiTurnStatus.Truncated)
-            {
-                error = "That took more look-ups than one message allows.";
-                showCarryOn = true;
-            }
-
-            // No API key, or the Claude call failed. Tell the dialog, so a form that is sitting
-            // blank waiting for a draft fills itself in from the record instead.
-            if (result.Status == AiTurnStatus.Unavailable) AiTasks.ReportAssistantUnavailable();
+            await RunHopLoopAsync(result);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            error = $"Couldn't send that: {ex.Message}";
+            if (conversationId is null)
+            {
+                // The very first send of a new conversation never reached the server (or never
+                // answered) — take the optimistic bubble back out and put the words back in the
+                // box, so nothing the user typed is lost.
+                messages.Remove(optimistic);
+                draft = text;
+                error = "Couldn't reach the server — nothing was sent. Your message is back in the box.";
+            }
+            else
+            {
+                // The conversation exists server-side, so the safe move is to CONTINUE it, not to
+                // resend the message (a resend would land the same words twice).
+                error = "Lost the connection sending that. Press Retry — nothing needs typing again.";
+                showRetryContinue = true;
+            }
             AiTasks.ReportAssistantUnavailable();
         }
         finally
@@ -1183,6 +1254,118 @@
         showCarryOn = false;
         draft = "Carry on from where you got to.";
         await Send();
+    }
+
+    /// <summary>
+    /// A turn is a sequence of hops. Each one is a single Claude call server-side, so the panel
+    /// can say what it is doing between them instead of sitting on one long request. The cap
+    /// tracks AiTurnRunner.MaxHops (10) with headroom — the server is authoritative.
+    /// </summary>
+    private async Task RunHopLoopAsync(AiTurnResult result)
+    {
+        for (var hop = 0; hop < 12; hop++)
+        {
+            await FoldAsync(result);
+            if (result.Status != AiTurnStatus.NeedsContinue) break;
+
+            // A hop that navigated or opened a dialog changed which page owns the screen — give
+            // that page a beat to initialise before the next hop's scope is built from it, or the
+            // model reads a half-loaded page (no task, no note, no project) and reasons from it.
+            await WaitForPageAfterActionsAsync();
+
+            // Scope is REBUILT per hop, not reused from the send: a navigate_to in the previous
+            // hop changed the page (and the page note), and the next hop must reason from where
+            // the user is NOW — that is what makes navigate-then-act chains work.
+            try
+            {
+                result = await Commands.SendAsync(
+                    new ContinueAiTurn(conversationId, BuildScope(), string.Empty, modelKey), CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                // One quiet retry, then the Retry chip. Continuing is ALWAYS safe — the server
+                // rebuilds the turn from its own transcript — so a network blip must not kill a
+                // nine-hop job with everything it has already read.
+                await Task.Delay(800);
+                try
+                {
+                    result = await Commands.SendAsync(
+                        new ContinueAiTurn(conversationId, BuildScope(), string.Empty, modelKey), CancellationToken.None);
+                }
+                catch (Exception)
+                {
+                    error = "Lost the connection mid-task. Nothing is lost — press Retry to carry on from where it got to.";
+                    showRetryContinue = true;
+                    return;
+                }
+            }
+            conversationId = result.ConversationId;
+        }
+
+        if (result.Status == AiTurnStatus.Truncated)
+        {
+            error = "That took more look-ups than one message allows.";
+            showCarryOn = true;
+        }
+
+        // No API key, or the Claude call failed. Tell the dialog, so a form that is sitting
+        // blank waiting for a draft fills itself in from the record instead.
+        if (result.Status == AiTurnStatus.Unavailable) AiTasks.ReportAssistantUnavailable();
+    }
+
+    /// <summary>The Retry chip: picks a broken turn back up with a plain continuation. Safe to
+    /// press any number of times — a hop that never answered wrote nothing.</summary>
+    private async Task RetryContinue()
+    {
+        if (busy || conversationId is null) return;
+
+        showRetryContinue = false;
+        error = null;
+        busy = true;
+        Chat.SetAssistantBusy(true);
+        try
+        {
+            var result = await Commands.SendAsync(
+                new ContinueAiTurn(conversationId, BuildScope(), string.Empty, modelKey), CancellationToken.None);
+            conversationId = result.ConversationId;
+            await RunHopLoopAsync(result);
+        }
+        catch (Exception)
+        {
+            error = "Still couldn't reach the server. Check the connection and press Retry again.";
+            showRetryContinue = true;
+        }
+        finally
+        {
+            busy = false;
+            Chat.SetAssistantBusy(false);
+            activityLabel = null;
+        }
+        await TryStartTaskAsync();
+    }
+
+    /// <summary>
+    /// The beat between a hop that changed the page and the next hop's scope build. An opened
+    /// dialog is waited on properly — up to two seconds for the destination page to honour the
+    /// query and start the task, checked every tenth — because the whole point of the next hop is
+    /// usually that dialog. A plain navigation gets a short fixed grace for the page's providers
+    /// to register. Neither wait throws and both are bounded, so a page that never settles costs
+    /// tenths of a second, not the turn.
+    /// </summary>
+    private async Task WaitForPageAfterActionsAsync()
+    {
+        var openedModal = hopOpenedModal;
+        var navigated = hopNavigated;
+        hopOpenedModal = false;
+        hopNavigated = false;
+
+        if (openedModal)
+        {
+            for (var i = 0; i < 20 && AiTasks.Active is null; i++)
+                await Task.Delay(100);
+            return;
+        }
+        if (navigated) await Task.Delay(400);
     }
 
     /// <summary>
@@ -1212,21 +1395,32 @@
             // the turn ends, the takeover overlay (MainLayout) dims the app and blocks its input
             // so the user and the assistant cannot fight over the same controls. Cleared by
             // SetAssistantBusy(false) in Send's finally, whatever way the turn ends.
-            case "navigate_to": Chat.SetAssistantControlling(true); ApplyNavigate(action); break;
+            case "navigate_to": Chat.SetAssistantControlling(true); hopNavigated = true; ApplyNavigate(action); break;
             case "update_open_modal": Chat.SetAssistantControlling(true); ApplyModalUpdate(action); break;
-            case "open_modal": Chat.SetAssistantControlling(true); ApplyOpenModal(action); break;
+            case "open_modal": Chat.SetAssistantControlling(true); hopOpenedModal = true; ApplyOpenModal(action); break;
             case "stage_triage_tag":
             case "stage_triage_todo":
+            case "select_email":
                 // Addressed to the open page (the Control Centre), not to the panel — and AWAITED,
-                // so the next hop's page note reports what actually staged. The server only offers
-                // these tools on that route, so a missing handler means the builds have drifted —
-                // said out loud, per the open_modal lesson: a silent no-op here is the model
-                // narrating a stage that never happened.
+                // so the next hop's page note reports what actually staged or selected. The server
+                // only offers these tools on that route, so a missing handler means the builds
+                // have drifted — said out loud, per the open_modal lesson: a silent no-op here is
+                // the model narrating a stage that never happened. (select_email was exactly that
+                // silent no-op until 2026-08-22: the tool, the server offer and the page handler
+                // all existed, and this switch had no case for it.)
                 Chat.SetAssistantControlling(true);
                 if (!await Chat.DispatchPageActionAsync(action.Tool!.ToLowerInvariant(), action.ArgumentsJson ?? "{}"))
-                    error = "The assistant tried to stage something, but this page can't take it. "
-                        + "Staging happens in the Control Centre — if you ARE there, hard-refresh "
-                        + "the browser and restart the API (the builds have drifted).";
+                    error = "The assistant tried to act on this page, but no page is listening for "
+                        + $"\"{action.Tool}\". That happens in the Control Centre — if you ARE there, "
+                        + "hard-refresh the browser and restart the API (the builds have drifted).";
+                break;
+            default:
+                // A Ui tool this build has no case for. The server said "handed to browser", so a
+                // silent drop here is the model narrating an action that never happened — the
+                // single worst failure this feature has. Say so.
+                error = $"The assistant asked for a browser action this app build doesn't know "
+                    + $"(\"{action.Tool}\"). If the portal was just updated, hard-refresh the "
+                    + "browser and restart the API.";
                 break;
         }
     }

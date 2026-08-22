@@ -16,8 +16,11 @@ public sealed record AiTask(
     /// <summary>Replaces "Thinking…" while a turn is in flight, so the wait says what it is
     /// waiting on: "Reading RFI-049 and the emails tagged to it…".</summary>
     string BusyLabel,
-    /// <summary>The first user turn, sent automatically once the cost notice has been accepted.</summary>
-    string KickoffMessage,
+    /// <summary>The first user turn, sent automatically once the cost notice has been accepted.
+    /// Null or blank means NO kick-off: the task rides along silently — the open dialog's contents
+    /// and the update tool reach the model, but no billed turn starts until the user speaks. Used
+    /// for dialogs the user opened by hand (the Control Centre's reply composer).</summary>
+    string? KickoffMessage,
     string? ProjectId,
     string? RecordType,
     string? RecordId,
@@ -75,11 +78,22 @@ public sealed class AiTaskState
     /// </summary>
     public event Action? OnAssistantUnavailable;
 
+    /// <summary>
+    /// True once the dialog has published its real state since the task started. The chat panel
+    /// waits briefly on this before sending a kick-off, so the first hop's scope carries the
+    /// form as it actually stands (work_order_edit's pre-filled lines above all) rather than the
+    /// "{}" the task was started with while the dialog was still rendering.
+    /// </summary>
+    public bool DraftPublishedSinceStart { get; private set; }
+
     public void Start(AiTask task, string draftJson)
     {
         Active = task;
         DraftJson = string.IsNullOrWhiteSpace(draftJson) ? "{}" : draftJson;
-        PendingKickoff = task.KickoffMessage;
+        // A real initial state counts as published — only "{}" leaves the panel waiting for the
+        // dialog's first publish.
+        DraftPublishedSinceStart = !string.IsNullOrWhiteSpace(draftJson) && draftJson.Trim() != "{}";
+        PendingKickoff = string.IsNullOrWhiteSpace(task.KickoffMessage) ? null : task.KickoffMessage;
         OnChange?.Invoke();
     }
 
@@ -88,6 +102,7 @@ public sealed class AiTaskState
     {
         if (Active is null) return;
         DraftJson = string.IsNullOrWhiteSpace(draftJson) ? "{}" : draftJson;
+        DraftPublishedSinceStart = true;
     }
 
     /// <summary>From the chat panel, when a update_open_modal action comes back from the server.</summary>
@@ -121,6 +136,7 @@ public sealed class AiTaskState
         Active = null;
         DraftJson = "{}";
         PendingKickoff = null;
+        DraftPublishedSinceStart = false;
         OnChange?.Invoke();
     }
 }

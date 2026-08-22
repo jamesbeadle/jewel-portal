@@ -40,6 +40,9 @@
       IFontResolver (DocumentFontResolver) supplies the TrueType faces it needs there.
     -->
     <PackageReference Include="PDFsharp-MigraDoc" Version="6.1.1" />
+    <!-- PDF TEXT EXTRACTION (reading, where PDFsharp above is generation) — read_email_attachment
+         and chat uploads route PDFs through AiAttachmentReader.ExtractPdf on it. -->
+    <PackageReference Include="PdfPig" Version="0.1.9" />
     <!--
       ClosedXML (MIT, pure managed — fine on the Linux Functions host) reads the spreadsheets users
       attach to the assistant chat (AiAttachmentReader): the boss's tracker workbook goes in, text

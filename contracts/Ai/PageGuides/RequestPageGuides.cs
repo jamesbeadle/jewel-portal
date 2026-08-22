@@ -16,7 +16,10 @@ public static class RequestPageGuides
             + "mailbox, PDF attached — sent from Outlook, never here), or merges exactly two open "
             + "General requests. You read it with list_requests and find_by_reference; no dialog "
             + "opens here. Variations live at /projects/{project}/variations; most RFIs are raised "
-            + "from emails in the Control Centre."),
+            + "from emails in the Control Centre.",
+            // The register's tab routes (/requests/all, /requests/general, /requests/rfis) are
+            // the same page — without the alias they resolved no guide at all.
+            Aliases: new[] { "/projects/{project}/requests/{kind}" }),
 
         new("/projects/{project}/requests/view/{requestId}", "Request / RFI detail",
             "One request's full working papers: detail, official form (itemised queries, basis, "

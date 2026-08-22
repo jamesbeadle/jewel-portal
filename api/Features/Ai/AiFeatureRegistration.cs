@@ -21,6 +21,12 @@ public static class AiFeatureRegistration
 {
     public static IServiceCollection AddAiFeature(this IServiceCollection services, IConfiguration configuration)
     {
+        // Fails the boot if the hand-kept AI registries (tools, dialogs, labels, descriptions)
+        // have drifted apart — deterministic static data, so a throw here can only mean a commit
+        // shipped the drift, and stopping it at startup beats the assistant narrating actions
+        // that never happen.
+        AiRegistryDriftCheck.Assert();
+
         var options = AnthropicOptions.FromConfiguration(configuration);
         services.AddSingleton(options);
 
@@ -32,10 +38,11 @@ public static class AiFeatureRegistration
 
             services.AddSingleton<IClaudeConversationClient>(sp =>
                 new ClaudeConversationClient(
-                    // The turn loop makes several calls inside one request; give it a per-call
-                    // timeout well under the Static Web Apps gateway's ~45s so one slow call fails
-                    // fast rather than taking the whole turn down with it.
-                    new HttpClient { Timeout = TimeSpan.FromSeconds(25) },
+                    // The client manages its own per-attempt deadlines against a 36s budget (see
+                    // ClaudeConversationClient.CallBudget) so a hop always answers inside the
+                    // Static Web Apps gateway's ~45s. This outer timeout is only the backstop for
+                    // a hung socket the budget's linked cancellation somehow failed to cut.
+                    new HttpClient { Timeout = TimeSpan.FromSeconds(60) },
                     options,
                     sp.GetRequiredService<ILogger<ClaudeConversationClient>>()));
         }

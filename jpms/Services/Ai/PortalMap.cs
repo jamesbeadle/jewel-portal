@@ -31,6 +31,11 @@ public static class PortalMap
 
         var map = new StringBuilder();
 
+        // Home is a standalone static item that belongs to neither collection below — without
+        // this line the landing page (which has a full page guide) was missing from the map.
+        map.AppendLine("- Home:");
+        map.AppendLine(Line(DesktopNavigation.Home));
+
         foreach (var folder in DesktopNavigation.FoldersFor(role))
         {
             map.Append("- ").Append(folder.Label).AppendLine(":");
@@ -61,6 +66,13 @@ public static class PortalMap
         // register, or from the ready-made `route` most read tools return (prefer those routes).
         map.AppendLine("- Record detail pages (substitute real ids — tools return ready-made routes):");
         foreach (var page in PortalMapCapabilities.DetailPages)
+            map.Append("  ").AppendLine(page);
+
+        // Pages with no sidebar row of their own — dashboards and registers reached from other
+        // pages. Listed so their guides are reachable: load_page_guide says "pass a route from
+        // the site map", and a guide for a route the map never mentions is write-only.
+        map.AppendLine("- Also reachable (no sidebar row — navigate_to takes you there):");
+        foreach (var page in PortalMapCapabilities.OtherPages)
             map.Append("  ").AppendLine(page);
 
         var built = map.ToString().TrimEnd();

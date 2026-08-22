@@ -378,7 +378,8 @@ else
            proposal card — the assistant fills it, the user reads and presses Add day. ---- *@
     <Modal IsOpen="@addDayOpen" Title="Add a day"
            ConfirmLabel="@(isAddingManual ? "Adding…" : "Add day")" ConfirmDisabled="@isAddingManual"
-           OnCancel="CloseAddDay" OnConfirm="AddManualAsync">
+           OnCancel="CloseAddDay" OnConfirm="AddManualAsync"
+           ChatAware="true" DismissOnOverlayClick="false">
         <p class="text-xs text-content-subtle mb-3">For workers who forgot to sign out (or verbal reports), enter their day here — it joins the approval queue as normal.</p>
         <div class="space-y-3">
             <label class="block text-sm text-content-muted">Worker
@@ -524,6 +525,9 @@ else
 
     public void Dispose()
     {
+        // Leaving the page ends its task — a dangling task ships the dialog's stale JSON with
+        // every later turn and leaves the chat panel lifted above every future modal.
+        EndManualTimesheetTask();
         Labour.OnChange -= StateHasChanged;
         CostCenters.OnChanged -= StateHasChanged;
         AiTasks.OnDraftApplied -= HandleAssistantDraft;
@@ -637,6 +641,9 @@ else
     private void OpenAddDay()
     {
         manualError = null;
+        // A full day is the house default — the draft used to publish hours: 0 against the
+        // schema's stated minimum of 0.5, which read as a value someone had chosen.
+        if (manualHours <= 0) manualHours = 8;
         addDayOpen = true;
     }
 
@@ -683,9 +690,27 @@ else
     {
         if (!WantsManualTimesheetFromRoute()) return;
 
+        // Latched BEFORE the first await: two entry paths (a lifecycle hook and LocationChanged,
+        // which resets the flag) can both enter for one navigation, and both used to cross the
+        // replaceState await before the flag was set — two AiTasks.Start calls, two billed
+        // kick-off turns.
+        modalRequestHonoured = true;
+
         try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
         catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-        modalRequestHonoured = true;
+
+        // Honoured only where this user could have opened the dialog by clicking — the same gate
+        // as ModalCatalog declares (the API's AddWorkerTimesheet gate), said out loud on refusal:
+        // a silently dropped open_modal is the worst failure this feature has.
+        if (Session.ActiveRole is not { } arrivedRole
+            || !ModalCatalog.CanOpen(ModalCatalog.ManualTimesheet, new[] { arrivedRole }))
+        {
+            manualError = "The assistant tried to open the Add-a-day dialog, but the role you are "
+                + "viewing as can't enter timesheets — the MD, the FD, a project manager or an "
+                + "administrator can.";
+            StateHasChanged();
+            return;
+        }
 
         OpenAddDay();
 

@@ -13,7 +13,8 @@ namespace Jewel.JPMS.Services.Ai;
 /// record detail pages have no sidebar row to derive from (they are reached from their register or
 /// from a tool's returned route), and the orchestrator has to know they exist to be told "open
 /// V72". Each entry names its @page route verbatim — when a detail page moves, this list is the
-/// second place the commit touches, and docs/site-map.md the third.</para>
+/// second place the commit touches. (docs/site-map.md is a historic proposal, not a
+    /// route table — do not update it.)</para>
 ///
 /// <para>Keep every note to ONE line and write it for the model: what lives there, and which of its
 /// verbs work there — read, create (which dialog), tag emails. No prose the model cannot act on.</para>
@@ -66,7 +67,8 @@ public static class PortalMapCapabilities
             "the master to-do list across every project, with a project filter. find_by_reference "
             + "resolves a spoken \"TODO-0074\" to the item — its notes, project and route — and "
             + "read_record_emails (record_type todo) reads its tagged mail, so action an item's work "
-            + "yourself rather than sending the user clicking",
+            + "yourself rather than sending the user clicking (a \"raise this WO\" item: read its "
+            + "tagged mail, then open_modal work_order_create with the item's projectId)",
         ["/directory"] =
             "everyone the company deals with — clients, architects, subcontractors, staff; open an entry for its record",
 
@@ -121,6 +123,9 @@ public static class PortalMapCapabilities
         ["/admin/users"] = "user administration",
         ["/admin/system"] = "the announced app version",
         ["/admin/trades"] = "the curated trade list (add, rename, delete)",
+        ["/registers"] = "the office registers — insurances, subscriptions, vehicles, trade accounts",
+        ["/policies"] = "company policies and staff sign-off",
+        ["/labour/xero-mapping"] = "maps labour payments to Xero accounts",
         ["/admin/agents"] = "the assistant's agent registry, live",
         ["/admin/skills"] = "the assistant's editable domain skills",
 
@@ -129,13 +134,16 @@ public static class PortalMapCapabilities
             "the mailbox intake queue and router for ALL correspondence across every project. "
             + "Everything about the SELECTED email is done on this page, never by navigating away: "
             + "select any email yourself with select_email (search words — never ask the user to "
-            + "click one for you); "
+            + "click one for you); READ it with read_selected_email (its attachment ids feed "
+            + "read_email_attachment); "
             + "tag it to any record — variations, RFIs, defects, bid packages — with stage_triage_tag "
             + "(the same act as picking it in the System Tags pane; Apply lands it); stage to-dos with "
             + "stage_triage_todo (assignee, notes, due date; Apply raises them); set its project; "
-            + "write a reply or forward; raise records from it in System Actions. Also the "
-            + "New email composer: the compose_email dialog opens HERE (open_modal compose_email) for "
-            + "any email the user asks you to draft; they review and press Send on this page",
+            + "DRAFT ITS REPLY with the reply_email dialog (open_modal reply_email opens the Reply "
+            + "box under it; the reply sends on Apply); raise records from it in System Actions. "
+            + "Also the New email composer: the compose_email dialog opens HERE (open_modal "
+            + "compose_email) for any brand-new email the user asks you to draft; they review and "
+            + "press Send on this page",
         ["/document-triage"] =
             "the attachment triage queue for all projects — files from the Control Centre, filed out to "
             + "Drawings, Payment Certificates or subcontractor records",
@@ -166,6 +174,27 @@ public static class PortalMapCapabilities
         "Drawing → /projects/{project}/drawings/{drawingId} — revision history and viewer",
         "To-do → /todos/{todoItemId} — one to-do with its notes and tagged mail",
         "Directory entry → /directory/{subcontractorId} — a subcontractor's master record, compliance and history",
+    };
+
+    /// <summary>
+    /// Pages with NO sidebar row and no register to be reached from — dashboards and admin lists
+    /// linked from other pages. Listed in the map under "Also reachable" so their page guides can
+    /// actually be loaded (load_page_guide tells the model to pass a route from the site map).
+    /// One line each: "name → route — what it is".
+    /// </summary>
+    public static readonly IReadOnlyList<string> OtherPages = new[]
+    {
+        "RFI dashboard → /rfis — RFIs across every project, by state and due date",
+        "Estimating queue → /estimating-queue — RFQs awaiting pricing across projects",
+        "Nurture → /nurture — leads and early-stage projects being nurtured",
+        "Architects → /architects — the architect practice directory",
+        "Clients → /clients — the client directory",
+        "Agent queue → /agents — requests being watched by applied discipline agents",
+        "Sales analytics → /sales-analytics — pipeline and conversion analytics",
+        "Revoked users → /admin/users/revoked — access that has been revoked",
+        "Stale rates → /rate-library/stale — library rates due a re-price",
+        "Project overview → /projects/{project} — one project's overview and tab bar",
+        "Ambiguous drawings → /projects/{project}/drawings/ambiguous — drawings needing manual matching",
     };
 
     /// <summary>The note for a sidebar href, or null.</summary>

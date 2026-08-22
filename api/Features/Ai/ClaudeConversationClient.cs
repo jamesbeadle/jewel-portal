@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Jewel.JPMS.Contracts.Ai;
@@ -114,18 +115,30 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
 
             foreach (var block in blocks)
             {
-                if (!block.TryGetValue("type", out var type) || !Equals(type, "image")) continue;
-                if (block.TryGetValue("source", out var source)
-                    && source is Dictionary<string, object?> sourceDictionary
-                    && sourceDictionary.TryGetValue("data", out var data)
-                    && data is string base64)
+                CountImage(block);
+                // Images also ride INSIDE a tool_result's own content blocks (an email
+                // attachment shown to the model) — one level of nesting, scanned the same way.
+                if (block.TryGetValue("content", out var nested)
+                    && nested is List<Dictionary<string, object?>> nestedBlocks)
                 {
-                    chars += base64.Length;
-                    count++;
+                    foreach (var inner in nestedBlocks) CountImage(inner);
                 }
             }
         }
         return (chars, count);
+
+        void CountImage(Dictionary<string, object?> block)
+        {
+            if (!block.TryGetValue("type", out var type) || !Equals(type, "image")) return;
+            if (block.TryGetValue("source", out var source)
+                && source is Dictionary<string, object?> sourceDictionary
+                && sourceDictionary.TryGetValue("data", out var data)
+                && data is string base64)
+            {
+                chars += base64.Length;
+                count++;
+            }
+        }
     }
 
     /// <summary>
@@ -230,46 +243,93 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
                     AiModelCatalogue.Normalise(modelTier), tier, estimatedTokens);
             }
 
-            // At most two attempts: the estimated fit, then one retry a tier up if the API still
-            // says the prompt is too long — the estimate is conservative, so this path should be
-            // rare, but "rare" is not "never" and a hard failure mid-conversation is the one
-            // outcome this method exists to prevent.
-            for (var attempt = 0; ; attempt++)
+            // The attempt loop, under one clock. Three kinds of second chance, all bounded:
+            //   - a transient failure (connection refused, 408/429/5xx/529) retries up to twice,
+            //     but only while the FIRST seconds of the budget are still on the table — those
+            //     failures arrive fast, and a retry after a slow failure would blow the gateway;
+            //   - "prompt too long" steps up ONE tier and goes again (the estimate is
+            //     conservative, so this is rare);
+            //   - a slow generation gets the whole remaining budget and, if it still times out,
+            //     fails with "timeout" — the runner tells the user a retry is safe, because a
+            //     hop that never answered wrote nothing.
+            var callClock = Stopwatch.StartNew();
+            var attempt = 0;
+            var steppedUpForLength = false;
+            while (true)
             {
+                attempt++;
                 payload["model"] = options.ModelForTier(tier);
 
-                using var request = new HttpRequestMessage(HttpMethod.Post, MessagesUrl)
-                {
-                    Content = JsonContent.Create(payload)
-                };
-                request.Headers.Add("x-api-key", options.ApiKey);
-                request.Headers.Add("anthropic-version", options.ApiVersion);
+                var remaining = CallBudget - callClock.Elapsed;
+                if (remaining < TimeSpan.FromSeconds(2))
+                    return new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null, "timeout");
 
-                using var response = await http.SendAsync(request, ct);
-                if (!response.IsSuccessStatusCode)
-                {
-                    var body = await response.Content.ReadAsStringAsync(ct);
-                    logger.LogWarning("Anthropic conversation call failed: {Status} {Body}.", (int)response.StatusCode, body);
+                using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                attemptCts.CancelAfter(remaining);
 
-                    if (attempt == 0
-                        && (int)response.StatusCode == 400
-                        && body.Contains("too long", StringComparison.OrdinalIgnoreCase)
-                        && NextBiggerTier(tier) is { } bigger)
+                HttpResponseMessage response;
+                try
+                {
+                    using var request = new HttpRequestMessage(HttpMethod.Post, MessagesUrl)
                     {
-                        var fromName = AiModelCatalogue.Find(tier)?.DisplayName ?? tier;
-                        tier = bigger;
-                        escalationNote = $"Stepped up to {AiModelCatalogue.Find(bigger)?.DisplayName ?? bigger} for this "
-                                         + $"reply — the conversation has grown past what {fromName} can read.";
+                        Content = JsonContent.Create(payload)
+                    };
+                    request.Headers.Add("x-api-key", options.ApiKey);
+                    request.Headers.Add("anthropic-version", options.ApiVersion);
+                    response = await http.SendAsync(request, attemptCts.Token);
+                }
+                catch (Exception ex) when (
+                    ex is HttpRequestException
+                    || (ex is OperationCanceledException && !ct.IsCancellationRequested))
+                {
+                    var timedOut = ex is OperationCanceledException;
+                    logger.LogWarning(ex, "Anthropic conversation attempt {Attempt} {Kind} after {Elapsed:F1}s.",
+                        attempt, timedOut ? "timed out" : "failed to connect", callClock.Elapsed.TotalSeconds);
+
+                    if (!timedOut && attempt < MaxAttempts && callClock.Elapsed < RetryWindow)
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(600 * attempt), ct);
                         continue;
                     }
-
                     return new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null,
-                        $"upstream_{(int)response.StatusCode}");
+                        timedOut ? "timeout" : "connection");
                 }
 
-                await using var stream = await response.Content.ReadAsStreamAsync(ct);
-                using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-                return Parse(document.RootElement, escalationNote);
+                using (response)
+                {
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        var body = await response.Content.ReadAsStringAsync(ct);
+                        var status = (int)response.StatusCode;
+                        logger.LogWarning("Anthropic conversation call failed: {Status} {Body}.", status, body);
+
+                        if (!steppedUpForLength
+                            && status == 400
+                            && body.Contains("too long", StringComparison.OrdinalIgnoreCase)
+                            && NextBiggerTier(tier) is { } bigger)
+                        {
+                            steppedUpForLength = true;
+                            var fromName = AiModelCatalogue.Find(tier)?.DisplayName ?? tier;
+                            tier = bigger;
+                            escalationNote = $"Stepped up to {AiModelCatalogue.Find(bigger)?.DisplayName ?? bigger} for this "
+                                             + $"reply — the conversation has grown past what {fromName} can read.";
+                            continue;
+                        }
+
+                        if (IsTransientStatus(status) && attempt < MaxAttempts && callClock.Elapsed < RetryWindow)
+                        {
+                            await Task.Delay(TimeSpan.FromMilliseconds(600 * attempt), ct);
+                            continue;
+                        }
+
+                        return new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null,
+                            status is 429 or 529 ? "busy" : $"upstream_{status}");
+                    }
+
+                    await using var stream = await response.Content.ReadAsStreamAsync(ct);
+                    using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+                    return Parse(document.RootElement, escalationNote);
+                }
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -278,6 +338,26 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
             return new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null, "exception");
         }
     }
+
+    /// <summary>
+    /// How long one hop may spend talking to Anthropic in total, across attempts. The Static Web
+    /// Apps gateway cuts the WHOLE request at ~45s and the hop still has tool execution and
+    /// database writes to do after the call, so the call itself gets 36s and not a second more.
+    /// </summary>
+    private static readonly TimeSpan CallBudget = TimeSpan.FromSeconds(36);
+
+    /// <summary>
+    /// A failure this early is a connection refusal, a 429 or an overloaded 529 — not a slow
+    /// generation — so there is budget left to try again. A timeout NEAR the budget retries
+    /// nothing: the retry would just time out again and blow the gateway ceiling.
+    /// </summary>
+    private static readonly TimeSpan RetryWindow = TimeSpan.FromSeconds(14);
+
+    private const int MaxAttempts = 3;
+
+    /// <summary>Statuses worth a second try: rate limits, transient server errors, overload.</summary>
+    private static bool IsTransientStatus(int status) =>
+        status is 408 or 429 or 500 or 502 or 503 or 504 or 529;
 
     /// <summary>The next tier up with a genuinely bigger window, or null from the top.</summary>
     private string? NextBiggerTier(string currentTier)

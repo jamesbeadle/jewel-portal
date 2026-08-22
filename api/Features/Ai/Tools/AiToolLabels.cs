@@ -34,6 +34,14 @@ public static class AiToolLabels
                             ?? "Reading a skill",
             "load_skill_reference" => Named(arguments, "ref_key", key => $"Reading {key}")
                                       ?? "Reading a reference",
+            "get_request_context" => "Reading the request's working papers",
+            "get_bid_package_context" => "Reading the bid package",
+            "get_work_order_context" => Named(arguments, "reference", reference => $"Reading {reference}")
+                                        ?? "Reading the work order",
+            "list_request_correspondence" => "Reading the correspondence",
+            "list_cost_codes" => "Reading the cost codes",
+            "load_page_guide" => Named(arguments, "route", route => $"Reading the guide for {route}")
+                                 ?? "Reading the page guide",
             "read_record_emails" => "Reading the tagged emails",
             "read_selected_email" => "Reading the open email",
             "read_email_attachment" => "Reading an attachment",
@@ -46,10 +54,15 @@ public static class AiToolLabels
             "open_modal" => Named(arguments, "modal_key", key => key switch
                             {
                                 "compose_email" => "Opening the email composer",
+                                "reply_email" => "Opening the reply",
                                 "manual_variation" => "Opening the Add-variation form",
                                 "variation_draft" => "Opening the variation draft",
                                 "work_order_edit" => "Opening the work order for editing",
                                 "work_order_create" => "Opening the Add work order form",
+                                "bid_package_details" => "Opening the package details",
+                                "manual_timesheet" => "Opening the Add-a-day form",
+                                "record_absence" => "Opening the Record-absence form",
+                                "worker_week" => "Opening the week entry",
                                 _ => "Opening a dialog"
                             }) ?? "Opening a dialog",
             "update_open_modal" => "Writing into the form",

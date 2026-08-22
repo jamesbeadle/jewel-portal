@@ -97,9 +97,11 @@ public sealed class ChatPanelState
     /// update_open_modal) until the turn ends: the assistant is OPERATING the portal, not just
     /// answering. MainLayout renders the takeover overlay while it is set — the screen dims behind
     /// a green-edged vignette and the app stops taking input, so the user cannot fight the
-    /// assistant for the controls mid-action. The chat panel lifts above the overlay and stays
-    /// fully usable throughout. Set by ChatPanel when it applies a UI action; cleared by
-    /// <see cref="SetAssistantBusy"/>(false) so no error path can strand the screen dimmed.
+    /// assistant for the controls mid-action. The overlay deliberately covers the chat panel too
+    /// (z-65 runs the full viewport, no seam at the panel's edge) — NOTHING takes input while the
+    /// assistant drives; typing resumes when control lifts. Set by ChatPanel when it applies a UI
+    /// action; cleared by <see cref="SetAssistantBusy"/>(false) so no error path can strand the
+    /// screen dimmed.
     /// </summary>
     public bool AssistantControlling { get; private set; }
 

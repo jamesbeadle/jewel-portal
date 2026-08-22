@@ -49,6 +49,17 @@ public partial class MailReplyComposer
 
     [Parameter] public EventCallback OnCancel { get; set; }
 
+    /// <summary>Raised whenever the composer's fields change — a user keystroke, the reply-all
+    /// prefill landing, an applied assistant proposal. A task host (the bid package page's
+    /// tender_reply) uses it to mirror <see cref="CurrentFieldsJson"/> into the task's draft, so
+    /// the model reads the form as it ACTUALLY stands. Without this the model was shown "{}"
+    /// against a schema that says the envelope is prefilled — so it "helpfully" overwrote the
+    /// correctly reply-all'd envelope, and never saw a word the user typed.</summary>
+    [Parameter] public EventCallback OnFieldsEdited { get; set; }
+
+    private Task NotifyEditedAsync() =>
+        OnFieldsEdited.HasDelegate ? OnFieldsEdited.InvokeAsync() : Task.CompletedTask;
+
     /// <summary>The sentence beside the button — what confirming will actually do, phrased for
     /// where the composer sits. Null falls back to a mode-appropriate default.</summary>
     [Parameter] public string? FooterNote { get; set; }
@@ -131,6 +142,18 @@ public partial class MailReplyComposer
                 subject = MailCompose.ReplySubjectFor(replyTo.Subject);
             }
         }
+
+        // The prefilled envelope IS field state — publish it. The awaits above mean the first
+        // render has happened, so the host's @ref is assigned and can read the fields back.
+        await NotifyEditedAsync();
+    }
+
+    /// <summary>Covers the synchronous path (no anchor — a blank new email): OnInitializedAsync
+    /// completes before the first render there, so the publish above fires while the host's @ref
+    /// is still null. A duplicate publish is harmless — the state is idempotent.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await NotifyEditedAsync();
     }
 
     private void PrefillReplyEnvelope(MailboxMessage replyTo, MailboxMessageDetail loaded)
@@ -182,9 +205,27 @@ public partial class MailReplyComposer
     }
 
     /// <summary>The composer's current fields as the task's draft JSON — what the model sees as
-    /// the dialog's live state on each turn.</summary>
+    /// the dialog's live state on each turn. The body goes out as PLAIN TEXT: that is the dialog
+    /// contract the schema states ("no HTML, no markdown"), and handing the model raw editor HTML
+    /// invited HTML straight back.</summary>
     public string CurrentFieldsJson() =>
-        System.Text.Json.JsonSerializer.Serialize(new { to = toField, cc = ccField, subject, body });
+        System.Text.Json.JsonSerializer.Serialize(new
+            { to = toField, cc = ccField, subject, body = HtmlToPlainText(body) });
+
+    /// <summary>Composer HTML → plain text for the draft JSON the model reads. Mirrors the
+    /// Control Centre composer's converter.</summary>
+    private static string HtmlToPlainText(string html)
+    {
+        if (string.IsNullOrWhiteSpace(html)) return "";
+        var text = html
+            .Replace("</p>", "\n\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("</div>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase)
+            .Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase);
+        text = System.Text.RegularExpressions.Regex.Replace(text, "<[^>]+>", "");
+        return System.Net.WebUtility.HtmlDecode(text).Trim();
+    }
 
     private static string? ReadField(System.Text.Json.JsonElement root, string name) =>
         root.TryGetProperty(name, out var value)

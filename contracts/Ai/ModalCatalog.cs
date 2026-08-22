@@ -211,6 +211,51 @@ public static class ModalCatalog
         });
 
     /// <summary>
+    /// The Reply box under the Control Centre's selected email, registered so "draft a reply to
+    /// this" is a first-class task rather than a degrade to an unthreaded compose_email
+    /// (2026-08-22). Two ways in: the user presses Reply (the page attaches the task silently —
+    /// no kick-off, no billed turn) or the assistant's open_modal reply_email (the server refuses
+    /// it while no email is selected). The reply is STAGED page state — it sends from the
+    /// projects mailbox when the user presses Apply, with the rest of the triage.
+    /// </summary>
+    public static readonly ModalDescriptor ReplyEmail = new(
+        "reply_email",
+        "Reply",
+        "It drafts the reply to the email SELECTED in the Control Centre, in the Reply box under "
+        + "it. The envelope prefills reply-all from the email itself. The reply is lined up and "
+        + "sends from the projects mailbox when the user presses Apply — nothing sends before "
+        + "that. Read the selected email (read_selected_email) BEFORE drafting, so the reply is "
+        + "grounded in what was actually written.",
+        "/control-centre",
+        // Exactly the people who can open the Control Centre (the API's TriageRoles) — same set
+        // as compose_email.
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.FinanceDirector,
+            Role.ProjectManager
+        },
+        new ModalField[]
+        {
+            new("to", "string",
+                "Prefilled reply-all from the email — leave it out unless it is blank, and only "
+                + "ever use addresses you have actually read."),
+
+            new("cc", "string",
+                "Cc recipients, semicolon-separated. Same rule: only addresses you have actually read."),
+
+            new("subject", "string",
+                "Prefilled as \"RE: …\" from the email — leave it out unless it is blank."),
+
+            new("body", "string",
+                "The reply as PLAIN TEXT — blank lines between paragraphs, no HTML, no markdown. "
+                + "Plain UK English, direct, commercial position first, grounded in what the email "
+                + "actually says. Never invent figures, dates or commitments.",
+                Required: true)
+        });
+
+    /// <summary>
     /// The bid package page's "Edit package details" dialog — the specification summary AND the
     /// line-item schedule together, because they are one act of authorship: the summary says what
     /// the package covers, the lines are the measurable scope behind it. This is how the assistant
@@ -601,7 +646,7 @@ public static class ModalCatalog
         });
 
     public static IReadOnlyList<ModalDescriptor> All { get; } =
-        new[] { VariationDraft, ManualVariation, ComposeEmail, BidPackageDetails, TenderReply, ManualTimesheet, RecordAbsence, WorkerWeek, WorkOrderEdit, WorkOrderCreate };
+        new[] { VariationDraft, ManualVariation, ComposeEmail, ReplyEmail, BidPackageDetails, TenderReply, ManualTimesheet, RecordAbsence, WorkerWeek, WorkOrderEdit, WorkOrderCreate };
 
     public static ModalDescriptor? Find(string? modalKey) =>
         string.IsNullOrWhiteSpace(modalKey)

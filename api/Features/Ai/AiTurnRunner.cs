@@ -126,7 +126,7 @@ public sealed class AiTurnRunner
         if (!reply.Ok)
         {
             var failed = Add(conversation, AiChatRole.Assistant,
-                "I could not reach the Claude API just then. Try again in a moment — nothing has been changed.",
+                FailureMessage(reply.Error),
                 ++sequence, newMessages);
             await SaveAsync(conversation, cancellationToken);
             await LogAsync(conversation, user, scope, AgentOutcome.Failed,
@@ -172,6 +172,20 @@ public sealed class AiTurnRunner
             }
             else if (tool.Kind == AiToolKind.Ui)
             {
+                // Arguments that are not valid JSON were cut off mid-generation (the reply hit
+                // its token ceiling inside the tool_use block). The old path let them through:
+                // the browser's own JsonDocument.Parse caught the exception and did NOTHING, so
+                // the model narrated a dialog update that never happened. Refuse in front of the
+                // model instead, and name the cause so it corrects course.
+                if (!IsParseableJson(call.ArgumentsJson))
+                {
+                    output = Fail("This call's arguments arrived truncated — your reply hit its "
+                        + "length limit mid-call. Resend it in smaller pieces: fewer fields at a "
+                        + "time, or the lines split across two updates.");
+                    ok = false;
+                }
+                else
+                {
                 // Checked BEFORE handing to the browser. A Ui tool's "ok" used to mean only
                 // "posted" — so an open_modal with an invented record id navigated the user to a
                 // dead page while the model narrated success. Refusing here puts the failure in
@@ -195,6 +209,7 @@ public sealed class AiTurnRunner
                         : call.ArgumentsJson;
                     uiActions.Add(new AiUiAction(call.Name, argumentsJson));
                     output = JsonSerializer.Serialize(new { ok = true, handed_to_browser = true });
+                }
                 }
             }
             else
@@ -236,7 +251,50 @@ public sealed class AiTurnRunner
                 : Truncate(reply.Text!, 400),
             steps, clock, reply.InputTokens, reply.OutputTokens, cancellationToken);
 
-        return Result(conversation, status, newMessages, uiActions, steps, remaining, reply.EscalationNote);
+        // A reply cut at the token ceiling is said quietly under the transcript — an answer that
+        // stops mid-thought must never be a mystery. (Truncated TOOL calls are already refused
+        // above, in front of the model.)
+        var modelNote = reply.EscalationNote;
+        if (string.Equals(reply.StopReason, "max_tokens", StringComparison.OrdinalIgnoreCase))
+        {
+            const string cut = "The reply hit its length limit and may stop short — say \"carry on\" to continue it.";
+            modelNote = modelNote is null ? cut : $"{modelNote} {cut}";
+        }
+
+        return Result(conversation, status, newMessages, uiActions, steps, remaining, modelNote);
+    }
+
+    /// <summary>What the panel says when the Claude call itself failed, by failure class. Every
+    /// message states the one fact that makes retrying safe: a hop that never answered wrote
+    /// nothing, so nothing has been changed.</summary>
+    private static string FailureMessage(string? error) => error switch
+    {
+        "timeout" =>
+            "That reply took longer than one request allows, so I had to stop waiting — nothing "
+            + "has been changed, and asking again is safe. If it keeps happening, a shorter ask "
+            + "or a faster model gets under the limit.",
+        "busy" =>
+            "Claude is briefly over capacity — nothing has been changed. Try again in a few seconds.",
+        "connection" =>
+            "The Claude API could not be reached — nothing has been changed. Try again in a moment.",
+        _ =>
+            "I could not reach the Claude API just then. Try again in a moment — nothing has been changed.",
+    };
+
+    /// <summary>True when the arguments parse as JSON (blank counts — it defaults to {}). False
+    /// means the tool_use block was cut off mid-generation by the reply's token ceiling.</summary>
+    private static bool IsParseableJson(string? argumentsJson)
+    {
+        if (string.IsNullOrWhiteSpace(argumentsJson)) return true;
+        try
+        {
+            using var _ = JsonDocument.Parse(argumentsJson);
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     // ---- Ui-action validation ----------------------------------------------------------------
@@ -302,6 +360,17 @@ public sealed class AiTurnRunner
             return Fail($"{modal.ModalKey} needs project_id — the user is not on one of that project's "
                 + "pages, so the browser cannot tell which project to open it in. Pass the project's id "
                 + "(list_projects returns ids); never guess one.");
+        }
+
+        // reply_email is anchored to the Control Centre's SELECTED email — with nothing selected
+        // the page would refuse after the turn ended and the model would narrate a reply box that
+        // never opened. The scope's selected-mail id is the same signal read_selected_email uses.
+        if (string.Equals(modal.ModalKey, ModalCatalog.ReplyEmail.ModalKey, StringComparison.OrdinalIgnoreCase)
+            && string.IsNullOrWhiteSpace(scope?.SelectedMailId))
+        {
+            return Fail("reply_email drafts the reply to the email SELECTED in the Control Centre — "
+                + "no email is selected right now. Select it first (select_email on that page), "
+                + "then open the reply.");
         }
 
         var needsRecord = modal.RouteTemplate.Contains("{record}", StringComparison.Ordinal);
@@ -503,7 +572,7 @@ public sealed class AiTurnRunner
 
         if (!AiRecordTools.TryMapRecordType(typeText, out var recordType))
             return Fail($"\"{typeText}\" is not a taggable record type. Use one of: request, "
-                + "bid_package, variation, variation_quote, work_order, todo, lad, scheduling.");
+                + "bid_package, variation, variation_quote, work_order, todo, defect, lad, scheduling.");
 
         // Where the record lives in a table this side, verify it exists ON THE PROJECT CLAIMED —
         // a right id with the wrong project is exactly the V80-on-three-projects mistake.
@@ -632,6 +701,11 @@ public sealed class AiTurnRunner
         {
             if ((AiChatRole)rows[i].Role == AiChatRole.Context && IsImageAttachment(rows[i]))
                 bodies[i] = "(image attachment — replays as an image block)";
+            // Same treatment for a TOOL row carrying an image (read_email_attachment on a photo
+            // or drawing): megabytes of base64, ~1,600 tokens of image. The replay below reads
+            // the row's real Body; a superseded copy keeps its stub instead.
+            else if ((AiChatRole)rows[i].Role == AiChatRole.Tool && AiImageToolResult.IsImage(rows[i].Body))
+                bodies[i] = AiImageToolResult.BudgetStandIn;
         }
 
         // A tool row's identity for the supersede rule is name + the arguments that produced it,
@@ -761,12 +835,40 @@ public sealed class AiTurnRunner
                         // replayed — a tool_result without its tool_use is rejected by the API.
                         var paired = !string.IsNullOrWhiteSpace(toolRow.ToolUseId)
                                      && replayedToolUseIds.Contains(toolRow.ToolUseId!);
+
+                        // A tool row carrying an image replays as REAL blocks — the model looks
+                        // at the photo or the marked-up drawing, exactly like a pasted chat
+                        // screenshot. Only the live copy: a superseded or budget-stubbed one has
+                        // lost its stand-in and replays as that stub's text.
+                        object? resultContent = bodies[index];
+                        if (paired
+                            && AiImageToolResult.IsImage(toolRow.Body)
+                            && bodies[index] == AiImageToolResult.BudgetStandIn
+                            && AiImageToolResult.TryParse(
+                                toolRow.Body!, out var imageMediaType, out var imageName, out var imageBase64))
+                        {
+                            resultContent = new List<Dictionary<string, object?>>
+                            {
+                                Text($"The attachment \"{imageName}\" ({imageMediaType}) — shown below."),
+                                new()
+                                {
+                                    ["type"] = "image",
+                                    ["source"] = new Dictionary<string, object?>
+                                    {
+                                        ["type"] = "base64",
+                                        ["media_type"] = imageMediaType,
+                                        ["data"] = imageBase64
+                                    }
+                                }
+                            };
+                        }
+
                         results.Add(paired
                             ? new Dictionary<string, object?>
                             {
                                 ["type"] = "tool_result",
                                 ["tool_use_id"] = toolRow.ToolUseId!,
-                                ["content"] = bodies[index]
+                                ["content"] = resultContent
                             }
                             : Text($"[earlier result from {toolRow.ToolName}]\n{bodies[index]}"));
                         index++;

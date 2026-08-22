@@ -705,7 +705,8 @@ else
                                            FooterNote="@(commsComposeIsForward
                                                ? "The forward sends now from the projects mailbox and files itself back into this list."
                                                : "The reply sends now from the projects mailbox and files itself back into this list.")"
-                                           OnSent="OnCommsReplySent" OnCancel="CancelCommsCompose" />
+                                           OnSent="OnCommsReplySent" OnCancel="CancelCommsCompose"
+                                           OnFieldsEdited="PublishTenderComposerState" />
                     </div>
                 }
                 @if (emails.Count == 0)
@@ -1533,6 +1534,25 @@ else
 
     private MailReplyComposer? commsComposer;
 
+    // An assistant proposal that lands before the composer's first render (@ref is only assigned
+    // after render) — held here and applied on the composer's first publish instead of vanishing.
+    private string? pendingTenderReplyFields;
+
+    /// <summary>Mirrors the Reply composer's live fields into the tender_reply task's draft, so
+    /// the model reads the form as it ACTUALLY stands — the prefilled envelope and every user
+    /// edit. Fired by the composer on prefill, on every keystroke and after applied proposals.</summary>
+    private void PublishTenderComposerState()
+    {
+        if (AiTasks.Active?.ModalKey != ModalCatalog.TenderReply.ModalKey) return;
+        if (commsComposer is not { } composer) return;
+        if (pendingTenderReplyFields is { } queued)
+        {
+            pendingTenderReplyFields = null;
+            composer.ApplyAssistantFields(queued);
+        }
+        AiTasks.UpdateDraft(composer.CurrentFieldsJson());
+    }
+
     private bool CanUseAssistantForReply =>
         Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
 
@@ -1599,15 +1619,27 @@ else
         // draft so the model sees what the form now says.
         if (AiTasks.Active?.ModalKey == ModalCatalog.TenderReply.ModalKey)
         {
-            if (commsComposer is { } composer && composer.ApplyAssistantFields(fieldsJson))
+            if (commsComposer is { } composer)
             {
-                AiTasks.UpdateDraft(composer.CurrentFieldsJson());
-                StateHasChanged();
+                if (composer.ApplyAssistantFields(fieldsJson))
+                {
+                    AiTasks.UpdateDraft(composer.CurrentFieldsJson());
+                    StateHasChanged();
+                }
+            }
+            else
+            {
+                // The composer has not rendered yet (its @ref lands after the first render) —
+                // hold the proposal and apply it on the composer's first publish rather than
+                // dropping it on the floor while the model narrates success.
+                pendingTenderReplyFields = fieldsJson;
             }
             return;
         }
 
-        if (!showDetailsModal) return;
+        // Applied even when the details dialog is not showing: the drafts are page state and the
+        // dialog re-opens onto them, so a proposal that lands just after the user closed it is
+        // waiting when they open it again — matching variation_draft, and never a silent drop.
         try
         {
             using var document = JsonDocument.Parse(fieldsJson);
@@ -1634,7 +1666,16 @@ else
                         CostCode = ReadJsonString(item, "costCode") ?? ""
                     });
                 }
-                if (drafts.Count > 0) { lineDrafts = drafts; changed = true; }
+                // An explicitly-sent lines array REPLACES the schedule — the schema says so.
+                // That includes an EMPTY one: "the schedule should be empty" is a real proposal,
+                // and ignoring it silently kept lines the model had decided were wrong. The one
+                // case that still keeps the old schedule is an array whose every item was
+                // malformed — that is a broken update, not an instruction.
+                if (lines.GetArrayLength() == 0 || drafts.Count > 0)
+                {
+                    lineDrafts = drafts;
+                    changed = true;
+                }
             }
 
             if (root.TryGetProperty("summary", out var summary) && summary.ValueKind == JsonValueKind.String)
@@ -1688,9 +1729,14 @@ else
                 $"openModal={ModalCatalog.BidPackageDetails.ModalKey}", StringComparison.OrdinalIgnoreCase))
             return;
 
+        // Latched BEFORE the first await: two entry paths (a lifecycle hook and LocationChanged,
+        // which resets the flag) can both enter for one navigation, and both used to cross the
+        // replaceState await before the flag was set — two AiTasks.Start calls, two billed
+        // kick-off turns.
+        modalRequestHonoured = true;
+
         try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
         catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-        modalRequestHonoured = true;
 
         if (!CanEdit)
         {

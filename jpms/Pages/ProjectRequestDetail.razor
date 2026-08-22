@@ -1139,8 +1139,30 @@ else
         catch { /* Address bar cosmetics. Never worth failing the page over. */ }
         modalRequestHonoured = true;
 
-        if (!CanRaiseVariation || record is null || variation is not null) return;
-        if (record.Kind is not RequestType.Rfi && !record.HasRfq) return;
+        // Refused OUT LOUD — a silently dropped open_modal is the worst failure this feature
+        // has: the model narrates a form that never appeared and nobody can tell what broke.
+        if (record is null) return;
+        if (!CanRaiseVariation)
+        {
+            variationError = "The assistant tried to open the variation dialog, but the role you "
+                + "are signed in as can't raise variations.";
+            StateHasChanged();
+            return;
+        }
+        if (variation is not null)
+        {
+            variationError = $"The assistant tried to draft a variation from {record.Reference}, "
+                + "but this request already has one — it's on the Variation tab.";
+            StateHasChanged();
+            return;
+        }
+        if (record.Kind is not RequestType.Rfi && !record.HasRfq)
+        {
+            variationError = "The assistant tried to draft a variation here, but this request "
+                + "isn't an RFI — a variation is drafted from the RFI stage.";
+            StateHasChanged();
+            return;
+        }
 
         await OpenVariationDraft();
     }
@@ -1668,6 +1690,27 @@ else
 
                 Chat.Open();
             }
+        }
+        else if (CanUseAssistant && !TaskIsForThisRecord)
+        {
+            // Reopened after the conversation moved on ("Done", New chat, a resumed thread ended
+            // the task). Without re-attaching one, update_open_modal no longer exists and every
+            // proposal is dropped while the model narrates success — so the task comes back, but
+            // SILENTLY: no kick-off, no billed turn, the drafted fields riding along as they
+            // stand. The user asks for what they want in their own words.
+            AiTasks.Start(
+                new AiTask(
+                    TaskKey: "variation-draft",
+                    ModalKey: ModalCatalog.VariationDraft.ModalKey,
+                    BannerLabel: $"Drafting a variation from {record.Reference}",
+                    BusyLabel: $"Reading {record.Reference} and the emails tagged to it…",
+                    KickoffMessage: null,
+                    ProjectId: ProjectId,
+                    RecordType: nameof(RecordType.Request),
+                    RecordId: record.RequestId,
+                    RecordReference: record.Reference),
+                SerialiseDraft());
+            Chat.Open();
         }
 
         // Cost centres feed the scope lines' cost-code selects. Awaited, not fire-and-forget: the

@@ -934,9 +934,15 @@ else
         if (RequestedModalKeyFromRoute() is not { } requestedModalKey) return;
 
         var requestedId = RequestedRecordFromRoute();
+
+        // Latched BEFORE the first await: two entry paths (a lifecycle hook and LocationChanged,
+        // which resets the flag) can both enter for one navigation, and both used to cross the
+        // replaceState await before the flag was set — two AiTasks.Start calls, two billed
+        // kick-off turns.
+        modalRequestHonoured = true;
+
         try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
         catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-        modalRequestHonoured = true;
 
         // ---- Add work order: no record — the dialog opens empty and the task points the model
         // at the correspondence it came from. Gate exactly as ModalCatalog declares (the API's

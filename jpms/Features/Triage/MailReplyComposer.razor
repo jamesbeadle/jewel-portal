@@ -29,7 +29,7 @@
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
         <input class="field" type="text" placeholder="name@example.com; other@example.com"
-               value="@toField" @oninput="e => toField = e.Value?.ToString() ?? string.Empty" />
+               value="@toField" @oninput="e => { toField = e.Value?.ToString() ?? string.Empty; _ = NotifyEditedAsync(); }" />
     </div>
     <div>
         <div class="flex items-center justify-between">
@@ -41,26 +41,26 @@
             }
         </div>
         <input class="field" type="text" placeholder="Copied recipients — separated by ;"
-               value="@ccField" @oninput="e => ccField = e.Value?.ToString() ?? string.Empty" />
+               value="@ccField" @oninput="e => { ccField = e.Value?.ToString() ?? string.Empty; _ = NotifyEditedAsync(); }" />
     </div>
     @if (showBcc)
     {
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
             <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
-                   value="@bccField" @oninput="e => bccField = e.Value?.ToString() ?? string.Empty" />
+                   value="@bccField" @oninput="e => { bccField = e.Value?.ToString() ?? string.Empty; _ = NotifyEditedAsync(); }" />
         </div>
     }
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
         <input class="field" type="text" value="@subject"
-               @oninput="e => subject = e.Value?.ToString() ?? string.Empty" />
+               @oninput="e => { subject = e.Value?.ToString() ?? string.Empty; _ = NotifyEditedAsync(); }" />
     </div>
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
             @(IsForward ? "Your message *" : IsReply ? "Your reply *" : "Your email *")
         </label>
-        <RichTextEditor @bind-Value="body" MinHeight="180"
+        <RichTextEditor @bind-Value="body" @bind-Value:after="NotifyEditedAsync" MinHeight="180"
                         Placeholder="@(IsForward ? "Write the message — the forwarded email is quoted behind it…"
                                      : IsReply ? "Write the reply — the whole thread is quoted behind it…" : "Write the email…")" />
     </div>

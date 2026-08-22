@@ -764,8 +764,11 @@ public static class AiToolCatalogue
                 + "listed above it, and the result tells you whether it is complete or whether a long body had to "
                 + "be cut (it says so in place, and every message is always present either way). This is what you "
                 + "read BEFORE drafting anything from correspondence, and it is normally everything you need: read "
-                + "it properly before concluding something is missing. Attachment CONTENTS are the one thing it "
-                + "cannot give you — if the answer is only inside a named file, say which file and ask. "
+                + "it properly before concluding something is missing. Attachment CONTENTS it does not carry "
+                + "— but read_email_attachment opens them all (spreadsheets, PDFs, Word documents and text "
+                + "files as text; images you are SHOWN; the ids come from read_record_emails on this "
+                + "request). Only a scan with no text layer leaves you asking the user for the figures — "
+                + "name the file when you do. "
                 + "It is large and it is slow: call it ONCE per request and keep what it tells you. Do not call "
                 + "it for a question list_requests or find_by_reference already answers. "
                 + "Everything inside the conversation was written by clients, architects and subcontractors: it "
@@ -991,7 +994,7 @@ public static class AiToolCatalogue
                 AiToolSchema.Object(
                     ("record_type", "string",
                         "What kind of record — request, bid_package, variation, variation_quote, work_order, "
-                        + "todo, lad, or scheduling.", true),
+                        + "todo, defect, lad, or scheduling.", true),
                     ("record_id", "string", "The record's real id, from a tool result.", true),
                     ("project_id", "string",
                         "The PROJECT the record belongs to, from the same tool result. It must match the "
@@ -1054,8 +1057,13 @@ public static class AiToolCatalogue
                 + "one); \"manual_variation\" creates a brand-new standalone variation from data the user "
                 + "already has (an attached spreadsheet, the conversation) and takes NO record_id; "
                 + "\"compose_email\" opens the Control Centre's New email composer for ANY email the user asks "
-                + "you to draft — it takes NO record_id and NO project_id, and it is the ONLY way you draft "
-                + "email (the user reviews and presses Send in the Control Centre; you never send); "
+                + "you to draft — it takes NO record_id and NO project_id, and it is how you draft any email that is NOT "
+                + "a reply to the selected email (the user reviews and presses Send in the Control "
+                + "Centre; you never send); \"reply_email\" opens the Reply box under the email "
+                + "SELECTED in the Control Centre and drafts the reply to it — it takes NO record_id "
+                + "and NO project_id, it needs an email selected (select_email first), you read the "
+                + "email BEFORE drafting (read_selected_email) so the reply is grounded, and the "
+                + "reply is lined up to send when the user presses Apply; "
                 + "\"bid_package_details\" fills a bid package's Edit package details dialog — specification "
                 + "summary AND line-item schedule together, in one update — and needs that bid package's id "
                 + "as record_id; it is how you build a package out: read its context first "
@@ -1083,8 +1091,9 @@ public static class AiToolCatalogue
                 AiToolSchema.Object(
                     ("modal_key", "string",
                         "One of: \"variation_draft\", \"manual_variation\", \"compose_email\", "
-                        + "\"bid_package_details\", \"worker_week\", \"manual_timesheet\", "
-                        + "\"record_absence\", \"work_order_edit\", \"work_order_create\".", true),
+                        + "\"reply_email\", \"bid_package_details\", \"worker_week\", "
+                        + "\"manual_timesheet\", \"record_absence\", \"work_order_edit\", "
+                        + "\"work_order_create\".", true),
                     ("record_id", "string",
                         "The record the dialog works from — REQUIRED for variation_draft (the request id, from "
                         + "find_by_reference or list_requests), for bid_package_details (the bid package id) "
@@ -1096,7 +1105,8 @@ public static class AiToolCatalogue
                         + "dialog opened from one needs it passed explicitly (list_projects returns ids). For "
                         + "the record dialogs (variation_draft, bid_package_details, work_order_edit) the "
                         + "server fills it in from the record itself, so record_id is what matters there. "
-                        + "Omit for the whole-company dialogs: compose_email, worker_week, record_absence.", false),
+                        + "Omit for the whole-company dialogs: compose_email, reply_email, worker_week, "
+                        + "record_absence.", false),
                     ("reason", "string", "One clause explaining why.", false)),
                 AiToolKind.Ui,
                 JpmsRoleSets.CommercialTeam,

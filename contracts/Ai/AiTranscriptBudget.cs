@@ -21,14 +21,29 @@ public static class AiTranscriptBudget
     /// <summary>
     /// Tools whose result is large and whose earlier copies are pure cost — a second call WITH THE
     /// SAME ARGUMENTS supersedes the first. Keyed on name + arguments, not name alone: two
-    /// different requests' working papers, or two different skills, are both worth keeping.
+    /// different requests' working papers, two different records' emails, or two different
+    /// attachments are all worth keeping side by side.
     /// (read_selected_email is usually called with no arguments, so a re-read after the user
     /// changes selection supersedes the old email's body too — right for cost, and the model is
-    /// told to trust only the newest current-context block anyway.)
+    /// told to trust only the newest current-context block anyway. A re-call with a DIFFERENT
+    /// maxChars keys differently and keeps both copies — the global budget below still catches
+    /// that; exact-match keying is the price of never conflating two genuinely different reads.)
     /// </summary>
     private static readonly HashSet<string> ReplayLatestOnly =
         new(StringComparer.OrdinalIgnoreCase)
-        { "get_request_context", "load_skill", "load_skill_reference", "read_selected_email" };
+        {
+            "get_request_context",
+            "load_skill",
+            "load_skill_reference",
+            "read_selected_email",
+            // The record-context readers joined 2026-08-22: a ten-turn drafting conversation was
+            // re-paying every earlier copy of a 25k-character email read on every single hop.
+            "read_record_emails",
+            "read_email_attachment",
+            "list_request_correspondence",
+            "get_bid_package_context",
+            "get_work_order_context",
+        };
 
     /// <summary>
     /// The ceiling on a replayed transcript, in characters. Well inside the model's context

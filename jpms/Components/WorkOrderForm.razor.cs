@@ -163,7 +163,9 @@ public partial class WorkOrderForm : IDisposable
             title = line.Title,
             description = line.Description,
             costCode = line.CostCode,
-            amount = line.AmountText,
+            // A NUMBER, as the schema declares it — null while blank or unparseable. Serialising
+            // the raw text ("" included) taught the model the wrong shape.
+            amount = decimal.TryParse(line.AmountText, out var lineAmount) ? (decimal?)lineAmount : null,
             // Says which lines are anchored: a paid line can't be removed and can't drop below this.
             paidToDate = line.PaidToDate
         })
@@ -186,10 +188,20 @@ public partial class WorkOrderForm : IDisposable
             var root = document.RootElement;
             if (root.ValueKind != JsonValueKind.Object) return;
 
-            if (ReadText(root, "supplier") is { } proposedSupplier && !string.IsNullOrWhiteSpace(proposedSupplier))
+            // Create only: work_order_edit's schema doesn't declare supplier, so a model that
+            // echoes state back must never re-point an ISSUED order at another firm.
+            if (!IsEditing
+                && ReadText(root, "supplier") is { } proposedSupplier
+                && !string.IsNullOrWhiteSpace(proposedSupplier))
+            {
                 ApplySupplierProposal(proposedSupplier);
-            if (ReadText(root, "title") is { } proposedTitle) title = proposedTitle;
-            if (ReadText(root, "scope") is { } proposedScope) scope = proposedScope;
+            }
+            // Whitespace-only counts as not sent — the schema promises "leave it out to keep
+            // what the dialog already shows", and an empty string used to wipe the user's text.
+            if (ReadText(root, "title") is { } proposedTitle && !string.IsNullOrWhiteSpace(proposedTitle))
+                title = proposedTitle;
+            if (ReadText(root, "scope") is { } proposedScope && !string.IsNullOrWhiteSpace(proposedScope))
+                scope = proposedScope;
             if (root.TryGetProperty("saveAsDraft", out var proposedDraft)
                 && proposedDraft.ValueKind is JsonValueKind.True or JsonValueKind.False
                 && !DraftTickLocked && !IsEditing)
@@ -373,9 +385,9 @@ public partial class WorkOrderForm : IDisposable
 
     private void SetLineCode(LineRow line, string? value) { line.CostCode = value ?? ""; _ = OnChanged.InvokeAsync(); }
     private void SetLineTitle(LineRow line, string? value) { line.Title = value ?? ""; _ = OnChanged.InvokeAsync(); }
-    private void SetLineDescription(LineRow line, string? value) => line.Description = value ?? "";
+    private void SetLineDescription(LineRow line, string? value) { line.Description = value ?? ""; _ = OnChanged.InvokeAsync(); }
     private void SetLineAmount(LineRow line, string? value) { line.AmountText = value ?? ""; _ = OnChanged.InvokeAsync(); }
-    private void SetDepositPercent(string? value) => depositPercentText = value ?? "";
+    private void SetDepositPercent(string? value) { depositPercentText = value ?? ""; _ = OnChanged.InvokeAsync(); }
 
     // ---- Cost-centre picker options (typed-to-find; cached against the master list) ----
 

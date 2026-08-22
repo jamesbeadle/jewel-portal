@@ -48,6 +48,35 @@ public sealed class AiTranscriptBudgetTests
     }
 
     [Fact]
+    public void EveryBigReader_isInTheSupersedeSet()
+    {
+        // The record-context readers were missing from the set until 2026-08-22: a ten-turn
+        // drafting conversation re-paid every earlier copy of a 25k-character read_record_emails
+        // on every hop. This pins the whole family so the next big reader added to the catalogue
+        // fails a test instead of silently re-billing.
+        foreach (var reader in new[]
+        {
+            "get_request_context", "read_selected_email", "read_record_emails",
+            "read_email_attachment", "list_request_correspondence",
+            "get_bid_package_context", "get_work_order_context",
+            "load_skill", "load_skill_reference"
+        })
+        {
+            var bodies = new[] { "OLD COPY", "NEW COPY" };
+            var toolRows = new[]
+            {
+                new TranscriptToolRow(0, reader, "{\"id\":\"x\"}", Sequence: 1),
+                new TranscriptToolRow(1, reader, "{\"id\":\"x\"}", Sequence: 2)
+            };
+
+            AiTranscriptBudget.Apply(bodies, toolRows);
+
+            Assert.Contains("superseded", bodies[0]);
+            Assert.Equal("NEW COPY", bodies[1]);
+        }
+    }
+
+    [Fact]
     public void AnOrdinaryTool_isNeverSuperseded()
     {
         var bodies = new[] { "V70 V71 V72", "V70 V71 V72" };

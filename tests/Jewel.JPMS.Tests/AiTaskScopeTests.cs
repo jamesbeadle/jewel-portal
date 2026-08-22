@@ -105,15 +105,76 @@ public sealed class AiTaskScopeTests
     }
 
     [Fact]
-    public void EveryRegisteredModal_hasARouteWithBothSubstitutions()
+    public void EveryRegisteredModal_hasAWellFormedRouteTemplate()
     {
-        // ChatPanel.ApplyOpenModal substitutes exactly these two and navigates to the result. A
-        // template missing one would send the user to a literal "{record}" URL.
+        // ChatPanel.ApplyOpenModal substitutes {project} and {record} and navigates to the
+        // result. Record-less and project-less dialogs are real shapes (compose_email,
+        // worker_week…) — the old both-placeholders assertion predates them and sat red against
+        // seven of ten dialogs, masking real regressions. The true invariants:
         foreach (var modal in ModalCatalog.All)
         {
-            Assert.Contains("{project}", modal.RouteTemplate);
-            Assert.Contains("{record}", modal.RouteTemplate);
             Assert.StartsWith("/", modal.RouteTemplate);
+
+            // Only placeholders the client knows how to fill.
+            foreach (System.Text.RegularExpressions.Match token in
+                System.Text.RegularExpressions.Regex.Matches(modal.RouteTemplate, "\\{[^}]+\\}"))
+            {
+                Assert.Contains(token.Value, new[] { "{project}", "{record}" });
+            }
+
+            // A record in the PATH needs its project segment to build the route at all.
+            var stem = modal.RouteTemplate.Split('?')[0];
+            if (stem.Contains("{record}", StringComparison.Ordinal))
+                Assert.Contains("{project}", stem);
         }
+    }
+
+    [Fact]
+    public void ModalKeys_areUniqueSnakeCase()
+    {
+        var keys = ModalCatalog.All.Select(modal => modal.ModalKey).ToList();
+        Assert.Equal(keys.Count, keys.Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        foreach (var key in keys)
+            Assert.Matches("^[a-z][a-z0-9_]*$", key);
+    }
+
+    [Fact]
+    public void EveryModalRoute_resolvesToAPageGuide()
+    {
+        // The model is told to read a page's guide before working it — a dialog whose hosting
+        // route has no guide strands that instruction. Guides and dialogs must move together.
+        foreach (var modal in ModalCatalog.All)
+        {
+            var stem = modal.RouteTemplate.Split('?')[0];
+            Assert.True(PageGuideCatalogue.FindForRoute(stem) is not null,
+                $"no page guide covers {modal.ModalKey}'s route {stem}");
+        }
+    }
+
+    [Fact]
+    public void EveryPageGuideRoute_isWellFormed()
+    {
+        foreach (var guide in PageGuideCatalogue.All)
+        {
+            Assert.StartsWith("/", guide.RouteTemplate);
+            Assert.False(string.IsNullOrWhiteSpace(guide.Guide));
+            if (guide.Aliases is null) continue;
+            foreach (var alias in guide.Aliases) Assert.StartsWith("/", alias);
+        }
+    }
+
+    [Fact]
+    public void PageGuideRoutes_areUniquePerTemplate()
+    {
+        var templates = PageGuideCatalogue.All
+            .SelectMany(guide => new[] { guide.RouteTemplate }.Concat(guide.Aliases ?? Array.Empty<string>()))
+            .Select(route => route.TrimEnd('/'))
+            .ToList();
+        var duplicates = templates
+            .GroupBy(route => route, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToList();
+        Assert.True(duplicates.Count == 0, "duplicate guide routes: " + string.Join(", ", duplicates));
     }
 }

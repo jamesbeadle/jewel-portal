@@ -19,6 +19,10 @@ namespace Jewel.JPMS.Api.Features.Ai.Commands;
 /// <para>No Claude call happens here: attaching is free; the next message the user sends is where
 /// the model reads it. That is also why this creates the conversation when none exists yet — the
 /// natural flow is attach first, then say what to do with it.</para>
+///
+/// <para>Formats follow AiAttachmentReader exactly: spreadsheets, PDFs, Word documents and text
+/// files extract to text; images persist as bytes and replay as image blocks; what cannot be
+/// read honestly refuses at upload, before anything is billed.</para>
 /// </summary>
 public sealed class AddAiAttachmentHandler : ICommandHandler<AddAiAttachment, AiAttachmentReceipt>
 {

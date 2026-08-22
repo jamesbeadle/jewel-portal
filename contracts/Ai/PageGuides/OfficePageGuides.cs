@@ -127,6 +127,30 @@ public static class OfficePageGuides
             + "tender-invite email on every project. Requires the Administrator active role. You "
             + "navigate_to only — publishing and uploading are the administrator's manual acts."),
 
+        new("/admin/trades", "Trades",
+            "Admin → Trades: the curated master list of trades the directory and bid packages "
+            + "pick from — this page is where that vocabulary is managed. A person adds, renames "
+            + "or deletes a trade; deletes are refused while directory records or packages still "
+            + "use one. You navigate_to only — no dialog or page action is registered here."),
+
+        new("/registers", "Registers",
+            "The company registers — insurances, subscriptions, vehicles and trade accounts, one "
+            + "tab per kind, each dated field tracking a renewal so nothing lapses unseen. A "
+            + "person adds and edits entries in place. You navigate_to only — no dialog or page "
+            + "action is registered here."),
+
+        new("/policies", "Policies & sign-off",
+            "Staff sign-off forms: NDAs, staff policies and H&S documents. An admin publishes a "
+            + "document to named users; each recipient reads and signs, and the page tracks who "
+            + "has signed what. You navigate_to only — no dialog or page action is registered "
+            + "here."),
+
+        new("/labour/xero-mapping", "Xero mapping",
+            "The effective-dated bridges between the portal and Xero: project to Sites tracking "
+            + "category, worker to Xero contact, and the account codes labour lands on. Finance "
+            + "sets a mapping with a from-date; the labour coding runs read whatever is effective. "
+            + "You navigate_to only — no dialog or page action is registered here."),
+
         new("/sales-analytics", "Sales analytics",
             "The CRM's sales analytics page — source attribution and win rate by channel, drawn "
             + "from the lead store: three stat tiles (Total leads, Won, Win rate) and a "

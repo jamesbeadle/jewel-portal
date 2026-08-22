@@ -469,9 +469,13 @@ else
     {
         if (!WantsManualVariationFromRoute()) return;
 
+        // Latched BEFORE the first await: OnParametersSetAsync and LocationChanged can both enter
+        // this method for one navigation, and both used to cross the replaceState await before the
+        // flag was set — two AiTasks.Start calls, two billed kick-off turns.
+        modalRequestHonoured = true;
+
         try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
         catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-        modalRequestHonoured = true;
 
         if (!CanManageVariations)
         {
@@ -913,6 +917,9 @@ else
 
     public void Dispose()
     {
+        // Leaving the page ends its task — a dangling task ships this dialog's stale JSON with
+        // every later turn and leaves the chat panel lifted above every future modal.
+        EndManualVariationTask();
         RequestRegister.OnChange -= StateHasChanged;
         Activity.OnChanged -= StateHasChanged;
         Nav.LocationChanged -= HandleLocationChanged;
