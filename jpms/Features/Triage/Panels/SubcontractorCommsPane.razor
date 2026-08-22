@@ -10,11 +10,26 @@
     newest thread first, narrowable to one category by the chip row. A workspace pane rather than
     the standalone page so it reads SIDE BY SIDE with a compose or an open email: browse a subbie's
     thread one window, copy and paste into the reply the other. Each email offers Reply and Forward,
-    lined up in the Outbox and sent by the triage's Apply. Tagging (and untagging, from the Tagged
-    view) stays in mailbox triage.
+    lined up in the Outbox and sent by the triage's Apply. Untagging stays on the Tagged view.
+
+    Tagging happens HERE too (Nigel, 2026-08-22): when a queue email is open the pane leads with the
+    communication ticks — the same ticks System Tags → Subcontractor shows — and every listed email
+    offers "Tag open email like this", which stages the open email with that email's communication
+    tags. The list narrows to the open email's project by name match (record-less tags carry no
+    project), with an "All projects" switch back to the whole feed.
 *@
 
 <div class="space-y-3">
+    @if (HasOpenEmail)
+    {
+        <div class="rounded-lg border border-accent/40 bg-accent/5 p-3 space-y-2">
+            <p class="text-xs uppercase tracking-wider text-accent font-semibold">Tag the open email</p>
+            <p class="text-xs text-content-subtle truncate" title="@EmailSubject">@EmailSubject</p>
+            <SubcontractorCommsTicks Picked="Picked" OnStagingChanged="OnStagingChanged" />
+            <p class="text-xs text-content-subtle">Ticks stage the open email — the inbox's Apply files it. Or press "Tag open email like this" on any email below.</p>
+        </div>
+    }
+
     <header>
         <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Subcontractor communications</p>
         @if (loaded && loadError is null && total > 0)
@@ -38,6 +53,16 @@
                     @onclick="() => SetCategoryFilterAsync(familyTag)">@chipLabel</button>
         }
     </div>
+
+    @if (ProjectNameMatch.IsUsable(ProjectName))
+    {
+        <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" class="@ScopeChipClass(isThisProject: true)" title="Emails that name this project in their subject or opening line"
+                    @onclick="() => showAllProjects = false">This project · @ProjectName</button>
+            <button type="button" class="@ScopeChipClass(isThisProject: false)" title="Every subcontractor communication, whatever the project"
+                    @onclick="() => showAllProjects = true">All projects</button>
+        </div>
+    }
 
     @if (loadError is not null)
     {
@@ -70,12 +95,13 @@
         @if (Filtered.Count == 0)
         {
             <p class="text-sm text-content-subtle">
-                No loaded email matches "@filter"@(nextCursor is not null ? " — try loading more below" : "").
+                @(IsScopedToProject ? $"No loaded email names {ProjectName}" : $"No loaded email matches \"{filter}\"")@(nextCursor is not null ? " — try loading more below" : "")@(IsScopedToProject ? ", or switch to All projects" : "").
             </p>
         }
         else
         {
-            <CorrespondenceThreadList Emails="Filtered" ExcludeTag="@ImpliedTag" OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward" />
+            <CorrespondenceThreadList Emails="Filtered" ExcludeTag="@ImpliedTag" OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward"
+                                      OnTagLike="TagLikeWhenEmailOpen" />
         }
 
         @if (nextCursor is not null)
@@ -101,6 +127,42 @@
     /// <summary>Start a forward of a listed email — the page lines it up in the Outbox.</summary>
     [Parameter] public EventCallback<MailboxMessage> OnForward { get; set; }
 
+    /// <summary>The open queue email's subject — blank when none is open, which hides the tagging
+    /// box and the per-email "tag like this" buttons.</summary>
+    [Parameter] public string EmailSubject { get; set; } = "";
+
+    /// <summary>The open email's project name (the triage bar's pick) — drives the
+    /// "This project / All projects" scope. Blank or too short = no scope chips.</summary>
+    [Parameter] public string ProjectName { get; set; } = "";
+
+    /// <summary>The page-owned staged picks — the SAME list System Tags mutates, so a tick here
+    /// and a tick there are one staged list, one badge, one Apply.</summary>
+    [Parameter] public List<LinkableRecord> Picked { get; set; } = new();
+    [Parameter] public EventCallback OnStagingChanged { get; set; }
+
+    private bool HasOpenEmail => !string.IsNullOrWhiteSpace(EmailSubject);
+    private bool showAllProjects;
+    private bool IsScopedToProject => ProjectNameMatch.IsUsable(ProjectName) && !showAllProjects;
+
+    private string ScopeChipClass(bool isThisProject) => ChipClassFor(isActive: isThisProject != showAllProjects);
+
+    // The list only offers "tag like this" while there is an open email to tag.
+    private EventCallback<MailboxMessage> TagLikeWhenEmailOpen =>
+        HasOpenEmail ? EventCallback.Factory.Create<MailboxMessage>(this, TagOpenEmailLikeAsync) : default;
+
+    // "Tag open email like this": every communication-family tag the listed email carries becomes
+    // a pick for the open email (general when it carries none the family recognises).
+    private async Task TagOpenEmailLikeAsync(MailboxMessage listed)
+    {
+        var family = SubcontractorComms.All
+            .Where(record => listed.Categories.Contains($"JPMS/{record.TagReference}", StringComparer.OrdinalIgnoreCase))
+            .ToList();
+        if (family.Count == 0) family.Add(SubcontractorComms.Record);
+        foreach (var record in family.Where(record => Picked.All(picked => picked.RecordId != record.RecordId)))
+            Picked.Add(record);
+        await OnStagingChanged.InvokeAsync();
+    }
+
     // `loaded` opens the gate whether the fetch landed or failed (the banner says which);
     // the list itself accumulates pages like the Tagged view does.
     private readonly List<MailboxMessage> items = new();
@@ -120,8 +182,11 @@
         get
         {
             var needle = filter.Trim();
-            if (needle.Length == 0) return items;
-            return items.Where(email =>
+            var inScope = IsScopedToProject
+                ? items.Where(email => ProjectNameMatch.Mentions(email, ProjectName))
+                : items;
+            if (needle.Length == 0) return inScope.ToList();
+            return inScope.Where(email =>
                     email.Subject.Contains(needle, StringComparison.OrdinalIgnoreCase)
                     || email.FromName.Contains(needle, StringComparison.OrdinalIgnoreCase)
                     || email.FromEmail.Contains(needle, StringComparison.OrdinalIgnoreCase)
@@ -162,9 +227,11 @@
             .Select(record => record.RecordId == SubcontractorComms.RecordId ? "General" : record.Title)
             .FirstOrDefault() ?? "";
 
-    private string ChipClass(string? tag) =>
+    private string ChipClass(string? tag) => ChipClassFor(isActive: categoryTagFilter == tag);
+
+    private static string ChipClassFor(bool isActive) =>
         "rounded-full border px-3 py-1 text-xs font-medium transition "
-        + (categoryTagFilter == tag
+        + (isActive
             ? "border-accent bg-accent/10 text-accent"
             : "border-line text-content-muted hover:text-content hover:border-line-strong");
 

@@ -1,0 +1,50 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+
+@* The plain finish under every record-create form (Nigel, 2026-08-22: "where's my click
+   button?"). The form lines itself up as it's typed, which reads as nothing happening — so this
+   strip says, in one line, whether the record is lined up and exactly what Apply will do with it,
+   and offers the two ways out: Create now (raise it this minute) or Done (back to the email, the
+   record waiting for Apply). *@
+
+@if (Staged is null)
+{
+    <p class="text-xs text-content-subtle pt-3 border-t border-line">
+        Fill the form in — it lines itself up as you type, and the email's Apply raises it.
+    </p>
+}
+else if (Staged.CreateProblem is { } problem)
+{
+    <div class="pt-3 border-t border-line flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-amber-600">Not lined up yet — @problem</p>
+        <button type="button" class="btn-secondary text-xs" @onclick="() => OnClose.InvokeAsync()">Back to the email</button>
+    </div>
+}
+else
+{
+    <div class="pt-3 border-t border-line space-y-2">
+        <p class="rounded-lg bg-positive/10 border border-positive/40 px-3 py-2 text-sm text-content">
+            <span class="font-semibold text-positive">Lined up.</span> Apply will @Staged.Outcome — together with any reply you've written.
+        </p>
+        <div class="flex flex-wrap items-center justify-end gap-2">
+            <button type="button" class="btn-secondary" disabled="@Busy"
+                    title="Raise it this minute instead of waiting for Apply — the email is tagged to it in the same act"
+                    @onclick="() => OnCreateNow.InvokeAsync()">Create now</button>
+            <button type="button" class="btn-primary" disabled="@Busy"
+                    title="Back to the email — the record stays lined up for Apply"
+                    @onclick="() => OnClose.InvokeAsync()">Done</button>
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>The page's staged record, or null while the form is still untouched.</summary>
+    [Parameter] public StagedRecordCreate? Staged { get; set; }
+
+    /// <summary>Raise the staged record immediately (the pane's existing Create now).</summary>
+    [Parameter] public EventCallback OnCreateNow { get; set; }
+
+    /// <summary>Hand the window back to the open email.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    [Parameter] public bool Busy { get; set; }
+}

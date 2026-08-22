@@ -101,7 +101,9 @@ public sealed class MailboxTriageEndpoints
         // characters that don't survive a URL path segment.
         var id = request.Query["id"].ToString();
         if (string.IsNullOrWhiteSpace(id)) return new BadRequestObjectResult("id is required.");
-        return new OkObjectResult(await listConversation.HandleAsync(new ListConversationMessages(id), request.HttpContext.RequestAborted));
+        var subject = request.Query["subject"].ToString();
+        var query = new ListConversationMessages(id, string.IsNullOrWhiteSpace(subject) ? null : subject);
+        return new OkObjectResult(await listConversation.HandleAsync(query, request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(GetMailboxMessageDetail))]

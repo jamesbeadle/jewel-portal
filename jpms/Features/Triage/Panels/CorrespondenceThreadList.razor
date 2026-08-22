@@ -65,6 +65,13 @@
     /// Untag button renders; with one, ExcludeTag must be the record's full "JPMS/…" tag.</summary>
     [Parameter] public EventCallback<MailboxMessage> OnUntagged { get; set; }
 
+    /// <summary>"Tag like this": stage the host's open email with the same tags as a listed one.
+    /// The Control Centre's browsers pass it (Nigel, 2026-08-22 — he reads a past thread and
+    /// expects to file the open email alongside it from the same list). Without a delegate no
+    /// button renders; <see cref="TagLikeLabel"/> is the button's wording.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnTagLike { get; set; }
+    [Parameter] public string TagLikeLabel { get; set; } = "Tag open email like this";
+
     private readonly HashSet<string> expandedThreads = new();
     private readonly HashSet<string> expandedEmails = new();
     // Detail cached for the component's life: null value = fetch in flight ("Loading full email…").
@@ -202,6 +209,12 @@
                 {
                     <button type="button" class="text-xs font-medium text-accent hover:underline"
                             @onclick="() => OnForward.InvokeAsync(email)">→ Forward</button>
+                }
+                @if (OnTagLike.HasDelegate)
+                {
+                    <button type="button" class="text-xs font-medium text-accent hover:underline"
+                            title="Stages the open email with the same tags as this one — applied by the inbox's Apply"
+                            @onclick="() => OnTagLike.InvokeAsync(email)">🏷 @TagLikeLabel</button>
                 }
                 @if (thread is { } threadGroup && threadGroup.Earlier.Count > 0)
                 {

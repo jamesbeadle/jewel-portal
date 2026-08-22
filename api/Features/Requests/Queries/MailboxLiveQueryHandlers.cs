@@ -68,10 +68,15 @@ public sealed class ListConversationMessagesHandler : IQueryHandler<ListConversa
     private readonly IMailboxGraphClient graph;
     public ListConversationMessagesHandler(IMailboxGraphClient graph) { this.graph = graph; }
 
-    public Task<MailboxPage> HandleAsync(ListConversationMessages query, CancellationToken cancellationToken) =>
-        string.IsNullOrWhiteSpace(query.ConversationId)
-            ? Task.FromResult(new MailboxPage(Array.Empty<MailboxMessage>(), null, 0))
-            : graph.ListConversationAsync(query.ConversationId, cancellationToken);
+    public async Task<MailboxPage> HandleAsync(ListConversationMessages query, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query.ConversationId))
+            return new MailboxPage(Array.Empty<MailboxMessage>(), null, 0);
+        var byConversation = await graph.ListConversationAsync(query.ConversationId, cancellationToken);
+        if (byConversation.Items.Count > 1)
+            return byConversation;
+        return await ConversationBySubject.FindAsync(graph, byConversation, query.Subject, cancellationToken);
+    }
 }
 
 /// <summary>

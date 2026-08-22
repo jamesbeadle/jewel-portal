@@ -88,7 +88,11 @@ public static class RequestsRouteRegistration
         // triage detail pane's thread panel. The conversation id goes in the query string too.
         queries.Register<ListConversationMessages, MailboxPage>(
             new QueryRoute("/api/mailbox/conversation",
-                query => $"/api/mailbox/conversation?id={Uri.EscapeDataString(((ListConversationMessages)query).ConversationId)}"));
+                query =>
+                {
+                    var q = (ListConversationMessages)query;
+                    return $"/api/mailbox/conversation?id={Uri.EscapeDataString(q.ConversationId)}&subject={Uri.EscapeDataString(q.Subject ?? string.Empty)}";
+                }));
 
         queries.Register<GetMailboxMessageDetail, MailboxMessageDetail>(
             new QueryRoute("/api/mailbox/message/detail",

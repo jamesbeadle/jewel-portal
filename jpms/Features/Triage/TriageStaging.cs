@@ -118,6 +118,33 @@ public sealed class StagedRecordCreate
     }
 
     /// <summary>
+    /// What still stops this staged record being raised, whatever its kind — null when Apply (or
+    /// Create now) can raise it. One answer for the System Actions footer and the Apply gate.
+    /// </summary>
+    public string? CreateProblem
+    {
+        get
+        {
+            if (Kind == StagedRecordKind.Defect) return DefectProblem;
+            if (string.IsNullOrWhiteSpace(Title)) return Kind == StagedRecordKind.WorkOrder ? "Give the work order a title." : "Give it a title.";
+            return WorkOrderProblem;
+        }
+    }
+
+    /// <summary>What Apply will do with this record, in one clause — the footer's promise.</summary>
+    public string Outcome => Kind switch
+    {
+        StagedRecordKind.BidPackage => "create the bid package and tag this email to it",
+        StagedRecordKind.Defect => "raise the defect and tag this email to it",
+        StagedRecordKind.WorkOrder => SaveAsDraft
+            ? "raise the work order as a draft — no purchase-order email until it's approved — and tag this email to it"
+            : "raise the work order, email the purchase order to the subcontractor and tag this email to it",
+        _ => RequestKind == Jewel.JPMS.Models.RequestType.Rfi
+            ? "raise the RFI and tag this email to it"
+            : "create the request and tag this email to it"
+    };
+
+    /// <summary>
     /// What still stops the staged defect being raised — null when it is complete. Shared by the
     /// modal (inline hint) and the page's Apply (hard gate), so the wording is decided once.
     /// Mirrors the server's own rule (RaiseDefectValidation: a description is required).

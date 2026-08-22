@@ -22,7 +22,9 @@ public interface IIntakeQueue
     // An email's whole thread: every Inbox message sharing its Graph conversation id, oldest first,
     // regardless of tags. Backs the triage detail pane's thread panel — later replies often say how
     // the older messages should be triaged, and link/discard already apply conversation-wide.
-    Task<MailboxPage> ListConversationLiveAsync(string conversationId, CancellationToken cancellationToken = default);
+    /// <summary>The thread an email belongs to. Pass its subject so a conversation id that has
+    /// split from the rest of the chain still finds the members (the page says MatchedBySubject).</summary>
+    Task<MailboxPage> ListConversationLiveAsync(string conversationId, string? subject = null, CancellationToken cancellationToken = default);
     Task<MailboxMessageDetail> GetMessageDetailAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);
 
     Task<Acknowledgement> DiscardMessageAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);

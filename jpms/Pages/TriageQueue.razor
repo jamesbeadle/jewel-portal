@@ -193,6 +193,13 @@
             {
                 <p class="text-xs text-content-subtle italic">Checking the thread for replies…</p>
             }
+            else if (threadError is { } threadProblem)
+            {
+                <p class="text-xs text-amber-600">
+                    @threadProblem
+                    <button type="button" class="ml-2 underline" @onclick="() => LoadThreadAsync(selected!)">Retry</button>
+                </p>
+            }
             else if (thread.Count > 1)
             {
                 @* The thread as TABS, not a stacked list: one numbered chip per email (oldest →
@@ -218,6 +225,13 @@
                         @if (thread[^1].Id != selected.Id)
                         {
                             <span class="text-[11px] text-content-subtle">· read the latest (@thread.Count) before triaging — actions apply to the whole thread</span>
+                        }
+                        @if (threadMatchedBySubject)
+                        {
+                            <span class="text-[11px] text-amber-600"
+                                  title="Outlook gave this email a different conversation id from the rest of the chain, so its members were found by subject. Apply's whole-thread sweep follows Outlook's id — emails matched here by subject keep their own queue entries and are triaged from those.">
+                                · thread matched by subject — Entire thread = Yes sweeps only the emails sharing this one's Outlook id
+                            </span>
                         }
                     </div>
                 </div>
@@ -1363,6 +1377,7 @@ else
                                        CreatedRecords="createdNowRecords"
                                        OnCreateNow="() => DoCreateStagedNow()"
                                        Busy="@busy"
+                                       OnClose="() => workspace.Close(PanelKind.SystemActions)"
                                        TodoRows="createTodoRows"
                                        TodoAssigneeOptions="todoAssigneeOptions"
                                        TodoProjectNote="@TodoProjectNote"
@@ -1382,7 +1397,11 @@ else
             <ComposeContent>@ComposePaneContent</ComposeContent>
             <SubcontractorCommsContent><SubcontractorCommsPane OnPreview="OpenSubcontractorCommsPreview"
                                                                OnReply="message => StartOutboxReply(message, PanelKind.SubcontractorComms)"
-                                                               OnForward="message => StartOutboxForward(message, PanelKind.SubcontractorComms)" /></SubcontractorCommsContent>
+                                                               OnForward="message => StartOutboxForward(message, PanelKind.SubcontractorComms)"
+                                                               EmailSubject="@OpenQueueEmailSubject"
+                                                               ProjectName="@TriageProjectName"
+                                                               Picked="pickedRecords"
+                                                               OnStagingChanged="StateHasChanged" /></SubcontractorCommsContent>
             <OutboxContent>
                 <OutboxPane QueuedReplies="queuedReplies"
                             OnChanged="StateHasChanged"
@@ -1721,6 +1740,12 @@ else
     // previous selection can never show against the wrong email.
     private IReadOnlyList<MailboxMessage> thread = Array.Empty<MailboxMessage>();
     private bool threadLoading;
+    // The thread came from a subject match because Outlook's conversation id had split from the
+    // rest of the chain — shown as such, since Apply's thread-wide sweep follows the id, not the subject.
+    private bool threadMatchedBySubject;
+    // The thread read failed outright (rather than finding nothing) — said so, never hidden
+    // (Nigel, 2026-08-22: an empty panel read as "no thread" when the read had simply failed).
+    private string? threadError;
     private CancellationTokenSource? threadCts;
 
     private IReadOnlyList<Request> unassigned = Array.Empty<Request>();
@@ -1974,6 +1999,15 @@ else
     // answered, required before Apply. Never persisted, cleared back to blank with the rest of
     // the staging on every selection/view change and after every apply.
     private bool? triageEntireThread;
+
+    // What the Subcontractor Communications browser tags against: the open QUEUE email (the
+    // Tagged view manages its tags from the email pane instead), and the triage bar's project —
+    // by name, because record-less communication tags carry no project to filter on.
+    private string OpenQueueEmailSubject =>
+        view == QueueView.Active && selected is not null ? selected.Subject : "";
+
+    private string TriageProjectName =>
+        AllProjects.FirstOrDefault(project => project.ProjectId == triageProjectId)?.Name ?? "";
 
     // The System Tags modal's tab IS the pathway decision — parse the tab label back onto the
     // page's own pathway state so filing, to-dos and a record-less reply all read one field.
@@ -2759,18 +2793,25 @@ else
         threadCts = cts;
 
         thread = Array.Empty<MailboxMessage>();
+        threadMatchedBySubject = false;
+        threadError = null;
         if (string.IsNullOrEmpty(item.ConversationId)) { threadLoading = false; return; }
 
         threadLoading = true;
         try
         {
-            var page = await Intake.ListConversationLiveAsync(item.ConversationId, cts.Token);
+            var page = await Intake.ListConversationLiveAsync(item.ConversationId, item.Subject, cts.Token);
             if (cts.IsCancellationRequested || selected?.Id != item.Id)
                 return;
             thread = page.Items;
+            threadMatchedBySubject = page.MatchedBySubject;
         }
         catch (OperationCanceledException) { /* superseded by a newer selection */ }
-        catch { /* leave empty: the panel simply doesn't render */ }
+        catch
+        {
+            if (selected?.Id == item.Id)
+                threadError = "Couldn't read this email's thread — the conversation may still have replies.";
+        }
         finally
         {
             if (selected?.Id == item.Id)

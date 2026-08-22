@@ -61,25 +61,7 @@
            Communications, filterable per category. *@
         @if (activeTab == "Subcontractor")
         {
-            <div class="space-y-2">
-                <label class="flex items-start gap-2 cursor-pointer select-none">
-                    <input type="checkbox" checked="@IsCommsPicked" @onchange="ToggleCommsPickAsync" />
-                    <span class="text-sm text-content">
-                        Subcontractor communication
-                        <span class="block text-xs text-content-subtle">Tags the thread as general subcontractor correspondence — no record needed. It appears under Subcontractor → Communications.</span>
-                    </span>
-                </label>
-                <div class="pl-6 space-y-1.5">
-                    <p class="text-xs text-content-subtle">Or something more specific — files the same way, and reads back under its own filter:</p>
-                    @foreach (var category in SubcontractorComms.Categories)
-                    {
-                        <label @key="category.RecordId" class="flex items-center gap-2 cursor-pointer select-none" title="@category.Summary">
-                            <input type="checkbox" checked="@IsCategoryPicked(category)" @onchange="() => TogglePick(category)" />
-                            <span class="text-sm text-content">@category.Title</span>
-                        </label>
-                    }
-                </div>
-            </div>
+            <SubcontractorCommsTicks Picked="Picked" OnStagingChanged="OnStagingChanged" />
         }
 
         @if (string.IsNullOrWhiteSpace(ProjectId))
@@ -92,7 +74,7 @@
         {
             @if (activeTab == "Internal")
             {
-                <p class="text-xs text-content-subtle">Link this email to existing to-do items — the email is tagged to every picked item on apply. To draft NEW to-dos from this email, use System actions.</p>
+                <p class="text-xs text-content-subtle">Link this email to existing to-do items, bid packages or work orders — the email is tagged to every picked record on apply. To draft NEW to-dos or records from this email, use System actions.</p>
             }
             @LinkPicker
         }
@@ -115,7 +97,10 @@
     // documents stay reachable here via Request / RFI and LADs claim.
     private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.Lad, RecordType.ValuationReportSnapshot };
     private static readonly RecordType[] SubcontractorTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Defect };
-    private static readonly RecordType[] InternalTypes = { RecordType.Todo };
+    // Internal carries bid packages and work orders too (Nigel, 2026-08-22): staff-to-staff mail
+    // about a package or an order is as common as a to-do. Those picks still file the thread
+    // Subcontractor-side (the record type decides), so the cross-filing confirm at Apply says so.
+    private static readonly RecordType[] InternalTypes = { RecordType.Todo, RecordType.BidPackageInvite, RecordType.WorkOrder };
 
     /// <summary>True while there is an email to stage against — the page renders the pane per
     /// selected email (keyed on the message id), so a fresh selection starts a fresh pane.</summary>
@@ -218,18 +203,6 @@
         else Picked.Add(record);
         await OnStagingChanged.InvokeAsync();
     }
-
-    // The Subcontractor tab's "communication" ticks — constant records staged through the same
-    // picks list as everything else, so the chips, the badge and the one Apply need nothing new.
-    // The general tick and each category are independent picks, matched by id: ticking Materials
-    // must not read as the general tick being on.
-    private bool IsCommsPicked =>
-        Picked.Any(record => record.RecordId == SubcontractorComms.RecordId);
-
-    private bool IsCategoryPicked(LinkableRecord category) =>
-        Picked.Any(record => record.RecordId == category.RecordId);
-
-    private Task ToggleCommsPickAsync() => TogglePick(SubcontractorComms.Record);
 
     private async Task CloseAsync()
     {

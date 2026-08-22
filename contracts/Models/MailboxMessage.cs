@@ -58,4 +58,8 @@ public sealed record MailboxMessageDetail(
 public sealed record MailboxPage(
     IReadOnlyList<MailboxMessage> Items,
     string? NextCursor,
-    int Total);
+    int Total,
+    // Thread reads only: true when the members were found by subject rather than by Graph's
+    // ConversationId (the id splits when a subject is edited or a forward re-threads), so the UI
+    // can say the grouping is a best match rather than Outlook's own.
+    bool MatchedBySubject = false);

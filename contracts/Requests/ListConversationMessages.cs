@@ -7,4 +7,7 @@ namespace Jewel.JPMS.Contracts.Requests;
 // members, discarded ones and already-linked ones alike, so the triage detail pane can show an
 // email's later replies (they often say how the older messages should be triaged). Not paged: a
 // single mail thread is small, so one read returns it whole.
-public sealed record ListConversationMessages(string ConversationId) : IQuery<MailboxPage>;
+// Subject (optional) is the opened email's own: when the conversation read comes back with only
+// that one email — Graph's id having split from the rest of the chain — the members are found by
+// matching subject instead, and the page says so (MatchedBySubject).
+public sealed record ListConversationMessages(string ConversationId, string? Subject = null) : IQuery<MailboxPage>;

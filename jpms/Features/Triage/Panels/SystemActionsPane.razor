@@ -152,6 +152,10 @@
                 <StageDirectoryContactAction OnStaged="StagedAsync" />
                 break;
         }
+        @if (IsRecordCreate(kind))
+        {
+            <StagedCreateFooter Staged="@StagedCreate" Busy="@Busy" OnCreateNow="OnCreateNow" OnClose="OnClose" />
+        }
     }
 
     <p class="text-xs text-content-subtle pt-2 border-t border-line">
@@ -199,6 +203,16 @@
 
     /// <summary>The page's busy flag — disables Create now while any apply/create is running.</summary>
     [Parameter] public bool Busy { get; set; }
+
+    /// <summary>Done pressed under a record form — the page hands this window back to the email.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    // The actions that draft the page's staged record — the ones the footer finishes.
+    private static bool IsRecordCreate(SystemActionKind actionKind) =>
+        actionKind is SystemActionKind.RaiseRfi
+            or SystemActionKind.RaiseWorkOrder
+            or SystemActionKind.CreateBidPackageInvite
+            or SystemActionKind.RaiseDefect;
 
     /// <summary>Page-owned to-do draft rows — "Create To-do Items". One to-do per assignee per
     /// row on Apply, the email tagged to every one.</summary>

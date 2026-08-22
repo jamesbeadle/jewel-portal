@@ -230,7 +230,7 @@ else if (Kind == StagedRecordKind.WorkOrder)
                title="A draft is stored without a number and is invisible to the supplier — though its value counts in the Financials tab's committed figures — until someone approves or rejects it from the Work Orders tab">
             <input type="checkbox" class="cursor-pointer align-middle" checked="@Create.SaveAsDraft"
                    @onchange="e => SetWorkOrder(c => c.SaveAsDraft = e.Value is true)" />
-            Save as a draft — needs approval before it's issued
+            Hold as a draft instead — no purchase-order email until it's approved from the Work Orders tab
         </label>
 
         @* The warning the auto-send promises: a released order emails its purchase order to the
@@ -249,10 +249,9 @@ else if (Kind == StagedRecordKind.WorkOrder)
             else
             {
                 <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content">
-                    When Apply raises this order, the purchase-order email will be
-                    <strong>sent</strong> to
+                    Apply will raise the order, <strong>send</strong> the purchase order to
                     <strong>@(WorkOrderSupplier?.ContactEmail ?? "the subcontractor's directory email")</strong>
-                    from the projects mailbox. Tick "Save as a draft" if it shouldn't go out yet.
+                    from the projects mailbox, tag this email to it, and send any reply you've written — all in the one go.
                 </p>
             }
         }
