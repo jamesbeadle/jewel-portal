@@ -105,10 +105,15 @@ public sealed class ListProjectCommunicationsHandler
     // an email carrying a category tag still shows its category chip however it was matched.
     private static bool ShouldQuery(LinkableRecord record, RecordType? requestedType)
     {
-        if (record.Type != RecordType.SubcontractorComms) return true;
-        if (requestedType == RecordType.SubcontractorComms) return true;
-        return record.RecordId == SubcontractorComms.RecordId;
+        if (!IsCommunicationFamily(record.Type)) return true;
+        if (requestedType == record.Type) return true;
+        return record.RecordId is SubcontractorComms.RecordId or InternalComms.RecordId;
     }
+
+    // The two record-less tag families (Subcontractor 2026-08-17, Internal 2026-08-22) — both
+    // project-less, so both get the general-tag-only treatment in the all-types read.
+    private static bool IsCommunicationFamily(RecordType type) =>
+        type is RecordType.SubcontractorComms or RecordType.InternalComms;
 
     // Conservatively below Exchange's "restriction or sort order is too complex" threshold for
     // OR'd category clauses.

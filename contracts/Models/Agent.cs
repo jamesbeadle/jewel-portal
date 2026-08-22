@@ -17,7 +17,8 @@ public enum RecordType
     WorkOrder = 8,         // a work order (purchase order) awarded to a subcontractor — subcontract-side
     Defect = 9,            // a defect logged on the project — remediation chased with the subcontractor
     SubcontractorComms = 10, // the record-less "subcontractor communication" tag family (general + categories) — subcontract-side correspondence tied to no record
-    ValuationReportSnapshot = 11 // a frozen valuation report snapshot — the client-facing statement a valuation email travels with
+    ValuationReportSnapshot = 11, // a frozen valuation report snapshot — the client-facing statement a valuation email travels with
+    InternalComms = 12     // the record-less "internal communication" tag family (general + categories) — staff-to-staff correspondence tied to no record
 }
 
 // The discipline an agent belongs to. Mirrors the columns of the request-agent flow diagram:

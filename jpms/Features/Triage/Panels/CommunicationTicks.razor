@@ -1,23 +1,23 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
 @using Jewel.JPMS.Contracts.RecordLinks
 
-@* The record-less Subcontractor-communication ticks — the general tick plus its categories
-   (Chaser / Info request / Materials / H&S). One component because the same ticks live in two
-   windows (decision 2026-08-22, Nigel's feedback): System Tags → Subcontractor, and the
-   Subcontractor Communications browser itself, which is where he goes looking for them. Every
-   tick is a pick in the page's one staged list, applied by the page's single Apply. *@
+@* The record-less communication ticks for one family — the general tick plus its categories.
+   One component because the same ticks live in several windows (decision 2026-08-22, Nigel's
+   feedback): System Tags → Subcontractor and → Internal, and the communications browser pane
+   itself, which is where he goes looking for them. Every tick is a pick in the page's one staged
+   list, applied by the page's single Apply. *@
 
 <div class="space-y-2">
     <label class="flex items-start gap-2 cursor-pointer select-none">
-        <input type="checkbox" checked="@IsGeneralPicked" @onchange="ToggleGeneralAsync" />
+        <input type="checkbox" checked="@IsPicked(Family.General)" @onchange="() => ToggleAsync(Family.General)" />
         <span class="text-sm text-content">
-            Subcontractor communication
-            <span class="block text-xs text-content-subtle">Tags the thread as general subcontractor correspondence — no record needed. It appears under Subcontractor → Communications.</span>
+            @Family.Label
+            <span class="block text-xs text-content-subtle">@Family.GeneralHint</span>
         </span>
     </label>
     <div class="pl-6 space-y-1.5">
         <p class="text-xs text-content-subtle">Or something more specific — files the same way, and reads back under its own filter:</p>
-        @foreach (var category in SubcontractorComms.Categories)
+        @foreach (var category in Family.Categories)
         {
             <label @key="category.RecordId" class="flex items-center gap-2 cursor-pointer select-none" title="@category.Summary">
                 <input type="checkbox" checked="@IsPicked(category)" @onchange="() => ToggleAsync(category)" />
@@ -28,16 +28,15 @@
 </div>
 
 @code {
+    /// <summary>Which family the ticks are — Subcontractor unless told otherwise.</summary>
+    [Parameter] public CommunicationFamily Family { get; set; } = CommunicationFamily.Subcontractor;
+
     /// <summary>The page-owned staged picks; ticking adds or removes the family record.</summary>
     [Parameter, EditorRequired] public List<LinkableRecord> Picked { get; set; } = new();
     [Parameter] public EventCallback OnStagingChanged { get; set; }
 
-    private bool IsGeneralPicked => IsPicked(SubcontractorComms.Record);
-
     private bool IsPicked(LinkableRecord record) =>
         Picked.Any(picked => picked.RecordId == record.RecordId);
-
-    private Task ToggleGeneralAsync() => ToggleAsync(SubcontractorComms.Record);
 
     private async Task ToggleAsync(LinkableRecord record)
     {

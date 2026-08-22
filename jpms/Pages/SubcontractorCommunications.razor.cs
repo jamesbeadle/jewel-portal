@@ -7,6 +7,10 @@ public partial class SubcontractorCommunications
 {
     private const int PageSize = 25;
 
+    // Which record-less family this page is showing — decided by the route (the one component
+    // serves /subcontractors/communications and /internal/communications).
+    private CommunicationFamily family = CommunicationFamily.Subcontractor;
+
     // Session checked and the user signed in — the chrome shows straight away; `loaded` is the
     // separate question of whether the page of emails has arrived (the loading-states convention).
     private bool sessionReady;
@@ -25,12 +29,12 @@ public partial class SubcontractorCommunications
 
     private IReadOnlyList<string> TagsToRead =>
         categoryTagFilter is null
-            ? SubcontractorComms.Tags
+            ? family.Tags
             : new[] { categoryTagFilter };
 
     // The tag a listed email's chip row may omit: it is this list's premise. Under "All" only the
     // general tag is implied — a category tag on a card is information, not noise.
-    private string ImpliedTag => categoryTagFilter ?? SubcontractorComms.Tag;
+    private string ImpliedTag => categoryTagFilter ?? family.Tag;
 
     // Switching chip resets the list BEFORE the fetch: a failed re-query must not leave the old
     // filter's emails (or its Graph cursor — "Load more" would mix filters) under the new chip.
@@ -46,9 +50,9 @@ public partial class SubcontractorCommunications
     }
 
     private string ActiveFilterLabel =>
-        SubcontractorComms.All
-            .Where(record => $"JPMS/{record.TagReference}" == categoryTagFilter)
-            .Select(record => record.RecordId == SubcontractorComms.RecordId ? "General" : record.Title)
+        family.All
+            .Where(record => CommunicationFamily.TagFor(record) == categoryTagFilter)
+            .Select(family.ChipLabel)
             .FirstOrDefault() ?? "";
 
     private string ChipClass(string? tag) =>
@@ -74,11 +78,28 @@ public partial class SubcontractorCommunications
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        family = CommunicationFamily.ForRoute(new Uri(Nav.Uri).AbsolutePath);
         sessionReady = true;
         StateHasChanged();
         // The project list only feeds the reply composer's attachment picker — losing it costs
         // the picker its drawing/photo sources, not the page.
         _ = LoadProjectListAsync();
+        await LoadPageAsync(cursor: null);
+    }
+
+    // Blazor keeps this one component instance when the user moves between its two routes, so the
+    // family is re-read on every parameter set and the list reloaded when it has changed.
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!sessionReady) return;
+        var routed = CommunicationFamily.ForRoute(new Uri(Nav.Uri).AbsolutePath);
+        if (routed == family) return;
+        family = routed;
+        categoryTagFilter = null;
+        loaded = false;
+        items.Clear();
+        total = 0;
+        nextCursor = null;
         await LoadPageAsync(cursor: null);
     }
 

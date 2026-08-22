@@ -215,6 +215,7 @@ public sealed class BackfillBucketsEndpoint
         if (stem.StartsWith("WO-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
         // The SubComms family: the general stem plus its category stems ("SubComms-Chase", …).
         if (stem.StartsWith(Jewel.JPMS.Contracts.RecordLinks.SubcontractorComms.Reference, StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
+        if (stem.StartsWith(Jewel.JPMS.Contracts.RecordLinks.InternalComms.Reference, StringComparison.OrdinalIgnoreCase)) return TriageCategories.Internal;
         if (stem.StartsWith("CC-", StringComparison.OrdinalIgnoreCase)) return "CC";
         if (stem.StartsWith("TODO-", StringComparison.OrdinalIgnoreCase)) return "TODO";
 

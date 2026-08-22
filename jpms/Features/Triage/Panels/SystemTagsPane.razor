@@ -61,7 +61,14 @@
            Communications, filterable per category. *@
         @if (activeTab == "Subcontractor")
         {
-            <SubcontractorCommsTicks Picked="Picked" OnStagingChanged="OnStagingChanged" />
+            <CommunicationTicks Picked="Picked" OnStagingChanged="OnStagingChanged" />
+            <p class="text-xs text-content-subtle">A tick and a record pick go together — a Chaser tick plus the bid package or RFI it's chasing files the email under both.</p>
+        }
+        @* The Internal side's own record-less ticks (2026-08-22): staff mail such as build-ups to
+           the site manager, which is neither a to-do nor a record. *@
+        @if (activeTab == "Internal")
+        {
+            <CommunicationTicks Family="CommunicationFamily.Internal" Picked="Picked" OnStagingChanged="OnStagingChanged" />
         }
 
         @if (string.IsNullOrWhiteSpace(ProjectId))

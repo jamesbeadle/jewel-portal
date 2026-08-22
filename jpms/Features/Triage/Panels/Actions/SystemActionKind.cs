@@ -23,7 +23,10 @@ public enum SystemActionKind
     RaiseDefect,
     CreateTodos,
     CompleteTodo,
-    AddDirectoryContact
+    AddDirectoryContact,
+    // Hand the email to the QS (Nigel, 2026-08-22: a tender enquiry's next step) — a forward
+    // lined up in the Outbox with the QS staff pre-filled, sent by Apply.
+    ForwardToQs
 }
 
 public static class SystemActionKinds
@@ -45,7 +48,8 @@ public static class SystemActionKinds
         SystemActionKind.RaiseDefect,
         SystemActionKind.CreateTodos,
         SystemActionKind.CompleteTodo,
-        SystemActionKind.AddDirectoryContact
+        SystemActionKind.AddDirectoryContact,
+        SystemActionKind.ForwardToQs
     };
 
     public static string Label(SystemActionKind kind) => kind switch
@@ -64,6 +68,7 @@ public static class SystemActionKinds
         SystemActionKind.CreateTodos => "Create To-do Items",
         SystemActionKind.CompleteTodo => "Mark To-do Done",
         SystemActionKind.AddDirectoryContact => "Add Directory Contact",
+        SystemActionKind.ForwardToQs => "Forward to QS",
         _ => kind.ToString()
     };
 }

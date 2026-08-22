@@ -87,12 +87,18 @@
     <div class="flex flex-wrap items-center gap-2">
         <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Action</label>
         <select class="field max-w-xs" value="@((int)kind)" @onchange="OnKindChanged">
-            @foreach (var option in SystemActionKinds.All)
+            @foreach (var group in SystemActionGuide.Groups)
             {
-                <option value="@((int)option)">@SystemActionKinds.Label(option)</option>
+                <optgroup label="@group.Title">
+                    @foreach (var option in group.Kinds)
+                    {
+                        <option value="@((int)option)">@SystemActionKinds.Label(option)</option>
+                    }
+                </optgroup>
             }
         </select>
     </div>
+    <p class="text-xs text-content-subtle -mt-2">@SystemActionGuide.WhenToUse(kind)</p>
 
     @if (NeedsProject(kind) && ProjectId == "")
     {
@@ -150,6 +156,9 @@
                 break;
             case SystemActionKind.AddDirectoryContact:
                 <StageDirectoryContactAction OnStaged="StagedAsync" />
+                break;
+            case SystemActionKind.ForwardToQs:
+                <StageForwardToQsAction QsRecipients="@QsRecipients" OnForward="OnForwardToQs" />
                 break;
         }
         @if (IsRecordCreate(kind))
@@ -233,7 +242,13 @@
     // To-dos are company-wide until a project is set, and a directory contact has no project at
     // all — everything else raises on the email's project.
     private static bool NeedsProject(SystemActionKind actionKind) =>
-        actionKind is not (SystemActionKind.AddDirectoryContact or SystemActionKind.CreateTodos);
+        actionKind is not (SystemActionKind.AddDirectoryContact or SystemActionKind.CreateTodos or SystemActionKind.ForwardToQs);
+
+    /// <summary>Staff holding the QS role — "Forward to QS" pre-fills them.</summary>
+    [Parameter] public IReadOnlyList<TodoAssignablePerson> QsRecipients { get; set; } = Array.Empty<TodoAssignablePerson>();
+
+    /// <summary>"Forward to QS" pressed — the page opens the forward in the Outbox.</summary>
+    [Parameter] public EventCallback OnForwardToQs { get; set; }
 
     private List<TodoDraftRow> TitledTodoRows => TodoRows.Where(r => !string.IsNullOrWhiteSpace(r.Title)).ToList();
 

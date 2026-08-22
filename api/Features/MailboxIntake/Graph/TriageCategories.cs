@@ -73,6 +73,7 @@ public static class TriageCategories
         RecordType.WorkOrder        => Subcontractor, // the order Jewel places with the subcontractor
         RecordType.Defect           => Subcontractor, // the remediation is chased with the subcontractor
         RecordType.SubcontractorComms => Subcontractor, // general subcontractor correspondence — the tag IS the filing
+        RecordType.InternalComms    => Internal,     // general staff-to-staff correspondence — the tag IS the filing
         RecordType.CostCentre       => null,     // triager picks the side, per email
         RecordType.Todo             => null,     // neutral: never sets or changes a pathway
         _ => null

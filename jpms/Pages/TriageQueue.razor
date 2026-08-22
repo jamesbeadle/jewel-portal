@@ -1378,6 +1378,8 @@ else
                                        OnCreateNow="() => DoCreateStagedNow()"
                                        Busy="@busy"
                                        OnClose="() => workspace.Close(PanelKind.SystemActions)"
+                                       QsRecipients="@QsRecipients"
+                                       OnForwardToQs="StartForwardToQs"
                                        TodoRows="createTodoRows"
                                        TodoAssigneeOptions="todoAssigneeOptions"
                                        TodoProjectNote="@TodoProjectNote"
@@ -1407,6 +1409,7 @@ else
                             OnChanged="StateHasChanged"
                             @bind-ComposeAnchor="outboxComposeAnchor"
                             ComposeAnchorIsForward="@outboxComposeAnchorIsForward"
+                            ComposeForwardTo="@outboxForwardTo"
                             CurrentReplyPending="@ReplyDraftPending"
                             CurrentReplyIsForward="@replyIsForward"
                             CurrentReplySubject="@replySubject"
@@ -1576,6 +1579,7 @@ else
             or RecordType.Scheduling or RecordType.Lad => TriagePathway.Client,
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
+        RecordType.InternalComms => TriagePathway.Internal,
         _ => null
     };
 
@@ -1587,6 +1591,7 @@ else
             or RecordType.Scheduling or RecordType.Lad => "Client",
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => "Subcontractor",
+        RecordType.InternalComms    => "Internal",
         RecordType.CostCentre       => "Client or Subcontractor",
         RecordType.Todo             => "Neutral",
         _ => ""
@@ -1612,6 +1617,7 @@ else
         RecordType.Lad              => "LADs claim",
         RecordType.Todo             => "To-do item",
         RecordType.SubcontractorComms => "Subcontractor communication",
+        RecordType.InternalComms    => "Internal communication",
         _                           => type.ToString()
     };
 
@@ -1783,6 +1789,7 @@ else
     private static string? RecentHref(AuditEvent entry)
     {
         if (entry.RecordType == RecordType.SubcontractorComms) return "/subcontractors/communications";
+        if (entry.RecordType == RecordType.InternalComms) return "/internal/communications";
         if (string.IsNullOrEmpty(entry.ProjectId))
             return entry.RecordType == RecordType.Todo ? "/todos" : null;
         var projectId = entry.ProjectId;
@@ -1971,7 +1978,18 @@ else
     {
         outboxComposeAnchor = message;
         outboxComposeAnchorIsForward = true;
+        outboxForwardTo = null;
         workspace.ShowOpposite(PanelKind.Outbox, anchor);
+    }
+
+    // Recipients a forward opens with — set by "Forward to QS", cleared by every other forward.
+    private string? outboxForwardTo;
+
+    private void StartForwardToQs()
+    {
+        if (selected is null) return;
+        StartOutboxForward(selected, PanelKind.SystemActions);
+        outboxForwardTo = string.Join("; ", QsRecipients.Select(person => person.Email));
     }
 
     // "Edit in Email window" on the Outbox's current-reply row — that composer lives under the
@@ -2038,6 +2056,11 @@ else
     // when the page loads, shaped by TodoAssigneePicker.BuildOptions and shared by every to-do
     // draft row. Assignment is picker-only.
     private IReadOnlyList<SearchSelect.Option> todoAssigneeOptions = Array.Empty<SearchSelect.Option>();
+    private IReadOnlyList<TodoAssignablePerson> assignablePeople = Array.Empty<TodoAssignablePerson>();
+
+    // "Forward to QS" (2026-08-22): everyone in the staff directory with the QS role.
+    private IReadOnlyList<TodoAssignablePerson> QsRecipients =>
+        assignablePeople.Where(person => person.Role == Role.QuantitySurveyor).ToList();
 
     // The drafts exactly as they will be posted. Built in one place so the count promised on the
     // summary and the batch the apply actually sends can never disagree.
@@ -2058,7 +2081,8 @@ else
         {
             var rolesTask = Todos.ListAssignableRolesAsync();
             var peopleTask = Todos.ListAssignablePeopleAsync();
-            todoAssigneeOptions = TodoAssigneePicker.BuildOptions(await rolesTask, await peopleTask);
+            assignablePeople = await peopleTask;
+            todoAssigneeOptions = TodoAssigneePicker.BuildOptions(await rolesTask, assignablePeople);
             await StageFilter.EnsureLoadedAsync();
             StageFilter.OnChange += StageFilterChanged;
         }

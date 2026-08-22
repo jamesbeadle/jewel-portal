@@ -19,12 +19,13 @@ public sealed class ListInboxMessagesHandler : IQueryHandler<ListInboxMessages, 
 {
     private readonly IMailboxGraphClient graph;
     private readonly RecordThreadTagger threadTagger;
-    public ListInboxMessagesHandler(IMailboxGraphClient graph, RecordThreadTagger threadTagger)
-    { this.graph = graph; this.threadTagger = threadTagger; }
+    private readonly AutoReplySweeper autoReplies;
+    public ListInboxMessagesHandler(IMailboxGraphClient graph, RecordThreadTagger threadTagger, AutoReplySweeper autoReplies)
+    { this.graph = graph; this.threadTagger = threadTagger; this.autoReplies = autoReplies; }
 
     public async Task<MailboxPage> HandleAsync(ListInboxMessages query, CancellationToken cancellationToken)
     {
-        var page = await graph.ListInboxAsync(query.Cursor, query.Take, query.NewestFirst, cancellationToken);
+        var page = await ListSweptAsync(query, cancellationToken);
 
         var threadTags = await threadTagger.LookupThreadTagsAsync(page.Items, cancellationToken);
         if (threadTags.Count == 0)
@@ -34,6 +35,24 @@ public sealed class ListInboxMessagesHandler : IQueryHandler<ListInboxMessages, 
             .Select(m => threadTags.TryGetValue(m.ConversationId, out var tags) ? m with { ThreadTags = tags } : m)
             .ToList();
         return new MailboxPage(annotated, page.NextCursor, page.Total);
+    }
+
+    // Automatic replies are discarded as they are met and the page re-read, because the inbox
+    // cursor is an offset into the untagged set — serving the swept page as listed would skip
+    // real emails on the next page. Bounded: a discard that keeps failing leaves its email in
+    // the queue for a human rather than looping.
+    private const int MaxSweepPasses = 3;
+
+    private async Task<MailboxPage> ListSweptAsync(ListInboxMessages query, CancellationToken cancellationToken)
+    {
+        var page = await graph.ListInboxAsync(query.Cursor, query.Take, query.NewestFirst, cancellationToken);
+        for (var pass = 0; pass < MaxSweepPasses; pass++)
+        {
+            var discarded = await autoReplies.SweepAsync(page, cancellationToken);
+            if (discarded == 0) return page;
+            page = await graph.ListInboxAsync(query.Cursor, query.Take, query.NewestFirst, cancellationToken);
+        }
+        return page;
     }
 }
 

@@ -24,6 +24,10 @@ public partial class MailReplyComposer
     /// thread. Only meaningful with <see cref="ReplyTo"/> (a draft carries its own kind).</summary>
     [Parameter] public bool Forward { get; set; }
 
+    /// <summary>Recipients a forward starts with — the "Forward to QS" action's preset
+    /// (2026-08-22). Semicolon-separated, editable like any To; ignored for replies and drafts.</summary>
+    [Parameter] public string? ForwardTo { get; set; }
+
     /// <summary>A queued reply re-opened for editing (stage mode): the fields load from the
     /// snapshot instead of the reply-all prefill, and confirming updates the same entry.</summary>
     [Parameter] public StagedOutboxReply? Draft { get; set; }
@@ -125,7 +129,10 @@ public partial class MailReplyComposer
         // so its subject can prefill immediately; the detail fetch below only feeds the
         // attachment hint (Graph carries the originals on the forward draft itself).
         if (Draft is null && ReplyTo is { } forwardOf && IsForward)
+        {
             subject = MailCompose.ForwardSubjectFor(forwardOf.Subject);
+            toField = ForwardTo ?? "";
+        }
 
         try
         {

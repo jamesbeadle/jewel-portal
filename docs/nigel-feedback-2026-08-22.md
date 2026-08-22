@@ -73,6 +73,12 @@ Fix:
 - D: `StagedCreateFooter.razor` under every record-create form (status line, Create now, Done), `CreateProblem`/`Outcome` on `StagedRecordCreate`, outcome-first PO copy in `StagedRecordActionEditor.razor`.
 - E: thread read falls back to subject matching when Outlook's conversation id has split (`ConversationSubject.cs`, `ConversationBySubject.cs`, `MailboxPage.MatchedBySubject`, `ListConversationMessages.Subject`); the page now shows a read failure with Retry and flags a subject-matched thread. Note: Apply's whole-thread sweep still follows the Outlook id — the flag says so.
 
+## Done in round 2 (same evening)
+- C2: Internal Communications family — `RecordType.InternalComms = 12`, `contracts/RecordLinks/InternalComms.cs` (General / Site instruction / Build-up / Spec note), `InternalCommsLinkProvider`, bucket → Internal, ticks on the Internal tab, `/internal/communications` served by the existing communications page via `CommunicationFamily.ForRoute`, Internal → Communications nav row. Category names are a first cut — rename with Nigel.
+- F: actions dropdown grouped (Raise something new / Move an existing record on / People and to-dos) with a one-line "when to use" under the pick (`SystemActionGuide.cs`); new **Forward to QS** action — opens the forward in the Outbox with every QS-role staff member pre-filled (`StageForwardToQsAction.razor`, `ForwardTo` on the composer).
+- G: `AutoReplySweeper` — "Automatic reply:" / out-of-office subjects are tagged Discarded (that message only, never the thread) as the queue is listed, and the page re-read so the offset cursor stays honest.
+- A4: the Subcontractor tab says a comms tick and a record pick go together.
+
 ## Suggested order (remaining)
 1. A1–A3 (SubComms pane becomes the tagging surface) — this alone fixes three of the seven videos.
 2. C1 (Internal tab types) and B (unlock) — two small changes, both unblock email 4.

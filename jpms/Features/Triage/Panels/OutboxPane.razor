@@ -27,7 +27,8 @@
                 <span class="italic">@anchor.Subject</span>
                 <span class="text-content-subtle">(@anchor.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm"))</span>
             </p>
-            <MailReplyComposer @key="@($"{anchor.Id}:{ComposeAnchorIsForward}")" ReplyTo="anchor" Forward="ComposeAnchorIsForward"
+            <MailReplyComposer @key="@($"{anchor.Id}:{ComposeAnchorIsForward}:{ComposeForwardTo}")" ReplyTo="anchor" Forward="ComposeAnchorIsForward"
+                               ForwardTo="@ComposeForwardTo"
                                Projects="@Projects" ProjectId="@ProjectId"
                                OnStage="StageNewAsync" OnCancel="CancelComposeAsync" />
         </div>
@@ -134,6 +135,10 @@
     /// <summary>True when the open composer FORWARDS the anchor rather than replying to it —
     /// decided by which button chose the anchor.</summary>
     [Parameter] public bool ComposeAnchorIsForward { get; set; }
+
+    /// <summary>Preset recipients for a forward started by an action ("Forward to QS") — null
+    /// for an ordinary forward, which starts blank.</summary>
+    [Parameter] public string? ComposeForwardTo { get; set; }
 
     /// <summary>The open email's own reply (or forward — <see cref="CurrentReplyIsForward"/>),
     /// listed here so the Outbox shows everything Apply will send — composing it stays in the

@@ -1,0 +1,33 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+
+@* "Forward to QS" (Nigel, 2026-08-22): the next step for a tender enquiry or a quote is to hand
+   it to the quantity surveyor. Pressing the button opens a forward in the Outbox with every QS
+   in the staff directory pre-filled — editable like any envelope — and Apply sends it with the
+   rest of the triage. Nothing is staged here itself: the Outbox entry is the staged work. *@
+
+<div class="space-y-3">
+    @if (QsRecipients.Count == 0)
+    {
+        <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-sm text-content">
+            Nobody in the staff directory holds the Quantity Surveyor role, so there's no one to
+            forward to. Add the role to the QS in the Directory, or use a plain Forward from the email window.
+        </p>
+    }
+    else
+    {
+        <p class="text-sm text-content">
+            Forwards this email to
+            <span class="font-medium">@string.Join(", ", QsRecipients.Select(person => person.DisplayName))</span>
+            — the envelope opens in the Outbox so you can add a line before Apply sends it.
+        </p>
+        <button type="button" class="btn-primary" @onclick="() => OnForward.InvokeAsync()">Line up the forward</button>
+    }
+</div>
+
+@code {
+    /// <summary>Everyone in the staff directory holding the QS role — the preset recipients.</summary>
+    [Parameter] public IReadOnlyList<TodoAssignablePerson> QsRecipients { get; set; } = Array.Empty<TodoAssignablePerson>();
+
+    /// <summary>Open the forward in the Outbox with the QS pre-filled.</summary>
+    [Parameter] public EventCallback OnForward { get; set; }
+}

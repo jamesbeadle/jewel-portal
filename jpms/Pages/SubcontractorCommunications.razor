@@ -1,4 +1,5 @@
 @page "/subcontractors/communications"
+@page "/internal/communications"
 @using Jewel.JPMS.Contracts.RecordLinks
 @using Jewel.JPMS.Features.Triage
 @using Jewel.JPMS.Features.Triage.Panels
@@ -19,6 +20,9 @@
     there and then; the sent copy inherits the thread's tags and files back into this list). The
     chip row narrows the list to one category. Tagging (and untagging, from the Control Centre's
     Tagged view) stays in mailbox triage.
+
+    The same page serves Internal → Communications (2026-08-22): the route picks the family
+    (CommunicationFamily.ForRoute), and everything else — chips, copy, the tags read — follows it.
 *@
 
 @if (!sessionReady)
@@ -35,12 +39,12 @@ else
 {
     <section class="px-6 md:px-8 py-8 md:py-12">
         <header class="mb-6">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">Subcontractor</p>
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">@family.Pathway</p>
             <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Communications</h1>
             @if (loaded && total > 0)
             {
                 <p class="text-sm text-content-muted mt-2">
-                    @total email@(total == 1 ? "" : "s") @(categoryTagFilter is null ? "tagged as subcontractor communication" : $"tagged {ActiveFilterLabel}").
+                    @total email@(total == 1 ? "" : "s") @(categoryTagFilter is null ? $"tagged as {family.Label.ToLowerInvariant()}" : $"tagged {ActiveFilterLabel}").
                 </p>
             }
         </header>
@@ -49,14 +53,13 @@ else
            constant alone, usable before the first page lands, and stay put when a category comes
            back empty. *@
         <div class="flex flex-wrap items-center gap-1.5 mb-4">
-            <button type="button" class="@ChipClass(null)" title="Every subcontractor communication, whatever its category"
+            <button type="button" class="@ChipClass(null)" title="@($"Every {family.Label.ToLowerInvariant()}, whatever its category")"
                     @onclick="() => SetCategoryFilterAsync(null)">All</button>
-            @foreach (var familyRecord in SubcontractorComms.All)
+            @foreach (var familyRecord in family.All)
             {
-                var familyTag = $"JPMS/{familyRecord.TagReference}";
-                var chipLabel = familyRecord.RecordId == SubcontractorComms.RecordId ? "General" : familyRecord.Title;
+                var familyTag = CommunicationFamily.TagFor(familyRecord);
                 <button type="button" @key="familyRecord.RecordId" class="@ChipClass(familyTag)" title="@familyRecord.Summary"
-                        @onclick="() => SetCategoryFilterAsync(familyTag)">@chipLabel</button>
+                        @onclick="() => SetCategoryFilterAsync(familyTag)">@family.ChipLabel(familyRecord)</button>
             }
         </div>
 
@@ -73,9 +76,9 @@ else
             @if (loadError is null)
             {
                 <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">@(categoryTagFilter is null ? "No subcontractor communications yet." : $"Nothing tagged {ActiveFilterLabel} yet.")</p>
+                    <p class="text-sm text-content">@(categoryTagFilter is null ? $"No {family.Label.ToLowerInvariant()}s yet." : $"Nothing tagged {ActiveFilterLabel} yet.")</p>
                     <p class="text-xs text-content-subtle mt-1">
-                        Tick "Subcontractor communication" — or one of its categories — in the Control Centre's System Tags and the thread appears here.
+                        Tick "@family.Label" — or one of its categories — in the Control Centre's System Tags (the @family.Pathway tab) and the thread appears here.
                     </p>
                 </div>
             }

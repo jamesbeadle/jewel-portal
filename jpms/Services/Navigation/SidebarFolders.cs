@@ -150,6 +150,10 @@ public static class SidebarFolders
                 // Everyone the company deals with — Clients · Architects · Subcontractors · Staff.
                 new SidebarRow(new NavigationItem("Directory", "/directory"),
                     DesktopNavigation.DirectorRoles),
+                // Staff-to-staff correspondence — every email tagged "JPMS/IntComms" at triage
+                // (the System Tags Internal tab's communication ticks), read live.
+                new SidebarRow(new NavigationItem("Communications", "/internal/communications"),
+                    DesktopNavigation.DirectorRoles),
                 // The Monday replacement: insurances, subscriptions, vans, trade accounts.
                 new SidebarRow(new NavigationItem("Registers", "/registers"),
                     DesktopNavigation.DirectorRoles),
