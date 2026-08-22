@@ -1400,6 +1400,7 @@
             case "open_modal": Chat.SetAssistantControlling(true); hopOpenedModal = true; ApplyOpenModal(action); break;
             case "stage_triage_tag":
             case "stage_triage_todo":
+            case "stage_triage_work_order":
             case "select_email":
                 // Addressed to the open page (the Control Centre), not to the panel — and AWAITED,
                 // so the next hop's page note reports what actually staged or selected. The server

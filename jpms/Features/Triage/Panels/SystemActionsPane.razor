@@ -22,9 +22,20 @@
         <h2 class="text-base font-semibold text-content">Line up actions for when triage completes</h2>
     </div>
 
-    @if (StagedActions.Count > 0 || StagedCreate is not null || TitledTodoRows.Count > 0)
+    @if (StagedActions.Count > 0 || StagedCreate is not null || TitledTodoRows.Count > 0 || CreatedRecords.Count > 0)
     {
         <div class="space-y-1.5">
+            @* Records already raised from this email (Create now, or an earlier apply's create):
+               done facts, not staged work — green, with the minted reference. *@
+            @foreach (var created in CreatedRecords)
+            {
+                <div class="flex items-center gap-3 rounded-lg border border-positive/40 bg-positive/5 px-3 py-2">
+                    <p class="text-sm text-content min-w-0">
+                        <span class="text-xs uppercase tracking-wider text-positive font-semibold mr-2">✓ @created.Reference</span>
+                        <span class="text-content-muted truncate">@created.Label@(string.IsNullOrWhiteSpace(created.Title) ? "" : $" — {created.Title}") — raised; this email is tagged to it.</span>
+                    </p>
+                </div>
+            }
             @foreach (var staged in StagedActions.ToList())
             {
                 var action = staged;
@@ -44,8 +55,18 @@
                         <span class="text-xs uppercase tracking-wider text-accent font-semibold mr-2">✚ @stagedRecord.Label</span>
                         <span class="text-content-muted truncate">@(string.IsNullOrWhiteSpace(stagedRecord.DisplayTitle) ? "(untitled)" : stagedRecord.DisplayTitle) — this email is tagged to it.</span>
                     </p>
-                    <button type="button" class="text-xs text-content-subtle hover:text-negative shrink-0"
-                            @onclick="ClearStagedCreateAsync">Remove</button>
+                    <div class="flex items-center gap-3 shrink-0">
+                        @* Create now: raise the record immediately (email tagged to it in the same
+                           act) instead of waiting for Apply — so the new record exists and can be
+                           worked with (named in the reply, linked elsewhere) mid-triage. The page
+                           validates readiness and says what's missing in its red bar. *@
+                        <button type="button" class="btn-secondary text-xs"
+                                disabled="@Busy"
+                                title="Raise this record immediately — the email is tagged to it now, and the rest of the triage still lands with Apply"
+                                @onclick="() => OnCreateNow.InvokeAsync()">Create now</button>
+                        <button type="button" class="text-xs text-content-subtle hover:text-negative"
+                                @onclick="ClearStagedCreateAsync">Remove</button>
+                    </div>
                 </div>
             }
             @foreach (var todoChipRow in TitledTodoRows)
@@ -136,7 +157,9 @@
     <p class="text-xs text-content-subtle pt-2 border-t border-line">
         Everything lined up here runs with the email's Apply — created records are tagged to the
         email, and an action on an existing record stages that record's tag in System Tags;
-        staged actions clear if you move to another email without applying.
+        staged actions clear if you move to another email without applying. A staged record's
+        Create now raises it immediately instead (email tagged to it in the same act), so the new
+        record exists to work with before the rest of the triage lands.
     </p>
 </div>
 
@@ -164,6 +187,18 @@
     /// by the page; edited in <see cref="StagedRecordActionEditor"/>.</summary>
     [Parameter] public StagedRecordCreate? StagedCreate { get; set; }
     [Parameter] public EventCallback<StagedRecordCreate?> StagedCreateChanged { get; set; }
+
+    /// <summary>Records already raised from this email — by Create now, or by an apply whose
+    /// create landed before a later step stopped it — shown as done chips with their minted
+    /// references. Page-owned, parked/restored per email like the staging.</summary>
+    [Parameter] public List<CreatedNowRecord> CreatedRecords { get; set; } = new();
+
+    /// <summary>The staged chip's "Create now": the page raises the staged record immediately
+    /// (email tagged in the same act) instead of waiting for Apply.</summary>
+    [Parameter] public EventCallback OnCreateNow { get; set; }
+
+    /// <summary>The page's busy flag — disables Create now while any apply/create is running.</summary>
+    [Parameter] public bool Busy { get; set; }
 
     /// <summary>Page-owned to-do draft rows — "Create To-do Items". One to-do per assignee per
     /// row on Apply, the email tagged to every one.</summary>

@@ -29,6 +29,7 @@
 @inject ControlCentreOpenEmail OpenEmail
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel Subcontractors
+@inject Jewel.JPMS.Features.CostCenters.CostCentersReadModel CostCenters
 @inject AiTaskState AiTasks
 @inject ChatPanelState Chat
 @inject IJSRuntime JS
@@ -1107,7 +1108,13 @@
         {
             <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 space-y-2">
                 <p class="text-sm text-content">@crossFileMessage</p>
-                <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="() => DoApplyAll(pendingSaveDraft, allowCrossPathway: true)">File under both anyway</button>
+                @* Re-runs whichever act hit the confirm — the Apply, or System Actions' Create
+                   now — with consent. The server pre-flights the check before anything persists,
+                   so the re-run creates exactly one record either way. *@
+                <button type="button" class="btn-secondary text-xs" disabled="@busy"
+                        @onclick="() => crossFileRetryIsCreateNow ? DoCreateStagedNow(allowCrossPathway: true) : DoApplyAll(pendingSaveDraft, allowCrossPathway: true)">
+                    File under both anyway
+                </button>
             </div>
         }
 
@@ -1353,6 +1360,9 @@ else
                                        OnStagingChanged="StateHasChanged"
                                        StagedCreate="@stagedCreate"
                                        StagedCreateChanged="v => stagedCreate = v"
+                                       CreatedRecords="createdNowRecords"
+                                       OnCreateNow="() => DoCreateStagedNow()"
+                                       Busy="@busy"
                                        TodoRows="createTodoRows"
                                        TodoAssigneeOptions="todoAssigneeOptions"
                                        TodoProjectNote="@TodoProjectNote"
@@ -1684,6 +1694,15 @@ else
     // (2026-08-21) EVERY pathway crossing — Client↔Subcontractor/Internal included — takes this
     // confirm route; no crossing is a dead end any more.
     private string? crossFileMessage;
+
+    // Which act the amber banner's "File under both anyway" re-runs: false = the Apply (with
+    // pendingSaveDraft), true = System Actions' Create now. Reset with the message itself.
+    private bool crossFileRetryIsCreateNow;
+
+    // Records ALREADY raised from the selected email this session — System Actions' Create now
+    // (and Apply's create) add a chip here so the pane says what exists, with its reference,
+    // rather than the staged "will raise" wording. Parked/restored per email like the staging.
+    private readonly List<CreatedNowRecord> createdNowRecords = new();
 
     private static bool IsCrossFilePrompt(string message) =>
         message.Contains("Confirm the cross-filing", StringComparison.OrdinalIgnoreCase);
@@ -2533,6 +2552,9 @@ else
         public IReadOnlyList<LinkableRecord> PickedRecords { get; init; } = Array.Empty<LinkableRecord>();
         public IReadOnlyList<StagedSystemAction> SystemActions { get; init; } = Array.Empty<StagedSystemAction>();
         public StagedRecordCreate? Create { get; init; }
+        // Records already raised from this email (Create now / the apply's create) — real
+        // server-side facts, so the chips must come back with the email they belong to.
+        public IReadOnlyList<CreatedNowRecord> CreatedRecords { get; init; } = Array.Empty<CreatedNowRecord>();
         public List<TodoDraftRow> TodoRows { get; init; } = new();
         // Nullable like the live fields: a parked email keeps its answered-or-blank state, so a
         // deliberate No survives a selection change exactly like a Yes — and an unanswered pair
@@ -2553,6 +2575,7 @@ else
         || pickedRecords.Count > 0
         || stagedSystemActions.Count > 0
         || stagedCreate is not null
+        || createdNowRecords.Count > 0
         || createTodoRows.Any(row => !string.IsNullOrWhiteSpace(row.Title) || !string.IsNullOrWhiteSpace(row.Notes))
         // An ANSWERED Yes/No is a decision the triager made — a No as much as a Yes — so either
         // pair being non-null is worth keeping across a selection change.
@@ -2588,6 +2611,7 @@ else
             PickedRecords = pickedRecords.ToList(),
             SystemActions = stagedSystemActions.ToList(),
             Create = stagedCreate,
+            CreatedRecords = createdNowRecords.ToList(),
             TodoRows = createTodoRows,
             RelevantEventStaged = relevantEventStaged,
             TriageEntireThread = triageEntireThread,
@@ -2617,6 +2641,7 @@ else
         pickedRecords.AddRange(parked.PickedRecords);
         stagedSystemActions.AddRange(parked.SystemActions);
         stagedCreate = parked.Create;
+        createdNowRecords.AddRange(parked.CreatedRecords);
         createTodoRows = parked.TodoRows;
         relevantEventStaged = parked.RelevantEventStaged;
         triageEntireThread = parked.TriageEntireThread;
@@ -2645,6 +2670,7 @@ else
         pathway = PathwayFromBucket(item.Bucket);
         actionError = null;
         crossFileMessage = null;
+        crossFileRetryIsCreateNow = false;
         ResetLinkState();
         composeOutcome = null;
         linkNote = null;
@@ -2666,6 +2692,7 @@ else
         stagedSystemActions.Clear();
         discardArmed = false;
         stagedCreate = null;
+        createdNowRecords.Clear();
         relevantEventStaged = null;
         triageEntireThread = null;
         // The document-triage ticks are drafted against ONE email's attachments — leaving them
@@ -3360,6 +3387,7 @@ else
                         // the amber confirm in section 3 — "File under both anyway" re-runs this
                         // apply with consent (to-dos already raised won't double: rows are cleared).
                         crossFileMessage = ex.Message;
+                        crossFileRetryIsCreateNow = false;
                         pendingSaveDraft = saveAsDraftOnly;
                         return;
                     }
@@ -3384,6 +3412,7 @@ else
                 catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
                 {
                     crossFileMessage = ex.Message;
+                    crossFileRetryIsCreateNow = false;
                     pendingSaveDraft = saveAsDraftOnly;
                     return;
                 }
@@ -3391,106 +3420,35 @@ else
             }
             if (createReady && stagedCreate is { } staged)
             {
-                if (staged.Kind == StagedRecordKind.BidPackage)
+                StagedCreateOutcome created;
+                try
                 {
-                    busyLabel = "Creating bid package";
-                    await Intake.CreateBidPackageFromMessageAsync(new CreateBidPackageFromMessage(
-                        anchor.Id, triageProjectId, staged.Title.Trim(), staged.Trade?.Trim() ?? "",
-                        InternetMessageId: anchor.InternetMessageId,
-                        Scope: scope));
+                    created = await RaiseStagedRecordAsync(staged, anchor!, scope, allowCrossPathway);
                 }
-                else if (staged.Kind == StagedRecordKind.WorkOrder)
+                catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
                 {
-                    // The full manual-order surface staged in System Actions, raised through the
-                    // same rules as the Work Orders tab (numbering, draft semantics, cost-code
-                    // master guard) with the email tagged to the new order.
-                    busyLabel = "Raising work order";
-                    var orderLines = staged.EnteredLines
-                        .Where(line => line.CostCode != "" && line.Amount is { } amount && amount != 0m)
-                        .Select(line => new ManualWorkOrderLine(
-                            line.CostCode, line.Title.Trim(), line.Amount!.Value, line.Description.Trim()))
-                        .ToList();
-                    var raisedOrder = await Intake.CreateWorkOrderFromMessageAsync(new CreateWorkOrderFromMessage(
-                        anchor.Id, triageProjectId, staged.SubcontractorId,
-                        staged.Title.Trim(), staged.Scope.Trim(), orderLines,
-                        ProgrammeStart: AsUtcDate(staged.ProgrammeStart),
-                        TargetCompletion: AsUtcDate(staged.TargetCompletion),
-                        ProgrammeNotes: staged.ProgrammeNotes.Trim(),
-                        SaveAsDraft: staged.SaveAsDraft,
-                        DepositRequired: staged.DepositRequired,
-                        DepositPercent: staged.DepositRequired
-                            ? StagedRecordCreate.ParseDecimal(staged.DepositPercentText)
-                            : null,
-                        InternetMessageId: anchor.InternetMessageId,
-                        // Named LinkScope on this command only: the order's own Scope (works text)
-                        // already owns the name — see CreateWorkOrderFromMessage.
-                        LinkScope: scope,
-                        // Ticked email attachments — copied onto the order server-side (record
-                        // keeping only; never sent to the supplier).
-                        AttachmentIds: staged.EmailAttachmentIds.Count > 0 ? staged.EmailAttachmentIds.ToList() : null));
-
-                    // The email the modal's warning promised: a released (non-draft) order sends
-                    // its purchase order to the supplier there and then. Non-fatal by design —
-                    // the order is raised and the email tagged to it either way; the note (shown
-                    // where the cleared selection was) says what happened.
-                    if (!staged.SaveAsDraft)
-                    {
-                        busyLabel = "Emailing purchase order";
-                        (poEmailNote, poEmailNoteIsSuccess) = await TrySendWorkOrderPoEmailAsync(raisedOrder, orderLines);
-                    }
-
-                    // Files picked from this computer land straight after the order exists —
-                    // multipart to the order's attachment endpoint. Record keeping only: never
-                    // part of the purchase-order email above.
-                    if (staged.UploadFiles.Count > 0)
-                    {
-                        busyLabel = "Uploading attachments";
-                        try
-                        {
-                            await WorkOrderAttachments.UploadFilesAsync(raisedOrder.WorkOrderId, staged.UploadFiles.ToList());
-                        }
-                        catch (Exception ex)
-                        {
-                            // The order exists and the email is tagged to it — never re-raise it.
-                            // Stop here (before any reply sends) so the failure is seen; the email
-                            // stays selected and the files can be re-added from the order's PO page.
-                            var fileCount = staged.UploadFiles.Count;
-                            stagedCreate = null;
-                            actionError = $"{raisedOrder.Reference} was raised and this email tagged to it, but the picked "
-                                + $"file{(fileCount == 1 ? "" : "s")} couldn't be uploaded — add "
-                                + $"{(fileCount == 1 ? "it" : "them")} again from the order's PO page. ({ex.Message})";
-                            return;
-                        }
-                    }
-                }
-                else if (staged.Kind == StagedRecordKind.Defect)
-                {
-                    // The defect staged in System Actions, raised through the same rules as a manual
-                    // defect (numbering, Open status) with the email tagged to it.
-                    busyLabel = "Raising defect";
-                    await Intake.CreateDefectFromMessageAsync(new Jewel.JPMS.Contracts.Closeout.CreateDefectFromMessage(
-                        anchor.Id, triageProjectId,
-                        staged.Description.Trim(),
-                        staged.DefectLocation.Trim(),
-                        staged.DefectAssignedTo.Trim(),
-                        InternetMessageId: anchor.InternetMessageId,
-                        Scope: scope));
-                }
-                else
-                {
-                    busyLabel = staged.RequestKind == RequestType.Rfi ? "Raising RFI" : "Creating request";
-                    await Intake.CreateRequestFromMessageAsync(new CreateRequestFromMessage(
-                        anchor.Id, triageProjectId, staged.RequestKind, "", staged.Title.Trim(),
-                        staged.Description?.Trim() ?? "",
-                        DrawingRef: NullIfBlank(staged.DrawingRef),
-                        ResponseDue: ParseDate(staged.ResponseDue),
-                        InternetMessageId: anchor.InternetMessageId,
-                        AddToProgramme: staged.AddToProgramme,
-                        Scope: scope));
+                    // The lane confirm, now BEFORE the record exists: the server pre-flights the
+                    // cross-pathway check (CrossPathwayGuard), so this rejection created NOTHING
+                    // — "File under both anyway" re-runs the apply with consent and the create
+                    // then runs exactly once. (Rejecting AFTER the create is what produced the
+                    // duplicate draft orders and the red no-confirm banner, 2026-08-22.)
+                    crossFileMessage = ex.Message;
+                    crossFileRetryIsCreateNow = false;
+                    pendingSaveDraft = saveAsDraftOnly;
+                    return;
                 }
                 // One create per apply: clear it so a cross-filing re-run can't double-create.
                 stagedCreate = null;
+                createdNowRecords.Add(created.Record);
                 filed = true;
+                if (created.UploadError is not null)
+                {
+                    // The order exists and the email is tagged to it — never re-raise it. Stop
+                    // here (before any reply sends) so the failure is seen; the email stays
+                    // selected and the files can be re-added from the order's PO page.
+                    actionError = created.UploadError;
+                    return;
+                }
             }
             // ---- System actions lined up in the Actions pane — run once the filing above has
             //      landed, each removed as it succeeds so a failed one can be retried without
@@ -3539,6 +3497,7 @@ else
                         // put and "File under both anyway" re-runs with consent (finished
                         // lined-up replies were removed as they sent, so nothing re-sends).
                         crossFileMessage = ex.Message;
+                        crossFileRetryIsCreateNow = false;
                         pendingSaveDraft = saveAsDraftOnly;
                         return;
                     }
@@ -3609,10 +3568,234 @@ else
             detailLoading = false;
             discardArmed = false;
             stagedCreate = null;
+            createdNowRecords.Clear();
             relevantEventStaged = null;
             triageEntireThread = null;
             pickedRecords.Clear();
             stagedSystemActions.Clear();
+        }
+        catch (CommandFailedException ex)
+        {
+            actionError = ex.Message;
+        }
+        catch
+        {
+            actionError = "That didn't complete. Please try again.";
+        }
+        finally { busy = false; }
+    }
+
+    /// <summary>What one staged-create execution produced: the created-record chip for the pane,
+    /// and — for a work order whose picked files failed to upload — the error that stops the
+    /// caller (the order exists and the email is tagged; the files are re-added from the order's
+    /// PO page).</summary>
+    private sealed record StagedCreateOutcome(CreatedNowRecord Record, string? UploadError);
+
+    /// <summary>
+    /// Raises the staged record and tags the email to it — the create-on-apply body, shared
+    /// verbatim by Apply and by System Actions' "Create now". The server pre-flights the
+    /// cross-pathway confirm before anything persists (CrossPathwayGuard), so an
+    /// IsCrossFilePrompt failure out of here has created NOTHING — the caller shows the amber
+    /// confirm and re-runs with consent.
+    /// </summary>
+    private async Task<StagedCreateOutcome> RaiseStagedRecordAsync(
+        StagedRecordCreate staged, MailboxMessage anchor, LinkThreadScope scope, bool allowCrossPathway)
+    {
+        if (staged.Kind == StagedRecordKind.BidPackage)
+        {
+            busyLabel = "Creating bid package";
+            var package = await Intake.CreateBidPackageFromMessageAsync(new CreateBidPackageFromMessage(
+                anchor.Id, triageProjectId, staged.Title.Trim(), staged.Trade?.Trim() ?? "",
+                InternetMessageId: anchor.InternetMessageId,
+                Scope: scope,
+                AllowCrossPathway: allowCrossPathway));
+            return new StagedCreateOutcome(
+                new CreatedNowRecord(package.Reference, "bid package", staged.Title.Trim()), null);
+        }
+        if (staged.Kind == StagedRecordKind.WorkOrder)
+        {
+            // The full manual-order surface staged in System Actions, raised through the
+            // same rules as the Work Orders tab (numbering, draft semantics, cost-code
+            // master guard) with the email tagged to the new order.
+            busyLabel = "Raising work order";
+            var orderLines = staged.EnteredLines
+                .Where(line => line.CostCode != "" && line.Amount is { } amount && amount != 0m)
+                .Select(line => new ManualWorkOrderLine(
+                    line.CostCode, line.Title.Trim(), line.Amount!.Value, line.Description.Trim()))
+                .ToList();
+            var raisedOrder = await Intake.CreateWorkOrderFromMessageAsync(new CreateWorkOrderFromMessage(
+                anchor.Id, triageProjectId, staged.SubcontractorId,
+                staged.Title.Trim(), staged.Scope.Trim(), orderLines,
+                ProgrammeStart: AsUtcDate(staged.ProgrammeStart),
+                TargetCompletion: AsUtcDate(staged.TargetCompletion),
+                ProgrammeNotes: staged.ProgrammeNotes.Trim(),
+                SaveAsDraft: staged.SaveAsDraft,
+                DepositRequired: staged.DepositRequired,
+                DepositPercent: staged.DepositRequired
+                    ? StagedRecordCreate.ParseDecimal(staged.DepositPercentText)
+                    : null,
+                InternetMessageId: anchor.InternetMessageId,
+                // Named LinkScope on this command only: the order's own Scope (works text)
+                // already owns the name — see CreateWorkOrderFromMessage.
+                LinkScope: scope,
+                // Ticked email attachments — copied onto the order server-side (record
+                // keeping only; never sent to the supplier).
+                AttachmentIds: staged.EmailAttachmentIds.Count > 0 ? staged.EmailAttachmentIds.ToList() : null,
+                AllowCrossPathway: allowCrossPathway));
+
+            // The email the modal's warning promised: a released (non-draft) order sends
+            // its purchase order to the supplier there and then. Non-fatal by design —
+            // the order is raised and the email tagged to it either way; the note (shown
+            // where the cleared selection was) says what happened.
+            if (!staged.SaveAsDraft)
+            {
+                busyLabel = "Emailing purchase order";
+                (poEmailNote, poEmailNoteIsSuccess) = await TrySendWorkOrderPoEmailAsync(raisedOrder, orderLines);
+            }
+
+            var orderRecord = new CreatedNowRecord(
+                raisedOrder.Reference,
+                staged.SaveAsDraft ? "draft work order" : "work order",
+                staged.Title.Trim());
+
+            // Files picked from this computer land straight after the order exists —
+            // multipart to the order's attachment endpoint. Record keeping only: never
+            // part of the purchase-order email above.
+            if (staged.UploadFiles.Count > 0)
+            {
+                busyLabel = "Uploading attachments";
+                try
+                {
+                    await WorkOrderAttachments.UploadFilesAsync(raisedOrder.WorkOrderId, staged.UploadFiles.ToList());
+                }
+                catch (Exception ex)
+                {
+                    var fileCount = staged.UploadFiles.Count;
+                    return new StagedCreateOutcome(orderRecord,
+                        $"{raisedOrder.Reference} was raised and this email tagged to it, but the picked "
+                        + $"file{(fileCount == 1 ? "" : "s")} couldn't be uploaded — add "
+                        + $"{(fileCount == 1 ? "it" : "them")} again from the order's PO page. ({ex.Message})");
+                }
+            }
+            return new StagedCreateOutcome(orderRecord, null);
+        }
+        if (staged.Kind == StagedRecordKind.Defect)
+        {
+            // The defect staged in System Actions, raised through the same rules as a manual
+            // defect (numbering, Open status) with the email tagged to it.
+            busyLabel = "Raising defect";
+            var defect = await Intake.CreateDefectFromMessageAsync(new Jewel.JPMS.Contracts.Closeout.CreateDefectFromMessage(
+                anchor.Id, triageProjectId,
+                staged.Description.Trim(),
+                staged.DefectLocation.Trim(),
+                staged.DefectAssignedTo.Trim(),
+                InternetMessageId: anchor.InternetMessageId,
+                Scope: scope,
+                AllowCrossPathway: allowCrossPathway));
+            return new StagedCreateOutcome(
+                new CreatedNowRecord(defect.Reference, "defect", staged.DisplayTitle), null);
+        }
+
+        busyLabel = staged.RequestKind == RequestType.Rfi ? "Raising RFI" : "Creating request";
+        var request = await Intake.CreateRequestFromMessageAsync(new CreateRequestFromMessage(
+            anchor.Id, triageProjectId, staged.RequestKind, "", staged.Title.Trim(),
+            staged.Description?.Trim() ?? "",
+            DrawingRef: NullIfBlank(staged.DrawingRef),
+            ResponseDue: ParseDate(staged.ResponseDue),
+            InternetMessageId: anchor.InternetMessageId,
+            AddToProgramme: staged.AddToProgramme,
+            Scope: scope,
+            AllowCrossPathway: allowCrossPathway));
+        return new StagedCreateOutcome(
+            new CreatedNowRecord(
+                request.Reference,
+                staged.RequestKind == RequestType.Rfi ? "RFI" : "request",
+                staged.Title.Trim()),
+            null);
+    }
+
+    /// <summary>
+    /// System Actions' "Create now": raises the staged record IMMEDIATELY — same body as the
+    /// apply's create (record raised, email tagged to it, PO email for a released order) — so the
+    /// new record exists and can be worked with (linked elsewhere, named in the reply, picked in
+    /// the tag pickers) before the rest of the triage lands. The chip in the pane swaps from
+    /// "will raise" to the raised reference; Apply then lands whatever else is staged, with
+    /// nothing left to double-create.
+    /// </summary>
+    private async Task DoCreateStagedNow(bool allowCrossPathway = false)
+    {
+        if (busy) return;
+        // Same guard as Apply: a mid-turn assistant may still be writing into the staged form.
+        if (Chat.AssistantBusy)
+        {
+            actionError = "The assistant is still working — let it finish before pressing Create now, "
+                + "so nothing it is staging is lost.";
+            return;
+        }
+        if (selected is not { } anchor || stagedCreate is not { } staged) return;
+        if (!StagedCreateReady)
+        {
+            actionError = staged.Kind == StagedRecordKind.Defect
+                ? "Describe the defect first — then Create now."
+                : "Give the staged record a title first — then Create now.";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(triageProjectId))
+        {
+            actionError = "To create the record now, set the email's Project in the bar above first.";
+            return;
+        }
+        // The same "decision not yet made" gates as Apply, for the decisions this act consumes.
+        if (staged is { Kind: StagedRecordKind.WorkOrder } stagedOrder
+            && stagedOrder.WorkOrderProblem is { } orderProblem)
+        {
+            actionError = $"The staged work order isn't ready — {orderProblem}";
+            return;
+        }
+        if (staged is { Kind: StagedRecordKind.Defect } stagedDefect
+            && stagedDefect.DefectProblem is { } defectProblem)
+        {
+            actionError = $"The staged defect isn't ready — {defectProblem}";
+            return;
+        }
+        // Creating now tags the email to the new record, so the thread-spread decision must be
+        // made — the Relevant Event answer can wait for Apply, which is what consumes it.
+        if (triageEntireThread is null)
+        {
+            actionError = "Answer Entire thread — Yes or No — so Create now knows how far the email tag spreads.";
+            return;
+        }
+
+        var scope = triageEntireThread == true ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly;
+        actionError = null;
+        if (allowCrossPathway) crossFileMessage = null;
+        busy = true;
+        try
+        {
+            StagedCreateOutcome created;
+            try
+            {
+                created = await RaiseStagedRecordAsync(staged, anchor, scope, allowCrossPathway);
+            }
+            catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
+            {
+                // The amber confirm, aimed back at THIS act: nothing was created (the server
+                // pre-flights the check), and "File under both anyway" re-runs Create now.
+                crossFileMessage = ex.Message;
+                crossFileRetryIsCreateNow = true;
+                return;
+            }
+            stagedCreate = null;
+            createdNowRecords.Add(created.Record);
+            if (created.UploadError is not null)
+            {
+                actionError = created.UploadError;
+                return;
+            }
+            // The record exists and this email is tagged to it — surface it in Recently
+            // processed. The email stays selected: the rest of the triage (reply, tags,
+            // to-dos, the two Yes/No answers) still lands with Apply.
+            await LoadRecentTriageAsync();
         }
         catch (CommandFailedException ex)
         {
@@ -3765,8 +3948,30 @@ else
                 .Append(string.Join("; ", stagedSystemActions.Select(action => action.Summary)))
                 .Append('.');
         }
-        if (StagedCreateReady)
-            note.Append(" A record creation is staged from this email (it lands on Apply).");
+        if (stagedCreate is { } stagedRecord)
+        {
+            note.Append(" A ").Append(stagedRecord.Label).Append(" is staged from this email");
+            if (!string.IsNullOrWhiteSpace(stagedRecord.DisplayTitle))
+                note.Append(": \"").Append(stagedRecord.DisplayTitle).Append('"');
+            note.Append(" — it is raised (and the email tagged to it) when the user presses Apply,"
+                        + " or immediately via the chip's Create now button in System Actions.");
+            var stagedProblem = stagedRecord.Kind == StagedRecordKind.WorkOrder
+                ? stagedRecord.WorkOrderProblem
+                : stagedRecord.Kind == StagedRecordKind.Defect ? stagedRecord.DefectProblem : null;
+            if (!StagedCreateReady)
+                note.Append(" It is NOT ready yet: it has no ")
+                    .Append(stagedRecord.Kind == StagedRecordKind.Defect ? "description" : "title")
+                    .Append('.');
+            else if (stagedProblem is not null)
+                note.Append(" It is NOT ready yet: ").Append(stagedProblem);
+        }
+        if (createdNowRecords.Count > 0)
+        {
+            note.Append(" Records ALREADY raised from this email (they exist; the email is tagged to each): ")
+                .Append(string.Join("; ", createdNowRecords.Select(record =>
+                    $"{record.Reference} ({record.Label}{(string.IsNullOrWhiteSpace(record.Title) ? "" : $" — {record.Title}")})")))
+                .Append('.');
+        }
 
         if (replyOpen)
         {
@@ -3806,7 +4011,12 @@ else
         note.Append(" Tagging this email to a record (a variation, RFI, defect, bid package…) is done")
             .Append(" ON THIS PAGE: find the record (search the register on the first call), stage it")
             .Append(" with stage_triage_tag, and the user presses Apply to land it. To-dos are staged")
-            .Append(" the same way with stage_triage_todo. REPLYING to this email is done here too:")
+            .Append(" the same way with stage_triage_todo. RAISING A NEW WORK ORDER from this email is")
+            .Append(" done here too: stage_triage_work_order drafts it into System Actions (read the")
+            .Append(" email first; use real cost codes from list_cost_codes) and the user raises it")
+            .Append(" with Apply or the chip's Create now button — never navigate away to the Work")
+            .Append(" Orders page for an order that comes from this email.")
+            .Append(" REPLYING to this email is done here too:")
             .Append(" open_modal reply_email opens the Reply box under it (read the email first),")
             .Append(" update_open_modal writes the body, and the reply sends on Apply. Do not")
             .Append(" navigate away for any of these. A different email is one select_email call")
@@ -3858,9 +4068,190 @@ else
     {
         "stage_triage_tag" => InvokeAsync(() => StageTagFromAssistantAsync(argumentsJson)),
         "stage_triage_todo" => InvokeAsync(() => StageTodoFromAssistant(argumentsJson)),
+        "stage_triage_work_order" => InvokeAsync(() => StageWorkOrderFromAssistantAsync(argumentsJson)),
         "select_email" => InvokeAsync(() => SelectEmailFromAssistantAsync(argumentsJson)),
         _ => Task.CompletedTask
     };
+
+    /// <summary>
+    /// stage_triage_work_order from the chat: drafts the SAME page-owned StagedRecordCreate the
+    /// System Actions "Raise Work Order" form edits, so the user sees the order there, corrects
+    /// it, and raises it with Apply or the chip's Create now — the assistant's version of typing
+    /// the form, never of pressing the button. The supplier arrives as words and is matched
+    /// against the live directory; cost codes are validated against the master list. A miss on
+    /// either stages the field empty and says so — a wrong supplier or cost centre sends real
+    /// money to the wrong place.
+    /// </summary>
+    private async Task StageWorkOrderFromAssistantAsync(string argumentsJson)
+    {
+        string? supplier = null, title = null, worksScope = null, programmeStart = null,
+            targetCompletion = null, programmeNotes = null;
+        bool? saveAsDraft = null;
+        decimal? depositPercent = null;
+        var lines = new List<(string CostCode, string Title, string Description, decimal Amount)>();
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
+            if (document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                var root = document.RootElement;
+                supplier = ReadDraftText(root, "supplier");
+                title = ReadDraftText(root, "title");
+                worksScope = ReadDraftText(root, "scope");
+                programmeStart = ReadDraftText(root, "programme_start");
+                targetCompletion = ReadDraftText(root, "target_completion");
+                programmeNotes = ReadDraftText(root, "programme_notes");
+                if (root.TryGetProperty("save_as_draft", out var draftElement)
+                    && draftElement.ValueKind is System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False)
+                    saveAsDraft = draftElement.ValueKind == System.Text.Json.JsonValueKind.True;
+                if (root.TryGetProperty("deposit_percent", out var depositElement)
+                    && depositElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+                    depositPercent = depositElement.GetDecimal();
+                if (root.TryGetProperty("lines", out var linesElement)
+                    && linesElement.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var lineElement in linesElement.EnumerateArray())
+                    {
+                        if (lineElement.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+                        var lineTitle = ReadDraftText(lineElement, "title") ?? "";
+                        var lineCode = ReadDraftText(lineElement, "cost_code") ?? "";
+                        var lineDescription = ReadDraftText(lineElement, "description") ?? "";
+                        decimal lineAmount = 0m;
+                        if (lineElement.TryGetProperty("amount", out var amountElement)
+                            && amountElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+                            lineAmount = amountElement.GetDecimal();
+                        lines.Add((lineCode, lineTitle, lineDescription, lineAmount));
+                    }
+                }
+            }
+        }
+        catch (System.Text.Json.JsonException)
+        {
+        }
+
+        // Every refusal is said out loud (actionError shows in the triage bar) — a silently
+        // dropped stage leaves the model narrating an order that never existed.
+        if (view != QueueView.Active || selected is null)
+        {
+            actionError = "The assistant tried to stage a work order, but no queue email is open — "
+                + "orders stage against the email being triaged on the Queue tab.";
+            StateHasChanged();
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            actionError = "The assistant tried to stage a work order without a title.";
+            StateHasChanged();
+            return;
+        }
+        // One staged create per email (the pane's own rule): a READY draft already lined up is
+        // the triager's decision-in-waiting — never silently replaced. A half-typed scratch
+        // (no title yet) is absorbed instead.
+        if (stagedCreate is { } existingCreate && StagedCreateReady)
+        {
+            actionError = $"The assistant tried to stage a work order, but a {existingCreate.Label} is "
+                + "already staged from this email — Apply it, raise it with Create now, or remove it first.";
+            StateHasChanged();
+            return;
+        }
+
+        // The pickers' backing lists, fetched if this page hasn't yet (the pane normally does
+        // this on mount — the assistant can stage before the form was ever opened).
+        try
+        {
+            await Task.WhenAll(
+                Subcontractors.Current is null ? Subcontractors.RefreshAsync(CancellationToken.None) : Task.CompletedTask,
+                CostCenters.Alphabetical.Count == 0 ? CostCenters.RefreshAsync(CancellationToken.None) : Task.CompletedTask);
+        }
+        catch { /* the match notes below say what couldn't be resolved */ }
+
+        var problems = new List<string>();
+
+        // Supplier by name against the live directory: exact company-name match first, else the
+        // single name containing the words. Ambiguity or a miss stages the picker empty and says
+        // so, rather than guessing a company.
+        var subcontractorId = "";
+        if (!string.IsNullOrWhiteSpace(supplier))
+        {
+            var wanted = supplier.Trim();
+            var companies = Subcontractors.Current ?? Array.Empty<Subcontractor>();
+            var exact = companies.Where(company =>
+                string.Equals(company.CompanyName?.Trim(), wanted, StringComparison.OrdinalIgnoreCase)).ToList();
+            var matches = exact.Count > 0
+                ? exact
+                : companies.Where(company =>
+                    (company.CompanyName ?? "").Contains(wanted, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (matches.Count == 1)
+                subcontractorId = matches[0].SubcontractorId;
+            else
+                problems.Add(matches.Count == 0
+                    ? $"no subcontractor called \"{wanted}\" is in the directory — pick one in System Actions"
+                    : $"\"{wanted}\" matches {matches.Count} subcontractors — pick the right one in System Actions");
+        }
+        else
+        {
+            problems.Add("no supplier was named — pick the subcontractor in System Actions");
+        }
+
+        // Cost codes must be real master-list codes, spelled as the list spells them; anything
+        // else stages the line's picker empty for the user to choose.
+        var knownCodes = CostCenters.Alphabetical
+            .ToDictionary(centre => centre.Code, centre => centre.Code, StringComparer.OrdinalIgnoreCase);
+        var staged = new StagedRecordCreate
+        {
+            Kind = StagedRecordKind.WorkOrder,
+            Title = title.Trim(),
+            Scope = worksScope?.Trim() ?? "",
+            SubcontractorId = subcontractorId,
+            ProgrammeStart = ParseAssistantDate(programmeStart),
+            TargetCompletion = ParseAssistantDate(targetCompletion),
+            ProgrammeNotes = programmeNotes?.Trim() ?? "",
+            // Releasing on apply emails the purchase order at once — the assistant's default is
+            // the safe draft unless it explicitly said otherwise.
+            SaveAsDraft = saveAsDraft ?? true
+        };
+        if (depositPercent is { } percent && percent > 0m)
+        {
+            staged.DepositRequired = true;
+            staged.DepositPercentText = percent.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
+        staged.Lines.Clear();
+        var unknownCodes = new List<string>();
+        foreach (var (lineCode, lineTitle, lineDescription, lineAmount) in lines)
+        {
+            var resolvedCode = "";
+            if (!string.IsNullOrWhiteSpace(lineCode))
+            {
+                if (knownCodes.TryGetValue(lineCode.Trim(), out var canonical)) resolvedCode = canonical;
+                else unknownCodes.Add(lineCode.Trim());
+            }
+            staged.Lines.Add(new StagedWorkOrderLine
+            {
+                CostCode = resolvedCode,
+                Title = lineTitle.Trim(),
+                AmountText = lineAmount == 0m
+                    ? ""
+                    : lineAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Description = lineDescription.Trim()
+            });
+        }
+        if (staged.Lines.Count == 0) staged.Lines.Add(new StagedWorkOrderLine());
+        if (unknownCodes.Count > 0)
+            problems.Add($"cost code{(unknownCodes.Count == 1 ? "" : "s")} {string.Join(", ", unknownCodes)} "
+                + "aren't in the master list — pick real codes in System Actions");
+
+        stagedCreate = staged;
+        if (problems.Count > 0)
+            actionError = $"The assistant staged the work order \"{staged.Title}\" but {string.Join("; ", problems)}.";
+        StateHasChanged();
+    }
+
+    /// <summary>An assistant-supplied date as the staged form's date-only string; anything
+    /// unparseable stages blank rather than guessing.</summary>
+    private static string ParseAssistantDate(string? text) =>
+        !string.IsNullOrWhiteSpace(text) && DateTime.TryParse(text, out var parsed)
+            ? parsed.ToString("yyyy-MM-dd")
+            : "";
 
     /// <summary>
     /// select_email from the chat: the assistant's own click on an email row. The search words go

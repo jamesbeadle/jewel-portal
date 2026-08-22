@@ -19,4 +19,8 @@ public sealed record CreateBidPackageFromMessage(
     // shared LinkMessageToRecord path). Default keeps the long-standing anchor+thread-behind
     // sweep; the Control Centre passes an explicit MessageOnly / EntireThread from its
     // "triage the entire thread" checkbox.
-    LinkThreadScope Scope = LinkThreadScope.ThreadBehindAnchor) : ICommand<BidPackage>;
+    LinkThreadScope Scope = LinkThreadScope.ThreadBehindAnchor,
+    // Explicit consent to file the thread under Subcontractor as well as a pathway it already
+    // carries. Pre-flighted before the package is created (CrossPathwayGuard), so a rejection
+    // creates nothing; the UI's "File under both anyway" re-sends with this true.
+    bool AllowCrossPathway = false) : ICommand<BidPackage>;

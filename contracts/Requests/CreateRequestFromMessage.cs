@@ -30,4 +30,10 @@ public sealed record CreateRequestFromMessage(
     // long-standing behaviour (anchor + the thread behind it) for existing callers such as
     // "Reply in thread"; the Control Centre passes MessageOnly, or EntireThread when its
     // "triage the entire thread" box is ticked.
-    LinkThreadScope Scope = LinkThreadScope.ThreadBehindAnchor) : ICommand<Request>;
+    LinkThreadScope Scope = LinkThreadScope.ThreadBehindAnchor,
+    // Explicit consent to file the thread under Client as well as a pathway it already carries.
+    // Replaces the old hard client wall on this path (removed 2026-08-22, following the
+    // 2026-08-21 wall removal on the link path): a request on a Subcontractor/Internal thread is
+    // now the same soft "Confirm the cross-filing" as every other dual filing, pre-flighted
+    // before the request is created so a rejection creates nothing.
+    bool AllowCrossPathway = false) : ICommand<Request>;

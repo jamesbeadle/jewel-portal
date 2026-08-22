@@ -62,28 +62,14 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
         var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
             ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
 
-        // THE CLIENT WALL (docs/Pathway-Split-Platform-Flow-Plan.md §2.3): a request files its
-        // thread under Client, so a thread already filed under Subcontractor or Internal can never
-        // become a request — refused before anything is tagged or created, with no override.
-        var existingBucket = (snapshot.Categories ?? Array.Empty<string>())
-            .FirstOrDefault(TriageCategories.IsBucketTag);
-        if (existingBucket is not null
-            && !existingBucket.Equals(TriageCategories.Client, StringComparison.OrdinalIgnoreCase))
-        {
-            await audit.WriteAsync(
-                AuditEventType.WallRejected,
-                $"Refused: creating a request would file this thread under Client but it is filed under {AuditTrail.PathwayLabel(existingBucket)}.",
-                pathway: AuditTrail.PathwayLabel(existingBucket),
-                projectId: command.ProjectId,
-                recordType: RecordType.Request,
-                conversationId: snapshot.ConversationId,
-                emailMessageId: command.MessageId,
-                internetMessageId: snapshot.InternetMessageId,
-                cancellationToken: cancellationToken);
-            throw new InvalidOperationException(
-                $"This thread is filed under {AuditTrail.PathwayLabel(existingBucket)}; a request would file it under Client. "
-                + "Client correspondence is never mixed with subcontractor or internal correspondence — start a new thread, or forward the relevant content.");
-        }
+        // The cross-filing confirm (the hard client wall this path kept until 2026-08-22, a day
+        // after the link path lost its own): a request files its thread under Client, so a thread
+        // already filed under Subcontractor or Internal asks for one explicit confirmation —
+        // pre-flighted here, before anything is tagged or created, so a rejection creates nothing.
+        // The UI catches the "Confirm the cross-filing" wording and retries with AllowCrossPathway.
+        Jewel.JPMS.Api.Features.RecordLinks.CrossPathwayGuard.EnsureConfirmed(
+            snapshot.Categories, TriageCategories.Client, command.AllowCrossPathway,
+            command.Kind == RequestType.Rfi ? "the new RFI" : "the new request");
 
         var nextNumber = (await context.Requests.MaxAsync(r => (int?)r.Number, cancellationToken) ?? 0) + 1;
 
@@ -165,9 +151,13 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
 
         // File the thread under the Client pathway (thread-wide, best-effort — the record tag is the
         // primary association; a missed stamp is healed by the backfill). Stamped after the save so
-        // a reference-clash rollback can never leave a pathway-only thread behind.
+        // a reference-clash rollback can never leave a pathway-only thread behind. A confirmed
+        // cross-filing stamps Client ALONGSIDE the thread's existing pathway — the dual filing the
+        // triager just consented to — so only an already-present Client stamp skips it.
+        var hasClientBucket = (snapshot.Categories ?? Array.Empty<string>())
+            .Any(category => category.Equals(TriageCategories.Client, StringComparison.OrdinalIgnoreCase));
         var stampedClient = false;
-        if (existingBucket is null)
+        if (!hasClientBucket)
         {
             try
             {
@@ -207,6 +197,10 @@ public sealed class CreateRequestFromMessageHandler : ICommandHandler<CreateRequ
                 await linkToRecord.HandleAsync(
                     new LinkMessageToRecord(
                         command.MessageId, RecordType.Scheduling, command.ProjectId, snapshot.InternetMessageId,
+                        // The triager's cross-filing consent covers the whole create: Scheduling is
+                        // Client-side like the request itself, so this second tag must not re-raise
+                        // the confirm the create just answered.
+                        AllowCrossPathway: command.AllowCrossPathway,
                         Scope: command.Scope),
                     cancellationToken);
             }

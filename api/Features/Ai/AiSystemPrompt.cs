@@ -194,6 +194,13 @@ public static class AiSystemPrompt
         prompt.AppendLine("  the Control Centre, stage_triage_todo stages it in System Actions (name the assignee as");
         prompt.AppendLine("  the user did; it lands on Apply, against the email's project or company-wide). On any");
         prompt.AppendLine("  other page, take them to the To-do list and say where the add button is.");
+        prompt.AppendLine("- **Raise a work order FROM an email** — \"raise the WO for this / turn Nigel's price into");
+        prompt.AppendLine("  an order\": in the Control Centre, read the selected email first, then");
+        prompt.AppendLine("  stage_triage_work_order drafts the order into System Actions (supplier as the");
+        prompt.AppendLine("  correspondence names it, real cost codes from list_cost_codes); the user raises it with");
+        prompt.AppendLine("  Apply or the staged chip's Create now, the email tagged to the new order either way.");
+        prompt.AppendLine("  Never navigate away to the Work Orders page for an order that comes from the selected");
+        prompt.AppendLine("  email — open_modal work_order_create is for orders with no email behind them.");
         prompt.AppendLine("- **Draft an email** — \"email X / draft a reply / chase Y / send Z the quote\": open_modal");
         prompt.AppendLine("  compose_email (the Control Centre's composer), then write the draft into it with");
         prompt.AppendLine("  update_open_modal — always after reading what the email answers, so the draft is grounded:");

@@ -100,6 +100,7 @@ public static class AiToolCatalogue
             visible = visible
                 .Where(tool => tool.Name != "stage_triage_tag"
                                && tool.Name != "stage_triage_todo"
+                               && tool.Name != "stage_triage_work_order"
                                && tool.Name != "select_email"
                                && tool.Name != "read_selected_email")
                 .ToList();
@@ -1024,6 +1025,119 @@ public static class AiToolCatalogue
                     ("due", "string", "Due date as yyyy-MM-dd. Leave out for the house default (a week).", false)),
                 AiToolKind.Ui,
                 TriageRoles.AllowedToTriage,
+                (_, _, _) => Task.FromResult(Serialise(new { ok = true, handed_to_browser = true }))),
+
+            new(
+                "stage_triage_work_order",
+                "Draft a NEW work order into the Control Centre's System Actions from the SELECTED email — "
+                + "the same act as the user filling the Raise Work Order form there. The order is raised (and "
+                + "the email tagged to it) when the user presses Apply, or immediately when they press the "
+                + "staged chip's Create now button; until one of those NOTHING exists, so say \"staged — Apply "
+                + "or Create now raises it\", never that the order was raised. Read the email FIRST "
+                + "(read_selected_email) so every figure comes from the correspondence, and use real cost "
+                + "codes from list_cost_codes — an invented figure or code ends up on a purchase order. Name "
+                + "the supplier as the correspondence says it; the page matches it against the live directory "
+                + "and says on screen (and in the next context block) when nothing matches, so pass it through "
+                + "rather than guessing. Releasing a live order emails the purchase order to the supplier the "
+                + "moment it is raised — leave save_as_draft out (it defaults to a safe draft) unless the "
+                + "correspondence clearly confirms the figures. Confirm what actually staged — and any "
+                + "supplier or cost-code miss — from the NEXT current-context block.",
+                new
+                {
+                    type = "object",
+                    properties = new Dictionary<string, object>
+                    {
+                        ["supplier"] = new
+                        {
+                            type = "string",
+                            description = "The subcontractor the order is raised to, named as the correspondence "
+                                + "says it — \"MGN Drywall\". Matched against the live directory; an unmatched "
+                                + "name stages the picker empty for the user."
+                        },
+                        ["title"] = new
+                        {
+                            type = "string",
+                            description = "The order's title, at most 256 characters, in the house style — "
+                                + "\"Render materials — WH89 colour change\". Not a sentence."
+                        },
+                        ["scope"] = new
+                        {
+                            type = "string",
+                            description = "The scope of works printed on the purchase order, plain text. Only "
+                                + "what the correspondence actually supports."
+                        },
+                        ["save_as_draft"] = new
+                        {
+                            type = "boolean",
+                            description = "false releases on raise — WO number minted and the purchase order "
+                                + "EMAILED to the supplier at once. Left out or true stores a draft awaiting "
+                                + "the two-click Approve on the Work Orders tab. Only pass false when the "
+                                + "correspondence clearly confirms the figures."
+                        },
+                        ["programme_start"] = new
+                        {
+                            type = "string",
+                            description = "Programme start date, yyyy-MM-dd — only if the correspondence states it."
+                        },
+                        ["target_completion"] = new
+                        {
+                            type = "string",
+                            description = "Target completion date, yyyy-MM-dd — only if the correspondence states it."
+                        },
+                        ["programme_notes"] = new
+                        {
+                            type = "string",
+                            description = "Programme notes printed on the purchase order — optional."
+                        },
+                        ["deposit_percent"] = new
+                        {
+                            type = "number",
+                            description = "Deposit percentage of the order value (0–100) — only when the "
+                                + "correspondence requires a deposit."
+                        },
+                        ["lines"] = new
+                        {
+                            type = "array",
+                            description = "The priced schedule. Only lines the correspondence actually prices.",
+                            items = new
+                            {
+                                type = "object",
+                                properties = new Dictionary<string, object>
+                                {
+                                    ["title"] = new
+                                    {
+                                        type = "string",
+                                        description = "The line as the purchase order prints it — a short label."
+                                    },
+                                    ["description"] = new
+                                    {
+                                        type = "string",
+                                        description = "The longer detail for the PO's Description column — optional."
+                                    },
+                                    ["cost_code"] = new
+                                    {
+                                        type = "string",
+                                        description = "A Code returned by list_cost_codes, spelled exactly as "
+                                            + "returned. If no code clearly fits, leave it out — the user picks."
+                                    },
+                                    ["amount"] = new
+                                    {
+                                        type = "number",
+                                        description = "The line's value in GBP, NET of VAT. Only figures the "
+                                            + "correspondence actually states."
+                                    }
+                                },
+                                required = new[] { "title", "amount" }
+                            }
+                        }
+                    },
+                    required = new[] { "title", "lines" }
+                },
+                AiToolKind.Ui,
+                // Staging the form is the Control Centre's own act (the page gates who triages),
+                // but RAISING a manual order is the tighter procurement gate — mirror it here so
+                // the model never drafts an order for someone who cannot raise one.
+                JpmsRoleSets.CommercialTeam,
                 (_, _, _) => Task.FromResult(Serialise(new { ok = true, handed_to_browser = true }))),
 
             new(

@@ -51,6 +51,8 @@ public static class AiToolLabels
                                   ?? "Staging the tag",
             "stage_triage_todo" => Named(arguments, "title", title => $"Staging to-do: {title}")
                                    ?? "Staging a to-do",
+            "stage_triage_work_order" => Named(arguments, "title", title => $"Staging work order: {title}")
+                                         ?? "Staging a work order",
             "open_modal" => Named(arguments, "modal_key", key => key switch
                             {
                                 "compose_email" => "Opening the email composer",

@@ -140,7 +140,10 @@ public static class PortalMapCapabilities
             + "(the same act as picking it in the System Tags pane; Apply lands it); stage to-dos with "
             + "stage_triage_todo (assignee, notes, due date; Apply raises them); set its project; "
             + "DRAFT ITS REPLY with the reply_email dialog (open_modal reply_email opens the Reply "
-            + "box under it; the reply sends on Apply); raise records from it in System Actions. "
+            + "box under it; the reply sends on Apply); raise records from it in System Actions — "
+            + "a NEW work order staged with stage_triage_work_order (supplier, scope, priced "
+            + "lines; the user raises it with Apply or the chip's Create now, the email tagged "
+            + "to the new order either way). "
             + "Also the New email composer: the compose_email dialog opens HERE (open_modal "
             + "compose_email) for any brand-new email the user asks you to draft; they review and "
             + "press Send on this page",

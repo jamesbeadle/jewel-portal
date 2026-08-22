@@ -155,6 +155,15 @@ public sealed class StagedWorkOrderLine
 public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect }
 
 /// <summary>
+/// A record ALREADY raised from the selected email — by System Actions' "Create now", or by the
+/// apply's create — shown in the pane as a done chip ("WO-0051 · work order — raised; this email
+/// is tagged to it") so the staged "will raise" wording never claims work that has already
+/// happened. Reference is what the user reads ("WO-0051", or "Draft" for an unnumbered draft
+/// order); Label names the kind in the chip.
+/// </summary>
+public sealed record CreatedNowRecord(string Reference, string Label, string Title);
+
+/// <summary>
 /// A reply — or a forward (<see cref="IsForward"/>) — LINED UP IN THE OUTBOX: written against an
 /// older email read in the Control Centre (a record's correspondence, the subcontractor comms
 /// browser) and sent when the page's Apply runs. The apply first tags the anchor email to the

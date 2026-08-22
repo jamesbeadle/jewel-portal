@@ -17,6 +17,10 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 // The order is persisted first because the link path resolves the record from the database;
 // a link failure therefore throws with the order already saved — same trade-off as the bid
 // package equivalent, and the email stays in the queue to retry against the existing order.
+// The one link failure that is a DECISION rather than a fault — the cross-pathway confirm — is
+// therefore PRE-FLIGHTED against the email's current categories before anything persists
+// (CrossPathwayGuard, 2026-08-22): rejecting after the order existed is what produced duplicate
+// draft orders, one per retry, with a red error the triager couldn't confirm past.
 //
 // AttachmentIds are the email attachments the triager ticked to keep on the order as record
 // keeping (never sent to the supplier). Their bytes are downloaded from the mailbox BEFORE the
@@ -30,6 +34,7 @@ public sealed class CreateWorkOrderFromMessageHandler
     private readonly ICommandHandler<LinkMessageToRecord, Acknowledgement> link;
     private readonly IIntakeMessageReader reader;
     private readonly IWorkOrderAttachmentStore attachmentStore;
+    private readonly IMailboxGraphClient graph;
     private readonly JpmsContext context;
 
     public CreateWorkOrderFromMessageHandler(
@@ -37,17 +42,29 @@ public sealed class CreateWorkOrderFromMessageHandler
         ICommandHandler<LinkMessageToRecord, Acknowledgement> link,
         IIntakeMessageReader reader,
         IWorkOrderAttachmentStore attachmentStore,
+        IMailboxGraphClient graph,
         JpmsContext context)
     {
         this.createOrder = createOrder;
         this.link = link;
         this.reader = reader;
         this.attachmentStore = attachmentStore;
+        this.graph = graph;
         this.context = context;
     }
 
     public async Task<WorkOrder> HandleAsync(CreateWorkOrderFromMessage command, CancellationToken cancellationToken)
     {
+        // Pre-flight the cross-pathway confirm BEFORE anything persists: a work order files the
+        // thread under Subcontractor, and a thread already filed elsewhere needs the triager's
+        // explicit "File under both anyway" — asked now, while refusing still costs nothing.
+        // (The link at the end re-checks with the same consent flag; it cannot disagree.)
+        var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
+            ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
+        Jewel.JPMS.Api.Features.RecordLinks.CrossPathwayGuard.EnsureConfirmed(
+            snapshot.Categories, TriageCategories.BucketFor(RecordType.WorkOrder),
+            command.AllowCrossPathway, "the new work order");
+
         // Fetch the ticked email attachments FIRST — before anything persists — so "that
         // attachment isn't there any more" is a clean refusal, not a half-attached order.
         var attachmentIds = (command.AttachmentIds ?? Array.Empty<string>())
@@ -121,6 +138,7 @@ public sealed class CreateWorkOrderFromMessageHandler
         await link.HandleAsync(
             new LinkMessageToRecord(
                 command.MessageId, RecordType.WorkOrder, order.WorkOrderId, command.InternetMessageId,
+                AllowCrossPathway: command.AllowCrossPathway,
                 Scope: command.LinkScope),
             cancellationToken);
 

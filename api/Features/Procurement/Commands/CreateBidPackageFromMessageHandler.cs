@@ -18,14 +18,27 @@ public sealed class CreateBidPackageFromMessageHandler
 {
     private readonly JpmsContext context;
     private readonly ICommandHandler<LinkMessageToRecord, Acknowledgement> link;
+    private readonly Jewel.JPMS.Api.Features.MailboxIntake.Graph.IMailboxGraphClient graph;
 
-    public CreateBidPackageFromMessageHandler(JpmsContext context, ICommandHandler<LinkMessageToRecord, Acknowledgement> link)
-    { this.context = context; this.link = link; }
+    public CreateBidPackageFromMessageHandler(
+        JpmsContext context, ICommandHandler<LinkMessageToRecord, Acknowledgement> link,
+        Jewel.JPMS.Api.Features.MailboxIntake.Graph.IMailboxGraphClient graph)
+    { this.context = context; this.link = link; this.graph = graph; }
 
     public async Task<BidPackage> HandleAsync(CreateBidPackageFromMessage command, CancellationToken cancellationToken)
     {
         var projectExists = await context.Projects.AnyAsync(p => p.ProjectId == command.ProjectId, cancellationToken);
         if (!projectExists) throw new InvalidOperationException($"Project '{command.ProjectId}' not found.");
+
+        // Pre-flight the cross-pathway confirm BEFORE the package persists (CrossPathwayGuard,
+        // 2026-08-22): a bid package files the thread under Subcontractor, and rejecting after the
+        // create left an orphaned package behind and a red error the triager couldn't confirm past.
+        var snapshot = await graph.GetSnapshotAsync(command.MessageId, command.InternetMessageId, cancellationToken)
+            ?? throw new InvalidOperationException("The email could not be read from the mailbox.");
+        Jewel.JPMS.Api.Features.RecordLinks.CrossPathwayGuard.EnsureConfirmed(
+            snapshot.Categories,
+            Jewel.JPMS.Api.Features.MailboxIntake.Graph.TriageCategories.BucketFor(RecordType.BidPackageInvite),
+            command.AllowCrossPathway, "the new bid package");
 
         var entity = new BidPackageEntity
         {
@@ -46,6 +59,7 @@ public sealed class CreateBidPackageFromMessageHandler
         await link.HandleAsync(
             new LinkMessageToRecord(
                 command.MessageId, RecordType.BidPackageInvite, entity.BidPackageId, command.InternetMessageId,
+                AllowCrossPathway: command.AllowCrossPathway,
                 Scope: command.Scope),
             cancellationToken);
 

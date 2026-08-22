@@ -38,4 +38,9 @@ public sealed record CreateWorkOrderFromMessage(
     // "triage the entire thread" checkbox. Named LinkScope — not Scope like the sibling
     // create-from-message commands — because this command already carries the ORDER's Scope
     // (the instructed works text) and a record can't have two parameters with one name.
-    LinkThreadScope LinkScope = LinkThreadScope.ThreadBehindAnchor) : ICommand<WorkOrder>;
+    LinkThreadScope LinkScope = LinkThreadScope.ThreadBehindAnchor,
+    // Explicit consent to file the thread under Subcontractor as well as a pathway it already
+    // carries. The handler PRE-FLIGHTS this check before anything persists (CrossPathwayGuard),
+    // so a rejection creates nothing -- the UI shows the same amber "File under both anyway"
+    // confirm as a plain record link and re-sends with this true.
+    bool AllowCrossPathway = false) : ICommand<WorkOrder>;
