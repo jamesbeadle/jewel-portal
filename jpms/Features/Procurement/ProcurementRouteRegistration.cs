@@ -255,6 +255,17 @@ public static class ProcurementRouteRegistration
                     return $"/api/projects/{c.ProjectId}/work-orders/{c.WorkOrderId}/reject";
                 }));
 
+        // Deletes a draft raised in error (or duplicated by the assistant) outright — no
+        // Rejected row is kept; the audit trail carries the surviving record. Draft-only,
+        // refused server-side for anything decided.
+        commands.Register<DeleteDraftWorkOrder, Contracts.Cqrs.Acknowledgement>(
+            new CommandRoute("DELETE", "/api/projects/{projectId}/work-orders/{workOrderId}",
+                command =>
+                {
+                    var c = (DeleteDraftWorkOrder)command;
+                    return $"/api/projects/{c.ProjectId}/work-orders/{c.WorkOrderId}";
+                }));
+
         // Cancels a released order — terminal, keeps its number as the record of a voided
         // purchase order; its value stops counting everywhere. Directors / FD only.
         commands.Register<CancelWorkOrder, WorkOrder>(

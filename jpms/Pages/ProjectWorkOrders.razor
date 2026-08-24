@@ -186,32 +186,14 @@ else
                             }
                             else
                             {
-                                <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                   title="Open the purchase order exactly as it will read once approved — the sheet carries a Draft mark until the number is minted; print or save it as a PDF from there"
-                                   href="@PurchaseOrderPathFor(detail)">
-                                    Preview PO
-                                </a>
-                                <button type="button"
-                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                        title="Edit the draft's supplier, title, scope and priced lines"
-                                        disabled="@decisionBusy"
-                                        @onclick="() => OpenEdit(detail)">
-                                    Edit…
-                                </button>
-                                <button type="button"
-                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                        title="Approve this draft — it takes the next order number and becomes a live order"
-                                        disabled="@decisionBusy"
-                                        @onclick="() => SetPending(detail, DraftDecision.Approve)">
-                                    Approve…
-                                </button>
-                                <button type="button"
-                                        class="text-xs font-medium text-content-subtle hover:text-negative underline underline-offset-4"
-                                        title="Reject this draft — terminal; its value stops counting everywhere"
-                                        disabled="@decisionBusy"
-                                        @onclick="() => SetPending(detail, DraftDecision.Reject)">
-                                    Reject…
-                                </button>
+                                @* One Actions menu per draft — the row grew four inline links and the
+                                   list grows drafts faster than it grows width. Approve/Reject keep
+                                   their inline confirm step (the branch above); Delete gets a modal,
+                                   because it is the only choice that leaves no record behind. *@
+                                <DropdownMenu Label="Actions" WidthClass="w-72" Disabled="@decisionBusy"
+                                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                                              Class="inline-block text-left"
+                                              Items="DraftMenuItems(detail)" />
                             }
                         </li>
                     }
@@ -534,6 +516,42 @@ else
                               OnClose="CloseManualOrder"
                               OnSaved="HandleManualOrderSavedAsync"
                               OnPoEmailNote="ShowPoEmailNote" />
+
+        @* Deleting is the one draft decision that leaves no row behind (rejecting keeps a quiet
+           record), so it alone earns a modal instead of an inline confirm. *@
+        <Modal IsOpen="@(deletingDraft is not null)" Title="Delete draft work order"
+               ShowFooter="false" OnCancel="CloseDeleteDraft">
+            @if (deletingDraft is { } draft)
+            {
+                <p class="text-sm text-content mb-2">
+                    Delete <span class="font-medium">"@draft.Order.Title"</span>
+                    (@draft.SubcontractorName · @Money(draft.Order.Value)) permanently?
+                </p>
+                <p class="text-sm text-content-subtle mb-2">
+                    This removes the draft and its priced lines and attachments outright — nothing
+                    stays on this page and its value drops out of the Financials tab's committed
+                    figures. No order number was ever minted, so no gap is left. It cannot be undone.
+                </p>
+                <p class="text-sm text-content-subtle">
+                    To keep a visible record of a considered "no", use Reject instead — rejected
+                    drafts stay listed below.
+                </p>
+                @if (deleteDraftError is not null)
+                {
+                    <p class="text-sm text-negative mt-3">@deleteDraftError</p>
+                }
+                <div class="flex items-center justify-end gap-2 mt-4">
+                    <button type="button" class="btn-neutral" disabled="@deleteDraftBusy"
+                            @onclick="CloseDeleteDraft">Keep draft</button>
+                    <button type="button"
+                            class="btn bg-negative-strong text-negative-ink hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled="@deleteDraftBusy"
+                            @onclick="DeleteDraftAsync">
+                        @(deleteDraftBusy ? "Deleting…" : "Delete draft")
+                    </button>
+                </div>
+            }
+        </Modal>
     </ProjectPageShell>
 }
 
@@ -1126,6 +1144,12 @@ else
     private bool decisionBusy;
     private string? decisionError;
 
+    // The delete confirm modal: which draft it is asking about, and its own busy/error state so
+    // a refused delete reads back inside the modal rather than under the list.
+    private ProjectWorkOrderDetail? deletingDraft;
+    private bool deleteDraftBusy;
+    private string? deleteDraftError;
+
     private DraftDecision? PendingFor(ProjectWorkOrderDetail detail) =>
         pendingDraftId == detail.Order.WorkOrderId ? pendingDecision : null;
 
@@ -1311,6 +1335,71 @@ else
     }
 
     private void ClearPending() => pendingDraftId = null;
+
+    // The draft row's Actions menu. Approve and Reject only ARM the row's inline confirm step
+    // (SetPending) — the decision itself still takes the second, spelled-out click. Delete opens
+    // the confirm modal instead, because it alone leaves no record behind.
+    private IReadOnlyList<DropdownMenu.Item> DraftMenuItems(ProjectWorkOrderDetail detail)
+    {
+        var items = new List<DropdownMenu.Item>
+        {
+            new(Label: "Preview PO",
+                Href: PurchaseOrderPathFor(detail),
+                Hint: "Open the purchase order exactly as it will read once approved — the sheet carries a Draft mark until the number is minted; print or save it as a PDF from there"),
+            new(Label: "Edit…",
+                OnSelect: EventCallback.Factory.Create(this, () => OpenEdit(detail)),
+                Hint: "Edit the draft's supplier, title, scope and priced lines"),
+            new(Label: "Approve…",
+                OnSelect: EventCallback.Factory.Create(this, () => SetPending(detail, DraftDecision.Approve)),
+                Hint: "Approve this draft — it takes the next order number and becomes a live order",
+                Group: 1),
+            new(Label: "Reject…",
+                OnSelect: EventCallback.Factory.Create(this, () => SetPending(detail, DraftDecision.Reject)),
+                Hint: "Reject this draft — terminal; its value stops counting everywhere, and it stays listed under Rejected",
+                Destructive: true, Group: 1),
+            new(Label: "Delete…",
+                OnSelect: EventCallback.Factory.Create(this, () => OpenDeleteDraft(detail)),
+                Hint: "Delete this draft outright — for drafts raised in error; nothing stays on this page",
+                Destructive: true, Group: 2)
+        };
+        return items;
+    }
+
+    private void OpenDeleteDraft(ProjectWorkOrderDetail detail)
+    {
+        deletingDraft = detail;
+        deleteDraftError = null;
+    }
+
+    private void CloseDeleteDraft()
+    {
+        if (deleteDraftBusy) return;
+        deletingDraft = null;
+        deleteDraftError = null;
+    }
+
+    private async Task DeleteDraftAsync()
+    {
+        if (deleteDraftBusy || deletingDraft is not { } draft) return;
+        deleteDraftBusy = true;
+        deleteDraftError = null;
+        try
+        {
+            await Commands.SendAsync(new DeleteDraftWorkOrder(
+                ProjectId, draft.Order.WorkOrderId), CancellationToken.None);
+            deletingDraft = null;
+            await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+        }
+        catch (CommandFailedException ex)
+        {
+            // 400s are answers for the caller to show, not toasts — say what refused and why.
+            deleteDraftError = $"Couldn't delete \"{draft.Order.Title}\": {ex.Message}";
+        }
+        finally
+        {
+            deleteDraftBusy = false;
+        }
+    }
 
     private async Task DecideAsync(ProjectWorkOrderDetail detail, DraftDecision decision)
     {

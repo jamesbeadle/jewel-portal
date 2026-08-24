@@ -51,7 +51,11 @@ public enum AuditEventType
     // has no priced valuation report line commits cost with no matching sale — the raise dialog
     // warns, and this row records the user's deliberate decision to raise anyway. Not a
     // client-facing event: Pathway is "", like CostCentreRecoded.
-    WorkOrderSaleWarningOverridden = 19 // a work order was raised against uncovered cost centre(s)
+    WorkOrderSaleWarningOverridden = 19, // a work order was raised against uncovered cost centre(s)
+    // Draft deletion (written since 2026-08-24): a draft work order removed outright — raised in
+    // error or duplicated — leaves no Rejected row behind, so this event is the surviving record
+    // (mirroring ProjectDeleted). Not a client-facing event: Pathway is "", like CostCentreRecoded.
+    DraftWorkOrderDeleted = 20  // a draft work order was permanently deleted before any decision
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

@@ -191,6 +191,10 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<RejectWorkOrderAuthorisation>();
         services.AddScoped<RejectWorkOrderValidation>();
 
+        services.AddScoped<ICommandHandler<DeleteDraftWorkOrder, Jewel.JPMS.Contracts.Cqrs.Acknowledgement>, DeleteDraftWorkOrderHandler>();
+        services.AddScoped<DeleteDraftWorkOrderAuthorisation>();
+        services.AddScoped<DeleteDraftWorkOrderValidation>();
+
         services.AddScoped<ICommandHandler<CancelWorkOrder, WorkOrder>, CancelWorkOrderHandler>();
         services.AddScoped<CancelWorkOrderAuthorisation>();
         services.AddScoped<CancelWorkOrderValidation>();

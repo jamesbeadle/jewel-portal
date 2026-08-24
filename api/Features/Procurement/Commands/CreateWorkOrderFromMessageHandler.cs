@@ -7,6 +7,7 @@ using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 
@@ -21,6 +22,15 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 // therefore PRE-FLIGHTED against the email's current categories before anything persists
 // (CrossPathwayGuard, 2026-08-22): rejecting after the order existed is what produced duplicate
 // draft orders, one per retry, with a red error the triager couldn't confirm past.
+//
+// The pre-flight closes the DECISION path, but any post-create FAULT — a mailbox blip while the
+// email is tagged, a blob store refusal — still throws with the order saved and the page none
+// the wiser: the staged create survives, the error says try again, and every retry used to
+// raise a twin (the run of identical £1,800 "Uplift in Change in Render" drafts, 2026-08-22,
+// was a dozen-plus presses of exactly this). So the create itself is now guarded: an identical order raised through this same door
+// in the last 48 hours — same project, supplier, title, value and resulting status — IS the
+// earlier attempt, and the handler reuses it, re-running only the steps that come after the
+// create so the retry finishes the tagging instead of duplicating the order.
 //
 // AttachmentIds are the email attachments the triager ticked to keep on the order as record
 // keeping (never sent to the supplier). Their bytes are downloaded from the mailbox BEFORE the
@@ -82,24 +92,63 @@ public sealed class CreateWorkOrderFromMessageHandler
             fetched.Add((attachment.Name, attachment.ContentType, attachment.Content));
         }
 
-        var order = await createOrder.HandleAsync(
-            new CreateManualWorkOrder(
-                command.ProjectId,
-                command.SubcontractorId,
-                command.Title,
-                command.Scope,
-                command.RaisedByEmail,
-                command.Lines,
-                command.ProgrammeStart,
-                command.TargetCompletion,
-                command.ProgrammeNotes,
-                SaveAsDraft: command.SaveAsDraft,
-                DepositRequired: command.DepositRequired,
-                DepositPercent: command.DepositPercent),
-            cancellationToken);
+        // The retry guard (see the header): before minting anything, look for the order a
+        // previous attempt at THIS apply already created. The match is deliberately exact —
+        // project, supplier, title (as it would be stored), value and the status this command
+        // would produce — and recent, so a deliberately identical order raised weeks later is
+        // never swallowed. Earliest match wins: that is the order the first attempt made.
+        var storedTitle = command.Title.Length > 256 ? command.Title[..256] : command.Title;
+        var wantedStatus = (int)(command.SaveAsDraft ? WorkOrderStatus.Draft : WorkOrderStatus.Released);
+        var wantedValue = command.Lines.Sum(line => line.Amount);
+        var retryWindowStart = DateTimeOffset.UtcNow.AddHours(-48);
+        var earlierAttempt = await context.WorkOrders
+            .Where(row => row.ProjectId == command.ProjectId
+                && row.SubcontractorId == command.SubcontractorId
+                && row.Status == wantedStatus
+                && row.Title == storedTitle
+                && row.Value == wantedValue
+                && row.CreatedAt >= retryWindowStart)
+            .OrderBy(row => row.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var order = earlierAttempt is not null
+            ? earlierAttempt.ToModel()
+            : await createOrder.HandleAsync(
+                new CreateManualWorkOrder(
+                    command.ProjectId,
+                    command.SubcontractorId,
+                    command.Title,
+                    command.Scope,
+                    command.RaisedByEmail,
+                    command.Lines,
+                    command.ProgrammeStart,
+                    command.TargetCompletion,
+                    command.ProgrammeNotes,
+                    SaveAsDraft: command.SaveAsDraft,
+                    DepositRequired: command.DepositRequired,
+                    DepositPercent: command.DepositPercent),
+                cancellationToken);
 
         // Store the ticked attachments against the new order: bytes into the private container,
         // a register row each. Record keeping only — the purchase-order email ignores these.
+        // On a reused order the earlier attempt has usually stored these same files already —
+        // same name and size on the same order is the same file, and skipping it keeps a retry
+        // from doubling the register.
+        if (earlierAttempt is not null && fetched.Count > 0)
+        {
+            var alreadyStored = await context.WorkOrderAttachments
+                .Where(row => row.WorkOrderId == order.WorkOrderId)
+                .Select(row => new { row.FileName, row.FileSizeBytes })
+                .ToListAsync(cancellationToken);
+            fetched = fetched
+                .Where(file => !alreadyStored.Any(existing =>
+                    string.Equals(
+                        existing.FileName,
+                        string.IsNullOrWhiteSpace(file.Name) ? "attachment" : file.Name,
+                        StringComparison.OrdinalIgnoreCase)
+                    && existing.FileSizeBytes == file.Content.LongLength))
+                .ToList();
+        }
         if (fetched.Count > 0)
         {
             var now = DateTimeOffset.UtcNow;
