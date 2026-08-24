@@ -10,11 +10,11 @@ using Microsoft.Extensions.Logging;
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 
 /// <summary>
-/// Deletes a draft work order with everything that only exists under it: priced lines and
-/// attachments (rows and blobs). Draft-only by design — a decided order is rejected or
-/// cancelled so the decision stays on record; deletion is for drafts that should never have
-/// existed. The rows are gone afterwards, so the audit event is the surviving record
-/// (mirroring ProjectDeleted). Idempotent on a missing id, like DeleteBidPackage.
+/// Deletes a draft work order — undecided or rejected — with everything that only exists
+/// under it: priced lines and attachments (rows and blobs). Never a live order: approval
+/// minted a number the supplier has seen, so a live order is cancelled and its row kept.
+/// The rows are gone afterwards, so the audit event is the surviving record (mirroring
+/// ProjectDeleted). Idempotent on a missing id, like DeleteBidPackage.
 /// </summary>
 public sealed class DeleteDraftWorkOrderHandler : ICommandHandler<DeleteDraftWorkOrder, Acknowledgement>
 {
@@ -37,9 +37,9 @@ public sealed class DeleteDraftWorkOrderHandler : ICommandHandler<DeleteDraftWor
         if (order is null) return new Acknowledgement(command.WorkOrderId); // already gone — nothing to do
         if (!string.Equals(order.ProjectId, command.ProjectId, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("This work order does not belong to this project.");
-        if (order.Status != (int)WorkOrderStatus.Draft)
+        if (order.Status != (int)WorkOrderStatus.Draft && order.Status != (int)WorkOrderStatus.Rejected)
             throw new InvalidOperationException(
-                "Only draft work orders can be deleted — this one has been decided. Reject a draft or cancel a live order instead.");
+                "Only draft or rejected work orders can be deleted — this one was issued. Cancel a live order instead; its number is on record with the supplier.");
 
         var lines = await context.WorkOrderLines
             .Where(line => line.WorkOrderId == order.WorkOrderId)
@@ -52,6 +52,7 @@ public sealed class DeleteDraftWorkOrderHandler : ICommandHandler<DeleteDraftWor
         context.WorkOrderAttachments.RemoveRange(attachments);
 
         var deletedTitle = order.Title;
+        var wasRejected = order.Status == (int)WorkOrderStatus.Rejected;
         context.WorkOrders.Remove(order);
         await context.SaveChangesAsync(cancellationToken);
 
@@ -70,7 +71,9 @@ public sealed class DeleteDraftWorkOrderHandler : ICommandHandler<DeleteDraftWor
         // surviving record of the draft, so the detail carries what the register no longer can.
         await audit.WriteAsync(
             AuditEventType.DraftWorkOrderDeleted,
-            $"Draft work order \"{deletedTitle}\" was permanently deleted before any decision — no order number was ever minted.",
+            wasRejected
+                ? $"Rejected work order \"{deletedTitle}\" was permanently deleted — no order number was ever minted."
+                : $"Draft work order \"{deletedTitle}\" was permanently deleted before any decision — no order number was ever minted.",
             projectId: command.ProjectId,
             recordType: RecordType.WorkOrder,
             recordId: command.WorkOrderId,
