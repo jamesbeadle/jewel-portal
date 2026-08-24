@@ -9,6 +9,13 @@
    when the order carries programme information. *@
 
 <div class="po-sheet">
+    @* A previewed draft must never pass for an issued order — the watermark travels with the
+       sheet into print and any PDF saved from it, and disappears the moment approval mints
+       the number. *@
+    @if (Order.IsDraft)
+    {
+        <p class="po-draft-mark">DRAFT</p>
+    }
     <header class="po-head">
         <div>
             @* The official Jewel Bespoke Build logo (wwwroot/branding — master in assets/branding). *@
@@ -16,7 +23,10 @@
             <h1 class="po-title">Purchase Order</h1>
             <dl class="po-meta">
                 <dt>Date Created</dt><dd>@Order.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</dd>
-                <dt>Date Released</dt><dd>@Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy")</dd>
+                @* A draft has not been released — AwardedAt still holds the drafting stamp until
+                   approval re-stamps it, so printing it here would date a release that hasn't
+                   happened. *@
+                <dt>Date Released</dt><dd>@(Order.IsDraft ? "— on approval" : Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy"))</dd>
                 <dt>Purchase Order #</dt><dd>@Reference</dd>
             </dl>
         </div>
@@ -195,9 +205,20 @@
 
     <div class="po-signatures">
         <div class="po-signature">
-            <p class="po-sign-name">@SignatureName(ApprovedByName, Order.AwardedByEmail)</p>
-            <p class="po-sign-line">Approved by</p>
-            <p class="po-sign-date">@Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
+            @if (Order.IsDraft)
+            {
+                @* Nobody has approved a draft — an empty signature line, like the acceptance
+                   side opposite, rather than the drafter's name presented as an approval. *@
+                <p class="po-sign-name po-dim">&nbsp;</p>
+                <p class="po-sign-line">Awaiting approval</p>
+                <p class="po-sign-date">&nbsp;</p>
+            }
+            else
+            {
+                <p class="po-sign-name">@SignatureName(ApprovedByName, Order.AwardedByEmail)</p>
+                <p class="po-sign-line">Approved by</p>
+                <p class="po-sign-date">@Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
+            }
         </div>
         <div class="po-signature">
             @if (Order.IsAccepted)
@@ -218,6 +239,7 @@
 
 <style>
     .po-sheet {
+        position: relative;
         background: #ffffff;
         color: #1e293b;
         max-width: 820px;
@@ -227,6 +249,20 @@
         line-height: 1.5;
         border-radius: 4px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+    }
+    .po-draft-mark {
+        position: absolute;
+        top: 45%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-30deg);
+        font-size: 140px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        color: rgba(180, 83, 9, .10);
+        white-space: nowrap;
+        pointer-events: none;
+        margin: 0;
+        z-index: 1;
     }
     .po-head { display: flex; justify-content: space-between; gap: 24px; }
     /* The official logo artwork carries some built-in whitespace; the negative margins pull its

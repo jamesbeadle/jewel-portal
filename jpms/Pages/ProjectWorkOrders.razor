@@ -141,9 +141,11 @@ else
                 <p class="text-xs text-content-subtle mb-2">
                     Awaiting approval: a draft has no order number, is invisible to the supplier
                     and can't be invoiced or packaged — but its value already counts in the
-                    Financials tab's committed figures. It can be edited freely. Approving mints
-                    the next order number and issues it like any other order; rejecting ends it
-                    and its value stops counting.
+                    Financials tab's committed figures. It can be edited freely. Preview PO opens
+                    the purchase order exactly as the supplier will receive it, so it can be
+                    checked — or saved as a PDF — before approving. Approving mints the next order
+                    number and issues it like any other order; rejecting ends it and its value
+                    stops counting.
                 </p>
                 <ul class="text-sm divide-y divide-line rounded-xl border border-line bg-surface mb-6">
                     @foreach (var detail in DraftOrders)
@@ -165,6 +167,11 @@ else
                                             : "No directory email — the PO won't be emailed")
                                     </span>
                                 }
+                                <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                   title="Open the purchase order exactly as it will read once approved — print or save it as a PDF before you decide"
+                                   href="@PurchaseOrderPathFor(detail)">
+                                    Preview PO
+                                </a>
                                 <button type="button" class="text-xs font-medium @(pending == DraftDecision.Approve ? "text-accent" : "text-negative") underline underline-offset-4"
                                         title="@(pending == DraftDecision.Approve ? "Mint the next order number, issue this order and email the purchase order to the supplier" : "End this draft — its value stops counting and there is no undo")"
                                         disabled="@decisionBusy"
@@ -179,6 +186,11 @@ else
                             }
                             else
                             {
+                                <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                   title="Open the purchase order exactly as it will read once approved — the sheet carries a Draft mark until the number is minted; print or save it as a PDF from there"
+                                   href="@PurchaseOrderPathFor(detail)">
+                                    Preview PO
+                                </a>
                                 <button type="button"
                                         class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
                                         title="Edit the draft's supplier, title, scope and priced lines"
@@ -1102,6 +1114,12 @@ else
     // back, and a rejection has no undo. pendingDraftId holds the draft awaiting its
     // confirm click, pendingDecision which decision was asked for.
     private enum DraftDecision { Approve, Reject }
+
+    // Drafts link to the same printable purchase order page as issued orders — it renders
+    // unreleased orders with a Draft reference and badge, so the sheet can be read (and saved
+    // as a PDF) BEFORE approving releases the order and emails the PO to the supplier.
+    private string PurchaseOrderPathFor(ProjectWorkOrderDetail detail) =>
+        $"/projects/{ProjectId}/work-orders/{detail.Order.WorkOrderId}/po";
 
     private string? pendingDraftId;
     private DraftDecision pendingDecision;

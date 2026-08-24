@@ -269,14 +269,33 @@
                 else
                 {
                     <div class="grow overflow-y-auto px-4 py-4 space-y-3.5">
+                        @{ var messagePosition = 0; }
                         @foreach (var message in messages)
                         {
+                            var isCarriedOver = messagePosition < carriedOverMessageCount;
+                            var startsFreshConversation = carriedOverMessageCount > 0 && messagePosition == carriedOverMessageCount;
+                            messagePosition++;
+
+                            @if (startsFreshConversation)
+                            {
+                                @* Where the chat the user was in ends and the task's fresh
+                                   conversation begins. The dimmed bubbles above stay on screen
+                                   because the server carries that chat's tail into the new
+                                   conversation as background — what the eye sees matches what
+                                   the model knows, and nothing looks lost. *@
+                                <div class="flex items-center gap-2 py-1">
+                                    <span class="h-px grow bg-line"></span>
+                                    <span class="text-[10px] text-content-faint whitespace-nowrap">The chat above carries over into this task</span>
+                                    <span class="h-px grow bg-line"></span>
+                                </div>
+                            }
+
                             @if (message.Role == AiChatRole.Context)
                             {
                                 @* An attachment, in the flow where it happened — it is already on
                                    the conversation server-side, and sits here so nobody thinks it
                                    is still waiting to be sent with the next message. *@
-                                <div class="flex justify-center">
+                                <div class="flex justify-center @(isCarriedOver ? "opacity-60" : null)">
                                     <span class="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-raised px-3 py-1 text-[11px] text-content-muted">
                                         <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -291,21 +310,21 @@
                                 @* A task's machine-authored instruction. A badge, never a green
                                    bubble — these are commands the app sent on the user's behalf,
                                    not words they typed. Full text on hover. *@
-                                <div class="flex justify-center">
+                                <div class="flex justify-center @(isCarriedOver ? "opacity-60" : null)">
                                     <span title="@message.Body"
                                           class="inline-flex max-w-[19rem] items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] text-accent">
                                         <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                             <path d="M13 2L4.5 13.5h6L11 22l8.5-11.5h-6z" />
                                         </svg>
-                                        <span class="truncate">@KickoffLabel(message.Body)</span>
+                                        <span class="truncate">@KickoffLabel(message.Body, isCarriedOver)</span>
                                     </span>
                                 </div>
                             }
                             else
                             {
                                 var isUser = message.Role == AiChatRole.User;
-                                <div class="flex flex-col @(isUser ? "items-end" : "items-start")">
+                                <div class="flex flex-col @(isUser ? "items-end" : "items-start") @(isCarriedOver ? "opacity-60" : null)">
                                     <div class="@BubbleClass(isUser)">
                                         <p class="whitespace-pre-line">@message.Body</p>
                                     </div>
@@ -476,6 +495,11 @@
     public const string DomId = "jpms-chat-panel";
 
     private readonly List<AiChatMessage> messages = new();
+    // How many bubbles at the top of the pane belong to the chat the user was in when a task
+    // started its fresh conversation. Display only — they render dimmed above a divider, because
+    // a transcript that vanishes the moment a dialog opens reads as the panel losing the chat.
+    // Zero whenever nothing is carried over.
+    private int carriedOverMessageCount;
     private List<string> lastToolsUsed = new();
     private string? conversationId;
     private string? agentKey;
@@ -963,7 +987,9 @@
     /// <summary>
     /// Opens the drafting conversation. A task always gets a FRESH conversation: the transcript is
     /// the account of how this one document came to say what it says (docs/ai §8), and starting it
-    /// clean is also the cheapest possible first turn.
+    /// clean is also the cheapest possible first turn. Fresh server-side, that is — on SCREEN the
+    /// chat the user was in stays put, dimmed above a divider, so the kick-off never reads as the
+    /// panel throwing their conversation away.
     ///
     /// <para>Does nothing until the billed-usage notice has been accepted — the kick-off simply
     /// stays queued in AiTaskState, and the user fills the form in by hand if they decline. It also
@@ -994,7 +1020,16 @@
         // as a handover: the server copies its tail into the new conversation as background, so
         // "draft it the way we just discussed" still means something.
         var previousConversationId = conversationId;
+        // The fresh conversation must not LOOK like the chat being wiped. The bubbles the user
+        // was just reading stay on screen, dimmed above a divider — the visible mirror of the
+        // handover below, which carries the same chat's tail to the server as background.
+        var visibleTranscript = messages.ToList();
         StartNewChat();
+        if (previousConversationId is not null && visibleTranscript.Count > 0)
+        {
+            messages.AddRange(visibleTranscript);
+            carriedOverMessageCount = visibleTranscript.Count;
+        }
         pendingPreviousConversationId = previousConversationId;
         nextSendIsKickoff = true;
         draft = kickoff;
@@ -1006,10 +1041,12 @@
     private bool nextSendIsKickoff;
 
     /// <summary>The badge line for a kick-off: the task banner when one is in force (the honest
-    /// short name of the job), else the instruction clipped.</summary>
-    private string KickoffLabel(string body)
+    /// short name of the job), else the instruction clipped. A badge in the carried-over region
+    /// belongs to an EARLIER task, so it never borrows the live banner — that would relabel
+    /// yesterday's kick-off with today's job.</summary>
+    private string KickoffLabel(string body, bool isCarriedOver = false)
     {
-        var banner = AiTasks.Active?.BannerLabel;
+        var banner = isCarriedOver ? null : AiTasks.Active?.BannerLabel;
         if (!string.IsNullOrWhiteSpace(banner)) return banner!;
         return body.Length <= 80 ? body : body[..80] + "…";
     }
@@ -1036,6 +1073,7 @@
         var hadConversation = conversationId is not null;
 
         messages.Clear();
+        carriedOverMessageCount = 0;
         lastToolsUsed = new List<string>();
         conversationId = null;
         agentKey = null;
