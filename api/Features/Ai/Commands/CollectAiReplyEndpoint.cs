@@ -80,7 +80,7 @@ public sealed class CollectAiReplyEndpoint
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Assistant reply collect failed for {Email}.", signedInUser.Email);
-            return new ObjectResult($"The assistant hit an unexpected error. ({ex.Message})")
+            return new ObjectResult(AiEndpointErrors.Explain(ex))
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             };

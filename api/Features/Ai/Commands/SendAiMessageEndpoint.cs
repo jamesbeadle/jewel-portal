@@ -78,35 +78,10 @@ public sealed class SendAiMessageEndpoint
             // difference between "Backend call failure" and knowing a migration has not been run.
             logger.LogError(ex, "Assistant turn failed for {Email}.", signedInUser.Email);
 
-            return new ObjectResult(Explain(ex))
+            return new ObjectResult(AiEndpointErrors.Explain(ex))
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             };
         }
-    }
-
-    /// <summary>
-    /// Turns the exception into something the person reading the chat panel can act on. Recognises
-    /// the failures that are configuration rather than bugs; everything else falls back to the
-    /// exception's own message, which is more use than nothing.
-    /// </summary>
-    private static string Explain(Exception ex)
-    {
-        var message = ex.Message;
-
-        if (message.Contains("Invalid object name", StringComparison.OrdinalIgnoreCase)
-            || message.Contains("Invalid column name", StringComparison.OrdinalIgnoreCase))
-        {
-            return "The assistant's database tables are missing or out of date. "
-                + "A pending EF migration has not been applied to this environment. "
-                + $"({message})";
-        }
-
-        if (message.Contains("Unable to resolve service", StringComparison.OrdinalIgnoreCase))
-        {
-            return $"The assistant is not wired up correctly on this environment. ({message})";
-        }
-
-        return $"The assistant hit an unexpected error. ({message})";
     }
 }
