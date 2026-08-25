@@ -69,7 +69,14 @@ public sealed class AddAiAttachmentEndpoint
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Chat attachment failed for {Email}.", signedInUser.Email);
-            return new ObjectResult($"The attachment could not be read. ({ex.Message})")
+            // The INNERMOST message: a DbUpdateException says only "see the inner exception",
+            // and the inner one is the sentence that names the missing table or column — the
+            // thing the error report exists to carry (live, 2026-08-25: "An error occurred while
+            // saving the entity changes" told nobody the AiAttachments migration had not run).
+            var root = ex;
+            while (root.InnerException is not null) root = root.InnerException;
+            var detail = ReferenceEquals(root, ex) ? ex.Message : $"{ex.Message} {root.Message}";
+            return new ObjectResult($"The attachment could not be read. ({detail})")
             {
                 StatusCode = StatusCodes.Status500InternalServerError
             };
