@@ -69,6 +69,7 @@ public static class TriageCategories
         RecordType.Scheduling       => Client,   // programme correspondence is client/architect-facing
         RecordType.Lad              => Client,   // LAD claims sit between Jewel and the client
         RecordType.ValuationReportSnapshot => Client, // the snapshot is the only client-facing form of the valuation report
+        RecordType.TenderEnquiry    => Client,   // the architect's invitation to tender — client-side from the first email
         RecordType.BidPackageInvite => Subcontractor,
         RecordType.WorkOrder        => Subcontractor, // the order Jewel places with the subcontractor
         RecordType.Defect           => Subcontractor, // the remediation is chased with the subcontractor

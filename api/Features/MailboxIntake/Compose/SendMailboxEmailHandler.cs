@@ -8,6 +8,7 @@ using Jewel.JPMS.Api.Features.Progress.Storage;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Features.Requests.Documents;
+using Jewel.JPMS.Api.Features.TenderEnquiries.Documents;
 using Jewel.JPMS.Api.Features.Todos;
 using Jewel.JPMS.Api.Features.Variations.Documents;
 using Jewel.JPMS.Contracts.Cqrs;
@@ -528,6 +529,15 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
                 var model = await VariationDocumentBuilder.BuildAsync(context, reference.Id, ct)
                     ?? throw new InvalidOperationException("A selected variation order no longer exists — remove its document and try again.");
                 return new MailboxDraftAttachment(model.FileName, "application/pdf", VariationDocumentRenderer.Render(model));
+            }
+
+            // The PQQ response — the architect's questionnaire answered, rendered from the answers
+            // as they stand when the email goes.
+            case RecordType.TenderEnquiry:
+            {
+                var model = await TenderEnquiryDocumentBuilder.BuildAsync(context, reference.Id, ct)
+                    ?? throw new InvalidOperationException("A selected tender enquiry no longer exists — remove its document and try again.");
+                return new MailboxDraftAttachment(model.FileName, "application/pdf", TenderEnquiryDocumentRenderer.Render(model));
             }
 
             default:

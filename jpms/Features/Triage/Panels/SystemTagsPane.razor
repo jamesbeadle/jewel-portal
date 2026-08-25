@@ -102,7 +102,7 @@
     // (2026-08-07): the programme bucket isn't a record anyone picks — the page's own
     // "Relevant Event for Programme" checkbox files to it instead; the bucket's claims
     // documents stay reachable here via Request / RFI and LADs claim.
-    private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.Lad, RecordType.ValuationReportSnapshot };
+    private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.TenderEnquiry, RecordType.Lad, RecordType.ValuationReportSnapshot };
     private static readonly RecordType[] SubcontractorTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Defect };
     // Internal carries bid packages and work orders too (Nigel, 2026-08-22): staff-to-staff mail
     // about a package or an order is as common as a to-do. Those picks still file the thread
@@ -356,6 +356,7 @@
     {
         RecordType.Request => "Request / RFI",
         RecordType.Variation => "Variation Order",
+        RecordType.TenderEnquiry => "Tender Enquiry",
         RecordType.Lad => "LADs claim",
         RecordType.ValuationReportSnapshot => "Valuation report snapshot",
         RecordType.Scheduling => "Relevant Event",

@@ -1,0 +1,148 @@
+@page "/projects/{ProjectId}/tender-enquiries"
+@using Jewel.JPMS.Contracts.TenderEnquiries
+@using Jewel.JPMS.Features.TenderEnquiries
+@inject AuthService Auth
+@inject SessionService Session
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject NavigationManager Nav
+
+<PageTitle>Tender Enquiries · JPMS</PageTitle>
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="tender-enquiries">
+        <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
+            <div>
+                <h2 class="text-lg font-semibold text-content">Tender enquiries</h2>
+                <p class="text-sm text-content-muted">
+                    Invitations to tender for this job — from the architect's first email through the PQQ to the priced tender.
+                </p>
+            </div>
+            @if (CanManage)
+            {
+                <button type="button" class="btn-primary" @onclick="OpenLogModal">Log enquiry</button>
+            }
+        </div>
+
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+        }
+
+        <LoadGate IsLoading="@(enquiries is null && !loadFailed)" Prominent="true" Label="Loading tender enquiries">
+        @if (Enquiries.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">
+                No tender enquiries yet.
+                @(CanManage ? "Log one here, or from the architect's email in the Control Centre with “Log Tender Enquiry”." : "")
+            </p>
+        }
+        else
+        {
+            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface-raised border-b border-line">
+                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <th class="px-4 py-3">Enquiry</th>
+                            <th class="px-4 py-3 hidden sm:table-cell">Architect</th>
+                            <th class="px-4 py-3">Status</th>
+                            <th class="px-4 py-3 hidden md:table-cell">Received</th>
+                            <th class="px-4 py-3 hidden lg:table-cell">Next due</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-line">
+                        @foreach (var enquiry in Enquiries)
+                        {
+                            <tr class="hover:bg-surface-raised @(enquiry.Status.IsOpen() ? "" : "opacity-60")">
+                                <td class="px-4 py-3">
+                                    <span class="text-xs font-mono text-content-subtle mr-2">@enquiry.Reference</span>
+                                    <a class="text-content font-medium hover:underline underline-offset-4"
+                                       href="@($"/projects/{ProjectId}/tender-enquiries/{enquiry.TenderEnquiryId}")">@enquiry.Title</a>
+                                </td>
+                                <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@enquiry.ArchitectPracticeName</td>
+                                <td class="px-4 py-3"><TenderEnquiryStatusBadge Status="@enquiry.Status" /></td>
+                                <td class="px-4 py-3 text-content-subtle hidden md:table-cell">@enquiry.ReceivedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                                <td class="px-4 py-3 hidden lg:table-cell @(enquiry.IsOverdue ? "text-negative font-medium" : "text-content-subtle")">
+                                    @(enquiry.NextDueAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—")
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        </LoadGate>
+    </ProjectPageShell>
+
+    <Modal IsOpen="showLogModal" Title="Log tender enquiry" ShowFooter="true"
+           ConfirmLabel="@(busy ? "Logging…" : "Log enquiry")" ConfirmDisabled="@(busy || draft.Problem is not null)"
+           CancelLabel="Cancel" OnCancel="() => showLogModal = false" OnConfirm="ConfirmLogAsync" Class="max-w-2xl w-full">
+        <TenderEnquiryDetailsForm Draft="@draft" OnChanged="StateHasChanged" />
+        <p class="text-xs text-content-subtle mt-3">
+            The enquiry starts as Received. Answer the PQQ, add the documents and move it along from its own page.
+        </p>
+    </Modal>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private bool sessionReady;
+    private bool busy;
+    private bool loadFailed;
+    private bool showLogModal;
+    private string? error;
+    private IReadOnlyList<TenderEnquiry>? enquiries;
+    private TenderEnquiryDetailsDraft draft = new();
+
+    private IReadOnlyList<TenderEnquiry> Enquiries => enquiries ?? Array.Empty<TenderEnquiry>();
+
+    private bool CanManage => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.QuantitySurveyor
+            or Role.OfficeComplianceCoordinator or Role.OfficeAdmin);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        sessionReady = true;
+        try { enquiries = await Queries.AskAsync(new ListTenderEnquiriesForProject(ProjectId), CancellationToken.None); }
+        catch
+        {
+            loadFailed = true;
+            error = "Couldn't load the tender enquiries.";
+        }
+    }
+
+    private void OpenLogModal()
+    {
+        draft = new TenderEnquiryDetailsDraft();
+        error = null;
+        showLogModal = true;
+    }
+
+    private async Task ConfirmLogAsync()
+    {
+        if (busy || draft.Problem is not null) return;
+        busy = true;
+        try
+        {
+            var enquiry = await Commands.SendAsync(new LogTenderEnquiry(ProjectId, draft.ToDetails()), CancellationToken.None);
+            showLogModal = false;
+            Nav.NavigateTo($"/projects/{ProjectId}/tender-enquiries/{enquiry.TenderEnquiryId}");
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+}

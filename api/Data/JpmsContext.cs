@@ -65,6 +65,9 @@ public sealed class JpmsContext : DbContext
     public DbSet<QuoteLineItemEntity> QuoteLineItems => Set<QuoteLineItemEntity>();
     public DbSet<BidPackageDrawingEntity> BidPackageDrawings => Set<BidPackageDrawingEntity>();
     public DbSet<BidPackageAttachmentEntity> BidPackageAttachments => Set<BidPackageAttachmentEntity>();
+    public DbSet<TenderEnquiryEntity> TenderEnquiries => Set<TenderEnquiryEntity>();
+    public DbSet<TenderEnquiryAnswerEntity> TenderEnquiryAnswers => Set<TenderEnquiryAnswerEntity>();
+    public DbSet<TenderEnquiryAttachmentEntity> TenderEnquiryAttachments => Set<TenderEnquiryAttachmentEntity>();
     public DbSet<WorkOrderEntity> WorkOrders => Set<WorkOrderEntity>();
     public DbSet<WorkOrderLineEntity> WorkOrderLines => Set<WorkOrderLineEntity>();
     public DbSet<WorkOrderAttachmentEntity> WorkOrderAttachments => Set<WorkOrderAttachmentEntity>();
@@ -434,6 +437,22 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<BidPackageAttachmentEntity>()
             .HasIndex(row => row.BidPackageId)
             .HasDatabaseName("IX_BidPackageAttachments_BidPackageId");
+
+        // ---- Tender enquiries -----------------------------------------------------------------------
+        // Read per project (the Tender Enquiries tab) and by number (the TEQ-#### tag resolves back
+        // to its record); answers and attachments are read per enquiry.
+        modelBuilder.Entity<TenderEnquiryEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_TenderEnquiries_ProjectId");
+        modelBuilder.Entity<TenderEnquiryEntity>()
+            .HasIndex(row => row.Number)
+            .HasDatabaseName("IX_TenderEnquiries_Number");
+        modelBuilder.Entity<TenderEnquiryAnswerEntity>()
+            .HasIndex(row => row.TenderEnquiryId)
+            .HasDatabaseName("IX_TenderEnquiryAnswers_TenderEnquiryId");
+        modelBuilder.Entity<TenderEnquiryAttachmentEntity>()
+            .HasIndex(row => row.TenderEnquiryId)
+            .HasDatabaseName("IX_TenderEnquiryAttachments_TenderEnquiryId");
 
         // ---- Audit trail ---------------------------------------------------------------------------
         // The register is read per record (a request's own History panel) as well as per project.

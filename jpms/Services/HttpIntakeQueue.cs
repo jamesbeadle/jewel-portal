@@ -109,6 +109,10 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<WorkOrder> CreateWorkOrderFromMessageAsync(CreateWorkOrderFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 
+    public Task<TenderEnquiry> LogTenderEnquiryFromMessageAsync(
+        Jewel.JPMS.Contracts.TenderEnquiries.LogTenderEnquiryFromMessage command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
     public Task<IReadOnlyList<TodoItem>> CreateTodoItemsFromMessageAsync(CreateTodoItemsFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 

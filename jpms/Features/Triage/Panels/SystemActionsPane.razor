@@ -147,6 +147,12 @@
                                           StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
                                           EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
                 break;
+            case SystemActionKind.LogTenderEnquiry:
+                <StageTenderEnquiryEditor @key="kind" ProjectId="@ProjectId" Projects="@Projects"
+                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
+                                          EmailSubject="@EmailSubject" />
+                break;
             case SystemActionKind.CreateTodos:
                 <StageTodosAction TodoRows="TodoRows" TodoAssigneeOptions="@TodoAssigneeOptions"
                                   TodoProjectNote="@TodoProjectNote" OnStagingChanged="OnStagingChanged" />
@@ -221,7 +227,8 @@
         actionKind is SystemActionKind.RaiseRfi
             or SystemActionKind.RaiseWorkOrder
             or SystemActionKind.CreateBidPackageInvite
-            or SystemActionKind.RaiseDefect;
+            or SystemActionKind.RaiseDefect
+            or SystemActionKind.LogTenderEnquiry;
 
     /// <summary>Page-owned to-do draft rows — "Create To-do Items". One to-do per assignee per
     /// row on Apply, the email tagged to every one.</summary>
@@ -239,10 +246,14 @@
 
     private SystemActionKind kind = SystemActionKind.RaiseRfi;
 
-    // To-dos are company-wide until a project is set, and a directory contact has no project at
-    // all — everything else raises on the email's project.
+    // To-dos are company-wide until a project is set, a directory contact has no project at all,
+    // and a tender enquiry usually creates its own — everything else raises on the email's project.
     private static bool NeedsProject(SystemActionKind actionKind) =>
-        actionKind is not (SystemActionKind.AddDirectoryContact or SystemActionKind.CreateTodos or SystemActionKind.ForwardToQs);
+        actionKind is not (SystemActionKind.AddDirectoryContact or SystemActionKind.CreateTodos
+            or SystemActionKind.ForwardToQs or SystemActionKind.LogTenderEnquiry);
+
+    /// <summary>The open email's subject — the tender enquiry editor titles the enquiry from it.</summary>
+    [Parameter] public string EmailSubject { get; set; } = "";
 
     /// <summary>Staff holding the QS role — "Forward to QS" pre-fills them.</summary>
     [Parameter] public IReadOnlyList<TodoAssignablePerson> QsRecipients { get; set; } = Array.Empty<TodoAssignablePerson>();

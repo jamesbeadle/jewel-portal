@@ -187,7 +187,7 @@
                     {
                         <p class="text-xs text-content-subtle">
                             @(recordsByProject[panelProjectId].Count == 0
-                                ? "No requests or variation orders on this project yet."
+                                ? "No requests, variation orders or tender enquiries on this project yet."
                                 : "No records match — clear the filter or include closed records.")
                         </p>
                     }
@@ -211,7 +211,7 @@
                     }
                     <p class="text-[11px] text-content-faint">
                         Attaches the record's official PDF, rendered as the record stands when the email is sent.
-                        Requests (RFI, NOD, EOT…) and variation orders carry official documents today.
+                        Requests (RFI, NOD, EOT…), variation orders and tender enquiries (the PQQ response) carry official documents today.
                     </p>
                 }
             }
@@ -329,7 +329,9 @@
             // one under its V-ref — so a VO can be attached and sent at any point in its life.
             var requests = await Intake.ListLinkableRecordsAsync(projectId, RecordType.Request);
             var variations = await Intake.ListLinkableRecordsAsync(projectId, RecordType.Variation);
-            recordsByProject[projectId] = requests.Concat(variations).ToList();
+            // Tender enquiries carry the PQQ response — the third official document.
+            var tenderEnquiries = await Intake.ListLinkableRecordsAsync(projectId, RecordType.TenderEnquiry);
+            recordsByProject[projectId] = requests.Concat(variations).Concat(tenderEnquiries).ToList();
         }
         catch
         {

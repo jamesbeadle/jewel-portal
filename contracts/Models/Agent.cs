@@ -18,7 +18,8 @@ public enum RecordType
     Defect = 9,            // a defect logged on the project — remediation chased with the subcontractor
     SubcontractorComms = 10, // the record-less "subcontractor communication" tag family (general + categories) — subcontract-side correspondence tied to no record
     ValuationReportSnapshot = 11, // a frozen valuation report snapshot — the client-facing statement a valuation email travels with
-    InternalComms = 12     // the record-less "internal communication" tag family (general + categories) — staff-to-staff correspondence tied to no record
+    InternalComms = 12,    // the record-less "internal communication" tag family (general + categories) — staff-to-staff correspondence tied to no record
+    TenderEnquiry = 13     // an architect's invitation for Jewel to tender (PQQ → shortlist → tender) — client-side, on a Lead-stage project
 }
 
 // The discipline an agent belongs to. Mirrors the columns of the request-agent flow diagram:

@@ -19,6 +19,7 @@ public static class SystemActionGuide
             (RaiseGroup, new[]
             {
                 SystemActionKind.RaiseRfi,
+                SystemActionKind.LogTenderEnquiry,
                 SystemActionKind.RaiseVariationOrder,
                 SystemActionKind.RaiseWorkOrder,
                 SystemActionKind.CreateBidPackageInvite,
@@ -45,6 +46,7 @@ public static class SystemActionGuide
     public static string WhenToUse(SystemActionKind kind) => kind switch
     {
         SystemActionKind.RaiseRfi => "A question for the client side that needs a formal, numbered answer — an architect's detail, a spec gap, a sequencing clash.",
+        SystemActionKind.LogTenderEnquiry => "An architect or client inviting Jewel to tender for a job — a PQQ, an expression-of-interest, a tender pack. Creates the Lead project if the job is new, keeps the PQQ and drawings, and tracks the bid from here to won or lost.",
         SystemActionKind.RaiseVariationOrder => "The client side has asked for, or caused, extra or changed work that needs pricing and approval.",
         SystemActionKind.RaiseWorkOrder => "You're placing work with a subcontractor — the email is the agreed scope or price; Apply emails them the purchase order.",
         SystemActionKind.CreateBidPackageInvite => "A package of work you're about to put out to tender — sets up the package so subcontractors can be invited.",
@@ -54,7 +56,7 @@ public static class SystemActionGuide
         SystemActionKind.CloseRfi => "This email answers an open RFI — file the answer and close it.",
         SystemActionKind.ApproveVariationOrder => "The client side has approved a variation in this email.",
         SystemActionKind.RejectVariationOrder => "The client side has turned a variation down in this email.",
-        SystemActionKind.FileBidPackageTender => "A subcontractor has returned pricing for a package you invited them to — a tender enquiry coming IN is this one, not Raise RFI.",
+        SystemActionKind.FileBidPackageTender => "A subcontractor has returned pricing for a package you invited them to. (An architect inviting Jewel to tender is Log Tender Enquiry, not this.)",
         SystemActionKind.CreateTodos => "Something for someone at Jewel to do — the catch-all when no record fits.",
         SystemActionKind.CompleteTodo => "This email shows a to-do is done — tick it off.",
         SystemActionKind.AddDirectoryContact => "A new supplier, subcontractor or contact to keep on file from this email.",

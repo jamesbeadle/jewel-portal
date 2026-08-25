@@ -50,6 +50,10 @@ public static class PortalMapCapabilities
             "internal-only notes for the office — door codes, key safes, site access",
         ["/projects/{project}/settings"] =
             "project settings: names, dates, stage",
+        ["/projects/{project}/tender-enquiries"] =
+            "inbound tender enquiries (an architect inviting Jewel to tender — TEQ-#### references); "
+            + "open one for its status, PQQ response, documents and tagged emails. A Lead-stage "
+            + "project usually exists because of one",
 
         // ---- Subcontractor ----
         ["/projects/{project}/bid-package-invites"] =
@@ -173,6 +177,10 @@ public static class PortalMapCapabilities
             + "subcontractors, their quotes, and the tagged email thread (get_bid_package_context and "
             + "read_record_emails read it; the bid_package_details dialog opens here to build the "
             + "package out — summary and line schedule in one update)",
+        "Tender enquiry → /projects/{project}/tender-enquiries/{tenderEnquiryId} — the architect's "
+            + "invitation: Received → Accepted → PQQ submitted → Shortlisted → Tender submitted → Won/Lost, "
+            + "the PQQ answers (rendered to the PQQ response PDF), the enquiry's documents and its tagged "
+            + "emails (read_record_emails works here)",
         "Work order → /projects/{project}/work-orders/{workOrderId}/po — the purchase order as issued",
         "Drawing → /projects/{project}/drawings/{drawingId} — revision history and viewer",
         "To-do → /todos/{todoItemId} — one to-do with its notes and tagged mail",

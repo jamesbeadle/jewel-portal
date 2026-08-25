@@ -618,6 +618,7 @@ internal static class AiRecordTools
             "scheduling" or "programme" => RecordType.Scheduling,
             "subcontractor comms" => RecordType.SubcontractorComms,
             "valuation snapshot" or "valuation report snapshot" => RecordType.ValuationReportSnapshot,
+            "tender enquiry" or "tender inquiry" or "teq" => RecordType.TenderEnquiry,
             _ => null
         };
         recordType = mapped ?? default;

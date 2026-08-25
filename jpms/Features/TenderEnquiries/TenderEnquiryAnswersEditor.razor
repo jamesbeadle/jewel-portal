@@ -1,0 +1,169 @@
+@namespace Jewel.JPMS.Features.TenderEnquiries
+@using Jewel.JPMS.Contracts.TenderEnquiries
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+
+@* The PQQ response: the architect's numbered questions with Jewel's answers beneath. Read mode
+   shows the sheet; edit mode saves it whole (positions re-minted server-side). The PDF renders
+   fresh from the saved answers on every download and every email attach. *@
+
+<div class="panel p-5">
+    <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+            <h3 class="eyebrow">PQQ response</h3>
+            <p class="text-xs text-content-subtle mt-0.5">
+                Paste the architect's questions in, answer each one, save. Download the PDF here, or attach it to the reply
+                from the Control Centre's System documents picker — the answers here are what the architect receives.
+            </p>
+        </div>
+        <Toolbar>
+            <ToolbarButton Icon="download" Label="Download the PQQ response PDF" Href="@DocumentHref" Download="true"
+                           Disabled="@(rows is null || editing)" />
+        </Toolbar>
+    </div>
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+
+    <LoadGate IsLoading="@(rows is null && !loadFailed)" Label="Loading answers">
+    @if (!editing)
+    {
+        @if (Rows.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">No questions yet. @(CanEdit ? "Press Edit to add the questionnaire." : "")</p>
+        }
+        else
+        {
+            <ol class="space-y-3">
+                @foreach (var row in Rows)
+                {
+                    <li>
+                        <p class="text-sm font-medium text-content">@row.Position. @row.Question</p>
+                        <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(row.Answer) ? "—" : row.Answer)</p>
+                    </li>
+                }
+            </ol>
+        }
+        @if (CanEdit)
+        {
+            <button type="button" class="btn-secondary mt-4" disabled="@busy" @onclick="StartEdit">@(Rows.Count == 0 ? "Add questionnaire" : "Edit answers")</button>
+        }
+    }
+    else
+    {
+        <div class="space-y-4">
+            @for (var index = 0; index < draft.Count; index++)
+            {
+                var position = index;
+                var row = draft[position];
+                <div class="rounded-lg border border-line p-3 space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-semibold text-content-subtle">Question @(position + 1)</span>
+                        <div class="flex gap-2 text-xs">
+                            <button type="button" class="text-content-subtle hover:text-content" disabled="@(position == 0)" @onclick="() => Move(position, -1)">↑</button>
+                            <button type="button" class="text-content-subtle hover:text-content" disabled="@(position == draft.Count - 1)" @onclick="() => Move(position, 1)">↓</button>
+                            <button type="button" class="text-content-subtle hover:text-negative" @onclick="() => draft.RemoveAt(position)">Remove</button>
+                        </div>
+                    </div>
+                    <input class="field" value="@row.Question" placeholder="The question as the architect asked it…"
+                           @oninput="e => row.Question = e.Value?.ToString() ?? string.Empty" />
+                    <textarea class="field" rows="4" value="@row.Answer" placeholder="Jewel's answer…"
+                              @oninput="e => row.Answer = e.Value?.ToString() ?? string.Empty"></textarea>
+                </div>
+            }
+            <div class="flex flex-wrap gap-2">
+                <button type="button" class="btn-secondary text-xs" @onclick="() => draft.Add(new AnswerRow())">+ Add question</button>
+                <button type="button" class="btn-secondary text-xs" @onclick="() => showPaste = !showPaste">Paste questions</button>
+            </div>
+            @if (showPaste)
+            {
+                <div class="space-y-2">
+                    <textarea class="field" rows="6" value="@pasteText" placeholder="One question per line — numbering is stripped."
+                              @oninput="e => pasteText = e.Value?.ToString() ?? string.Empty"></textarea>
+                    <button type="button" class="btn-secondary text-xs" @onclick="AddPastedQuestions">Add these questions</button>
+                </div>
+            }
+            <div class="flex gap-2 pt-2">
+                <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveAsync">@(busy ? "Saving…" : "Save answers")</button>
+                <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => editing = false">Cancel</button>
+            </div>
+        </div>
+    }
+    </LoadGate>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string TenderEnquiryId { get; set; } = "";
+    [Parameter] public bool CanEdit { get; set; }
+
+    private sealed class AnswerRow
+    {
+        public string Question { get; set; } = "";
+        public string Answer { get; set; } = "";
+    }
+
+    private IReadOnlyList<TenderEnquiryAnswer>? rows;
+    private IReadOnlyList<TenderEnquiryAnswer> Rows => rows ?? Array.Empty<TenderEnquiryAnswer>();
+    private readonly List<AnswerRow> draft = new();
+    private bool editing;
+    private bool busy;
+    private bool loadFailed;
+    private bool showPaste;
+    private string pasteText = "";
+    private string? error;
+
+    private string DocumentHref => $"/api/tender-enquiries/{TenderEnquiryId}/document";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { rows = await Queries.AskAsync(new ListTenderEnquiryAnswers(TenderEnquiryId), CancellationToken.None); }
+        catch { loadFailed = true; }
+    }
+
+    private void StartEdit()
+    {
+        draft.Clear();
+        draft.AddRange(Rows.Select(row => new AnswerRow { Question = row.Question, Answer = row.Answer }));
+        if (draft.Count == 0) draft.Add(new AnswerRow());
+        error = null;
+        editing = true;
+    }
+
+    private void Move(int position, int direction)
+    {
+        var target = position + direction;
+        if (target < 0 || target >= draft.Count) return;
+        (draft[position], draft[target]) = (draft[target], draft[position]);
+    }
+
+    // "1. Full company name…" → "Full company name…": leading numbering and bullets are stripped
+    // so the sheet numbers itself.
+    private void AddPastedQuestions()
+    {
+        var questions = pasteText.Split('\n')
+            .Select(line => line.Trim().TrimStart('-', '•', '·', ' '))
+            .Select(line => System.Text.RegularExpressions.Regex.Replace(line, @"^\(?\d+[\.\)]\s*", ""))
+            .Where(line => line.Length > 0);
+        draft.RemoveAll(row => string.IsNullOrWhiteSpace(row.Question) && string.IsNullOrWhiteSpace(row.Answer));
+        draft.AddRange(questions.Select(question => new AnswerRow { Question = question }));
+        pasteText = "";
+        showPaste = false;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        try
+        {
+            var answers = draft.Select(row => new TenderEnquiryAnswerDraft(row.Question, row.Answer)).ToList();
+            rows = await Commands.SendAsync(new SetTenderEnquiryAnswers(TenderEnquiryId, answers), CancellationToken.None);
+            editing = false;
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+}

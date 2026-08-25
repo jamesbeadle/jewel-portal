@@ -55,7 +55,12 @@ public enum AuditEventType
     // Draft deletion (written since 2026-08-24): a draft work order removed outright — raised in
     // error or duplicated — leaves no Rejected row behind, so this event is the surviving record
     // (mirroring ProjectDeleted). Not a client-facing event: Pathway is "", like CostCentreRecoded.
-    DraftWorkOrderDeleted = 20  // a draft work order was permanently deleted before any decision
+    DraftWorkOrderDeleted = 20, // a draft work order was permanently deleted before any decision
+    // Tender enquiries (written since 2026-08-25): an architect's invitation to tender logged from
+    // its email (or by hand), and every move of its status — accepted, PQQ submitted, shortlisted,
+    // tender submitted, won/lost. Client-facing: Pathway is "Client", like the request events.
+    TenderEnquiryLogged = 21,        // a tender enquiry was logged (its Lead project created when new)
+    TenderEnquiryStatusChanged = 22  // a tender enquiry moved to a new status
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

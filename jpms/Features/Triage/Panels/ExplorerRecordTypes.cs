@@ -11,7 +11,7 @@ public static class ExplorerRecordTypes
     /// <summary>Every record family the explorer offers — the same set an email can be linked to.</summary>
     public static readonly RecordType[] All =
     {
-        RecordType.Request, RecordType.Variation, RecordType.WorkOrder,
+        RecordType.Request, RecordType.Variation, RecordType.TenderEnquiry, RecordType.WorkOrder,
         RecordType.BidPackageInvite, RecordType.Defect, RecordType.Lad, RecordType.Todo
     };
 
@@ -19,6 +19,7 @@ public static class ExplorerRecordTypes
     {
         RecordType.Request => "Requests / RFIs",
         RecordType.Variation => "Variation Orders",
+        RecordType.TenderEnquiry => "Tender Enquiries",
         RecordType.WorkOrder => "Work Orders",
         RecordType.BidPackageInvite => "Bid Package Invites",
         RecordType.Defect => "Defects",
@@ -33,6 +34,7 @@ public static class ExplorerRecordTypes
         RecordType.Request => $"/projects/{record.ProjectId}/requests/view/{record.RecordId}",
         RecordType.Variation or RecordType.VariationQuote => $"/projects/{record.ProjectId}/variations/{record.RecordId}",
         RecordType.BidPackageInvite => $"/projects/{record.ProjectId}/bid-package-invites/{record.RecordId}",
+        RecordType.TenderEnquiry => $"/projects/{record.ProjectId}/tender-enquiries/{record.RecordId}",
         RecordType.WorkOrder => $"/projects/{record.ProjectId}/work-orders",
         RecordType.Defect => $"/projects/{record.ProjectId}/defects",
         RecordType.Scheduling or RecordType.Lad => $"/projects/{record.ProjectId}/programme",

@@ -1384,7 +1384,8 @@ else
                                        TodoAssigneeOptions="todoAssigneeOptions"
                                        TodoProjectNote="@TodoProjectNote"
                                        EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
-                                       SenderEmail="@(selected?.FromEmail ?? "")" />
+                                       SenderEmail="@(selected?.FromEmail ?? "")"
+                                       EmailSubject="@(selected?.Subject ?? "")" />
                 }
             </ActionsContent>
             <RecordsContent>
@@ -1576,7 +1577,7 @@ else
     private static TriagePathway? ImpliedPathway(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
-            or RecordType.Scheduling or RecordType.Lad => TriagePathway.Client,
+            or RecordType.Scheduling or RecordType.Lad or RecordType.TenderEnquiry => TriagePathway.Client,
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
         RecordType.InternalComms => TriagePathway.Internal,
@@ -1588,7 +1589,7 @@ else
     private static string RecordTypePathwayLabel(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
-            or RecordType.Scheduling or RecordType.Lad => "Client",
+            or RecordType.Scheduling or RecordType.Lad or RecordType.TenderEnquiry => "Client",
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => "Subcontractor",
         RecordType.InternalComms    => "Internal",
@@ -2039,11 +2040,16 @@ else
     private int StagedTagCount => pickedRecords.Count;
     private int StagedActionCount => stagedSystemActions.Count + (StagedCreateReady ? 1 : 0) + CurrentTodoDrafts().Count;
 
-    private bool StagedCreateReady =>
-        // A defect has no title — its description is what makes it a real staged record.
-        stagedCreate is { } sc && (sc.Kind == StagedRecordKind.Defect
-            ? !string.IsNullOrWhiteSpace(sc.Description)
-            : !string.IsNullOrWhiteSpace(sc.Title));
+    private bool StagedCreateReady => stagedCreate is { } sc && sc.IsReady;
+
+    // A tender enquiry usually brings its own Lead project, so it needs no project in the bar.
+    private bool StagedCreatesOwnProject =>
+        stagedCreate is { Kind: StagedRecordKind.TenderEnquiry } sc && sc.TenderEnquiry.CreatesNewProject;
+
+    private string? StagedTenderEnquiryProblem =>
+        stagedCreate is { Kind: StagedRecordKind.TenderEnquiry } sc
+            ? sc.TenderEnquiry.Problem(!string.IsNullOrWhiteSpace(triageProjectId))
+            : null;
 
     private string? TodoProjectNote =>
         string.IsNullOrWhiteSpace(triageProjectId)
@@ -3076,10 +3082,13 @@ else
                 parts.Add(stagedDocControlIds.Count == 1
                     ? "send 1 attachment to Document Triage"
                     : $"send {stagedDocControlIds.Count} attachments to Document Triage");
-            if (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId))
+            if (StagedCreateReady && (!string.IsNullOrWhiteSpace(triageProjectId) || StagedCreatesOwnProject))
                 parts.Add(stagedCreate!.Kind switch
                 {
                     StagedRecordKind.BidPackage => "create the bid package from this email",
+                    StagedRecordKind.TenderEnquiry => StagedCreatesOwnProject
+                        ? "create a Lead project and log the tender enquiry from this email"
+                        : "log the tender enquiry from this email",
                     StagedRecordKind.WorkOrder => StagedWorkOrderSummary(stagedCreate),
                     StagedRecordKind.Defect => "raise the defect from this email",
                     _ => stagedCreate.RequestKind == RequestType.Rfi
@@ -3181,7 +3190,7 @@ else
                 || relevantEventStaged == true
                 || stagedSystemActions.Count > 0
                 || stagedDocControlIds.Count > 0
-                || (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId));
+                || (StagedCreateReady && (!string.IsNullOrWhiteSpace(triageProjectId) || StagedCreatesOwnProject));
             var sendCount = (ReplyDraftPending ? 1 : 0) + queuedReplies.Count;
             if (sendCount > 0)
             {
@@ -3292,7 +3301,8 @@ else
         var replying = ReplyDraftPending && anchorEmail is not null;
         var drafts = anchorEmail is null ? new List<TodoItemDraft>() : CurrentTodoDrafts();
         var picks = pickedRecords.ToList();
-        var createReady = anchorEmail is not null && StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId);
+        var createReady = anchorEmail is not null && StagedCreateReady
+            && (!string.IsNullOrWhiteSpace(triageProjectId) || StagedCreatesOwnProject);
         var relevantEvent = relevantEventStaged == true && anchorEmail is not null;
         var discarding = discardArmed && anchorEmail is not null;
         // One scope for the whole apply: a thread-wide Yes opts every staged action into the thread.
@@ -3377,6 +3387,11 @@ else
             && stagedDefect.DefectProblem is { } defectProblem)
         {
             actionError = $"The staged defect isn't ready — {defectProblem} Finish it in System Actions, or remove it.";
+            return;
+        }
+        if (createReady && StagedTenderEnquiryProblem is { } enquiryProblem)
+        {
+            actionError = $"The staged tender enquiry isn't ready — {enquiryProblem} Finish it in System Actions, or remove it.";
             return;
         }
         if (replying)
@@ -3761,6 +3776,9 @@ else
                 new CreatedNowRecord(defect.Reference, "defect", staged.DisplayTitle), null);
         }
 
+        if (staged.Kind == StagedRecordKind.TenderEnquiry)
+            return await LogStagedTenderEnquiryAsync(staged, anchor, scope, allowCrossPathway);
+
         busyLabel = staged.RequestKind == RequestType.Rfi ? "Raising RFI" : "Creating request";
         var request = await Intake.CreateRequestFromMessageAsync(new CreateRequestFromMessage(
             anchor.Id, triageProjectId, staged.RequestKind, "", staged.Title.Trim(),
@@ -3777,6 +3795,28 @@ else
                 staged.RequestKind == RequestType.Rfi ? "RFI" : "request",
                 staged.Title.Trim()),
             null);
+    }
+
+    /// <summary>
+    /// The tender enquiry staged in System Actions, logged through LogTenderEnquiryFromMessage:
+    /// its Lead project created when the job is new (the bar then points at that project, so the
+    /// NEXT act on this email — a reply, a Create now follow-up — lands there; to-dos staged in
+    /// the same apply have already been raised company-wide), the ticked files copied across,
+    /// the email tagged to the enquiry.
+    /// </summary>
+    private async Task<StagedCreateOutcome> LogStagedTenderEnquiryAsync(
+        StagedRecordCreate staged, MailboxMessage anchor, LinkThreadScope scope, bool allowCrossPathway)
+    {
+        busyLabel = "Logging tender enquiry";
+        var enquiry = await Intake.LogTenderEnquiryFromMessageAsync(
+            staged.TenderEnquiry.ToCommand(anchor.Id, anchor.InternetMessageId, triageProjectId, scope, allowCrossPathway));
+        if (staged.TenderEnquiry.CreatesNewProject)
+        {
+            await LoadProjectsAsync();
+            triageProjectId = enquiry.ProjectId;
+        }
+        return new StagedCreateOutcome(
+            new CreatedNowRecord(enquiry.Reference, "tender enquiry", enquiry.Title), null);
     }
 
     /// <summary>
@@ -3805,12 +3845,17 @@ else
                 : "Give the staged record a title first — then Create now.";
             return;
         }
-        if (string.IsNullOrWhiteSpace(triageProjectId))
+        if (string.IsNullOrWhiteSpace(triageProjectId) && !StagedCreatesOwnProject)
         {
             actionError = "To create the record now, set the email's Project in the bar above first.";
             return;
         }
         // The same "decision not yet made" gates as Apply, for the decisions this act consumes.
+        if (StagedTenderEnquiryProblem is { } enquiryProblem)
+        {
+            actionError = $"The staged tender enquiry isn't ready — {enquiryProblem}";
+            return;
+        }
         if (staged is { Kind: StagedRecordKind.WorkOrder } stagedOrder
             && stagedOrder.WorkOrderProblem is { } orderProblem)
         {
@@ -4020,9 +4065,13 @@ else
                 note.Append(": \"").Append(stagedRecord.DisplayTitle).Append('"');
             note.Append(" — it is raised (and the email tagged to it) when the user presses Apply,"
                         + " or immediately via the chip's Create now button in System Actions.");
-            var stagedProblem = stagedRecord.Kind == StagedRecordKind.WorkOrder
-                ? stagedRecord.WorkOrderProblem
-                : stagedRecord.Kind == StagedRecordKind.Defect ? stagedRecord.DefectProblem : null;
+            var stagedProblem = stagedRecord.Kind switch
+            {
+                StagedRecordKind.WorkOrder => stagedRecord.WorkOrderProblem,
+                StagedRecordKind.Defect => stagedRecord.DefectProblem,
+                StagedRecordKind.TenderEnquiry => StagedTenderEnquiryProblem,
+                _ => null
+            };
             if (!StagedCreateReady)
                 note.Append(" It is NOT ready yet: it has no ")
                     .Append(stagedRecord.Kind == StagedRecordKind.Defect ? "description" : "title")

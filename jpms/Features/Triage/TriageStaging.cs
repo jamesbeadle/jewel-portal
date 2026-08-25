@@ -71,21 +71,38 @@ public sealed class StagedRecordCreate
     // Who the remediation is chased with — pre-filled from the email's sender, freely editable.
     public string DefectAssignedTo { get; set; } = "";
 
+    // ---- Tender enquiry (Kind == TenderEnquiry) — the enquiry's details plus the Lead project it
+    //      creates; kept as its own draft so this class stays readable. ----
+    public StagedTenderEnquiryDraft TenderEnquiry { get; } = new();
+
     public string Label => Kind switch
     {
         StagedRecordKind.BidPackage => "new bid package",
         StagedRecordKind.WorkOrder => "new work order",
         StagedRecordKind.Defect => "new defect",
+        StagedRecordKind.TenderEnquiry => "new tender enquiry",
         _ => RequestKind == Jewel.JPMS.Models.RequestType.Rfi ? "new RFI" : "new request"
     };
 
     /// <summary>What the staged-record chip shows after the label: the title — or for a defect,
     /// which has no title, its location (else the start of its description).</summary>
-    public string DisplayTitle => Kind == StagedRecordKind.Defect
-        ? (!string.IsNullOrWhiteSpace(DefectLocation)
+    public string DisplayTitle => Kind switch
+    {
+        StagedRecordKind.Defect => !string.IsNullOrWhiteSpace(DefectLocation)
             ? DefectLocation
-            : Description.Length > 48 ? Description[..48] + "…" : Description)
-        : Title;
+            : Description.Length > 48 ? Description[..48] + "…" : Description,
+        StagedRecordKind.TenderEnquiry => TenderEnquiry.Details.Title,
+        _ => Title
+    };
+
+    /// <summary>True once the draft carries the one thing that makes it a real staged record —
+    /// a title (a defect its description; a tender enquiry its own title).</summary>
+    public bool IsReady => Kind switch
+    {
+        StagedRecordKind.Defect => !string.IsNullOrWhiteSpace(Description),
+        StagedRecordKind.TenderEnquiry => !string.IsNullOrWhiteSpace(TenderEnquiry.Details.Title),
+        _ => !string.IsNullOrWhiteSpace(Title)
+    };
 
     /// <summary>Lines the apply will actually send: rows where anything has been entered.</summary>
     public IEnumerable<StagedWorkOrderLine> EnteredLines =>
@@ -126,6 +143,8 @@ public sealed class StagedRecordCreate
         get
         {
             if (Kind == StagedRecordKind.Defect) return DefectProblem;
+            // The footer can't see the triage bar; the page's own gate re-checks the project.
+            if (Kind == StagedRecordKind.TenderEnquiry) return TenderEnquiry.Problem(isProjectSet: true);
             if (string.IsNullOrWhiteSpace(Title)) return Kind == StagedRecordKind.WorkOrder ? "Give the work order a title." : "Give it a title.";
             return WorkOrderProblem;
         }
@@ -136,6 +155,7 @@ public sealed class StagedRecordCreate
     {
         StagedRecordKind.BidPackage => "create the bid package and tag this email to it",
         StagedRecordKind.Defect => "raise the defect and tag this email to it",
+        StagedRecordKind.TenderEnquiry => TenderEnquiry.Outcome,
         StagedRecordKind.WorkOrder => SaveAsDraft
             ? "raise the work order as a draft — no purchase-order email until it's approved — and tag this email to it"
             : "raise the work order, email the purchase order to the subcontractor and tag this email to it",
@@ -179,7 +199,7 @@ public sealed class StagedWorkOrderLine
     public decimal? Amount => StagedRecordCreate.ParseDecimal(AmountText);
 }
 
-public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect }
+public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect, TenderEnquiry }
 
 /// <summary>
 /// A record ALREADY raised from the selected email — by System Actions' "Create now", or by the

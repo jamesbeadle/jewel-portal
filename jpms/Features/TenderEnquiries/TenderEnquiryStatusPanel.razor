@@ -1,0 +1,117 @@
+@namespace Jewel.JPMS.Features.TenderEnquiries
+@using Jewel.JPMS.Contracts.TenderEnquiries
+@inject ICommandSender Commands
+
+@* Where the enquiry stands and the moves it can make from here. Bookkeeping moves (PQQ sent,
+   shortlisted, tender sent) go straight through; an ending (declined, not shortlisted, won,
+   lost) asks for the reason first — that note is the surviving record of why. *@
+
+<div class="panel p-5 space-y-3">
+    <div class="flex items-center justify-between gap-3">
+        <h3 class="eyebrow">Status</h3>
+        <TenderEnquiryStatusBadge Status="@Enquiry.Status" />
+    </div>
+    <dl class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+        <dt class="text-content-subtle">Received</dt><dd class="text-content">@Date(Enquiry.ReceivedAt)</dd>
+        <dt class="text-content-subtle">PQQ return by</dt><dd class="@DueClass(Enquiry.PqqDueAt, Enquiry.PqqSubmittedAt)">@Date(Enquiry.PqqDueAt)</dd>
+        <dt class="text-content-subtle">PQQ submitted</dt><dd class="text-content">@Date(Enquiry.PqqSubmittedAt)</dd>
+        <dt class="text-content-subtle">Tender return by</dt><dd class="@DueClass(Enquiry.TenderDueAt, Enquiry.TenderSubmittedAt)">@Date(Enquiry.TenderDueAt)</dd>
+        <dt class="text-content-subtle">Tender submitted</dt><dd class="text-content">@Date(Enquiry.TenderSubmittedAt)</dd>
+        @if (Enquiry.DecidedAt is { } decidedAt)
+        {
+            <dt class="text-content-subtle">Decided</dt><dd class="text-content">@Date(decidedAt)</dd>
+        }
+    </dl>
+    @if (!string.IsNullOrWhiteSpace(Enquiry.DecisionNote))
+    {
+        <p class="text-sm text-content-muted whitespace-pre-wrap">@Enquiry.DecisionNote</p>
+    }
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+    @if (CanMove)
+    {
+        @if (pendingStatus is { } pending)
+        {
+            <div class="space-y-2 rounded-lg border border-line bg-surface-raised p-3">
+                <p class="text-sm text-content">Mark as <span class="font-medium">@pending.DisplayName()</span> — why?</p>
+                <textarea class="field" rows="2" value="@note" placeholder="The reason, for the record…"
+                          @oninput="e => note = e.Value?.ToString() ?? string.Empty"></textarea>
+                <div class="flex gap-2">
+                    <button type="button" class="btn-primary text-xs" disabled="@(busy || string.IsNullOrWhiteSpace(note))"
+                            @onclick="() => MoveAsync(pending)">Confirm</button>
+                    <button type="button" class="btn-neutral text-xs" disabled="@busy" @onclick="() => pendingStatus = null">Cancel</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="flex flex-wrap gap-2 pt-1">
+                @foreach (var next in Enquiry.Status.NextStatuses())
+                {
+                    var target = next;
+                    <button type="button" class="@(target.IsOpen() ? "btn-secondary" : "btn-neutral") text-xs" disabled="@busy"
+                            @onclick="() => StartMove(target)">@LabelFor(target)</button>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TenderEnquiry Enquiry { get; set; } = default!;
+    [Parameter] public bool CanMove { get; set; }
+    [Parameter] public EventCallback<TenderEnquiry> OnChanged { get; set; }
+
+    private TenderEnquiryStatus? pendingStatus;
+    private string note = "";
+    private bool busy;
+    private string? error;
+
+    private async Task StartMove(TenderEnquiryStatus target)
+    {
+        error = null;
+        note = "";
+        if (target.IsOpen())
+        {
+            await MoveAsync(target);
+            return;
+        }
+        pendingStatus = target;
+    }
+
+    private async Task MoveAsync(TenderEnquiryStatus target)
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            var updated = await Commands.SendAsync(new SetTenderEnquiryStatus(Enquiry.TenderEnquiryId, target, note), CancellationToken.None);
+            pendingStatus = null;
+            await OnChanged.InvokeAsync(updated);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private static string LabelFor(TenderEnquiryStatus target) => target switch
+    {
+        TenderEnquiryStatus.Accepted => "Accept — we'll bid",
+        TenderEnquiryStatus.Declined => "Decline",
+        TenderEnquiryStatus.PqqSubmitted => "PQQ submitted",
+        TenderEnquiryStatus.Shortlisted => "Shortlisted — pricing",
+        TenderEnquiryStatus.NotShortlisted => "Not shortlisted",
+        TenderEnquiryStatus.TenderSubmitted => "Tender submitted",
+        TenderEnquiryStatus.Won => "Won",
+        TenderEnquiryStatus.Lost => "Lost",
+        _ => target.DisplayName()
+    };
+
+    private static string Date(DateTimeOffset? value) => value?.LocalDateTime.ToString("d MMM yyyy") ?? "—";
+
+    // A return date still ahead of us reads normally; one that has passed without the submission
+    // it was for reads as overdue.
+    private static string DueClass(DateTimeOffset? dueAt, DateTimeOffset? submittedAt) =>
+        dueAt is { } due && submittedAt is null && due < DateTimeOffset.UtcNow ? "text-negative font-medium" : "text-content";
+}
