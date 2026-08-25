@@ -5,9 +5,10 @@ namespace Jewel.JPMS.Api.Features.Commercial.Documents;
 
 /// <summary>
 /// One printed row of a bill section on the valuation report PDF. Contract, PC and contingency
-/// lines print one row each under their area title; variations print one row per variation
-/// order per cost centre (<see cref="VariationRollUps"/>) — a consolidated row carries the
-/// lines' summed money and their weighted % complete, and no single quantity or rate.
+/// lines print one row per area grouping (<see cref="ValuationReportAreaRollUps"/>); variations
+/// print one row per variation order per cost centre (<see cref="VariationRollUps"/>) — a
+/// consolidated row carries the lines' summed money and their weighted % complete, and no
+/// single quantity or rate.
 /// </summary>
 internal sealed record ValuationReportBillRow(
     string Code,
@@ -15,7 +16,6 @@ internal sealed record ValuationReportBillRow(
     string Title,
     string Comments,
     string KindLabel,        // "" for a priced row; "Omit", "Declined", "TBC"… otherwise
-    string AreaTitle,        // "" when the row carries no area (variations, untitled lines)
     decimal? Quantity,
     decimal? Rate,
     decimal Amount,
@@ -36,17 +36,14 @@ internal static class ValuationReportBillRows
         var ofType = lines.Where(line => line.ElementType == elementType).ToList();
         if (elementType == ValuationElementType.Variation)
             return VariationRollUps.Build(ofType)
-                .Select(rollUp => rollUp.IsRolledUp ? Consolidated(rollUp, costCentreNameFor) : FromLine(rollUp.Lines[0], ""))
+                .Select(rollUp => rollUp.IsRolledUp ? Consolidated(rollUp, costCentreNameFor) : FromLine(rollUp.Lines[0]))
                 .ToList();
-        return ofType
-            .OrderBy(line => line.DisplayOrder)
-            .Select(line => FromLine(line, ValuationReportAreas.TitleFor(line.SectionName, line.CostCode, costCentreNameFor)))
-            .ToList();
+        return ValuationReportAreaRollUps.For(ofType, costCentreNameFor);
     }
 
-    private static ValuationReportBillRow FromLine(ValuationReportSnapshotLine line, string areaTitle) =>
+    private static ValuationReportBillRow FromLine(ValuationReportSnapshotLine line) =>
         new(CodeFor(line), line.ClientReference, TitleFor(line), line.Comments,
-            line.CountsTowardTotals ? "" : LineTypeLabel(line.LineType), areaTitle,
+            line.CountsTowardTotals ? "" : LineTypeLabel(line.LineType),
             line.Quantity, line.Rate, line.LineAmount, line.PercentComplete,
             line.CumulativeClaimed - line.PeriodIncrement, line.PeriodIncrement, line.CumulativeClaimed,
             line.CountsTowardTotals);
@@ -58,7 +55,7 @@ internal static class ValuationReportBillRows
         var period = rollUp.CountingLines.Sum(line => line.PeriodIncrement);
         var centre = costCentreNameFor(rollUp.CostCode) ?? rollUp.CostCode;
         return new(rollUp.VariationRef, ClientReferenceFor(rollUp), rollUp.VariationTitle,
-            $"{rollUp.Lines.Count} items — {centre}", rollUp.CountsTowardTotals ? "" : "Not priced", "",
+            $"{rollUp.Lines.Count} items — {centre}", rollUp.CountsTowardTotals ? "" : "Not priced",
             null, null, rollUp.Amount, VariationRollUps.WeightedPercent(claimed, rollUp.Amount),
             claimed - period, period, claimed, rollUp.CountsTowardTotals);
     }

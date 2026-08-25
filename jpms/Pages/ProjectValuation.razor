@@ -6,6 +6,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IValuationReportStore Store
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @inject IValuationInvoiceStore Invoices
 @inject IProjectRetentionStore Retention
 @inject ICostCenterStore CostCenters
@@ -42,7 +43,7 @@ else
                     <ToolbarButton Icon="download" Label="Download PDF — working copy of the report as it stands" Target="_blank"
                                    Disabled="@(!ReportReady)"
                                    Href="@($"/api/projects/{ProjectId}/valuation-report/pdf")" />
-                    <ExportToExcelButton FileName="@($"Valuation report {Selected?.DisplayName ?? "working copy"}")"
+                    <ExportToExcelButton FileName="@LiveExportFileName" FileDate="@DateTimeOffset.UtcNow"
                                          Disabled="@(!ReportReady)"
                                          BuildWorkbook="BuildLiveExportWorkbook" />
                     @* Report setup, apart from the document actions: the client's schedule-of-works
@@ -694,6 +695,11 @@ else
                 .FirstOrDefault();
 
     // ---- Working-copy Excel export ------------------------------------------
+    // Same stem as the working-copy PDF's file name (ValuationReportFileNames), so the two
+    // downloads of one claim sit together; the date is stamped on by the export button.
+    private string LiveExportFileName =>
+        ValuationReportFileNames.Stem(Projects.Find(ProjectId)?.Reference ?? "", Selected?.DisplayName);
+
     // The live report in the same two-tab workbook shape as a snapshot export (branded
     // presentation + flat raw data), stamped as a working copy: figures are the selected
     // claim's as the table currently shows them, with each line's previous/this-period
@@ -820,6 +826,8 @@ else
         // The new-claim form shows the retention terms read-only — re-render when the
         // background fetch lands so it doesn't sit on the "no terms" warning.
         Retention.OnChange += OnStoreChanged;
+        // The export file name carries the project reference — re-render when the list lands.
+        Projects.OnChanged += OnStoreChanged;
         // Refresh on entry: cached lines/claims render immediately, then update when the
         // background reload lands — so navigating back to this tab never shows stale data.
         Store.Refresh(ProjectId);
@@ -1082,6 +1090,7 @@ else
     {
         Store.OnChange -= OnStoreChanged;
         Retention.OnChange -= OnStoreChanged;
+        Projects.OnChanged -= OnStoreChanged;
         if (pageNoteProvider is not null) Chat.ClearPageNoteProvider(pageNoteProvider);
         Nav.LocationChanged -= HandleLocationChanged;
         // Leaving the tab ends its dialog task — a dangling task ships this dialog's stale JSON

@@ -6,6 +6,7 @@
 @inject IValuationReportStore Store
 @inject IQueryClient Queries
 @inject ICostCenterStore CostCenters
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @implements IDisposable
 
 @* Read-only rendering of one frozen valuation-report snapshot: the same grouped-bill +
@@ -43,7 +44,8 @@ else
             @* Document group: the report as a file, out of the system. *@
             <ToolbarButton Icon="download" Label="Download PDF" Target="_blank"
                            Href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")" />
-            <ExportToExcelButton FileName="@($"Valuation report {snapshot.Label}")" BuildWorkbook="BuildExportWorkbook" />
+            @* Named as the PDF above is (ValuationReportFileNames): the pair share one name. *@
+            <ExportToExcelButton FileName="@ExportFileName(snapshot)" FileDate="@snapshot.TakenAt" BuildWorkbook="BuildExportWorkbook" />
             @if (OnEmailRequested.HasDelegate)
             {
                 <ToolbarDivider />
@@ -225,6 +227,9 @@ else
     private bool loadFailed;
     private string? loadedSnapshotId;
 
+    private string ExportFileName(ValuationReportSnapshot snapshot) =>
+        ValuationReportFileNames.Stem(Projects.Find(snapshot.ProjectId)?.Reference ?? "", snapshot.Label);
+
     // Null until the mailbox has ANSWERED — an empty list is a real "none", never a placeholder
     // (the loading convention: nullable backing field, gate on the null).
     private IReadOnlyList<MailboxMessage>? emails;
@@ -294,6 +299,8 @@ else
     protected override void OnInitialized()
     {
         CostCenters.OnChange += OnCostCentresChanged;
+        // The export file name carries the project reference — re-render when the list lands.
+        Projects.OnChanged += OnCostCentresChanged;
         // Revalidate the master (stale-while-revalidate; fetch-once underneath) — the host
         // page usually warmed it already, but the snapshots register opens this viewer too.
         _ = CostCenters.ListAllAsync();
@@ -301,7 +308,11 @@ else
 
     private void OnCostCentresChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => CostCenters.OnChange -= OnCostCentresChanged;
+    public void Dispose()
+    {
+        CostCenters.OnChange -= OnCostCentresChanged;
+        Projects.OnChanged -= OnCostCentresChanged;
+    }
 
     private static string CodeFor(ValuationReportSnapshotLine line) =>
         line.ElementType == ValuationElementType.Variation

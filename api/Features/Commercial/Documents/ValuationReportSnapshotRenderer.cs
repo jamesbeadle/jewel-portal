@@ -27,9 +27,11 @@ public sealed record ValuationReportSnapshotDocument(
 
 /// <summary>
 /// Renders one frozen valuation-report snapshot into a branded PDF using PDFsharp/MigraDoc: the
-/// same grouped-bill + summary-footer layout as the on-screen snapshot viewer (Contract Works,
+/// same section + summary-footer layout as the on-screen snapshot viewer (Contract Works,
 /// Provisional Sums, Contingency Sums, Variations), fed entirely from the snapshot's copied lines
-/// — live report edits never show here, exactly as on screen. Each line carries the movement
+/// — live report edits never show here, exactly as on screen — but printed at grouping level:
+/// one row per area of the works, one per variation per cost centre, never the individual items
+/// (those stay on screen and in the spreadsheet). Each row carries the movement
 /// story the accountant traces a claim by: Previous / This period / Claimed, with lines that
 /// moved this period shaded gold. Pure function of the document model, so the download endpoint
 /// and the email attachment render identically.
@@ -209,7 +211,7 @@ public static class ValuationReportSnapshotRenderer
         legend.Format.Font.Size = 7.5;
         legend.Format.Font.Color = Muted;
         legend.AddFormattedText("◆ ", new Font { Color = Orange, Size = 7.5 });
-        legend.AddText("Lines shaded gold moved this period. ");
+        legend.AddText("Rows shaded gold moved this period. ");
         legend.AddFormattedText("Previous", new Font { Bold = true, Size = 7.5, Color = Muted });
         legend.AddText(" is the cumulative value claimed on the statement before this one, ");
         legend.AddFormattedText("This period", new Font { Bold = true, Size = 7.5, Color = Muted });
@@ -223,7 +225,8 @@ public static class ValuationReportSnapshotRenderer
         Section section, ValuationReportSnapshotDocument document, ValuationReportBillColumns columns,
         string title, ValuationElementType elementType)
     {
-        // Variations print consolidated per variation per cost centre (ValuationReportBillRows).
+        // Every row is a grouping: an area for contract/PC/contingency work, a variation per
+        // cost centre for variations (ValuationReportBillRows) — never an individual item.
         var rows = ValuationReportBillRows.For(document.Detail.Lines, elementType,
             code => document.CostCentreNames is { } names && names.TryGetValue(code, out var name) ? name : null);
         if (rows.Count == 0)
@@ -233,18 +236,8 @@ public static class ValuationReportSnapshotRenderer
         var table = BillTable(section, columns);
         AddBillHeader(table, columns);
 
-        var currentArea = "";
         foreach (var row in rows)
         {
-            // Area sub-headings — the estimate's own section titles ("Electrics", "Plumbing &
-            // Heating"), else the line's cost-centre name — so the statement reads in the same
-            // titled areas as the estimate it was priced from. Same shared rule as the screen
-            // and the workbook (ValuationReportAreas); consecutive runs in display order.
-            if (ValuationReportAreas.StartsNewArea(row.AreaTitle, currentArea))
-            {
-                currentArea = row.AreaTitle;
-                AddAreaRow(table, columns, row.AreaTitle);
-            }
             AddBillRow(table, columns, row);
         }
 
@@ -296,21 +289,6 @@ public static class ValuationReportSnapshotRenderer
         HeaderCell(header.Cells[columns.Previous], "Previous");
         HeaderCell(header.Cells[columns.Period], "This period");
         HeaderCell(header.Cells[columns.Claimed], "Claimed");
-    }
-
-    private static void AddAreaRow(Table table, ValuationReportBillColumns columns, string area)
-    {
-        var areaRow = table.AddRow();
-        areaRow.Shading.Color = Panel;
-        areaRow.TopPadding = Unit.FromMillimeter(1.4);
-        areaRow.BottomPadding = Unit.FromMillimeter(1);
-        areaRow.KeepWith = 1; // never strand a title at the foot of a page
-        areaRow.Cells[columns.Code].MergeRight = columns.Last;
-        var areaTitle = areaRow.Cells[columns.Code].AddParagraph(area.ToUpperInvariant());
-        areaTitle.Format.LeftIndent = Unit.FromMillimeter(1.5);
-        areaTitle.Format.Font.Size = 7.5;
-        areaTitle.Format.Font.Bold = true;
-        areaTitle.Format.Font.Color = Navy;
     }
 
     private static void AddBillRow(Table table, ValuationReportBillColumns columns, ValuationReportBillRow line)
@@ -455,12 +433,13 @@ public static class ValuationReportSnapshotRenderer
         var note = section.AddParagraph(document.IsDraft
             ? "All figures are net of VAT. This is a WORKING COPY of the live valuation report as it stood "
               + $"when prepared on {Date(snapshot.TakenAt)} — figures may change until the claim is locked "
-              + "and a snapshot is taken; nothing here has been issued to anyone. Declined and "
-              + "to-be-confirmed lines are shown for completeness but are not priced into any total."
+              + "and a snapshot is taken; nothing here has been issued to anyone. Each row consolidates "
+              + "the items priced under that area; declined and to-be-confirmed items are not priced into any total."
             : "All figures are net of VAT. This statement is a frozen record of the valuation report exactly "
               + $"as it stood when the snapshot was taken on {Date(snapshot.TakenAt)}; work recorded since is "
-              + "not reflected here. Declined and to-be-confirmed lines are shown for completeness but are not "
-              + "priced into any total. If anything on this statement doesn't match your records, please get "
+              + "not reflected here. Each row consolidates the items priced under that area; declined and "
+              + "to-be-confirmed items are not priced into any total. If anything on this statement doesn't "
+              + "match your records, please get "
               + "in touch so we can reconcile it together.");
         note.Format.Font.Size = 8;
         note.Format.Font.Color = Muted;
