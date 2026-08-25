@@ -26,9 +26,11 @@ public sealed record LogTenderEnquiryFromMessage(
     // Pre-flighted before anything is created (CrossPathwayGuard), so a rejection creates nothing.
     bool AllowCrossPathway = false) : ICommand<TenderEnquiry>;
 
-/// <summary>Logs an enquiry by hand on a project that already exists — the phone-call case.</summary>
+/// <summary>Logs an enquiry by hand — the phone-call case. Same project rule as the email route:
+/// exactly one of an existing project or the details of the new Lead-stage one.</summary>
 public sealed record LogTenderEnquiry(
-    string ProjectId,
+    string? ProjectId,
+    TenderEnquiryProjectDraft? NewProject,
     TenderEnquiryDetails Details,
     string LoggedByEmail = "") : ICommand<TenderEnquiry>;
 

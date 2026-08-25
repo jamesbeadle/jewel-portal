@@ -27,6 +27,25 @@ public sealed class ListTenderEnquiriesForProjectHandler
     }
 }
 
+/// <summary>The company-wide register: live enquiries first (soonest deadline leading), then
+/// the ended ones, newest received first — the Internal folder's view.</summary>
+public sealed class ListTenderEnquiriesHandler : IQueryHandler<ListTenderEnquiries, IReadOnlyList<TenderEnquiry>>
+{
+    private readonly JpmsContext context;
+
+    public ListTenderEnquiriesHandler(JpmsContext context) { this.context = context; }
+
+    public async Task<IReadOnlyList<TenderEnquiry>> HandleAsync(ListTenderEnquiries query, CancellationToken cancellationToken)
+    {
+        var rows = await context.TenderEnquiries.AsNoTracking().ToListAsync(cancellationToken);
+        return rows.Select(row => row.ToModel())
+            .OrderBy(enquiry => enquiry.Status.IsOpen() ? 0 : 1)
+            .ThenBy(enquiry => enquiry.Status.IsOpen() ? enquiry.NextDueAt ?? DateTimeOffset.MaxValue : DateTimeOffset.MaxValue)
+            .ThenByDescending(enquiry => enquiry.ReceivedAt)
+            .ToList();
+    }
+}
+
 public sealed class GetTenderEnquiryByIdHandler : IQueryHandler<GetTenderEnquiryById, TenderEnquiry?>
 {
     private readonly JpmsContext context;

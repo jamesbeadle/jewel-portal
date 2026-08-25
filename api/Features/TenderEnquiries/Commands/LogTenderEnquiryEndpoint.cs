@@ -31,8 +31,7 @@ public sealed class LogTenderEnquiryEndpoint
 
     [Function(nameof(LogTenderEnquiry))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "projects/{projectId}/tender-enquiries")] HttpRequest request,
-        string projectId)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "tender-enquiries")] HttpRequest request)
     {
         var cancellationToken = request.HttpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
@@ -41,7 +40,7 @@ public sealed class LogTenderEnquiryEndpoint
         var posted = await request.ReadFromJsonAsync<LogTenderEnquiry>(cancellationToken);
         if (posted is null) return new BadRequestObjectResult("A tender enquiry is required.");
 
-        var command = posted with { ProjectId = projectId, LoggedByEmail = signedInUser.Email };
+        var command = posted with { LoggedByEmail = signedInUser.Email };
         auditActor.Email = signedInUser.Email;
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);

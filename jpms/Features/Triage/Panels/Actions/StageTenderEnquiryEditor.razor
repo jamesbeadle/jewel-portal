@@ -5,47 +5,33 @@
    the ONE page-owned StagedRecordCreate (Kind = TenderEnquiry) like the other creates, so Apply
    logs the enquiry through LogTenderEnquiryFromMessage and the email is tagged to it. The form
    pre-fills what the email already says — the title from the subject, the contact from the
-   sender — and ticks every attachment, since an enquiry's attachments are the PQQ and drawings. *@
+   sender — and ticks every attachment, since an enquiry's attachments are the PQQ and drawings.
+   A new job always gets a new Lead project; only when the bar's project is itself a Lead (the
+   same job's second email) is joining it offered. *@
 
 <div class="space-y-4">
     <p class="text-xs text-content-subtle">
         @(Draft.CreatesNewProject
             ? "A Lead-stage project is created for the job, the enquiry logged on it, and this email tagged to the enquiry on apply."
-            : "The enquiry is logged on the email's project and this email tagged to it on apply.")
+            : $"The enquiry joins {LeadProjectLabel} and this email is tagged to it on apply.")
     </p>
 
     <TenderEnquiryDetailsForm Draft="@Draft.Details" OnChanged="NotifyCreate" ShowProblem="@(StagedCreate is not null)" />
 
-    <label class="flex items-start gap-2 cursor-pointer">
-        <input type="checkbox" checked="@Draft.CreatesNewProject" @onchange="e => Set(draft => draft.CreatesNewProject = e.Value is true)" />
-        <span class="text-sm text-content">
-            Create a new project for this job
-            <span class="block text-xs text-content-subtle">
-                @(string.IsNullOrWhiteSpace(ProjectId)
-                    ? "Untick to log the enquiry on an existing project — set it in the triage bar above."
-                    : $"Untick to log it on {ProjectLabel} instead.")
+    @if (BarProjectIsLead)
+    {
+        <label class="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" checked="@(!Draft.CreatesNewProject)" @onchange="e => Set(draft => draft.CreatesNewProject = e.Value is not true)" />
+            <span class="text-sm text-content">
+                This is the same job as @LeadProjectLabel — log it there
+                <span class="block text-xs text-content-subtle">The bar's project is still a Lead, so a follow-up email (the tender pack after the PQQ) can join it rather than start a second project.</span>
             </span>
-        </span>
-    </label>
+        </label>
+    }
 
     @if (Draft.CreatesNewProject)
     {
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-line bg-surface-raised p-3">
-            <FormField Label="Project name" Value="@Draft.ProjectName" Required="true" OnChange="v => Set(draft => draft.ProjectName = v)" />
-            <FormField Label="Client (if known)" Value="@Draft.ClientName" OnChange="v => Set(draft => draft.ClientName = v)" />
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Jewel entity</label>
-                <select class="field" value="@((int)Draft.Organisation)" @onchange="OnOrganisationChanged">
-                    @foreach (var organisation in Enum.GetValues<Organisation>())
-                    {
-                        <option value="@((int)organisation)">@organisation.DisplayName()</option>
-                    }
-                </select>
-            </div>
-            <FormField Label="Site address" Value="@Draft.AddressLine" OnChange="v => Set(draft => draft.AddressLine = v)" />
-            <FormField Label="Town" Value="@Draft.Town" OnChange="v => Set(draft => draft.Town = v)" />
-            <FormField Label="Postcode" Value="@Draft.Postcode" OnChange="v => Set(draft => draft.Postcode = v)" />
-        </div>
+        <TenderEnquiryNewProjectFields Draft="@Draft.NewProject" OnChanged="NotifyCreate" />
     }
 
     @if (TickableEmailAttachments.Count > 0)
@@ -68,7 +54,7 @@
         </div>
     }
 
-    @if (StagedCreate is not null && Draft.Problem(!string.IsNullOrWhiteSpace(ProjectId)) is { } problem)
+    @if (StagedCreate is not null && Draft.Problem(BarProjectIsLead) is { } problem)
     {
         <p class="text-xs text-amber-600">@problem</p>
     }
@@ -90,7 +76,9 @@
     private StagedRecordCreate Create => StagedCreate ?? scratchCreate;
     private StagedTenderEnquiryDraft Draft => Create.TenderEnquiry;
 
-    private string ProjectLabel => Projects.FirstOrDefault(project => project.ProjectId == ProjectId)?.Name ?? "the email's project";
+    private Project? BarProject => Projects.FirstOrDefault(project => project.ProjectId == ProjectId);
+    private bool BarProjectIsLead => BarProject?.Stage == ProjectStage.Lead;
+    private string LeadProjectLabel => BarProject?.Name ?? "the email's project";
 
     private IReadOnlyList<IntakeAttachment> TickableEmailAttachments =>
         (EmailAttachments ?? Array.Empty<IntakeAttachment>()).Where(attachment => !string.IsNullOrEmpty(attachment.Id)).ToList();
@@ -116,28 +104,29 @@
             PrefillFromEmail(scratchCreate);
         }
         lastStaged = StagedCreate;
+        // Live work never receives an enquiry: if the bar moved off a Lead, the draft creates its own.
+        if (!BarProjectIsLead) Draft.CreatesNewProject = true;
     }
 
     // Suggestions only, filled WITHOUT staging: the subject (minus FW:/RE:) as the title and the
-    // project name, the sender as the contact, every attachment ticked, a project by default
-    // when the bar has none.
+    // project name, the sender as the contact, every attachment ticked.
     private void PrefillFromEmail(StagedRecordCreate target)
     {
         var draft = target.TenderEnquiry;
         var subject = StripReplyPrefixes(EmailSubject);
         draft.Details.Title = subject;
-        draft.ProjectName = subject;
+        draft.NewProject.Name = subject;
         draft.Details.ArchitectContactEmail = SenderEmail.Trim();
-        draft.CreatesNewProject = string.IsNullOrWhiteSpace(ProjectId);
         draft.EmailAttachmentIds.Clear();
         draft.EmailAttachmentIds.AddRange(TickableEmailAttachments.Select(attachment => attachment.Id));
     }
 
     private static string StripReplyPrefixes(string subject)
     {
+        const string prefixPattern = @"^(fw|fwd|re)\s*:\s*";
         var cleaned = subject.Trim();
-        while (System.Text.RegularExpressions.Regex.IsMatch(cleaned, @"^(fw|fwd|re)\s*:\s*", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
-            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, @"^(fw|fwd|re)\s*:\s*", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        while (System.Text.RegularExpressions.Regex.IsMatch(cleaned, prefixPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, prefixPattern, "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         return cleaned;
     }
 
@@ -145,11 +134,6 @@
     {
         edit(Draft);
         NotifyCreate();
-    }
-
-    private void OnOrganisationChanged(ChangeEventArgs e)
-    {
-        if (Enum.TryParse<Organisation>(e.Value?.ToString(), out var parsed)) Set(draft => draft.Organisation = parsed);
     }
 
     private void ToggleEmailAttachment(IntakeAttachment attachment, bool isTicked) =>

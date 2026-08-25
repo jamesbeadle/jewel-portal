@@ -8,6 +8,9 @@ public static class TenderEnquiriesRouteRegistration
 {
     public static void RegisterTenderEnquiriesRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
+        queries.Register<ListTenderEnquiries, IReadOnlyList<TenderEnquiry>>(
+            new QueryRoute("/api/tender-enquiries", _ => "/api/tender-enquiries"));
+
         queries.Register<ListTenderEnquiriesForProject, IReadOnlyList<TenderEnquiry>>(
             new QueryRoute("/api/projects/{projectId}/tender-enquiries",
                 query => $"/api/projects/{((ListTenderEnquiriesForProject)query).ProjectId}/tender-enquiries"));
@@ -39,8 +42,7 @@ public static class TenderEnquiriesRouteRegistration
                 _ => "/api/mailbox/message/log-tender-enquiry"));
 
         commands.Register<LogTenderEnquiry, TenderEnquiry>(
-            new CommandRoute("POST", "/api/projects/{projectId}/tender-enquiries",
-                command => $"/api/projects/{((LogTenderEnquiry)command).ProjectId}/tender-enquiries"));
+            new CommandRoute("POST", "/api/tender-enquiries", _ => "/api/tender-enquiries"));
 
         commands.Register<UpdateTenderEnquiryDetails, TenderEnquiry>(
             new CommandRoute("PUT", "/api/tender-enquiries/{tenderEnquiryId}/details",

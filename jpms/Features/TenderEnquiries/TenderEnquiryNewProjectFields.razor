@@ -1,0 +1,36 @@
+@namespace Jewel.JPMS.Features.TenderEnquiries
+
+@* The new project's fields — name, client if known, Jewel entity, site address. *@
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border border-line bg-surface-raised p-3">
+    <FormField Label="Project name" Value="@Draft.Name" Required="true" OnChange="v => Set(draft => draft.Name = v)" />
+    <FormField Label="Client (if known)" Value="@Draft.ClientName" OnChange="v => Set(draft => draft.ClientName = v)" />
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Jewel entity</label>
+        <select class="field" value="@((int)Draft.Organisation)" @onchange="OnOrganisationChanged">
+            @foreach (var organisation in Enum.GetValues<Organisation>())
+            {
+                <option value="@((int)organisation)">@organisation.DisplayName()</option>
+            }
+        </select>
+    </div>
+    <FormField Label="Site address" Value="@Draft.AddressLine" OnChange="v => Set(draft => draft.AddressLine = v)" />
+    <FormField Label="Town" Value="@Draft.Town" OnChange="v => Set(draft => draft.Town = v)" />
+    <FormField Label="Postcode" Value="@Draft.Postcode" OnChange="v => Set(draft => draft.Postcode = v)" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TenderEnquiryNewProjectDraft Draft { get; set; } = new();
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private Task Set(Action<TenderEnquiryNewProjectDraft> edit)
+    {
+        edit(Draft);
+        return OnChanged.InvokeAsync();
+    }
+
+    private Task OnOrganisationChanged(ChangeEventArgs e) =>
+        Enum.TryParse<Organisation>(e.Value?.ToString(), out var parsed)
+            ? Set(draft => draft.Organisation = parsed)
+            : Task.CompletedTask;
+}

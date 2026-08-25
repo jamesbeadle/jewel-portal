@@ -1,4 +1,4 @@
-@page "/projects/{ProjectId}/tender-enquiries/{TenderEnquiryId}"
+@page "/tender-enquiries/{TenderEnquiryId}"
 @using Jewel.JPMS.Contracts.TenderEnquiries
 @using Jewel.JPMS.Features.TenderEnquiries
 @inject AuthService Auth
@@ -6,6 +6,8 @@
 @inject IQueryClient Queries
 @inject ICommandSender Commands
 @inject NavigationManager Nav
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
+@implements IDisposable
 
 <PageTitle>Tender Enquiry · JPMS</PageTitle>
 
@@ -21,9 +23,9 @@ else if (!Session.IsApproved)
 }
 else
 {
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="tender-enquiries">
+    <section class="px-6 py-6 md:px-8">
         <nav class="mb-4 text-sm">
-            <a href="@($"/projects/{ProjectId}/tender-enquiries")" class="text-content-subtle hover:text-content underline underline-offset-4">Tender enquiries</a>
+            <a href="/tender-enquiries" class="text-content-subtle hover:text-content underline underline-offset-4">Tender enquiries</a>
         </nav>
 
         @if (error is not null)
@@ -42,10 +44,17 @@ else
                 <div>
                     <p class="text-xs font-mono tracking-wide text-content-subtle mb-0.5">@enquiry.Reference</p>
                     <div class="flex items-center gap-3">
-                        <h2 class="text-lg font-semibold text-content">@enquiry.Title</h2>
+                        <h1 class="text-2xl font-semibold text-content leading-tight">@enquiry.Title</h1>
                         <TenderEnquiryStatusBadge Status="@enquiry.Status" />
                     </div>
-                    <p class="text-sm text-content-muted">@enquiry.ArchitectPracticeName@(string.IsNullOrWhiteSpace(enquiry.ArchitectContactName) ? "" : $" · {enquiry.ArchitectContactName}")</p>
+                    <p class="text-sm text-content-muted">
+                        @enquiry.ArchitectPracticeName@(string.IsNullOrWhiteSpace(enquiry.ArchitectContactName) ? "" : $" · {enquiry.ArchitectContactName}")
+                        @if (Project is { } project)
+                        {
+                            <span> · </span><a class="font-mono text-xs hover:underline" href="@($"/projects/{project.ProjectId}")">@project.Reference</a>
+                            <ProjectStageBadge Stage="@project.Stage" />
+                        }
+                    </p>
                 </div>
                 @if (CanManage)
                 {
@@ -80,7 +89,7 @@ else
                         </div>
                         <RecordAuditHistory RecordId="@TenderEnquiryId" RecordType="RecordType.TenderEnquiry" />
                     </div>
-                    <TenderEnquiryStatusPanel Enquiry="@enquiry" CanMove="@CanManage" OnChanged="updated => enquiry = updated" />
+                    <TenderEnquiryStatusPanel Enquiry="@enquiry" CanMove="@CanManage" OnChanged="OnStatusChanged" />
                 </div>
             }
             else if (activeTab == "pqq")
@@ -97,7 +106,7 @@ else
             }
         }
         </LoadGate>
-    </ProjectPageShell>
+    </section>
 
     <Modal IsOpen="showEdit" Title="Edit enquiry details" ShowFooter="true"
            ConfirmLabel="@(busy ? "Saving…" : "Save")" ConfirmDisabled="@(busy || draft.Problem is not null)"
@@ -107,7 +116,6 @@ else
 }
 
 @code {
-    [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string TenderEnquiryId { get; set; } = "";
 
     private static readonly (string Key, string Label)[] SectionTabs =
@@ -128,6 +136,8 @@ else
         role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.QuantitySurveyor
             or Role.OfficeComplianceCoordinator or Role.OfficeAdmin);
 
+    private Project? Project => enquiry is null ? null : Projects.Find(enquiry.ProjectId);
+
     private string ContactLine => enquiry is null ? "" : string.Join(" · ",
         new[] { enquiry.ArchitectContactName, enquiry.ArchitectContactEmail }.Where(part => !string.IsNullOrWhiteSpace(part)));
 
@@ -140,9 +150,20 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         sessionReady = true;
+        Projects.OnChanged += StateHasChanged;
+        if (Projects.Current is null) _ = Projects.RefreshAsync(CancellationToken.None);
         try { enquiry = await Queries.AskAsync(new GetTenderEnquiryById(TenderEnquiryId), CancellationToken.None); }
         catch { error = "Couldn't load the tender enquiry."; }
         finally { loadAttempted = true; }
+    }
+
+    public void Dispose() => Projects.OnChanged -= StateHasChanged;
+
+    // Winning moves the project on from Lead — the header's stage badge should say so.
+    private Task OnStatusChanged(TenderEnquiry updated)
+    {
+        enquiry = updated;
+        return updated.Status == TenderEnquiryStatus.Won ? Projects.RefreshAsync(CancellationToken.None) : Task.CompletedTask;
     }
 
     private void OpenEdit()

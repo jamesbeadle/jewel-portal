@@ -3,6 +3,9 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Contracts.TenderEnquiries;
 
+/// <summary>Every enquiry across the company — the Internal folder's register. Live ones first.</summary>
+public sealed record ListTenderEnquiries : IQuery<IReadOnlyList<TenderEnquiry>>;
+
 public sealed record ListTenderEnquiriesForProject(string ProjectId) : IQuery<IReadOnlyList<TenderEnquiry>>;
 
 public sealed record GetTenderEnquiryById(string TenderEnquiryId) : IQuery<TenderEnquiry?>;

@@ -34,7 +34,7 @@ public static class ExplorerRecordTypes
         RecordType.Request => $"/projects/{record.ProjectId}/requests/view/{record.RecordId}",
         RecordType.Variation or RecordType.VariationQuote => $"/projects/{record.ProjectId}/variations/{record.RecordId}",
         RecordType.BidPackageInvite => $"/projects/{record.ProjectId}/bid-package-invites/{record.RecordId}",
-        RecordType.TenderEnquiry => $"/projects/{record.ProjectId}/tender-enquiries/{record.RecordId}",
+        RecordType.TenderEnquiry => $"/tender-enquiries/{record.RecordId}",
         RecordType.WorkOrder => $"/projects/{record.ProjectId}/work-orders",
         RecordType.Defect => $"/projects/{record.ProjectId}/defects",
         RecordType.Scheduling or RecordType.Lad => $"/projects/{record.ProjectId}/programme",

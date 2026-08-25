@@ -50,10 +50,6 @@ public static class PortalMapCapabilities
             "internal-only notes for the office — door codes, key safes, site access",
         ["/projects/{project}/settings"] =
             "project settings: names, dates, stage",
-        ["/projects/{project}/tender-enquiries"] =
-            "inbound tender enquiries (an architect inviting Jewel to tender — TEQ-#### references); "
-            + "open one for its status, PQQ response, documents and tagged emails. A Lead-stage "
-            + "project usually exists because of one",
 
         // ---- Subcontractor ----
         ["/projects/{project}/bid-package-invites"] =
@@ -67,6 +63,10 @@ public static class PortalMapCapabilities
             "subcontractor correspondence (everything tagged with the JPMS/SubComms family at triage — general plus the Chaser / Info request / Materials / H&S categories), read live with a per-category filter",
 
         // ---- Internal ----
+        ["/tender-enquiries"] =
+            "the bid pipeline: every inbound tender enquiry (an architect inviting Jewel to tender — "
+            + "TEQ-#### references), company-wide; open one for its status, PQQ response, documents "
+            + "and tagged emails. Each sits on a Lead-stage project behind the scenes",
         ["/todos"] =
             "the master to-do list across every project, with a project filter. find_by_reference "
             + "resolves a spoken \"TODO-0074\" to the item — its notes, project and route — and "
@@ -177,7 +177,7 @@ public static class PortalMapCapabilities
             + "subcontractors, their quotes, and the tagged email thread (get_bid_package_context and "
             + "read_record_emails read it; the bid_package_details dialog opens here to build the "
             + "package out — summary and line schedule in one update)",
-        "Tender enquiry → /projects/{project}/tender-enquiries/{tenderEnquiryId} — the architect's "
+        "Tender enquiry → /tender-enquiries/{tenderEnquiryId} — the architect's "
             + "invitation: Received → Accepted → PQQ submitted → Shortlisted → Tender submitted → Won/Lost, "
             + "the PQQ answers (rendered to the PQQ response PDF), the enquiry's documents and its tagged "
             + "emails (read_record_emails works here)",

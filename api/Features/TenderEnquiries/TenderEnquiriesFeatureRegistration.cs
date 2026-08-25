@@ -18,6 +18,7 @@ public static class TenderEnquiriesFeatureRegistration
         // The pieces the two logging routes share: the Lead project shell, the enquiry row +
         // audit, and the one way a file lands on an enquiry.
         services.AddScoped<TenderEnquiryProjectCreator>();
+        services.AddScoped<TenderEnquiryProjectResolver>();
         services.AddScoped<TenderEnquiryRegister>();
         services.AddScoped<TenderEnquiryAttachmentWriter>();
         services.AddScoped<TenderEnquiryEmailAttachmentFetcher>();
@@ -42,6 +43,7 @@ public static class TenderEnquiriesFeatureRegistration
         services.AddScoped<SetTenderEnquiryAnswersAuthorisation>();
         services.AddScoped<SetTenderEnquiryAnswersValidation>();
 
+        services.AddScoped<IQueryHandler<ListTenderEnquiries, IReadOnlyList<TenderEnquiry>>, ListTenderEnquiriesHandler>();
         services.AddScoped<IQueryHandler<ListTenderEnquiriesForProject, IReadOnlyList<TenderEnquiry>>, ListTenderEnquiriesForProjectHandler>();
         services.AddScoped<IQueryHandler<GetTenderEnquiryById, TenderEnquiry?>, GetTenderEnquiryByIdHandler>();
         services.AddScoped<IQueryHandler<ListTenderEnquiryAnswers, IReadOnlyList<TenderEnquiryAnswer>>, ListTenderEnquiryAnswersHandler>();

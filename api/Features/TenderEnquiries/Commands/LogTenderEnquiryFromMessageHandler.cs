@@ -7,7 +7,6 @@ using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.TenderEnquiries;
 using Jewel.JPMS.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.TenderEnquiries.Commands;
 
@@ -25,20 +24,20 @@ public sealed class LogTenderEnquiryFromMessageHandler : ICommandHandler<LogTend
     private readonly JpmsContext context;
     private readonly IMailboxGraphClient graph;
     private readonly TenderEnquiryEmailAttachmentFetcher emailAttachments;
-    private readonly TenderEnquiryProjectCreator projectCreator;
+    private readonly TenderEnquiryProjectResolver projectResolver;
     private readonly TenderEnquiryRegister register;
     private readonly TenderEnquiryAttachmentWriter attachments;
     private readonly ICommandHandler<LinkMessageToRecord, Acknowledgement> link;
 
     public LogTenderEnquiryFromMessageHandler(
         JpmsContext context, IMailboxGraphClient graph, TenderEnquiryEmailAttachmentFetcher emailAttachments,
-        TenderEnquiryProjectCreator projectCreator, TenderEnquiryRegister register,
+        TenderEnquiryProjectResolver projectResolver, TenderEnquiryRegister register,
         TenderEnquiryAttachmentWriter attachments, ICommandHandler<LinkMessageToRecord, Acknowledgement> link)
     {
         this.context = context;
         this.graph = graph;
         this.emailAttachments = emailAttachments;
-        this.projectCreator = projectCreator;
+        this.projectResolver = projectResolver;
         this.register = register;
         this.attachments = attachments;
         this.link = link;
@@ -52,7 +51,8 @@ public sealed class LogTenderEnquiryFromMessageHandler : ICommandHandler<LogTend
             snapshot.Categories, TriageCategories.BucketFor(RecordType.TenderEnquiry), command.AllowCrossPathway, NewRecordLabel);
 
         var files = await emailAttachments.DownloadAsync(command.MessageId, command.AttachmentIds, cancellationToken);
-        var (projectId, createdProject) = await ResolveProjectAsync(command, cancellationToken);
+        var (projectId, createdProject) = await projectResolver.ResolveAsync(
+            command.ProjectId, command.NewProject, command.Details, command.LoggedByEmail, cancellationToken);
         var enquiry = await register.LogAsync(projectId, command.Details, command.LoggedByEmail, cancellationToken);
 
         foreach (var file in files)
@@ -67,20 +67,5 @@ public sealed class LogTenderEnquiryFromMessageHandler : ICommandHandler<LogTend
 
         await register.RecordLoggedAsync(enquiry, createdProject, cancellationToken);
         return enquiry.ToModel();
-    }
-
-    private async Task<(string ProjectId, bool Created)> ResolveProjectAsync(
-        LogTenderEnquiryFromMessage command, CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(command.ProjectId))
-        {
-            var exists = await context.Projects.AnyAsync(row => row.ProjectId == command.ProjectId, cancellationToken);
-            if (!exists) throw new InvalidOperationException($"Project '{command.ProjectId}' not found.");
-            return (command.ProjectId, false);
-        }
-        var draft = command.NewProject
-            ?? throw new InvalidOperationException("Either an existing project or the details of a new one are required.");
-        var project = await projectCreator.CreateAsync(draft, command.Details, command.LoggedByEmail, cancellationToken);
-        return (project.ProjectId, true);
     }
 }

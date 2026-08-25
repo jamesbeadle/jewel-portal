@@ -94,11 +94,6 @@ public static class SidebarFolders
                     DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Drawings", "/projects/{project}/drawings"),
                     DesktopNavigation.DirectorRoles),
-                // Inbound invitations to tender (TEQ-#### references) — the reason a Lead-stage
-                // project exists. Logged from the architect's email in the Control Centre or by
-                // hand here; each reads its mail back live by tag.
-                new SidebarRow(new NavigationItem("Tender Enquiries", "/projects/{project}/tender-enquiries"),
-                    DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Programme", "/projects/{project}/programme"),
                     DesktopNavigation.DirectorRoles),
                 // The project-specific to-do view — second way in, alongside Internal's master list.
@@ -151,6 +146,12 @@ public static class SidebarFolders
             {
                 // The master to-do list: all projects plus company-wide items, with a project filter.
                 new SidebarRow(new NavigationItem("Todo", "/todos"),
+                    DesktopNavigation.DirectorRoles),
+                // The bid pipeline: every invitation to tender (TEQ-#### references), company-wide.
+                // An enquiry isn't a project yet (James, 2026-08-25), so it lives here rather than
+                // in the project folder — even though each sits on a Lead-stage project behind
+                // the scenes for its drawings and correspondence.
+                new SidebarRow(new NavigationItem("Tender Enquiries", "/tender-enquiries"),
                     DesktopNavigation.DirectorRoles),
                 // Everyone the company deals with — Clients · Architects · Subcontractors · Staff.
                 new SidebarRow(new NavigationItem("Directory", "/directory"),

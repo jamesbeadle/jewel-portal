@@ -2046,9 +2046,14 @@ else
     private bool StagedCreatesOwnProject =>
         stagedCreate is { Kind: StagedRecordKind.TenderEnquiry } sc && sc.TenderEnquiry.CreatesNewProject;
 
+    // Joining an existing project is only ever the same job's second email — the bar's project
+    // must itself still be a Lead.
+    private bool TriageProjectIsLead =>
+        !string.IsNullOrWhiteSpace(triageProjectId) && Projects.Find(triageProjectId)?.Stage == ProjectStage.Lead;
+
     private string? StagedTenderEnquiryProblem =>
         stagedCreate is { Kind: StagedRecordKind.TenderEnquiry } sc
-            ? sc.TenderEnquiry.Problem(!string.IsNullOrWhiteSpace(triageProjectId))
+            ? sc.TenderEnquiry.Problem(TriageProjectIsLead)
             : null;
 
     private string? TodoProjectNote =>
