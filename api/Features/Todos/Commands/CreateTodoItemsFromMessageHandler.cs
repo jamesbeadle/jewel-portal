@@ -28,8 +28,9 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
     private readonly IMailboxGraphClient graph;
     private readonly RecordThreadTagger threadTagger;
     private readonly RecordProviderRegistry providers;
-    public CreateTodoItemsFromMessageHandler(JpmsContext context, IMailboxGraphClient graph, RecordThreadTagger threadTagger, RecordProviderRegistry providers)
-    { this.context = context; this.graph = graph; this.threadTagger = threadTagger; this.providers = providers; }
+    private readonly TodoActivityRecorder activity;
+    public CreateTodoItemsFromMessageHandler(JpmsContext context, IMailboxGraphClient graph, RecordThreadTagger threadTagger, RecordProviderRegistry providers, TodoActivityRecorder activity)
+    { this.context = context; this.graph = graph; this.threadTagger = threadTagger; this.providers = providers; this.activity = activity; }
 
     public async Task<IReadOnlyList<TodoItem>> HandleAsync(CreateTodoItemsFromMessage command, CancellationToken cancellationToken)
     {
@@ -163,6 +164,9 @@ public sealed class CreateTodoItemsFromMessageHandler : ICommandHandler<CreateTo
         }
 
         context.TodoItems.AddRange(entities);
+        foreach (var entity in entities)
+            activity.Record(entity, TodoActivityKind.Created,
+                TodoActivitySummaries.CreatedFromEmailSummary(entity, snapshot.Subject), command.CreatedByEmail);
 
         // The row's LINKED to-dos (validated above): every item the row fanned out into is linked
         // to every existing item picked — undirected pairs in canonical order, one row each

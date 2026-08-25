@@ -10,6 +10,7 @@
                     <th class="sticky top-0 z-20 bg-surface-raised hidden md:table-cell">Client</th>
                     <th class="sticky top-0 z-20 bg-surface-raised hidden lg:table-cell">Entity</th>
                     <th class="sticky top-0 z-20 bg-surface-raised">Stage</th>
+                    <th class="sticky top-0 z-20 bg-surface-raised text-right">Next valuation</th>
                 </tr>
             </thead>
             <tbody>
@@ -21,6 +22,7 @@
                         <td class="hidden md:table-cell">@project.ClientName</td>
                         <td class="hidden lg:table-cell">@project.Organisation.ShortCode()</td>
                         <td><ProjectStageBadge Stage="project.Stage" /></td>
+                        <td class="text-right whitespace-nowrap"><ValuationDueBadge Project="project" /></td>
                     </tr>
                 }
             </tbody>

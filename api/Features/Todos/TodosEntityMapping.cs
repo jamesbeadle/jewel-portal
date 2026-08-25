@@ -21,7 +21,17 @@ internal static class TodosEntityMapping
             entity.IsComplete,
             entity.CreatedAt,
             entity.DueAt,
-            entity.CompletedAt);
+            entity.CompletedAt,
+            entity.StartedAt,
+            entity.StartedByEmail);
+
+    public static TodoActivity ToModel(this TodoItemActivityEntity entity) =>
+        new(entity.TodoItemActivityId,
+            entity.TodoItemId,
+            (TodoActivityKind)entity.Kind,
+            entity.Summary,
+            entity.ActorEmail,
+            entity.OccurredAt);
 
     // The display names for every person pinned on the given rows, keyed by email
     // (case-insensitive), read from the directory in one query. Handlers pass this into ToModel so

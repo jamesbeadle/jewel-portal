@@ -12,7 +12,8 @@ namespace Jewel.JPMS.Api.Features.Todos.Commands;
 public sealed class MoveTodoItemHandler : ICommandHandler<MoveTodoItem, TodoItem>
 {
     private readonly JpmsContext context;
-    public MoveTodoItemHandler(JpmsContext context) { this.context = context; }
+    private readonly TodoActivityRecorder activity;
+    public MoveTodoItemHandler(JpmsContext context, TodoActivityRecorder activity) { this.context = context; this.activity = activity; }
 
     public async Task<TodoItem> HandleAsync(MoveTodoItem command, CancellationToken cancellationToken)
     {
@@ -21,13 +22,18 @@ public sealed class MoveTodoItemHandler : ICommandHandler<MoveTodoItem, TodoItem
 
         // Blank-to-"" plus trim, mirroring how the add paths store the general (no-project) value.
         var projectId = command.ProjectId?.Trim() ?? "";
+        var projectLabel = "company-wide";
         if (projectId != "")
         {
-            var projectExists = await context.Projects.AnyAsync(p => p.ProjectId == projectId, cancellationToken);
-            if (!projectExists) throw new InvalidOperationException($"Project '{projectId}' not found.");
+            projectLabel = await context.Projects.AsNoTracking()
+                .Where(p => p.ProjectId == projectId)
+                .Select(p => p.Reference + " — " + p.Name)
+                .FirstOrDefaultAsync(cancellationToken)
+                ?? throw new InvalidOperationException($"Project '{projectId}' not found.");
         }
 
         entity.ProjectId = projectId;
+        activity.Record(entity, TodoActivityKind.Moved, TodoActivitySummaries.MovedSummary(projectLabel));
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel(await context.PersonNamesForAsync(new[] { entity }, cancellationToken));
     }

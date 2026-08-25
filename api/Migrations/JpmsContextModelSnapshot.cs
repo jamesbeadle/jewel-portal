@@ -4869,6 +4869,13 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("StartedByEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -4880,6 +4887,41 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasDatabaseName("IX_TodoItems_ProjectId");
 
                     b.ToTable("TodoItems");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.TodoItemActivityEntity", b =>
+                {
+                    b.Property<string>("TodoItemActivityId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ActorEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("TodoItemId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("TodoItemActivityId");
+
+                    b.HasIndex("TodoItemId")
+                        .HasDatabaseName("IX_TodoItemActivities_TodoItemId");
+
+                    b.ToTable("TodoItemActivities");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.TodoItemLinkEntity", b =>

@@ -42,6 +42,8 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<IQueryHandler<ListSchedulingEmails, IReadOnlyList<MailboxMessage>>, ListSchedulingEmailsHandler>();
         services.AddScoped<IQueryHandler<GetProgrammeEmailDetail, MailboxMessageDetail>, GetProgrammeEmailDetailHandler>();
         services.AddScoped<IQueryHandler<ListRecordEmails, IReadOnlyList<MailboxMessage>>, ListRecordEmailsHandler>();
+        // The replies a record page is blind to: newer thread members not yet tagged to it.
+        services.AddScoped<IQueryHandler<ListUnfiledReplies, IReadOnlyList<MailboxMessage>>, ListUnfiledRepliesHandler>();
         services.AddScoped<IQueryHandler<SearchMailboxMessages, IReadOnlyList<MailboxMessage>>, SearchMailboxMessagesHandler>();
         services.AddScoped<IQueryHandler<ResolveRecordTags, IReadOnlyList<LinkableRecord>>, ResolveRecordTagsHandler>();
         services.AddScoped<IQueryHandler<ListRecordActivity, IReadOnlyList<RecordActivitySummary>>, ListRecordActivityHandler>();

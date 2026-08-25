@@ -8,6 +8,7 @@ using Jewel.JPMS.Api.Features.Progress.Storage;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Features.Requests.Documents;
+using Jewel.JPMS.Api.Features.Todos;
 using Jewel.JPMS.Api.Features.Variations.Documents;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.MailboxCompose;
@@ -58,6 +59,7 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
     private readonly IEmailFileShareStore shareStore;
     private readonly ComposeHtmlPipeline pipeline;
     private readonly AuditTrail audit;
+    private readonly TodoEmailActivityRecorder todoActivity;
     private readonly ICommandHandler<CreateRequestFromMessage, Request> createRequest;
 
     public SendMailboxEmailHandler(
@@ -71,8 +73,10 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
         IEmailFileShareStore shareStore,
         ComposeHtmlPipeline pipeline,
         AuditTrail audit,
+        TodoEmailActivityRecorder todoActivity,
         ICommandHandler<CreateRequestFromMessage, Request> createRequest)
     {
+        this.todoActivity = todoActivity;
         this.context = context;
         this.graph = graph;
         this.reader = reader;
@@ -411,6 +415,10 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
             internetMessageId: snapshot?.InternetMessageId,
             webLink: sentWebLink,
             cancellationToken: cancellationToken);
+
+        // Every to-do the sent copy is filed under gets an "Emailed …" timeline line and, if it was
+        // still Open, becomes In progress — the assignee's proof of chasing, without closing it.
+        await todoActivity.RecordSentAsync(workflowStamp, subject, toAddresses, command.SenderEmail, cancellationToken);
 
         // A raised request whose reply has now been SENT moves Needs action → Open (the ball is
         // with the correspondent) — same rule as the draft flows, only now the send is real.

@@ -38,9 +38,7 @@
                             <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
                                 <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                             </p>
-                            <span class="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @(item.IsComplete ? "bg-positive/10 text-positive" : "bg-accent/10 text-accent")">
-                                @(item.IsComplete ? "Done" : "Open")
-                            </span>
+                            <span class="@TodoStatus.PillBaseClass @TodoStatus.PillClass(item)">@TodoStatus.Label(item)</span>
                         </div>
                         <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
                             <span class="whitespace-nowrap">@ScopeLabel(item)</span>

@@ -188,9 +188,9 @@
             if (ShowValuations && Projects.Current is not null)
             {
                 var live = Projects.Current.Where(p => p.Stage != ProjectStage.Completed).ToList();
-                var overdue = live.Count(p => p.NextExpectedValuationDate is { } due && due.Date < DateTimeOffset.UtcNow.Date);
+                var overdue = live.Count(ValuationDue.IsOverdue);
                 tiles.Add(new("Live projects", live.Count.ToString(), "/projects"));
-                tiles.Add(new("Valuations overdue", overdue.ToString(), "/projects",
+                tiles.Add(new("Valuations overdue", overdue.ToString(), ValuationDue.OverdueFilterRoute,
                     Note: overdue > 0 ? "needs chasing" : "up to date", IsBad: overdue > 0));
             }
 

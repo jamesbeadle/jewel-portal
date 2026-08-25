@@ -31,6 +31,12 @@ public sealed class TodoItemEntity
     public DateTimeOffset? DueAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
 
+    // In progress: stamped by "Working on it", by a logged chase, or by an email sent from the
+    // item's page; cleared on reopen. Open = neither started nor complete. See TodoActivity for
+    // the timeline these stamps summarise.
+    public DateTimeOffset? StartedAt { get; set; }
+    [MaxLength(256)] public string? StartedByEmail { get; set; }
+
     // Sequential, human-readable item number (rendered as TODO-0001). Global — like request and bid
     // package numbers — so the tag stem is unique across the flat JPMS mailbox-category space.
     public int Number { get; set; }
@@ -55,4 +61,20 @@ public sealed class TodoItemLinkEntity
     [MaxLength(64)]      public string TodoItemBId { get; set; } = "";
     public DateTimeOffset LinkedAt { get; set; }
     [MaxLength(256)]     public string LinkedByEmail { get; set; } = "";
+}
+
+/// <summary>
+/// One line of a to-do item's timeline (contracts/Models/TodoActivity.cs): what happened, the
+/// sentence shown on the page, who did it and when. Written by every to-do command and by the
+/// mailbox compose handler when an email is sent from the item's page. Loose string ids, no FK —
+/// DeleteTodoItemHandler sweeps the rows that name a deleted item.
+/// </summary>
+public sealed class TodoItemActivityEntity
+{
+    [Key, MaxLength(64)] public string TodoItemActivityId { get; set; } = "";
+    [MaxLength(64)]      public string TodoItemId { get; set; } = "";
+    public int Kind { get; set; }
+    [MaxLength(512)]     public string Summary { get; set; } = "";
+    [MaxLength(256)]     public string ActorEmail { get; set; } = "";
+    public DateTimeOffset OccurredAt { get; set; }
 }

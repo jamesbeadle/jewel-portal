@@ -26,7 +26,14 @@ public sealed record TodoItem(
     bool IsComplete,
     DateTimeOffset CreatedAt,
     DateTimeOffset? DueAt,
-    DateTimeOffset? CompletedAt);
+    DateTimeOffset? CompletedAt,
+    // In progress: set by "Working on it", by logging a chase, or by sending an email from the
+    // item's page; cleared when the item is reopened. Open = neither started nor complete.
+    DateTimeOffset? StartedAt = null,
+    string? StartedByEmail = null)
+{
+    public bool IsInProgress => !IsComplete && StartedAt is not null;
+}
 
 // One assignee a to-do can be raised for (or moved to): a ROLE, optionally pinned to a named
 // person who holds it. There is deliberately no person-without-role shape — the role is what an

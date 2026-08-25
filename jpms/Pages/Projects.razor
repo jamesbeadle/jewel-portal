@@ -44,6 +44,11 @@ else
         </header>
 
         <div class="mb-3 flex items-center justify-end gap-4">
+            @* Where the dashboard's "Valuations overdue" tile lands: the same rows it counted. *@
+            <label class="flex items-center gap-2 text-sm cursor-pointer select-none @(overdueValuationsOnly ? "text-negative font-medium" : "text-content-muted")">
+                <input type="checkbox" checked="@overdueValuationsOnly" @onchange="e => overdueValuationsOnly = (bool)e.Value!" />
+                <span>Overdue valuations only@(OverdueValuationCount > 0 ? $" ({OverdueValuationCount})" : "")</span>
+            </label>
             <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
                 <input type="checkbox" checked="@showCompleted" @onchange="e => showCompleted = (bool)e.Value!" />
                 <span>Show completed</span>
@@ -55,6 +60,10 @@ else
                                  BuildWorkbook="BuildExportWorkbook" />
         </div>
 
+        @if (overdueValuationsOnly && VisibleProjects.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic mb-3">No live project has an overdue valuation date. Dates are set on each project's Settings tab.</p>
+        }
         <ProjectsTable Projects="VisibleProjects" />
     </section>
 
@@ -67,14 +76,17 @@ else
     private bool isLoaded;
     private bool showForm;
     private bool showCompleted;
+    private bool overdueValuationsOnly;
 
     private IReadOnlyList<Project> ActiveProjects =>
         ProjectsReadModel.Current ?? Array.Empty<Project>();
 
     private IReadOnlyList<Project> VisibleProjects =>
-        showCompleted
-            ? ActiveProjects
-            : ActiveProjects.Where(p => p.Stage != ProjectStage.Completed).ToList();
+        (showCompleted ? ActiveProjects : ActiveProjects.Where(p => p.Stage != ProjectStage.Completed))
+            .Where(p => !overdueValuationsOnly || ValuationDue.IsOverdue(p))
+            .ToList();
+
+    private int OverdueValuationCount => ActiveProjects.Count(ValuationDue.IsOverdue);
 
     // Mirrors the server-side authorisation (CreateProjectShellAuthorisation):
     // Managing Director and Project Manager. Master admins hold every role and so qualify too.
@@ -98,7 +110,8 @@ else
             new ExcelColumn("Name"),
             new ExcelColumn("Client"),
             new ExcelColumn("Entity"),
-            new ExcelColumn("Stage"));
+            new ExcelColumn("Stage"),
+            new ExcelColumn("Next valuation"));
 
         foreach (var project in projects)
         {
@@ -107,7 +120,8 @@ else
                 project.Name,
                 project.ClientName,
                 project.Organisation.ShortCode(),
-                project.Stage.DisplayName());
+                project.Stage.DisplayName(),
+                project.NextExpectedValuationDate?.ToString("d MMM yyyy") ?? "");
         }
         return workbook;
     }
@@ -127,6 +141,9 @@ else
             Nav.NavigateTo("/login", forceLoad: true);
             return;
         }
+        // ?valuations=overdue (the dashboard tile) opens the page already filtered. Read once at
+        // load; the tick box is the source of truth thereafter.
+        overdueValuationsOnly = new Uri(Nav.Uri).Query.Contains(ValuationDue.OverdueFilterQuery, StringComparison.OrdinalIgnoreCase);
         ProjectsReadModel.OnChanged += StateHasChanged;
         Session.OnChange += StateHasChanged;
         await ProjectsReadModel.RefreshAsync(CancellationToken.None);

@@ -10,7 +10,8 @@ namespace Jewel.JPMS.Api.Features.Todos.Commands;
 public sealed class AddTodoItemHandler : ICommandHandler<AddTodoItem, TodoItem>
 {
     private readonly JpmsContext context;
-    public AddTodoItemHandler(JpmsContext context) { this.context = context; }
+    private readonly TodoActivityRecorder activity;
+    public AddTodoItemHandler(JpmsContext context, TodoActivityRecorder activity) { this.context = context; this.activity = activity; }
 
     public async Task<TodoItem> HandleAsync(AddTodoItem command, CancellationToken cancellationToken)
     {
@@ -39,6 +40,7 @@ public sealed class AddTodoItemHandler : ICommandHandler<AddTodoItem, TodoItem>
         };
 
         context.TodoItems.Add(entity);
+        activity.Record(entity, TodoActivityKind.Created, TodoActivitySummaries.CreatedSummary(entity), command.CreatedByEmail);
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel(await context.PersonNamesForAsync(new[] { entity }, cancellationToken));
     }

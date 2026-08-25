@@ -1,0 +1,88 @@
+@namespace Jewel.JPMS.Features.Todos.Detail
+@using Jewel.JPMS.Contracts.RecordLinks
+@inject ITodoStore Todos
+@inject ICommandSender Commands
+
+@* "Could there have been a response I haven't seen?" — the replies that arrived on this item's
+   threads after its last filed email and aren't tagged to it yet. Thread tagging never sweeps a
+   later reply (it queues in the Control Centre for its own decision), so without this the list
+   below can be silent while the answer sits in the queue. Nothing renders while there is nothing
+   to say; the read is best-effort and a failure stays quiet — the list itself is unaffected. *@
+
+@if (replies.Count > 0)
+{
+    <div class="rounded-lg bg-amber-400/10 border border-amber-400/30 px-3 py-2 mb-3 space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-sm font-medium text-amber-400">
+                @replies.Count newer @(replies.Count == 1 ? "reply" : "replies") on this thread @(replies.Count == 1 ? "isn't" : "aren't") filed to this to-do yet.
+            </p>
+            @if (CanFile)
+            {
+                <button type="button" class="btn-secondary text-xs px-2 py-1" disabled="@filing" @onclick="FileAllAsync">
+                    File @(replies.Count == 1 ? "it" : "them all") here
+                </button>
+            }
+        </div>
+        <ul class="space-y-1">
+            @foreach (var reply in replies)
+            {
+                <li class="flex flex-wrap items-baseline gap-x-2 text-xs text-content-muted">
+                    <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(reply.FromName) ? reply.FromEmail : reply.FromName)</span>
+                    <span>@reply.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                    <span class="italic truncate max-w-[24rem]">@reply.Subject</span>
+                </li>
+            }
+        </ul>
+        @if (error is not null)
+        {
+            <p class="text-xs text-negative">@error</p>
+        }
+        <p class="text-[11px] text-content-subtle">
+            Filing tags the email <span class="font-mono">JPMS/@Reference</span> so it appears in the list below — the same as tagging it in the Control Centre.
+        </p>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public string TodoItemId { get; set; } = "";
+    [Parameter, EditorRequired] public string Reference { get; set; } = "";
+    /// <summary>Bumped by the host whenever it re-reads its own list, so both reads agree.</summary>
+    [Parameter] public int Version { get; set; }
+    /// <summary>Filing is a triage act (LinkMessageToRecord's gate) — the host says who may.</summary>
+    [Parameter] public bool CanFile { get; set; }
+    [Parameter] public EventCallback OnFiled { get; set; }
+
+    private IReadOnlyList<MailboxMessage> replies = Array.Empty<MailboxMessage>();
+    private int loadedVersion = -1;
+    private bool filing;
+    private string? error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedVersion == Version) return;
+        loadedVersion = Version;
+        try { replies = await Todos.ListUnfiledRepliesAsync(TodoItemId); }
+        catch { replies = Array.Empty<MailboxMessage>(); }
+    }
+
+    private async Task FileAllAsync()
+    {
+        if (filing) return;
+        filing = true;
+        error = null;
+        var failures = new List<string>();
+        foreach (var reply in replies)
+        {
+            try
+            {
+                await Commands.SendAsync(new LinkMessageToRecord(
+                    reply.Id, RecordType.Todo, TodoItemId, reply.InternetMessageId, Scope: LinkThreadScope.MessageOnly),
+                    CancellationToken.None);
+            }
+            catch (Exception ex) { failures.Add($"{reply.Subject}: {ex.Message}"); }
+        }
+        filing = false;
+        if (failures.Count > 0) error = string.Join(" — ", failures.Take(3));
+        if (failures.Count < replies.Count) await OnFiled.InvokeAsync();
+    }
+}

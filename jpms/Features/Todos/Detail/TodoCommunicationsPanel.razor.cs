@@ -14,6 +14,9 @@ public partial class TodoCommunicationsPanel
     /// <summary>Whether the signed-in user may send from the projects mailbox — the API's compose
     /// gate (every internal role), mirrored by the page. Without it the list is read-only.</summary>
     [Parameter] public bool CanSend { get; set; }
+    /// <summary>Whether the signed-in user may file an unfiled reply to this item — the API's
+    /// triage gate (LinkMessageToRecord), mirrored by the page.</summary>
+    [Parameter] public bool CanFile { get; set; }
     /// <summary>Project pool for the composer's drawing / photo attachment sources.</summary>
     [Parameter] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
 
@@ -21,6 +24,8 @@ public partial class TodoCommunicationsPanel
     private bool refreshing;
     private string? failed;
     private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
+    // Bumped on every list read so the unfiled-replies notice re-reads alongside it.
+    private int listVersion;
 
     // One composer at a time: a reply (or forward — composeIsForward says which) above the list,
     // or the new-email form.
@@ -50,6 +55,7 @@ public partial class TodoCommunicationsPanel
     private async Task LoadAsync()
     {
         failed = null;
+        listVersion++;
         try
         {
             emails = (await Todos.ListEmailsAsync(Todo.TodoItemId))

@@ -83,6 +83,10 @@
                                 <span title="@chip.Title"
                                       class="inline-flex min-w-0 max-w-[14rem] items-center rounded border px-1.5 text-[10px] font-mono leading-4 whitespace-nowrap @(chip.Emphasis ? "border-accent/40 text-accent" : "border-line bg-surface-raised text-content-muted")"><span class="truncate">@chip.Label</span></span>
                             }
+                            @if (item.IsInProgress)
+                            {
+                                <span class="inline-flex items-center rounded border border-amber-400/30 bg-amber-400/10 px-1.5 text-[10px] font-medium leading-4 whitespace-nowrap text-amber-400" title="Started — still open until it's marked done">In progress</span>
+                            }
                             @if (!item.IsComplete && item.DueAt is not null)
                             {
                                 <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>

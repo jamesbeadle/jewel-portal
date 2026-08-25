@@ -44,6 +44,11 @@ public static class TodosRouteRegistration
             new QueryRoute("/api/todo-items/{todoItemId}",
                 query => $"/api/todo-items/{((GetTodoItemById)query).TodoItemId}"));
 
+        // The item's timeline (created / started / chased / … / email sent), newest first.
+        queries.Register<ListTodoActivity, IReadOnlyList<TodoActivity>>(
+            new QueryRoute("/api/todo-items/{todoItemId}/activity",
+                query => $"/api/todo-items/{((ListTodoActivity)query).TodoItemId}/activity"));
+
         queries.Register<ListLinkedTodoItems, IReadOnlyList<TodoItem>>(
             new QueryRoute("/api/todo-items/{todoItemId}/linked-todos",
                 query => $"/api/todo-items/{((ListLinkedTodoItems)query).TodoItemId}/linked-todos"));
@@ -59,6 +64,11 @@ public static class TodosRouteRegistration
         commands.Register<UpdateTodoItem, TodoItem>(
             new CommandRoute("PUT", "/api/todo-items/{todoItemId}",
                 command => $"/api/todo-items/{((UpdateTodoItem)command).TodoItemId}"));
+
+        // Progress logged by hand from the item's page: Working on it, a chase, or a note.
+        commands.Register<LogTodoProgress, TodoItem>(
+            new CommandRoute("POST", "/api/todo-items/{todoItemId}/progress",
+                command => $"/api/todo-items/{((LogTodoProgress)command).TodoItemId}/progress"));
 
         // Re-file an item under a different project (blank ProjectId = company-wide, MD/admin only).
         commands.Register<MoveTodoItem, TodoItem>(

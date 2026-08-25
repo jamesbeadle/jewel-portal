@@ -600,7 +600,7 @@ public static class AiToolCatalogue
                                             todoItemId = row.TodoItemId,
                                             row.Title,
                                             notes = string.IsNullOrWhiteSpace(row.Notes) ? null : row.Notes,
-                                            status = row.IsComplete ? "Done" : "Open",
+                                            status = row.IsComplete ? "Done" : row.StartedAt is null ? "Open" : "In progress",
                                             assignee = row.AssigneeRole is { } assigneeRole
                                                 ? ((Role)assigneeRole).ToString()
                                                   + (string.IsNullOrWhiteSpace(row.AssigneePersonEmail) ? "" : $" — {row.AssigneePersonEmail}")

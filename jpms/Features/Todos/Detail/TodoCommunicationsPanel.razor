@@ -68,6 +68,10 @@
             </div>
         }
 
+        @* Replies the tag can't see yet — newer thread members waiting in the Control Centre. *@
+        <UnfiledRepliesNotice TodoItemId="@Todo.TodoItemId" Reference="@Todo.Reference"
+                              Version="@listVersion" CanFile="@CanFile" OnFiled="RefreshAsync" />
+
         @if (failed is null && emails.Count == 0 && !composingNew)
         {
             <p class="text-sm text-content-subtle italic">

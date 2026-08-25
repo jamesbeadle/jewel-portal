@@ -21,6 +21,10 @@ public sealed class DeleteTodoItemHandler : ICommandHandler<DeleteTodoItem, Ackn
         if (entity is null) throw new InvalidOperationException($"To-do item {command.TodoItemId} not found.");
         var links = await context.Touching(command.TodoItemId).ToListAsync(cancellationToken);
         context.TodoItemLinks.RemoveRange(links);
+        var activity = await context.TodoItemActivities
+            .Where(row => row.TodoItemId == command.TodoItemId)
+            .ToListAsync(cancellationToken);
+        context.TodoItemActivities.RemoveRange(activity);
         context.TodoItems.Remove(entity);
         await context.SaveChangesAsync(cancellationToken);
         return new Acknowledgement(command.TodoItemId);

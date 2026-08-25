@@ -91,6 +91,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<TodoItemEntity> TodoItems => Set<TodoItemEntity>();
     // Undirected to-do ↔ to-do links, one row per pair in canonical id order (TodoItemLinkPairs).
     public DbSet<TodoItemLinkEntity> TodoItemLinks => Set<TodoItemLinkEntity>();
+    // The per-item timeline (created / started / chased / reassigned / … / email sent).
+    public DbSet<TodoItemActivityEntity> TodoItemActivities => Set<TodoItemActivityEntity>();
 
     // Internal-only titled free-text notes per project (door codes, site notes) — the Useful
     // Information tab.
@@ -398,6 +400,9 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<TodoItemLinkEntity>()
             .HasIndex(row => row.TodoItemBId)
             .HasDatabaseName("IX_TodoItemLinks_TodoItemBId");
+        modelBuilder.Entity<TodoItemActivityEntity>()
+            .HasIndex(row => row.TodoItemId)
+            .HasDatabaseName("IX_TodoItemActivities_TodoItemId");
         modelBuilder.Entity<DefectEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_Defects_ProjectId");

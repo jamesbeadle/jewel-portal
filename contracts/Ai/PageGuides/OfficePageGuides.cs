@@ -9,8 +9,10 @@ public static class OfficePageGuides
             "The master to-do list across every project — company-wide and project items together, "
             + "with a project filter. The MD and administrators see every item; everyone else sees "
             + "only items assigned to a role they hold, minus items pinned to a different named "
-            + "person. Manually: Board view (drag a card between Open and Done) or List view with "
-            + "Open/Done/All tabs; filters for project scope, role and — for MD/admin — person; "
+            + "person. An item reads as Open, In progress (started, chased or emailed from its page — "
+            + "an amber chip) or Done. Manually: Board view (drag a card between Open and Done) or "
+            + "List view with Open/Done/All tabs; filters for project scope, role and — for MD/admin "
+            + "— person; "
             + "\"Add to-do\" opens a modal with Project picker (blank = company-wide, MD/admin "
             + "only), title, assignee, due date and notes. Clicking an item opens its detail page. "
             + "find_by_reference resolves a spoken \"TODO-0074\" to the item (title, notes, "
@@ -22,13 +24,23 @@ public static class OfficePageGuides
             + "Centre, not here."),
 
         new("/todos/{todoItemId}", "To-do detail",
-            "One to-do item's own page — its full facts, multiline notes, the to-dos linked to it "
-            + "by shared tagged mail, and its communications: the item's tagged emails read live, "
-            + "each answerable here, plus a new outbound email filed to the item. Manually: Mark "
-            + "done / Reopen; a two-click armed Delete; the reassign editor (role, optionally "
-            + "pinned to a person) and the move editor (to another project, or company-wide for "
-            + "MD/admin). Reassign, move and delete need the manage gate; completing needs manage "
-            + "or the item being the reader's own. You navigate_to with the ready-made route "
+            "One to-do item's own page — its full facts, multiline notes, its Timeline, the to-dos "
+            + "linked to it by shared tagged mail, and its communications: the item's tagged emails "
+            + "read live, each answerable here, plus a new outbound email filed to the item. The "
+            + "item is Open, In progress or Done: \"Working on it\" moves Open to In progress; so "
+            + "does \"Log a chase\" in the Timeline panel (a chase or a note with words — for chases "
+            + "made outside the portal, e.g. from the person's own Outlook or by phone); an email "
+            + "sent from this page logs itself on the Timeline and starts the item too. The item "
+            + "stays open until Mark done — being chased is not being finished. The Timeline lists "
+            + "every change newest first (added, started, chased, emailed, reassigned, moved, due "
+            + "date, done/reopened) with who and when. Above the communications list a notice "
+            + "reports newer replies on the item's threads that are not filed to it yet (they wait "
+            + "in the Control Centre queue); \"File it here\" tags them to the item (triage roles). "
+            + "Manually: Mark done / Reopen; a two-click armed Delete; the reassign editor (role, "
+            + "optionally pinned to a person) and the move editor (to another project, or "
+            + "company-wide for MD/admin). Reassign, move and delete need the manage gate; "
+            + "completing and logging progress need manage or the item being the reader's own. "
+            + "You navigate_to with the ready-made route "
             + "(find_by_reference resolves \"TODO-0074\" to it), and read_record_emails "
             + "(record_type todo) reads this item's communications; no dialog opens here, but "
             + "actioning the item's work often opens one elsewhere — e.g. work_order_create for a "
@@ -54,8 +66,15 @@ public static class OfficePageGuides
         new("/dashboard", "Home",
             "The signed-in home page, rendered per active role: administrators get the admin home "
             + "(user directory and pending access-request panels), every other role gets its role "
-            + "home — for site-floor roles that is the My Day workspace. There are no page-level "
-            + "actions of its own. The retired /my-day route redirects here.",
+            + "home — for site-floor roles that is the My Day workspace. The director / finance "
+            + "director home shows count tiles (Live projects, Valuations overdue, Control Centre "
+            + "inbox, Xero lines to allocate, Open and Overdue to-dos) — each tile is a link: "
+            + "Valuations overdue lands on /projects filtered to the overdue rows — then the My "
+            + "to-dos board and the Upcoming valuations table (every live project's next expected "
+            + "valuation date, Overdue in red, Due soon in amber, sorted soonest first). \"Valuation "
+            + "overdue\" means the project's next expected valuation date (set on its Settings tab) "
+            + "has passed. There are no page-level actions of its own. The retired /my-day route "
+            + "redirects here.",
             Aliases: new[] { "/my-day" }),
 
         new("/audit", "Audit trail",

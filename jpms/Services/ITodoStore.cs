@@ -42,4 +42,13 @@ public interface ITodoStore
     /// linked emails included, moves with it.</summary>
     Task<TodoItem> MoveAsync(MoveTodoItem command, CancellationToken cancellationToken = default);
     Task<Acknowledgement> DeleteAsync(string todoItemId, CancellationToken cancellationToken = default);
+    /// <summary>The item's timeline, newest first — every change, logged chase and email sent
+    /// from its page.</summary>
+    Task<IReadOnlyList<TodoActivity>> ListActivityAsync(string todoItemId, CancellationToken cancellationToken = default);
+    /// <summary>Log progress by hand: Working on it, a chase with a note, or a plain note.
+    /// Started and Chased move an Open item to In progress; nothing here completes it.</summary>
+    Task<TodoItem> LogProgressAsync(LogTodoProgress command, CancellationToken cancellationToken = default);
+    /// <summary>Replies that arrived on the item's threads after its last filed email and are not
+    /// tagged to it yet — what the communications list is blind to until someone files them.</summary>
+    Task<IReadOnlyList<MailboxMessage>> ListUnfiledRepliesAsync(string todoItemId, CancellationToken cancellationToken = default);
 }

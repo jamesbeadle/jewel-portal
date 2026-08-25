@@ -24,6 +24,8 @@ public partial class TodoDetail
     private bool busy;
     private string? error;
     private bool deleteArmed;
+    // Bumped after every item-changing command so the timeline panel re-reads its lines.
+    private int activityVersion;
     private IReadOnlyList<SearchSelect.Option> assigneeOptions = Array.Empty<SearchSelect.Option>();
 
     // Mirrors the API's TodoRoles.AllowedToManageTodos gate (reassign, move, delete).
@@ -51,6 +53,12 @@ public partial class TodoDetail
             || string.Equals(item.AssigneePersonEmail, Auth.CurrentUser?.Email, StringComparison.OrdinalIgnoreCase));
 
     private bool CanComplete => CanManage || IsMine;
+
+    // Mirrors the API's TriageRoles.AllowedToTriage — who may file an unfiled reply to the item
+    // (LinkMessageToRecord is a triage act).
+    private bool CanTriage =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector
+            or Role.ProjectManager or Role.FinanceDirector);
 
     protected override async Task OnInitializedAsync()
     {
@@ -150,6 +158,17 @@ public partial class TodoDetail
         return error is null;
     }
 
+    private Task StartAsync() =>
+        RunAsync(() => TodoStore.LogProgressAsync(new LogTodoProgress(TodoItemId, TodoActivityKind.Started)));
+
+    // The timeline panel's log-a-chase form: run the command, answer whether it landed.
+    private async Task<bool> LogProgressAsync(TodoActivityKind kind, string? note)
+    {
+        if (item is null) return false;
+        await RunAsync(() => TodoStore.LogProgressAsync(new LogTodoProgress(item.TodoItemId, kind, note)));
+        return error is null;
+    }
+
     private async Task DeleteAsync()
     {
         if (item is null || busy) return;
@@ -168,7 +187,9 @@ public partial class TodoDetail
     }
 
     // One path for every item-changing command: run it, then re-read the item so the page shows
-    // the server's answer rather than a local guess.
+    // the server's answer rather than a local guess. Repaints explicitly: the Timeline panel's
+    // form reaches here through a Func, not an EventCallback, so nothing else would re-render
+    // the header pill, the buttons or the error bar.
     private async Task RunAsync(Func<Task> action)
     {
         if (busy) return;
@@ -176,12 +197,14 @@ public partial class TodoDetail
         try
         {
             busy = true;
+            StateHasChanged();
             await action();
             item = await TodoStore.GetAsync(TodoItemId);
+            activityVersion++;
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         catch { error = "That action didn't complete. Please try again."; }
-        finally { busy = false; }
+        finally { busy = false; StateHasChanged(); }
     }
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

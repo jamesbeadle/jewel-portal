@@ -134,8 +134,11 @@ public static class SitePageGuides
             + "Control Centre with stage_triage_todo, not on this page."),
 
         new("/projects", "Projects",
-            "The project portfolio register: reference, name, client, entity and stage for every "
-            + "project, hiding completed ones unless \"Show completed\" is ticked. Manually: "
+            "The project portfolio register: reference, name, client, entity, stage and next "
+            + "expected valuation date (Overdue in red, Due soon in amber, Not set when blank) for "
+            + "every project, hiding completed ones unless \"Show completed\" is ticked. "
+            + "\"Overdue valuations only\" narrows the table to the rows the dashboard's Valuations "
+            + "overdue tile counted (?valuations=overdue opens the page already filtered). Manually: "
             + "\"+ New project\" (MD/PM) opens the New project modal, though projects are normally "
             + "created from a won lead; Export to Excel exports the portfolio. You read the same "
             + "data with list_projects and use navigate_to to open a project, which lands on the "

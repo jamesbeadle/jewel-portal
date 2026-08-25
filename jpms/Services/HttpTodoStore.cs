@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Cqrs;
+using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Todos;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
@@ -54,4 +55,13 @@ public sealed class HttpTodoStore : ITodoStore
 
     public Task<Acknowledgement> DeleteAsync(string todoItemId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new DeleteTodoItem(todoItemId), cancellationToken);
+
+    public Task<IReadOnlyList<TodoActivity>> ListActivityAsync(string todoItemId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListTodoActivity(todoItemId), cancellationToken);
+
+    public Task<TodoItem> LogProgressAsync(LogTodoProgress command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
+    public Task<IReadOnlyList<MailboxMessage>> ListUnfiledRepliesAsync(string todoItemId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListUnfiledReplies(RecordType.Todo, todoItemId), cancellationToken);
 }

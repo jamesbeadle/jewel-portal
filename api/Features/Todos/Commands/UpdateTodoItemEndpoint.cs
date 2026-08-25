@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Todos;
 using Jewel.JPMS.Models;
@@ -11,12 +12,13 @@ namespace Jewel.JPMS.Api.Features.Todos.Commands;
 public sealed class UpdateTodoItemEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly AuditActor auditActor;
     private readonly UpdateTodoItemAuthorisation authorisation;
     private readonly UpdateTodoItemValidation validation;
     private readonly ICommandHandler<UpdateTodoItem, TodoItem> handler;
 
-    public UpdateTodoItemEndpoint(SignedInUserResolver users, UpdateTodoItemAuthorisation authorisation, UpdateTodoItemValidation validation, ICommandHandler<UpdateTodoItem, TodoItem> handler)
-    { this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler; }
+    public UpdateTodoItemEndpoint(SignedInUserResolver users, AuditActor auditActor, UpdateTodoItemAuthorisation authorisation, UpdateTodoItemValidation validation, ICommandHandler<UpdateTodoItem, TodoItem> handler)
+    { this.users = users; this.auditActor = auditActor; this.authorisation = authorisation; this.validation = validation; this.handler = handler; }
 
     [Function(nameof(UpdateTodoItem))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "todo-items/{todoItemId}")] HttpRequest request, string todoItemId)
@@ -26,6 +28,7 @@ public sealed class UpdateTodoItemEndpoint
         var command = await request.ReadFromJsonAsync<UpdateTodoItem>();
         if (command is null) return new BadRequestResult();
         if (command.TodoItemId != todoItemId) return new BadRequestObjectResult("Route todoItemId does not match body.");
+        auditActor.Email = signedInUser.Email; // the timeline records who completed / reassigned
         // Managers pass on role; anyone else may still update an item currently assigned to them
         // (ticking their own item off from the dashboard / To-dos browser).
         if (!authorisation.Allows(signedInUser, command)

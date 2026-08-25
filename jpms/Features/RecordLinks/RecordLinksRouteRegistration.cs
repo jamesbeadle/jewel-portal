@@ -49,6 +49,15 @@ public static class RecordLinksRouteRegistration
                     return $"/api/records/{q.Type}/{Uri.EscapeDataString(q.RecordId)}/emails";
                 }));
 
+        // The replies a record page is blind to: newer thread members not yet tagged to it.
+        queries.Register<ListUnfiledReplies, IReadOnlyList<MailboxMessage>>(
+            new QueryRoute("/api/records/{type}/{recordId}/unfiled-replies",
+                query =>
+                {
+                    var q = (ListUnfiledReplies)query;
+                    return $"/api/records/{q.Type}/{Uri.EscapeDataString(q.RecordId)}/unfiled-replies";
+                }));
+
         // Free-text mailbox search behind the record pages' "Find emails" dialog.
         queries.Register<SearchMailboxMessages, IReadOnlyList<MailboxMessage>>(
             new QueryRoute("/api/mailbox/search",

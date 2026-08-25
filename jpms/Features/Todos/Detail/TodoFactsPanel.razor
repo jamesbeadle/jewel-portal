@@ -28,6 +28,15 @@
                     @Item.CreatedAt.LocalDateTime.ToString("d MMM yyyy")@(string.IsNullOrWhiteSpace(Item.CreatedByEmail) ? "" : $" by {Item.CreatedByEmail}")
                 </dd>
             </div>
+            @if (Item.StartedAt is not null && !Item.IsComplete)
+            {
+                <div>
+                    <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">In progress since</dt>
+                    <dd class="text-content mt-0.5">
+                        @Item.StartedAt.Value.LocalDateTime.ToString("d MMM yyyy")@(string.IsNullOrWhiteSpace(Item.StartedByEmail) ? "" : $" by {Item.StartedByEmail}")
+                    </dd>
+                </div>
+            }
             @if (Item.CompletedAt is not null)
             {
                 <div>

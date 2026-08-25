@@ -1,0 +1,56 @@
+@namespace Jewel.JPMS.Features.Todos.Detail
+
+@* Logging progress by hand: a CHASE ("emailed Justine for the certificate", "rang the office")
+   or a plain NOTE. A chase moves an Open item to In progress — the item itself stays open until
+   the other side comes back. Emails sent from this page log themselves; this form is for the
+   chases that happen elsewhere (a call, an email from your own Outlook, a conversation on site).
+   The form stays open after a failed save so the words survive to retry. *@
+
+<div class="rounded-lg border border-line bg-canvas/40 p-3 space-y-2">
+    <div class="flex flex-wrap gap-3 text-sm">
+        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+            <input type="radio" name="todo-progress-kind" checked="@(kind == TodoActivityKind.Chased)" disabled="@Busy"
+                   @onchange="() => kind = TodoActivityKind.Chased" />
+            <span>Chased</span>
+        </label>
+        <label class="inline-flex items-center gap-1.5 cursor-pointer">
+            <input type="radio" name="todo-progress-kind" checked="@(kind == TodoActivityKind.Note)" disabled="@Busy"
+                   @onchange="() => kind = TodoActivityKind.Note" />
+            <span>Note</span>
+        </label>
+    </div>
+    <textarea class="w-full rounded-md bg-surface border border-line px-2 py-1.5 text-sm" rows="3"
+              placeholder="@Placeholder" disabled="@Busy" maxlength="400" @bind="note" @bind:event="oninput"></textarea>
+    <div class="flex items-center gap-2">
+        <button type="button" class="btn-primary text-xs px-2 py-1" disabled="@(Busy || !CanSave)" @onclick="SaveAsync">Save</button>
+        <button type="button" class="btn-neutral text-xs px-2 py-1" disabled="@Busy" @onclick="() => OnCancel.InvokeAsync()">Cancel</button>
+        <span class="text-[11px] text-content-subtle">@Hint</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>Raised with the kind and note; the host runs the command and answers true when it
+    /// landed (the form closes) or false (it stays open with the words intact).</summary>
+    [Parameter] public Func<TodoActivityKind, string?, Task<bool>> OnSave { get; set; } = (_, _) => Task.FromResult(false);
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private TodoActivityKind kind = TodoActivityKind.Chased;
+    private string note = "";
+
+    private bool CanSave => kind == TodoActivityKind.Chased || !string.IsNullOrWhiteSpace(note);
+
+    private string Placeholder => kind == TodoActivityKind.Chased
+        ? "What did you do? e.g. Emailed Justine for the payment certificate"
+        : "What happened? e.g. Justine says the certificate is with Dave for sign-off";
+
+    private string Hint => kind == TodoActivityKind.Chased
+        ? "Marks the item In progress. It stays open until they come back."
+        : "Recorded on the timeline; the item's state doesn't change.";
+
+    private async Task SaveAsync()
+    {
+        var saved = await OnSave(kind, string.IsNullOrWhiteSpace(note) ? null : note.Trim());
+        if (saved) await OnCancel.InvokeAsync();
+    }
+}

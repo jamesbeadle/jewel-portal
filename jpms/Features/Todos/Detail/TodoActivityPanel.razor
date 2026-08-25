@@ -1,0 +1,62 @@
+@namespace Jewel.JPMS.Features.Todos.Detail
+@inject ITodoStore Todos
+
+@* The item's timeline — every change, every logged chase, every email sent from this page,
+   newest first — so "I chased Justine on the 24th" is on record without the item being done.
+   The panel owns its read; the page owns the commands and bumps Version after each so the
+   story here catches up. Logging a chase or a note happens right here, under the header. *@
+
+<Panel Title="Timeline" BodyClass="p-5" IsLoading="@loading" Prominent="false">
+    <HeaderActions>
+        @if (CanLog && !formOpen)
+        {
+            <button type="button" class="btn-secondary text-xs px-2 py-1" disabled="@Busy" @onclick="() => formOpen = true">
+                Log a chase
+            </button>
+        }
+    </HeaderActions>
+    <ChildContent>
+        @if (formOpen)
+        {
+            <div class="mb-4">
+                <TodoProgressForm Busy="@Busy" OnSave="SaveAsync" OnCancel="() => formOpen = false" />
+            </div>
+        }
+
+        @if (failed)
+        {
+            <p class="text-sm text-negative">Couldn't load the timeline. The reason is in the red bar above.</p>
+        }
+        else if (rows.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">Nothing recorded yet.</p>
+        }
+        else
+        {
+            <ol class="space-y-3">
+                @foreach (var row in rows)
+                {
+                    <li class="flex gap-3 text-sm">
+                        <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full @DotClass(row.Kind)" aria-hidden="true"></span>
+                        <div class="min-w-0">
+                            <p class="text-content break-words">@row.Summary</p>
+                            <p class="text-[11px] text-content-subtle">
+                                @row.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")@(string.IsNullOrWhiteSpace(row.ActorEmail) ? "" : $" · {row.ActorEmail}")
+                            </p>
+                        </div>
+                    </li>
+                }
+            </ol>
+        }
+    </ChildContent>
+</Panel>
+
+@code {
+    private static string DotClass(TodoActivityKind kind) => kind switch
+    {
+        TodoActivityKind.Completed => "bg-positive",
+        TodoActivityKind.Chased or TodoActivityKind.EmailSent or TodoActivityKind.Started => "bg-amber-400",
+        TodoActivityKind.Created => "bg-info",
+        _ => "bg-line-strong",
+    };
+}

@@ -60,9 +60,7 @@ else
                     <p class="eyebrow mb-1">JPMS · <span class="font-mono">@item.Reference</span></p>
                     <div class="flex items-center gap-3">
                         <h1 class="text-2xl md:text-3xl font-semibold leading-tight @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">@item.Title</h1>
-                        <span class="shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @(item.IsComplete ? "bg-positive/10 text-positive" : "bg-accent/10 text-accent")">
-                            @(item.IsComplete ? "Done" : "Open")
-                        </span>
+                        <span class="@TodoStatus.PillBaseClass @TodoStatus.PillClass(item)">@TodoStatus.Label(item)</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
@@ -74,6 +72,12 @@ else
                                 class="btn-ghost text-negative @(deleteArmed ? "bg-negative/10 font-semibold" : "")">
                             @(deleteArmed ? "Delete this item? Click again to confirm" : "Delete")
                         </button>
+                    }
+                    @if (CanComplete && !item.IsComplete && !item.IsInProgress)
+                    {
+                        @* Open → In progress without a note: "I've picked this up." Chases and
+                           emails sent from this page move it along on their own. *@
+                        <button type="button" class="btn-secondary" disabled="@busy" @onclick="StartAsync">Working on it</button>
                     }
                     @if (CanComplete)
                     {
@@ -91,12 +95,14 @@ else
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                 <div class="lg:col-span-2">
-                    <TodoCommunicationsPanel Todo="@item" CanSend="@HasInternalRole" Projects="@ProjectPool" />
+                    <TodoCommunicationsPanel Todo="@item" CanSend="@HasInternalRole" CanFile="@CanTriage" Projects="@ProjectPool" />
                 </div>
                 <div class="space-y-6">
                     <TodoFactsPanel Item="@item" ScopeLabel="@ScopeLabel(item)" Busy="@busy"
                                     CanReassign="@CanManage" AssigneeOptions="@assigneeOptions" Reassign="@ReassignAsync"
                                     CanMove="@CanManage" MoveOptions="@MoveOptions" Move="@MoveAsync" />
+                    <TodoActivityPanel TodoItemId="@TodoItemId" Version="@activityVersion" Busy="@busy"
+                                       CanLog="@(CanComplete && !item.IsComplete)" LogProgress="@LogProgressAsync" />
                     <LinkedTodosPanel TodoItemId="@TodoItemId" />
                 </div>
             </div>

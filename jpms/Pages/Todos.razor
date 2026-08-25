@@ -254,6 +254,10 @@ else
                                 </p>
                                 <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
                                     <span class="whitespace-nowrap @(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
+                                    @if (item.IsInProgress)
+                                    {
+                                        <span class="inline-flex items-center rounded border border-amber-400/30 bg-amber-400/10 px-1.5 text-[10px] font-medium leading-4 whitespace-nowrap text-amber-400" title="Started — still open until it's marked done">In progress</span>
+                                    }
                                     @if (item.DueAt is not null)
                                     {
                                         <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>

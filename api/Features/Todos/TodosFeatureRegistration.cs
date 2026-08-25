@@ -41,6 +41,17 @@ public static class TodosFeatureRegistration
         services.AddScoped<AddGeneralTodoItemAuthorisation>();
         services.AddScoped<AddGeneralTodoItemValidation>();
 
+        // The timeline: every command above and below writes its line through the recorder (one
+        // save with the change); the page reads it back newest-first; progress logged by hand
+        // (Working on it / a chase / a note) is its own command. The email recorder is the
+        // mailbox compose handler's bridge — an email sent from the item's page is a line too.
+        services.AddScoped<TodoActivityRecorder>();
+        services.AddScoped<TodoEmailActivityRecorder>();
+        services.AddScoped<IQueryHandler<ListTodoActivity, IReadOnlyList<TodoActivity>>, ListTodoActivityHandler>();
+        services.AddScoped<ICommandHandler<LogTodoProgress, TodoItem>, LogTodoProgressHandler>();
+        services.AddScoped<LogTodoProgressAuthorisation>();
+        services.AddScoped<LogTodoProgressValidation>();
+
         services.AddScoped<ICommandHandler<UpdateTodoItem, TodoItem>, UpdateTodoItemHandler>();
         services.AddScoped<UpdateTodoItemAuthorisation>();
         services.AddScoped<UpdateTodoItemValidation>();
