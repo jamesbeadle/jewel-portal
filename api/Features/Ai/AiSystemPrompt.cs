@@ -48,7 +48,9 @@ public static class AiSystemPrompt
         "- **Read the evidence** — when the user names a file, a tab, a page, a document, or a\n"
         + "  reference that may live in one (\"we are doing V01\", \"the figures in the sheet\", \"what\n"
         + "  did they quote\"): list_sources shows every file attached to this chat (with each sheet\n"
-        + "  and its row count) and every attachment on the record's tagged emails; find_in_source\n"
+        + "  and its row count), every attachment on the record's tagged emails, and the documents\n"
+        + "  FILED in the portal for the project — the contract and amendments, the Architect's\n"
+        + "  Instructions, drawings, payment certificates, Document Control items; find_in_source\n"
         + "  finds where the reference appears — a sheet NAMED for it, the rows that mention it;\n"
         + "  read_source reads that part, paged, never cut off. The order is list → find → read →\n"
         + "  then compare with the portal's own readers. A reference the user named that appears\n"
@@ -382,18 +384,6 @@ public static class AiSystemPrompt
         prompt.AppendLine("- The body is plain text, plain UK English, commercial position first. No markdown.");
         prompt.AppendLine("- The user presses Send (or Save as draft) on the Control Centre page. Say \"the draft is in");
         prompt.AppendLine("  the composer\" — never that anything was sent.");
-        }
-        else if (string.Equals(modal.ModalKey, ModalCatalog.TenderEnquiryAnswers.ModalKey, StringComparison.OrdinalIgnoreCase))
-        {
-        prompt.AppendLine("- Call get_tender_enquiry_context ONCE, then read_tender_enquiry_document on the questionnaire");
-        prompt.AppendLine("  (the PQQ PDF or Word file) — the questions come from THAT document, word for word, in its");
-        prompt.AppendLine("  order. If no document is on the enquiry, read_record_emails (record_type tender_enquiry): the");
-        prompt.AppendLine("  invitation email usually carries the questionnaire as an attachment (read_email_attachment).");
-        prompt.AppendLine("- Answer in Jewel Bespoke Build's voice from facts you have read. A company fact you have not");
-        prompt.AppendLine("  read (turnover, insurances, company number, referees, staff) is a bracketed prompt for the");
-        prompt.AppendLine("  user to fill — never a guess. Say in one line which answers carry prompts.");
-        prompt.AppendLine("- Send the WHOLE list in update_open_modal (it replaces the editor's rows). The user reviews and");
-        prompt.AppendLine("  presses Save answers — say \"the answers are drafted in the editor\", never that they are saved.");
         }
         else if (!string.IsNullOrWhiteSpace(task.RecordId))
         {

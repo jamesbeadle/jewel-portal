@@ -189,4 +189,8 @@ rediscovered in the chat. This is what turns iterative feedback into a ratchet.
   `variation_edit_lines` (ProjectVariationDetail, reusing `VariationApprovePanel` with
   `SnapshotLines` / `ReplaceLines`) and `claim_progress` (`ClaimProgressDialog` on ProjectValuation);
   page notes on both pages; guides, labels, drift-check entries, `AiTaskScopeTests` facts.
-- Phase 3 (filed documents as sources) and Phase 4 (the regression harness) are next.
+- **Phase 3 — shipped 2026-08-25.** `AiFiledDocuments`: handles `contract:`, `amendment:`, `ai:`,
+  `drawing:`, `cert:`, `doc:`, `compliance:`; `list_sources` lists a project's filed documents
+  (current drawing revision each, `query` narrows), a variation's linked instructions and a
+  subcontractor's current compliance files; each kind gated by its download endpoint's RoleSet.
+- Phase 4 (the regression harness) is next.
