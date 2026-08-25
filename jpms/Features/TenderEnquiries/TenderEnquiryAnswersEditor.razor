@@ -113,6 +113,10 @@
     {
         if (!editing) StartEdit();
         if (Enquiry is null) return;
+        // A second press is a deliberate restart: end the live task first, or AiTaskState's
+        // same-task guard (which exists to stop the ASSISTANT restarting itself) would make the
+        // button a silent no-op.
+        EndTask();
         AiTasks.Start(
             new AiTask(
                 TaskKey: "tender-enquiry-answers",

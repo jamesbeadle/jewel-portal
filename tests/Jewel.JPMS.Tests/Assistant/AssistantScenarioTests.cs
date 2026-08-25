@@ -471,4 +471,69 @@ public sealed class AssistantScenarioTests
         Assert.DoesNotContain(harness.Db.AiConversationMessages.Where(m => m.ConversationId == conversation.ConversationId),
             m => m.Body == "First answer.");
     }
+
+    // ---- 2026-08-25, 14:31–14:33: the V2 build-up staged, then three fresh "the dialog is open
+    // beside me" conversations a minute apart, each billed — the model re-opened the dialog it
+    // was already sitting in, and every re-open restarted the task. ----
+
+    [Fact]
+    public async Task OpenModal_forTheDialogAlreadyOpenWithItsTask_isRefusedTowardsUpdateOpenModal()
+    {
+        using var harness = new AssistantHarness();
+        await SeedProjectsAsync(harness);
+        var id = await SeedVariationAsync(harness, 2, VariationOrderStatus.Quoting);
+        harness.Claude
+            .Then(ScriptedClaude.Call("open_modal", new { modal_key = "variation_build_up", record_id = id }))
+            .ThenSay("The schedule is already in the dialog.");
+
+        // The kick-off's scope: the build-up dialog for V2 is open and its task is live.
+        var scope = new AiScope(AbbotRoad, $"/projects/{AbbotRoad}/variations/{id}", "Variation Orders",
+            RecordType: "variation", RecordId: id,
+            Task: new AiTaskScope("variation-build-up", "variation_build_up", "Variation", id, "V2", "{}"));
+
+        var turn = await harness.SendAsync("The \"Agreed build-up\" dialog for V2 is open beside me. Stage it.", scope);
+
+        Assert.Empty(turn.UiActions);
+        var result = turn.LastToolResult("open_modal");
+        Assert.Contains("already open beside the user", result);
+        Assert.Contains("update_open_modal", result);
+        Assert.Equal(AiTurnStatus.Complete, turn.Status);
+    }
+
+    [Fact]
+    public async Task OpenModal_forTheSameDialogOnAnotherRecord_stillOpens()
+    {
+        using var harness = new AssistantHarness();
+        await SeedProjectsAsync(harness);
+        var v2 = await SeedVariationAsync(harness, 2, VariationOrderStatus.Quoting);
+        var v3 = await SeedVariationAsync(harness, 3, VariationOrderStatus.Quoting);
+        harness.Claude
+            .Then(ScriptedClaude.Call("open_modal", new { modal_key = "variation_build_up", record_id = v3 }))
+            .ThenSay("V3's build-up dialog is open.");
+
+        var scope = new AiScope(AbbotRoad, $"/projects/{AbbotRoad}/variations/{v2}", "Variation Orders",
+            RecordType: "variation", RecordId: v2,
+            Task: new AiTaskScope("variation-build-up", "variation_build_up", "Variation", v2, "V2", "{}"));
+
+        var turn = await harness.SendAsync("now do V3", scope);
+
+        var action = Assert.Single(turn.UiActions);
+        Assert.Equal("open_modal", action.Tool);
+    }
+
+    [Fact]
+    public async Task NavigateTo_carryingOpenModal_isRefusedTowardsOpenModal()
+    {
+        using var harness = new AssistantHarness();
+        await SeedProjectsAsync(harness);
+        var id = await SeedVariationAsync(harness, 2, VariationOrderStatus.Quoting);
+        harness.Claude
+            .Then(ScriptedClaude.Call("navigate_to", new { route = $"/projects/{AbbotRoad}/variations/{id}?openModal=variation_build_up", reason = "open the build-up" }))
+            .ThenSay("Opening it properly.");
+
+        var turn = await harness.SendAsync("stage V2's build-up", OnAbbotRoadRfis());
+
+        Assert.Empty(turn.UiActions);
+        Assert.Contains("navigate_to never opens a dialog", turn.LastToolResult("navigate_to"));
+    }
 }

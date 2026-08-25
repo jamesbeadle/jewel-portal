@@ -50,7 +50,14 @@ public sealed record MailboxMessageDetail(
     string? Subject = null,
     // The shared projects mailbox address. The composer filters it out of the reply-all prefill —
     // the server auto-Cc's it on every send, so showing it in the visible Cc is pure noise.
-    string? MailboxAddress = null);
+    string? MailboxAddress = null,
+    // The email's JPMS tags and pathway bucket AS THEY ARE NOW — the same split as MailboxMessage's
+    // Categories/Bucket, but read live from the message itself rather than the list page it was
+    // picked from. A list row goes stale the moment something tags the email while it stays open
+    // (System Actions' Create now raising a record from it); the Control Centre reconciles the
+    // open email against these. Null when the read couldn't reach the mailbox.
+    IReadOnlyList<string>? Categories = null,
+    string? Bucket = null);
 
 // One page of a live, server-side-filtered mailbox read. Graph pages these with an opaque cursor
 // (its own nextLink) rather than an offset, so NextCursor — when non-null — is passed straight back

@@ -179,6 +179,16 @@ rediscovered in the chat. This is what turns iterative feedback into a ratchet.
 
 ## Status
 
+- **Task re-entry guard — 2026-08-25, after the first live run.** The V2 build-up was staged
+  and then three fresh "the dialog is open beside me" conversations started a minute apart, each
+  billed: the model re-opened the dialog it was sitting in, the page honoured the fresh
+  `?openModal`, started a fresh task and queued a fresh kick-off, and the kick-off did the same
+  again. Three guards now: the server refuses an `open_modal` for the dialog the scope's task
+  already names (same modal, same record) and a `navigate_to` carrying `openModal=`;
+  `AiTaskState.Start` never queues a second kick-off for the task already active (a page that
+  wants a deliberate restart ends the task first). The harness pins both refusals and the
+  sibling case (the same dialog for another record still opens).
+
 - **Phase 1 — shipped 2026-08-25.** `AiAttachments` table + `ai-attachments` blob store (migration
   `20260825120000_AddAiAttachments`, script `api/Migrations/add-ai-attachments.sql`, retention via
   `infra/run-ai-attachments-lifecycle.sh`); `AiSourceReader` (parts, paged reads, search);

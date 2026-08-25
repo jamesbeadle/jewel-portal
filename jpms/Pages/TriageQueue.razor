@@ -395,6 +395,23 @@
                                     }
                                 </div>
                             }
+                            @* A queue email tagged while it stayed open (Create now raised a record
+                               from it) carries its filing here, exactly as the Tagged tab's rows do,
+                               until Apply reloads the queue and it leaves. Queue reads never return
+                               a tagged email, so this only ever lights up for that case. *@
+                            @if (item.Bucket is not null || item.Categories.Count > 0)
+                            {
+                                <div class="flex flex-wrap items-center gap-1 mt-1">
+                                    @if (PathwayFromBucket(item.Bucket) is { } queueRowPathway)
+                                    {
+                                        <span class="inline-flex items-center rounded-full @PathwayChipColour(queueRowPathway) text-[10px] font-medium px-2 py-0.5">@PathwayLabel(queueRowPathway)</span>
+                                    }
+                                    @foreach (var tag in item.Categories)
+                                    {
+                                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
+                                    }
+                                </div>
+                            }
                         </button>
                     }
 
@@ -779,6 +796,24 @@
                     }
 
                     @MessageHeader
+
+                    @* The filing this email already carries — only ever present on a queue email
+                       that was tagged while open (Create now), so the triager sees the record
+                       tag land without leaving the email. Managing tags stays on the Tagged tab. *@
+                    @if (selected.Bucket is not null || selected.Categories.Count > 0)
+                    {
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tagged</span>
+                            @if (FixedPathway is { } openEmailPathway)
+                            {
+                                <span class="inline-flex items-center rounded-full @PathwayChipColour(openEmailPathway) text-xs font-medium px-2.5 py-1">@PathwayLabel(openEmailPathway)</span>
+                            }
+                            @foreach (var tag in selected.Categories)
+                            {
+                                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2.5 py-1">@TagLabel(tag)</span>
+                            }
+                        </div>
+                    }
 
                     @MessageAttachments
 
@@ -2807,6 +2842,7 @@ else
             {
                 detail = loaded;
                 PrefillReplyEnvelope(item, loaded);
+                ReflectLiveTags(loaded);
             }
         }
         catch (OperationCanceledException) { /* superseded by a newer selection */ }
@@ -2816,6 +2852,47 @@ else
             if (selected?.Id == item.Id)
                 detailLoading = false;
         }
+    }
+
+    // The open email's tags as the mailbox holds them NOW, carried on the detail read, replace the
+    // copy the list page gave us: a row goes stale the moment something tags the email while it
+    // stays open — System Actions' Create now raising a record from it (2026-08-25: the defect was
+    // raised and the email tagged, but the Control Centre kept showing it untagged). The selected
+    // record and its list row are both swapped, so the queue row grows its chips and the pane's
+    // pathway follows the thread's real filing. A detail that couldn't read the tags changes nothing.
+    private void ReflectLiveTags(MailboxMessageDetail loaded)
+    {
+        if (loaded.Categories is null || selected is null || selected.Id != loaded.MessageId) return;
+        var hasSameTags = selected.Categories.SequenceEqual(loaded.Categories)
+            && string.Equals(selected.Bucket, loaded.Bucket, StringComparison.OrdinalIgnoreCase);
+        if (hasSameTags) return;
+
+        var refreshed = selected with { Categories = loaded.Categories, Bucket = loaded.Bucket };
+        selected = refreshed;
+        if (refreshed.Bucket is not null) pathway = PathwayFromBucket(refreshed.Bucket);
+        items = ReplaceRow(items, refreshed);
+        taggedItems = ReplaceRow(taggedItems, refreshed);
+        discardedItems = ReplaceRow(discardedItems, refreshed);
+        thread = ReplaceRow(thread, refreshed);
+    }
+
+    private static IReadOnlyList<MailboxMessage> ReplaceRow(IReadOnlyList<MailboxMessage> rows, MailboxMessage refreshed) =>
+        rows.Any(row => row.Id == refreshed.Id)
+            ? rows.Select(row => row.Id == refreshed.Id ? refreshed : row).ToList()
+            : rows;
+
+    // Re-read the open email's tags after an act that tagged it server-side while it stays selected
+    // (Create now). Only the tags are refreshed — the body, thread and every draft on the email are
+    // untouched, so nothing flickers and nothing staged is lost. Best-effort: a failed read leaves
+    // the row as it was, and Apply's queue reload reconciles it anyway.
+    private async Task RefreshSelectedTagsAsync(MailboxMessage anchor)
+    {
+        try
+        {
+            var loaded = await Intake.GetMessageDetailAsync(anchor.Id, anchor.InternetMessageId);
+            ReflectLiveTags(loaded);
+        }
+        catch { /* the row stays as it was; the next queue reload shows the truth */ }
     }
 
     // Fetch the selected email's whole conversation for the thread panel. Same cancellation shape as
@@ -3908,9 +3985,10 @@ else
                 return;
             }
             // The record exists and this email is tagged to it — surface it in Recently
-            // processed. The email stays selected: the rest of the triage (reply, tags,
-            // to-dos, the two Yes/No answers) still lands with Apply.
-            await LoadRecentTriageAsync();
+            // processed and show the tag on the email itself. The email stays selected: the
+            // rest of the triage (reply, tags, to-dos, the two Yes/No answers) still lands
+            // with Apply.
+            await Task.WhenAll(LoadRecentTriageAsync(), RefreshSelectedTagsAsync(anchor));
         }
         catch (CommandFailedException ex)
         {
@@ -4602,8 +4680,10 @@ else
             var selectedAtStart = selected;
             var candidates = await Intake.ListLinkableRecordsAsync(triageProjectId, recordType);
             // The selection can change while the lookup is in flight — a record resolved for the
-            // OLD email's project must never stage onto the new one.
-            if (!ReferenceEquals(selected, selectedAtStart))
+            // OLD email's project must never stage onto the new one. Compared by id: the same
+            // email is re-instanced when its live tags land (ReflectLiveTags), and that is not
+            // a change of selection.
+            if (selected?.Id != selectedAtStart?.Id)
             {
                 actionError = "The selected email changed while the assistant was staging a tag — "
                     + "nothing was staged. Ask it again on the right email.";
@@ -4901,7 +4981,11 @@ else
                 RecordReference: null),
             "{}");
         PublishReplyDraft();
-        Chat.Open();
+        // The panel opens only when the assistant is about to work in it (a kicked-off draft).
+        // A plain Reply press attaches the task silently — the triager asked for the Reply box,
+        // not the chat, and the task is already there for "draft this reply" whenever the panel
+        // is opened by hand.
+        if (withKickoff) Chat.Open();
     }
 
     /// <summary>Safe whenever no reply task is active. No coexistence change — the Reply box is

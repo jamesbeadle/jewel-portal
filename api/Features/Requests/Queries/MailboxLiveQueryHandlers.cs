@@ -127,9 +127,29 @@ public sealed class GetMailboxMessageDetailHandler : IQueryHandler<GetMailboxMes
             .ToList()
             .AsReadOnly();
 
+        var (workflowTags, bucket) = SplitLiveTags(content.Categories);
         return new MailboxMessageDetail(
             query.MessageId, body, content.IsHtml, attachments,
             content.FromEmail, content.FromName, content.To, content.Cc, content.ReplyTo, content.Subject,
-            MailboxAddress: string.IsNullOrWhiteSpace(options.Mailbox) ? null : options.Mailbox);
+            MailboxAddress: string.IsNullOrWhiteSpace(options.Mailbox) ? null : options.Mailbox,
+            Categories: workflowTags,
+            Bucket: bucket);
+    }
+
+    // The same split the list reads make (MailboxGraphClient.Parse): record tags become chips, the
+    // first pathway tag travels as Bucket, and the bare marker and the user's own Outlook categories
+    // are left out. Null categories (the reader didn't select them) stay null so the client can tell
+    // "no tags" from "not read".
+    private static (IReadOnlyList<string>? WorkflowTags, string? Bucket) SplitLiveTags(IReadOnlyList<string>? categories)
+    {
+        if (categories is null) return (null, null);
+        var workflowTags = new List<string>();
+        string? bucket = null;
+        foreach (var category in categories.Where(TriageCategories.IsWorkflowTag))
+        {
+            if (TriageCategories.IsBucketTag(category)) { bucket ??= category; continue; }
+            workflowTags.Add(category);
+        }
+        return (workflowTags, bucket);
     }
 }
