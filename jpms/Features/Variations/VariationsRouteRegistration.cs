@@ -77,6 +77,11 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/variation-orders/{voId}/revise-lines",
                 command => $"/api/variation-orders/{((ReviseVariationOrderLines)command).VariationOrderId}/revise-lines"));
 
+        // The agreed build-up staged before approval.
+        commands.Register<StageVariationOrderBuildUp, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/build-up",
+                command => $"/api/variation-orders/{((StageVariationOrderBuildUp)command).VariationOrderId}/build-up"));
+
         // Direct moves between the side-effect-free stages (Quoting, Issued) — the status pill.
         commands.Register<SetVariationOrderStatus, VariationOrder>(
             new CommandRoute("POST", "/api/variation-orders/{voId}/status",

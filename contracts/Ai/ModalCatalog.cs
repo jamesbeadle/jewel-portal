@@ -749,20 +749,26 @@ public static class ModalCatalog
         });
 
     /// <summary>
-    /// The PQQ response editor on a tender enquiry's page — the questionnaire's numbered questions
-    /// with Jewel's answer under each. Page-anchored like tender_reply: the user presses "Draft
-    /// with AI" on the PQQ tab and the editor is already open beside the chat; the assistant reads
-    /// the questionnaire as received (get_tender_enquiry_context → read_tender_enquiry_document),
-    /// lifts the questions and drafts the answers. The user reviews and presses Save themselves.
+    /// The "Agreed build-up" dialog on a PRE-approval variation's page (2026-08-25, rebuilt from the
+    /// lost 2026-08-22 design): "update the draft VO to these client-agreed details" on an Issued
+    /// variation — the assistant reads the agreed spreadsheet or email, stages the priced lines
+    /// (and the narratives) here, and the user presses Stage build-up. Nothing reaches the
+    /// Valuation Report: the staged total becomes the estimate and the approve modal opens
+    /// pre-seeded with the lines, so approval is a check. Once approved, variation_edit_lines
+    /// is the dialog instead.
     /// </summary>
-    public static readonly ModalDescriptor TenderEnquiryAnswers = new(
-        "tender_enquiry_answers",
-        "PQQ response",
-        "It drafts Jewel's response to an architect's pre-qualification questionnaire: the questions "
-        + "exactly as the architect asked them, each with Jewel's answer beneath. The editor is already "
-        + "open beside the chat with whatever has been typed so far — send the complete list; the user "
-        + "reviews every answer and presses Save answers themselves.",
-        "/tender-enquiries/{record}",
+    public static readonly ModalDescriptor VariationBuildUp = new(
+        "variation_build_up",
+        "Agreed build-up",
+        "It stages the client-agreed priced build-up on a variation that is NOT yet approved — "
+        + "Quoting, Issued or Awaiting AI — one line per cost centre, plus the VO document's "
+        + "narrative sections. Read the variation first (get_variation_context) and the evidence "
+        + "the user named (the agreed spreadsheet tab, the client's email — find_in_source, "
+        + "read_source), then send the whole schedule in ONE update. The lines sent REPLACE the "
+        + "dialog's list; their total becomes the variation's estimate when the user presses "
+        + "Stage build-up, and the approve modal opens pre-seeded with them. Nothing is written "
+        + "to the Valuation Report — that happens at approval, by the user.",
+        "/projects/{project}/variations/{record}",
         new[]
         {
             Role.Admin,
@@ -772,23 +778,28 @@ public static class ModalCatalog
         },
         new ModalField[]
         {
-            new("answers", "array",
-                "The complete questionnaire as it should stand — this replaces the editor's list, so "
-                + "carry every existing row forward (edited or not) and keep the architect's order. "
-                + "Questions come from the questionnaire document or email, numbering stripped, wording "
-                + "kept. Answers are plain UK English in Jewel Bespoke Build's own voice, first person "
-                + "plural, no markdown. Only state facts you have READ — in the enquiry, its documents, "
-                + "its emails, the conversation, or a loaded skill. Where a question needs a fact you "
-                + "do not have (turnover, insurance limits, company number, referees, staff numbers), "
-                + "write the answer's frame and leave the figure as a bracketed prompt such as "
-                + "[turnover FY2025], and say which ones you left for the user. Never invent an "
-                + "accreditation, a figure, a client or a project.",
+            new("lines", "array",
+                "The complete agreed schedule — this replaces the dialog's list. Every line needs a "
+                + "cost centre code from list_cost_codes. Quantity × rate is the line's value, NET of "
+                + "VAT; a negative rate is an omit. Only figures the evidence actually states.",
                 Required: true,
                 ItemFields: new ModalField[]
                 {
-                    new("question", "string", "The question as the architect asked it, without its number.", Required: true),
-                    new("answer", "string", "Jewel's answer, plain text. Blank lines between paragraphs.")
-                })
+                    new("costCode", "string",
+                        "The cost centre code, exactly as list_cost_codes returned it.", Required: true),
+                    new("description", "string", "What the line is — the agreed wording, short.", Required: true),
+                    new("quantity", "number", "The quantity as a plain number (1 for a lump sum).", Required: true),
+                    new("rate", "number",
+                        "The rate per unit in GBP as a plain number, NET of VAT. Negative for an omit.",
+                        Required: true)
+                }),
+            new("commercialBasis", "string",
+                "The VO document's commercial basis — what the price is based on. Leave it out to keep "
+                + "what stands."),
+            new("programmeImpact", "string",
+                "The VO document's programme impact. Leave it out to keep what stands."),
+            new("exclusions", "string",
+                "What the VO expressly does not price. Leave it out to keep what stands.")
         });
 
     public static IReadOnlyList<ModalDescriptor> All { get; } =
@@ -796,7 +807,7 @@ public static class ModalCatalog
         {
             VariationDraft, ManualVariation, ComposeEmail, ReplyEmail, BidPackageDetails, TenderReply,
             ManualTimesheet, RecordAbsence, WorkerWeek, WorkOrderEdit, WorkOrderCreate,
-            VariationEditLines, ClaimProgress, TenderEnquiryAnswers
+            VariationEditLines, ClaimProgress, VariationBuildUp
         };
 
     public static ModalDescriptor? Find(string? modalKey) =>

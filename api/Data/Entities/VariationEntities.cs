@@ -41,6 +41,12 @@ public sealed class VariationOrderEntity
     [MaxLength(4000)]    public string? ProgrammeImpact { get; set; }
     [MaxLength(4000)]    public string? Exclusions { get; set; }
 
+    // The agreed build-up STAGED before approval (2026-08-25): the client-agreed priced lines,
+    // as JSON, captured on an Issued / Awaiting-AI variation so the approve modal opens
+    // pre-seeded and the estimate already reads the agreed figure. Consumed (cleared) by
+    // approval, which writes the real lines onto the Valuation Report. Null when nothing is staged.
+    public string? DraftLinesJson { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     [MaxLength(256)]     public string CreatedByEmail { get; set; } = "";
     public DateTimeOffset? IssuedAt { get; set; }

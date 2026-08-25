@@ -59,7 +59,13 @@ public sealed record VariationOrder(
     // (and after) issue, the same rule as the title.
     string? CommercialBasis = null,   // pricing basis: tender-face position, rate basis, OH&P…
     string? ProgrammeImpact = null,   // effect on the programme (procurement, mobilisation, duration)
-    string? Exclusions = null)        // what this VO expressly does not price
+    string? Exclusions = null,        // what this VO expressly does not price
+    // ---- The agreed build-up staged before approval (2026-08-25) ------------------------------
+    // The client-agreed priced lines captured on an Issued / Awaiting-AI variation (the
+    // "Agreed build-up" panel, or the assistant's variation_build_up dialog). Their total is the
+    // estimate; approval opens pre-seeded with them and consumes them. Null when nothing is
+    // staged, and null once approved.
+    IReadOnlyList<Jewel.JPMS.Contracts.Variations.VariationLineInput>? DraftLines = null)
 {
     /// <summary>What a user sees this variation called, at every stage: "V72".
     ///

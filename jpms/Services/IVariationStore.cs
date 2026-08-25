@@ -76,4 +76,12 @@ public interface IVariationStore
     /// <summary>Re-states an approved variation's priced lines (add / edit / remove) without
     /// un-approving it; the report lines, CVR and per-centre budgets move by the difference.</summary>
     Task<VariationOrder> ReviseVariationOrderLinesAsync(string variationOrderId, IReadOnlyList<VariationLineInput> lines, CancellationToken cancellationToken = default);
+
+    /// <summary>Stages the client-agreed build-up on a PRE-approval variation: the lines (their
+    /// total becomes the estimate; an empty list clears the staging) and the VO document's
+    /// narrative sections (null keeps, whitespace clears). Nothing reaches the Valuation Report.</summary>
+    Task<VariationOrder> StageBuildUpAsync(
+        string variationOrderId, IReadOnlyList<VariationLineInput> lines,
+        string? commercialBasis, string? programmeImpact, string? exclusions,
+        CancellationToken cancellationToken = default);
 }

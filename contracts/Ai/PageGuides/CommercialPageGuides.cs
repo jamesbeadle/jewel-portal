@@ -32,12 +32,13 @@ public static class CommercialPageGuides
             + "Architect's Instruction is linked. The Communications panel reads the tagged mail "
             + "(read_record_emails works here) with reply/forward and \"Find & tag emails\". "
             + "get_variation_context reads the whole record in one call — header, request, the "
-            + "approved lines with their ids, work orders. One dialog is registered here: "
-            + "open_modal \"variation_edit_lines\" (record_id = the variation's id) opens the "
-            + "post-approval Edit lines dialog pre-filled with the current build-up so you can "
-            + "send the corrected schedule from the evidence — the user presses Save lines. It "
-            + "exists only once the variation is Approved; before that, its value is set in the "
-            + "approve modal by hand.",
+            + "approved lines with their ids, work orders. Two dialogs are registered here, one per "
+            + "side of approval: BEFORE it, open_modal \"variation_build_up\" (record_id = the "
+            + "variation's id) opens the Agreed build-up dialog — stage the client-agreed priced lines "
+            + "and narratives from the evidence, the user presses Stage build-up, the total becomes "
+            + "the estimate and the approve modal opens pre-seeded; AFTER it, open_modal "
+            + "\"variation_edit_lines\" opens Edit lines pre-filled with the real build-up so you can "
+            + "send the corrected schedule — the user presses Save lines.",
             Aliases: new[] { "/projects/{project}/voq/{variationOrderId}" }),
 
         new("/projects/{project}/valuation", "Valuation Report",

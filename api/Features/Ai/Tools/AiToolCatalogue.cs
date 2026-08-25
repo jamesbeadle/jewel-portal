@@ -61,7 +61,6 @@ public static class AiToolCatalogue
             .Concat(AiRecordTools.Build())
             .Concat(AiSourceTools.Build())
             .Concat(AiCommercialTools.Build())
-            .Concat(AiTenderEnquiryTools.Build())
             .Concat(AiSkillTools.Build())
             .Concat(AiPageGuideTools.Build())
             .ToList();
@@ -1229,25 +1228,32 @@ public static class AiToolCatalogue
                 + "\"claim_progress\" sets cumulative % complete on lines of the Valuation Report's selected "
                 + "Draft claim — it takes project_id but NO record_id; read get_valuation_context first "
                 + "(line ids, current and previous %, which claim is selected and whether it is Draft), "
-                + "then send only the lines whose % should change.",
+                + "then send only the lines whose % should change; "
+                + "\"variation_build_up\" stages the client-AGREED priced build-up on a variation that is NOT "
+                + "yet approved (Quoting, Issued, Awaiting AI) — \"update the draft VO to the agreed details\" — "
+                + "and needs that variation's id as record_id (get_variation_context resolves \"V80\"); read "
+                + "the agreed spreadsheet or email first (find_in_source / read_source), then send the whole "
+                + "schedule (and any narrative) in one update — the user presses Stage build-up, the total "
+                + "becomes the estimate, and approval opens pre-seeded with the lines.",
                 AiToolSchema.Object(
                     ("modal_key", "string",
                         "One of: \"variation_draft\", \"manual_variation\", \"compose_email\", "
                         + "\"reply_email\", \"bid_package_details\", \"worker_week\", "
                         + "\"manual_timesheet\", \"record_absence\", \"work_order_edit\", "
-                        + "\"work_order_create\", \"variation_edit_lines\", \"claim_progress\".", true),
+                        + "\"work_order_create\", \"variation_edit_lines\", \"claim_progress\", "
+                        + "\"variation_build_up\".", true),
                     ("record_id", "string",
                         "The record the dialog works from — REQUIRED for variation_draft (the request id, from "
                         + "find_by_reference or list_requests), for bid_package_details (the bid package id), "
-                        + "for work_order_edit (the work order id, from get_work_order_context) and for "
-                        + "variation_edit_lines (the variation's id, from get_variation_context or "
-                        + "find_by_reference). Omit for every other dialog.", false),
+                        + "for work_order_edit (the work order id, from get_work_order_context), and for "
+                        + "variation_edit_lines and variation_build_up (the variation's id, from "
+                        + "get_variation_context or find_by_reference). Omit for every other dialog.", false),
                     ("project_id", "string",
                         "Defaults to the project in view — but on a whole-company page (the To-dos page, the "
                         + "Control Centre, the Labour overview) there IS no project in view, so a project "
                         + "dialog opened from one needs it passed explicitly (list_projects returns ids). For "
                         + "the record dialogs (variation_draft, bid_package_details, work_order_edit, "
-                        + "variation_edit_lines) the server fills it in from the record itself, so record_id "
+                        + "variation_edit_lines, variation_build_up) the server fills it in from the record itself, so record_id "
                         + "is what matters there. claim_progress needs it unless the user is on one of that "
                         + "project's pages. Omit for the whole-company dialogs: compose_email, reply_email, "
                         + "worker_week, record_absence.", false),

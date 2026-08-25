@@ -125,6 +125,18 @@ public sealed class HttpVariationStore : IVariationStore
         return order;
     }
 
+    public async Task<VariationOrder> StageBuildUpAsync(
+        string variationOrderId, IReadOnlyList<VariationLineInput> lines,
+        string? commercialBasis, string? programmeImpact, string? exclusions,
+        CancellationToken cancellationToken = default)
+    {
+        // StagedByEmail is stamped from the signed-in user server-side.
+        var order = await commands.SendAsync(
+            new StageVariationOrderBuildUp(variationOrderId, lines, commercialBasis, programmeImpact, exclusions), cancellationToken);
+        OnChange?.Invoke();
+        return order;
+    }
+
     public Task<IReadOnlyList<SubcontractorVariationRequest>> ListVariationRequestsForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListVariationRequestsForProject(projectId), cancellationToken);
 

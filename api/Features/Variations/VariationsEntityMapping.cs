@@ -28,7 +28,8 @@ internal static class VariationsEntityMapping
         RejectedAt: entity.RejectedAt,
         CommercialBasis: entity.CommercialBasis,
         ProgrammeImpact: entity.ProgrammeImpact,
-        Exclusions: entity.Exclusions);
+        Exclusions: entity.Exclusions,
+        DraftLines: VariationDraftLines.Parse(entity.DraftLinesJson));
 
     public static BidPackage ToModel(this BidPackageEntity entity) => new(
         entity.BidPackageId, entity.ProjectId, entity.Title, entity.Trade,

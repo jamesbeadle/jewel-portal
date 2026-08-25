@@ -398,25 +398,6 @@ public sealed class AiTurnRunner
                 + "then open the reply.");
         }
 
-        // tender_reply is anchored to a specific tender EMAIL, which only the bid package page can
-        // supply — opening it by navigation would land on the page with no composer showing. When
-        // the task is live the composer is already open; there is nothing for open_modal to do.
-        if (string.Equals(modal.ModalKey, ModalCatalog.TenderReply.ModalKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return Fail("tender_reply can't be opened from here — the user opens it from a tender "
-                + "extraction's \"Draft supplier reply\", and it is already open beside you when that "
-                + "task is running. Use update_open_modal to fill it.");
-        }
-
-        // Same for the PQQ editor: it is a pane on the enquiry's PQQ tab, opened by the page's own
-        // "Draft with AI"; when the task is live it is already open beside the chat.
-        if (string.Equals(modal.ModalKey, ModalCatalog.TenderEnquiryAnswers.ModalKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return Fail("tender_enquiry_answers can't be opened from here — the user opens it with "
-                + "\"Draft with AI\" on the enquiry's PQQ response tab, and it is already open beside you "
-                + "when that task is running. Use update_open_modal to fill it.");
-        }
-
         var needsRecord = modal.RouteTemplate.Contains("{record}", StringComparison.Ordinal);
         if (!needsRecord) return null;
 
@@ -427,7 +408,7 @@ public sealed class AiTurnRunner
                 + "package id (the record in view, or get_bid_package_context) for bid_package_details, "
                 + "the work order id (get_work_order_context, which resolves \"WO-0045\") for "
                 + "work_order_edit, the variation's id (get_variation_context, which resolves \"V01\") "
-                + "for variation_edit_lines. Do not invent one.");
+                + "for variation_edit_lines and variation_build_up. Do not invent one.");
         }
 
         // The record must actually exist before anyone navigates — the failure the model must see
@@ -499,6 +480,41 @@ public sealed class AiTurnRunner
             return null;
         }
 
+        if (string.Equals(modal.ModalKey, ModalCatalog.VariationBuildUp.ModalKey, StringComparison.OrdinalIgnoreCase))
+        {
+            var order = await context.VariationOrders.AsNoTracking()
+                .Where(row => row.VariationOrderId == recordId)
+                .Select(row => new { row.Number, row.Status })
+                .FirstOrDefaultAsync(ct);
+            if (order is null)
+            {
+                return Fail($"No variation exists with id \"{recordId}\" — that is not a real record id. "
+                    + "get_variation_context (by reference, e.g. V80) or find_by_reference returns the "
+                    + "actual id. Do not invent one.");
+            }
+            // Staging is a pre-approval act: once approved the lines are real and variation_edit_lines
+            // is the dialog; a rejected variation is closed.
+            var status = (VariationOrderStatus)order.Status;
+            if (status is VariationOrderStatus.Approved or VariationOrderStatus.Rejected)
+            {
+                return Fail($"V{order.Number} is {status}, so a build-up can't be staged on it — "
+                    + (status == VariationOrderStatus.Approved
+                        ? "its lines are real now: use variation_edit_lines to change them."
+                        : "a rejected variation is closed; say so to the user."));
+            }
+            return null;
+        }
+
+        // tender_reply is anchored to a specific tender EMAIL, which only the bid package page can
+        // supply — opening it by navigation would land on the page with no composer showing. When
+        // the task is live the composer is already open; there is nothing for open_modal to do.
+        if (string.Equals(modal.ModalKey, ModalCatalog.TenderReply.ModalKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return Fail("tender_reply can't be opened from here — the user opens it from a tender "
+                + "extraction's \"Draft supplier reply\", and it is already open beside you when that "
+                + "task is running. Use update_open_modal to fill it.");
+        }
+
         // A record dialog this validator doesn't know which table to check — let it through rather
         // than refuse a real id. The client still refuses loudly for anything actually wrong, and
         // a stale id lands on the record page's own not-found handling, never silently nowhere.
@@ -511,7 +527,8 @@ public sealed class AiTurnRunner
         string.Equals(modalKey, ModalCatalog.VariationDraft.ModalKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(modalKey, ModalCatalog.BidPackageDetails.ModalKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(modalKey, ModalCatalog.WorkOrderEdit.ModalKey, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(modalKey, ModalCatalog.VariationEditLines.ModalKey, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(modalKey, ModalCatalog.VariationEditLines.ModalKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(modalKey, ModalCatalog.VariationBuildUp.ModalKey, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Completes a validated open_modal's arguments with what the server KNOWS: a record dialog's
@@ -560,7 +577,8 @@ public sealed class AiTurnRunner
                     .Select(row => row.ProjectId)
                     .FirstOrDefaultAsync(ct);
             }
-            else if (string.Equals(modalKey, ModalCatalog.VariationEditLines.ModalKey, StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(modalKey, ModalCatalog.VariationEditLines.ModalKey, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(modalKey, ModalCatalog.VariationBuildUp.ModalKey, StringComparison.OrdinalIgnoreCase))
             {
                 projectId = await context.VariationOrders.AsNoTracking()
                     .Where(row => row.VariationOrderId == recordId)
@@ -760,7 +778,7 @@ public sealed class AiTurnRunner
 
         if (!AiRecordTools.TryMapRecordType(typeText, out var recordType))
             return Fail($"\"{typeText}\" is not a taggable record type. Use one of: request, "
-                + "bid_package, variation, variation_quote, work_order, todo, defect, lad, scheduling, tender_enquiry.");
+                + "bid_package, variation, variation_quote, work_order, todo, defect, lad, scheduling.");
 
         // Where the record lives in a table this side, verify it exists ON THE PROJECT CLAIMED —
         // a right id with the wrong project is exactly the V80-on-three-projects mistake.

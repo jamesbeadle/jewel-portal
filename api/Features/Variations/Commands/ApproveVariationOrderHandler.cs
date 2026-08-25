@@ -207,6 +207,9 @@ public sealed class ApproveVariationOrderHandler : ICommandHandler<ApproveVariat
 
         // 4) Advance the order.
         order.Status = (int)VariationOrderStatus.Approved;
+        // The staged build-up is consumed: approval has written the real lines, and a stale
+        // staging would re-seed a later Edit lines / re-approval with figures already superseded.
+        order.DraftLinesJson = null;
         order.ApprovedAt = now;
         order.ApprovedByEmail = command.ApprovedByEmail;
         order.RejectedAt = null;

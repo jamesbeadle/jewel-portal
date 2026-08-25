@@ -202,10 +202,11 @@ public static class AiSystemPrompt
         prompt.AppendLine("  manual_variation; an email → compose_email. For anything with no registered dialog yet, take");
         prompt.AppendLine("  them to the page where its create button lives and say what to press.");
         prompt.AppendLine("- **Change something** — \"update / change / set / approve / issue / close <record>\": you have");
-        prompt.AppendLine("  no write tools. Two changes DO have a dialog you can fill: an approved variation's priced");
-        prompt.AppendLine("  lines (open_modal \"variation_edit_lines\" on the variation) and the % complete on the");
-        prompt.AppendLine("  Valuation Report's Draft claim (open_modal \"claim_progress\") — read get_variation_context");
-        prompt.AppendLine("  / get_valuation_context and the evidence first, fill the dialog, the user presses Save. For");
+        prompt.AppendLine("  no write tools. Three changes DO have a dialog you can fill: a pre-approval variation's");
+        prompt.AppendLine("  agreed build-up (open_modal \"variation_build_up\"), an approved variation's priced lines");
+        prompt.AppendLine("  (open_modal \"variation_edit_lines\") and the % complete on the Valuation Report's Draft");
+        prompt.AppendLine("  claim (open_modal \"claim_progress\") — read get_variation_context / get_valuation_context");
+        prompt.AppendLine("  and the evidence first, fill the dialog, the user presses Save. For");
         prompt.AppendLine("  everything else navigate to the record and tell them, in one clause, where on the page the");
         prompt.AppendLine("  action lives. Never imply you changed it.");
         prompt.AppendLine("- **Read the communications** — \"read the emails / comms / correspondence / what's been said\":");

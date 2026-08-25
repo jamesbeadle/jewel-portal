@@ -193,4 +193,14 @@ rediscovered in the chat. This is what turns iterative feedback into a ratchet.
   `drawing:`, `cert:`, `doc:`, `compliance:`; `list_sources` lists a project's filed documents
   (current drawing revision each, `query` narrows), a variation's linked instructions and a
   subcontractor's current compliance files; each kind gated by its download endpoint's RoleSet.
-- Phase 4 (the regression harness) is next.
+- **Phase 4 — shipped 2026-08-25.** `tests/Jewel.JPMS.Tests/Assistant/`: `AssistantHarness` runs
+  the real `AiTurnRunner` (real tools, validation, transcript and turn context, in-memory
+  `JpmsContext`) with a scripted Claude; `AssistantScenarioTests` replays each live failure as the
+  tool calls the model made that day and asserts the server's answer. New failure → new scenario.
+  What it cannot test is the model's own choice of tool; that stays the post-deploy smoke.
+- **Pre-approval build-up — rebuilt 2026-08-25** (the 2026-08-22 design lost with commit c81a0a2):
+  `DraftLinesJson` on `VariationOrderQuotes` (migration `20260825130000_AddVariationOrderDraftLines`,
+  script `api/Migrations/add-variation-draft-lines.sql`), `StageVariationOrderBuildUp`
+  (`POST /api/variation-orders/{voId}/build-up`), `VariationOrder.DraftLines`, the
+  `variation_build_up` dialog and the "Agreed build-up (staged)" panel on ProjectVariationDetail;
+  approval opens pre-seeded and consumes the staging.

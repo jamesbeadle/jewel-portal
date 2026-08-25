@@ -208,6 +208,9 @@ internal static class AiCommercialTools
                             percentCompleteOnLatestClaim = entries.TryGetValue(row.ValuationLineItemId, out var percent) ? percent : (decimal?)null
                         }).ToList(),
                         linesTotal = lines.Sum(row => row.LineAmount),
+                        draftLines = Variations.VariationDraftLines.Parse(order.DraftLinesJson)?
+                            .Select(line => new { line.CostCode, line.Description, line.Quantity, line.Rate, amount = line.Quantity * line.Rate })
+                            .ToList(),
                         costCentres = lines.GroupBy(row => row.CostCode)
                             .Select(group => new { costCode = group.Key, amount = group.Sum(row => row.LineAmount) })
                             .ToList(),
@@ -226,9 +229,13 @@ internal static class AiCommercialTools
                               + "valuationLineItemId. To change the % complete, get_valuation_context then "
                               + "open_modal \"claim_progress\" on the Valuation Report. Neither writes until the "
                               + "user presses Save."
-                            : "Not yet approved, so no lines stand on the Valuation Report. Its value is set at "
-                              + "approval on its own page (Approve & raise VO); there is no dialog for that yet — "
-                              + "take the user there and give them the figures."
+                            : status == VariationOrderStatus.Rejected
+                                ? "Rejected — closed; nothing stands on the Valuation Report and nothing can be staged."
+                                : "Not yet approved, so no lines stand on the Valuation Report. To stage the client-agreed "
+                                  + "build-up (lines and narratives), open_modal \"variation_build_up\" with this "
+                                  + "variationOrderId as record_id and send the whole schedule; the user presses Stage "
+                                  + "build-up, the total becomes the estimate, and the approve modal opens pre-seeded. "
+                                  + "The staged lines, if any, are under draftLines."
                     });
                 }),
 

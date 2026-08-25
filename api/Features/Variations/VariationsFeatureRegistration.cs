@@ -53,6 +53,11 @@ public static class VariationsFeatureRegistration
         services.AddScoped<ReviseVariationOrderLinesAuthorisation>();
         services.AddScoped<ReviseVariationOrderLinesValidation>();
 
+        // The agreed build-up staged before approval (2026-08-25).
+        services.AddScoped<ICommandHandler<StageVariationOrderBuildUp, VariationOrder>, StageVariationOrderBuildUpHandler>();
+        services.AddScoped<StageVariationOrderBuildUpAuthorisation>();
+        services.AddScoped<StageVariationOrderBuildUpValidation>();
+
         services.AddScoped<ICommandHandler<SetVariationOrderStatus, VariationOrder>, SetVariationOrderStatusHandler>();
         services.AddScoped<SetVariationOrderStatusAuthorisation>();
         services.AddScoped<SetVariationOrderStatusValidation>();

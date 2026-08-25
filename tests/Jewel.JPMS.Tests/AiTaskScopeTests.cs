@@ -122,11 +122,9 @@ public sealed class AiTaskScopeTests
                 Assert.Contains(token.Value, new[] { "{project}", "{record}" });
             }
 
-            // A PROJECT record in the path needs its project segment to build the route at all.
-            // (Company-wide record pages — /tender-enquiries/{record} — carry no project; the
-            // client substitutes the two placeholders independently.)
+            // A record in the PATH needs its project segment to build the route at all.
             var stem = modal.RouteTemplate.Split('?')[0];
-            if (stem.Contains("{record}", StringComparison.Ordinal) && stem.StartsWith("/projects/", StringComparison.Ordinal))
+            if (stem.Contains("{record}", StringComparison.Ordinal))
                 Assert.Contains("{project}", stem);
         }
     }
@@ -255,5 +253,25 @@ public sealed class AiTaskScopeTests
         var itemRequired = entries.GetProperty("items").GetProperty("required").EnumerateArray().Select(value => value.GetString()).ToList();
         Assert.Contains("valuationLineItemId", itemRequired);
         Assert.Contains("percentComplete", itemRequired);
+    }
+
+    [Fact]
+    public void VariationBuildUp_isRegistered_forThePreApprovalSide_withTheSameRolesAsEditLines()
+    {
+        var modal = ModalCatalog.Find("variation_build_up");
+        Assert.NotNull(modal);
+        Assert.Equal("/projects/{project}/variations/{record}", modal!.RouteTemplate);
+        Assert.Equal(ModalCatalog.VariationEditLines.OpenableBy, modal.OpenableBy);
+
+        // VariationApprovePanel.SnapshotLines emits lines[] of {costCode, description, quantity,
+        // rate}; the page adds commercialBasis / programmeImpact / exclusions. Same names here.
+        var json = JsonSerializer.Serialize(ModalCatalog.SchemaFor(modal));
+        using var document = JsonDocument.Parse(json);
+        var properties = document.RootElement.GetProperty("properties");
+        foreach (var field in new[] { "lines", "commercialBasis", "programmeImpact", "exclusions" })
+            Assert.True(properties.TryGetProperty(field, out _), $"missing field: {field}");
+        var item = properties.GetProperty("lines").GetProperty("items").GetProperty("properties");
+        foreach (var field in new[] { "costCode", "description", "quantity", "rate" })
+            Assert.True(item.TryGetProperty(field, out _), $"missing line field: {field}");
     }
 }
