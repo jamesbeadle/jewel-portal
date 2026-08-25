@@ -7,6 +7,7 @@ using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -33,14 +34,23 @@ public sealed class AssistantHarness : IDisposable
     public SignedInUser User { get; }
 
     private readonly ServiceProvider services;
+    private readonly ServiceProvider collectorServices;
     private readonly AiTurnRunner runner;
+    public AiReplyCollector Collector { get; }
 
-    public AssistantHarness(SignedInUser? user = null)
+    /// <param name="inlineWait">How long a hop waits for the scripted reply before answering
+    /// Pending — the production value is twenty seconds; a scenario proving the collect path sets
+    /// it to milliseconds and scripts a reply slower than that.</param>
+    public AssistantHarness(SignedInUser? user = null, TimeSpan? inlineWait = null)
     {
         User = user ?? new SignedInUser("qs@jewelbb.co.uk", "Test QS", new[] { Role.QuantitySurveyor });
 
+        // One explicit root shared by both providers below: the store is then shared by
+        // construction, not by the accident of two option sets hashing alike.
+        var databaseName = "assistant-" + Guid.NewGuid().ToString("N");
+        var root = new InMemoryDatabaseRoot();
         var options = new DbContextOptionsBuilder<JpmsContext>()
-            .UseInMemoryDatabase("assistant-" + Guid.NewGuid().ToString("N"))
+            .UseInMemoryDatabase(databaseName, root)
             .Options;
         Db = new JpmsContext(options);
 
@@ -53,7 +63,19 @@ public sealed class AssistantHarness : IDisposable
         collection.AddSingleton<IClaudeConversationClient>(Claude);
         services = collection.BuildServiceProvider();
 
-        runner = new AiTurnRunner(Db, Claude, services.GetRequiredService<AgentActivityLog>(), services);
+        // The collector's background task writes the answer through a scope of its own, as it does
+        // in production — a SEPARATE context on the same in-memory store, never the harness's Db,
+        // which the hop being collected may be using at that very moment.
+        var collectorCollection = new ServiceCollection();
+        collectorCollection.AddDbContext<JpmsContext>(builder => builder.UseInMemoryDatabase(databaseName, root));
+        collectorServices = collectorCollection.BuildServiceProvider();
+        Collector = new AiReplyCollector(
+            collectorServices.GetRequiredService<IServiceScopeFactory>(), NullLogger<AiReplyCollector>.Instance)
+        {
+            InlineWait = inlineWait ?? TimeSpan.FromSeconds(20)
+        };
+
+        runner = new AiTurnRunner(Db, Claude, services.GetRequiredService<AgentActivityLog>(), services, Collector);
     }
 
     /// <summary>Starts a conversation on a route and sends one user message, pumping hops the way
@@ -64,6 +86,51 @@ public sealed class AssistantHarness : IDisposable
             ? await StartConversationAsync(scope)
             : await Db.AiConversations.FirstAsync(row => row.ConversationId == conversationId);
 
+        await AddUserMessageAsync(conversation, message);
+
+        var uiActions = new List<AiUiAction>();
+        var steps = new List<AiStep>();
+        AiTurnResult result;
+        var hops = 0;
+        var collects = 0;
+        do
+        {
+            result = await runner.RunHopAsync(conversation, User, scope, null, CancellationToken.None);
+            // The panel's collect loop: a hop whose reply outlived the inline wait answers Pending,
+            // and the answer is collected — as many times as it takes — before the hop is folded.
+            while (result.Status == AiTurnStatus.Pending && result.PendingReplyId is { } replyId && collects < 50)
+            {
+                collects++;
+                result = await runner.CollectAsync(conversation, User, scope, replyId, CancellationToken.None);
+            }
+            uiActions.AddRange(result.UiActions);
+            steps.AddRange(result.Steps);
+            hops++;
+        }
+        while (result.Status == AiTurnStatus.NeedsContinue && hops < 12);
+
+        var rows = await Db.AiConversationMessages
+            .Where(row => row.ConversationId == conversation.ConversationId)
+            .OrderBy(row => row.Sequence)
+            .ToListAsync();
+
+        return new TurnOutcome(conversation.ConversationId, result.Status, uiActions, steps, rows,
+            rows.LastOrDefault(row => row.Role == (int)AiChatRole.Assistant && row.ToolCallsJson == null)?.Body ?? "",
+            collects);
+    }
+
+    /// <summary>Starts a conversation on a route with one user message on it and NO hop run —
+    /// for a scenario that drives the hops itself.</summary>
+    public async Task<AiConversationEntity> StartAsync(string message, AiScope scope)
+    {
+        var conversation = await StartConversationAsync(scope);
+        await AddUserMessageAsync(conversation, message);
+        return conversation;
+    }
+
+    /// <summary>Appends a user message the way SendAiMessageHandler does.</summary>
+    public async Task AddUserMessageAsync(AiConversationEntity conversation, string message)
+    {
         var sequence = await Db.AiConversationMessages
             .Where(row => row.ConversationId == conversation.ConversationId)
             .Select(row => (int?)row.Sequence).MaxAsync() ?? 0;
@@ -77,28 +144,15 @@ public sealed class AssistantHarness : IDisposable
             PostedAt = DateTimeOffset.UtcNow
         });
         await Db.SaveChangesAsync();
-
-        var uiActions = new List<AiUiAction>();
-        var steps = new List<AiStep>();
-        AiTurnResult result;
-        var hops = 0;
-        do
-        {
-            result = await runner.RunHopAsync(conversation, User, scope, null, CancellationToken.None);
-            uiActions.AddRange(result.UiActions);
-            steps.AddRange(result.Steps);
-            hops++;
-        }
-        while (result.Status == AiTurnStatus.NeedsContinue && hops < 12);
-
-        var rows = await Db.AiConversationMessages
-            .Where(row => row.ConversationId == conversation.ConversationId)
-            .OrderBy(row => row.Sequence)
-            .ToListAsync();
-
-        return new TurnOutcome(conversation.ConversationId, result.Status, uiActions, steps, rows,
-            rows.LastOrDefault(row => row.Role == (int)AiChatRole.Assistant && row.ToolCallsJson == null)?.Body ?? "");
     }
+
+    /// <summary>One hop, as the server runs it — Pending included.</summary>
+    public Task<AiTurnResult> RunHopAsync(AiConversationEntity conversation, AiScope scope) =>
+        runner.RunHopAsync(conversation, User, scope, null, CancellationToken.None);
+
+    /// <summary>One collect, as the server runs it.</summary>
+    public Task<AiTurnResult> CollectAsync(AiConversationEntity conversation, AiScope scope, string replyId) =>
+        runner.CollectAsync(conversation, User, scope, replyId, CancellationToken.None);
 
     /// <summary>Attaches a file the way the panel's upload does — through the real handler.</summary>
     public async Task<AiAttachmentReceipt> AttachAsync(string fileName, byte[] content, AiScope scope, string? conversationId = null)
@@ -132,6 +186,7 @@ public sealed class AssistantHarness : IDisposable
 
     public void Dispose()
     {
+        collectorServices.Dispose();
         services.Dispose();
         Db.Dispose();
     }
@@ -145,7 +200,10 @@ public sealed record TurnOutcome(
     IReadOnlyList<AiUiAction> UiActions,
     IReadOnlyList<AiStep> Steps,
     IReadOnlyList<AiConversationMessageEntity> Rows,
-    string Reply)
+    string Reply,
+    /// <summary>How many collects the turn needed — zero when every reply landed inside the
+    /// inline wait, which is every scenario but the one proving the collect path.</summary>
+    int Collects = 0)
 {
     /// <summary>The stored results of every call to <paramref name="toolName"/>, in order.</summary>
     public IReadOnlyList<string> ToolResults(string toolName) =>
@@ -171,6 +229,13 @@ public sealed class ScriptedClaude : IClaudeConversationClient
 
     public bool IsConfigured => true;
 
+    /// <summary>How long every scripted reply takes to arrive. Zero by default; a scenario proving
+    /// the collect path sets it past the harness's inline wait.</summary>
+    public TimeSpan ReplyDelay { get; set; } = TimeSpan.Zero;
+
+    /// <summary>The budget each call was given — the collector's on the background path.</summary>
+    public List<TimeSpan?> Budgets { get; } = new();
+
     public ScriptedClaude Then(params ClaudeToolCall[] toolCalls)
     {
         replies.Enqueue(new ClaudeReply(true, toolCalls.Length == 0 ? "Done." : "Working…", toolCalls, "end_turn", null));
@@ -183,13 +248,16 @@ public sealed class ScriptedClaude : IClaudeConversationClient
         return this;
     }
 
-    public Task<ClaudeReply> ContinueAsync(
-        string systemPrompt, IReadOnlyList<object> messages, IReadOnlyList<ClaudeToolSpec> tools, string? modelTier, CancellationToken ct)
+    public async Task<ClaudeReply> ContinueAsync(
+        string systemPrompt, IReadOnlyList<object> messages, IReadOnlyList<ClaudeToolSpec> tools, string? modelTier,
+        CancellationToken ct, TimeSpan? budget = null)
     {
         Calls.Add(new CapturedCall(systemPrompt, messages, tools));
+        Budgets.Add(budget);
+        if (ReplyDelay > TimeSpan.Zero) await Task.Delay(ReplyDelay, ct);
         if (replies.Count == 0)
-            return Task.FromResult(new ClaudeReply(true, "(no more scripted replies)", Array.Empty<ClaudeToolCall>(), "end_turn", null));
-        return Task.FromResult(replies.Dequeue());
+            return new ClaudeReply(true, "(no more scripted replies)", Array.Empty<ClaudeToolCall>(), "end_turn", null);
+        return replies.Dequeue();
     }
 
     /// <summary>The text of the newest user-side block the model saw on a call — where the turn

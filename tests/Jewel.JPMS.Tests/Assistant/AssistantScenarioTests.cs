@@ -3,6 +3,7 @@ using ClosedXML.Excel;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Models;
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace Jewel.JPMS.Tests.Assistant;
@@ -388,5 +389,86 @@ public sealed class AssistantScenarioTests
         var result = turn.LastToolResult("open_modal");
         Assert.Contains("V1 is Approved", result);
         Assert.Contains("variation_edit_lines", result);
+    }
+
+    // ---- 2026-08-25, 15:10: Fable + a 17-sheet workbook — "That reply took longer than one
+    // request allows", twice. The Claude call now runs on the collector's background task and the
+    // answer is COLLECTED by a later request (docs/ai/07-reply-collection.md). ----
+
+    [Fact]
+    public async Task ASlowReply_outlivesTheInlineWait_andIsCollectedWithTheSameToolRun()
+    {
+        using var harness = new AssistantHarness(inlineWait: TimeSpan.FromMilliseconds(150));
+        await SeedProjectsAsync(harness);
+        harness.Claude.ReplyDelay = TimeSpan.FromMilliseconds(600);
+        harness.Claude
+            .Then(ScriptedClaude.Call("navigate_to", new { route = "/projects/By France/requests/rfis", reason = "you asked" }))
+            .ThenSay("You're on the By France RFI register.");
+
+        var turn = await harness.SendAsync("load by france rfis", OnAbbotRoadRfis());
+
+        // Both hops outlived the wait, so each was collected at least once — and the hop that was
+        // collected did exactly what the fast path does: the route rewritten, the result stored.
+        Assert.True(turn.Collects >= 2, $"expected the slow replies to be collected, saw {turn.Collects} collects");
+        var action = Assert.Single(turn.UiActions);
+        Assert.Equal("navigate_to", action.Tool);
+        Assert.Contains("\"ok\":true", turn.LastToolResult("navigate_to"));
+        Assert.Equal(AiTurnStatus.Complete, turn.Status);
+        Assert.Equal("You're on the By France RFI register.", turn.Reply);
+
+        // The calls ran on the collector's budget, not the in-request 36s.
+        Assert.All(harness.Claude.Budgets, budget => Assert.Equal(AiReplyCollector.CallBudget, budget));
+
+        // Every pending row was consumed exactly once; none is left answered-but-unapplied.
+        var pending = harness.Db.AiPendingReplies.AsNoTracking().Where(row => row.ConversationId == turn.ConversationId).ToList();
+        Assert.Equal(2, pending.Count);
+        Assert.All(pending, row => Assert.Equal(AiPendingReplyStatus.Consumed, row.Status));
+        Assert.All(pending, row => Assert.NotNull(row.ReplyJson));
+    }
+
+    [Fact]
+    public async Task AFastReply_landsInsideTheInlineWait_andNeedsNoCollect()
+    {
+        using var harness = new AssistantHarness();
+        await SeedProjectsAsync(harness);
+        harness.Claude.ThenSay("Hello.");
+
+        var turn = await harness.SendAsync("hello", OnAbbotRoadRfis());
+
+        Assert.Equal(0, turn.Collects);
+        Assert.Equal(AiTurnStatus.Complete, turn.Status);
+        var row = Assert.Single(harness.Db.AiPendingReplies.AsNoTracking().Where(pending => pending.ConversationId == turn.ConversationId));
+        Assert.Equal(AiPendingReplyStatus.Consumed, row.Status);
+        // The background task recorded the answer on the row before the hop applied it.
+        Assert.NotNull(row.AnsweredAt);
+        Assert.NotNull(row.ReplyJson);
+    }
+
+    [Fact]
+    public async Task ACollect_afterTheConversationMovedOn_setsTheReplyAsideAndRefuses()
+    {
+        using var harness = new AssistantHarness(inlineWait: TimeSpan.FromMilliseconds(100));
+        await SeedProjectsAsync(harness);
+        harness.Claude.ReplyDelay = TimeSpan.FromMilliseconds(400);
+        harness.Claude.ThenSay("First answer.");
+
+        // Ask, and take only the Pending result — do not collect.
+        var conversation = await harness.StartAsync("first question", OnAbbotRoadRfis());
+        var first = await harness.RunHopAsync(conversation, OnAbbotRoadRfis());
+        Assert.Equal(AiTurnStatus.Pending, first.Status);
+        var replyId = first.PendingReplyId!;
+
+        // The user sends again before the answer is collected.
+        await harness.AddUserMessageAsync(conversation, "second question");
+        await Task.Delay(600);
+
+        var refusal = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => harness.CollectAsync(conversation, OnAbbotRoadRfis(), replyId));
+        Assert.Contains("moved on", refusal.Message);
+        var row = harness.Db.AiPendingReplies.Single(pending => pending.ReplyId == replyId);
+        Assert.Equal(AiPendingReplyStatus.Consumed, row.Status);
+        // Nothing of the late answer reached the transcript.
+        Assert.DoesNotContain(harness.Db.AiConversationMessages.Where(m => m.ConversationId == conversation.ConversationId),
+            m => m.Body == "First answer.");
     }
 }

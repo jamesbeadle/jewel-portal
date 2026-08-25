@@ -45,14 +45,18 @@ public interface IClaudeConversationClient
     /// One round trip. <paramref name="messages"/> is the Anthropic messages array, already shaped
     /// by the caller (see <c>SendAiMessageHandler</c>). <paramref name="modelTier"/> is an
     /// AiModelCatalogue key — resolved to a real model id here, against config, so the client of
-    /// this client can never name a raw model.
+    /// this client can never name a raw model. <paramref name="budget"/> is how long the call may
+    /// take across attempts; null means the in-request budget (36s, under the gateway's ~45s).
+    /// The reply collector passes its own, longer budget because its call runs on a background
+    /// task outside any request (docs/ai/07-reply-collection.md).
     /// </summary>
     Task<ClaudeReply> ContinueAsync(
         string systemPrompt,
         IReadOnlyList<object> messages,
         IReadOnlyList<ClaudeToolSpec> tools,
         string? modelTier,
-        CancellationToken ct);
+        CancellationToken ct,
+        TimeSpan? budget = null);
 }
 
 public sealed class NullClaudeConversationClient : IClaudeConversationClient
@@ -61,7 +65,7 @@ public sealed class NullClaudeConversationClient : IClaudeConversationClient
 
     public Task<ClaudeReply> ContinueAsync(
         string systemPrompt, IReadOnlyList<object> messages,
-        IReadOnlyList<ClaudeToolSpec> tools, string? modelTier, CancellationToken ct) =>
+        IReadOnlyList<ClaudeToolSpec> tools, string? modelTier, CancellationToken ct, TimeSpan? budget = null) =>
         Task.FromResult(new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null, "not_configured"));
 }
 
@@ -184,8 +188,10 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
         IReadOnlyList<object> messages,
         IReadOnlyList<ClaudeToolSpec> tools,
         string? modelTier,
-        CancellationToken ct)
+        CancellationToken ct,
+        TimeSpan? budget = null)
     {
+        var callBudget = budget ?? CallBudget;
         if (!options.IsConfigured)
             return new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null, "not_configured");
 
@@ -269,7 +275,7 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
                 attempt++;
                 payload["model"] = options.ModelForTier(tier);
 
-                var remaining = CallBudget - callClock.Elapsed;
+                var remaining = callBudget - callClock.Elapsed;
                 if (remaining < TimeSpan.FromSeconds(2))
                     return new ClaudeReply(false, null, Array.Empty<ClaudeToolCall>(), null, "timeout");
 
@@ -349,9 +355,11 @@ public sealed class ClaudeConversationClient : IClaudeConversationClient
     }
 
     /// <summary>
-    /// How long one hop may spend talking to Anthropic in total, across attempts. The Static Web
-    /// Apps gateway cuts the WHOLE request at ~45s and the hop still has tool execution and
-    /// database writes to do after the call, so the call itself gets 36s and not a second more.
+    /// How long a call may spend talking to Anthropic in total, across attempts, when no budget is
+    /// passed: the in-request figure. The Static Web Apps gateway cuts the WHOLE request at ~45s
+    /// and a hop still has tool execution and database writes to do after the call, so the call
+    /// itself gets 36s and not a second more. The reply collector runs its calls outside any
+    /// request and passes <see cref="AiReplyCollector.CallBudget"/> instead.
     /// </summary>
     private static readonly TimeSpan CallBudget = TimeSpan.FromSeconds(36);
 

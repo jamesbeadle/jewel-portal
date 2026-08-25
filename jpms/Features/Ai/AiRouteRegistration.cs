@@ -27,6 +27,10 @@ public static class AiRouteRegistration
         commands.Register<ContinueAiTurn, AiTurnResult>(
             CommandRoute.Post("/api/ai/turn/continue"));
 
+        // A reply that outlived its request's inline wait (docs/ai/07-reply-collection.md).
+        commands.Register<CollectAiReply, AiTurnResult>(
+            CommandRoute.Post("/api/ai/turn/collect"));
+
         commands.Register<AddAiAttachment, AiAttachmentReceipt>(
             CommandRoute.Post("/api/ai/attachments"));
 

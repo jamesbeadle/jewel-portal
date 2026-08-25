@@ -1303,6 +1303,29 @@
     {
         for (var hop = 0; hop < 12; hop++)
         {
+            // A hop whose Claude call outlived the request's inline wait answers Pending with a
+            // reply id. The call is still running server-side; collect it before folding.
+            try
+            {
+                result = await CollectIfPendingAsync(result);
+            }
+            catch (CommandFailedException ex)
+            {
+                // The server set the reply aside ("the conversation moved on", "already
+                // collected"): its own words, and Retry — a plain continuation — is the recovery.
+                error = ex.Message;
+                showRetryContinue = true;
+                AiTasks.ReportAssistantUnavailable();
+                return;
+            }
+            if (result.Status == AiTurnStatus.Pending)
+            {
+                error = "That reply is taking longer than expected. Nothing is lost — press Retry to carry on.";
+                showRetryContinue = true;
+                AiTasks.ReportAssistantUnavailable();
+                return;
+            }
+
             await FoldAsync(result);
             if (result.Status != AiTurnStatus.NeedsContinue) break;
 
@@ -1350,6 +1373,52 @@
         // blank waiting for a draft fills itself in from the record instead.
         if (result.Status == AiTurnStatus.Unavailable) AiTasks.ReportAssistantUnavailable();
     }
+
+    /// <summary>
+    /// Collects a pending reply (docs/ai/07-reply-collection.md). Each collect is a short request
+    /// the server holds for up to twenty seconds, so the loop is a handful of polls, not a storm;
+    /// the whole wait is bounded here, after which the Retry chip takes over. Anything other than
+    /// Pending — the finished hop, or a failure — comes back to the hop loop unchanged. A lost
+    /// connection mid-collect gets one quiet retry, exactly like a lost continuation.
+    /// </summary>
+    private async Task<AiTurnResult> CollectIfPendingAsync(AiTurnResult result)
+    {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var missed = 0;
+        while (result.Status == AiTurnStatus.Pending
+               && result.PendingReplyId is { } replyId
+               && conversationId is not null
+               && clock.Elapsed < PendingWait)
+        {
+            if (string.IsNullOrWhiteSpace(activityLabel)) activityLabel = "Still thinking…";
+            StateHasChanged();
+            await Task.Delay(PendingPollGap);
+            try
+            {
+                result = await Commands.SendAsync(
+                    new CollectAiReply(conversationId, replyId, BuildScope(), string.Empty), CancellationToken.None);
+                missed = 0;
+            }
+            catch (CommandFailedException)
+            {
+                // The server's own refusal — never a blip, so never retried here.
+                throw;
+            }
+            catch (Exception)
+            {
+                if (++missed >= 2) throw;
+                await Task.Delay(800);
+            }
+        }
+        return result;
+    }
+
+    /// <summary>How long the panel keeps collecting one reply before offering Retry. Above the
+    /// server's own background budget (three and a half minutes), so a slow answer is always
+    /// collected rather than abandoned a poll too early.</summary>
+    private static readonly TimeSpan PendingWait = TimeSpan.FromMinutes(5);
+    /// <summary>The pause between one collect answering Pending and the next going out.</summary>
+    private static readonly TimeSpan PendingPollGap = TimeSpan.FromMilliseconds(750);
 
     /// <summary>The Retry chip: picks a broken turn back up with a plain continuation. Safe to
     /// press any number of times — a hop that never answered wrote nothing.</summary>

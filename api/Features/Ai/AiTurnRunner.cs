@@ -35,23 +35,174 @@ public sealed class AiTurnRunner
     private readonly IClaudeConversationClient claude;
     private readonly AgentActivityLog activityLog;
     private readonly IServiceProvider services;
+    private readonly AiReplyCollector collector;
 
     public AiTurnRunner(
         JpmsContext context, IClaudeConversationClient claude,
-        AgentActivityLog activityLog, IServiceProvider services)
+        AgentActivityLog activityLog, IServiceProvider services, AiReplyCollector collector)
     {
         this.context = context;
         this.claude = claude;
         this.activityLog = activityLog;
         this.services = services;
+        this.collector = collector;
     }
 
+    /// <summary>Everything a hop knows before and after its Claude call: the transcript as loaded,
+    /// where the sequence stands, how many hops this user message has already spent, the agent in
+    /// force and the project in view. Built by <see cref="FrameAsync"/> for the hop that asks and
+    /// again, fresh, for the collect that applies the answer.</summary>
+    private sealed record HopFrame(
+        Stopwatch Clock,
+        List<AiConversationMessageEntity> Rows,
+        int Sequence,
+        int HopsSpent,
+        AgentDefinition Agent,
+        ProjectEntity? Project);
+
+    /// <summary>
+    /// One hop: ask Claude, and either finish the hop (the answer landed inside the inline wait)
+    /// or answer <see cref="AiTurnStatus.Pending"/> with the reply id for the panel to collect
+    /// (docs/ai/07-reply-collection.md). The call itself runs on the collector's background task
+    /// with its own budget, never on this request's clock.
+    /// </summary>
     public async Task<AiTurnResult> RunHopAsync(
         AiConversationEntity conversation,
         SignedInUser user,
         AiScope? scope,
         string? modelTier,
         CancellationToken cancellationToken)
+    {
+        var frame = await FrameAsync(conversation, user, scope, cancellationToken);
+        var sequence = frame.Sequence;
+
+        if (!claude.IsConfigured)
+        {
+            var newMessages = new List<AiConversationMessageEntity>();
+            Add(conversation, AiChatRole.Assistant,
+                "The assistant is not connected yet — no Anthropic API key is configured on this "
+                + "environment. Ask an administrator to set Anthropic__ApiKey.",
+                ++sequence, newMessages);
+            await SaveAsync(conversation, cancellationToken);
+            await LogAsync(conversation, user, scope, AgentOutcome.NotConfigured,
+                "No Anthropic API key is configured.", Array.Empty<AiStep>(), frame.Clock, 0, 0, cancellationToken);
+            return Result(conversation, AiTurnStatus.Unavailable, newMessages, Array.Empty<AiUiAction>(), Array.Empty<AiStep>(), 0);
+        }
+
+        if (frame.HopsSpent >= MaxHops)
+        {
+            var newMessages = new List<AiConversationMessageEntity>();
+            Add(conversation, AiChatRole.Assistant,
+                "I've used up the look-ups I'm allowed for one question. Ask me again and I'll carry on "
+                + "from where I got to.",
+                ++sequence, newMessages);
+            await SaveAsync(conversation, cancellationToken);
+            await LogAsync(conversation, user, scope, AgentOutcome.Truncated,
+                "Hop budget exhausted.", Array.Empty<AiStep>(), frame.Clock, 0, 0, cancellationToken);
+            return Result(conversation, AiTurnStatus.Truncated, newMessages, Array.Empty<AiUiAction>(), Array.Empty<AiStep>(), 0);
+        }
+
+        // The agent's skills plus the shared set, fresh from the database every hop — a portal
+        // edit is in force on the very next message. Bodies are fetched for PINNED skills only;
+        // the rest ride as one menu line each and arrive via load_skill.
+        var skills = await LoadSkillsAsync(frame.Agent.Key, cancellationToken);
+
+        var systemPrompt = AiSystemPrompt.Build(
+            user, scope, frame.Project?.Reference, frame.Project?.Name, frame.Agent, skills);
+        var tools = AiToolCatalogue.For(user, scope, frame.Agent)
+            .Select(tool => new ClaudeToolSpec(tool.Name, tool.Description, tool.InputSchema))
+            .ToList();
+
+        // The volatile facts — where the user is, the dialog's live contents, the look-up budget —
+        // ride as a block on the NEWEST message rather than in the system prompt, so the system
+        // prompt and the transcript prefix stay byte-stable across hops and cache (see
+        // ClaudeConversationClient). Rebuilt every hop, never persisted.
+        var turnContext = AiSystemPrompt.BuildTurnContext(
+            user, scope, frame.Project?.Reference, frame.Project?.Name, frame.HopsSpent, MaxHops,
+            await SourcesOnHandAsync(conversation.ConversationId, frame.Rows, cancellationToken));
+        var transcript = BuildTranscript(frame.Rows, turnContext);
+
+        // The row goes in BEFORE the call starts: a collect on another instance may look for it
+        // before the answer lands, and the background task only ever updates it.
+        var pending = new AiPendingReplyEntity
+        {
+            ReplyId = Guid.NewGuid().ToString("N"),
+            ConversationId = conversation.ConversationId,
+            AfterSequence = frame.Sequence,
+            ModelTier = modelTier is { Length: <= 32 } ? modelTier : null,
+            Status = AiPendingReplyStatus.InFlight,
+            RequestedAt = DateTimeOffset.UtcNow
+        };
+        context.AiPendingReplies.Add(pending);
+        await context.SaveChangesAsync(cancellationToken);
+
+        // Fire and collect: the task is the collector's to keep, and it outlives this request.
+        _ = collector.Begin(pending.ReplyId, ct =>
+            claude.ContinueAsync(systemPrompt, transcript, tools, modelTier, ct, AiReplyCollector.CallBudget));
+
+        var reply = await collector.WaitAsync(context, pending, collector.InlineWait, cancellationToken);
+        if (reply is null)
+            return PendingResult(conversation, pending.ReplyId, frame.HopsSpent);
+
+        return await CompleteAsync(conversation, user, scope, frame, pending, reply, cancellationToken);
+    }
+
+    /// <summary>
+    /// Collects a reply that outlived its request's inline wait: waits a bounded while more, then
+    /// applies the answer exactly as the fast path would have — the same tool run, the same rows —
+    /// or answers pending again. Refuses an answer whose transcript has moved on, because a late
+    /// reply must never be spliced into a conversation that no longer matches the prompt it was
+    /// for.
+    /// </summary>
+    public async Task<AiTurnResult> CollectAsync(
+        AiConversationEntity conversation,
+        SignedInUser user,
+        AiScope? scope,
+        string replyId,
+        CancellationToken cancellationToken)
+    {
+        var pending = await context.AiPendingReplies
+            .FirstOrDefaultAsync(row => row.ReplyId == replyId, cancellationToken);
+        if (pending is null || !string.Equals(pending.ConversationId, conversation.ConversationId, StringComparison.Ordinal))
+            throw new InvalidOperationException("That reply is not one of this conversation's.");
+        // The background task may have answered since this context last saw the row (a context
+        // that already tracks it — the harness's, above all — would otherwise read its own stale
+        // copy), and the status is a concurrency token: the write must start from the truth.
+        await context.Entry(pending).ReloadAsync(cancellationToken);
+
+        var frame = await FrameAsync(conversation, user, scope, cancellationToken);
+
+        if (pending.Status == AiPendingReplyStatus.Consumed)
+        {
+            // Already applied (a second tab, a double collect): the transcript holds the hop, so
+            // hand back what it wrote and whether it is still mid-turn — a Ui action is not
+            // replayed (the first collect's browser did it), but the rows and the status are the
+            // same ones the first collect saw.
+            var written = frame.Rows.Where(row => row.Sequence > pending.AfterSequence).ToList();
+            var midTurn = written.Count > 0 && written[^1].Role == (int)AiChatRole.Tool;
+            return Result(conversation,
+                midTurn ? AiTurnStatus.NeedsContinue : AiTurnStatus.Complete,
+                written, Array.Empty<AiUiAction>(), Array.Empty<AiStep>(),
+                Math.Max(0, MaxHops - frame.HopsSpent));
+        }
+
+        if (frame.Sequence != pending.AfterSequence)
+        {
+            pending.Status = AiPendingReplyStatus.Consumed;
+            await context.SaveChangesAsync(cancellationToken);
+            throw new InvalidOperationException(
+                "The conversation moved on before that reply was collected, so it was set aside. Ask again.");
+        }
+
+        var reply = await collector.WaitAsync(context, pending, collector.InlineWait, cancellationToken);
+        if (reply is null)
+            return PendingResult(conversation, pending.ReplyId, frame.HopsSpent);
+
+        return await CompleteAsync(conversation, user, scope, frame, pending, reply, cancellationToken);
+    }
+
+    private async Task<HopFrame> FrameAsync(
+        AiConversationEntity conversation, SignedInUser user, AiScope? scope, CancellationToken cancellationToken)
     {
         var clock = Stopwatch.StartNew();
         var rows = await LoadAsync(conversation.ConversationId, cancellationToken);
@@ -63,34 +214,6 @@ public sealed class AiTurnRunner
         var hopsSpent = lastUserIndex < 0
             ? 0
             : rows.Skip(lastUserIndex).Count(row => row.Role == (int)AiChatRole.Assistant);
-
-        var newMessages = new List<AiConversationMessageEntity>();
-        var steps = new List<AiStep>();
-        var uiActions = new List<AiUiAction>();
-
-        if (!claude.IsConfigured)
-        {
-            var unavailable = Add(conversation, AiChatRole.Assistant,
-                "The assistant is not connected yet — no Anthropic API key is configured on this "
-                + "environment. Ask an administrator to set Anthropic__ApiKey.",
-                ++sequence, newMessages);
-            await SaveAsync(conversation, cancellationToken);
-            await LogAsync(conversation, user, scope, AgentOutcome.NotConfigured,
-                "No Anthropic API key is configured.", steps, clock, 0, 0, cancellationToken);
-            return Result(conversation, AiTurnStatus.Unavailable, newMessages, uiActions, steps, 0);
-        }
-
-        if (hopsSpent >= MaxHops)
-        {
-            var stopped = Add(conversation, AiChatRole.Assistant,
-                "I've used up the look-ups I'm allowed for one question. Ask me again and I'll carry on "
-                + "from where I got to.",
-                ++sequence, newMessages);
-            await SaveAsync(conversation, cancellationToken);
-            await LogAsync(conversation, user, scope, AgentOutcome.Truncated,
-                "Hop budget exhausted.", steps, clock, 0, 0, cancellationToken);
-            return Result(conversation, AiTurnStatus.Truncated, newMessages, uiActions, steps, 0);
-        }
 
         var project = string.IsNullOrWhiteSpace(scope?.ProjectId)
             ? null
@@ -104,26 +227,45 @@ public sealed class AiTurnRunner
         var agent = AgentCatalogue.Find(conversation.CapabilityKey) ?? AgentCatalogue.Orchestrator;
         if (!AgentCatalogue.CanEngage(agent, user.Roles)) agent = AgentCatalogue.Orchestrator;
 
-        // The agent's skills plus the shared set, fresh from the database every hop — a portal
-        // edit is in force on the very next message. Bodies are fetched for PINNED skills only;
-        // the rest ride as one menu line each and arrive via load_skill.
-        var skills = await LoadSkillsAsync(agent.Key, cancellationToken);
+        return new HopFrame(clock, rows, sequence, hopsSpent, agent, project);
+    }
 
-        var systemPrompt = AiSystemPrompt.Build(user, scope, project?.Reference, project?.Name, agent, skills);
-        var tools = AiToolCatalogue.For(user, scope, agent)
-            .Select(tool => new ClaudeToolSpec(tool.Name, tool.Description, tool.InputSchema))
-            .ToList();
+    /// <summary>The "still thinking" answer: no rows, no actions, the reply id to collect with.
+    /// The hop budget is unchanged — nothing has been spent until the answer is applied.</summary>
+    private static AiTurnResult PendingResult(AiConversationEntity conversation, string replyId, int hopsSpent) =>
+        new(conversation.ConversationId,
+            AiTurnStatus.Pending,
+            Array.Empty<AiChatMessage>(),
+            Array.Empty<AiUiAction>(),
+            Array.Empty<AiStep>(),
+            Math.Max(0, MaxHops - hopsSpent),
+            conversation.CapabilityKey,
+            PendingReplyId: replyId);
 
-        // The volatile facts — where the user is, the dialog's live contents, the look-up budget —
-        // ride as a block on the NEWEST message rather than in the system prompt, so the system
-        // prompt and the transcript prefix stay byte-stable across hops and cache (see
-        // ClaudeConversationClient). Rebuilt every hop, never persisted.
-        var turnContext = AiSystemPrompt.BuildTurnContext(
-            user, scope, project?.Reference, project?.Name, hopsSpent, MaxHops,
-            await SourcesOnHandAsync(conversation.ConversationId, rows, cancellationToken));
+    /// <summary>
+    /// The second half of a hop, shared by the fast path and the collect: the answer is applied to
+    /// the transcript, its tools run, the rows are written and the pending row is marked consumed
+    /// in the same save — so an answer is applied once, whichever request got there.
+    /// </summary>
+    private async Task<AiTurnResult> CompleteAsync(
+        AiConversationEntity conversation,
+        SignedInUser user,
+        AiScope? scope,
+        HopFrame frame,
+        AiPendingReplyEntity pending,
+        ClaudeReply reply,
+        CancellationToken cancellationToken)
+    {
+        var clock = frame.Clock;
+        var sequence = frame.Sequence;
+        var hopsSpent = frame.HopsSpent;
+        var agent = frame.Agent;
 
-        var reply = await claude.ContinueAsync(
-            systemPrompt, BuildTranscript(rows, turnContext), tools, modelTier, cancellationToken);
+        var newMessages = new List<AiConversationMessageEntity>();
+        var steps = new List<AiStep>();
+        var uiActions = new List<AiUiAction>();
+
+        pending.Status = AiPendingReplyStatus.Consumed;
 
         if (!reply.Ok)
         {

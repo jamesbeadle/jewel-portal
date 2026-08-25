@@ -360,6 +360,49 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("AiConversationMessages");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.AiPendingReplyEntity", b =>
+                {
+                    b.Property<string>("ReplyId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("AfterSequence")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("AnsweredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ConversationId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ModelTier")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ReplyJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Status")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int");
+
+                    b.HasKey("ReplyId");
+
+                    b.HasIndex("ConversationId", "Status")
+                        .HasDatabaseName("IX_AiPendingReplies_ConversationId_Status");
+
+                    b.ToTable("AiPendingReplies");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.AppVersionEntity", b =>
                 {
                     b.Property<string>("AppVersionId")

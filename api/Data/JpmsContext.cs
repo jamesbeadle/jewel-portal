@@ -171,6 +171,9 @@ public sealed class JpmsContext : DbContext
     // Files attached to a conversation, kept as bytes in blob storage so any part can be re-read
     // on demand (docs/ai/06-context-retrieval.md).
     public DbSet<AiAttachmentEntity> AiAttachments => Set<AiAttachmentEntity>();
+    // Claude calls in flight — the answer is collected by a later request rather than awaited
+    // inside one (docs/ai/07-reply-collection.md).
+    public DbSet<AiPendingReplyEntity> AiPendingReplies => Set<AiPendingReplyEntity>();
     public DbSet<AgentActivityEntity> AgentActivity => Set<AgentActivityEntity>();
 
     // The assistant's skills — the domain half of an agent, edited in the portal
@@ -262,6 +265,10 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<AiAttachmentEntity>()
             .HasIndex(row => row.ConversationId)
             .HasDatabaseName("IX_AiAttachments_ConversationId");
+        // "Is there a reply in flight for this conversation" — read by every collect.
+        modelBuilder.Entity<AiPendingReplyEntity>()
+            .HasIndex(row => new { row.ConversationId, row.Status })
+            .HasDatabaseName("IX_AiPendingReplies_ConversationId_Status");
         // "Which conversations drafted this variation / this RFI", newest first — the lookup an
         // argument about a document starts from.
         modelBuilder.Entity<AiConversationEntity>()

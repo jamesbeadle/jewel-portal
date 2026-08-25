@@ -55,7 +55,11 @@ public enum AiTurnStatus
     /// <summary>No Anthropic key, or the API could not be reached.</summary>
     Unavailable = 2,
     /// <summary>Tools ran and the model needs another hop. The client calls continue.</summary>
-    NeedsContinue = 3
+    NeedsContinue = 3,
+    /// <summary>Claude has not answered yet — the call is still running on the server's background
+    /// task (docs/ai/07-reply-collection.md). Nothing has been written. The client collects the
+    /// answer with <c>AiTurnResult.PendingReplyId</c>; the hop budget is unchanged.</summary>
+    Pending = 4
 }
 
 /// <summary>
@@ -139,7 +143,11 @@ public sealed record AiTurnResult(
     /// <summary>Set when the server stepped the model up a tier because the conversation had
     /// outgrown the chosen one's context window (e.g. Haiku's 200k). One short human sentence,
     /// shown by the panel so a reply that billed as a bigger model is never a mystery.</summary>
-    string? ModelNote = null)
+    string? ModelNote = null,
+    /// <summary>Set with <see cref="AiTurnStatus.Pending"/>: the reply the client collects with
+    /// <c>CollectAiReply</c>. Null on every other status. Defaulted so cached responses and
+    /// pre-collection clients keep deserialising.</summary>
+    string? PendingReplyId = null)
 {
     /// <summary>The label to show beside the pulsing jewel while the next hop runs.</summary>
     public string? LatestLabel => Steps.Count > 0 ? Steps[^1].Label : null;

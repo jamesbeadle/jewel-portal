@@ -38,11 +38,12 @@ public static class AiFeatureRegistration
 
             services.AddSingleton<IClaudeConversationClient>(sp =>
                 new ClaudeConversationClient(
-                    // The client manages its own per-attempt deadlines against a 36s budget (see
-                    // ClaudeConversationClient.CallBudget) so a hop always answers inside the
-                    // Static Web Apps gateway's ~45s. This outer timeout is only the backstop for
-                    // a hung socket the budget's linked cancellation somehow failed to cut.
-                    new HttpClient { Timeout = TimeSpan.FromSeconds(60) },
+                    // The client manages its own per-attempt deadlines against a budget — 36s
+                    // in-request, AiReplyCollector.CallBudget on the collector's background task
+                    // (docs/ai/07-reply-collection.md). This outer timeout is only the backstop
+                    // for a hung socket the budget's linked cancellation somehow failed to cut,
+                    // so it sits above the longer of the two.
+                    new HttpClient { Timeout = TimeSpan.FromMinutes(5) },
                     options,
                     sp.GetRequiredService<ILogger<ClaudeConversationClient>>()));
         }
@@ -56,6 +57,11 @@ public static class AiFeatureRegistration
         // gate, because the tool layer filters on the caller's roles, not just their email.
         services.AddScoped<AiCaller>();
 
+        // The Claude calls in flight, one background task each, answered into AiPendingReplies
+        // (docs/ai/07-reply-collection.md). A singleton: the task must outlive the request that
+        // started it, and a collect on the same instance awaits the task rather than the row.
+        services.AddSingleton<AiReplyCollector>();
+
         // One hop of a turn. Shared by the first hop and every continuation so they cannot diverge.
         services.AddScoped<AiTurnRunner>();
 
@@ -66,6 +72,11 @@ public static class AiFeatureRegistration
         services.AddScoped<ICommandHandler<ContinueAiTurn, AiTurnResult>, ContinueAiTurnHandler>();
         services.AddScoped<ContinueAiTurnAuthorisation>();
         services.AddScoped<ContinueAiTurnValidation>();
+
+        // Collecting a reply that outlived its request's inline wait.
+        services.AddScoped<ICommandHandler<CollectAiReply, AiTurnResult>, CollectAiReplyHandler>();
+        services.AddScoped<CollectAiReplyAuthorisation>();
+        services.AddScoped<CollectAiReplyValidation>();
 
         // Chat attachments: bytes kept in the ai-attachments container so any part can be read on
         // demand, a manifest + preview persisted as a Context row. No Claude call at upload.
