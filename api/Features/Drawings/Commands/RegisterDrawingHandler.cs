@@ -28,8 +28,8 @@ public sealed class RegisterDrawingHandler
         {
             DrawingId = DrawingIdentifierFactory.NextDrawingId(),
             ProjectId = command.ProjectId,
-            DrawingCode = command.DrawingCode,
-            Title = command.Title,
+            DrawingCode = (command.DrawingCode ?? "").Trim(),
+            Title = (command.Title ?? "").Trim(),
             // A new drawing has no approved revision yet; the label is set on first approval.
             CurrentApprovedRevisionLabel = null,
             CreatedAt = DateTimeOffset.UtcNow,

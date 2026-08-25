@@ -69,22 +69,31 @@ public static class SitePageGuides
             + "confirm). You have no dialogs here; use navigate_to to bring the user to it."),
 
         new("/projects/{project}/drawings", "Drawing register",
-            "The project's drawing register with revisions — each row is a drawing with its latest "
-            + "approved revision, pending/archived counts and pipeline status, plus an "
-            + "\"ambiguous\" count badge when uploads couldn't be auto-classified. Manually: a "
-            + "toggle switches between all drawings and approved-only; \"+ Upload drawing\" "
-            + "(Admin/MD/PM) opens the upload form; Export to Excel exports the register; opening a "
-            + "row goes to the drawing's detail page for revision history and the viewer. Incoming "
-            + "drawing files from correspondence are filed to this register from Document Triage, "
-            + "not uploaded here."),
+            "The project's drawing register with revisions — each row is a drawing with its code, "
+            + "title, original file name, latest approved revision, pending/archived counts and "
+            + "pipeline status, plus an \"ambiguous\" count badge for older mailbox imports that "
+            + "couldn't be auto-classified (new uploads never are — a blank revision is simply "
+            + "\"no revision\"). Rows group into folders, and folders nest (sub-folders indent "
+            + "beneath their parent; drawings sit at any level; Ungrouped last). Code, title, "
+            + "revision and issuer are all optional on upload — a drawing with no title shows its "
+            + "file name. Manually: a toggle switches between all drawings and approved-only; "
+            + "\"+ Upload drawing\" (Admin/MD/PM) opens the upload form; \"+ New folder\" and each "
+            + "folder's + / pencil / bin buttons add a sub-folder, rename or delete it (contents "
+            + "move up a level); Export to Excel exports the register; opening a row goes to the "
+            + "drawing's detail page for revision history and the viewer. Incoming drawing files "
+            + "from correspondence are filed to this register from Document Triage, not uploaded "
+            + "here."),
 
         new("/projects/{project}/drawings/{drawingId}", "Drawing detail",
             "One drawing's page: revision history alongside an inline viewer (PDFs and images), "
             + "previewing the approved revision if there is one, else the most recent revision with "
             + "a file, with Previous/Next stepping through the register. Manually (Admin/MD/PM): "
-            + "\"+ Upload new version\" adds a revision; \"Delete drawing\" (confirm modal) "
-            + "permanently removes the drawing, all its revisions and files; the revision list "
-            + "carries each revision's approval and pipeline status. You have no dialogs here; "
+            + "the pencil by the code/title edits them in place (both optional); the folder picker "
+            + "moves the drawing to any folder or sub-folder; \"+ Upload new version\" adds a "
+            + "revision; \"Delete drawing\" (confirm modal) permanently removes the drawing, all "
+            + "its revisions and files; the revision list carries each revision's approval and "
+            + "pipeline status, and a pencil by the revision label sets it (uploads may have none). "
+            + "You have no dialogs here; "
             + "navigate_to opens it (tools that return a drawing route are preferred)."),
 
         new("/projects/{project}/drawings/ambiguous", "Ambiguous drawing revisions",

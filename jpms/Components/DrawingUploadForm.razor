@@ -1,6 +1,9 @@
-@inject AuthService Auth
 @inject IDrawingStore DrawingStore
 @using Microsoft.AspNetCore.Components.Forms
+
+@* Only the file is required. Code, title, revision and issuer are all optional — a drawing
+   uploaded with none of them is shown on the register by its original file name and can be
+   named, labelled and filed later from its page. *@
 
 <EditForm Model="this" OnValidSubmit="HandleUpload"
       class="rounded-2xl border border-line bg-surface p-5 space-y-3">
@@ -21,7 +24,11 @@
         <InputFile OnChange="OnFileSelected" class="w-full text-sm text-content-muted" />
         @if (selectedFile is not null)
         {
-            <p class="text-xs text-content-subtle mt-1">@selectedFile.Name · @FormatSize(selectedFile.Size)</p>
+            <p class="mt-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm text-content">
+                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-2">Original file</span>
+                <span class="font-medium break-all">@selectedFile.Name</span>
+                <span class="text-content-subtle"> · @FormatSize(selectedFile.Size)</span>
+            </p>
         }
     </div>
 
@@ -34,7 +41,7 @@
                 <option value="">Select a drawing…</option>
                 @foreach (var drawing in ExistingDrawings)
                 {
-                    <option value="@drawing.DrawingId">@drawing.DrawingCode — @drawing.Title</option>
+                    <option value="@drawing.DrawingId">@DrawingNaming.Label(drawing)</option>
                 }
             </select>
         </div>
@@ -42,15 +49,16 @@
     else
     {
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing code *</label>
-            <input type="text" @bind="drawingCode" required placeholder="A-100"
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing code</label>
+            <input type="text" @bind="drawingCode" placeholder="A-100 (optional)"
                    class="field" />
         </div>
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title *</label>
-            <input type="text" @bind="title" required placeholder="Garden, shed, …"
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <input type="text" @bind="title" placeholder="Garden, shed, … (optional)"
                    class="field" />
+            <p class="text-xs text-content-subtle mt-1">Leave blank and the register shows the original file name instead.</p>
         </div>
 
         <div>
@@ -58,11 +66,8 @@
             <select @bind="selectedFolderId"
                     class="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
                 <option value="">No folder (ungrouped)</option>
-                @foreach (var folder in Folders)
-                {
-                    <option value="@folder.DrawingFolderId">@folder.Name</option>
-                }
-                <option value="@NewFolderOption">+ New folder…</option>
+                <DrawingFolderOptions Folders="Folders" />
+                <option value="@NewFolderOption">+ New top-level folder…</option>
             </select>
             @if (selectedFolderId == NewFolderOption)
             {
@@ -73,14 +78,14 @@
     }
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Revision *</label>
-        <input type="text" @bind="revisionLabel" required placeholder="A"
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Revision</label>
+        <input type="text" @bind="revisionLabel" placeholder="A (optional)"
                class="field" />
     </div>
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Issued by</label>
-        <input type="email" @bind="issuedBy" placeholder="architect@example.com"
+        <input type="email" @bind="issuedBy" placeholder="architect@example.com (optional)"
                class="field" />
     </div>
 
@@ -138,7 +143,6 @@
     private async Task HandleUpload()
     {
         if (selectedFile is null) { error = "Choose a file to upload."; return; }
-        if (string.IsNullOrWhiteSpace(revisionLabel)) { error = "Enter a revision label."; return; }
 
         string drawingId;
         if (isRevision)
@@ -148,8 +152,8 @@
         }
         else
         {
-            var duplicate = ExistingDrawings
-                .FirstOrDefault(drawing => string.Equals(drawing.DrawingCode, drawingCode.Trim(), StringComparison.OrdinalIgnoreCase));
+            // A blank code can never clash — only a given code is checked against the register.
+            var duplicate = DuplicateOfCode(drawingCode.Trim());
             if (duplicate is not null)
             {
                 error = $"“{duplicate.DrawingCode}” is already in the register. Switch to “Revision of existing drawing” to add a new version of it.";
@@ -174,17 +178,16 @@
                 // name) the folder, then the drawing is registered straight into it.
                 var folderId = selectedFolderId switch
                 {
-                    NewFolderOption => (await DrawingStore.CreateFolderAsync(ProjectId, newFolderName.Trim(), CancellationToken.None)).DrawingFolderId,
+                    NewFolderOption => (await DrawingStore.CreateFolderAsync(ProjectId, newFolderName.Trim(), parentFolderId: null, CancellationToken.None)).DrawingFolderId,
                     "" => (string?)null,
                     _ => selectedFolderId
                 };
 
-                drawingId = (await DrawingStore.RegisterDrawingAsync(ProjectId, drawingCode.Trim(), title, folderId, CancellationToken.None)).DrawingId;
+                drawingId = (await DrawingStore.RegisterDrawingAsync(ProjectId, drawingCode.Trim(), title.Trim(), folderId, CancellationToken.None)).DrawingId;
             }
 
-            var issuedByEmail = string.IsNullOrWhiteSpace(issuedBy) ? Auth.CurrentUser?.Email ?? "" : issuedBy;
             await DrawingStore.UploadRevisionAsync(
-                ProjectId, drawingId, revisionLabel.Trim().ToUpperInvariant(), issuedByEmail, selectedFile, CancellationToken.None);
+                ProjectId, drawingId, revisionLabel.Trim().ToUpperInvariant(), issuedBy.Trim(), selectedFile, CancellationToken.None);
 
             selectedFile = null; drawingCode = ""; title = ""; revisionLabel = ""; issuedBy = ""; selectedDrawingId = "";
             selectedFolderId = ""; newFolderName = "";
@@ -199,6 +202,11 @@
             busy = false;
         }
     }
+
+    private Drawing? DuplicateOfCode(string code) =>
+        code.Length == 0
+            ? null
+            : ExistingDrawings.FirstOrDefault(drawing => string.Equals(drawing.DrawingCode, code, StringComparison.OrdinalIgnoreCase));
 
     private static string ExtractRevisionLabel(string fileName)
     {

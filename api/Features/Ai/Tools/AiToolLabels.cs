@@ -45,6 +45,8 @@ public static class AiToolLabels
             "read_record_emails" => "Reading the tagged emails",
             "read_selected_email" => "Reading the open email",
             "read_email_attachment" => "Reading an attachment",
+            "get_tender_enquiry_context" => "Reading the tender enquiry",
+            "read_tender_enquiry_document" => "Reading the enquiry's document",
             "select_email" => Named(arguments, "search", search => $"Opening the email: {search}")
                               ?? "Opening an email",
             "stage_triage_tag" => Named(arguments, "reference", reference => $"Staging the {reference} tag")

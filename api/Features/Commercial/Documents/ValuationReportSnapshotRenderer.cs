@@ -84,10 +84,13 @@ public static class ValuationReportSnapshotRenderer
         AddDetailsGrid(section, document);
         AddMovementLegend(section, document);
 
-        AddElementGroup(section, document, "Contract Works", ValuationElementType.ContractWorks);
-        AddElementGroup(section, document, "Provisional Sums", ValuationElementType.PcSum);
-        AddElementGroup(section, document, "Contingency Sums", ValuationElementType.Contingency);
-        AddElementGroup(section, document, "Variations", ValuationElementType.Variation);
+        // One column layout for the whole statement: the client-reference column appears in
+        // every bill section or none, decided by the document's lines as a whole.
+        var columns = ValuationReportBillColumns.For(document.Detail.Lines);
+        AddElementGroup(section, document, columns, "Contract Works", ValuationElementType.ContractWorks);
+        AddElementGroup(section, document, columns, "Provisional Sums", ValuationElementType.PcSum);
+        AddElementGroup(section, document, columns, "Contingency Sums", ValuationElementType.Contingency);
+        AddElementGroup(section, document, columns, "Variations", ValuationElementType.Variation);
 
         AddSummary(section, document.Detail);
         AddClosingNote(section, document);
@@ -217,7 +220,8 @@ public static class ValuationReportSnapshotRenderer
     }
 
     private static void AddElementGroup(
-        Section section, ValuationReportSnapshotDocument document, string title, ValuationElementType elementType)
+        Section section, ValuationReportSnapshotDocument document, ValuationReportBillColumns columns,
+        string title, ValuationElementType elementType)
     {
         var detail = document.Detail;
         var lines = detail.Lines
@@ -232,15 +236,17 @@ public static class ValuationReportSnapshotRenderer
         var table = section.AddTable();
         table.Borders.Color = Hair;
         table.Borders.Width = 0.5;
-        table.AddColumn(Unit.FromCentimeter(1.5));                              // code
-        table.AddColumn(Unit.FromCentimeter(4.9));                              // description
-        var qty = table.AddColumn(Unit.FromCentimeter(1.0));
-        var rate = table.AddColumn(Unit.FromCentimeter(1.4));
-        var amount = table.AddColumn(Unit.FromCentimeter(1.9));
-        var percent = table.AddColumn(Unit.FromCentimeter(1.1));
-        var previous = table.AddColumn(Unit.FromCentimeter(1.9));
-        var period = table.AddColumn(Unit.FromCentimeter(2.0));
-        var claimed = table.AddColumn(Unit.FromCentimeter(2.1));
+        table.AddColumn(Unit.FromCentimeter(columns.CodeWidthCentimetres));
+        if (columns.HasClientReference)
+            table.AddColumn(Unit.FromCentimeter(columns.ClientReferenceWidthCentimetres));
+        table.AddColumn(Unit.FromCentimeter(columns.DescriptionWidthCentimetres));
+        var qty = table.AddColumn(Unit.FromCentimeter(columns.QuantityWidthCentimetres));
+        var rate = table.AddColumn(Unit.FromCentimeter(columns.RateWidthCentimetres));
+        var amount = table.AddColumn(Unit.FromCentimeter(columns.AmountWidthCentimetres));
+        var percent = table.AddColumn(Unit.FromCentimeter(columns.PercentWidthCentimetres));
+        var previous = table.AddColumn(Unit.FromCentimeter(columns.PreviousWidthCentimetres));
+        var period = table.AddColumn(Unit.FromCentimeter(columns.PeriodWidthCentimetres));
+        var claimed = table.AddColumn(Unit.FromCentimeter(columns.ClaimedWidthCentimetres));
         qty.Format.Alignment = ParagraphAlignment.Right;
         rate.Format.Alignment = ParagraphAlignment.Right;
         amount.Format.Alignment = ParagraphAlignment.Right;
@@ -254,15 +260,17 @@ public static class ValuationReportSnapshotRenderer
         header.TopPadding = Unit.FromMillimeter(1.2);
         header.BottomPadding = Unit.FromMillimeter(1.2);
         header.HeadingFormat = true;
-        HeaderCell(header.Cells[0], "Code");
-        HeaderCell(header.Cells[1], "Description");
-        HeaderCell(header.Cells[2], "Qty");
-        HeaderCell(header.Cells[3], "Rate");
-        HeaderCell(header.Cells[4], "Amount");
-        HeaderCell(header.Cells[5], "%");
-        HeaderCell(header.Cells[6], "Previous");
-        HeaderCell(header.Cells[7], "This period");
-        HeaderCell(header.Cells[8], "Claimed");
+        HeaderCell(header.Cells[columns.Code], "Code");
+        if (columns.HasClientReference)
+            HeaderCell(header.Cells[columns.ClientReference], "Client ref");
+        HeaderCell(header.Cells[columns.Description], "Description");
+        HeaderCell(header.Cells[columns.Quantity], "Qty");
+        HeaderCell(header.Cells[columns.Rate], "Rate");
+        HeaderCell(header.Cells[columns.Amount], "Amount");
+        HeaderCell(header.Cells[columns.Percent], "%");
+        HeaderCell(header.Cells[columns.Previous], "Previous");
+        HeaderCell(header.Cells[columns.Period], "This period");
+        HeaderCell(header.Cells[columns.Claimed], "Claimed");
 
         var currentArea = "";
         foreach (var line in lines)
@@ -283,8 +291,8 @@ public static class ValuationReportSnapshotRenderer
                     areaRow.TopPadding = Unit.FromMillimeter(1.4);
                     areaRow.BottomPadding = Unit.FromMillimeter(1);
                     areaRow.KeepWith = 1; // never strand a title at the foot of a page
-                    areaRow.Cells[0].MergeRight = 8;
-                    var areaTitle = areaRow.Cells[0].AddParagraph(area.ToUpperInvariant());
+                    areaRow.Cells[columns.Code].MergeRight = columns.Last;
+                    var areaTitle = areaRow.Cells[columns.Code].AddParagraph(area.ToUpperInvariant());
                     areaTitle.Format.LeftIndent = Unit.FromMillimeter(1.5);
                     areaTitle.Format.Font.Size = 7.5;
                     areaTitle.Format.Font.Bold = true;
@@ -301,55 +309,63 @@ public static class ValuationReportSnapshotRenderer
             // The gold tint is the accountant's scan line: only rows that moved carry it.
             if (moved) row.Shading.Color = Highlight;
 
-            var code = row.Cells[0].AddParagraph(CodeFor(line));
+            var code = row.Cells[columns.Code].AddParagraph(CodeFor(line));
             code.Format.Font.Size = 8;
             code.Format.Font.Bold = true;
             code.Format.Font.Color = line.CountsTowardTotals ? Navy : Muted;
 
-            var title2 = row.Cells[1].AddParagraph(TitleFor(line));
+            // The client's own schedule-of-works item number — the figure they reconcile by.
+            if (columns.HasClientReference)
+            {
+                var clientReference = row.Cells[columns.ClientReference].AddParagraph(line.ClientReference);
+                clientReference.Format.Font.Size = 8;
+                clientReference.Format.Font.Color = line.CountsTowardTotals ? Navy : Muted;
+            }
+
+            var title2 = row.Cells[columns.Description].AddParagraph(TitleFor(line));
             title2.Format.Font.Size = 8.5;
             title2.Format.Font.Color = line.CountsTowardTotals ? Ink : Muted;
             if (!string.IsNullOrWhiteSpace(line.Comments))
             {
-                var comment = row.Cells[1].AddParagraph(line.Comments);
+                var comment = row.Cells[columns.Description].AddParagraph(line.Comments);
                 comment.Format.Font.Size = 7.5;
                 comment.Format.Font.Color = Muted;
             }
             if (!line.CountsTowardTotals)
             {
-                var kind = row.Cells[1].AddParagraph(LineTypeLabel(line.LineType).ToUpperInvariant());
+                var kind = row.Cells[columns.Description].AddParagraph(LineTypeLabel(line.LineType).ToUpperInvariant());
                 kind.Format.Font.Size = 7;
                 kind.Format.Font.Color = Muted;
             }
 
-            var qtyCell = row.Cells[2].AddParagraph(Num(line.Quantity));
+            var qtyCell = row.Cells[columns.Quantity].AddParagraph(Num(line.Quantity));
             qtyCell.Format.Font.Size = 8;
             qtyCell.Format.Font.Color = Muted;
 
-            var rateCell = row.Cells[3].AddParagraph(Num(line.Rate));
+            var rateCell = row.Cells[columns.Rate].AddParagraph(Num(line.Rate));
             rateCell.Format.Font.Size = 8;
             rateCell.Format.Font.Color = Muted;
 
-            MoneyCell(row.Cells[4], line.LineAmount,
+            MoneyCell(row.Cells[columns.Amount], line.LineAmount,
                 colour: line.LineAmount < 0 ? Negative : line.CountsTowardTotals ? null : Muted);
 
-            var pct = row.Cells[5].AddParagraph(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—");
+            var pct = row.Cells[columns.Percent].AddParagraph(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—");
             pct.Format.Font.Size = 8;
             pct.Format.Font.Color = Muted;
 
             if (line.CountsTowardTotals)
             {
-                MoneyCell(row.Cells[6], previousClaimed, colour: Muted);
+                MoneyCell(row.Cells[columns.Previous], previousClaimed, colour: Muted);
                 // The figure this statement exists to show — bold on the rows that moved.
-                MoneyCell(row.Cells[7], line.PeriodIncrement, bold: moved,
+                MoneyCell(row.Cells[columns.Period], line.PeriodIncrement, bold: moved,
                     colour: line.PeriodIncrement < 0 ? Negative : moved ? Navy : Muted);
-                MoneyCell(row.Cells[8], line.CumulativeClaimed);
+                MoneyCell(row.Cells[columns.Claimed], line.CumulativeClaimed);
             }
             else
             {
-                DashCell(row.Cells[6]);
-                DashCell(row.Cells[7]);
-                DashCell(row.Cells[8]);
+                DashCell(row.Cells[columns.Previous]);
+                DashCell(row.Cells[columns.Period]);
+                DashCell(row.Cells[columns.Claimed]);
             }
         }
 
@@ -358,14 +374,14 @@ public static class ValuationReportSnapshotRenderer
         totals.Shading.Color = Panel;
         totals.TopPadding = Unit.FromMillimeter(1.4);
         totals.BottomPadding = Unit.FromMillimeter(1.4);
-        var label = totals.Cells[1].AddParagraph($"{title} total");
+        var label = totals.Cells[columns.Description].AddParagraph($"{title} total");
         label.Format.Font.Size = 8.5;
         label.Format.Font.Bold = true;
         label.Format.Font.Color = Navy;
-        MoneyCell(totals.Cells[4], counting.Sum(line => line.LineAmount), bold: true);
-        MoneyCell(totals.Cells[6], counting.Sum(line => line.CumulativeClaimed - line.PeriodIncrement), bold: true);
-        MoneyCell(totals.Cells[7], counting.Sum(line => line.PeriodIncrement), bold: true);
-        MoneyCell(totals.Cells[8], counting.Sum(line => line.CumulativeClaimed), bold: true);
+        MoneyCell(totals.Cells[columns.Amount], counting.Sum(line => line.LineAmount), bold: true);
+        MoneyCell(totals.Cells[columns.Previous], counting.Sum(line => line.CumulativeClaimed - line.PeriodIncrement), bold: true);
+        MoneyCell(totals.Cells[columns.Period], counting.Sum(line => line.PeriodIncrement), bold: true);
+        MoneyCell(totals.Cells[columns.Claimed], counting.Sum(line => line.CumulativeClaimed), bold: true);
 
         SpaceAfterTable(section);
     }

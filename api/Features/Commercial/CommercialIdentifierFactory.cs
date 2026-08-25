@@ -16,6 +16,7 @@ internal static class CommercialIdentifierFactory
     public static string NextClaimLineId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextValuationReportSnapshotId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextValuationReportSnapshotLineId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextClientCostReferenceId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextXeroLineWorkOrderLinkId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextReconciliationPackageId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextReconciliationPackageOrderId() => Guid.NewGuid().ToString(CompactGuidFormat);

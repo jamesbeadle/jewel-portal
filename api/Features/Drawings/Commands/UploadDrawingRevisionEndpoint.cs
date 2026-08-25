@@ -13,7 +13,7 @@ namespace Jewel.JPMS.Api.Features.Drawings.Commands;
 
 /// <summary>
 /// POST /api/drawings/{drawingId}/revisions — multipart/form-data upload.
-/// Form fields: <c>file</c> (the drawing file), <c>revisionLabel</c>, optional <c>issuedByEmail</c>.
+/// Form fields: <c>file</c> (the drawing file), optional <c>revisionLabel</c>, optional <c>issuedByEmail</c>.
 /// Streams the file to blob storage, then records an Unapproved revision. No sibling is superseded.
 /// </summary>
 public sealed class UploadDrawingRevisionEndpoint
@@ -61,10 +61,10 @@ public sealed class UploadDrawingRevisionEndpoint
             .FirstOrDefaultAsync(row => row.DrawingId == drawingId, cancellationToken);
         if (drawing is null) return new NotFoundObjectResult($"Drawing {drawingId} not found.");
 
+        // Both optional: a blank label is "no revision given", a blank issuer is "not recorded" —
+        // neither is guessed (the uploader is not the issuer).
         var revisionLabel = form["revisionLabel"].ToString().Trim();
-        if (string.IsNullOrWhiteSpace(revisionLabel)) revisionLabel = "?";
         var issuedByEmail = form["issuedByEmail"].ToString().Trim();
-        if (string.IsNullOrWhiteSpace(issuedByEmail)) issuedByEmail = signedInUser.Email;
 
         var fileName = string.IsNullOrWhiteSpace(file.FileName) ? "drawing" : file.FileName;
         var contentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
@@ -91,7 +91,13 @@ public sealed class UploadDrawingRevisionEndpoint
             drawingId, revisionId, revisionLabel, fileName, issuedByEmail, blobRef, contentType, file.Length);
 
         var validationOutcome = validation.Check(command);
-        if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
+        if (validationOutcome.HasFailed)
+        {
+            // The file is already in storage — an over-long label or email must not leave an
+            // orphan blob behind the 400.
+            await blobStore.DeleteAsync(blobRef, cancellationToken);
+            return new BadRequestObjectResult(validationOutcome.Errors);
+        }
 
         var revision = await handler.HandleAsync(command, cancellationToken);
         return new OkObjectResult(revision);

@@ -122,9 +122,11 @@ public sealed class AiTaskScopeTests
                 Assert.Contains(token.Value, new[] { "{project}", "{record}" });
             }
 
-            // A record in the PATH needs its project segment to build the route at all.
+            // A PROJECT record in the path needs its project segment to build the route at all.
+            // (Company-wide record pages — /tender-enquiries/{record} — carry no project; the
+            // client substitutes the two placeholders independently.)
             var stem = modal.RouteTemplate.Split('?')[0];
-            if (stem.Contains("{record}", StringComparison.Ordinal))
+            if (stem.Contains("{record}", StringComparison.Ordinal) && stem.StartsWith("/projects/", StringComparison.Ordinal))
                 Assert.Contains("{project}", stem);
         }
     }

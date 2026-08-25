@@ -1,9 +1,9 @@
-@inject AuthService Auth
 @inject IDrawingStore DrawingStore
 @using Microsoft.AspNetCore.Components.Forms
 
 @* Uploads a new revision straight into a known drawing (unlike DrawingUploadForm, which
-   resolves the drawing by code from the register). Used on the drawing detail page. *@
+   resolves the drawing by code from the register). Used on the drawing detail page. Only the
+   file is required — the revision label and issuer can be added later. *@
 <EditForm Model="this" OnValidSubmit="HandleUpload"
       class="rounded-2xl border border-line bg-surface p-5 space-y-3">
 
@@ -12,18 +12,22 @@
         <InputFile OnChange="OnFileSelected" class="w-full text-sm text-content-muted" />
         @if (selectedFile is not null)
         {
-            <p class="text-xs text-content-subtle mt-1">@selectedFile.Name · @FormatSize(selectedFile.Size)</p>
+            <p class="mt-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm text-content">
+                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-2">Original file</span>
+                <span class="font-medium break-all">@selectedFile.Name</span>
+                <span class="text-content-subtle"> · @FormatSize(selectedFile.Size)</span>
+            </p>
         }
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Revision *</label>
-        <input type="text" @bind="revisionLabel" required placeholder="B" class="field" />
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Revision</label>
+        <input type="text" @bind="revisionLabel" placeholder="B (optional)" class="field" />
     </div>
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Issued by</label>
-        <input type="email" @bind="issuedBy" placeholder="architect@example.com" class="field" />
+        <input type="email" @bind="issuedBy" placeholder="architect@example.com (optional)" class="field" />
     </div>
 
     @if (error is not null)
@@ -64,15 +68,13 @@
     private async Task HandleUpload()
     {
         if (selectedFile is null) { error = "Choose a file to upload."; return; }
-        if (string.IsNullOrWhiteSpace(revisionLabel)) { error = "Enter a revision label."; return; }
 
         busy = true;
         error = null;
         try
         {
-            var issuedByEmail = string.IsNullOrWhiteSpace(issuedBy) ? Auth.CurrentUser?.Email ?? "" : issuedBy;
             await DrawingStore.UploadRevisionAsync(
-                ProjectId, DrawingId, revisionLabel.Trim().ToUpperInvariant(), issuedByEmail, selectedFile, CancellationToken.None);
+                ProjectId, DrawingId, revisionLabel.Trim().ToUpperInvariant(), issuedBy.Trim(), selectedFile, CancellationToken.None);
 
             selectedFile = null; revisionLabel = ""; issuedBy = "";
             await OnUploaded.InvokeAsync();

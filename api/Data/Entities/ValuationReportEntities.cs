@@ -116,4 +116,7 @@ public sealed class ValuationReportSnapshotLineEntity
     public decimal PeriodIncrement { get; set; }
     [MaxLength(512)]     public string Comments { get; set; } = "";
     public int DisplayOrder { get; set; }
+    // The client's schedule-of-works reference for the line's cost centre, copied from the
+    // project's ClientCostReferences map at capture. Empty when the project has no map.
+    [MaxLength(64)]      public string ClientReference { get; set; } = "";
 }

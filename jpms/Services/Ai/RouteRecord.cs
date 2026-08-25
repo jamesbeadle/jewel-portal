@@ -12,10 +12,19 @@ namespace Jewel.JPMS.Services.Ai;
 public static class RouteRecord
 {
     private const string ProjectPrefix = "/projects/";
+    // The one company-wide record page: an enquiry sits on a Lead project but is reached from the
+    // Internal folder, so its route carries no project segment.
+    private const string TenderEnquiryPrefix = "/tender-enquiries/";
+    private const string TenderEnquiryType = "tender enquiry";
 
     /// <summary>The record on this route, or (null, null) when the page is not about one.</summary>
     public static (string? Type, string? Id) From(string path)
     {
+        if (path.StartsWith(TenderEnquiryPrefix, StringComparison.Ordinal))
+        {
+            var enquiryId = path[TenderEnquiryPrefix.Length..].Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            return string.IsNullOrEmpty(enquiryId) ? (null, null) : (TenderEnquiryType, enquiryId.Split('?')[0]);
+        }
         if (!path.StartsWith(ProjectPrefix, StringComparison.Ordinal)) return (null, null);
 
         var segments = path[ProjectPrefix.Length..]

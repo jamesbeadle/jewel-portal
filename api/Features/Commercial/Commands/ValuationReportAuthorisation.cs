@@ -41,6 +41,11 @@ public sealed class ValuationReportAuthorisation
     private static readonly RoleSet RolesThatMayRecordClaimEntries =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.FinanceDirector);
 
+    // Mapping our cost centres to the client's schedule-of-works references is report setup:
+    // the drafters who build the bill, plus the Finance Director who reconciles with the client.
+    private static readonly RoleSet RolesThatMayMapClientReferences =
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.FinanceDirector);
+
     private bool MayEditBill(SignedInUser user) => RolesThatMayEditValuationBill.IncludesAny(user.Roles);
     private bool MayManageClaimLifecycle(SignedInUser user) => RolesThatMayManageClaimLifecycle.IncludesAny(user.Roles);
 
@@ -58,6 +63,7 @@ public sealed class ValuationReportAuthorisation
     public bool Allows(SignedInUser user, RenameValuationClaim command) => MayManageClaimLifecycle(user);
     public bool Allows(SignedInUser user, DeleteValuationClaim command) => MayManageClaimLifecycle(user);
     public bool Allows(SignedInUser user, SetValuationLineCostCentre command) => RolesThatMayRecodeCostCentres.IncludesAny(user.Roles);
+    public bool Allows(SignedInUser user, SetClientCostReferences command) => RolesThatMayMapClientReferences.IncludesAny(user.Roles);
     public bool Allows(SignedInUser user, TakeValuationReportSnapshot command) => RolesThatMayManageSnapshots.IncludesAny(user.Roles);
     public bool Allows(SignedInUser user, DeleteValuationReportSnapshot command) => RolesThatMayManageSnapshots.IncludesAny(user.Roles);
 }

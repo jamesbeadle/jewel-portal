@@ -45,6 +45,8 @@ public sealed class DrawingEntity
 {
     [Key, MaxLength(64)] public string DrawingId { get; set; } = "";
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
+    // Code and title are optional — blank means "not given yet"; the register then names the
+    // drawing by its latest file.
     [MaxLength(64)]      public string DrawingCode { get; set; } = "";
     [MaxLength(256)]     public string Title { get; set; } = "";
     // The latest APPROVED revision label; null until a revision has been approved.
@@ -56,8 +58,10 @@ public sealed class DrawingEntity
 }
 
 /// <summary>
-/// A named group on a project's drawing register — one flat level, no nesting. Drawings point at a
-/// folder via <see cref="DrawingEntity.DrawingFolderId"/>; deleting a folder ungroups its drawings.
+/// A named group on a project's drawing register. Folders nest through
+/// <see cref="ParentDrawingFolderId"/> (null = top level). Drawings point at a folder via
+/// <see cref="DrawingEntity.DrawingFolderId"/>; deleting a folder moves its drawings and
+/// sub-folders up one level. No FK on the parent, for the same reason as DrawingFolderId.
 /// </summary>
 public sealed class DrawingFolderEntity
 {
@@ -65,14 +69,17 @@ public sealed class DrawingFolderEntity
     [MaxLength(64)]      public string ProjectId { get; set; } = "";
     [MaxLength(128)]     public string Name { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
+    [MaxLength(64)]      public string? ParentDrawingFolderId { get; set; }
 }
 
 public sealed class DrawingRevisionEntity
 {
     [Key, MaxLength(64)] public string DrawingRevisionId { get; set; } = "";
     [MaxLength(64)]      public string DrawingId { get; set; } = "";
+    // Blank = no revision given; settable later via SetDrawingRevisionLabel.
     [MaxLength(16)]      public string RevisionLabel { get; set; } = "";
     [MaxLength(256)]     public string FileName { get; set; } = "";
+    // Blank = issuer not recorded.
     [MaxLength(256)]     public string IssuedByEmail { get; set; } = "";
     public DateTimeOffset ReceivedAt { get; set; }
     public DateTimeOffset? SupersededAt { get; set; }

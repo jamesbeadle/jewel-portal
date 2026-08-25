@@ -261,11 +261,11 @@
                                         class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                                         @onclick="() => OpenDrawing(drawing)">
                                     <p class="truncate text-sm text-content">
-                                        <span class="font-mono text-xs text-content-muted mr-2">@drawing.DrawingCode</span>@drawing.Title
+                                        <span class="font-mono text-xs text-content-muted mr-2">@DrawingNaming.Code(drawing)</span>@DrawingNaming.Name(drawing)
                                     </p>
                                     <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
                                         <span class="whitespace-nowrap">
-                                            @(string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel) ? "No approved revision" : $"Rev {drawing.CurrentApprovedRevisionLabel} approved")
+                                            @(DrawingNaming.ApprovedRevisionText(drawing) is { } approvedText ? $"{approvedText} approved" : "No approved revision")
                                         </span>
                                     </div>
                                 </button>

@@ -13,11 +13,12 @@ public interface IDocumentControlStore
     /// Queue / Filed / Discarded views client-side.</summary>
     Task<IReadOnlyList<DocumentControlItem>> ListAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>Files an item into a project's drawings as an Unapproved revision (matched by
-    /// code within the project; a new code registers a new drawing).</summary>
+    /// <summary>Files an item into a project's drawings as an Unapproved revision — of the given
+    /// drawing when <paramref name="drawingId"/> is set, else matched by code within the project
+    /// (a new or blank code registers a new drawing).</summary>
     Task<DocumentControlItem> FileAsDrawingAsync(
         string documentControlItemId, string projectId, string drawingCode, string title,
-        string revisionLabel, CancellationToken cancellationToken = default);
+        string revisionLabel, string? drawingId = null, CancellationToken cancellationToken = default);
 
     /// <summary>Files an item as a payment certificate on a project, optionally tied to the
     /// valuation claim it certifies.</summary>

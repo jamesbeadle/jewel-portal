@@ -53,7 +53,7 @@ This is the contract between scoping and Blazor implementation. Every Phase 1 us
                                                    an enquiry isn't a project yet). Logged from the invitation
                                                    email in the Control Centre ("Log Tender Enquiry", which
                                                    creates the Lead-stage project) or by hand here. TEQ-#### tags.
-  /tender-enquiries/{tenderEnquiryId}              Status (Received → Accepted → PQQ submitted →
+  /tender-enquiries/{tenderEnquiryId}              Status (Received → PQQ submitted →
                                                    Shortlisted → Tender submitted → Won/Lost), PQQ answers
                                                    → /api/tender-enquiries/{id}/document (PDF, attachable
                                                    from Compose), documents, tagged emails, history.

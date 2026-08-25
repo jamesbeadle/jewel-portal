@@ -64,6 +64,11 @@ internal static class ValuationReportSnapshotCapture
             .Where(line => line.ProjectId == projectId)
             .ToListAsync(cancellationToken);
 
+        // The client's schedule-of-works reference per cost centre, frozen onto each line now:
+        // the PDF prints what the map said at capture, and a later remap never rewrites an
+        // issued statement. Empty when the project has no map.
+        var clientReferencesByCostCode = await ClientReferencesByCostCodeAsync(context, projectId, cancellationToken);
+
         // The figures come from the latest claim (highest number), whatever its status —
         // that is what the report tab shows and what a submission is asking to be paid for.
         var claim = await context.ValuationClaims
@@ -165,7 +170,8 @@ internal static class ValuationReportSnapshotCapture
                 CumulativeClaimed = entry?.CumulativeClaimed ?? 0m,
                 PeriodIncrement = entry?.PeriodIncrement ?? 0m,
                 Comments = line.Comments,
-                DisplayOrder = displayOrder++
+                DisplayOrder = displayOrder++,
+                ClientReference = clientReferencesByCostCode.GetValueOrDefault(line.CostCode, "")
             };
             // Declined/TBC lines are recorded but never priced into totals — keep the
             // footer reconciling with the viewer's per-section sums.
@@ -196,5 +202,19 @@ internal static class ValuationReportSnapshotCapture
             snapshot.DepositReleased, certifiedToDate);
 
         return (snapshot, snapshotLines);
+    }
+
+    // Grouped rather than ToDictionary so a code duplicated by case alone can never turn a
+    // capture (or a working-copy download) into a 500.
+    private static async Task<Dictionary<string, string>> ClientReferencesByCostCodeAsync(
+        JpmsContext context, string projectId, CancellationToken cancellationToken)
+    {
+        var references = await context.ClientCostReferences.AsNoTracking()
+            .Where(reference => reference.ProjectId == projectId)
+            .Select(reference => new { reference.CostCode, reference.ClientReference })
+            .ToListAsync(cancellationToken);
+        return references
+            .GroupBy(reference => reference.CostCode, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().ClientReference, StringComparer.OrdinalIgnoreCase);
     }
 }

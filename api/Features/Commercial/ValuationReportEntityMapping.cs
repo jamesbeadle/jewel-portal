@@ -51,5 +51,5 @@ internal static class ValuationReportEntityMapping
             entity.CostCode, entity.Description, entity.Unit,
             entity.Quantity, entity.Rate, entity.LineAmount,
             entity.PercentComplete, entity.CumulativeClaimed, entity.PeriodIncrement,
-            entity.Comments, entity.DisplayOrder);
+            entity.Comments, entity.DisplayOrder, entity.ClientReference);
 }

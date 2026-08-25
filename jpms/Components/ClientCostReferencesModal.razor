@@ -1,0 +1,99 @@
+@using Jewel.JPMS.Contracts.Commercial
+@using Jewel.JPMS.Features.Commercial
+@inject IClientCostReferenceStore References
+@inject IValuationReportStore Valuation
+@inject ICostCenterStore CostCenters
+@*
+    Maps the project's cost centres to the client's schedule-of-works item numbers — the "Client
+    ref" column on the valuation report PDF. One reference per cost centre per project; a centre
+    spanning several items takes a range ("3.7–3.9"). Rendered only while open (the parent guards
+    with @@if), so it always loads the saved map fresh.
+*@
+<Modal IsOpen="true" Title="Client references" Class="max-w-2xl" OnCancel="Cancel">
+    <ChildContent>
+        <p class="text-sm text-content-muted mb-3">
+            The client's schedule-of-works reference for each cost centre on this report. These print
+            in a <span class="font-medium text-content">Client ref</span> column on the valuation report
+            PDF from the next download or snapshot onwards — statements already issued keep the
+            references they were sent with. Leave a box blank to leave that centre unreferenced.
+        </p>
+        <LoadGate IsLoading="@(rows is null && loadError is null)" Prominent="true" Label="Loading references">
+        @if (loadError is not null)
+        {
+            <p class="text-sm text-negative">@loadError</p>
+        }
+        else if (rows is { Count: 0 })
+        {
+            <p class="text-sm text-content-subtle">No valuation lines carry a cost centre yet — add the bill first.</p>
+        }
+        else if (rows is not null)
+        {
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs uppercase tracking-wider text-content-subtle">
+                        <th class="py-1.5 pr-3 font-semibold">Cost centre</th>
+                        <th class="py-1.5 pr-3 font-semibold">Client ref</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in rows)
+                    {
+                        <tr class="border-t border-line">
+                            <td class="py-1.5 pr-3 align-middle">
+                                <span class="font-medium text-content">@row.CostCode</span>
+                                <span class="text-content-muted ml-1.5">@row.Name</span>
+                                @if (!row.IsOnReport) { <span class="ml-1.5 text-xs text-content-subtle">— no longer on the report</span> }
+                            </td>
+                            <td class="py-1.5 w-40">
+                                <input class="field" maxlength="64" placeholder="e.g. 3.12" @bind="row.ClientReference" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        </LoadGate>
+    </ChildContent>
+    <FooterContent>
+        @if (saveError is not null)
+        {
+            <p class="mr-auto text-sm text-negative">@saveError</p>
+        }
+        <button type="button" class="btn-neutral" disabled="@busy" @onclick="Cancel">Cancel</button>
+        <button type="button" class="btn-primary" disabled="@(busy || rows is null)" @onclick="SaveAsync">
+            @(busy ? "Saving…" : "Save references")
+        </button>
+    </FooterContent>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancelled { get; set; }
+
+    private IReadOnlyList<ClientCostReferenceRow>? rows;
+    private string? loadError, saveError;
+    private bool busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { rows = ClientCostReferenceRows.Build(Valuation.LinesFor(ProjectId), CostCenters.All(), await References.ListAsync(ProjectId)); }
+        catch (Exception exception) { loadError = exception.Message; }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (busy || rows is null) return;
+        busy = true;
+        saveError = null;
+        try
+        {
+            await References.SaveAsync(new SetClientCostReferences(ProjectId, rows.Select(row => row.ToEntry()).ToList()));
+            await OnSaved.InvokeAsync();
+        }
+        catch (Exception exception) { saveError = exception.Message; }
+        finally { busy = false; }
+    }
+
+    private Task Cancel() => OnCancelled.InvokeAsync();
+}

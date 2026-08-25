@@ -156,7 +156,11 @@ public sealed record ValuationReportSnapshotLine(
     decimal CumulativeClaimed,
     decimal PeriodIncrement,
     string Comments,
-    int DisplayOrder)
+    int DisplayOrder,
+    // The client's schedule-of-works reference for the line's cost centre, frozen from the
+    // project's ClientCostReference map at capture — so a later remap never rewrites what the
+    // client was sent. Trailing default keeps the positional constructor stable for older callers.
+    string ClientReference = "")
 {
     public bool CountsTowardTotals => LineType is not (ValuationLineType.Declined or ValuationLineType.Tbc);
 }

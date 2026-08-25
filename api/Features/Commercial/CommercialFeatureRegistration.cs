@@ -102,6 +102,12 @@ public static class CommercialFeatureRegistration
         services.AddScoped<ICommandHandler<SetValuationLineCostCentre, ValuationLineItem>, SetValuationLineCostCentreHandler>();
         services.AddScoped<SetValuationLineCostCentreValidation>();
 
+        // The client's schedule-of-works references — the per-project cost centre map the
+        // valuation report PDF prints beside each line's code.
+        services.AddScoped<IQueryHandler<ListClientCostReferencesForProject, IReadOnlyList<ClientCostReference>>, ListClientCostReferencesForProjectHandler>();
+        services.AddScoped<ICommandHandler<SetClientCostReferences, IReadOnlyList<ClientCostReference>>, SetClientCostReferencesHandler>();
+        services.AddScoped<SetClientCostReferencesValidation>();
+
         services.AddScoped<ICommandHandler<RemoveValuationLineItem, Acknowledgement>, RemoveValuationLineItemHandler>();
 
         services.AddScoped<ICommandHandler<StartValuationClaim, ValuationClaim>, StartValuationClaimHandler>();

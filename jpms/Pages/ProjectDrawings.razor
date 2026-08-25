@@ -4,6 +4,7 @@
 @inject IDrawingStore DrawingStore
 @inject NavigationManager Nav
 @implements IDisposable
+@using Jewel.JPMS.Features.Drawings
 
 <PageTitle>Drawings · JPMS</PageTitle>
 
@@ -79,13 +80,15 @@ else
             <DrawingsTable Drawings="VisibleDrawings"
                            Folders="Folders"
                            CanManage="CanManage"
+                           OnCreateSubFolder="OpenNewSubFolder"
                            OnRenameFolder="OpenRenameFolder"
                            OnDeleteFolder="OpenDeleteFolder" />
         }
 
-        @* New folder / rename share one name dialog — which command runs depends on renamingFolder. *@
+        @* New folder / new sub-folder / rename share one name dialog — which command runs depends
+           on renamingFolder, and where a new folder lands on parentFolder. *@
         <Modal IsOpen="folderDialogOpen"
-               Title="@(renamingFolder is null ? "New folder" : $"Rename “{renamingFolder.Name}”")"
+               Title="@FolderDialogTitle"
                ConfirmLabel="@(folderBusy ? "Saving…" : renamingFolder is null ? "Create folder" : "Rename folder")"
                ConfirmDisabled="@(folderBusy || string.IsNullOrWhiteSpace(folderName))"
                OnCancel="CloseFolderDialog"
@@ -106,8 +109,9 @@ else
                OnCancel="() => deletingFolder = null"
                OnConfirm="DeleteFolderAsync">
             <p class="text-sm text-content-muted">
-                This deletes the folder <strong>@deletingFolder?.Name</strong>. The drawings inside it are
-                not deleted — they move back to the register's Ungrouped section.
+                This deletes the folder <strong>@deletingFolder?.Name</strong>. Nothing inside it is
+                deleted — its drawings and sub-folders move up a level
+                @(deletingFolder?.ParentDrawingFolderId is null ? "(to the register's top level and Ungrouped section)." : $"into “{Tree.PathOf(deletingFolder.ParentDrawingFolderId)}”.")
             </p>
             @if (folderError is not null)
             {
@@ -127,6 +131,7 @@ else
     // Folder dialogs: one name dialog for create/rename, one confirm for delete.
     private bool folderDialogOpen;
     private DrawingFolder? renamingFolder;
+    private DrawingFolder? parentFolder;
     private DrawingFolder? deletingFolder;
     private string folderName = "";
     private string? folderError;
@@ -134,12 +139,23 @@ else
 
     private IReadOnlyList<Drawing> Drawings => DrawingStore.DrawingsFor(ProjectId);
     private IReadOnlyList<DrawingFolder> Folders => DrawingStore.FoldersFor(ProjectId);
+    private DrawingFolderTree Tree => new(Folders);
     private IReadOnlyList<DrawingRevision> Ambiguous => DrawingStore.AmbiguousFor(ProjectId);
 
     private IReadOnlyList<Drawing> VisibleDrawings =>
         approvedOnly
-            ? Drawings.Where(drawing => !string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel)).ToList()
+            ? Drawings.Where(drawing => drawing.HasApprovedRevision).ToList()
             : Drawings;
+
+    private string FolderDialogTitle
+    {
+        get
+        {
+            if (renamingFolder is not null) return $"Rename “{renamingFolder.Name}”";
+            if (parentFolder is not null) return $"New sub-folder in “{parentFolder.Name}”";
+            return "New folder";
+        }
+    }
 
     private bool CanManage =>
         Auth.CurrentRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
@@ -156,19 +172,22 @@ else
             new ExcelColumn("Folder"),
             new ExcelColumn("Code"),
             new ExcelColumn("Title"),
+            new ExcelColumn("File"),
             new ExcelColumn("Latest approved"),
             new ExcelColumn("Status"),
             new ExcelColumn("Pipeline"),
             new ExcelColumn("Added", ExcelFormat.Date));
 
-        // Rows in register order: each folder A–Z, then Ungrouped — the same shape as the table.
-        foreach (var drawing in InRegisterOrder(drawings))
+        // Rows in register order: each folder in tree order, then Ungrouped — the same shape as the table.
+        var tree = Tree;
+        foreach (var drawing in InRegisterOrder(drawings, tree))
         {
             sheet.AddRow(
-                FolderNameFor(drawing),
+                FolderPathFor(drawing, tree),
                 drawing.DrawingCode,
                 drawing.Title,
-                LatestApprovedText(drawing),
+                drawing.LatestFileName,
+                DrawingNaming.ApprovedRevisionText(drawing),
                 StatusText(drawing),
                 PipelineText(drawing),
                 drawing.CreatedAt.LocalDateTime);
@@ -176,22 +195,22 @@ else
         return workbook;
     }
 
-    private IEnumerable<Drawing> InRegisterOrder(IReadOnlyList<Drawing> drawings)
+    private IEnumerable<Drawing> InRegisterOrder(IReadOnlyList<Drawing> drawings, DrawingFolderTree tree)
     {
-        foreach (var folder in Folders)
-            foreach (var drawing in drawings.Where(candidate => candidate.DrawingFolderId == folder.DrawingFolderId))
+        foreach (var node in tree.Nodes)
+            foreach (var drawing in drawings.Where(candidate => candidate.DrawingFolderId == node.Folder.DrawingFolderId))
                 yield return drawing;
         foreach (var drawing in drawings.Where(candidate => candidate.DrawingFolderId is null
             || Folders.All(folder => folder.DrawingFolderId != candidate.DrawingFolderId)))
             yield return drawing;
     }
 
-    private string? FolderNameFor(Drawing drawing) =>
-        Folders.FirstOrDefault(folder => folder.DrawingFolderId == drawing.DrawingFolderId)?.Name;
-
-    // Mirrors DrawingsTable's "Latest approved" cell (the em-dash there becomes a blank export cell).
-    private static string? LatestApprovedText(Drawing drawing) =>
-        string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel) ? null : $"Rev {drawing.CurrentApprovedRevisionLabel}";
+    // "Architect / Planning" — the full path, so a sub-folder's drawings say where they live.
+    private static string? FolderPathFor(Drawing drawing, DrawingFolderTree tree)
+    {
+        var path = tree.PathOf(drawing.DrawingFolderId);
+        return path.Length == 0 ? null : path;
+    }
 
     // Mirrors DrawingsTable's Status badges: pending/archived counts, or "Approved" when neither
     // applies and a current approval exists — blank when none of those hold.
@@ -200,7 +219,7 @@ else
         var parts = new List<string>();
         if (drawing.UnapprovedCount > 0) parts.Add($"{drawing.UnapprovedCount} pending");
         if (drawing.ArchivedCount > 0) parts.Add($"{drawing.ArchivedCount} archived");
-        if (drawing.UnapprovedCount == 0 && drawing.ArchivedCount == 0 && !string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
+        if (drawing.UnapprovedCount == 0 && drawing.ArchivedCount == 0 && drawing.HasApprovedRevision)
             parts.Add("Approved");
         return parts.Count == 0 ? null : string.Join(" · ", parts);
     }
@@ -211,9 +230,14 @@ else
         $"{(drawing.LatestMetadataExtractedAt is not null ? "Metadata ✓" : "Not extracted")} · "
         + $"{(drawing.LatestAnalysedAt is not null ? "Analysed ✓" : "Not analysed")}";
 
-    private void OpenNewFolder()
+    private void OpenNewFolder() => OpenNewFolderIn(parent: null);
+
+    private void OpenNewSubFolder(DrawingFolder parent) => OpenNewFolderIn(parent);
+
+    private void OpenNewFolderIn(DrawingFolder? parent)
     {
         renamingFolder = null;
+        parentFolder = parent;
         folderName = "";
         folderError = null;
         folderDialogOpen = true;
@@ -222,6 +246,7 @@ else
     private void OpenRenameFolder(DrawingFolder folder)
     {
         renamingFolder = folder;
+        parentFolder = null;
         folderName = folder.Name;
         folderError = null;
         folderDialogOpen = true;
@@ -237,6 +262,7 @@ else
     {
         folderDialogOpen = false;
         renamingFolder = null;
+        parentFolder = null;
         folderError = null;
     }
 
@@ -248,7 +274,7 @@ else
         try
         {
             if (renamingFolder is null)
-                await DrawingStore.CreateFolderAsync(ProjectId, folderName.Trim(), CancellationToken.None);
+                await DrawingStore.CreateFolderAsync(ProjectId, folderName.Trim(), parentFolder?.DrawingFolderId, CancellationToken.None);
             else
                 await DrawingStore.RenameFolderAsync(ProjectId, renamingFolder.DrawingFolderId, folderName.Trim(), CancellationToken.None);
             CloseFolderDialog();

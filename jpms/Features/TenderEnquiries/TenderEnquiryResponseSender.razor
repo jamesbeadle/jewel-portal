@@ -1,0 +1,84 @@
+@namespace Jewel.JPMS.Features.TenderEnquiries
+@using Jewel.JPMS.Contracts.MailboxCompose
+@using Jewel.JPMS.Contracts.TenderEnquiries
+@using Jewel.JPMS.Features.Triage
+@inject ICommandSender Commands
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
+
+@* Sending the response back (James, 2026-08-25: "I don't see how I'd send it"). One button opens
+   a new email already addressed to the architect, subject written, the PQQ response PDF attached
+   — rendered from the saved answers at the moment of sending. It goes from the projects mailbox,
+   is tagged to this enquiry so it appears under Emails, and on success the enquiry is marked
+   PQQ submitted. Every field stays editable before Send. *@
+
+<div class="panel p-5 space-y-3">
+    <div class="flex items-start justify-between gap-3">
+        <div>
+            <h3 class="eyebrow">Send the response</h3>
+            <p class="text-xs text-content-subtle mt-0.5">
+                Emails the architect with the PQQ response PDF attached and marks the enquiry PQQ submitted.
+                @(string.IsNullOrWhiteSpace(Enquiry.ArchitectContactEmail) ? "Add the architect's contact email under Edit details to address it automatically." : "")
+            </p>
+        </div>
+        @if (!isComposing)
+        {
+            <button type="button" class="btn-primary" @onclick="() => isComposing = true">Send PQQ response</button>
+        }
+    </div>
+    @if (sentNote is not null)
+    {
+        <p class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 text-sm text-content">@sentNote</p>
+    }
+    @if (isComposing)
+    {
+        <MailReplyComposer Prefill="@Prefill"
+                           Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@Enquiry.ProjectId"
+                           LinkRecordType="RecordType.TenderEnquiry" LinkRecordId="@Enquiry.TenderEnquiryId"
+                           FooterNote="Sends now from the projects mailbox with the PQQ response PDF attached, files under this enquiry, and marks it PQQ submitted."
+                           OnSent="OnSent" OnCancel="() => isComposing = false" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TenderEnquiry Enquiry { get; set; } = default!;
+    [Parameter] public EventCallback<TenderEnquiry> OnChanged { get; set; }
+
+    private bool isComposing;
+    private string? sentNote;
+
+    private ComposePrefill Prefill => new(
+        To: Enquiry.ArchitectContactEmail,
+        Subject: $"Pre-Qualification Questionnaire response: {Enquiry.Title} — Jewel Bespoke Build",
+        Body: BodyText,
+        Attachments: new[] { ComposeDraftAttachment.FromRecordDocument(AsLinkable) });
+
+    private string BodyText =>
+        $"Dear {Salutation},\n\n"
+        + $"Thank you for your invitation to tender for {Enquiry.Title}. Please find attached our completed Pre-Qualification Questionnaire response.\n\n"
+        + "We would be pleased to be considered for the tender list and are happy to discuss any aspect of our submission.\n\n"
+        + "Kind regards,\n\nJewel Bespoke Build";
+
+    private string Salutation =>
+        string.IsNullOrWhiteSpace(Enquiry.ArchitectContactName) ? "Sirs" : Enquiry.ArchitectContactName.Trim().Split(' ')[0];
+
+    // The composer attaches record documents by their linkable projection; only the id, type and
+    // reference matter to the renderer.
+    private LinkableRecord AsLinkable => new(
+        RecordType.TenderEnquiry, Enquiry.TenderEnquiryId, Enquiry.ProjectId, Enquiry.Reference, Enquiry.Reference, Enquiry.Title);
+
+    private async Task OnSent(ComposeOutcome outcome)
+    {
+        isComposing = false;
+        sentNote = outcome.Sent
+            ? $"Sent to {string.Join("; ", outcome.To)} — it's under Emails, and the enquiry is marked PQQ submitted."
+            : "Saved to the mailbox's Drafts — review and send it from Outlook, then mark the enquiry PQQ submitted.";
+        if (!outcome.Sent || Enquiry.Status is not (TenderEnquiryStatus.Received or TenderEnquiryStatus.Accepted)) return;
+        try
+        {
+            var updated = await Commands.SendAsync(
+                new SetTenderEnquiryStatus(Enquiry.TenderEnquiryId, TenderEnquiryStatus.PqqSubmitted), CancellationToken.None);
+            await OnChanged.InvokeAsync(updated);
+        }
+        catch (CommandFailedException ex) { sentNote += $" (The status didn't update: {ex.Message})"; }
+    }
+}

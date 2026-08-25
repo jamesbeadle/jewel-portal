@@ -32,6 +32,10 @@ public static class DrawingsFeatureRegistration
         services.AddScoped<UploadDrawingRevisionAuthorisation>();
         services.AddScoped<UploadDrawingRevisionValidation>();
 
+        services.AddScoped<ICommandHandler<SetDrawingRevisionLabel, DrawingRevision>, SetDrawingRevisionLabelHandler>();
+        services.AddScoped<SetDrawingRevisionLabelAuthorisation>();
+        services.AddScoped<SetDrawingRevisionLabelValidation>();
+
         services.AddScoped<ICommandHandler<ApproveDrawingRevision, DrawingRevision>, ApproveDrawingRevisionHandler>();
         services.AddScoped<ApproveDrawingRevisionAuthorisation>();
         services.AddScoped<ApproveDrawingRevisionValidation>();

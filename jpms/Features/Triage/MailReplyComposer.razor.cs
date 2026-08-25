@@ -32,6 +32,12 @@ public partial class MailReplyComposer
     /// snapshot instead of the reply-all prefill, and confirming updates the same entry.</summary>
     [Parameter] public StagedOutboxReply? Draft { get; set; }
 
+    /// <summary>A NEW email's starting envelope — the tender enquiry page's "Send PQQ response"
+    /// (2026-08-25): the architect addressed, the subject written, the response PDF already
+    /// attached. Every field stays editable; ignored for replies, forwards and queued drafts,
+    /// which prefill from their anchor.</summary>
+    [Parameter] public ComposePrefill? Prefill { get; set; }
+
     /// <summary>Project pool for the attachment picker's drawing / photo sources.</summary>
     [Parameter] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
     /// <summary>The project whose drawings/photos the attachment picker offers; also travels on
@@ -123,6 +129,8 @@ public partial class MailReplyComposer
             attachments = draft.Attachments;
         }
 
+        if (Draft is null && ReplyTo is null && Prefill is { } prefill) ApplyPrefill(prefill);
+
         if (AnchorMessageId is not { } anchorId) return;
 
         // A forward starts with a blank envelope — the whole point is choosing NEW recipients —
@@ -161,6 +169,14 @@ public partial class MailReplyComposer
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender) await NotifyEditedAsync();
+    }
+
+    private void ApplyPrefill(ComposePrefill prefill)
+    {
+        toField = prefill.To;
+        subject = prefill.Subject;
+        body = PlainTextToHtml(prefill.Body);
+        attachments = prefill.Attachments ?? Array.Empty<ComposeDraftAttachment>();
     }
 
     private void PrefillReplyEnvelope(MailboxMessage replyTo, MailboxMessageDetail loaded)

@@ -15,11 +15,11 @@
         <ul class="divide-y divide-line">
             @foreach (var revision in Revisions)
             {
-                <li class="p-4 text-sm">
+                <li @key="revision.DrawingRevisionId" class="p-4 text-sm">
                     <div class="flex items-start justify-between gap-3">
                         <div class="min-w-0">
                             <p class="font-medium text-content">
-                                Rev @revision.RevisionLabel
+                                <DrawingRevisionLabelEditor Revision="revision" ProjectId="@ProjectId" CanEdit="CanManage" />
                                 @switch (revision.ApprovalStatus)
                                 {
                                     case DrawingApprovalStatus.Approved:
@@ -37,8 +37,12 @@
                                     <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Ambiguous</span>
                                 }
                             </p>
-                            <p class="text-xs text-content-subtle mt-1 truncate">
-                                @revision.FileName · from @revision.IssuedByEmail
+                            <p class="text-xs text-content-subtle mt-1 truncate" title="@revision.FileName">
+                                @revision.FileName
+                                @if (!string.IsNullOrWhiteSpace(revision.IssuedByEmail))
+                                {
+                                    <span> · from @revision.IssuedByEmail</span>
+                                }
                             </p>
                             <p class="text-xs text-content-subtle">
                                 Received @revision.ReceivedAt.LocalDateTime.ToString("d MMM yyyy") · @revision.ViewCount views
@@ -117,7 +121,7 @@
        OnCancel="() => pendingDelete = null"
        OnConfirm="DeletePendingAsync">
     <p class="text-sm text-content-muted">
-        This permanently deletes <strong>Rev @pendingDelete?.RevisionLabel</strong>
+        This permanently deletes <strong>@(pendingDelete is null ? "" : DrawingNaming.RevisionText(pendingDelete.RevisionLabel))</strong>
         (@pendingDelete?.FileName) and its stored file.
         @if (pendingDelete?.ApprovalStatus == DrawingApprovalStatus.Approved)
         {

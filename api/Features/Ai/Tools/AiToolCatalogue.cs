@@ -59,6 +59,7 @@ public static class AiToolCatalogue
     public static IReadOnlyList<AiTool> All { get; } =
         Build()
             .Concat(AiRecordTools.Build())
+            .Concat(AiTenderEnquiryTools.Build())
             .Concat(AiSkillTools.Build())
             .Concat(AiPageGuideTools.Build())
             .ToList();

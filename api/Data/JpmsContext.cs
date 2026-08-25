@@ -385,6 +385,9 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<DrawingFolderEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_DrawingFolders_ProjectId");
+        modelBuilder.Entity<DrawingFolderEntity>()
+            .HasIndex(row => row.ParentDrawingFolderId)
+            .HasDatabaseName("IX_DrawingFolders_ParentDrawingFolderId");
         modelBuilder.Entity<HsRecordEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_HsRecords_ProjectId");

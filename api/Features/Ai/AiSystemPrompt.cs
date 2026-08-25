@@ -357,6 +357,18 @@ public static class AiSystemPrompt
         prompt.AppendLine("- The user presses Send (or Save as draft) on the Control Centre page. Say \"the draft is in");
         prompt.AppendLine("  the composer\" — never that anything was sent.");
         }
+        else if (string.Equals(modal.ModalKey, ModalCatalog.TenderEnquiryAnswers.ModalKey, StringComparison.OrdinalIgnoreCase))
+        {
+        prompt.AppendLine("- Call get_tender_enquiry_context ONCE, then read_tender_enquiry_document on the questionnaire");
+        prompt.AppendLine("  (the PQQ PDF or Word file) — the questions come from THAT document, word for word, in its");
+        prompt.AppendLine("  order. If no document is on the enquiry, read_record_emails (record_type tender_enquiry): the");
+        prompt.AppendLine("  invitation email usually carries the questionnaire as an attachment (read_email_attachment).");
+        prompt.AppendLine("- Answer in Jewel Bespoke Build's voice from facts you have read. A company fact you have not");
+        prompt.AppendLine("  read (turnover, insurances, company number, referees, staff) is a bracketed prompt for the");
+        prompt.AppendLine("  user to fill — never a guess. Say in one line which answers carry prompts.");
+        prompt.AppendLine("- Send the WHOLE list in update_open_modal (it replaces the editor's rows). The user reviews and");
+        prompt.AppendLine("  presses Save answers — say \"the answers are drafted in the editor\", never that they are saved.");
+        }
         else if (!string.IsNullOrWhiteSpace(task.RecordId))
         {
         prompt.AppendLine($"- Call get_request_context ONCE for {record} and draft from what was actually said in it.");

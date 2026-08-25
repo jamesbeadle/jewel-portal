@@ -16,6 +16,15 @@ public sealed class GetDrawingByIdHandler : IQueryHandler<GetDrawingById, Drawin
     {
         var entity = await context.Drawings.AsNoTracking()
             .FirstOrDefaultAsync(drawing => drawing.DrawingId == query.DrawingId, cancellationToken);
-        return entity?.ToModel();
+        if (entity is null) return null;
+
+        // Same rollup as the register, so a single drawing reads identically to its register row.
+        var summaries = await context.DrawingRevisions.AsNoTracking()
+            .Where(revision => revision.DrawingId == query.DrawingId)
+            .Select(revision => new DrawingRevisionRollup.RevisionSummary(
+                revision.DrawingId, revision.ApprovalStatus, revision.ReceivedAt, revision.FileName,
+                revision.MetadataExtractedAt, revision.AnalysedAt))
+            .ToListAsync(cancellationToken);
+        return entity.ToModel(DrawingRevisionRollup.Of(summaries));
     }
 }

@@ -1,0 +1,17 @@
+@using Jewel.JPMS.Features.Drawings
+
+@* The <option>s for a drawing-folder <select>: every folder in tree order, each shown by its
+   full path ("Architect / Planning") so a sub-folder is never mistaken for a top-level one.
+   Drop this inside a <select> after whatever "no folder" option the caller wants. *@
+@foreach (var node in Tree.Nodes)
+{
+    <option value="@node.Folder.DrawingFolderId">@node.Path</option>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DrawingFolder> Folders { get; set; } = Array.Empty<DrawingFolder>();
+
+    private DrawingFolderTree Tree = new(Array.Empty<DrawingFolder>());
+
+    protected override void OnParametersSet() => Tree = new DrawingFolderTree(Folders);
+}

@@ -3,6 +3,8 @@ namespace Jewel.JPMS.Models;
 public sealed record Drawing(
     string DrawingId,
     string ProjectId,
+    // Code and title are optional on upload — either may be blank. When both are, the register
+    // names the drawing by its file (see LatestFileName and DrawingNaming).
     string DrawingCode,
     string Title,
     string? CurrentApprovedRevisionLabel,
@@ -14,24 +16,35 @@ public sealed record Drawing(
     DateTimeOffset? LatestMetadataExtractedAt = null,
     DateTimeOffset? LatestAnalysedAt = null,
     // The folder this drawing sits in on the register; null = ungrouped.
-    string? DrawingFolderId = null);
+    string? DrawingFolderId = null,
+    // The original file name of the latest revision — the drawing's identity when it was
+    // uploaded without a code or title.
+    string? LatestFileName = null,
+    // Whether an Approved revision exists. Separate from the label because a revision can be
+    // approved with no revision label, which would otherwise read as "nothing approved".
+    bool HasApprovedRevision = false);
 
 /// <summary>
-/// A named group on a project's drawing register — one flat level (no nesting), typically a
-/// discipline or package split ("Architectural", "Structural", "M&amp;E"). Drawings reference a
-/// folder via <see cref="Drawing.DrawingFolderId"/>; a drawing without one is ungrouped.
+/// A named group on a project's drawing register, typically a discipline or package split
+/// ("Architectural", "Structural", "M&amp;E"). Folders nest: a folder with a
+/// <see cref="ParentDrawingFolderId"/> is a sub-folder, and drawings may sit at any level.
+/// Drawings reference a folder via <see cref="Drawing.DrawingFolderId"/>; a drawing without one
+/// is ungrouped.
 /// </summary>
 public sealed record DrawingFolder(
     string DrawingFolderId,
     string ProjectId,
     string Name,
-    DateTimeOffset CreatedAt);
+    DateTimeOffset CreatedAt,
+    string? ParentDrawingFolderId = null);
 
 public sealed record DrawingRevision(
     string DrawingRevisionId,
     string DrawingId,
+    // Blank = no revision given yet; it can be set later from the drawing page.
     string RevisionLabel,
     string FileName,
+    // Blank = nobody recorded who issued it.
     string IssuedByEmail,
     DateTimeOffset ReceivedAt,
     DateTimeOffset? SupersededAt,

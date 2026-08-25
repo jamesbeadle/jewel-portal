@@ -23,8 +23,14 @@ public interface IDrawingStore
     /// <summary>False until the project's drawing folders have been fetched at least once.</summary>
     bool FoldersLoadedFor(string projectId);
 
-    /// <summary>The project's drawing folders, A–Z by name. One flat level — no nesting.</summary>
+    /// <summary>The project's drawing folders, every level, A–Z by name. See <see cref="Features.Drawings.DrawingFolderTree"/> for nesting.</summary>
     IReadOnlyList<DrawingFolder> FoldersFor(string projectId);
+
+    /// <summary>Sets a drawing's code and title; either may be blank.</summary>
+    Task UpdateDetailsAsync(string projectId, string drawingId, string drawingCode, string title, CancellationToken cancellationToken);
+
+    /// <summary>Sets or clears a revision's label after upload.</summary>
+    Task SetRevisionLabelAsync(string projectId, string drawingId, string revisionId, string revisionLabel, CancellationToken cancellationToken);
 
     /// <summary>Starts a background refetch of the project's drawings even if cached, and marks
     /// cached revisions stale so the next read refetches them. Call on page entry so navigating
@@ -35,14 +41,15 @@ public interface IDrawingStore
     /// straight into a folder (null = ungrouped).</summary>
     Task<Drawing> RegisterDrawingAsync(string projectId, string drawingCode, string title, string? drawingFolderId, CancellationToken cancellationToken);
 
-    /// <summary>Creates a folder on the project's register; creating an existing name
-    /// (case-insensitive) returns the existing folder rather than a duplicate.</summary>
-    Task<DrawingFolder> CreateFolderAsync(string projectId, string name, CancellationToken cancellationToken);
+    /// <summary>Creates a folder on the project's register, top level or inside a parent;
+    /// creating a name that already exists at that level (case-insensitive) returns the
+    /// existing folder rather than a duplicate.</summary>
+    Task<DrawingFolder> CreateFolderAsync(string projectId, string name, string? parentFolderId, CancellationToken cancellationToken);
 
     /// <summary>Renames a folder; the drawings inside move with it.</summary>
     Task RenameFolderAsync(string projectId, string folderId, string name, CancellationToken cancellationToken);
 
-    /// <summary>Deletes a folder. Its drawings are not deleted — they become ungrouped.</summary>
+    /// <summary>Deletes a folder. Its drawings and sub-folders are not deleted — they move up a level.</summary>
     Task DeleteFolderAsync(string projectId, string folderId, CancellationToken cancellationToken);
 
     /// <summary>Moves a drawing into a folder, or out of any folder when the id is null.</summary>

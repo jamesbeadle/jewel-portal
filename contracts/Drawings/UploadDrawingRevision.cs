@@ -9,6 +9,8 @@ namespace Jewel.JPMS.Contracts.Drawings;
 /// revision is created <see cref="DrawingApprovalStatus.Unapproved"/> and does NOT supersede any
 /// existing revision — archiving happens only on approval (see <see cref="ApproveDrawingRevision"/>).
 /// The endpoint owns identifier generation so the blob path and the persisted revision share an id.
+/// <see cref="RevisionLabel"/> and <see cref="IssuedByEmail"/> are optional: blank means "not
+/// given" and can be filled in later.
 /// </summary>
 public sealed record UploadDrawingRevision(
     string DrawingId,

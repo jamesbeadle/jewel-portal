@@ -17,8 +17,8 @@ public sealed class UpdateDrawingMetadataHandler
         var entity = await context.Drawings.FindAsync(new object[] { command.DrawingId }, cancellationToken);
         if (entity is null) throw new InvalidOperationException($"Drawing {command.DrawingId} not found.");
 
-        entity.DrawingCode = command.DrawingCode;
-        entity.Title = command.Title;
+        entity.DrawingCode = (command.DrawingCode ?? "").Trim();
+        entity.Title = (command.Title ?? "").Trim();
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();

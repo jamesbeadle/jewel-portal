@@ -5,6 +5,39 @@ public static class OfficePageGuides
 {
     public static readonly IReadOnlyList<PageGuide> Guides = new PageGuide[]
     {
+        new("/tender-enquiries", "Tender enquiries",
+            "The company's bid pipeline — every inbound invitation to tender (an architect or client "
+            + "asking Jewel to tender: a PQQ, an expression of interest, a tender pack), company-wide "
+            + "under the Internal folder because an enquiry is not yet a project. Each enquiry does sit "
+            + "on a Lead-stage project behind the scenes (its drawings, correspondence and document "
+            + "control live there), reference TEQ-####. Live enquiries lead, soonest deadline first; "
+            + "\"Show ended\" reveals declined / not shortlisted / won / lost ones. Manually: \"Log "
+            + "enquiry\" opens a dialog for the enquiry's details (title, architect practice and "
+            + "contact, scope, contract form, received and return-by dates) plus the new project's "
+            + "name, client, Jewel entity and site address; clicking a row opens the enquiry. "
+            + "Enquiries are more usually logged from the architect's email in the Control Centre "
+            + "(\"Log Tender Enquiry\" in System Actions, which also copies the PQQ and drawings off "
+            + "the email). You navigate_to here; no dialog opens on this page itself."),
+
+        new("/tender-enquiries/{tenderEnquiryId}", "Tender enquiry",
+            "One enquiry's own page, four tabs. Overview: the architect, contact, contract form, "
+            + "scope, bid owner, the audit history, and the Status panel — a picker of every status "
+            + "(Received, PQQ submitted, Shortlisted, Not shortlisted, Tender submitted, Won, Lost, "
+            + "Declined); any move goes forwards or back, PQQ/Tender submitted stamp the date, an "
+            + "ending asks for a reason, Won moves the Lead project to Pre-Construction. PQQ response: "
+            + "the questionnaire's numbered questions with Jewel's answers — edited by hand, or drafted "
+            + "with \"Draft with AI\", which opens the editor beside you as the tender_enquiry_answers "
+            + "task (get_tender_enquiry_context, read_tender_enquiry_document on the PQQ, "
+            + "read_record_emails record_type tender_enquiry; send the whole list with "
+            + "update_open_modal; the user presses Save answers); the PDF downloads from the toolbar and "
+            + "renders fresh from the saved answers; \"Send PQQ response\" below opens a new email to "
+            + "the architect with the PDF attached, which files under the enquiry and marks it PQQ "
+            + "submitted when sent. Documents: the files kept on the enquiry (the PQQ and drawings "
+            + "copied off the email, plus uploads). Emails: everything tagged TEQ-####, read live, "
+            + "with reply/forward and \"Find & tag emails\". \"Edit details\" in the header rewrites "
+            + "the enquiry's details. The tender_enquiry_answers dialog cannot be opened by open_modal "
+            + "— the user opens it with Draft with AI."),
+
         new("/todos", "To-dos",
             "The master to-do list across every project — company-wide and project items together, "
             + "with a project filter. The MD and administrators see every item; everyone else sees "

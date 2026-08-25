@@ -643,12 +643,12 @@ else
                         {
                             <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
                                 <div>
-                                    <span class="text-sm font-medium text-content">@drawing.DrawingCode</span>
-                                    <span class="text-sm text-content-muted ml-2">@drawing.Title</span>
+                                    <span class="text-sm font-medium text-content">@DrawingNaming.Code(drawing)</span>
+                                    <span class="text-sm text-content-muted ml-2">@DrawingNaming.Name(drawing)</span>
                                 </div>
                                 <div class="flex items-center gap-3">
-                                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium @(drawing.CurrentApprovedRevisionLabel is null ? "border-amber-200 bg-amber-50 text-amber-800" : "border-line bg-surface-raised text-content-muted")">
-                                        @(drawing.CurrentApprovedRevisionLabel is null ? "No approved revision" : $"Rev {drawing.CurrentApprovedRevisionLabel}")
+                                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium @(drawing.HasApprovedRevision ? "border-line bg-surface-raised text-content-muted" : "border-amber-200 bg-amber-50 text-amber-800")">
+                                        @(DrawingNaming.ApprovedRevisionText(drawing) ?? "No approved revision")
                                     </span>
                                     <a class="text-xs text-accent hover:underline" href="@($"/projects/{ProjectId}/drawings/{drawing.DrawingId}")">Open</a>
                                 </div>
@@ -977,11 +977,11 @@ else
                     <label class="flex items-center gap-2 text-sm text-content py-1">
                         <input type="checkbox" checked="@selectedDrawingIds.Contains(drawing.DrawingId)"
                                @onchange="e => ToggleDrawing(drawing.DrawingId, e)" />
-                        <span class="font-medium">@drawing.DrawingCode</span>
-                        <span class="text-content-subtle truncate">· @drawing.Title</span>
-                        @if (drawing.CurrentApprovedRevisionLabel is not null)
+                        <span class="font-medium">@DrawingNaming.Code(drawing)</span>
+                        <span class="text-content-subtle truncate">· @DrawingNaming.Name(drawing)</span>
+                        @if (DrawingNaming.ApprovedRevisionText(drawing) is { } approvedText)
                         {
-                            <span class="text-content-subtle">· Rev @drawing.CurrentApprovedRevisionLabel</span>
+                            <span class="text-content-subtle">· @approvedText</span>
                         }
                     </label>
                 }

@@ -1,0 +1,24 @@
+@namespace Jewel.JPMS.Features.TenderEnquiries
+
+@* The saved questionnaire, read-only: numbered question, answer beneath. *@
+
+@if (Rows.Count == 0)
+{
+    <p class="text-sm text-content-subtle italic">No questions yet — draft them with the assistant, or add the questionnaire by hand.</p>
+}
+else
+{
+    <ol class="space-y-3">
+        @foreach (var row in Rows)
+        {
+            <li>
+                <p class="text-sm font-medium text-content">@row.Position. @row.Question</p>
+                <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(row.Answer) ? "—" : row.Answer)</p>
+            </li>
+        }
+    </ol>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<TenderEnquiryAnswer> Rows { get; set; } = Array.Empty<TenderEnquiryAnswer>();
+}

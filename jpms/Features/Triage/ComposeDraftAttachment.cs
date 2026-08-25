@@ -46,3 +46,11 @@ public sealed record ComposeDraftAttachment(
         Guid.NewGuid().ToString("N"), ComposeAttachmentSource.RecordDocument, record.RecordId,
         $"{record.Reference}.pdf", 0, RecordType: record.Type);
 }
+
+/// <summary>The starting envelope for a brand-new email composed from a record page — who it
+/// goes to, what it says, what travels with it. Plain-text body (the composer makes paragraphs).</summary>
+public sealed record ComposePrefill(
+    string To = "",
+    string Subject = "",
+    string Body = "",
+    IReadOnlyList<ComposeDraftAttachment>? Attachments = null);

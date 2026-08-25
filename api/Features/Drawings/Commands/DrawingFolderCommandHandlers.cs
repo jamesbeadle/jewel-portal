@@ -10,7 +10,7 @@ namespace Jewel.JPMS.Api.Features.Drawings.Commands;
 
 // The drawing-folder command handlers, kept in one file because the whole feature is four small
 // writes over one table (create, rename, delete, move-drawing) — the same reasoning as the
-// contracts living together in DrawingFolders.cs.
+// contracts living together in DrawingFolders.cs. Folders nest via ParentDrawingFolderId.
 
 public sealed class CreateDrawingFolderHandler
     : ICommandHandler<CreateDrawingFolder, DrawingFolder>
@@ -22,12 +22,19 @@ public sealed class CreateDrawingFolderHandler
     public async Task<DrawingFolder> HandleAsync(CreateDrawingFolder command, CancellationToken cancellationToken)
     {
         var name = command.Name.Trim();
+        var parentId = string.IsNullOrWhiteSpace(command.ParentDrawingFolderId) ? null : command.ParentDrawingFolderId;
 
-        // Same name on the same project returns the existing folder — the inline "New folder…"
+        if (parentId is not null)
+        {
+            var parent = await context.DrawingFolders.AsNoTracking()
+                .FirstOrDefaultAsync(folder => folder.DrawingFolderId == parentId, cancellationToken);
+            if (parent is null || parent.ProjectId != command.ProjectId)
+                throw new InvalidOperationException("The parent folder does not exist on this project.");
+        }
+
+        // Same name at the same level returns the existing folder — the inline "New folder…"
         // path must not split one discipline across two folders because of a retype.
-        var existing = await context.DrawingFolders
-            .FirstOrDefaultAsync(folder => folder.ProjectId == command.ProjectId
-                && folder.Name.ToLower() == name.ToLower(), cancellationToken);
+        var existing = await DrawingFolderSiblings.FindByNameAsync(context, command.ProjectId, parentId, name, cancellationToken);
         if (existing is not null) return existing.ToModel();
 
         var entity = new DrawingFolderEntity
@@ -35,7 +42,8 @@ public sealed class CreateDrawingFolderHandler
             DrawingFolderId = DrawingIdentifierFactory.NextDrawingFolderId(),
             ProjectId = command.ProjectId,
             Name = name,
-            CreatedAt = DateTimeOffset.UtcNow
+            CreatedAt = DateTimeOffset.UtcNow,
+            ParentDrawingFolderId = parentId
         };
         context.DrawingFolders.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
@@ -56,11 +64,10 @@ public sealed class RenameDrawingFolderHandler
         if (entity is null) throw new InvalidOperationException($"Drawing folder {command.DrawingFolderId} not found.");
 
         var name = command.Name.Trim();
-        var duplicate = await context.DrawingFolders.AsNoTracking()
-            .AnyAsync(folder => folder.ProjectId == entity.ProjectId
-                && folder.DrawingFolderId != entity.DrawingFolderId
-                && folder.Name.ToLower() == name.ToLower(), cancellationToken);
-        if (duplicate) throw new InvalidOperationException($"The project already has a folder named “{name}”.");
+        var duplicate = await DrawingFolderSiblings.FindByNameAsync(
+            context, entity.ProjectId, entity.ParentDrawingFolderId, name, cancellationToken);
+        if (duplicate is not null && duplicate.DrawingFolderId != entity.DrawingFolderId)
+            throw new InvalidOperationException($"There is already a folder named “{name}” at this level.");
 
         entity.Name = name;
         await context.SaveChangesAsync(cancellationToken);
@@ -80,14 +87,30 @@ public sealed class DeleteDrawingFolderHandler
         var entity = await context.DrawingFolders.FindAsync(new object[] { command.DrawingFolderId }, cancellationToken);
         if (entity is null) throw new InvalidOperationException($"Drawing folder {command.DrawingFolderId} not found.");
 
-        // The drawings survive — they drop back to the register's Ungrouped section.
-        await context.Drawings
-            .Where(drawing => drawing.DrawingFolderId == command.DrawingFolderId)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(drawing => drawing.DrawingFolderId, (string?)null),
-                cancellationToken);
+        // Nothing inside is lost: drawings and sub-folders move up one level into the deleted
+        // folder's parent (null = Ungrouped / top level). The bulk updates commit on their own,
+        // so the three writes share a transaction — a failed delete must not leave the contents
+        // re-parented under a folder that still exists.
+        // The context retries on transient SQL failures, and a user transaction must run inside
+        // that strategy (as DeleteProjectHandler does) or EF refuses it.
+        var parentId = entity.ParentDrawingFolderId;
+        var strategy = context.Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+            await context.Drawings
+                .Where(drawing => drawing.DrawingFolderId == command.DrawingFolderId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(drawing => drawing.DrawingFolderId, parentId),
+                    cancellationToken);
+            await context.DrawingFolders
+                .Where(folder => folder.ParentDrawingFolderId == command.DrawingFolderId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(folder => folder.ParentDrawingFolderId, parentId),
+                    cancellationToken);
 
-        context.DrawingFolders.Remove(entity);
-        await context.SaveChangesAsync(cancellationToken);
+            context.DrawingFolders.Remove(entity);
+            await context.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+        });
         return new Acknowledgement(command.DrawingFolderId);
     }
 }

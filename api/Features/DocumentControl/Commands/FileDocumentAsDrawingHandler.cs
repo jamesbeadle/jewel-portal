@@ -48,16 +48,15 @@ public sealed class FileDocumentAsDrawingHandler
         var landed = await DrawingRevisionLanding.LandAsync(
             context, drawingBlobs,
             command.ProjectId, command.DrawingCode, command.Title, command.RevisionLabel,
-            item.FileName, item.ContentType, bytes, item.FromEmail, cancellationToken);
+            item.FileName, item.ContentType, bytes, item.FromEmail, cancellationToken,
+            drawingId: command.DrawingId);
 
-        var label = command.RevisionLabel.Trim();
         item.Status = (int)DocumentControlStatus.Filed;
         item.ResolvedBy = actor.Email;
         item.ResolvedAt = DateTimeOffset.UtcNow;
         item.FiledAsKind = (int)DocumentFiledAs.Drawing;
         item.FiledRecordId = landed.Drawing.DrawingId;
-        item.FiledLabel =
-            $"Drawing {landed.Drawing.DrawingCode}{(string.IsNullOrWhiteSpace(label) ? "" : $" Rev {label}")} on {project.Name}";
+        item.FiledLabel = $"Drawing {FiledDrawingName(landed)} on {project.Name}";
 
         // One save: the drawing, its revision and the item's resolution commit together.
         await context.SaveChangesAsync(cancellationToken);
@@ -71,6 +70,16 @@ public sealed class FileDocumentAsDrawingHandler
             cancellationToken: cancellationToken);
 
         return item.ToModel();
+    }
+
+    // "A-100 Rev C", or the file name when the drawing was filed without a code; the revision is
+    // appended only when one was given.
+    private static string FiledDrawingName(DrawingRevisionLanding.Landed landed)
+    {
+        var drawing = landed.Drawing;
+        var name = string.IsNullOrWhiteSpace(drawing.DrawingCode) ? landed.Revision.FileName : drawing.DrawingCode;
+        var label = landed.Revision.RevisionLabel;
+        return string.IsNullOrWhiteSpace(label) ? name : $"{name} Rev {label}";
     }
 
     private async Task<byte[]> ReadItemBytesAsync(string blobRef, CancellationToken cancellationToken)

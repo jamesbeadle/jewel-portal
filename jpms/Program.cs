@@ -129,6 +129,7 @@ builder.Services.AddScoped<ISiteStore, HttpSiteStore>();
 builder.Services.AddScoped<ICommercialStore, HttpCommercialStore>();
 builder.Services.AddScoped<ILabourStore, HttpLabourStore>();
 builder.Services.AddScoped<IValuationReportStore, HttpValuationReportStore>();
+builder.Services.AddScoped<IClientCostReferenceStore, HttpClientCostReferenceStore>();
 builder.Services.AddScoped<ICvrStore, HttpCvrStore>();
 builder.Services.AddScoped<ICommercialInputsStore, HttpCommercialInputsStore>();
 builder.Services.AddScoped<IProjectRetentionStore, HttpProjectRetentionStore>();

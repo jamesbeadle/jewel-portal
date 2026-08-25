@@ -6,8 +6,8 @@ namespace Jewel.JPMS.Models;
 /// </summary>
 public enum TenderEnquiryStatus
 {
-    Received = 0,         // the invitation has arrived; nobody has decided whether to go for it
-    Accepted = 1,         // Jewel is interested and is answering the PQQ / preparing a tender
+    Received = 0,         // logged and in hand — the response is being prepared
+    Accepted = 1,         // RETIRED 2026-08-25 (James: logging IS accepting) — never set; kept so persisted ints hold
     Declined = 2,         // Jewel passed on the enquiry
     PqqSubmitted = 3,     // the pre-qualification questionnaire has gone back to the architect
     Shortlisted = 4,      // invited onto the tender list — pricing the job
@@ -54,15 +54,22 @@ public static class TenderEnquiryStatusExtensions
             or TenderEnquiryStatus.Won
             or TenderEnquiryStatus.Lost);
 
-    /// <summary>The statuses a user may move an enquiry to from where it stands. The journey is
-    /// linear with an exit at each gate; an ended enquiry can be reopened to Accepted.</summary>
-    public static IReadOnlyList<TenderEnquiryStatus> NextStatuses(this TenderEnquiryStatus status) => status switch
+    /// <summary>A value that exists only for rows written before it was retired; never offered,
+    /// never accepted as a move.</summary>
+    public static bool IsRetired(this TenderEnquiryStatus status) => status == TenderEnquiryStatus.Accepted;
+
+    /// <summary>Every status a user may set, in journey order — any move is allowed in either
+    /// direction (a wrong press is undone by choosing the right one); an ending just needs a
+    /// reason.</summary>
+    public static IReadOnlyList<TenderEnquiryStatus> Choices { get; } = new[]
     {
-        TenderEnquiryStatus.Received        => new[] { TenderEnquiryStatus.Accepted, TenderEnquiryStatus.Declined },
-        TenderEnquiryStatus.Accepted        => new[] { TenderEnquiryStatus.PqqSubmitted, TenderEnquiryStatus.Shortlisted, TenderEnquiryStatus.Declined },
-        TenderEnquiryStatus.PqqSubmitted    => new[] { TenderEnquiryStatus.Shortlisted, TenderEnquiryStatus.NotShortlisted },
-        TenderEnquiryStatus.Shortlisted     => new[] { TenderEnquiryStatus.TenderSubmitted, TenderEnquiryStatus.Declined },
-        TenderEnquiryStatus.TenderSubmitted => new[] { TenderEnquiryStatus.Won, TenderEnquiryStatus.Lost },
-        _ => new[] { TenderEnquiryStatus.Accepted }
+        TenderEnquiryStatus.Received,
+        TenderEnquiryStatus.PqqSubmitted,
+        TenderEnquiryStatus.Shortlisted,
+        TenderEnquiryStatus.NotShortlisted,
+        TenderEnquiryStatus.TenderSubmitted,
+        TenderEnquiryStatus.Won,
+        TenderEnquiryStatus.Lost,
+        TenderEnquiryStatus.Declined
     };
 }

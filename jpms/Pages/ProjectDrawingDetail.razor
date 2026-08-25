@@ -4,6 +4,7 @@
 @inject IDrawingStore DrawingStore
 @inject NavigationManager Nav
 @implements IDisposable
+@using Jewel.JPMS.Features.Drawings
 
 <PageTitle>Drawing · JPMS</PageTitle>
 
@@ -51,17 +52,16 @@ else
 
             <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                    <p class="font-mono text-xs text-content-subtle mb-1">@drawing.DrawingCode</p>
-                    <h2 class="text-xl md:text-2xl font-semibold text-content">@drawing.Title</h2>
+                    <DrawingDetailsEditor Drawing="drawing" ProjectId="@ProjectId" CanEdit="CanManage" />
                     <p class="text-sm text-content-muted mt-1">
                         Latest approved:
-                        @if (string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
+                        @if (DrawingNaming.ApprovedRevisionText(drawing) is { } approvedText)
                         {
-                            <span class="italic text-content-subtle">none yet</span>
+                            <span class="font-mono">@approvedText</span>
                         }
                         else
                         {
-                            <span class="font-mono">Rev @drawing.CurrentApprovedRevisionLabel</span>
+                            <span class="italic text-content-subtle">none yet</span>
                         }
                     </p>
                     <div class="mt-2 flex items-center gap-2 text-sm text-content-muted">
@@ -80,16 +80,13 @@ else
                                 else
                                 {
                                     <option value="">No folder (ungrouped)</option>
-                                    @foreach (var folder in Folders)
-                                    {
-                                        <option value="@folder.DrawingFolderId">@folder.Name</option>
-                                    }
+                                    <DrawingFolderOptions Folders="Folders" />
                                 }
                             </select>
                         }
                         else
                         {
-                            <span>@(FolderName ?? "Ungrouped")</span>
+                            <span>@(FolderPath ?? "Ungrouped")</span>
                         }
                     </div>
                     @if (moveError is not null)
@@ -130,7 +127,7 @@ else
                    OnCancel="() => confirmingDelete = false"
                    OnConfirm="DeleteDrawingAsync">
                 <p class="text-sm text-content-muted">
-                    This permanently deletes <strong>@drawing.DrawingCode · @drawing.Title</strong>,
+                    This permanently deletes <strong>@DrawingNaming.Label(drawing)</strong>,
                     including all @DrawingStore.RevisionsFor(drawing.DrawingId).Count revision(s) and their files.
                     This cannot be undone.
                 </p>
@@ -161,14 +158,14 @@ else
                            bare <iframe> left drawings at the mercy of the browser's own viewer. *@
                         <PdfViewer FileUrl="@FileUrl(PreviewRevision, inline: true)"
                                    DownloadUrl="@FileUrl(PreviewRevision, inline: false)"
-                                   Caption="@($"Showing Rev {PreviewRevision.RevisionLabel} · {PreviewRevision.FileName}")" />
+                                   Caption="@($"Showing {DrawingNaming.RevisionText(PreviewRevision.RevisionLabel)} · {PreviewRevision.FileName}")" />
                     }
                     else if (IsImage(PreviewRevision))
                     {
                         <div class="rounded-xl border border-line bg-surface overflow-hidden">
                             <header class="px-4 py-2.5 border-b border-line bg-surface-raised flex items-center justify-between gap-3">
                                 <span class="text-xs text-content-muted font-medium truncate">
-                                    Showing Rev @PreviewRevision.RevisionLabel · @PreviewRevision.FileName
+                                    Showing @DrawingNaming.RevisionText(PreviewRevision.RevisionLabel) · @PreviewRevision.FileName
                                 </span>
                                 <a href="@FileUrl(PreviewRevision, inline: false)" target="_blank" rel="noopener"
                                    class="text-xs text-accent hover:underline underline-offset-2 shrink-0">Open / download</a>
@@ -221,8 +218,15 @@ else
     private bool FoldersReady => DrawingStore.FoldersLoadedFor(ProjectId);
     private IReadOnlyList<DrawingFolder> Folders => DrawingStore.FoldersFor(ProjectId);
 
-    private string? FolderName =>
-        Folders.FirstOrDefault(folder => folder.DrawingFolderId == drawing?.DrawingFolderId)?.Name;
+    // "Architect / Planning" — the full path, since the drawing may sit in a sub-folder.
+    private string? FolderPath
+    {
+        get
+        {
+            var path = new DrawingFolderTree(Folders).PathOf(drawing?.DrawingFolderId);
+            return path.Length == 0 ? null : path;
+        }
+    }
 
     private async Task MoveToFolderAsync(ChangeEventArgs args)
     {

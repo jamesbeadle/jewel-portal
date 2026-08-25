@@ -1,25 +1,40 @@
 @namespace Jewel.JPMS.Features.TenderEnquiries
+@using System.Text.Json
+@using Jewel.JPMS.Contracts.Ai
 @using Jewel.JPMS.Contracts.TenderEnquiries
 @inject IQueryClient Queries
 @inject ICommandSender Commands
+@inject SessionService Session
+@inject AiTaskState AiTasks
+@inject ChatPanelState Chat
+@implements IDisposable
 
 @* The PQQ response: the architect's numbered questions with Jewel's answers beneath. Read mode
-   shows the sheet; edit mode saves it whole (positions re-minted server-side). The PDF renders
-   fresh from the saved answers on every download and every email attach. *@
+   shows the sheet; edit mode saves it whole (positions re-minted server-side). "Draft with AI"
+   opens the editor beside the chat as the tender_enquiry_answers task: the assistant reads the
+   questionnaire off the enquiry's documents and emails, lifts the questions and drafts the
+   answers into these rows — the user reviews and presses Save. The PDF renders fresh from the
+   saved answers on every download and every email attach. *@
 
 <div class="panel p-5">
     <div class="flex items-start justify-between gap-3 mb-3">
         <div>
             <h3 class="eyebrow">PQQ response</h3>
             <p class="text-xs text-content-subtle mt-0.5">
-                Paste the architect's questions in, answer each one, save. Download the PDF here, or attach it to the reply
-                from the Control Centre's System documents picker — the answers here are what the architect receives.
+                The questions as the architect asked them, each with Jewel's answer. Draft them with the assistant or by hand,
+                save, then send the response from the panel below — the PDF is rendered from what is saved here.
             </p>
         </div>
-        <Toolbar>
-            <ToolbarButton Icon="download" Label="Download the PQQ response PDF" Href="@DocumentHref" Download="true"
-                           Disabled="@(rows is null || editing)" />
-        </Toolbar>
+        <div class="flex items-center gap-2">
+            @if (CanEdit && CanUseAssistant)
+            {
+                <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="StartDraftWithAi">Draft with AI</button>
+            }
+            <Toolbar>
+                <ToolbarButton Icon="download" Label="Download the PQQ response PDF" Href="@DocumentHref" Download="true"
+                               Disabled="@(rows is null || editing)" />
+            </Toolbar>
+        </div>
     </div>
 
     @if (error is not null)
@@ -30,22 +45,7 @@
     <LoadGate IsLoading="@(rows is null && !loadFailed)" Label="Loading answers">
     @if (!editing)
     {
-        @if (Rows.Count == 0)
-        {
-            <p class="text-sm text-content-subtle italic">No questions yet. @(CanEdit ? "Press Edit to add the questionnaire." : "")</p>
-        }
-        else
-        {
-            <ol class="space-y-3">
-                @foreach (var row in Rows)
-                {
-                    <li>
-                        <p class="text-sm font-medium text-content">@row.Position. @row.Question</p>
-                        <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(row.Answer) ? "—" : row.Answer)</p>
-                    </li>
-                }
-            </ol>
-        }
+        <TenderEnquiryAnswersSheet Rows="@Rows" />
         @if (CanEdit)
         {
             <button type="button" class="btn-secondary mt-4" disabled="@busy" @onclick="StartEdit">@(Rows.Count == 0 ? "Add questionnaire" : "Edit answers")</button>
@@ -53,103 +53,110 @@
     }
     else
     {
-        <div class="space-y-4">
-            @for (var index = 0; index < draft.Count; index++)
-            {
-                var position = index;
-                var row = draft[position];
-                <div class="rounded-lg border border-line p-3 space-y-2">
-                    <div class="flex items-center justify-between gap-2">
-                        <span class="text-xs font-semibold text-content-subtle">Question @(position + 1)</span>
-                        <div class="flex gap-2 text-xs">
-                            <button type="button" class="text-content-subtle hover:text-content" disabled="@(position == 0)" @onclick="() => Move(position, -1)">↑</button>
-                            <button type="button" class="text-content-subtle hover:text-content" disabled="@(position == draft.Count - 1)" @onclick="() => Move(position, 1)">↓</button>
-                            <button type="button" class="text-content-subtle hover:text-negative" @onclick="() => draft.RemoveAt(position)">Remove</button>
-                        </div>
-                    </div>
-                    <input class="field" value="@row.Question" placeholder="The question as the architect asked it…"
-                           @oninput="e => row.Question = e.Value?.ToString() ?? string.Empty" />
-                    <textarea class="field" rows="4" value="@row.Answer" placeholder="Jewel's answer…"
-                              @oninput="e => row.Answer = e.Value?.ToString() ?? string.Empty"></textarea>
-                </div>
-            }
-            <div class="flex flex-wrap gap-2">
-                <button type="button" class="btn-secondary text-xs" @onclick="() => draft.Add(new AnswerRow())">+ Add question</button>
-                <button type="button" class="btn-secondary text-xs" @onclick="() => showPaste = !showPaste">Paste questions</button>
-            </div>
-            @if (showPaste)
-            {
-                <div class="space-y-2">
-                    <textarea class="field" rows="6" value="@pasteText" placeholder="One question per line — numbering is stripped."
-                              @oninput="e => pasteText = e.Value?.ToString() ?? string.Empty"></textarea>
-                    <button type="button" class="btn-secondary text-xs" @onclick="AddPastedQuestions">Add these questions</button>
-                </div>
-            }
-            <div class="flex gap-2 pt-2">
-                <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveAsync">@(busy ? "Saving…" : "Save answers")</button>
-                <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => editing = false">Cancel</button>
-            </div>
-        </div>
+        <TenderEnquiryAnswersForm Draft="@draft" Busy="@busy" OnChanged="PublishDraft" OnSave="SaveAsync" OnCancel="CancelEdit" />
     }
     </LoadGate>
 </div>
 
 @code {
     [Parameter, EditorRequired] public string TenderEnquiryId { get; set; } = "";
+    [Parameter] public TenderEnquiry? Enquiry { get; set; }
     [Parameter] public bool CanEdit { get; set; }
-
-    private sealed class AnswerRow
-    {
-        public string Question { get; set; } = "";
-        public string Answer { get; set; } = "";
-    }
 
     private IReadOnlyList<TenderEnquiryAnswer>? rows;
     private IReadOnlyList<TenderEnquiryAnswer> Rows => rows ?? Array.Empty<TenderEnquiryAnswer>();
-    private readonly List<AnswerRow> draft = new();
+    private readonly List<TenderEnquiryAnswerRow> draft = new();
     private bool editing;
     private bool busy;
     private bool loadFailed;
-    private bool showPaste;
-    private string pasteText = "";
     private string? error;
 
     private string DocumentHref => $"/api/tender-enquiries/{TenderEnquiryId}/document";
+    private bool CanUseAssistant => Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
+    private bool TaskIsMine => AiTasks.Active?.ModalKey == ModalCatalog.TenderEnquiryAnswers.ModalKey;
 
     protected override async Task OnInitializedAsync()
     {
+        AiTasks.OnDraftApplied += ApplyAssistantDraft;
         try { rows = await Queries.AskAsync(new ListTenderEnquiryAnswers(TenderEnquiryId), CancellationToken.None); }
-        catch { loadFailed = true; }
+        catch
+        {
+            loadFailed = true;
+            error = "Couldn't load the PQQ answers.";
+        }
+    }
+
+    public void Dispose()
+    {
+        AiTasks.OnDraftApplied -= ApplyAssistantDraft;
+        EndTask();
     }
 
     private void StartEdit()
     {
         draft.Clear();
-        draft.AddRange(Rows.Select(row => new AnswerRow { Question = row.Question, Answer = row.Answer }));
-        if (draft.Count == 0) draft.Add(new AnswerRow());
+        draft.AddRange(Rows.Select(row => new TenderEnquiryAnswerRow { Question = row.Question, Answer = row.Answer }));
+        if (draft.Count == 0) draft.Add(new TenderEnquiryAnswerRow());
         error = null;
         editing = true;
     }
 
-    private void Move(int position, int direction)
+    private void CancelEdit()
     {
-        var target = position + direction;
-        if (target < 0 || target >= draft.Count) return;
-        (draft[position], draft[target]) = (draft[target], draft[position]);
+        editing = false;
+        EndTask();
     }
 
-    // "1. Full company name…" → "Full company name…": leading numbering and bullets are stripped
-    // so the sheet numbers itself.
-    private void AddPastedQuestions()
+    // The editor opens beside the chat and the assistant is asked to fill it: the task carries the
+    // rows as they stand so the model reads the real form, and every keystroke republishes.
+    private void StartDraftWithAi()
     {
-        var questions = pasteText.Split('\n')
-            .Select(line => line.Trim().TrimStart('-', '•', '·', ' '))
-            .Select(line => System.Text.RegularExpressions.Regex.Replace(line, @"^\(?\d+[\.\)]\s*", ""))
-            .Where(line => line.Length > 0);
-        draft.RemoveAll(row => string.IsNullOrWhiteSpace(row.Question) && string.IsNullOrWhiteSpace(row.Answer));
-        draft.AddRange(questions.Select(question => new AnswerRow { Question = question }));
-        pasteText = "";
-        showPaste = false;
+        if (!editing) StartEdit();
+        if (Enquiry is null) return;
+        AiTasks.Start(
+            new AiTask(
+                TaskKey: "tender-enquiry-answers",
+                ModalKey: ModalCatalog.TenderEnquiryAnswers.ModalKey,
+                BannerLabel: $"Drafting the PQQ response for {Enquiry.Reference}",
+                BusyLabel: "Reading the enquiry, its questionnaire and tagged emails…",
+                KickoffMessage: $"Draft the PQQ response for {Enquiry.Reference} ({Enquiry.Title}) in the editor beside you: "
+                    + "read the questionnaire the architect sent, put every question in, and answer each one from what you can read.",
+                ProjectId: Enquiry.ProjectId,
+                RecordType: "tender_enquiry",
+                RecordId: Enquiry.TenderEnquiryId,
+                RecordReference: Enquiry.Reference),
+            CurrentDraftJson());
+        Chat.Open();
+        Chat.SetCoexistence(true);
+    }
+
+    private void EndTask()
+    {
+        if (!TaskIsMine) return;
+        AiTasks.End();
+        Chat.SetCoexistence(false);
+    }
+
+    private void PublishDraft()
+    {
+        if (TaskIsMine) AiTasks.UpdateDraft(CurrentDraftJson());
+    }
+
+    private string CurrentDraftJson() =>
+        JsonSerializer.Serialize(new { answers = draft.Select(row => new { question = row.Question, answer = row.Answer }) });
+
+    // The assistant's proposal REPLACES the list (the schema says so) — every row it carries, in
+    // its order; an update whose every item is malformed is a broken update, not an instruction.
+    private void ApplyAssistantDraft(string fieldsJson)
+    {
+        if (!TaskIsMine) return;
+        var proposed = TenderEnquiryAnswerRow.ParseProposal(fieldsJson);
+        if (proposed is null || proposed.Count == 0) return;
+        if (!editing) StartEdit();
+        draft.Clear();
+        draft.AddRange(proposed);
+        AiTasks.UpdateDraft(CurrentDraftJson());
+        _ = InvokeAsync(StateHasChanged);
     }
 
     private async Task SaveAsync()
@@ -162,6 +169,7 @@
             var answers = draft.Select(row => new TenderEnquiryAnswerDraft(row.Question, row.Answer)).ToList();
             rows = await Commands.SendAsync(new SetTenderEnquiryAnswers(TenderEnquiryId, answers), CancellationToken.None);
             editing = false;
+            EndTask();
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         finally { busy = false; }

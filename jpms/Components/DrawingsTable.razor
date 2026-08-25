@@ -1,9 +1,11 @@
 @inject NavigationManager Nav
+@using Jewel.JPMS.Features.Drawings
 
 @* The drawing register table. With folders present the rows group into collapsible sections —
-   one per folder (A–Z, as supplied), Ungrouped last — inside a single table so the sticky
-   column headers hold across sections. With no folders it renders the flat register it always
-   was. Collapse state is per-visit; the register reopens fully expanded. *@
+   one per folder in tree order (top level A–Z, each sub-folder indented beneath its parent),
+   Ungrouped last — inside a single table so the sticky column headers hold across sections.
+   Drawings sit at whatever level their folder is. With no folders it renders the flat register
+   it always was. Collapse state is per-visit; the register reopens fully expanded. *@
 
 <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
     <table class="w-full text-sm">
@@ -11,6 +13,7 @@
             <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Code</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Title</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">File</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-center">Latest approved</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-center">Status</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-center">Pipeline</th>
@@ -22,18 +25,18 @@
             <tbody class="divide-y divide-line">
                 @foreach (var drawing in Drawings)
                 {
-                    @DrawingRow(drawing)
+                    @DrawingRow(drawing, depth: 0)
                 }
             </tbody>
         }
         else
         {
-            @foreach (var section in Sections)
+            @foreach (var section in VisibleSections)
             {
                 <tbody class="divide-y divide-line border-t border-line">
                     <tr class="bg-surface-raised/70 cursor-pointer select-none hover:bg-surface-raised transition"
                         @onclick="() => ToggleCollapse(section.Key)">
-                        <td colspan="6" class="px-4 py-2">
+                        <td colspan="@ColumnCount" class="px-4 py-2" style="@IndentStyle(section.Depth)">
                             <div class="flex items-center gap-2">
                                 <ActionIcon Name="chevron-down"
                                             Class="@(IsCollapsed(section.Key) ? "w-3.5 h-3.5 text-content-subtle -rotate-90 transition-transform" : "w-3.5 h-3.5 text-content-subtle transition-transform")" />
@@ -46,16 +49,21 @@
                                 {
                                     <span class="font-medium text-content-muted italic">Ungrouped</span>
                                 }
-                                <span class="text-xs text-content-subtle tabular-nums">@section.Drawings.Count</span>
+                                <span class="text-xs text-content-subtle tabular-nums" title="Drawings in this folder, sub-folders included">@SubtreeCount(section)</span>
                                 @if (CanManage && section.Folder is { } folder)
                                 {
                                     <span class="ml-auto flex items-center gap-1">
+                                        <button type="button" title="New sub-folder" aria-label="New sub-folder"
+                                                @onclick="() => OnCreateSubFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
+                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
+                                            <ActionIcon Name="plus" Class="w-3.5 h-3.5" />
+                                        </button>
                                         <button type="button" title="Rename folder" aria-label="Rename folder"
                                                 @onclick="() => OnRenameFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
                                                 class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
                                             <ActionIcon Name="pencil" Class="w-3.5 h-3.5" />
                                         </button>
-                                        <button type="button" title="Delete folder (drawings become ungrouped)" aria-label="Delete folder"
+                                        <button type="button" title="Delete folder (its drawings and sub-folders move up a level)" aria-label="Delete folder"
                                                 @onclick="() => OnDeleteFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
                                                 class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-red-700 hover:bg-red-50 transition">
                                             <ActionIcon Name="trash" Class="w-3.5 h-3.5" />
@@ -67,17 +75,17 @@
                     </tr>
                     @if (!IsCollapsed(section.Key))
                     {
-                        @if (section.Drawings.Count == 0)
+                        @if (section.Drawings.Count == 0 && !HasSubFolders(section))
                         {
                             <tr>
-                                <td colspan="6" class="px-4 py-3 pl-10 text-xs text-content-subtle italic">No drawings in this folder yet.</td>
+                                <td colspan="@ColumnCount" class="px-4 py-3 text-xs text-content-subtle italic" style="@IndentStyle(section.Depth + 1)">No drawings in this folder yet.</td>
                             </tr>
                         }
                         else
                         {
                             @foreach (var drawing in section.Drawings)
                             {
-                                @DrawingRow(drawing)
+                                @DrawingRow(drawing, section.Depth + 1)
                             }
                         }
                     }
@@ -90,18 +98,30 @@
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Drawing> Drawings { get; set; } = Array.Empty<Drawing>();
 
-    /// <summary>The project's folders, in display order (A–Z from the store). Empty = flat table.</summary>
+    /// <summary>The project's folders, every level (A–Z from the store). Empty = flat table.</summary>
     [Parameter] public IReadOnlyList<DrawingFolder> Folders { get; set; } = Array.Empty<DrawingFolder>();
 
     [Parameter] public bool CanManage { get; set; }
+    [Parameter] public EventCallback<DrawingFolder> OnCreateSubFolder { get; set; }
     [Parameter] public EventCallback<DrawingFolder> OnRenameFolder { get; set; }
     [Parameter] public EventCallback<DrawingFolder> OnDeleteFolder { get; set; }
 
     private readonly HashSet<string> collapsed = new();
 
     private const string UngroupedKey = "";
+    private const int ColumnCount = 7;
+    private const double IndentRemPerLevel = 1.5;
 
-    private sealed record Section(string Key, DrawingFolder? Folder, IReadOnlyList<Drawing> Drawings);
+    private sealed record Section(string Key, DrawingFolder? Folder, int Depth, IReadOnlyList<Drawing> Drawings);
+
+    // Rebuilt once per parameter set, not per render — the tree is read many times a render.
+    private DrawingFolderTree Tree = new(Array.Empty<DrawingFolder>());
+
+    protected override void OnParametersSet() => Tree = new DrawingFolderTree(Folders);
+
+    // A collapsed folder hides its whole sub-tree, not just its own drawings.
+    private IEnumerable<Section> VisibleSections =>
+        Sections.Where(section => !Tree.HasAncestor(section.Folder?.DrawingFolderId, collapsed));
 
     // Every folder gets a section even when empty (so it can be renamed/deleted and shows it
     // exists); Ungrouped renders last and only when something is actually ungrouped.
@@ -113,18 +133,31 @@
                 .GroupBy(drawing => drawing.DrawingFolderId ?? UngroupedKey)
                 .ToDictionary(group => group.Key, group => (IReadOnlyList<Drawing>)group.ToList());
 
-            foreach (var folder in Folders)
+            foreach (var node in Tree.Nodes)
             {
-                byFolder.TryGetValue(folder.DrawingFolderId, out var drawings);
-                yield return new Section(folder.DrawingFolderId, folder, drawings ?? Array.Empty<Drawing>());
+                byFolder.TryGetValue(node.Folder.DrawingFolderId, out var drawings);
+                yield return new Section(node.Folder.DrawingFolderId, node.Folder, node.Depth, drawings ?? Array.Empty<Drawing>());
             }
 
             if (byFolder.TryGetValue(UngroupedKey, out var ungrouped) && ungrouped.Count > 0)
-                yield return new Section(UngroupedKey, null, ungrouped);
+                yield return new Section(UngroupedKey, null, 0, ungrouped);
         }
     }
 
     private bool IsCollapsed(string key) => collapsed.Contains(key);
+
+    private bool HasSubFolders(Section section) =>
+        section.Folder is not null && Tree.ChildrenOf(section.Folder.DrawingFolderId).Any();
+
+    private int SubtreeCount(Section section)
+    {
+        if (section.Folder is null) return section.Drawings.Count;
+        var ids = Tree.SubtreeIds(section.Folder.DrawingFolderId).ToHashSet();
+        return Drawings.Count(drawing => drawing.DrawingFolderId is { } folderId && ids.Contains(folderId));
+    }
+
+    private static string IndentStyle(int depth) =>
+        depth == 0 ? "" : $"padding-left: {1 + depth * IndentRemPerLevel}rem";
 
     private void ToggleCollapse(string key)
     {
@@ -134,22 +167,34 @@
     private void OpenDrawing(Drawing drawing) =>
         Nav.NavigateTo($"/projects/{drawing.ProjectId}/drawings/{drawing.DrawingId}");
 
-    private RenderFragment DrawingRow(Drawing drawing) => __builder =>
+    private RenderFragment DrawingRow(Drawing drawing, int depth) => __builder =>
     {
         <tr class="hover:bg-surface-raised cursor-pointer transition"
             @onclick="() => OpenDrawing(drawing)">
-            <td class="px-4 py-3 font-mono text-xs text-content-muted">@drawing.DrawingCode</td>
-            <td class="px-4 py-3 text-content font-medium">@drawing.Title</td>
-            <td class="px-4 py-3 text-center">
-                @if (string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
+            <td class="px-4 py-3 font-mono text-xs text-content-muted" style="@IndentStyle(depth)">@DrawingNaming.Code(drawing)</td>
+            <td class="px-4 py-3 text-content font-medium">
+                @if (DrawingNaming.IsNamedByFile(drawing))
                 {
-                    <span class="text-xs text-content-subtle italic">—</span>
+                    <span class="text-content-muted" title="No title yet — showing the file name">@DrawingNaming.Name(drawing)</span>
                 }
                 else
                 {
+                    @DrawingNaming.Name(drawing)
+                }
+            </td>
+            <td class="px-4 py-3 text-xs text-content-subtle hidden lg:table-cell max-w-[16rem] truncate" title="@drawing.LatestFileName">
+                @(drawing.LatestFileName ?? DrawingNaming.Blank)
+            </td>
+            <td class="px-4 py-3 text-center">
+                @if (DrawingNaming.ApprovedRevisionText(drawing) is { } approvedText)
+                {
                     <span class="inline-flex items-center justify-center rounded bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-mono font-medium text-emerald-800">
-                        Rev @drawing.CurrentApprovedRevisionLabel
+                        @approvedText
                     </span>
+                }
+                else
+                {
+                    <span class="text-xs text-content-subtle italic">@DrawingNaming.Blank</span>
                 }
             </td>
             <td class="px-4 py-3 text-center whitespace-nowrap">
@@ -165,7 +210,7 @@
                         @drawing.ArchivedCount archived
                     </span>
                 }
-                @if (drawing.UnapprovedCount == 0 && drawing.ArchivedCount == 0 && !string.IsNullOrEmpty(drawing.CurrentApprovedRevisionLabel))
+                @if (drawing.UnapprovedCount == 0 && drawing.ArchivedCount == 0 && drawing.HasApprovedRevision)
                 {
                     <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
                         Approved

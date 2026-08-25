@@ -1,0 +1,91 @@
+@inject IDrawingStore DrawingStore
+
+@* The drawing page's code-and-title header, editable in place. Both fields are optional — a
+   drawing uploaded from nothing but a file shows its file name here until it is named. *@
+@if (!isEditing)
+{
+    <div class="flex items-start gap-3">
+        <div>
+            <p class="font-mono text-xs text-content-subtle mb-1">@DrawingNaming.Code(Drawing)</p>
+            <h2 class="text-xl md:text-2xl font-semibold text-content">@DrawingNaming.Name(Drawing)</h2>
+            @if (DrawingNaming.IsNamedByFile(Drawing))
+            {
+                <p class="text-xs text-content-subtle mt-0.5">No title yet — showing the file name.</p>
+            }
+        </div>
+        @if (CanEdit)
+        {
+            <button type="button" title="Edit code and title" aria-label="Edit code and title" @onclick="BeginEdit"
+                    class="mt-1 inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised transition">
+                <ActionIcon Name="pencil" Class="w-3.5 h-3.5" />
+            </button>
+        }
+    </div>
+}
+else
+{
+    <div class="rounded-xl border border-line bg-surface p-4 space-y-3 max-w-xl">
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing code</label>
+            <input type="text" @bind="code" placeholder="A-100" class="field" />
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <input type="text" @bind="title" placeholder="@(Drawing.LatestFileName ?? "Ground floor plan")" class="field" />
+        </div>
+        @if (error is not null)
+        {
+            <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@error</p>
+        }
+        <div class="flex items-center gap-2">
+            <button type="button" disabled="@busy" @onclick="SaveAsync"
+                    class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-1.5 hover:bg-accent-hover transition disabled:opacity-60">
+                @(busy ? "Saving…" : "Save")
+            </button>
+            <button type="button" disabled="@busy" @onclick="() => isEditing = false"
+                    class="rounded-lg border border-line-strong text-sm px-3 py-1.5 text-content-muted hover:bg-surface-raised transition">
+                Cancel
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public Drawing Drawing { get; set; } = default!;
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter] public bool CanEdit { get; set; }
+
+    private bool isEditing;
+    private bool busy;
+    private string? error;
+    private string code = "";
+    private string title = "";
+
+    private void BeginEdit()
+    {
+        code = Drawing.DrawingCode;
+        title = Drawing.Title;
+        error = null;
+        isEditing = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        try
+        {
+            await DrawingStore.UpdateDetailsAsync(ProjectId, Drawing.DrawingId, code.Trim(), title.Trim(), CancellationToken.None);
+            isEditing = false;
+        }
+        catch (Exception ex)
+        {
+            error = $"Save failed: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

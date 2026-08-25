@@ -194,6 +194,16 @@ public static class CommercialRouteRegistration
             new CommandRoute("DELETE", "/api/valuation-claims/{claimId}",
                 command => $"/api/valuation-claims/{((DeleteValuationClaim)command).ValuationClaimId}"));
 
+        // The client's schedule-of-works references — the per-project cost centre map the
+        // valuation report PDF prints beside each line's code. Read and replaced as a whole.
+        queries.Register<ListClientCostReferencesForProject, IReadOnlyList<ClientCostReference>>(
+            new QueryRoute("/api/projects/{projectId}/client-cost-references",
+                query => $"/api/projects/{((ListClientCostReferencesForProject)query).ProjectId}/client-cost-references"));
+
+        commands.Register<SetClientCostReferences, IReadOnlyList<ClientCostReference>>(
+            new CommandRoute("PUT", "/api/projects/{projectId}/client-cost-references",
+                command => $"/api/projects/{((SetClientCostReferences)command).ProjectId}/client-cost-references"));
+
         // Valuation report snapshots — immutable frozen copies behind invoice submissions
         // and on-demand period-end records.
         queries.Register<ListValuationReportSnapshotsForProject, IReadOnlyList<ValuationReportSnapshot>>(

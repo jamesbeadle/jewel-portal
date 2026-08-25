@@ -266,7 +266,7 @@ else
                                 {
                                     <p class="text-xs text-content-muted">
                                         The file lands as an <span class="font-medium text-content">unapproved revision</span> —
-                                        a new code registers a new drawing; approval follows the normal drawings workflow.
+                                        a new (or blank) code registers a new drawing, named by its file until it is given a code or title; approval follows the normal drawings workflow.
                                     </p>
                                     <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
                                         <button type="button" @onclick="() => SetDrawingMode(isRevision: false)"
@@ -311,7 +311,7 @@ else
                                                         <option value="">Select a drawing…</option>
                                                         @foreach (var drawing in DrawingOptions)
                                                         {
-                                                            <option value="@drawing.DrawingId">@drawing.DrawingCode — @drawing.Title</option>
+                                                            <option value="@drawing.DrawingId">@DrawingNaming.Label(drawing)</option>
                                                         }
                                                     }
                                                 </select>
@@ -319,7 +319,7 @@ else
                                         }
                                         else
                                         {
-                                            <FormField Label="Drawing code" Value="@drawingCode" OnChange="v => drawingCode = v" Required="true" />
+                                            <FormField Label="Drawing code" Value="@drawingCode" OnChange="v => drawingCode = v" />
                                         }
                                     </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -331,7 +331,7 @@ else
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <button type="button" class="btn-primary"
-                                                disabled="@(busy || string.IsNullOrWhiteSpace(filingProjectId) || (drawingIsRevision ? string.IsNullOrWhiteSpace(drawingId) : string.IsNullOrWhiteSpace(drawingCode)))"
+                                                disabled="@(busy || string.IsNullOrWhiteSpace(filingProjectId) || (drawingIsRevision && string.IsNullOrWhiteSpace(drawingId)))"
                                                 @onclick="DoFileAsDrawing">@(busy ? "Filing…" : "File to drawings")</button>
                                         @DiscardControl
                                     </div>
@@ -643,8 +643,9 @@ else
     }
 
     // "PRO-064-(WD)-P-800 Rev I Site set out.pdf" → code "PRO-064-(WD)-P-800", revision "I",
-    // title "Site set out". Falls back to the bare file name as the code when no "Rev X" is
-    // found. Moved from the Control Centre's retired save-to-drawings form (2026-08-12).
+    // title "Site set out". With no "Rev X" the fields stay blank — the register then names the
+    // drawing by its file, which beats a file name masquerading as a code. Moved from the Control
+    // Centre's retired save-to-drawings form (2026-08-12).
     private void PrefillDrawingFieldsFromFileName(string fileName)
     {
         var name = System.IO.Path.GetFileNameWithoutExtension(fileName ?? "").Trim();
@@ -659,7 +660,7 @@ else
         }
         else
         {
-            drawingCode = name;
+            drawingCode = "";
             drawingRevision = "";
             drawingTitle = "";
         }
@@ -693,15 +694,18 @@ else
         if (item is null || busy) return;
         var code = drawingCode.Trim();
         var title = drawingTitle.Trim();
+        string? targetDrawingId = null;
         if (drawingIsRevision)
         {
+            // The revision joins the picked drawing by id — its code may be blank.
             var target = DrawingOptions.FirstOrDefault(d => d.DrawingId == drawingId);
             if (target is null) { actionError = "Select the drawing this revision belongs to."; return; }
+            targetDrawingId = target.DrawingId;
             code = target.DrawingCode;
             title = target.Title;
         }
         await RunFiling("Filing to drawings", () =>
-            Store.FileAsDrawingAsync(item.DocumentControlItemId, filingProjectId, code, title, drawingRevision.Trim()));
+            Store.FileAsDrawingAsync(item.DocumentControlItemId, filingProjectId, code, title, drawingRevision.Trim(), targetDrawingId));
     }
 
     private async Task DoFileAsPaymentCertificate()

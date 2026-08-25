@@ -5,15 +5,19 @@ namespace Jewel.JPMS.Api.Features.Drawings;
 
 internal static class DrawingEntityMapping
 {
-    public static Drawing ToModel(this DrawingEntity entity, int unapprovedCount = 0, int archivedCount = 0,
-        DateTimeOffset? latestMetadataExtractedAt = null, DateTimeOffset? latestAnalysedAt = null) =>
+    public static Drawing ToModel(this DrawingEntity entity) => entity.ToModel(DrawingRevisionRollup.None);
+
+    public static Drawing ToModel(this DrawingEntity entity, DrawingRevisionRollup rollup) =>
         new(entity.DrawingId, entity.ProjectId, entity.DrawingCode, entity.Title,
             string.IsNullOrEmpty(entity.CurrentApprovedRevisionLabel) ? null : entity.CurrentApprovedRevisionLabel,
-            entity.CreatedAt, unapprovedCount, archivedCount, latestMetadataExtractedAt, latestAnalysedAt,
-            string.IsNullOrEmpty(entity.DrawingFolderId) ? null : entity.DrawingFolderId);
+            entity.CreatedAt, rollup.UnapprovedCount, rollup.ArchivedCount,
+            rollup.LatestMetadataExtractedAt, rollup.LatestAnalysedAt,
+            string.IsNullOrEmpty(entity.DrawingFolderId) ? null : entity.DrawingFolderId,
+            rollup.LatestFileName, rollup.HasApprovedRevision);
 
     public static DrawingFolder ToModel(this DrawingFolderEntity entity) =>
-        new(entity.DrawingFolderId, entity.ProjectId, entity.Name, entity.CreatedAt);
+        new(entity.DrawingFolderId, entity.ProjectId, entity.Name, entity.CreatedAt,
+            string.IsNullOrEmpty(entity.ParentDrawingFolderId) ? null : entity.ParentDrawingFolderId);
 
     public static DrawingRevision ToModel(this DrawingRevisionEntity entity) =>
         new(entity.DrawingRevisionId, entity.DrawingId, entity.RevisionLabel, entity.FileName, entity.IssuedByEmail,

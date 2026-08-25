@@ -7,12 +7,12 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Drawings;
 
 /// <summary>
-/// The one way a file becomes a drawing revision from bytes: the drawing is matched by code
-/// (case-insensitive) within the project — a new code registers a new drawing — and the file lands
-/// as an Unapproved revision, exactly as if uploaded by hand. Extracted from the retired
-/// ImportDrawingFromMessageHandler so Document Control's filing shares its behaviour to the letter.
-/// Adds entities and uploads the blob but does NOT save — the caller owns the SaveChanges so its
-/// own bookkeeping commits atomically with the landing.
+/// The one way a file becomes a drawing revision from bytes: with a drawing id the file joins that
+/// drawing; otherwise the drawing is matched by code (case-insensitive) within the project — a new
+/// or blank code registers a new drawing — and the file lands as an Unapproved revision, exactly
+/// as if uploaded by hand. Code, title and revision label are all optional. Extracted from the retired ImportDrawingFromMessageHandler so Document
+/// Control's filing shares its behaviour to the letter. Adds entities and uploads the blob but
+/// does NOT save — the caller owns the SaveChanges so its own bookkeeping commits atomically.
 /// </summary>
 public static class DrawingRevisionLanding
 {
@@ -22,24 +22,9 @@ public static class DrawingRevisionLanding
         JpmsContext context, IDrawingBlobStore blobStore,
         string projectId, string drawingCode, string title, string revisionLabel,
         string fileName, string contentType, byte[] content, string issuedByEmail,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, string? drawingId = null)
     {
-        var code = drawingCode.Trim();
-        var drawing = await context.Drawings
-            .FirstOrDefaultAsync(d => d.ProjectId == projectId && d.DrawingCode == code, cancellationToken);
-        if (drawing is null)
-        {
-            drawing = new DrawingEntity
-            {
-                DrawingId = DrawingIdentifierFactory.NextDrawingId(),
-                ProjectId = projectId,
-                DrawingCode = code,
-                Title = string.IsNullOrWhiteSpace(title) ? code : title.Trim(),
-                CurrentApprovedRevisionLabel = null,
-                CreatedAt = DateTimeOffset.UtcNow
-            };
-            context.Drawings.Add(drawing);
-        }
+        var drawing = await FindOrRegisterAsync(context, projectId, drawingId, drawingCode, title, cancellationToken);
 
         var revisionId = DrawingIdentifierFactory.NextDrawingRevisionId();
         string blobRef;
@@ -50,17 +35,17 @@ public static class DrawingRevisionLanding
                 fileName, contentType, stream, cancellationToken);
         }
 
-        var label = revisionLabel.Trim();
         var revision = new DrawingRevisionEntity
         {
             DrawingRevisionId = revisionId,
             DrawingId = drawing.DrawingId,
-            RevisionLabel = label,
+            RevisionLabel = (revisionLabel ?? "").Trim(),
             FileName = fileName,
-            IssuedByEmail = issuedByEmail,
+            IssuedByEmail = (issuedByEmail ?? "").Trim(),
             ReceivedAt = DateTimeOffset.UtcNow,
             SupersededAt = null,
-            IsAmbiguous = string.IsNullOrWhiteSpace(label) || label == "?",
+            // A blank label is "no revision given", not a classification failure.
+            IsAmbiguous = false,
             ViewCount = 0,
             ApprovalStatus = (int)DrawingApprovalStatus.Unapproved,
             BlobRef = blobRef,
@@ -69,5 +54,40 @@ public static class DrawingRevisionLanding
         };
         context.DrawingRevisions.Add(revision);
         return new Landed(drawing, revision);
+    }
+
+    // A drawing id wins (it is how a revision reaches a drawing that has no code). A blank code can
+    // never match an existing drawing — each such file is its own drawing, named by its file until
+    // someone gives it a code or title.
+    private static async Task<DrawingEntity> FindOrRegisterAsync(
+        JpmsContext context, string projectId, string? drawingId, string drawingCode, string title,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(drawingId))
+        {
+            var byId = await context.Drawings.FirstOrDefaultAsync(
+                candidate => candidate.DrawingId == drawingId && candidate.ProjectId == projectId, cancellationToken);
+            return byId ?? throw new InvalidOperationException("That drawing is no longer on this project.");
+        }
+
+        var code = (drawingCode ?? "").Trim();
+        var hasCode = code.Length > 0;
+        var existing = hasCode
+            ? await context.Drawings.FirstOrDefaultAsync(
+                candidate => candidate.ProjectId == projectId && candidate.DrawingCode == code, cancellationToken)
+            : null;
+        if (existing is not null) return existing;
+
+        var drawing = new DrawingEntity
+        {
+            DrawingId = DrawingIdentifierFactory.NextDrawingId(),
+            ProjectId = projectId,
+            DrawingCode = code,
+            Title = (title ?? "").Trim(),
+            CurrentApprovedRevisionLabel = null,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        context.Drawings.Add(drawing);
+        return drawing;
     }
 }

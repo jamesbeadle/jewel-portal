@@ -11,7 +11,7 @@ public sealed class SetTenderEnquiryStatusValidation
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.TenderEnquiryId)) errors.Add("TenderEnquiryId is required.");
         if (!Enum.IsDefined(command.Status)) errors.Add("Status is not recognised.");
-        if (command.Status == TenderEnquiryStatus.Received) errors.Add("An enquiry can't be moved back to Received.");
+        if (command.Status.IsRetired()) errors.Add("That status is no longer used.");
         var isEnding = !command.Status.IsOpen();
         if (isEnding && string.IsNullOrWhiteSpace(command.Note))
             errors.Add("Say why the enquiry ended this way — the note is the surviving record.");

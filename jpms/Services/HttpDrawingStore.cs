@@ -85,9 +85,25 @@ public sealed class HttpDrawingStore : IDrawingStore
         return drawing;
     }
 
-    public async Task<DrawingFolder> CreateFolderAsync(string projectId, string name, CancellationToken cancellationToken)
+    // The in-place editors await the refresh so the display never flashes the old value after
+    // Save (and a failed refresh surfaces in the editor rather than being swallowed).
+    public async Task UpdateDetailsAsync(string projectId, string drawingId, string drawingCode, string title, CancellationToken cancellationToken)
     {
-        var folder = await commands.SendAsync(new CreateDrawingFolder(projectId, name), cancellationToken);
+        await commands.SendAsync(new UpdateDrawingMetadata(drawingId, drawingCode, title), cancellationToken);
+        await readModel.RefreshDrawingsAsync(projectId, cancellationToken);
+    }
+
+    public async Task SetRevisionLabelAsync(string projectId, string drawingId, string revisionId, string revisionLabel, CancellationToken cancellationToken)
+    {
+        await commands.SendAsync(new SetDrawingRevisionLabel(drawingId, revisionId, revisionLabel), cancellationToken);
+        await readModel.RefreshRevisionsAsync(drawingId, cancellationToken);
+        // The register's "Latest approved" follows the approved revision's label.
+        RefreshInBackground(projectId, null);
+    }
+
+    public async Task<DrawingFolder> CreateFolderAsync(string projectId, string name, string? parentFolderId, CancellationToken cancellationToken)
+    {
+        var folder = await commands.SendAsync(new CreateDrawingFolder(projectId, name, parentFolderId), cancellationToken);
         await readModel.RefreshFoldersAsync(projectId, cancellationToken);
         return folder;
     }
@@ -101,7 +117,7 @@ public sealed class HttpDrawingStore : IDrawingStore
     public async Task DeleteFolderAsync(string projectId, string folderId, CancellationToken cancellationToken)
     {
         await commands.SendAsync(new DeleteDrawingFolder(folderId), cancellationToken);
-        // The folder's drawings drop back to Ungrouped — refresh both lists.
+        // The folder's drawings and sub-folders move up a level — refresh both lists.
         await readModel.RefreshFoldersAsync(projectId, cancellationToken);
         RefreshInBackground(projectId, null);
     }

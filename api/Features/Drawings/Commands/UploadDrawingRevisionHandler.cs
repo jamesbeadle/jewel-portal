@@ -26,12 +26,14 @@ public sealed class UploadDrawingRevisionHandler
         {
             DrawingRevisionId = command.DrawingRevisionId,
             DrawingId = command.DrawingId,
-            RevisionLabel = command.RevisionLabel,
+            RevisionLabel = (command.RevisionLabel ?? "").Trim(),
             FileName = command.FileName,
-            IssuedByEmail = command.IssuedByEmail,
+            IssuedByEmail = (command.IssuedByEmail ?? "").Trim(),
             ReceivedAt = DateTimeOffset.UtcNow,
             SupersededAt = null,
-            IsAmbiguous = string.IsNullOrWhiteSpace(command.RevisionLabel) || command.RevisionLabel == "?",
+            // A blank label is "no revision given", a deliberate choice on upload — not a
+            // classification failure, so it does not join the Ambiguous queue.
+            IsAmbiguous = false,
             ViewCount = 0,
             ApprovalStatus = (int)DrawingApprovalStatus.Unapproved,
             BlobRef = command.BlobRef,

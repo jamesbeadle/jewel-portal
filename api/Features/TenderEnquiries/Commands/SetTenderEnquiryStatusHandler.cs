@@ -9,8 +9,9 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.TenderEnquiries.Commands;
 
 /// <summary>
-/// Moves an enquiry along its journey, stamping the date the move means (PQQ submitted, tender
-/// submitted, decided) and refusing a move the current status can't make. Winning also moves the
+/// Sets where an enquiry stands. Any move goes, forwards or back (James, 2026-08-25: a wrong
+/// press must be undoable) — the handler stamps the date a move means (PQQ submitted, tender
+/// submitted, decided) and clears the stamps a step back makes untrue. Winning also moves the
 /// project on from Lead to Pre-Construction — the reference was minted when the enquiry was
 /// logged, so nothing else changes hands.
 /// </summary>
@@ -34,9 +35,8 @@ public sealed class SetTenderEnquiryStatusHandler : ICommandHandler<SetTenderEnq
             ?? throw new InvalidOperationException($"Tender enquiry '{command.TenderEnquiryId}' not found.");
 
         var current = (TenderEnquiryStatus)entity.Status;
-        if (!current.NextStatuses().Contains(command.Status))
-            throw new InvalidOperationException(
-                $"A {current.DisplayName().ToLowerInvariant()} enquiry can't move to {command.Status.DisplayName().ToLowerInvariant()}.");
+        if (current == command.Status)
+            throw new InvalidOperationException($"The enquiry is already {command.Status.DisplayName().ToLowerInvariant()}.");
 
         Stamp(entity, command);
         if (command.Status == TenderEnquiryStatus.Won) await MoveProjectOnFromLeadAsync(entity.ProjectId, cancellationToken);
@@ -55,15 +55,21 @@ public sealed class SetTenderEnquiryStatusHandler : ICommandHandler<SetTenderEnq
         return entity.ToModel();
     }
 
+    // The submitted stamps follow the journey: a step forward sets the one it reaches (first time
+    // only, so a re-set keeps the original date); a step back to before it clears it.
     private static void Stamp(TenderEnquiryEntity entity, SetTenderEnquiryStatus command)
     {
         var now = DateTimeOffset.UtcNow;
         entity.Status = (int)command.Status;
-        if (command.Status == TenderEnquiryStatus.PqqSubmitted) entity.PqqSubmittedAt = now;
-        if (command.Status == TenderEnquiryStatus.TenderSubmitted) entity.TenderSubmittedAt = now;
+        if (command.Status == TenderEnquiryStatus.PqqSubmitted) entity.PqqSubmittedAt ??= now;
+        if (command.Status == TenderEnquiryStatus.TenderSubmitted) entity.TenderSubmittedAt ??= now;
+        if (command.Status == TenderEnquiryStatus.Received) entity.PqqSubmittedAt = null;
+        if (command.Status is TenderEnquiryStatus.Received or TenderEnquiryStatus.PqqSubmitted or TenderEnquiryStatus.Shortlisted)
+            entity.TenderSubmittedAt = null;
         if (command.Status.IsOpen())
         {
             entity.DecidedAt = null;
+            entity.DecisionNote = "";
             return;
         }
         entity.DecidedAt = now;

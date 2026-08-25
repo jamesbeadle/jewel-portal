@@ -86,8 +86,8 @@
                             <div @key="drawing.DrawingId" class="py-1.5">
                                 <button type="button" class="w-full text-left text-xs text-content hover:text-accent flex items-center gap-2"
                                         @onclick="() => ToggleDrawing(drawing.DrawingId)">
-                                    <span class="font-mono">@drawing.DrawingCode</span>
-                                    <span class="truncate flex-1">@drawing.Title</span>
+                                    <span class="font-mono">@DrawingNaming.Code(drawing)</span>
+                                    <span class="truncate flex-1">@DrawingNaming.Name(drawing)</span>
                                     <span class="text-content-faint">@(expandedDrawingId == drawing.DrawingId ? "▾" : "▸")</span>
                                 </button>
                                 @if (expandedDrawingId == drawing.DrawingId)
@@ -104,7 +104,7 @@
                                                 <button type="button" @key="revision.DrawingRevisionId"
                                                         class="w-full text-left text-[11px] text-content-muted hover:text-accent flex items-center gap-2"
                                                         @onclick="() => AddDrawingAsync(revision)">
-                                                    <span class="font-medium">Rev @revision.RevisionLabel</span>
+                                                    <span class="font-medium">@DrawingNaming.RevisionText(revision.RevisionLabel)</span>
                                                     <span class="truncate flex-1">@revision.FileName</span>
                                                     <span>@(revision.ApprovalStatus == DrawingApprovalStatus.Approved ? "Approved" : revision.ApprovalStatus == DrawingApprovalStatus.Archived ? "Archived" : "Unapproved")</span>
                                                     <span class="text-content-faint">@SizeLabel(revision.FileSizeBytes ?? 0)</span>

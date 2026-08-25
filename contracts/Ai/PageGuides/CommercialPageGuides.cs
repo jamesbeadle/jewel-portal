@@ -41,9 +41,12 @@ public static class CommercialPageGuides
             + "roll over, with one primary button per stage and an Actions menu for rename, reopen, "
             + "record rejection/payment, issue without approval and delete. Lines are added or "
             + "edited while the claim is Draft; the Valuation Invoices and Snapshots sections sit "
-            + "inline, and working-copy PDF/Excel exports are always available. You have no dialog "
-            + "registered here — navigate_to it and answer from reads. Approving variations, which "
-            + "writes their lines here, happens on the variation record."),
+            + "inline, and working-copy PDF/Excel exports are always available. The toolbar's "
+            + "\"Client references\" tag button maps each cost centre on the report to the client's "
+            + "own schedule-of-works item number (\"3.12\", \"2.1–2.4\"); once any are set, the "
+            + "client PDF gains a \"Client ref\" column beside Code, frozen into each snapshot at "
+            + "capture. You have no dialog registered here — navigate_to it and answer from reads. "
+            + "Approving variations, which writes their lines here, happens on the variation record."),
 
         new("/projects/{project}/valuation-snapshots", "Valuation Snapshots",
             "The read-only register of the project's frozen valuation report snapshots — the "

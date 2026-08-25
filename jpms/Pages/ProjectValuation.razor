@@ -41,6 +41,15 @@ else
                     <ExportToExcelButton FileName="@($"Valuation report {Selected?.DisplayName ?? "working copy"}")"
                                          Disabled="@(!ReportReady)"
                                          BuildWorkbook="BuildLiveExportWorkbook" />
+                    @* Report setup, apart from the document actions: the client's schedule-of-works
+                       references per cost centre, printed as a "Client ref" column on the PDF. *@
+                    @if (CanMapClientReferences)
+                    {
+                        <ToolbarDivider />
+                        <ToolbarButton Icon="tag" Label="Client references — map cost centres to the client's schedule-of-works item numbers for the PDF"
+                                       Disabled="@(!ReportReady)"
+                                       OnClick="@(() => showClientReferences = true)" />
+                    }
                 </Toolbar>
                 @* The claim picker sits in a row with the New claim button, so it shows its own
                    waiting state rather than a spinner between two controls. Disabled while the
@@ -244,6 +253,13 @@ else
             <ValuationLineForm ProjectId="@ProjectId" Editing="@editingLine" OnSaved="OnLineSaved" OnCancel="CloseLineForm" />
         </Modal>
 
+        @if (showClientReferences)
+        {
+            <ClientCostReferencesModal ProjectId="@ProjectId"
+                                       OnSaved="@(() => showClientReferences = false)"
+                                       OnCancelled="@(() => showClientReferences = false)" />
+        }
+
         <Modal IsOpen="@(viewingSnapshotId is not null)"
                Title="Valuation report snapshot"
                ShowFooter="false" Class="max-w-6xl" OnCancel="CloseSnapshot">
@@ -372,6 +388,7 @@ else
     private bool busy;
     private bool showStartClaim;
     private bool showLineForm;
+    private bool showClientReferences;
     private string selectedClaimId = "";
     private ValuationLineItem? editingLine;
 
@@ -519,6 +536,11 @@ else
     private ValuationReportSnapshot? emailingSnapshot;
     private bool CanEmailSnapshot => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager);
+
+    // Who may map cost centres to the client's references — the bill's drafters plus the FD,
+    // who reconciles with the client. Mirrors ValuationReportAuthorisation on the API.
+    private bool CanMapClientReferences => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager or Role.QuantitySurveyor);
 
     // Who may manage the claim itself (rename, reopen, early confirm, delete): the roles
     // that run the report — Admin, MD, FD, PM — never the client, who only reads it.

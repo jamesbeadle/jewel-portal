@@ -67,6 +67,14 @@ public static class DrawingsRouteRegistration
                     return $"/api/drawings/{approve.DrawingId}/revisions/{approve.DrawingRevisionId}/approve";
                 }));
 
+        commands.Register<SetDrawingRevisionLabel, DrawingRevision>(
+            new CommandRoute("PUT", "/api/drawings/{drawingId}/revisions/{revisionId}/label",
+                command =>
+                {
+                    var setLabel = (SetDrawingRevisionLabel)command;
+                    return $"/api/drawings/{setLabel.DrawingId}/revisions/{setLabel.DrawingRevisionId}/label";
+                }));
+
         commands.Register<DeleteDrawing, Acknowledgement>(
             new CommandRoute("DELETE", "/api/drawings/{drawingId}",
                 command => $"/api/drawings/{((DeleteDrawing)command).DrawingId}"));

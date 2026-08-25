@@ -122,8 +122,8 @@
                                    @onchange="e => ToggleRevision(revisionId, e.Value is true)" />
                             <span>
                                 <span class="font-mono">@option.Code</span>
-                                <span class="text-content-subtle"> rev @option.Label</span>
-                                @if (!string.IsNullOrWhiteSpace(option.Title))
+                                <span class="text-content-subtle"> @DrawingNaming.RevisionText(option.Label).ToLowerInvariant()</span>
+                                @if (!string.IsNullOrWhiteSpace(option.Title) && option.Title != option.Code)
                                 {
                                     <span class="text-content-subtle"> — @option.Title</span>
                                 }
@@ -165,7 +165,7 @@
             .SelectMany(drawing => Drawings.RevisionsFor(drawing.DrawingId)
                 .OrderByDescending(revision => revision.ReceivedAt)
                 .Select(revision => new RevisionOption(
-                    revision.DrawingRevisionId, drawing.DrawingCode, revision.RevisionLabel, drawing.Title)))
+                    revision.DrawingRevisionId, DrawingNaming.Code(drawing), revision.RevisionLabel, DrawingNaming.Name(drawing))))
             .ToList();
 
     // The drawing store is lazy and fills in the background, publishing OnChange when data lands.

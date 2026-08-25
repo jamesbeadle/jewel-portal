@@ -1807,12 +1807,19 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<string>("ParentDrawingFolderId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("ProjectId")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
                     b.HasKey("DrawingFolderId");
+
+                    b.HasIndex("ParentDrawingFolderId")
+                        .HasDatabaseName("IX_DrawingFolders_ParentDrawingFolderId");
 
                     b.HasIndex("ProjectId")
                         .HasDatabaseName("IX_DrawingFolders_ProjectId");

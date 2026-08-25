@@ -7,9 +7,10 @@ public sealed class SendAiMessageValidation
 {
     private const int MaxMessageLength = 8000;
 
-    /// <summary>The live contents of the dialog beside the chat. Generous for any real form, and a
+    /// <summary>The live contents of the dialog beside the chat. Generous for any real form — a
+    /// PQQ response (twenty-odd questions with prose answers, 2026-08-25) is the largest — and a
     /// ceiling on what an unbounded client field can push into the prompt every single turn.</summary>
-    private const int MaxDraftLength = 8000;
+    private const int MaxDraftLength = 60_000;
 
     public ValidationOutcome Check(SendAiMessage command)
     {

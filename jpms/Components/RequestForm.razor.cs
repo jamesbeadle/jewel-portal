@@ -158,7 +158,7 @@ public partial class RequestForm : IDisposable
             .SelectMany(drawing => Drawings.RevisionsFor(drawing.DrawingId)
                 .OrderByDescending(revision => revision.ReceivedAt)
                 .Select(revision => new RevisionOption(
-                    revision.DrawingRevisionId, drawing.DrawingCode, revision.RevisionLabel, drawing.Title)))
+                    revision.DrawingRevisionId, DrawingNaming.Code(drawing), revision.RevisionLabel, DrawingNaming.Name(drawing))))
             .ToList();
 
     private void OpenDrawingPicker()

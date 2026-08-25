@@ -94,7 +94,13 @@ else
             }
             else if (activeTab == "pqq")
             {
-                <TenderEnquiryAnswersEditor TenderEnquiryId="@TenderEnquiryId" CanEdit="@CanManage" />
+                <div class="space-y-5">
+                    <TenderEnquiryAnswersEditor TenderEnquiryId="@TenderEnquiryId" Enquiry="@enquiry" CanEdit="@CanManage" />
+                    @if (CanManage)
+                    {
+                        <TenderEnquiryResponseSender Enquiry="@enquiry" OnChanged="OnStatusChanged" />
+                    }
+                </div>
             }
             else if (activeTab == "documents")
             {

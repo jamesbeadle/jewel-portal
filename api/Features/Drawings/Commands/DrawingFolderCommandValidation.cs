@@ -13,7 +13,8 @@ public sealed class CreateDrawingFolderValidation
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.ProjectId)) errors.Add("ProjectId is required.");
         if (string.IsNullOrWhiteSpace(command.Name)) errors.Add("Folder name is required.");
-        if (command.Name?.Trim().Length > 128) errors.Add("Folder name must be 128 characters or fewer.");
+        if (command.Name?.Trim().Length > DrawingFieldLimits.FolderNameMaxLength)
+            errors.Add($"Folder name must be {DrawingFieldLimits.FolderNameMaxLength} characters or fewer.");
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }
@@ -26,7 +27,8 @@ public sealed class RenameDrawingFolderValidation
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.DrawingFolderId)) errors.Add("DrawingFolderId is required.");
         if (string.IsNullOrWhiteSpace(command.Name)) errors.Add("Folder name is required.");
-        if (command.Name?.Trim().Length > 128) errors.Add("Folder name must be 128 characters or fewer.");
+        if (command.Name?.Trim().Length > DrawingFieldLimits.FolderNameMaxLength)
+            errors.Add($"Folder name must be {DrawingFieldLimits.FolderNameMaxLength} characters or fewer.");
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

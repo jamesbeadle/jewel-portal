@@ -17,45 +17,38 @@ public sealed class ListDrawingsForProjectHandler
     {
         var drawings = await context.Drawings.AsNoTracking()
             .Where(drawing => drawing.ProjectId == query.ProjectId)
-            .OrderBy(drawing => drawing.DrawingCode)
             .ToListAsync(cancellationToken);
 
         var drawingIds = drawings.Select(drawing => drawing.DrawingId).ToList();
-        var revisionStatuses = await context.DrawingRevisions.AsNoTracking()
+        var revisionSummaries = await context.DrawingRevisions.AsNoTracking()
             .Where(revision => drawingIds.Contains(revision.DrawingId))
-            .Select(revision => new
-            {
-                revision.DrawingId,
-                revision.ApprovalStatus,
-                revision.ReceivedAt,
-                revision.MetadataExtractedAt,
-                revision.AnalysedAt
-            })
+            .Select(revision => new DrawingRevisionRollup.RevisionSummary(
+                revision.DrawingId, revision.ApprovalStatus, revision.ReceivedAt, revision.FileName,
+                revision.MetadataExtractedAt, revision.AnalysedAt))
             .ToListAsync(cancellationToken);
 
-        var byDrawing = revisionStatuses
+        var summariesByDrawing = revisionSummaries
             .GroupBy(revision => revision.DrawingId)
-            .ToDictionary(group => group.Key, group => group.ToList());
+            .ToDictionary(group => group.Key, group => (IReadOnlyCollection<DrawingRevisionRollup.RevisionSummary>)group.ToList());
 
         var result = new List<Drawing>();
         foreach (var drawing in drawings)
         {
-            byDrawing.TryGetValue(drawing.DrawingId, out var statuses);
-            statuses ??= new();
-
-            var unapproved = statuses.Count(status => status.ApprovalStatus == (int)DrawingApprovalStatus.Unapproved);
-            var archived = statuses.Count(status => status.ApprovalStatus == (int)DrawingApprovalStatus.Archived);
-            var hasApproved = statuses.Any(status => status.ApprovalStatus == (int)DrawingApprovalStatus.Approved);
-
-            if (query.ApprovedOnly && !hasApproved) continue;
-
-            // Pipeline status rolls up from the LATEST revision — that's the one the register
-            // cares about: has the newest issue been extracted and analysed yet?
-            var latest = statuses.OrderByDescending(status => status.ReceivedAt).FirstOrDefault();
-            result.Add(drawing.ToModel(unapproved, archived,
-                latest?.MetadataExtractedAt, latest?.AnalysedAt));
+            summariesByDrawing.TryGetValue(drawing.DrawingId, out var summaries);
+            var rollup = DrawingRevisionRollup.Of(summaries ?? Array.Empty<DrawingRevisionRollup.RevisionSummary>());
+            if (query.ApprovedOnly && !rollup.HasApprovedRevision) continue;
+            result.Add(drawing.ToModel(rollup));
         }
 
-        return result.AsReadOnly();
+        // Register order: coded drawings by code, then the uncoded ones by title, then file — so
+        // drawings uploaded without a code sit after the coded set, sorted by something a person
+        // can see rather than landing in insertion order.
+        return result
+            .OrderBy(drawing => string.IsNullOrEmpty(drawing.DrawingCode))
+            .ThenBy(drawing => drawing.DrawingCode, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(drawing => drawing.Title, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(drawing => drawing.LatestFileName, StringComparer.OrdinalIgnoreCase)
+            .ToList()
+            .AsReadOnly();
     }
 }

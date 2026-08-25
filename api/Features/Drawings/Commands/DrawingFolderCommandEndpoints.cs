@@ -78,8 +78,15 @@ public sealed class DrawingFolderCommandEndpoints
         var validationOutcome = createValidation.Check(command);
         if (validationOutcome.HasFailed) return new BadRequestObjectResult(validationOutcome.Errors);
 
-        var folder = await createHandler.HandleAsync(command, request.HttpContext.RequestAborted);
-        return new OkObjectResult(folder);
+        try
+        {
+            var folder = await createHandler.HandleAsync(command, request.HttpContext.RequestAborted);
+            return new OkObjectResult(folder);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return new BadRequestObjectResult(ex.Message);
+        }
     }
 
     [Function(nameof(RenameDrawingFolder))]

@@ -102,7 +102,7 @@
                     {
                         var option = revision;
                         <li class="flex items-center justify-between gap-2 text-xs text-content-muted">
-                            <span class="truncate"><span class="font-mono">@option.Code</span> rev @option.Label</span>
+                            <span class="truncate"><span class="font-mono">@option.Code</span> @DrawingNaming.RevisionText(option.Label).ToLowerInvariant()</span>
                             <button type="button" class="text-content-subtle hover:text-negative"
                                     @onclick="() => selectedRevisions.Remove(option)">Remove</button>
                         </li>
