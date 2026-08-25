@@ -49,7 +49,7 @@ public sealed class FileDocumentAsDrawingHandler
             context, drawingBlobs,
             command.ProjectId, command.DrawingCode, command.Title, command.RevisionLabel,
             item.FileName, item.ContentType, bytes, item.FromEmail, cancellationToken,
-            drawingId: command.DrawingId);
+            drawingId: command.DrawingId, drawingFolderId: command.DrawingFolderId);
 
         item.Status = (int)DocumentControlStatus.Filed;
         item.ResolvedBy = actor.Email;

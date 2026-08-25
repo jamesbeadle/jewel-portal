@@ -65,9 +65,6 @@ public sealed class JpmsContext : DbContext
     public DbSet<QuoteLineItemEntity> QuoteLineItems => Set<QuoteLineItemEntity>();
     public DbSet<BidPackageDrawingEntity> BidPackageDrawings => Set<BidPackageDrawingEntity>();
     public DbSet<BidPackageAttachmentEntity> BidPackageAttachments => Set<BidPackageAttachmentEntity>();
-    public DbSet<TenderEnquiryEntity> TenderEnquiries => Set<TenderEnquiryEntity>();
-    public DbSet<TenderEnquiryAnswerEntity> TenderEnquiryAnswers => Set<TenderEnquiryAnswerEntity>();
-    public DbSet<TenderEnquiryAttachmentEntity> TenderEnquiryAttachments => Set<TenderEnquiryAttachmentEntity>();
     public DbSet<WorkOrderEntity> WorkOrders => Set<WorkOrderEntity>();
     public DbSet<WorkOrderLineEntity> WorkOrderLines => Set<WorkOrderLineEntity>();
     public DbSet<WorkOrderAttachmentEntity> WorkOrderAttachments => Set<WorkOrderAttachmentEntity>();
@@ -94,8 +91,6 @@ public sealed class JpmsContext : DbContext
     public DbSet<TodoItemEntity> TodoItems => Set<TodoItemEntity>();
     // Undirected to-do ↔ to-do links, one row per pair in canonical id order (TodoItemLinkPairs).
     public DbSet<TodoItemLinkEntity> TodoItemLinks => Set<TodoItemLinkEntity>();
-    // The per-item timeline (created / started / chased / reassigned / … / email sent).
-    public DbSet<TodoItemActivityEntity> TodoItemActivities => Set<TodoItemActivityEntity>();
 
     // Internal-only titled free-text notes per project (door codes, site notes) — the Useful
     // Information tab.
@@ -158,7 +153,6 @@ public sealed class JpmsContext : DbContext
     public DbSet<ValuationInvoiceEventEntity> ValuationInvoiceEvents => Set<ValuationInvoiceEventEntity>();
     public DbSet<ValuationReportSnapshotEntity> ValuationReportSnapshots => Set<ValuationReportSnapshotEntity>();
     public DbSet<ValuationReportSnapshotLineEntity> ValuationReportSnapshotLines => Set<ValuationReportSnapshotLineEntity>();
-    public DbSet<ClientCostReferenceEntity> ClientCostReferences => Set<ClientCostReferenceEntity>();
     public DbSet<DayworkEntity> Dayworks => Set<DayworkEntity>();
     public DbSet<ContraChargeEntity> ContraCharges => Set<ContraChargeEntity>();
     public DbSet<SubcontractorRetentionEntity> SubcontractorRetentions => Set<SubcontractorRetentionEntity>();
@@ -168,6 +162,9 @@ public sealed class JpmsContext : DbContext
 
     public DbSet<AiConversationEntity> AiConversations => Set<AiConversationEntity>();
     public DbSet<AiConversationMessageEntity> AiConversationMessages => Set<AiConversationMessageEntity>();
+    // Files attached to a conversation, kept as bytes in blob storage so any part can be re-read
+    // on demand (docs/ai/06-context-retrieval.md).
+    public DbSet<AiAttachmentEntity> AiAttachments => Set<AiAttachmentEntity>();
     public DbSet<AgentActivityEntity> AgentActivity => Set<AgentActivityEntity>();
 
     // The assistant's skills — the domain half of an agent, edited in the portal
@@ -255,6 +252,10 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<AiConversationEntity>()
             .HasIndex(row => new { row.StartedByEmail, row.LastMessageAt })
             .HasDatabaseName("IX_AiConversations_StartedByEmail_LastMessageAt");
+        // "What files are on hand in this conversation" — read every hop for the turn context.
+        modelBuilder.Entity<AiAttachmentEntity>()
+            .HasIndex(row => row.ConversationId)
+            .HasDatabaseName("IX_AiAttachments_ConversationId");
         // "Which conversations drafted this variation / this RFI", newest first — the lookup an
         // argument about a document starts from.
         modelBuilder.Entity<AiConversationEntity>()
@@ -386,9 +387,6 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<DrawingFolderEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_DrawingFolders_ProjectId");
-        modelBuilder.Entity<DrawingFolderEntity>()
-            .HasIndex(row => row.ParentDrawingFolderId)
-            .HasDatabaseName("IX_DrawingFolders_ParentDrawingFolderId");
         modelBuilder.Entity<HsRecordEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_HsRecords_ProjectId");
@@ -407,14 +405,6 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<TodoItemLinkEntity>()
             .HasIndex(row => row.TodoItemBId)
             .HasDatabaseName("IX_TodoItemLinks_TodoItemBId");
-        modelBuilder.Entity<TodoItemActivityEntity>()
-            .HasIndex(row => row.TodoItemId)
-            .HasDatabaseName("IX_TodoItemActivities_TodoItemId");
-        // One client reference per cost centre per project.
-        modelBuilder.Entity<ClientCostReferenceEntity>()
-            .HasIndex(row => new { row.ProjectId, row.CostCode })
-            .IsUnique()
-            .HasDatabaseName("IX_ClientCostReferences_ProjectId_CostCode");
         modelBuilder.Entity<DefectEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_Defects_ProjectId");
@@ -446,22 +436,6 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<BidPackageAttachmentEntity>()
             .HasIndex(row => row.BidPackageId)
             .HasDatabaseName("IX_BidPackageAttachments_BidPackageId");
-
-        // ---- Tender enquiries -----------------------------------------------------------------------
-        // Read per project (the Tender Enquiries tab) and by number (the TEQ-#### tag resolves back
-        // to its record); answers and attachments are read per enquiry.
-        modelBuilder.Entity<TenderEnquiryEntity>()
-            .HasIndex(row => row.ProjectId)
-            .HasDatabaseName("IX_TenderEnquiries_ProjectId");
-        modelBuilder.Entity<TenderEnquiryEntity>()
-            .HasIndex(row => row.Number)
-            .HasDatabaseName("IX_TenderEnquiries_Number");
-        modelBuilder.Entity<TenderEnquiryAnswerEntity>()
-            .HasIndex(row => row.TenderEnquiryId)
-            .HasDatabaseName("IX_TenderEnquiryAnswers_TenderEnquiryId");
-        modelBuilder.Entity<TenderEnquiryAttachmentEntity>()
-            .HasIndex(row => row.TenderEnquiryId)
-            .HasDatabaseName("IX_TenderEnquiryAttachments_TenderEnquiryId");
 
         // ---- Audit trail ---------------------------------------------------------------------------
         // The register is read per record (a request's own History panel) as well as per project.

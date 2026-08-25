@@ -20,9 +20,10 @@ public sealed class HttpDocumentControlStore : IDocumentControlStore
 
     public Task<DocumentControlItem> FileAsDrawingAsync(
         string documentControlItemId, string projectId, string drawingCode, string title,
-        string revisionLabel, string? drawingId = null, CancellationToken cancellationToken = default) =>
+        string revisionLabel, string? drawingId = null, string? drawingFolderId = null,
+        CancellationToken cancellationToken = default) =>
         commands.SendAsync(
-            new FileDocumentAsDrawing(documentControlItemId, projectId, drawingCode, title, revisionLabel, drawingId),
+            new FileDocumentAsDrawing(documentControlItemId, projectId, drawingCode, title, revisionLabel, drawingId, drawingFolderId),
             cancellationToken);
 
     public Task<DocumentControlItem> FileAsPaymentCertificateAsync(

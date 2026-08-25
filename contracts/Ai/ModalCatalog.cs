@@ -646,20 +646,28 @@ public static class ModalCatalog
         });
 
     /// <summary>
-    /// The PQQ response editor on a tender enquiry's page — the questionnaire's numbered questions
-    /// with Jewel's answer under each. Page-anchored like tender_reply: the user presses "Draft
-    /// with AI" on the PQQ tab and the editor is already open beside the chat; the assistant reads
-    /// the questionnaire as received (get_tender_enquiry_context → read_tender_enquiry_document),
-    /// lifts the questions and drafts the answers. The user reviews and presses Save themselves.
+    /// The "Edit lines" dialog on an APPROVED variation's page (2026-08-25, the valuation loop —
+    /// docs/ai/06-context-retrieval.md): "update V01 to the V01 tab of the valuation" means the
+    /// assistant reads the tab, opens this dialog pre-filled with the variation's current lines,
+    /// sends the corrected build-up, and the user presses Save lines. The save re-prices the
+    /// variation's lines on the Valuation Report and moves the CVR and cost-centre budgets by the
+    /// difference — the same write-through as editing by hand. Pre-approval variations have no
+    /// lines to edit: their estimate is set at approval.
     /// </summary>
-    public static readonly ModalDescriptor TenderEnquiryAnswers = new(
-        "tender_enquiry_answers",
-        "PQQ response",
-        "It drafts Jewel's response to an architect's pre-qualification questionnaire: the questions "
-        + "exactly as the architect asked them, each with Jewel's answer beneath. The editor is already "
-        + "open beside the chat with whatever has been typed so far — send the complete list; the user "
-        + "reviews every answer and presses Save answers themselves.",
-        "/tender-enquiries/{record}",
+    public static readonly ModalDescriptor VariationEditLines = new(
+        "variation_edit_lines",
+        "Edit variation lines",
+        "It edits an APPROVED variation's priced build-up — the lines that stand on the Valuation "
+        + "Report under its V-number, each coded to a cost centre — pre-filled with the lines as "
+        + "they stand. Read the variation first (get_variation_context gives every current line "
+        + "with its valuationLineItemId) and the evidence the user named (the workbook tab, the "
+        + "email attachment — read_source), then send the corrected schedule in ONE update. The "
+        + "lines sent REPLACE the dialog's list: keep every existing line that is still right and "
+        + "carry its valuationLineItemId so its claim history stays attached; a line left out is "
+        + "removed. The user reviews everything and presses Save lines themselves; nothing is "
+        + "written until they do.",
+        "/projects/{project}/variations/{record}",
+        // Exactly the page's CanManage set — who may approve and revise a variation.
         new[]
         {
             Role.Admin,
@@ -669,27 +677,84 @@ public static class ModalCatalog
         },
         new ModalField[]
         {
-            new("answers", "array",
-                "The complete questionnaire as it should stand — this replaces the editor's list, so "
-                + "carry every existing row forward (edited or not) and keep the architect's order. "
-                + "Questions come from the questionnaire document or email, numbering stripped, wording "
-                + "kept. Answers are plain UK English in Jewel Bespoke Build's own voice, first person "
-                + "plural, no markdown. Only state facts you have READ — in the enquiry, its documents, "
-                + "its emails, the conversation, or a loaded skill. Where a question needs a fact you "
-                + "do not have (turnover, insurance limits, company number, referees, staff numbers), "
-                + "write the answer's frame and leave the figure as a bracketed prompt such as "
-                + "[turnover FY2025], and say which ones you left for the user. Never invent an "
-                + "accreditation, a figure, a client or a project.",
+            new("lines", "array",
+                "The complete priced schedule as it should stand — this replaces the dialog's list. "
+                + "One entry per line: an existing line keeps its valuationLineItemId (from the "
+                + "dialog's state or get_variation_context); a new line has none. Every line needs "
+                + "a cost centre code from list_cost_codes. Quantity × rate is the line's value, NET "
+                + "of VAT; a negative rate is an omit. Only figures the evidence actually states.",
                 Required: true,
                 ItemFields: new ModalField[]
                 {
-                    new("question", "string", "The question as the architect asked it, without its number.", Required: true),
-                    new("answer", "string", "Jewel's answer, plain text. Blank lines between paragraphs.")
+                    new("valuationLineItemId", "string",
+                        "The existing report line this entry re-prices — copy it verbatim from the "
+                        + "dialog's state. Leave it out for a line that is new."),
+                    new("costCode", "string",
+                        "The cost centre code, exactly as list_cost_codes returned it. A wrong "
+                        + "code sends real money to the wrong place.", Required: true),
+                    new("description", "string",
+                        "What the line is — the tab's item wording, short.", Required: true),
+                    new("quantity", "number", "The quantity as a plain number (1 for a lump sum).", Required: true),
+                    new("rate", "number",
+                        "The rate per unit in GBP as a plain number, NET of VAT. Negative for an omit.",
+                        Required: true)
+                })
+        });
+
+    /// <summary>
+    /// The "Set % complete" dialog on a project's Valuation Report tab (2026-08-25): "review and
+    /// correct the % complete against the valuation" means the assistant reads the report
+    /// (get_valuation_context — every line with its id, current % and previous %), reads the
+    /// evidence, and puts the corrected percentages into this dialog for the user to check and
+    /// press Save. It records entries on the SELECTED claim, which must be a Draft — the page
+    /// refuses otherwise, and the dialog's state names the claim.
+    /// </summary>
+    public static readonly ModalDescriptor ClaimProgress = new(
+        "claim_progress",
+        "Set % complete",
+        "It sets the cumulative % complete on lines of the Valuation Report's selected Draft claim "
+        + "— the same act as typing into the report's % column, batched. Read "
+        + "get_valuation_context first: it gives every line's valuationLineItemId, its current % "
+        + "on the claim and the previous claim's %, and says which claim is selected and whether "
+        + "it is Draft. Send only lines whose % should change, as CUMULATIVE percentages (what is "
+        + "complete to date, not this period's increment); 0–100 on contract lines, wider on "
+        + "variation lines. The entries sent replace the dialog's pending list. The user reviews "
+        + "them and presses Save themselves; nothing is recorded until they do.",
+        "/projects/{project}/valuation",
+        // Exactly the API's gate for recording claim entries (ValuationReportAuthorisation
+        // .RolesThatMayRecordClaimEntries): Director, FD, PM, QS — plus administrators.
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.FinanceDirector,
+            Role.ProjectManager,
+            Role.QuantitySurveyor
+        },
+        new ModalField[]
+        {
+            new("entries", "array",
+                "The lines to change, each with its new cumulative % complete — this replaces the "
+                + "dialog's pending list. Only lines whose % should change; every entry needs the "
+                + "line's valuationLineItemId from get_valuation_context.",
+                Required: true,
+                ItemFields: new ModalField[]
+                {
+                    new("valuationLineItemId", "string",
+                        "The report line, exactly as get_valuation_context returned it.", Required: true),
+                    new("percentComplete", "number",
+                        "The cumulative % complete to date as a plain number — 100 for finished. "
+                        + "Not the period's increment.", Required: true)
                 })
         });
 
     public static IReadOnlyList<ModalDescriptor> All { get; } =
-        new[] { VariationDraft, ManualVariation, ComposeEmail, ReplyEmail, BidPackageDetails, TenderReply, TenderEnquiryAnswers, ManualTimesheet, RecordAbsence, WorkerWeek, WorkOrderEdit, WorkOrderCreate };
+        new[]
+        {
+            VariationDraft, ManualVariation, ComposeEmail, ReplyEmail, BidPackageDetails, TenderReply,
+            ManualTimesheet, RecordAbsence, WorkerWeek, WorkOrderEdit, WorkOrderCreate,
+            VariationEditLines, ClaimProgress
+        };
 
     public static ModalDescriptor? Find(string? modalKey) =>
         string.IsNullOrWhiteSpace(modalKey)

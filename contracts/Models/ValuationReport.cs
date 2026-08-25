@@ -1,3 +1,5 @@
+using Jewel.JPMS.Contracts.Commercial;
+
 namespace Jewel.JPMS.Models;
 
 // Where a priced line sits in the bill. Mirrors the three blocks of the By France
@@ -48,7 +50,7 @@ public sealed record ValuationLineItem(
     decimal Rate,
     decimal LineAmount,        // qty x rate; negative for omits
     string Comments,
-    int DisplayOrder)
+    int DisplayOrder) : IVariationBillLine
 {
     // Declined / TBC lines are recorded but never priced into any total.
     public bool CountsTowardTotals => LineType is not (ValuationLineType.Declined or ValuationLineType.Tbc);
@@ -160,7 +162,7 @@ public sealed record ValuationReportSnapshotLine(
     // The client's schedule-of-works reference for the line's cost centre, frozen from the
     // project's ClientCostReference map at capture — so a later remap never rewrites what the
     // client was sent. Trailing default keeps the positional constructor stable for older callers.
-    string ClientReference = "")
+    string ClientReference = "") : IVariationBillLine
 {
     public bool CountsTowardTotals => LineType is not (ValuationLineType.Declined or ValuationLineType.Tbc);
 }

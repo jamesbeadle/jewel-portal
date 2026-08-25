@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
@@ -118,7 +119,8 @@ public sealed class AiTurnRunner
         // prompt and the transcript prefix stay byte-stable across hops and cache (see
         // ClaudeConversationClient). Rebuilt every hop, never persisted.
         var turnContext = AiSystemPrompt.BuildTurnContext(
-            user, scope, project?.Reference, project?.Name, hopsSpent, MaxHops);
+            user, scope, project?.Reference, project?.Name, hopsSpent, MaxHops,
+            await SourcesOnHandAsync(conversation.ConversationId, rows, cancellationToken));
 
         var reply = await claude.ContinueAsync(
             systemPrompt, BuildTranscript(rows, turnContext), tools, modelTier, cancellationToken);
@@ -143,7 +145,7 @@ public sealed class AiTurnRunner
                 reply.ToolCalls.Select(call => new { id = call.Id, name = call.Name, input = call.ArgumentsJson }));
         }
 
-        var toolContext = new AiToolContext(context, user, scope, services, agent.Key);
+        var toolContext = new AiToolContext(context, user, scope, services, agent.Key, conversation.ConversationId);
 
         foreach (var call in reply.ToolCalls)
         {
@@ -396,25 +398,6 @@ public sealed class AiTurnRunner
                 + "then open the reply.");
         }
 
-        // tender_reply is anchored to a specific tender EMAIL, which only the bid package page can
-        // supply — opening it by navigation would land on the page with no composer showing. When
-        // the task is live the composer is already open; there is nothing for open_modal to do.
-        if (string.Equals(modal.ModalKey, ModalCatalog.TenderReply.ModalKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return Fail("tender_reply can't be opened from here — the user opens it from a tender "
-                + "extraction's \"Draft supplier reply\", and it is already open beside you when that "
-                + "task is running. Use update_open_modal to fill it.");
-        }
-
-        // Same for the PQQ editor: it is a pane on the enquiry's PQQ tab, opened by the page's own
-        // "Draft with AI"; when the task is live it is already open beside the chat.
-        if (string.Equals(modal.ModalKey, ModalCatalog.TenderEnquiryAnswers.ModalKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return Fail("tender_enquiry_answers can't be opened from here — the user opens it with "
-                + "\"Draft with AI\" on the enquiry's PQQ response tab, and it is already open beside you "
-                + "when that task is running. Use update_open_modal to fill it.");
-        }
-
         var needsRecord = modal.RouteTemplate.Contains("{record}", StringComparison.Ordinal);
         if (!needsRecord) return null;
 
@@ -424,7 +407,8 @@ public sealed class AiTurnRunner
                 + "the request id (find_by_reference or list_requests) for variation_draft, the bid "
                 + "package id (the record in view, or get_bid_package_context) for bid_package_details, "
                 + "the work order id (get_work_order_context, which resolves \"WO-0045\") for "
-                + "work_order_edit. Do not invent one.");
+                + "work_order_edit, the variation's id (get_variation_context, which resolves \"V01\") "
+                + "for variation_edit_lines. Do not invent one.");
         }
 
         // The record must actually exist before anyone navigates — the failure the model must see
@@ -470,6 +454,42 @@ public sealed class AiTurnRunner
             return null;
         }
 
+        if (string.Equals(modal.ModalKey, ModalCatalog.VariationEditLines.ModalKey, StringComparison.OrdinalIgnoreCase))
+        {
+            var order = await context.VariationOrders.AsNoTracking()
+                .Where(row => row.VariationOrderId == recordId)
+                .Select(row => new { row.Number, row.Status, row.VariationRef })
+                .FirstOrDefaultAsync(ct);
+            if (order is null)
+            {
+                return Fail($"No variation exists with id \"{recordId}\" — that is not a real record id. "
+                    + "get_variation_context (by reference, e.g. V01) or find_by_reference returns the "
+                    + "actual id. Do not invent one.");
+            }
+            // The dialog edits the lines an approval wrote onto the Valuation Report; before
+            // approval there are none, and the refusal has to say so in the user's terms rather
+            // than land them on a page whose Edit lines button is not there.
+            if (order.Status != (int)VariationOrderStatus.Approved)
+            {
+                return Fail($"V{order.Number} is {((VariationOrderStatus)order.Status).ToString()}, not Approved — "
+                    + "variation_edit_lines edits the priced lines an approval has written onto the "
+                    + "Valuation Report, and this one has none yet. Its value is set when it is approved: "
+                    + "take the user to the variation's page and say where Approve lives, and give them "
+                    + "the figures from the evidence to enter there.");
+            }
+            return null;
+        }
+
+        // tender_reply is anchored to a specific tender EMAIL, which only the bid package page can
+        // supply — opening it by navigation would land on the page with no composer showing. When
+        // the task is live the composer is already open; there is nothing for open_modal to do.
+        if (string.Equals(modal.ModalKey, ModalCatalog.TenderReply.ModalKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return Fail("tender_reply can't be opened from here — the user opens it from a tender "
+                + "extraction's \"Draft supplier reply\", and it is already open beside you when that "
+                + "task is running. Use update_open_modal to fill it.");
+        }
+
         // A record dialog this validator doesn't know which table to check — let it through rather
         // than refuse a real id. The client still refuses loudly for anything actually wrong, and
         // a stale id lands on the record page's own not-found handling, never silently nowhere.
@@ -481,7 +501,8 @@ public sealed class AiTurnRunner
     private static bool ProjectDerivableFromRecord(string modalKey) =>
         string.Equals(modalKey, ModalCatalog.VariationDraft.ModalKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(modalKey, ModalCatalog.BidPackageDetails.ModalKey, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(modalKey, ModalCatalog.WorkOrderEdit.ModalKey, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(modalKey, ModalCatalog.WorkOrderEdit.ModalKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(modalKey, ModalCatalog.VariationEditLines.ModalKey, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Completes a validated open_modal's arguments with what the server KNOWS: a record dialog's
@@ -527,6 +548,13 @@ public sealed class AiTurnRunner
             {
                 projectId = await context.WorkOrders.AsNoTracking()
                     .Where(row => row.WorkOrderId == recordId)
+                    .Select(row => row.ProjectId)
+                    .FirstOrDefaultAsync(ct);
+            }
+            else if (string.Equals(modalKey, ModalCatalog.VariationEditLines.ModalKey, StringComparison.OrdinalIgnoreCase))
+            {
+                projectId = await context.VariationOrders.AsNoTracking()
+                    .Where(row => row.VariationOrderId == recordId)
                     .Select(row => row.ProjectId)
                     .FirstOrDefaultAsync(ct);
             }
@@ -723,7 +751,7 @@ public sealed class AiTurnRunner
 
         if (!AiRecordTools.TryMapRecordType(typeText, out var recordType))
             return Fail($"\"{typeText}\" is not a taggable record type. Use one of: request, "
-                + "bid_package, variation, variation_quote, work_order, todo, defect, lad, scheduling, tender_enquiry.");
+                + "bid_package, variation, variation_quote, work_order, todo, defect, lad, scheduling.");
 
         // Where the record lives in a table this side, verify it exists ON THE PROJECT CLAIMED —
         // a right id with the wrong project is exactly the V80-on-three-projects mistake.
@@ -1062,6 +1090,76 @@ public sealed class AiTurnRunner
     /// <summary>A Context row holding an image attachment (AddAiAttachmentHandler's marker).</summary>
     private static bool IsImageAttachment(AiConversationMessageEntity row) =>
         string.Equals(row.ToolName, "attachment-image", StringComparison.Ordinal);
+
+    /// <summary>
+    /// The "files on hand" lines for the turn context: every file attached to this conversation
+    /// with its source id, its shape, and which parts have been read so far — reconstructed from
+    /// the stored read_source / find_in_source calls, so the model sees at a glance what it has
+    /// and has not looked at. This is what stops "the extract was cut off" being said about a tab
+    /// that was never asked for. Null when nothing is attached.
+    /// </summary>
+    private async Task<string?> SourcesOnHandAsync(
+        string conversationId, List<AiConversationMessageEntity> rows, CancellationToken ct)
+    {
+        var attachments = await context.AiAttachments.AsNoTracking()
+            .Where(row => row.ConversationId == conversationId)
+            .OrderBy(row => row.UploadedAt)
+            .Select(row => new { row.AttachmentId, row.FileName, row.ManifestJson })
+            .ToListAsync(ct);
+        if (attachments.Count == 0) return null;
+
+        // What has been read: read_source (source, part or "from the start") and find_in_source
+        // (source or all, query), from the assistant rows' stored tool_use blocks.
+        var readParts = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        var searches = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        const string all = "*";
+        foreach (var row in rows)
+        {
+            if ((AiChatRole)row.Role != AiChatRole.Assistant || string.IsNullOrWhiteSpace(row.ToolCallsJson)) continue;
+            foreach (var call in ReadToolCalls(row.ToolCallsJson))
+            {
+                var input = ParseInput(call.Input);
+                if (string.Equals(call.Name, AiSourceTools.ReadSource, StringComparison.OrdinalIgnoreCase))
+                {
+                    var source = AiToolSchema.Text(input, "source_id");
+                    if (string.IsNullOrWhiteSpace(source)) continue;
+                    var part = AiToolSchema.Text(input, "part");
+                    Add(readParts, source!.Trim(), string.IsNullOrWhiteSpace(part) ? "from the start" : $"«{part!.Trim()}»");
+                }
+                else if (string.Equals(call.Name, AiSourceTools.FindInSource, StringComparison.OrdinalIgnoreCase))
+                {
+                    var query = AiToolSchema.Text(input, "query");
+                    if (string.IsNullOrWhiteSpace(query)) continue;
+                    var source = AiToolSchema.Text(input, "source_id");
+                    Add(searches, string.IsNullOrWhiteSpace(source) ? all : source!.Trim(), $"«{query!.Trim()}»");
+                }
+            }
+        }
+
+        var lines = new StringBuilder();
+        lines.AppendLine("- Files attached to this chat, kept in full and readable part by part (read_source;");
+        lines.AppendLine("  find_in_source locates a reference). Nothing listed here is missing or cut off:");
+        foreach (var attachment in attachments)
+        {
+            var sourceId = AiSourceTools.ChatSourceId(attachment.AttachmentId);
+            var manifest = AiSourceTools.ParseManifest(attachment.ManifestJson);
+            var shape = manifest is null ? "shape unknown" : $"{manifest.Summary()}: {manifest.PartsLine(12)}";
+            var read = readParts.TryGetValue(sourceId, out var parts) ? string.Join(", ", parts) : "nothing yet";
+            var searched = new List<string>();
+            if (searches.TryGetValue(sourceId, out var own)) searched.AddRange(own);
+            if (searches.TryGetValue(all, out var everywhere)) searched.AddRange(everywhere);
+            lines.AppendLine($"  · «{attachment.FileName}» ({sourceId}) — {shape}.");
+            lines.AppendLine($"    Read so far: {read}."
+                             + (searched.Count > 0 ? $" Searched for: {string.Join(", ", searched.Distinct())}." : ""));
+        }
+        return lines.ToString().TrimEnd();
+
+        static void Add(Dictionary<string, HashSet<string>> into, string key, string value)
+        {
+            if (!into.TryGetValue(key, out var set)) into[key] = set = new HashSet<string>(StringComparer.Ordinal);
+            set.Add(value);
+        }
+    }
 
     private sealed record StoredToolCall(string? Id, string? Name, string? Input);
 

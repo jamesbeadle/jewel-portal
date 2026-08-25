@@ -9,11 +9,14 @@ namespace Jewel.JPMS.Contracts.DocumentControl;
 // blank code registers a new drawing. Either way the file lands as an Unapproved revision, exactly
 // as if uploaded by hand. Code, title and revision are all optional. Bytes come from the
 // document-control blob (not the mailbox), so filing works long after the email has moved on;
-// IssuedByEmail is the item's snapshotted sender. Returns the item, now Filed.
+// IssuedByEmail is the item's snapshotted sender. A newly registered drawing is filed under
+// DrawingFolderId when given (any level; null = ungrouped) — an existing drawing keeps its folder.
+// Returns the item, now Filed.
 public sealed record FileDocumentAsDrawing(
     string DocumentControlItemId,
     string ProjectId,
     string DrawingCode,
     string Title,
     string RevisionLabel,
-    string? DrawingId = null) : ICommand<DocumentControlItem>;
+    string? DrawingId = null,
+    string? DrawingFolderId = null) : ICommand<DocumentControlItem>;

@@ -176,3 +176,17 @@ rediscovered in the chat. This is what turns iterative feedback into a ratchet.
    (recommended), or keep indefinitely.
 3. Whether `read_email_attachment` is kept as an alias for one release (recommended) or removed in
    the same commit with every skill and guide updated at once.
+
+## Status
+
+- **Phase 1 — shipped 2026-08-25.** `AiAttachments` table + `ai-attachments` blob store (migration
+  `20260825120000_AddAiAttachments`, script `api/Migrations/add-ai-attachments.sql`, retention via
+  `infra/run-ai-attachments-lifecycle.sh`); `AiSourceReader` (parts, paged reads, search);
+  `list_sources` / `find_in_source` / `read_source`; `read_email_attachment` as alias; manifest +
+  preview replay; "files on hand" turn-context lines; the evidence rule (`AiSystemPrompt.EvidenceRule`,
+  asserted by `AiRegistryDriftCheck`).
+- **Phase 2 — shipped 2026-08-25.** `get_variation_context`, `get_valuation_context`; dialogs
+  `variation_edit_lines` (ProjectVariationDetail, reusing `VariationApprovePanel` with
+  `SnapshotLines` / `ReplaceLines`) and `claim_progress` (`ClaimProgressDialog` on ProjectValuation);
+  page notes on both pages; guides, labels, drift-check entries, `AiTaskScopeTests` facts.
+- Phase 3 (filed documents as sources) and Phase 4 (the regression harness) are next.

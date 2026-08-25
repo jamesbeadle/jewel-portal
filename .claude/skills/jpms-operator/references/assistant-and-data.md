@@ -27,8 +27,11 @@ Reads: `list_projects`, `list_requests`, `list_variations`, `list_cost_codes`,
 `find_by_reference`, `get_request_context` (a request's full working papers),
 `get_bid_package_context`, `get_project_contract`, `get_current_context`,
 `read_record_emails` (any record page), `read_selected_email` (the ONLY way to
-read an untagged Control Centre queue email), `read_email_attachment`,
-`load_page_guide`, `load_skill`, `load_skill_reference`.
+read an untagged Control Centre queue email), `read_email_attachment` (alias),
+`list_sources` / `find_in_source` / `read_source` (files attached to the chat
+and attachments on a record's tagged emails, read one sheet or page at a time —
+docs/ai/06-context-retrieval.md), `load_page_guide`, `load_skill`,
+`load_skill_reference`.
 Acts: `navigate_to`, `open_modal` / `update_open_modal` (registered dialogs),
 `stage_triage_tag` and `stage_triage_todo` (Control Centre staging — lands on
 the user's Apply), `switch_agent`.

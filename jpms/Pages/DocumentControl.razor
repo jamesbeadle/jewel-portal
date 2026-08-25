@@ -328,6 +328,10 @@ else
                                             <FormField Label="Title" Value="@drawingTitle" OnChange="v => drawingTitle = v" />
                                         }
                                         <FormField Label="Revision label" Value="@drawingRevision" OnChange="v => drawingRevision = v" />
+                                        @if (!drawingIsRevision)
+                                        {
+                                            <DrawingFolderPicker @ref="drawingFolderPicker" ProjectId="@filingProjectId" />
+                                        }
                                     </div>
                                     <div class="flex items-center gap-3">
                                         <button type="button" class="btn-primary"
@@ -483,6 +487,7 @@ else
     private string drawingId = "";
     private string drawingCode = "";
     private string drawingTitle = "";
+    private DrawingFolderPicker? drawingFolderPicker;
     private string drawingRevision = "";
     private string certificateNumber = "";
     private string certificateAmountText = "";
@@ -601,6 +606,7 @@ else
         destination = FileDestination.Drawing;
         drawingIsRevision = false;
         drawingId = "";
+        drawingFolderPicker?.Reset();
         certificateNumber = "";
         certificateAmountText = "";
         certificateIssuedDate = null;
@@ -704,8 +710,20 @@ else
             code = target.DrawingCode;
             title = target.Title;
         }
-        await RunFiling("Filing to drawings", () =>
-            Store.FileAsDrawingAsync(item.DocumentControlItemId, filingProjectId, code, title, drawingRevision.Trim(), targetDrawingId));
+        if (!drawingIsRevision && drawingFolderPicker?.Problem is { } folderProblem)
+        {
+            actionError = folderProblem;
+            return;
+        }
+        await RunFiling("Filing to drawings", async () =>
+        {
+            // The folder resolves first (creating it if asked), then the file lands inside it.
+            var folderId = drawingIsRevision || drawingFolderPicker is null
+                ? null
+                : await drawingFolderPicker.ResolveFolderAsync(CancellationToken.None);
+            return await Store.FileAsDrawingAsync(
+                item.DocumentControlItemId, filingProjectId, code, title, drawingRevision.Trim(), targetDrawingId, folderId);
+        });
     }
 
     private async Task DoFileAsPaymentCertificate()

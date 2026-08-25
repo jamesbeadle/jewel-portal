@@ -63,10 +63,6 @@ public static class PortalMapCapabilities
             "subcontractor correspondence (everything tagged with the JPMS/SubComms family at triage — general plus the Chaser / Info request / Materials / H&S categories), read live with a per-category filter",
 
         // ---- Internal ----
-        ["/tender-enquiries"] =
-            "the bid pipeline: every inbound tender enquiry (an architect inviting Jewel to tender — "
-            + "TEQ-#### references), company-wide; open one for its status, PQQ response, documents "
-            + "and tagged emails. Each sits on a Lead-stage project behind the scenes",
         ["/todos"] =
             "the master to-do list across every project, with a project filter. find_by_reference "
             + "resolves a spoken \"TODO-0074\" to the item — its notes, project and route — and "
@@ -157,7 +153,8 @@ public static class PortalMapCapabilities
         ["/finance/allocation"] =
             "distributing allocated Xero purchase lines to cost centres",
         ["/projects/{project}/valuation"] =
-            "the picked project's LIVE valuation report — the system's flagship output",
+            "the picked project's LIVE valuation report — the system's flagship output. "
+            + "get_valuation_context reads it; the \"Set % complete\" dialog (claim_progress) lives here",
     };
 
     /// <summary>
@@ -172,17 +169,12 @@ public static class PortalMapCapabilities
             + "\"Find & tag emails\" adds more correspondence",
         "Variation → /projects/{project}/variations/{variationOrderId} — one document through "
             + "Quoting → Issued → Awaiting AI → Approved/Rejected, with its quotes and tagged emails "
-            + "(read_record_emails works here)",
+            + "(get_variation_context and read_record_emails read it; once Approved, the "
+            + "variation_edit_lines dialog opens here to re-price its build-up)",
         "Bid package → /projects/{project}/bid-package-invites/{bidPackageId} — scope lines, invited "
             + "subcontractors, their quotes, and the tagged email thread (get_bid_package_context and "
             + "read_record_emails read it; the bid_package_details dialog opens here to build the "
             + "package out — summary and line schedule in one update)",
-        "Tender enquiry → /tender-enquiries/{tenderEnquiryId} — the architect's "
-            + "invitation: Received → PQQ submitted → Shortlisted → Tender submitted → Won/Lost (any move, forwards or back), "
-            + "the PQQ answers (rendered to the PQQ response PDF; the user's \"Draft with AI\" opens the "
-            + "tender_enquiry_answers editor beside you — get_tender_enquiry_context, "
-            + "read_tender_enquiry_document, then update_open_modal), the enquiry's documents and its "
-            + "tagged emails (read_record_emails works here)",
         "Work order → /projects/{project}/work-orders/{workOrderId}/po — the purchase order as issued",
         "Drawing → /projects/{project}/drawings/{drawingId} — revision history and viewer",
         "To-do → /todos/{todoItemId} — one to-do with its notes and tagged mail",

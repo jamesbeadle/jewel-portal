@@ -91,8 +91,40 @@ else
                             </thead>
                             <tbody class="divide-y divide-line">
                                 @{ var currentArea = ""; }
-                                @foreach (var line in section.Lines)
+                                @foreach (var row in RowsFor(section))
                                 {
+                                    @* Variations consolidate per variation per cost centre (VariationRollUps),
+                                       exactly as the client's PDF shows them; a consolidated row opens to show
+                                       the frozen lines beneath it. *@
+                                    @if (row.RollUp is { } rollUp)
+                                    {
+                                        var isRollUpOpen = IsRollUpOpen(rollUp);
+                                        <tr class="@(rollUp.CountsTowardTotals ? "bg-surface-raised" : "bg-surface-raised opacity-60")">
+                                            <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@rollUp.VariationRef</td>
+                                            <td class="px-3 py-2 text-content">
+                                                <button type="button" @onclick="() => ToggleRollUp(rollUp)" aria-expanded="@isRollUpOpen"
+                                                        title="@(isRollUpOpen ? "Hide this row's lines" : "Show this row's lines")"
+                                                        class="flex items-start gap-1.5 text-left">
+                                                    <svg class="@(isRollUpOpen ? "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle transition-transform")"
+                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                        <path d="M9 6l6 6-6 6" />
+                                                    </svg>
+                                                    <span>
+                                                        <span class="font-medium">@rollUp.VariationTitle</span>
+                                                        <span class="block text-[11px] text-content-subtle">@RollUpSubtitle(rollUp)</span>
+                                                    </span>
+                                                </button>
+                                            </td>
+                                            <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">—</td>
+                                            <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">—</td>
+                                            <td class="px-3 py-2 text-right text-content font-medium whitespace-nowrap">@Money(rollUp.Amount)</td>
+                                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(rollUp.CountsTowardTotals ? Pct(RollUpPercent(rollUp)) : "—")</td>
+                                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(rollUp.CountsTowardTotals ? Money(RollUpClaimed(rollUp)) : "—")</td>
+                                        </tr>
+                                        continue;
+                                    }
+                                    var line = row.Line!;
                                     @* Area title rows, same rule as the live report table (ValuationReportAreas):
                                        the estimate section frozen on the line, else its cost-centre name. *@
                                     @if (ValuationReportAreas.GroupsByArea(section.Type))
@@ -107,8 +139,8 @@ else
                                         }
                                     }
                                     <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
-                                        <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@CodeFor(line)</td>
-                                        <td class="px-3 py-2 text-content">
+                                        <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@(row.IsDetail ? "↳ " : "")@CodeFor(line)</td>
+                                        <td class="px-3 py-2 text-content @(row.IsDetail ? "pl-7" : "")">
                                             <div class="font-medium">@TitleFor(line)</div>
                                             @if (!string.IsNullOrWhiteSpace(line.Comments))
                                             {
@@ -302,8 +334,14 @@ else
         var exportLines = new List<ValuationExportLine>();
         foreach (var section in Sections)
         {
-            foreach (var line in section.Lines)
+            foreach (var row in ExportRowsFor(section))
             {
+                if (row.RollUp is { } rollUp)
+                {
+                    exportLines.Add(RollUpExportLine(section.Title, rollUp));
+                    continue;
+                }
+                var line = row.Line!;
                 exportLines.Add(new ValuationExportLine(
                     section.Title,
                     ValuationReportAreas.GroupsByArea(section.Type) ? AreaTitleFor(line) : "",

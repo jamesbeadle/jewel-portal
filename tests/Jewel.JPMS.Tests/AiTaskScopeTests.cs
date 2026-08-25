@@ -122,11 +122,9 @@ public sealed class AiTaskScopeTests
                 Assert.Contains(token.Value, new[] { "{project}", "{record}" });
             }
 
-            // A PROJECT record in the path needs its project segment to build the route at all.
-            // (Company-wide record pages — /tender-enquiries/{record} — carry no project; the
-            // client substitutes the two placeholders independently.)
+            // A record in the PATH needs its project segment to build the route at all.
             var stem = modal.RouteTemplate.Split('?')[0];
-            if (stem.Contains("{record}", StringComparison.Ordinal) && stem.StartsWith("/projects/", StringComparison.Ordinal))
+            if (stem.Contains("{record}", StringComparison.Ordinal))
                 Assert.Contains("{project}", stem);
         }
     }
@@ -178,5 +176,82 @@ public sealed class AiTaskScopeTests
             .Select(group => group.Key)
             .ToList();
         Assert.True(duplicates.Count == 0, "duplicate guide routes: " + string.Join(", ", duplicates));
+    }
+
+    // ---- The valuation loop (2026-08-25): variation_edit_lines + claim_progress ----
+
+    [Fact]
+    public void VariationEditLines_isRegistered_forExactlyThePageCanManageSet()
+    {
+        var modal = ModalCatalog.Find("variation_edit_lines");
+        Assert.NotNull(modal);
+        Assert.Equal("/projects/{project}/variations/{record}", modal!.RouteTemplate);
+
+        // ProjectVariationDetail.CanManage: Admin, MD, PM, QS — who may approve and revise.
+        Assert.True(ModalCatalog.CanOpen(modal, new[] { Role.ProjectManager }));
+        Assert.True(ModalCatalog.CanOpen(modal, new[] { Role.QuantitySurveyor }));
+        Assert.True(ModalCatalog.CanOpen(modal, new[] { Role.ManagingDirector }));
+        Assert.True(ModalCatalog.CanOpen(modal, new[] { Role.Admin }));
+        Assert.False(ModalCatalog.CanOpen(modal, new[] { Role.FinanceDirector }));
+        Assert.False(ModalCatalog.CanOpen(modal, new[] { Role.SiteManager }));
+        Assert.False(ModalCatalog.CanOpen(modal, new[] { Role.Subcontractor }));
+    }
+
+    [Fact]
+    public void VariationEditLines_schemaMatchesTheDialogsSnapshot()
+    {
+        // VariationApprovePanel.SnapshotLines emits { lines: [{valuationLineItemId, costCode,
+        // description, quantity, rate, amount}] } and ReplaceLines reads the same names back.
+        // A name that drifts is a line the model sends and the panel ignores.
+        var json = JsonSerializer.Serialize(ModalCatalog.SchemaFor(ModalCatalog.VariationEditLines));
+        using var document = JsonDocument.Parse(json);
+
+        var lines = document.RootElement.GetProperty("properties").GetProperty("lines");
+        Assert.Equal("array", lines.GetProperty("type").GetString());
+        var item = lines.GetProperty("items").GetProperty("properties");
+        foreach (var field in new[] { "valuationLineItemId", "costCode", "description", "quantity", "rate" })
+            Assert.True(item.TryGetProperty(field, out _), $"missing line field: {field}");
+        Assert.Equal("number", item.GetProperty("quantity").GetProperty("type").GetString());
+        Assert.Equal("number", item.GetProperty("rate").GetProperty("type").GetString());
+
+        var required = document.RootElement.GetProperty("required").EnumerateArray().Select(value => value.GetString()).ToList();
+        Assert.Contains("lines", required);
+    }
+
+    [Fact]
+    public void ClaimProgress_isRegistered_forExactlyTheClaimEntryGate()
+    {
+        var modal = ModalCatalog.Find("claim_progress");
+        Assert.NotNull(modal);
+        Assert.Equal("/projects/{project}/valuation", modal!.RouteTemplate);
+
+        // ValuationReportAuthorisation.RolesThatMayRecordClaimEntries: Director, FD, PM, QS.
+        Assert.True(ModalCatalog.CanOpen(modal, new[] { Role.ManagingDirector }));
+        Assert.True(ModalCatalog.CanOpen(modal, new[] { Role.FinanceDirector }));
+        Assert.True(ModalCatalog.CanOpen(modal, new[] { Role.ProjectManager }));
+        Assert.True(ModalCatalog.CanOpen(modal, new[] { Role.QuantitySurveyor }));
+        Assert.True(ModalCatalog.CanOpen(modal, new[] { Role.Admin }));
+        Assert.False(ModalCatalog.CanOpen(modal, new[] { Role.SiteManager }));
+        Assert.False(ModalCatalog.CanOpen(modal, new[] { Role.Architect }));
+    }
+
+    [Fact]
+    public void ClaimProgress_schemaMatchesTheDialogsState()
+    {
+        // ClaimProgressDialog.SerialiseState emits { claim, entries: [{valuationLineItemId, line,
+        // currentPercent, percentComplete}] } and HandleAssistantDraft reads entries back by the
+        // same two names the schema declares.
+        var json = JsonSerializer.Serialize(ModalCatalog.SchemaFor(ModalCatalog.ClaimProgress));
+        using var document = JsonDocument.Parse(json);
+
+        var entries = document.RootElement.GetProperty("properties").GetProperty("entries");
+        Assert.Equal("array", entries.GetProperty("type").GetString());
+        var item = entries.GetProperty("items").GetProperty("properties");
+        Assert.True(item.TryGetProperty("valuationLineItemId", out _));
+        Assert.True(item.TryGetProperty("percentComplete", out _));
+        Assert.Equal("number", item.GetProperty("percentComplete").GetProperty("type").GetString());
+        var itemRequired = entries.GetProperty("items").GetProperty("required").EnumerateArray().Select(value => value.GetString()).ToList();
+        Assert.Contains("valuationLineItemId", itemRequired);
+        Assert.Contains("percentComplete", itemRequired);
     }
 }

@@ -127,8 +127,119 @@ else
                                 </thead>
                                 <tbody class="divide-y divide-line">
                                     @{ var currentArea = ""; }
-                                    @foreach (var line in section.Lines)
+                                    @foreach (var row in RowsFor(section))
                                     {
+                                        @* The Variations section consolidates each variation's lines per cost
+                                           centre into one row (VariationRollUps); a rolled-up row opens to show
+                                           the lines beneath it, each with its own % complete. *@
+                                        @if (row.RollUp is { } rollUp)
+                                        {
+                                            var isRollUpOpen = IsRollUpOpen(rollUp);
+                                            <tr class="@(rollUp.CountsTowardTotals ? "bg-surface-raised" : "bg-surface-raised opacity-60")">
+                                                <td class="sticky left-0 z-10 bg-surface-raised px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@rollUp.VariationRef</td>
+                                                <td class="sticky left-[72px] z-10 bg-surface-raised px-3 py-2 text-content">
+                                                    <button type="button" @onclick="() => ToggleRollUp(rollUp)" aria-expanded="@isRollUpOpen"
+                                                            title="@(isRollUpOpen ? "Hide this row's lines" : "Show this row's lines")"
+                                                            class="flex items-start gap-1.5 text-left">
+                                                        <svg class="@(isRollUpOpen ? "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle transition-transform")"
+                                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                            <path d="M9 6l6 6-6 6" />
+                                                        </svg>
+                                                        <span>
+                                                            <span class="font-medium">@rollUp.VariationTitle</span>
+                                                            <span class="block text-[11px] text-content-subtle">@rollUp.Lines.Count lines consolidated</span>
+                                                        </span>
+                                                    </button>
+                                                </td>
+                                                <td class="px-3 py-2 whitespace-nowrap text-content-muted">@CostCentreLabel(rollUp.CostCode)</td>
+                                                <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">—</td>
+                                                <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">—</td>
+                                                <td class="px-3 py-2 text-right text-content font-medium whitespace-nowrap">@Money(rollUp.Amount)</td>
+                                                @if (SelectedClaim is not null)
+                                                {
+                                                    <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">
+                                                        @(rollUp.CountsTowardTotals && HasPreviousClaim ? Pct(RollUpPreviousPercent(rollUp)) : "—")
+                                                    </td>
+                                                }
+                                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                    @if (bulkEditing && CanEditEntries)
+                                                    {
+                                                        <span class="text-[11px] text-content-subtle" title="In bulk edit the percentages are typed per line below">per line</span>
+                                                    }
+                                                    else if (CanEditEntries && rollUp.CountsTowardTotals)
+                                                    {
+                                                        @if (editingRollUpKey == rollUp.Key)
+                                                        {
+                                                            <span class="inline-flex items-center gap-1">
+                                                                <input @ref="editInput" type="text" inputmode="decimal"
+                                                                       value="@editValue"
+                                                                       onfocus="this.select()"
+                                                                       @oninput="@(e => { editValue = e.Value?.ToString() ?? ""; editError = false; })"
+                                                                       @onkeydown="@(e => OnRollUpEditKeyDownAsync(e, rollUp))"
+                                                                       @onblur="@(() => OnRollUpEditBlurAsync(rollUp))"
+                                                                       aria-label="Percent complete for every line in this row"
+                                                                       class="field w-16 text-right px-2 py-1 focus:outline-none focus:ring-2 @(editError ? "ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
+                                                                <button type="button" title="Save (Enter)" aria-label="Save percent complete"
+                                                                        @onmousedown:preventDefault
+                                                                        @onclick="() => CommitRollUpEditAsync(rollUp)"
+                                                                        class="inline-flex items-center justify-center w-6 h-6 rounded-md text-positive hover:bg-surface-raised">
+                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                                                         stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+                                                                </button>
+                                                                <button type="button" title="Cancel (Esc)" aria-label="Cancel edit"
+                                                                        @onmousedown:preventDefault
+                                                                        @onclick="CancelRollUpEdit"
+                                                                        class="inline-flex items-center justify-center w-6 h-6 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
+                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                                                         stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                                                                </button>
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="inline-flex items-baseline gap-1.5 justify-end">
+                                                                <button type="button" title="Set the same % complete on every line in this row — open the row to set lines individually"
+                                                                        @onclick="() => StartRollUpEdit(rollUp)"
+                                                                        class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(RollUpPercent(rollUp) == 0m ? "text-content-muted" : "text-content")">
+                                                                    @Pct(RollUpPercent(rollUp))
+                                                                </button>
+                                                                @if (ShowRollUpDelta(rollUp))
+                                                                {
+                                                                    <span class="text-[11px] text-content-subtle whitespace-nowrap" title="Change from the previous claim">@SignedPct(RollUpDelta(rollUp))</span>
+                                                                }
+                                                            </span>
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-content-muted">@(rollUp.CountsTowardTotals ? Pct(RollUpPercent(rollUp)) : "—")</span>
+                                                        @if (ShowRollUpDelta(rollUp))
+                                                        {
+                                                            <span class="ml-1.5 text-[11px] text-content-subtle whitespace-nowrap" title="Change from the previous claim">@SignedPct(RollUpDelta(rollUp))</span>
+                                                        }
+                                                    }
+                                                </td>
+                                                <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">
+                                                    @(rollUp.CountsTowardTotals ? Money(RollUpClaimed(rollUp)) : "—")
+                                                </td>
+                                                @if (SelectedClaim is not null)
+                                                {
+                                                    <td class="px-3 py-2 text-right whitespace-nowrap @(RollUpPeriod(rollUp) == 0m ? "text-content-subtle" : "text-content")">
+                                                        @(rollUp.CountsTowardTotals ? Money(RollUpPeriod(rollUp)) : "—")
+                                                    </td>
+                                                }
+                                                @if (CanEditLines)
+                                                {
+                                                    <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                        <button type="button" @onclick="() => ToggleRollUp(rollUp)"
+                                                                class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">@(isRollUpOpen ? "Hide lines" : "Show lines")</button>
+                                                    </td>
+                                                }
+                                            </tr>
+                                            continue;
+                                        }
+                                        var line = row.Line!;
                                         @* Area title rows — the estimate's own section headings ("Electrics",
                                            "Plumbing & Heating"), falling back to the line's cost-centre name,
                                            so the bill reads in the same titled areas as the estimate instead
@@ -146,8 +257,8 @@ else
                                             }
                                         }
                                         <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
-                                            <td class="sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@CodeFor(line)</td>
-                                            <td class="sticky left-[72px] z-10 bg-surface px-3 py-2 text-content">
+                                            <td class="sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@(row.IsDetail ? "↳ " : "")@CodeFor(line)</td>
+                                            <td class="sticky left-[72px] z-10 bg-surface px-3 py-2 text-content @(row.IsDetail ? "pl-7" : "")">
                                                 <div class="font-medium">@TitleFor(line)</div>
                                                 @if (!string.IsNullOrWhiteSpace(line.Comments))
                                                 {
@@ -504,26 +615,16 @@ else
     }
 
     // Always render all four sections so the shape of the bill is visible even before
-    // any lines exist in a given block. Variation lines group by their V-ref (natural
-    // numeric order) before display order — a line added to an earlier variation later
-    // on (ReviseVariationOrderLines appends with the project's next display order) still
-    // renders with its variation instead of dropping to the bottom of the section.
-    private static int VariationRefOrder(string variationRef)
-    {
-        var digits = new string(variationRef.Where(char.IsDigit).ToArray());
-        return int.TryParse(digits, out var number) ? number : int.MaxValue;
-    }
-
+    // any lines exist in a given block. Variation lines sit in their consolidated order
+    // (VariationRollUps: V-ref, then each variation/cost-centre row, its lines together) so
+    // Enter-to-advance walks the rows exactly as they render — a line added to an earlier
+    // variation later on still renders with its variation instead of dropping to the bottom.
     private IEnumerable<Section> Sections
     {
         get
         {
             Section Make(string title, ValuationElementType type) =>
-                new(type, title, lines.Where(l => l.ElementType == type)
-                                      .OrderBy(l => type == ValuationElementType.Variation
-                                          ? VariationRefOrder(l.VariationRef) : 0)
-                                      .ThenBy(l => l.DisplayOrder)
-                                      .ToList());
+                new(type, title, OrderedLinesOf(type));
 
             return new[]
             {
@@ -533,6 +634,14 @@ else
                 Make("Variations", ValuationElementType.Variation)
             };
         }
+    }
+
+    private List<ValuationLineItem> OrderedLinesOf(ValuationElementType type)
+    {
+        var ofType = lines.Where(l => l.ElementType == type);
+        if (type == ValuationElementType.Variation)
+            return VariationRollUps.Build(ofType).SelectMany(rollUp => rollUp.Lines).ToList();
+        return ofType.OrderBy(l => l.DisplayOrder).ToList();
     }
 
     private decimal ClaimedTotalFor(Section section) =>
@@ -642,6 +751,7 @@ else
             bulkValues[line.ValuationLineItemId] = PercentFor(line).ToString("0.##", Gb);
         foreach (ValuationElementType type in Enum.GetValues<ValuationElementType>())
             expanded.Add(type);
+        OpenEveryRollUp(); // every line's % is typed individually, so the consolidated rows must show them
     }
 
     private void CancelBulkEdit()
@@ -744,6 +854,8 @@ else
 
     private void StartEdit(ValuationLineItem line)
     {
+        CancelRollUpEdit();
+        RevealRollUpFor(line); // a line inside a collapsed consolidated row must be visible to edit
         editingLineId = line.ValuationLineItemId;
         editValue = PercentFor(line).ToString("0.##", Gb);
         editError = false;
@@ -753,6 +865,7 @@ else
     private void CancelEdit()
     {
         editingLineId = null;
+        editingRollUpKey = null;
         editError = false;
     }
 
@@ -863,7 +976,7 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (focusPending && editingLineId is not null)
+        if (focusPending && (editingLineId is not null || editingRollUpKey is not null))
         {
             focusPending = false;
             await editInput.FocusAsync();
@@ -1082,8 +1195,14 @@ else
 
         foreach (var section in Sections)
         {
-            foreach (var line in section.Lines)
+            foreach (var row in ExportRowsFor(section))
             {
+                if (row.RollUp is { } rollUp)
+                {
+                    AddRollUpExportRow(linesSheet, rollUp);
+                    continue;
+                }
+                var line = row.Line!;
                 linesSheet.AddRow(
                     SectionLabel(section.Type),
                     ValuationReportAreas.GroupsByArea(section.Type) ? AreaTitleFor(line) : null,
@@ -1099,6 +1218,7 @@ else
                     line.CountsTowardTotals ? (decimal?)ClaimedFor(line) : null);
             }
         }
+        AddVariationLinesSheet(workbook);
 
         var summarySheet = workbook.AddSheet("Summary",
             new ExcelColumn("Item"),

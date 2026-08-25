@@ -11,7 +11,10 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// re-implementing it. <paramref name="AgentKey"/> is the agent in force this hop — the skill
 /// tools use it to keep an agent inside its own (plus shared) skill set.</summary>
 public sealed record AiToolContext(
-    JpmsContext Db, SignedInUser User, AiScope? Scope, IServiceProvider Services, string AgentKey = "orchestrator");
+    JpmsContext Db, SignedInUser User, AiScope? Scope, IServiceProvider Services, string AgentKey = "orchestrator",
+    /// <summary>The conversation the hop belongs to — what scopes "the files attached to this
+    /// chat" (AiSourceTools). Null only in tests that never touch a conversation.</summary>
+    string? ConversationId = null);
 
 public enum AiToolKind
 {

@@ -27,7 +27,7 @@ public static class AiRegistryDriftCheck
 
         // Page-anchored dialogs are deliberately NOT openable via open_modal — the page supplies
         // their anchor (tender_reply's tender email) when it starts the task itself.
-        var pageAnchored = new[] { ModalCatalog.TenderReply.ModalKey, ModalCatalog.TenderEnquiryAnswers.ModalKey };
+        var pageAnchored = new[] { ModalCatalog.TenderReply.ModalKey };
 
         foreach (var modal in ModalCatalog.All)
         {
@@ -58,6 +58,18 @@ public static class AiRegistryDriftCheck
                     $"AiToolLabels has no label for \"{tool.Name}\" — the user watches "
                     + "\"Working on it\" for its whole run, and the slow tools run longest.");
             }
+        }
+
+        // The evidence rule must name every source-reading tool, and every tool it names must
+        // exist — a reader the prompt never mentions is a reader the model never reaches for, and
+        // a name the prompt mentions that the catalogue lacks is a model promising a call it
+        // cannot make.
+        foreach (var name in AiSourceTools.Names)
+        {
+            if (!AiSystemPrompt.EvidenceRule.Contains(name, StringComparison.Ordinal))
+                complaints.Add($"AiSystemPrompt.EvidenceRule never mentions \"{name}\" — the model is never told to use it.");
+            if (!AiToolCatalogue.All.Any(tool => string.Equals(tool.Name, name, StringComparison.OrdinalIgnoreCase)))
+                complaints.Add($"AiSourceTools.Names lists \"{name}\" but the tool catalogue has no such tool.");
         }
 
         if (complaints.Count > 0)

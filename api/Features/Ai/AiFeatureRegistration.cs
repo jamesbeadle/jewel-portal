@@ -67,7 +67,9 @@ public static class AiFeatureRegistration
         services.AddScoped<ContinueAiTurnAuthorisation>();
         services.AddScoped<ContinueAiTurnValidation>();
 
-        // Chat attachments: extract-once-to-text, persisted as a Context row. No Claude call.
+        // Chat attachments: bytes kept in the ai-attachments container so any part can be read on
+        // demand, a manifest + preview persisted as a Context row. No Claude call at upload.
+        RegisterAttachmentStore(services, configuration);
         services.AddScoped<ICommandHandler<AddAiAttachment, AiAttachmentReceipt>, AddAiAttachmentHandler>();
         services.AddScoped<AddAiAttachmentValidation>();
 
@@ -89,5 +91,20 @@ public static class AiFeatureRegistration
         services.AddScoped<Skills.SaveAiSkillReferenceValidation>();
 
         return services;
+    }
+
+    private static void RegisterAttachmentStore(IServiceCollection services, IConfiguration configuration)
+    {
+        // Its own setting when one is configured, otherwise the same storage account the other
+        // stores share (the Document Control / drawings pattern): a dedicated private container.
+        var connectionString = configuration["AiAttachmentStorage:ConnectionString"]
+            ?? configuration["DocumentControlStorage:ConnectionString"]
+            ?? configuration["DrawingsStorage:ConnectionString"]
+            ?? configuration["AzureWebJobsStorage"];
+
+        if (string.IsNullOrWhiteSpace(connectionString))
+            services.AddSingleton<Storage.IAiAttachmentStore, Storage.NullAiAttachmentStore>();
+        else
+            services.AddSingleton<Storage.IAiAttachmentStore>(_ => new Storage.AzureBlobAiAttachmentStore(connectionString));
     }
 }

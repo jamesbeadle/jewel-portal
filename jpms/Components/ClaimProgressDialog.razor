@@ -1,0 +1,340 @@
+@using System.Text.Json
+@using Jewel.JPMS.Models
+@using Jewel.JPMS.Contracts.Ai
+@using Jewel.JPMS.Contracts.Commercial
+@inject IValuationReportStore Store
+@inject AiTaskState AiTasks
+@inject ChatPanelState Chat
+@implements IDisposable
+
+@*
+    "Set % complete" — the Valuation Report's % column, batched into a dialog: a list of lines with
+    a new cumulative % each, saved as ONE RecordClaimEntries against the selected Draft claim. The
+    same act as typing into the report row by row; the point of the dialog is that the assistant can
+    fill it (the claim_progress registration, docs/ai/06-context-retrieval.md Phase 2): "review the %
+    complete against the valuation" → the assistant reads the report and the evidence, puts the
+    corrected percentages here, and the user checks each one and presses Save.
+
+    When the assistant opened it (an AiTask with this dialog's modal key is active), this component
+    is also the dialog ⇄ assistant pipe: every edit republishes the live list, and the assistant's
+    update_open_modal proposals REPLACE the pending list (the entries array is the whole list by
+    stated contract). Ids it sends that are not on this report are dropped and said so. Filling
+    writes nothing — the user presses Save.
+*@
+<Modal IsOpen="IsOpen"
+       Title="@($"Set % complete — {Claim?.DisplayName}")"
+       ConfirmLabel="@(saving ? "Saving…" : $"Save {Pending.Count} line{(Pending.Count == 1 ? "" : "s")}")"
+       ConfirmDisabled="@(saving || Pending.Count == 0 || !ClaimIsDraft)"
+       OnCancel="Cancel"
+       OnConfirm="SaveAsync"
+       ChatAware="true"
+       DismissOnOverlayClick="@(!AssistantTaskActive)"
+       Class="max-w-3xl">
+    @if (AssistantTaskActive && Chat.AssistantBusy)
+    {
+        <div class="mb-3 flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2">
+            <span class="w-3 h-3 shrink-0 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></span>
+            <p class="text-xs text-accent">The assistant is working on this list — lines fill in as it goes.</p>
+        </div>
+    }
+
+    @if (!ClaimIsDraft)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+            @(Claim is null ? "No claim is selected." : $"{Claim.DisplayName} is {Claim.Status} — % complete can only be recorded on a Draft claim.")
+        </p>
+    }
+    else
+    {
+        <p class="text-xs text-content-subtle mb-3">
+            Cumulative % complete to date on @Claim!.DisplayName — the same as typing into the report's % column,
+            one save for the lot. 0–100 on contract lines; variation lines may go wider (a weighted % of a net variation).
+        </p>
+    }
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+
+    <div class="space-y-2">
+        <div class="hidden sm:grid grid-cols-[1fr_5rem_6rem_1.5rem] gap-2 px-1">
+            <span class="eyebrow">Line</span>
+            <span class="eyebrow text-right">Now %</span>
+            <span class="eyebrow text-right">New %</span>
+            <span></span>
+        </div>
+
+        @foreach (var entry in Pending)
+        {
+            var row = entry;
+            var line = LineFor(row.ValuationLineItemId);
+            <div class="grid grid-cols-1 sm:grid-cols-[1fr_5rem_6rem_1.5rem] gap-2 items-center">
+                <div class="text-sm text-content truncate" title="@LabelFor(line)">@LabelFor(line)</div>
+                <div class="text-right text-sm font-mono text-content-muted">@FormatPercent(CurrentPercentFor(row.ValuationLineItemId))</div>
+                <input class="field text-right" type="number" step="any"
+                       value="@row.PercentText" @oninput="e => { row.PercentText = e.Value?.ToString() ?? string.Empty; Publish(); }" />
+                <button type="button" class="text-content-subtle hover:text-negative" title="Remove"
+                        @onclick="() => Remove(row)">✕</button>
+            </div>
+        }
+
+        @if (Pending.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic px-1">No lines yet — pick one below, or ask the assistant.</p>
+        }
+
+        <div class="flex items-center gap-2 pt-2">
+            <SearchSelect Options="@LineOptions" WidthClass="w-full" Placeholder="Add a line…"
+                          InputClass="bg-surface-field border border-line-strong px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                          Value="@pickedLineId" ValueChanged="AddPicked" />
+        </div>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public bool IsOpen { get; set; }
+    /// <summary>The claim the entries land on — must be Draft to save.</summary>
+    [Parameter] public ValuationClaim? Claim { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+
+    private sealed class PendingEntry
+    {
+        public string ValuationLineItemId { get; set; } = "";
+        public string PercentText { get; set; } = "";
+    }
+
+    private readonly List<PendingEntry> Pending = new();
+    private string pickedLineId = "";
+    private string? error;
+    private bool saving;
+    private bool wasOpen;
+    private bool initialDraftPublished;
+
+    private bool ClaimIsDraft => Claim is { Status: ValuationClaimStatus.Draft };
+
+    private bool AssistantTaskActive =>
+        AiTasks.Active?.ModalKey == ModalCatalog.ClaimProgress.ModalKey;
+
+    private IReadOnlyList<ValuationLineItem> Lines => Store.LinesFor(ProjectId);
+
+    private IReadOnlyList<ClaimLine> Entries => Claim is null ? Array.Empty<ClaimLine>() : Store.EntriesFor(Claim.ValuationClaimId);
+
+    protected override void OnInitialized()
+    {
+        // The assistant's proposals, when a task is in force. Subscribed for the component's life —
+        // the handler checks the task matches, so another dialog's task never writes into this list.
+        AiTasks.OnDraftApplied += HandleAssistantDraft;
+        // Repaints the working banner as the assistant's turn starts and finishes.
+        Chat.OnChange += StateHasChanged;
+        Store.OnChange += StateHasChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Each opening starts clean — last time's list must not read as this time's.
+        if (IsOpen && !wasOpen)
+        {
+            Pending.Clear();
+            error = null;
+            pickedLineId = "";
+            initialDraftPublished = false;
+        }
+        wasOpen = IsOpen;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // Publish the (empty) list once per opening so the model's first hop sees the dialog's
+        // shape — and the claim it is for — rather than "{}".
+        if (IsOpen && AssistantTaskActive && !initialDraftPublished)
+        {
+            initialDraftPublished = true;
+            AiTasks.UpdateDraft(SerialiseState());
+        }
+    }
+
+    public void Dispose()
+    {
+        AiTasks.OnDraftApplied -= HandleAssistantDraft;
+        Chat.OnChange -= StateHasChanged;
+        Store.OnChange -= StateHasChanged;
+    }
+
+    // ---- The list -------------------------------------------------------------------------------
+
+    private IReadOnlyList<SearchSelect.Option> LineOptions =>
+        Lines.Where(line => line.CountsTowardTotals)
+            .Where(line => Pending.All(entry => entry.ValuationLineItemId != line.ValuationLineItemId))
+            .OrderBy(line => line.ElementType).ThenBy(line => line.DisplayOrder)
+            .Select(line => new SearchSelect.Option(line.ValuationLineItemId,
+                $"{LabelFor(line)} — {FormatPercent(CurrentPercentFor(line.ValuationLineItemId))}"))
+            .ToList();
+
+    private void AddPicked(string lineId)
+    {
+        pickedLineId = "";
+        if (string.IsNullOrWhiteSpace(lineId) || LineFor(lineId) is null) return;
+        if (Pending.Any(entry => entry.ValuationLineItemId == lineId)) return;
+        Pending.Add(new PendingEntry
+        {
+            ValuationLineItemId = lineId,
+            PercentText = CurrentPercentFor(lineId).ToString(System.Globalization.CultureInfo.InvariantCulture)
+        });
+        Publish();
+    }
+
+    private void Remove(PendingEntry row)
+    {
+        Pending.Remove(row);
+        Publish();
+    }
+
+    private ValuationLineItem? LineFor(string lineId) =>
+        Lines.FirstOrDefault(line => line.ValuationLineItemId == lineId);
+
+    private decimal CurrentPercentFor(string lineId) =>
+        Entries.FirstOrDefault(entry => entry.ValuationLineItemId == lineId)?.PercentComplete ?? 0m;
+
+    private static string LabelFor(ValuationLineItem? line) =>
+        line is null
+            ? "(line not on this report)"
+            : line.ElementType == ValuationElementType.Variation
+                ? $"{line.VariationRef} · {line.Description}"
+                : $"{(string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionName : line.CostCode)} · {line.Description}";
+
+    private static string FormatPercent(decimal value) =>
+        value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+
+    private static (decimal Min, decimal Max) BoundsFor(ValuationLineItem line) =>
+        line.ElementType == ValuationElementType.Variation ? (-100000m, 100000m) : (0m, 100m);
+
+    private async Task Cancel() => await OnClose.InvokeAsync();
+
+    private async Task SaveAsync()
+    {
+        if (saving || Claim is null || !ClaimIsDraft) return;
+        error = null;
+
+        var entries = new List<ClaimEntryInput>();
+        foreach (var row in Pending)
+        {
+            var line = LineFor(row.ValuationLineItemId);
+            if (line is null)
+            {
+                error = "One of the lines is no longer on the report — remove it and save again.";
+                return;
+            }
+            if (!FormNumber.TryParseAmount(row.PercentText, out var percent))
+            {
+                error = $"\"{LabelFor(line)}\" needs a number for its new %.";
+                return;
+            }
+            var (min, max) = BoundsFor(line);
+            if (percent < min || percent > max)
+            {
+                error = $"\"{LabelFor(line)}\": {FormatPercent(percent)} is outside {FormatPercent(min)}–{FormatPercent(max)}.";
+                return;
+            }
+            entries.Add(new ClaimEntryInput(line.ValuationLineItemId, percent));
+        }
+        if (entries.Count == 0)
+        {
+            error = "Add at least one line.";
+            return;
+        }
+
+        saving = true;
+        try
+        {
+            await Store.RecordEntriesAsync(ProjectId, new RecordClaimEntries(Claim.ValuationClaimId, entries));
+            await OnSaved.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't save the percentages. Please try again."; }
+        finally { saving = false; }
+    }
+
+    // ---- The assistant pipe ---------------------------------------------------------------------
+
+    /// <summary>The live list as the JSON the task carries with every turn — the dialog's schema
+    /// (entries with valuationLineItemId and percentComplete as a NUMBER, null while blank), plus
+    /// the claim it is for, so the model never has to guess which claim "the selected one" is.</summary>
+    private string SerialiseState() => JsonSerializer.Serialize(new
+    {
+        claim = Claim is null
+            ? null
+            : new { valuationClaimId = Claim.ValuationClaimId, name = Claim.DisplayName, status = Claim.Status.ToString(), editable = ClaimIsDraft },
+        entries = Pending.Select(row =>
+        {
+            var line = LineFor(row.ValuationLineItemId);
+            return new
+            {
+                valuationLineItemId = row.ValuationLineItemId,
+                line = LabelFor(line),
+                currentPercent = CurrentPercentFor(row.ValuationLineItemId),
+                percentComplete = FormNumber.TryParseAmount(row.PercentText, out var percent) ? percent : (decimal?)null
+            };
+        }).ToList()
+    });
+
+    /// <summary>The model's update_open_modal, landing here: the entries array REPLACES the pending
+    /// list. An id not on this report is dropped and reported in the dialog, never saved.</summary>
+    private void HandleAssistantDraft(string fieldsJson)
+    {
+        if (!IsOpen || !AssistantTaskActive || string.IsNullOrWhiteSpace(fieldsJson)) return;
+        try
+        {
+            using var document = JsonDocument.Parse(fieldsJson);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object) return;
+            if (!root.TryGetProperty("entries", out var proposed) || proposed.ValueKind != JsonValueKind.Array) return;
+
+            var replacement = new List<PendingEntry>();
+            var unknown = 0;
+            foreach (var item in proposed.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object) continue;
+                var lineId = item.TryGetProperty("valuationLineItemId", out var idValue) && idValue.ValueKind == JsonValueKind.String
+                    ? idValue.GetString()?.Trim() ?? ""
+                    : "";
+                if (lineId.Length == 0 || LineFor(lineId) is null) { unknown++; continue; }
+                if (replacement.Any(entry => entry.ValuationLineItemId == lineId)) continue;
+
+                string percentText = "";
+                if (item.TryGetProperty("percentComplete", out var percentValue))
+                {
+                    percentText = percentValue.ValueKind switch
+                    {
+                        JsonValueKind.Number => percentValue.GetDecimal().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        JsonValueKind.String => percentValue.GetString()?.Trim() ?? "",
+                        _ => ""
+                    };
+                }
+                replacement.Add(new PendingEntry { ValuationLineItemId = lineId, PercentText = percentText });
+            }
+
+            Pending.Clear();
+            Pending.AddRange(replacement);
+            error = unknown == 0
+                ? null
+                : $"{unknown} line{(unknown == 1 ? "" : "s")} the assistant sent {(unknown == 1 ? "is" : "are")} not on this report and {(unknown == 1 ? "was" : "were")} dropped.";
+            AiTasks.UpdateDraft(SerialiseState());
+            StateHasChanged();
+        }
+        catch (JsonException)
+        {
+            // A malformed proposal is the model's problem, not the user's. The list stands.
+        }
+    }
+
+    /// <summary>Every human edit republishes the live list, so the model reasons from it as it
+    /// stands NOW.</summary>
+    private void Publish()
+    {
+        if (!AssistantTaskActive) return;
+        AiTasks.UpdateDraft(SerialiseState());
+    }
+}

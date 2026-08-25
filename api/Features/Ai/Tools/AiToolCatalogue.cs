@@ -59,7 +59,8 @@ public static class AiToolCatalogue
     public static IReadOnlyList<AiTool> All { get; } =
         Build()
             .Concat(AiRecordTools.Build())
-            .Concat(AiTenderEnquiryTools.Build())
+            .Concat(AiSourceTools.Build())
+            .Concat(AiCommercialTools.Build())
             .Concat(AiSkillTools.Build())
             .Concat(AiPageGuideTools.Build())
             .ToList();
@@ -601,7 +602,7 @@ public static class AiToolCatalogue
                                             todoItemId = row.TodoItemId,
                                             row.Title,
                                             notes = string.IsNullOrWhiteSpace(row.Notes) ? null : row.Notes,
-                                            status = row.IsComplete ? "Done" : row.StartedAt is null ? "Open" : "In progress",
+                                            status = row.IsComplete ? "Done" : "Open",
                                             assignee = row.AssigneeRole is { } assigneeRole
                                                 ? ((Role)assigneeRole).ToString()
                                                   + (string.IsNullOrWhiteSpace(row.AssigneePersonEmail) ? "" : $" — {row.AssigneePersonEmail}")
@@ -1217,26 +1218,38 @@ public static class AiToolCatalogue
                 + "find_by_reference); read the correspondence first (read_record_emails on the to-do or "
                 + "record that holds it), then send supplier, title, scope and the priced lines in one "
                 + "update — saving a LIVE order mints the WO number and emails the purchase order to the "
-                + "supplier at once, so propose saveAsDraft true unless the figures are confirmed.",
+                + "supplier at once, so propose saveAsDraft true unless the figures are confirmed; "
+                + "\"variation_edit_lines\" edits an APPROVED variation's priced build-up — the lines on "
+                + "the Valuation Report under its V-number — pre-filled with the lines as they stand, and "
+                + "needs that variation's id as record_id (get_variation_context resolves \"V01\" to it and "
+                + "lists every current line with its valuationLineItemId); read the evidence the user "
+                + "named first (the workbook tab via find_in_source / read_source), then send the whole "
+                + "corrected schedule in one update, carrying each kept line's valuationLineItemId; "
+                + "\"claim_progress\" sets cumulative % complete on lines of the Valuation Report's selected "
+                + "Draft claim — it takes project_id but NO record_id; read get_valuation_context first "
+                + "(line ids, current and previous %, which claim is selected and whether it is Draft), "
+                + "then send only the lines whose % should change.",
                 AiToolSchema.Object(
                     ("modal_key", "string",
                         "One of: \"variation_draft\", \"manual_variation\", \"compose_email\", "
                         + "\"reply_email\", \"bid_package_details\", \"worker_week\", "
                         + "\"manual_timesheet\", \"record_absence\", \"work_order_edit\", "
-                        + "\"work_order_create\".", true),
+                        + "\"work_order_create\", \"variation_edit_lines\", \"claim_progress\".", true),
                     ("record_id", "string",
                         "The record the dialog works from — REQUIRED for variation_draft (the request id, from "
-                        + "find_by_reference or list_requests), for bid_package_details (the bid package id) "
-                        + "and for work_order_edit (the work order id, from get_work_order_context). "
-                        + "Omit for every other dialog.", false),
+                        + "find_by_reference or list_requests), for bid_package_details (the bid package id), "
+                        + "for work_order_edit (the work order id, from get_work_order_context) and for "
+                        + "variation_edit_lines (the variation's id, from get_variation_context or "
+                        + "find_by_reference). Omit for every other dialog.", false),
                     ("project_id", "string",
                         "Defaults to the project in view — but on a whole-company page (the To-dos page, the "
                         + "Control Centre, the Labour overview) there IS no project in view, so a project "
                         + "dialog opened from one needs it passed explicitly (list_projects returns ids). For "
-                        + "the record dialogs (variation_draft, bid_package_details, work_order_edit) the "
-                        + "server fills it in from the record itself, so record_id is what matters there. "
-                        + "Omit for the whole-company dialogs: compose_email, reply_email, worker_week, "
-                        + "record_absence.", false),
+                        + "the record dialogs (variation_draft, bid_package_details, work_order_edit, "
+                        + "variation_edit_lines) the server fills it in from the record itself, so record_id "
+                        + "is what matters there. claim_progress needs it unless the user is on one of that "
+                        + "project's pages. Omit for the whole-company dialogs: compose_email, reply_email, "
+                        + "worker_week, record_absence.", false),
                     ("reason", "string", "One clause explaining why.", false)),
                 AiToolKind.Ui,
                 JpmsRoleSets.CommercialTeam,

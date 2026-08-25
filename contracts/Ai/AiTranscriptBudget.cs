@@ -43,6 +43,13 @@ public static class AiTranscriptBudget
             "list_request_correspondence",
             "get_bid_package_context",
             "get_work_order_context",
+            // The source readers (2026-08-25): a part read is keyed by source + part + from, so
+            // two different sheets both stay; the same sheet read twice keeps the newest copy.
+            "list_sources",
+            "find_in_source",
+            "read_source",
+            "get_variation_context",
+            "get_valuation_context",
         };
 
     /// <summary>

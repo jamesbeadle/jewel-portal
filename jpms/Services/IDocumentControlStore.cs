@@ -15,10 +15,12 @@ public interface IDocumentControlStore
 
     /// <summary>Files an item into a project's drawings as an Unapproved revision — of the given
     /// drawing when <paramref name="drawingId"/> is set, else matched by code within the project
-    /// (a new or blank code registers a new drawing).</summary>
+    /// (a new or blank code registers a new drawing, filed under <paramref name="drawingFolderId"/>
+    /// when given).</summary>
     Task<DocumentControlItem> FileAsDrawingAsync(
         string documentControlItemId, string projectId, string drawingCode, string title,
-        string revisionLabel, string? drawingId = null, CancellationToken cancellationToken = default);
+        string revisionLabel, string? drawingId = null, string? drawingFolderId = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Files an item as a payment certificate on a project, optionally tied to the
     /// valuation claim it certifies.</summary>

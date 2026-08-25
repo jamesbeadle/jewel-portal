@@ -30,8 +30,14 @@ public static class CommercialPageGuides
             + "(un-approve) and Reject (reverses the writes). \"Record agreed tender\" captures the "
             + "chosen subcontractor and value pre-approval; an Awaiting-AI banner shows whether an "
             + "Architect's Instruction is linked. The Communications panel reads the tagged mail "
-            + "(read_record_emails works here) with reply/forward and \"Find & tag emails\". No "
-            + "dialog is registered here for open_modal.",
+            + "(read_record_emails works here) with reply/forward and \"Find & tag emails\". "
+            + "get_variation_context reads the whole record in one call — header, request, the "
+            + "approved lines with their ids, work orders. One dialog is registered here: "
+            + "open_modal \"variation_edit_lines\" (record_id = the variation's id) opens the "
+            + "post-approval Edit lines dialog pre-filled with the current build-up so you can "
+            + "send the corrected schedule from the evidence — the user presses Save lines. It "
+            + "exists only once the variation is Approved; before that, its value is set in the "
+            + "approve modal by hand.",
             Aliases: new[] { "/projects/{project}/voq/{variationOrderId}" }),
 
         new("/projects/{project}/valuation", "Valuation Report",
@@ -41,12 +47,14 @@ public static class CommercialPageGuides
             + "roll over, with one primary button per stage and an Actions menu for rename, reopen, "
             + "record rejection/payment, issue without approval and delete. Lines are added or "
             + "edited while the claim is Draft; the Valuation Invoices and Snapshots sections sit "
-            + "inline, and working-copy PDF/Excel exports are always available. The toolbar's "
-            + "\"Client references\" tag button maps each cost centre on the report to the client's "
-            + "own schedule-of-works item number (\"3.12\", \"2.1–2.4\"); once any are set, the "
-            + "client PDF gains a \"Client ref\" column beside Code, frozen into each snapshot at "
-            + "capture. You have no dialog registered here — navigate_to it and answer from reads. "
-            + "Approving variations, which writes their lines here, happens on the variation record."),
+            + "inline, and working-copy PDF/Excel exports are always available. get_valuation_context "
+            + "reads the whole report — every line with its id, the selected claim's % complete, the "
+            + "previous claim's, the totals. One dialog is registered here: open_modal "
+            + "\"claim_progress\" (project_id; no record) opens Set % complete for the selected "
+            + "claim, which must be Draft — you send the lines to change with their cumulative %, "
+            + "the user checks and presses Save. Approving variations, which writes their lines "
+            + "here, happens on the variation record; editing an approved variation's lines is "
+            + "variation_edit_lines on that record."),
 
         new("/projects/{project}/valuation-snapshots", "Valuation Snapshots",
             "The read-only register of the project's frozen valuation report snapshots — the "

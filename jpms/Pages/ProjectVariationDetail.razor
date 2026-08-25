@@ -2,6 +2,7 @@
 @* The old /voq/ route is kept so links already sent out — in mail, to-dos and bookmarks —
    still land here. Blazor matches both to this page; nothing else needs a redirect. *@
 @page "/projects/{ProjectId}/voq/{VariationOrderId}"
+@using Jewel.JPMS.Contracts.Ai
 @using Jewel.JPMS.Contracts.RecordLinks
 @using Jewel.JPMS.Contracts.Variations
 @using Jewel.JPMS.Features.RecordLinks
@@ -19,6 +20,8 @@
 @inject NavigationManager Nav
 @inject IJSRuntime Js
 @inject IValuationReportStore Valuation
+@inject AiTaskState AiTasks
+@inject ChatPanelState Chat
 @implements IDisposable
 
 <PageTitle>Variation · JPMS</PageTitle>
@@ -63,6 +66,17 @@ else
             <a href="@($"/projects/{ProjectId}/variations")" class="text-sm text-content-muted hover:text-content inline-flex items-center gap-1 mb-4">
                 &larr; Variations
             </a>
+        }
+
+        @* An assistant open_modal request this page had to refuse — said out loud, because a
+           silently dropped open_modal leaves the model narrating a dialog that never appeared. *@
+        @if (assistantRouteError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+                @assistantRouteError
+                <button type="button" class="text-xs text-content-subtle underline underline-offset-4 ml-2"
+                        @onclick="() => assistantRouteError = null">Dismiss</button>
+            </p>
         }
 
         <div class="flex flex-wrap items-center gap-3 mb-1">
@@ -588,14 +602,27 @@ else
                     <Modal IsOpen="editLinesModalOpen"
                            Title="@($"Edit lines — {order.Reference}")"
                            ShowFooter="false"
-                           OnCancel="@(() => { editLinesModalOpen = false; editLinesError = null; })"
+                           OnCancel="CloseEditLines"
+                           ChatAware="true"
+                           DismissOnOverlayClick="@(!EditLinesTaskActive)"
                            Class="max-w-3xl">
-                        <VariationApprovePanel ShowHeading="false"
+                        @if (EditLinesTaskActive && Chat.AssistantBusy)
+                        {
+                            @* The assistant is mid-turn on this very schedule. Without this the user
+                               watches static rows while the model works through the wire. *@
+                            <div class="mb-3 flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2">
+                                <span class="w-3 h-3 shrink-0 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></span>
+                                <p class="text-xs text-accent">The assistant is working on these lines — rows change as it goes.</p>
+                            </div>
+                        }
+                        <VariationApprovePanel @ref="editLinesPanel"
+                                               ShowHeading="false"
                                                InitialLines="@CurrentLineInputs"
                                                SubmitLabel="Save lines"
                                                HelpOverride="Editing re-prices these lines on the Valuation Report and moves the CVR and cost-centre budgets by the difference. Nothing else changes."
                                                Busy="@busy"
                                                SubmitError="@editLinesError"
+                                               OnLinesEdited="PublishEditLinesDraft"
                                                OnApprove="SaveLinesEdit" />
                     </Modal>
                 }
@@ -891,8 +918,51 @@ else
         // project) — revalidated in the background like every other read model here.
         ProjectList.OnChanged += StateHasChanged;
         _ = LoadProjectListAsync();
+        // The assistant's route in (open_modal → ?openModal=variation_edit_lines) and its
+        // proposals while the Edit lines dialog is open beside the chat.
+        AiTasks.OnDraftApplied += HandleAssistantLinesDraft;
+        Chat.OnChange += StateHasChanged;
+        // The provider is cleared by reference, so the same delegate instance must be kept.
+        Chat.SetPageNoteProvider(pageNoteProvider = PageNote);
+        Nav.LocationChanged += HandleLocationChanged;
         sessionReady = true;
         await ReloadAsync();
+        await HonourRequestedModalAsync();
+    }
+
+    // Belt: covers arrivals where the router does re-set parameters — and the case where the
+    // component is REUSED for a different variation (the assistant's open_modal for V02 while V01
+    // is in view): the record must be reloaded before anything is honoured against it, or the
+    // dialog would seed from the old variation's lines and save them onto the new one.
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!sessionReady) return;
+        if (order is not null && order.VariationOrderId != VariationOrderId)
+        {
+            orderLoaded = false;
+            editLinesModalOpen = false;
+            // The old variation's task, ended by key: EditLinesTaskActive compares against the
+            // NEW route id and would say "not ours".
+            if (AiTasks.Active?.ModalKey == ModalCatalog.VariationEditLines.ModalKey)
+            {
+                AiTasks.End();
+                Chat.SetCoexistence(false);
+            }
+            await ReloadAsync();
+        }
+        if (orderLoaded) await HonourRequestedModalAsync();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // The Modal renders its children only while open, so the panel mounts fresh on each
+        // opening — publish its seeded rows once, so the model's first hop sees the schedule as
+        // it stands rather than "{}".
+        if (editLinesModalOpen && EditLinesTaskActive && editLinesPanel is not null && !editLinesDraftPublished)
+        {
+            editLinesDraftPublished = true;
+            AiTasks.UpdateDraft(editLinesPanel.SnapshotLines());
+        }
     }
 
     // Scrolls to and flashes the approved-figures panel. The lineage bar no longer needs this —
@@ -913,6 +983,13 @@ else
         Valuation.OnChange -= StateHasChanged;
         Activity.OnChanged -= StateHasChanged;
         ProjectList.OnChanged -= StateHasChanged;
+        AiTasks.OnDraftApplied -= HandleAssistantLinesDraft;
+        Chat.OnChange -= StateHasChanged;
+        if (pageNoteProvider is not null) Chat.ClearPageNoteProvider(pageNoteProvider);
+        Nav.LocationChanged -= HandleLocationChanged;
+        // Leaving the page ends its dialog task — a dangling task ships this dialog's stale JSON
+        // with every later turn and leaves the chat panel lifted above every future modal.
+        EndEditLinesTask();
     }
 
     // Losing the project list should cost the composer its drawing/photo sources, not the page.
@@ -1252,6 +1329,23 @@ else
     {
         editLinesError = null;
         editLinesModalOpen = true;
+        editLinesDraftPublished = false;
+        // Opened by hand: the task attaches SILENTLY — no kick-off, no billed turn — so the
+        // assistant knows the dialog is open (its rows ride with every turn) and can fill it
+        // when asked. Reopened while its own task is live (the assistant opened it, the user
+        // closed and reopened): the task is already there.
+        if (!EditLinesTaskActive && order is not null && Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
+        {
+            AiTasks.Start(EditLinesTask(order, kickoff: null), "{}");
+            Chat.SetCoexistence(true);
+        }
+    }
+
+    private void CloseEditLines()
+    {
+        editLinesModalOpen = false;
+        editLinesError = null;
+        EndEditLinesTask();
     }
 
     private async Task SaveLinesEdit(VariationApprovePanel.ApproveRequest request)
@@ -1263,6 +1357,7 @@ else
             busy = true;
             order = await Variations.ReviseVariationOrderLinesAsync(VariationOrderId, request.Lines);
             editLinesModalOpen = false;
+            EndEditLinesTask(); // Saved: the dialog is gone, so its task goes with it.
             Valuation.Refresh(ProjectId); // pull the re-priced lines for the breakdown
             await ReloadAsync();
         }
@@ -1348,4 +1443,172 @@ else
 
 
     private static string Money(decimal value) => value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // ---- The assistant's route in: open_modal → ?openModal=variation_edit_lines ---------------
+    //
+    // The valuation loop (docs/ai/06-context-retrieval.md, Phase 2): "update V01 to the V01 tab"
+    // — the assistant reads the tab and the variation, opens THIS dialog pre-filled with the
+    // current build-up, sends the corrected schedule, and the user presses Save lines. The same
+    // Edit lines modal the user opens by hand; opened by hand it attaches the task silently.
+
+    private VariationApprovePanel? editLinesPanel;
+    private bool editLinesDraftPublished;
+    private string? assistantRouteError;
+    private Func<string?>? pageNoteProvider;
+
+    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
+    // for the life of this component. This is what stops a later repaint re-honouring it.
+    private bool modalRequestHonoured;
+
+    private bool EditLinesTaskActive =>
+        AiTasks.Active?.ModalKey == ModalCatalog.VariationEditLines.ModalKey
+        && AiTasks.Active.RecordId == VariationOrderId;
+
+    private bool WantsEditLinesFromRoute() =>
+        !modalRequestHonoured
+        && new Uri(Nav.Uri).Query.Contains(
+            $"openModal={ModalCatalog.VariationEditLines.ModalKey}", StringComparison.OrdinalIgnoreCase);
+
+    private AiTask EditLinesTask(VariationOrder target, string? kickoff) =>
+        new(
+            TaskKey: "variation-edit-lines",
+            ModalKey: ModalCatalog.VariationEditLines.ModalKey,
+            BannerLabel: $"Editing {target.DisplayNumber}'s lines",
+            BusyLabel: $"Reading {target.DisplayNumber} and the evidence…",
+            KickoffMessage: kickoff,
+            ProjectId: ProjectId,
+            RecordType: nameof(RecordType.Variation),
+            RecordId: target.VariationOrderId,
+            RecordReference: target.DisplayNumber);
+
+    /// <summary>
+    /// Honoured only where this user could have opened the dialog by clicking — the assistant can
+    /// route somebody to a page; it cannot get them past a gate. The query is cleared first,
+    /// through history rather than the router, so F5 does not reopen the dialog and re-bill a
+    /// kick-off turn. Every refusal is said out loud in the banner.
+    /// </summary>
+    private async Task HonourRequestedModalAsync()
+    {
+        if (!WantsEditLinesFromRoute()) return;
+
+        // Latched BEFORE the first await: OnParametersSetAsync and LocationChanged can both enter
+        // this method for one navigation — two AiTasks.Start calls, two billed kick-off turns.
+        modalRequestHonoured = true;
+
+        try { await Js.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
+        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
+
+        if (order is null)
+        {
+            assistantRouteError = "The assistant tried to open the Edit lines dialog, but this variation could not be loaded.";
+            StateHasChanged();
+            return;
+        }
+        if (!CanManage)
+        {
+            assistantRouteError = "The assistant tried to open the Edit lines dialog, but the role you are viewing as can't edit variations.";
+            StateHasChanged();
+            return;
+        }
+        if (order.Status != VariationOrderStatus.Approved)
+        {
+            assistantRouteError = $"The assistant tried to open the Edit lines dialog, but {order.DisplayNumber} is "
+                + $"{order.Status.DisplayName()} — lines exist only once a variation is approved.";
+            StateHasChanged();
+            return;
+        }
+        if (!ValuationLinesReady)
+        {
+            // The dialog seeds itself from the report lines; opening it before they land would
+            // offer an empty build-up. Wait for the store — bounded.
+            for (var i = 0; i < 30 && !ValuationLinesReady; i++) await Task.Delay(100);
+            if (!ValuationLinesReady)
+            {
+                assistantRouteError = "The assistant tried to open the Edit lines dialog, but the Valuation Report's lines have not loaded yet — try again in a moment.";
+                StateHasChanged();
+                return;
+            }
+        }
+
+        editLinesError = null;
+        editLinesModalOpen = true;
+        editLinesDraftPublished = false;
+
+        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
+        {
+            AiTasks.Start(
+                EditLinesTask(order,
+                    // A user turn, so it outranks the system prompt — it has to say the same thing.
+                    kickoff: $"The \"Edit variation lines\" dialog for {order.DisplayNumber} is open beside me, "
+                        + "pre-filled with its current build-up. Correct the schedule from the evidence we were "
+                        + "working with — the attached file or the tagged emails above all (get_variation_context "
+                        + "for the lines as they stand, find_in_source and read_source for the evidence). Send the "
+                        + "whole schedule in ONE update: keep every line that is still right with its "
+                        + "valuationLineItemId, change what the evidence changes, add only lines it actually "
+                        + "prices, and tell me in one line what you changed and what you could not establish."),
+                "{}");
+            Chat.Open();
+            Chat.SetCoexistence(true);
+        }
+        StateHasChanged();
+    }
+
+    private void EndEditLinesTask()
+    {
+        if (!EditLinesTaskActive) return;
+        AiTasks.End();
+        Chat.SetCoexistence(false);
+    }
+
+    /// <summary>The model's update_open_modal, landing in the panel: the schedule replaces the
+    /// rows, the live state is republished, the modal repaints.</summary>
+    private void HandleAssistantLinesDraft(string fieldsJson)
+    {
+        if (!editLinesModalOpen || !EditLinesTaskActive || editLinesPanel is null) return;
+        editLinesPanel.ReplaceLines(fieldsJson);
+        AiTasks.UpdateDraft(editLinesPanel.SnapshotLines());
+        StateHasChanged();
+    }
+
+    /// <summary>Every human edit republishes the live rows, so the model reasons from the
+    /// schedule as it stands NOW.</summary>
+    private void PublishEditLinesDraft()
+    {
+        if (!EditLinesTaskActive || editLinesPanel is null) return;
+        AiTasks.UpdateDraft(editLinesPanel.SnapshotLines());
+    }
+
+    /// <summary>
+    /// Braces: the case the lifecycle hooks MISS. When the panel's open_modal fires while the user
+    /// is ALREADY on this variation, the navigation changes only the query string — the route
+    /// parameter values are identical, so neither OnInitializedAsync nor OnParametersSetAsync
+    /// runs. This event is the one signal that always fires; history.replaceState does not raise
+    /// it, so honouring cannot loop.
+    /// </summary>
+    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
+        _ = InvokeAsync(async () =>
+        {
+            if (!sessionReady || !orderLoaded) return;
+            modalRequestHonoured = false; // a fresh navigation is a fresh request
+            await HonourRequestedModalAsync();
+        });
+
+    /// <summary>What this page reports to the assistant every hop, beyond the route: the
+    /// variation's status and value, how many report lines it has, and whether the Edit lines
+    /// dialog is open — so "update it" resolves to the right act without a guess.</summary>
+    private string? PageNote()
+    {
+        if (order is null) return null;
+        var lines = VariationLines;
+        var note = $"Variation {order.DisplayNumber} «{order.Title}» is {order.Status.DisplayName()}"
+                   + (order.Status == VariationOrderStatus.Approved
+                       ? $", approved value {MoneyPennies(order.Value)} across {lines.Count} report line{(lines.Count == 1 ? "" : "s")}"
+                       : order.EstimatedValue is { } estimate ? $", estimate {MoneyPennies(estimate)}" : "")
+                   + ".";
+        if (editLinesModalOpen)
+            note += " The Edit lines dialog is open" + (EditLinesTaskActive ? " (its rows are in the task state)." : ".");
+        else if (order.Status == VariationOrderStatus.Approved && CanManage)
+            note += " Edit lines (variation_edit_lines) can be opened here.";
+        return note;
+    }
 }

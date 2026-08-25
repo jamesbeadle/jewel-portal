@@ -223,16 +223,37 @@ public static class ValuationReportSnapshotRenderer
         Section section, ValuationReportSnapshotDocument document, ValuationReportBillColumns columns,
         string title, ValuationElementType elementType)
     {
-        var detail = document.Detail;
-        var lines = detail.Lines
-            .Where(line => line.ElementType == elementType)
-            .OrderBy(line => line.DisplayOrder)
-            .ToList();
-        if (lines.Count == 0)
+        // Variations print consolidated per variation per cost centre (ValuationReportBillRows).
+        var rows = ValuationReportBillRows.For(document.Detail.Lines, elementType,
+            code => document.CostCentreNames is { } names && names.TryGetValue(code, out var name) ? name : null);
+        if (rows.Count == 0)
             return;
 
         SectionHeading(section, title);
+        var table = BillTable(section, columns);
+        AddBillHeader(table, columns);
 
+        var currentArea = "";
+        foreach (var row in rows)
+        {
+            // Area sub-headings — the estimate's own section titles ("Electrics", "Plumbing &
+            // Heating"), else the line's cost-centre name — so the statement reads in the same
+            // titled areas as the estimate it was priced from. Same shared rule as the screen
+            // and the workbook (ValuationReportAreas); consecutive runs in display order.
+            if (ValuationReportAreas.StartsNewArea(row.AreaTitle, currentArea))
+            {
+                currentArea = row.AreaTitle;
+                AddAreaRow(table, columns, row.AreaTitle);
+            }
+            AddBillRow(table, columns, row);
+        }
+
+        AddBillTotals(table, columns, title, rows);
+        SpaceAfterTable(section);
+    }
+
+    private static Table BillTable(Section section, ValuationReportBillColumns columns)
+    {
         var table = section.AddTable();
         table.Borders.Color = Hair;
         table.Borders.Width = 0.5;
@@ -254,7 +275,11 @@ public static class ValuationReportSnapshotRenderer
         previous.Format.Alignment = ParagraphAlignment.Right;
         period.Format.Alignment = ParagraphAlignment.Right;
         claimed.Format.Alignment = ParagraphAlignment.Right;
+        return table;
+    }
 
+    private static void AddBillHeader(Table table, ValuationReportBillColumns columns)
+    {
         var header = table.AddRow();
         header.Shading.Color = Panel;
         header.TopPadding = Unit.FromMillimeter(1.2);
@@ -271,105 +296,90 @@ public static class ValuationReportSnapshotRenderer
         HeaderCell(header.Cells[columns.Previous], "Previous");
         HeaderCell(header.Cells[columns.Period], "This period");
         HeaderCell(header.Cells[columns.Claimed], "Claimed");
+    }
 
-        var currentArea = "";
-        foreach (var line in lines)
+    private static void AddAreaRow(Table table, ValuationReportBillColumns columns, string area)
+    {
+        var areaRow = table.AddRow();
+        areaRow.Shading.Color = Panel;
+        areaRow.TopPadding = Unit.FromMillimeter(1.4);
+        areaRow.BottomPadding = Unit.FromMillimeter(1);
+        areaRow.KeepWith = 1; // never strand a title at the foot of a page
+        areaRow.Cells[columns.Code].MergeRight = columns.Last;
+        var areaTitle = areaRow.Cells[columns.Code].AddParagraph(area.ToUpperInvariant());
+        areaTitle.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        areaTitle.Format.Font.Size = 7.5;
+        areaTitle.Format.Font.Bold = true;
+        areaTitle.Format.Font.Color = Navy;
+    }
+
+    private static void AddBillRow(Table table, ValuationReportBillColumns columns, ValuationReportBillRow line)
+    {
+        var moved = line.MovedThisPeriod;
+        var row = table.AddRow();
+        row.TopPadding = Unit.FromMillimeter(1.2);
+        row.BottomPadding = Unit.FromMillimeter(1.2);
+        // The gold tint is the accountant's scan line: only rows that moved carry it.
+        if (moved) row.Shading.Color = Highlight;
+
+        var code = row.Cells[columns.Code].AddParagraph(line.Code);
+        code.Format.Font.Size = 8;
+        code.Format.Font.Bold = true;
+        code.Format.Font.Color = line.CountsTowardTotals ? Navy : Muted;
+
+        // The client's own schedule-of-works item number — the figure they reconcile by.
+        if (columns.HasClientReference)
         {
-            // Area sub-headings — the estimate's own section titles ("Electrics", "Plumbing &
-            // Heating"), else the line's cost-centre name — so the statement reads in the same
-            // titled areas as the estimate it was priced from. Same shared rule as the screen
-            // and the workbook (ValuationReportAreas); consecutive runs in display order.
-            if (ValuationReportAreas.GroupsByArea(elementType))
-            {
-                var area = ValuationReportAreas.TitleFor(line.SectionName, line.CostCode,
-                    code => document.CostCentreNames is { } names && names.TryGetValue(code, out var name) ? name : null);
-                if (ValuationReportAreas.StartsNewArea(area, currentArea))
-                {
-                    currentArea = area;
-                    var areaRow = table.AddRow();
-                    areaRow.Shading.Color = Panel;
-                    areaRow.TopPadding = Unit.FromMillimeter(1.4);
-                    areaRow.BottomPadding = Unit.FromMillimeter(1);
-                    areaRow.KeepWith = 1; // never strand a title at the foot of a page
-                    areaRow.Cells[columns.Code].MergeRight = columns.Last;
-                    var areaTitle = areaRow.Cells[columns.Code].AddParagraph(area.ToUpperInvariant());
-                    areaTitle.Format.LeftIndent = Unit.FromMillimeter(1.5);
-                    areaTitle.Format.Font.Size = 7.5;
-                    areaTitle.Format.Font.Bold = true;
-                    areaTitle.Format.Font.Color = Navy;
-                }
-            }
-
-            var moved = line.CountsTowardTotals && line.PeriodIncrement != 0m;
-            var previousClaimed = line.CumulativeClaimed - line.PeriodIncrement;
-
-            var row = table.AddRow();
-            row.TopPadding = Unit.FromMillimeter(1.2);
-            row.BottomPadding = Unit.FromMillimeter(1.2);
-            // The gold tint is the accountant's scan line: only rows that moved carry it.
-            if (moved) row.Shading.Color = Highlight;
-
-            var code = row.Cells[columns.Code].AddParagraph(CodeFor(line));
-            code.Format.Font.Size = 8;
-            code.Format.Font.Bold = true;
-            code.Format.Font.Color = line.CountsTowardTotals ? Navy : Muted;
-
-            // The client's own schedule-of-works item number — the figure they reconcile by.
-            if (columns.HasClientReference)
-            {
-                var clientReference = row.Cells[columns.ClientReference].AddParagraph(line.ClientReference);
-                clientReference.Format.Font.Size = 8;
-                clientReference.Format.Font.Color = line.CountsTowardTotals ? Navy : Muted;
-            }
-
-            var title2 = row.Cells[columns.Description].AddParagraph(TitleFor(line));
-            title2.Format.Font.Size = 8.5;
-            title2.Format.Font.Color = line.CountsTowardTotals ? Ink : Muted;
-            if (!string.IsNullOrWhiteSpace(line.Comments))
-            {
-                var comment = row.Cells[columns.Description].AddParagraph(line.Comments);
-                comment.Format.Font.Size = 7.5;
-                comment.Format.Font.Color = Muted;
-            }
-            if (!line.CountsTowardTotals)
-            {
-                var kind = row.Cells[columns.Description].AddParagraph(LineTypeLabel(line.LineType).ToUpperInvariant());
-                kind.Format.Font.Size = 7;
-                kind.Format.Font.Color = Muted;
-            }
-
-            var qtyCell = row.Cells[columns.Quantity].AddParagraph(Num(line.Quantity));
-            qtyCell.Format.Font.Size = 8;
-            qtyCell.Format.Font.Color = Muted;
-
-            var rateCell = row.Cells[columns.Rate].AddParagraph(Num(line.Rate));
-            rateCell.Format.Font.Size = 8;
-            rateCell.Format.Font.Color = Muted;
-
-            MoneyCell(row.Cells[columns.Amount], line.LineAmount,
-                colour: line.LineAmount < 0 ? Negative : line.CountsTowardTotals ? null : Muted);
-
-            var pct = row.Cells[columns.Percent].AddParagraph(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—");
-            pct.Format.Font.Size = 8;
-            pct.Format.Font.Color = Muted;
-
-            if (line.CountsTowardTotals)
-            {
-                MoneyCell(row.Cells[columns.Previous], previousClaimed, colour: Muted);
-                // The figure this statement exists to show — bold on the rows that moved.
-                MoneyCell(row.Cells[columns.Period], line.PeriodIncrement, bold: moved,
-                    colour: line.PeriodIncrement < 0 ? Negative : moved ? Navy : Muted);
-                MoneyCell(row.Cells[columns.Claimed], line.CumulativeClaimed);
-            }
-            else
-            {
-                DashCell(row.Cells[columns.Previous]);
-                DashCell(row.Cells[columns.Period]);
-                DashCell(row.Cells[columns.Claimed]);
-            }
+            var clientReference = row.Cells[columns.ClientReference].AddParagraph(line.ClientReference);
+            clientReference.Format.Font.Size = 8;
+            clientReference.Format.Font.Color = line.CountsTowardTotals ? Navy : Muted;
         }
 
-        var counting = lines.Where(line => line.CountsTowardTotals).ToList();
+        AddDescription(row.Cells[columns.Description], line);
+        NumberCell(row.Cells[columns.Quantity], line.Quantity);
+        NumberCell(row.Cells[columns.Rate], line.Rate);
+        MoneyCell(row.Cells[columns.Amount], line.Amount,
+            colour: line.Amount < 0 ? Negative : line.CountsTowardTotals ? null : Muted);
+
+        var pct = row.Cells[columns.Percent].AddParagraph(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—");
+        pct.Format.Font.Size = 8;
+        pct.Format.Font.Color = Muted;
+
+        if (!line.CountsTowardTotals)
+        {
+            DashCell(row.Cells[columns.Previous]);
+            DashCell(row.Cells[columns.Period]);
+            DashCell(row.Cells[columns.Claimed]);
+            return;
+        }
+        MoneyCell(row.Cells[columns.Previous], line.PreviousClaimed, colour: Muted);
+        // The figure this statement exists to show — bold on the rows that moved.
+        MoneyCell(row.Cells[columns.Period], line.PeriodIncrement, bold: moved,
+            colour: line.PeriodIncrement < 0 ? Negative : moved ? Navy : Muted);
+        MoneyCell(row.Cells[columns.Claimed], line.CumulativeClaimed);
+    }
+
+    private static void AddDescription(Cell cell, ValuationReportBillRow line)
+    {
+        var title = cell.AddParagraph(line.Title);
+        title.Format.Font.Size = 8.5;
+        title.Format.Font.Color = line.CountsTowardTotals ? Ink : Muted;
+        if (!string.IsNullOrWhiteSpace(line.Comments))
+        {
+            var comment = cell.AddParagraph(line.Comments);
+            comment.Format.Font.Size = 7.5;
+            comment.Format.Font.Color = Muted;
+        }
+        if (string.IsNullOrWhiteSpace(line.KindLabel))
+            return;
+        var kind = cell.AddParagraph(line.KindLabel.ToUpperInvariant());
+        kind.Format.Font.Size = 7;
+        kind.Format.Font.Color = Muted;
+    }
+
+    private static void AddBillTotals(Table table, ValuationReportBillColumns columns, string title, IReadOnlyList<ValuationReportBillRow> rows)
+    {
+        var counting = rows.Where(row => row.CountsTowardTotals).ToList();
         var totals = table.AddRow();
         totals.Shading.Color = Panel;
         totals.TopPadding = Unit.FromMillimeter(1.4);
@@ -378,12 +388,10 @@ public static class ValuationReportSnapshotRenderer
         label.Format.Font.Size = 8.5;
         label.Format.Font.Bold = true;
         label.Format.Font.Color = Navy;
-        MoneyCell(totals.Cells[columns.Amount], counting.Sum(line => line.LineAmount), bold: true);
-        MoneyCell(totals.Cells[columns.Previous], counting.Sum(line => line.CumulativeClaimed - line.PeriodIncrement), bold: true);
-        MoneyCell(totals.Cells[columns.Period], counting.Sum(line => line.PeriodIncrement), bold: true);
-        MoneyCell(totals.Cells[columns.Claimed], counting.Sum(line => line.CumulativeClaimed), bold: true);
-
-        SpaceAfterTable(section);
+        MoneyCell(totals.Cells[columns.Amount], counting.Sum(row => row.Amount), bold: true);
+        MoneyCell(totals.Cells[columns.Previous], counting.Sum(row => row.PreviousClaimed), bold: true);
+        MoneyCell(totals.Cells[columns.Period], counting.Sum(row => row.PeriodIncrement), bold: true);
+        MoneyCell(totals.Cells[columns.Claimed], counting.Sum(row => row.CumulativeClaimed), bold: true);
     }
 
     private static void AddSummary(Section section, ValuationReportSnapshotDetail detail)
@@ -483,31 +491,6 @@ public static class ValuationReportSnapshotRenderer
 
     // ---- Helpers ------------------------------------------------------------------------------
 
-    // Same code/title fallbacks as the on-screen snapshot viewer, so PDF and screen always agree.
-    private static string CodeFor(ValuationReportSnapshotLine line) =>
-        line.ElementType == ValuationElementType.Variation
-            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
-            : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
-
-    // Variation lines lead with their own line description; VO title is the fallback —
-    // mirrors the report table and snapshot viewer so every surface agrees.
-    private static string TitleFor(ValuationReportSnapshotLine line)
-    {
-        if (line.ElementType == ValuationElementType.Variation)
-            return string.IsNullOrWhiteSpace(line.Description) ? line.VariationTitle : line.Description;
-        if (!string.IsNullOrWhiteSpace(line.Description)) return line.Description;
-        return line.SectionName;
-    }
-
-    private static string LineTypeLabel(ValuationLineType type) => type switch
-    {
-        ValuationLineType.ProvisionalSum => "Provisional sum",
-        ValuationLineType.Omit => "Omit",
-        ValuationLineType.Declined => "Declined",
-        ValuationLineType.Tbc => "TBC",
-        _ => type.ToString()
-    };
-
     private static void SectionHeading(Section section, string text)
     {
         var p = section.AddParagraph(text);
@@ -539,6 +522,14 @@ public static class ValuationReportSnapshotRenderer
         p.Format.Font.Size = 8;
         p.Format.Font.Bold = bold;
         p.Format.Font.Color = colour ?? Ink;
+    }
+
+    // Quantity / rate: a consolidated variation row has neither, and prints a dash instead.
+    private static void NumberCell(Cell cell, decimal? value)
+    {
+        var p = cell.AddParagraph(value is { } number ? Num(number) : "—");
+        p.Format.Font.Size = 8;
+        p.Format.Font.Color = Muted;
     }
 
     private static void DashCell(Cell cell)

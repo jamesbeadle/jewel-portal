@@ -1,0 +1,85 @@
+@inject IDrawingStore DrawingStore
+
+@* Picks the register folder for a new drawing: any existing folder (shown by its full path),
+   no folder, or "+ New folder…" — which asks for a name and, optionally, the folder to create
+   it inside, so a sub-folder can be made right where the drawing is being filed. The host form
+   calls ResolveFolderAsync on submit: it creates the folder if asked and returns the id to file
+   under (null = ungrouped). Shared by the upload form and Document Triage. *@
+<div>
+    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Folder</label>
+    <select @bind="selectedFolderId" disabled="@(!IsEnabled)" class="field">
+        @if (!HasProject)
+        {
+            <option value="">Select a project first</option>
+        }
+        else if (!FoldersReady)
+        {
+            <option value="">Loading folders…</option>
+        }
+        else
+        {
+            <option value="">No folder (ungrouped)</option>
+            <DrawingFolderOptions Folders="Folders" />
+            <option value="@NewFolderOption">+ New folder…</option>
+        }
+    </select>
+    @if (IsCreatingFolder)
+    {
+        <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input type="text" @bind="newFolderName" placeholder="Folder name — Architectural, Planning…" class="field" />
+            <select @bind="newFolderParentId" class="field" title="Where the new folder goes">
+                <option value="">Top level</option>
+                <DrawingFolderOptions Folders="Folders" />
+            </select>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    private const string NewFolderOption = "__new__";
+
+    private string selectedFolderId = "";
+    private string newFolderName = "";
+    private string newFolderParentId = "";
+
+    private bool HasProject => !string.IsNullOrWhiteSpace(ProjectId);
+    private bool FoldersReady => HasProject && DrawingStore.FoldersLoadedFor(ProjectId);
+    private bool IsEnabled => HasProject && FoldersReady;
+    private bool IsCreatingFolder => selectedFolderId == NewFolderOption;
+    private IReadOnlyList<DrawingFolder> Folders => HasProject ? DrawingStore.FoldersFor(ProjectId) : Array.Empty<DrawingFolder>();
+
+    /// <summary>Why the choice can't be used yet, or null when it can.</summary>
+    public string? Problem =>
+        IsCreatingFolder && string.IsNullOrWhiteSpace(newFolderName)
+            ? "Enter a name for the new folder (or choose “No folder”)."
+            : null;
+
+    /// <summary>The folder id to file under — creating the new folder first if one was asked
+    /// for (an existing name at that level is reused). Null = ungrouped.</summary>
+    public async Task<string?> ResolveFolderAsync(CancellationToken cancellationToken)
+    {
+        if (!IsCreatingFolder) return string.IsNullOrEmpty(selectedFolderId) ? null : selectedFolderId;
+        var parentId = string.IsNullOrEmpty(newFolderParentId) ? null : newFolderParentId;
+        var folder = await DrawingStore.CreateFolderAsync(ProjectId, newFolderName.Trim(), parentId, cancellationToken);
+        return folder.DrawingFolderId;
+    }
+
+    public void Reset()
+    {
+        selectedFolderId = "";
+        newFolderName = "";
+        newFolderParentId = "";
+    }
+
+    // A different project means a different folder list — the old choice cannot carry over.
+    private string projectSeen = "";
+
+    protected override void OnParametersSet()
+    {
+        if (ProjectId == projectSeen) return;
+        projectSeen = ProjectId;
+        Reset();
+    }
+}

@@ -55,13 +55,13 @@
             <div class="grid grid-cols-1 sm:grid-cols-[1.3fr_1.7fr_4.5rem_6rem_6rem_1.5rem] gap-2 items-center">
                 <SearchSelect Options="@CostCentreOptions" WidthClass="w-full" Placeholder="Cost centre…"
                               InputClass="bg-surface-field border border-line-strong px-3 py-2 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
-                              Value="@row.CostCode" ValueChanged="@(v => row.CostCode = v)" />
+                              Value="@row.CostCode" ValueChanged="@(v => { row.CostCode = v; NotifyEdited(); })" />
                 <input class="field" placeholder="Description"
-                       value="@row.Description" @oninput="e => row.Description = e.Value?.ToString() ?? string.Empty" />
+                       value="@row.Description" @oninput="e => { row.Description = e.Value?.ToString() ?? string.Empty; NotifyEdited(); }" />
                 <input class="field text-right" type="number" step="any"
-                       value="@row.Qty" @oninput="e => row.Qty = e.Value?.ToString() ?? string.Empty" />
+                       value="@row.Qty" @oninput="e => { row.Qty = e.Value?.ToString() ?? string.Empty; NotifyEdited(); }" />
                 <input class="field text-right" type="number" step="any"
-                       value="@row.Rate" @oninput="e => row.Rate = e.Value?.ToString() ?? string.Empty" />
+                       value="@row.Rate" @oninput="e => { row.Rate = e.Value?.ToString() ?? string.Empty; NotifyEdited(); }" />
                 <div class="text-right text-sm font-mono text-content whitespace-nowrap">@Money(LineAmount(row))</div>
                 <button type="button" class="text-content-subtle hover:text-negative disabled:opacity-30"
                         title="Remove line" disabled="@(lines.Count == 1)" @onclick="() => RemoveLine(row)">✕</button>
@@ -98,6 +98,106 @@
     [Parameter] public string? HelpOverride { get; set; }
     // Why the caller's save was refused, shown where the panel shows its own validation.
     [Parameter] public string? SubmitError { get; set; }
+
+    // ---- The assistant pipe (variation_edit_lines) ----------------------------------------------
+    // Out: every edit raises OnLinesEdited so the host can republish the live rows
+    // (AiTaskState.UpdateDraft) — the model reasons from what is on screen NOW. In: ReplaceLines
+    // takes the model's schedule and REPLACES the rows (the lines array is the whole schedule by
+    // stated contract), keeping a row's ValuationLineItemId when the model carried it. Optional:
+    // a host with no assistant simply doesn't listen or call.
+
+    /// <summary>Raised after any row changes, however it changed.</summary>
+    [Parameter] public EventCallback OnLinesEdited { get; set; }
+
+    private void NotifyEdited()
+    {
+        if (OnLinesEdited.HasDelegate) _ = OnLinesEdited.InvokeAsync();
+    }
+
+    /// <summary>The rows as the JSON the assistant task carries with every turn — the dialog's
+    /// schema exactly (quantity and rate as NUMBERS, null while unparseable), so the model learns
+    /// the shape it must send back.</summary>
+    public string SnapshotLines() => System.Text.Json.JsonSerializer.Serialize(new
+    {
+        lines = lines.Select(row => new
+        {
+            valuationLineItemId = row.ValuationLineItemId,
+            costCode = row.CostCode,
+            description = row.Description,
+            quantity = FormNumber.TryParseAmount(row.Qty, out var qty) ? qty : (decimal?)null,
+            rate = FormNumber.TryParseAmount(row.Rate, out var rate) ? rate : (decimal?)null,
+            amount = LineAmount(row)
+        }).ToList()
+    });
+
+    /// <summary>
+    /// The assistant's schedule, replacing the rows. A JSON object with a "lines" array of
+    /// {valuationLineItemId?, costCode, description, quantity, rate}; numbers are tolerated as
+    /// strings (the model is not the only writer). A malformed or empty proposal leaves the rows
+    /// as they are — the user still presses Save lines, and the panel's own validation still runs.
+    /// </summary>
+    public void ReplaceLines(string fieldsJson)
+    {
+        if (string.IsNullOrWhiteSpace(fieldsJson)) return;
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(fieldsJson);
+            var root = document.RootElement;
+            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return;
+            if (!root.TryGetProperty("lines", out var proposed) || proposed.ValueKind != System.Text.Json.JsonValueKind.Array) return;
+
+            var replacement = new List<LineRow>();
+            foreach (var item in proposed.EnumerateArray())
+            {
+                if (item.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
+                var row = new LineRow
+                {
+                    ValuationLineItemId = NullIfBlank(ReadText(item, "valuationLineItemId")),
+                    CostCode = ReadText(item, "costCode") ?? "",
+                    Description = ReadText(item, "description") ?? "",
+                    Qty = ReadNumberText(item, "quantity") ?? "1",
+                    Rate = ReadNumberText(item, "rate") ?? "0"
+                };
+                replacement.Add(row);
+            }
+            if (replacement.Count == 0) return;
+
+            // A line id the model invented (or one from another variation) must not be sent back
+            // as a re-price: only ids seeded from this variation's own lines survive.
+            var known = lines.Where(row => row.ValuationLineItemId is not null)
+                .Select(row => row.ValuationLineItemId!)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var row in replacement)
+                if (row.ValuationLineItemId is { } id && !known.Contains(id)) row.ValuationLineItemId = null;
+
+            lines.Clear();
+            lines.AddRange(replacement);
+            error = null;
+            StateHasChanged();
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            // A malformed proposal is the model's problem, not the user's. The rows stand.
+        }
+    }
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string? ReadText(System.Text.Json.JsonElement item, string name) =>
+        item.TryGetProperty(name, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.String
+            ? value.GetString()
+            : null;
+
+    private static string? ReadNumberText(System.Text.Json.JsonElement item, string name)
+    {
+        if (!item.TryGetProperty(name, out var value)) return null;
+        return value.ValueKind switch
+        {
+            System.Text.Json.JsonValueKind.Number => value.GetDecimal().ToString(System.Globalization.CultureInfo.InvariantCulture),
+            System.Text.Json.JsonValueKind.String when !string.IsNullOrWhiteSpace(value.GetString()) => value.GetString(),
+            _ => null
+        };
+    }
 
     public sealed record ApproveRequest(string PrimaryCostCode, decimal Total, IReadOnlyList<VariationLineInput> Lines);
 
@@ -158,11 +258,16 @@
             .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}"))
             .ToList();
 
-    private void AddLine() => lines.Add(new LineRow());
+    private void AddLine()
+    {
+        lines.Add(new LineRow());
+        NotifyEdited();
+    }
 
     private void RemoveLine(LineRow row)
     {
         if (lines.Count > 1) lines.Remove(row);
+        NotifyEdited();
     }
 
     private static decimal LineAmount(LineRow row) =>

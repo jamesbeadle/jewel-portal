@@ -21,8 +21,8 @@ public sealed record ValuationExportLine(
     string LineTypeLabel,
     bool CountsTowardTotals,
     string Unit,
-    decimal Quantity,
-    decimal Rate,
+    decimal? Quantity,          // null on a consolidated variation row — several lines, no single qty/rate
+    decimal? Rate,
     decimal LineAmount,
     decimal PercentComplete,
     decimal PreviousClaimed,

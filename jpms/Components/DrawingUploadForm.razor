@@ -61,20 +61,7 @@
             <p class="text-xs text-content-subtle mt-1">Leave blank and the register shows the original file name instead.</p>
         </div>
 
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Folder</label>
-            <select @bind="selectedFolderId"
-                    class="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
-                <option value="">No folder (ungrouped)</option>
-                <DrawingFolderOptions Folders="Folders" />
-                <option value="@NewFolderOption">+ New top-level folder…</option>
-            </select>
-            @if (selectedFolderId == NewFolderOption)
-            {
-                <input type="text" @bind="newFolderName" placeholder="Architectural, Structural, M&E…"
-                       class="field mt-2" />
-            }
-        </div>
+        <DrawingFolderPicker @ref="folderPicker" ProjectId="@ProjectId" />
     }
 
     <div>
@@ -106,8 +93,7 @@
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
     [Parameter] public EventCallback OnUploaded { get; set; }
 
-    private const string NewFolderOption = "__new__";
-
+    private DrawingFolderPicker? folderPicker;
     private IBrowserFile? selectedFile;
     private bool isRevision;
     private string selectedDrawingId = "";
@@ -115,13 +101,10 @@
     private string title = "";
     private string revisionLabel = "";
     private string issuedBy = "";
-    private string selectedFolderId = "";
-    private string newFolderName = "";
     private bool busy;
     private string? error;
 
     private IReadOnlyList<Drawing> ExistingDrawings => DrawingStore.DrawingsFor(ProjectId);
-    private IReadOnlyList<DrawingFolder> Folders => DrawingStore.FoldersFor(ProjectId);
 
     private void SetMode(bool isRevision)
     {
@@ -162,9 +145,9 @@
             drawingId = "";
         }
 
-        if (!isRevision && selectedFolderId == NewFolderOption && string.IsNullOrWhiteSpace(newFolderName))
+        if (!isRevision && folderPicker?.Problem is { } folderProblem)
         {
-            error = "Enter a name for the new folder (or choose “No folder”).";
+            error = folderProblem;
             return;
         }
 
@@ -174,14 +157,9 @@
         {
             if (!isRevision)
             {
-                // Resolve the folder first: the inline "New folder…" path creates (or finds, by
+                // Resolve the folder first: the picker's "New folder…" path creates (or finds, by
                 // name) the folder, then the drawing is registered straight into it.
-                var folderId = selectedFolderId switch
-                {
-                    NewFolderOption => (await DrawingStore.CreateFolderAsync(ProjectId, newFolderName.Trim(), parentFolderId: null, CancellationToken.None)).DrawingFolderId,
-                    "" => (string?)null,
-                    _ => selectedFolderId
-                };
+                var folderId = folderPicker is null ? null : await folderPicker.ResolveFolderAsync(CancellationToken.None);
 
                 drawingId = (await DrawingStore.RegisterDrawingAsync(ProjectId, drawingCode.Trim(), title.Trim(), folderId, CancellationToken.None)).DrawingId;
             }
@@ -190,7 +168,7 @@
                 ProjectId, drawingId, revisionLabel.Trim().ToUpperInvariant(), issuedBy.Trim(), selectedFile, CancellationToken.None);
 
             selectedFile = null; drawingCode = ""; title = ""; revisionLabel = ""; issuedBy = ""; selectedDrawingId = "";
-            selectedFolderId = ""; newFolderName = "";
+            folderPicker?.Reset();
             await OnUploaded.InvokeAsync();
         }
         catch (Exception ex)

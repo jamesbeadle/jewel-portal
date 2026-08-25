@@ -1,20 +1,14 @@
-using System.IO.Compression;
-using System.Text;
-using System.Xml.Linq;
-using ClosedXML.Excel;
-
 namespace Jewel.JPMS.Api.Features.Ai;
 
 /// <summary>
-/// Turns an attachment into text the model can read — the ONE extraction home, shared by the
-/// chat's own uploads (extracted once at upload, persisted as a Context row, bytes discarded)
-/// and read_email_attachment (extracted per call from the live Graph bytes). Spreadsheets come
-/// back as displayed values row by row (ClosedXML), PDFs page by page (PdfPig), Word documents
-/// paragraph by paragraph (the docx zip read directly — no extra dependency), text files as
-/// text. Images are the one kind carried as BYTES, because the model reads them as image
-/// blocks, not text. What genuinely cannot be read — a password-protected PDF, a scan with no
-/// text layer, a legacy .doc/.xls — is refused with a plain sentence rather than half-read
-/// (ADR-007: declared, not hidden).
+/// The attachment helpers shared by the chat's uploads and the email readers: which formats are
+/// supported, image validation (magic bytes, dimensions, media types) and a flat
+/// <see cref="Extract"/> for callers that want one read from the start. The parsing itself —
+/// spreadsheets sheet by sheet, PDFs page by page, Word documents, text — lives in
+/// <see cref="Sources.AiSourceReader"/>, which is also where a file is read PART by part
+/// (docs/ai/06-context-retrieval.md). What genuinely cannot be read — a password-protected PDF, a
+/// scan with no text layer, a legacy .doc/.xls — is refused with a plain sentence rather than
+/// half-read (ADR-007: declared, not hidden).
 /// </summary>
 internal static class AiAttachmentReader
 {
@@ -22,9 +16,8 @@ internal static class AiAttachmentReader
     /// while staying far inside the gateway's request budget once base64-inflated.</summary>
     public const int MaxBytes = 10 * 1024 * 1024;
 
-    /// <summary>Extracted-text ceiling. The text replays with EVERY hop of the conversation
-    /// (that is the point — the model keeps the sheet in view), so it is capped hard rather than
-    /// trusted to the transcript budget, which deliberately never touches non-tool rows.</summary>
+    /// <summary>Ceiling on a flat <see cref="Extract"/>. Part-by-part reads through
+    /// AiSourceReader are budgeted per call instead and never lose a later sheet or page.</summary>
     public const int MaxChars = 25_000;
 
     private static readonly string[] SupportedExtensions =
@@ -48,6 +41,19 @@ internal static class AiAttachmentReader
     public static bool IsSupported(string fileName) =>
         SupportedExtensions.Contains(Path.GetExtension(fileName).ToLowerInvariant())
         || IsImage(fileName);
+
+    /// <summary>The media type a chat upload is stored under — the image's own, the Office /
+    /// PDF type for documents, text for the rest.</summary>
+    public static string StoredContentType(string fileName) =>
+        IsImage(fileName) ? ImageMediaType(fileName) : Path.GetExtension(fileName).ToLowerInvariant() switch
+        {
+            ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".pdf" => "application/pdf",
+            ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".csv" => "text/csv",
+            ".tsv" => "text/tab-separated-values",
+            _ => "text/plain"
+        };
 
     public static bool IsImage(string fileName) =>
         ImageMediaTypes.ContainsKey(Path.GetExtension(fileName));
@@ -157,248 +163,30 @@ internal static class AiAttachmentReader
         return true;
     }
 
-    /// <summary>Extracts <paramref name="content"/> to prompt-ready text plus a one-line human
-    /// summary. Throws <see cref="NotSupportedException"/> for a format outside the list and
-    /// <see cref="InvalidDataException"/> when the file cannot be read as what it claims to be.</summary>
+    /// <summary>
+    /// Extracts <paramref name="content"/> to prompt-ready text plus a one-line human summary —
+    /// the whole file from the start, under <see cref="MaxChars"/>. Kept for callers that want
+    /// one flat read; it delegates to <see cref="Sources.AiSourceReader"/>, which is where the
+    /// parsing lives and where part-by-part reading (a named sheet, a page range) happens.
+    /// Throws <see cref="NotSupportedException"/> for a format outside the list and
+    /// <see cref="InvalidDataException"/> when the file cannot be read as what it claims to be.
+    /// </summary>
     public static (string Text, string Summary) Extract(string fileName, byte[] content)
     {
-        var extension = Path.GetExtension(fileName).ToLowerInvariant();
-        return extension switch
+        var document = Sources.AiSourceReader.Load(fileName, null, content);
+        if (document.IsImage)
         {
-            ".xlsx" => ExtractWorkbook(content),
-            ".pdf" => ExtractPdf(content),
-            ".docx" => ExtractDocx(content),
-            ".csv" or ".tsv" or ".txt" => ExtractText(content),
-            _ => throw new NotSupportedException(
-                $"\"{fileName}\" is not a format the assistant can read yet — attach {SupportedList}.")
-        };
-    }
-
-    private static (string, string) ExtractWorkbook(byte[] content)
-    {
-        using var stream = new MemoryStream(content);
-        using var workbook = OpenWorkbook(stream);
-
-        var text = new StringBuilder();
-        var totalRows = 0;
-        var sheets = 0;
-        var truncated = false;
-
-        foreach (var sheet in workbook.Worksheets)
-        {
-            var rows = sheet.RowsUsed().ToList();
-            if (rows.Count == 0) continue;
-
-            sheets++;
-            if (text.Length > 0) text.AppendLine();
-            text.AppendLine($"[Sheet: {sheet.Name}]");
-
-            foreach (var row in rows)
-            {
-                if (text.Length >= MaxChars)
-                {
-                    truncated = true;
-                    break;
-                }
-                totalRows++;
-                // GetFormattedString so dates read as dates and money as money — the DISPLAYED
-                // value is what the boss meant, not the raw serial behind it. Tabs between cells
-                // keep a priced schedule readable as columns.
-                text.AppendLine(string.Join('\t',
-                    row.CellsUsed().Select(cell => cell.GetFormattedString().Trim())));
-            }
-            if (truncated) break;
+            // A flat text read has nothing to say about a picture; callers that can SHOW an
+            // image (read_source) never come through here, and the tender extractor lists it
+            // as unreadable exactly as it did before.
+            throw new NotSupportedException($"\"{fileName}\" is an image — it has no text to extract.");
         }
-
-        if (truncated)
-            text.AppendLine($"[… the workbook was larger than {MaxChars:N0} characters and has been cut here.]");
-
-        return (text.ToString().TrimEnd(),
-            $"{sheets} sheet{(sheets == 1 ? "" : "s")} · {totalRows} row{(totalRows == 1 ? "" : "s")}"
-            + (truncated ? " (truncated)" : ""));
-    }
-
-    private static IXLWorkbook OpenWorkbook(Stream stream)
-    {
-        try
-        {
-            return new XLWorkbook(stream);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidDataException(
-                "That file could not be opened as a spreadsheet — if it is an old .xls, save it as .xlsx first.", ex);
-        }
-    }
-
-    /// <summary>PDF → text, page by page in reading order (PdfPig). Password-protected or
-    /// corrupted files, and scans with no text layer, throw the honest sentence instead of
-    /// returning half a document.</summary>
-    private static (string, string) ExtractPdf(byte[] content)
-    {
-        UglyToad.PdfPig.PdfDocument document;
-        try
-        {
-            document = UglyToad.PdfPig.PdfDocument.Open(content);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidDataException(
-                "That PDF could not be opened — it may be password-protected or corrupted.", ex);
-        }
-
-        using (document)
-        {
-            var text = new StringBuilder();
-            var pages = 0;
-            var anyText = false;
-            var truncated = false;
-
-            foreach (var page in document.GetPages())
-            {
-                pages++;
-                if (text.Length >= MaxChars) { truncated = true; break; }
-
-                string pageText;
-                try
-                {
-                    // Reading order beats raw content-stream order — a two-column spec sheet
-                    // read stream-wise interleaves the columns into nonsense.
-                    pageText = UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor
-                        .ContentOrderTextExtractor.GetText(page);
-                }
-                catch (Exception)
-                {
-                    pageText = page.Text;
-                }
-                if (string.IsNullOrWhiteSpace(pageText)) continue;
-
-                anyText = true;
-                if (text.Length > 0) text.AppendLine();
-                text.AppendLine($"[Page {page.Number}]");
-                text.AppendLine(pageText.Trim());
-            }
-
-            if (!anyText)
-            {
-                throw new InvalidDataException(
-                    "That PDF has no selectable text — it is likely a scan. Reading scans needs "
-                    + "OCR, which is not available here; the figures have to come from the user.");
-            }
-            if (truncated)
-                text.AppendLine($"[… the document was longer than {MaxChars:N0} characters and has been cut here.]");
-
-            return (text.ToString().TrimEnd(),
-                $"{pages} page{(pages == 1 ? "" : "s")}" + (truncated ? " (truncated)" : ""));
-        }
-    }
-
-    private static readonly XNamespace WordNs =
-        "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-
-    /// <summary>Word (.docx) → text, read straight out of the document zip — no Office
-    /// dependency. Paragraphs one per line, tabs and breaks honoured, tables as tab-separated
-    /// rows, content controls unwrapped.</summary>
-    private static (string, string) ExtractDocx(byte[] content)
-    {
-        try
-        {
-            using var stream = new MemoryStream(content);
-            using var zip = new ZipArchive(stream, ZipArchiveMode.Read);
-            var entry = zip.GetEntry("word/document.xml")
-                ?? throw new InvalidDataException("no word/document.xml inside the file");
-
-            XDocument xml;
-            using (var entryStream = entry.Open()) xml = XDocument.Load(entryStream);
-            var body = xml.Root?.Element(WordNs + "body")
-                ?? throw new InvalidDataException("the document has no body");
-
-            var text = new StringBuilder();
-            var paragraphs = 0;
-            var truncated = false;
-            AppendDocxBlocks(body, text, ref paragraphs, ref truncated);
-
-            var result = text.ToString().TrimEnd();
-            if (string.IsNullOrWhiteSpace(result))
-                throw new InvalidDataException("the document has no readable text");
-            if (truncated)
-                result += $"\n[… the document was longer than {MaxChars:N0} characters and has been cut here.]";
-
-            return (result,
-                $"{paragraphs:N0} paragraph{(paragraphs == 1 ? "" : "s")}" + (truncated ? " (truncated)" : ""));
-        }
-        catch (InvalidDataException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidDataException(
-                "That file could not be opened as a Word document — if it is an old .doc, save it as .docx first.", ex);
-        }
-    }
-
-    private static void AppendDocxBlocks(XElement container, StringBuilder text, ref int paragraphs, ref bool truncated)
-    {
-        foreach (var element in container.Elements())
-        {
-            if (text.Length >= MaxChars) { truncated = true; return; }
-
-            if (element.Name == WordNs + "p")
-            {
-                paragraphs++;
-                text.AppendLine(DocxParagraphText(element));
-            }
-            else if (element.Name == WordNs + "tbl")
-            {
-                foreach (var row in element.Elements(WordNs + "tr"))
-                {
-                    if (text.Length >= MaxChars) { truncated = true; return; }
-                    text.AppendLine(string.Join('\t', row.Elements(WordNs + "tc").Select(DocxCellText)));
-                }
-            }
-            else if (element.Name == WordNs + "sdt")
-            {
-                // A content control wraps real content — unwrap it.
-                if (element.Element(WordNs + "sdtContent") is { } inner)
-                    AppendDocxBlocks(inner, text, ref paragraphs, ref truncated);
-            }
-        }
-    }
-
-    private static string DocxParagraphText(XElement paragraph) =>
-        string.Concat(paragraph.Descendants().Select(node =>
-            node.Name == WordNs + "t" ? node.Value
-            : node.Name == WordNs + "tab" ? "\t"
-            : node.Name == WordNs + "br" || node.Name == WordNs + "cr" ? "\n"
-            : ""));
-
-    private static string DocxCellText(XElement cell) =>
-        string.Join(" ", cell.Elements(WordNs + "p")
-            .Select(DocxParagraphText)
-            .Where(paragraph => !string.IsNullOrWhiteSpace(paragraph)));
-
-    private static (string, string) ExtractText(byte[] content)
-    {
-        string text;
-        try
-        {
-            // BOM-aware: Excel exports CSVs as UTF-16 (and UTF-8 with a BOM) often enough that
-            // blind UTF-8 turned them to spaced-out mojibake. No BOM falls back to UTF-8.
-            using var stream = new MemoryStream(content);
-            using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true);
-            text = reader.ReadToEnd().Trim();
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidDataException("That file could not be read as text.", ex);
-        }
-
-        var truncated = text.Length > MaxChars;
-        if (truncated)
-            text = text[..MaxChars] + $"\n[… the file was longer than {MaxChars:N0} characters and has been cut here.]";
-
-        var lines = text.Count(character => character == '\n') + 1;
-        return (text, $"{lines:N0} line{(lines == 1 ? "" : "s")}" + (truncated ? " (truncated)" : ""));
+        var manifest = document.Manifest();
+        var read = Sources.AiSourceReader.Read(document, null, 1, MaxChars);
+        var truncated = read.Next is not null;
+        var text = truncated
+            ? read.Text + $"\n[… the file was larger than {MaxChars:N0} characters and has been cut here.]"
+            : read.Text;
+        return (text, manifest.Summary() + (truncated ? " (truncated)" : ""));
     }
 }

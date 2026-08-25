@@ -38,6 +38,9 @@ public static class AiToolLabels
             "get_bid_package_context" => "Reading the bid package",
             "get_work_order_context" => Named(arguments, "reference", reference => $"Reading {reference}")
                                         ?? "Reading the work order",
+            "get_variation_context" => Named(arguments, "reference", reference => $"Reading {reference}")
+                                       ?? "Reading the variation",
+            "get_valuation_context" => "Reading the valuation report",
             "list_request_correspondence" => "Reading the correspondence",
             "list_cost_codes" => "Reading the cost codes",
             "load_page_guide" => Named(arguments, "route", route => $"Reading the guide for {route}")
@@ -45,8 +48,11 @@ public static class AiToolLabels
             "read_record_emails" => "Reading the tagged emails",
             "read_selected_email" => "Reading the open email",
             "read_email_attachment" => "Reading an attachment",
-            "get_tender_enquiry_context" => "Reading the tender enquiry",
-            "read_tender_enquiry_document" => "Reading the enquiry's document",
+            "list_sources" => "Looking at what files are to hand",
+            "find_in_source" => Named(arguments, "query", query => $"Searching the files for {query}")
+                                ?? "Searching the files",
+            "read_source" => Named(arguments, "part", part => $"Reading {part}")
+                             ?? "Reading a file",
             "select_email" => Named(arguments, "search", search => $"Opening the email: {search}")
                               ?? "Opening an email",
             "stage_triage_tag" => Named(arguments, "reference", reference => $"Staging the {reference} tag")
@@ -67,6 +73,8 @@ public static class AiToolLabels
                                 "manual_timesheet" => "Opening the Add-a-day form",
                                 "record_absence" => "Opening the Record-absence form",
                                 "worker_week" => "Opening the week entry",
+                                "variation_edit_lines" => "Opening the variation's lines for editing",
+                                "claim_progress" => "Opening the % complete entry",
                                 _ => "Opening a dialog"
                             }) ?? "Opening a dialog",
             "update_open_modal" => "Writing into the form",
