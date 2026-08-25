@@ -53,6 +53,8 @@ public static class AiToolLabels
                                 ?? "Searching the files",
             "read_source" => Named(arguments, "part", part => $"Reading {part}")
                              ?? "Reading a file",
+            "get_tender_enquiry_context" => "Reading the tender enquiry",
+            "read_tender_enquiry_document" => "Reading the enquiry's document",
             "select_email" => Named(arguments, "search", search => $"Opening the email: {search}")
                               ?? "Opening an email",
             "stage_triage_tag" => Named(arguments, "reference", reference => $"Staging the {reference} tag")

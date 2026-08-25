@@ -398,6 +398,25 @@ public sealed class AiTurnRunner
                 + "then open the reply.");
         }
 
+        // tender_reply is anchored to a specific tender EMAIL, which only the bid package page can
+        // supply — opening it by navigation would land on the page with no composer showing. When
+        // the task is live the composer is already open; there is nothing for open_modal to do.
+        if (string.Equals(modal.ModalKey, ModalCatalog.TenderReply.ModalKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return Fail("tender_reply can't be opened from here — the user opens it from a tender "
+                + "extraction's \"Draft supplier reply\", and it is already open beside you when that "
+                + "task is running. Use update_open_modal to fill it.");
+        }
+
+        // Same for the PQQ editor: it is a pane on the enquiry's PQQ tab, opened by the page's own
+        // "Draft with AI"; when the task is live it is already open beside the chat.
+        if (string.Equals(modal.ModalKey, ModalCatalog.TenderEnquiryAnswers.ModalKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return Fail("tender_enquiry_answers can't be opened from here — the user opens it with "
+                + "\"Draft with AI\" on the enquiry's PQQ response tab, and it is already open beside you "
+                + "when that task is running. Use update_open_modal to fill it.");
+        }
+
         var needsRecord = modal.RouteTemplate.Contains("{record}", StringComparison.Ordinal);
         if (!needsRecord) return null;
 
@@ -478,16 +497,6 @@ public sealed class AiTurnRunner
                     + "the figures from the evidence to enter there.");
             }
             return null;
-        }
-
-        // tender_reply is anchored to a specific tender EMAIL, which only the bid package page can
-        // supply — opening it by navigation would land on the page with no composer showing. When
-        // the task is live the composer is already open; there is nothing for open_modal to do.
-        if (string.Equals(modal.ModalKey, ModalCatalog.TenderReply.ModalKey, StringComparison.OrdinalIgnoreCase))
-        {
-            return Fail("tender_reply can't be opened from here — the user opens it from a tender "
-                + "extraction's \"Draft supplier reply\", and it is already open beside you when that "
-                + "task is running. Use update_open_modal to fill it.");
         }
 
         // A record dialog this validator doesn't know which table to check — let it through rather
@@ -751,7 +760,7 @@ public sealed class AiTurnRunner
 
         if (!AiRecordTools.TryMapRecordType(typeText, out var recordType))
             return Fail($"\"{typeText}\" is not a taggable record type. Use one of: request, "
-                + "bid_package, variation, variation_quote, work_order, todo, defect, lad, scheduling.");
+                + "bid_package, variation, variation_quote, work_order, todo, defect, lad, scheduling, tender_enquiry.");
 
         // Where the record lives in a table this side, verify it exists ON THE PROJECT CLAIMED —
         // a right id with the wrong project is exactly the V80-on-three-projects mistake.

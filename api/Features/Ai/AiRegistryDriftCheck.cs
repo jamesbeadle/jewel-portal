@@ -27,7 +27,7 @@ public static class AiRegistryDriftCheck
 
         // Page-anchored dialogs are deliberately NOT openable via open_modal — the page supplies
         // their anchor (tender_reply's tender email) when it starts the task itself.
-        var pageAnchored = new[] { ModalCatalog.TenderReply.ModalKey };
+        var pageAnchored = new[] { ModalCatalog.TenderReply.ModalKey, ModalCatalog.TenderEnquiryAnswers.ModalKey };
 
         foreach (var modal in ModalCatalog.All)
         {

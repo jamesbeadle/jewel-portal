@@ -1,25 +1,21 @@
 using System.Text.Json;
+using Jewel.JPMS.Api.Features.Ai.Sources;
 using Jewel.JPMS.Api.Features.TenderEnquiries;
-using Jewel.JPMS.Api.Features.TenderEnquiries.Attachments;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;
 
 /// <summary>
 /// The assistant's view of a tender enquiry (2026-08-25, James: "I'd use the AI chat to draft
 /// everything"): the record in one call, and the documents kept on it — the PQQ as received
-/// above all — opened as text so the questions can be lifted and answered. Same read set as the
-/// enquiry pages (every internal role); same file reader as email attachments.
+/// above all — opened as a source (teq:&lt;documentId&gt;) so the questions can be lifted and
+/// answered. Same read set as the enquiry pages (every internal role); the same source reader as
+/// chat files and email attachments, so find_in_source / read_source work on them too.
 /// </summary>
 public static class AiTenderEnquiryTools
 {
-    private const int DefaultMaxChars = 20_000;
-    private const int MinMaxChars = 2_000;
-    private const int MaxMaxChars = 50_000;
-
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
     private static string Serialise(object value) => JsonSerializer.Serialize(value, Json);
@@ -32,7 +28,8 @@ public static class AiTenderEnquiryTools
             "Everything held ON a tender enquiry record, in one call: reference, title, the "
             + "architect and contact, scope of works, contract form, status and dates, the PQQ "
             + "answers as they stand, and the documents kept on it (the questionnaire as received, "
-            + "the drawings) with the ids read_tender_enquiry_document opens them by. Call this "
+            + "the drawings) with the source_id (teq:…) read_tender_enquiry_document, read_source and "
+            + "find_in_source open them by. Call this "
             + "FIRST when drafting a PQQ response or answering questions about an enquiry; the "
             + "tagged emails are separate — read_record_emails (record_type tender_enquiry) has "
             + "those. Defaults to the enquiry on the page in view.",
@@ -47,11 +44,14 @@ public static class AiTenderEnquiryTools
             "read_tender_enquiry_document",
             "One document kept on a tender enquiry, by the documentId get_tender_enquiry_context "
             + "returned — the PQQ PDF as the architect sent it, a drawing, supporting material. "
-            + "PDFs and Word documents come back as text, spreadsheets as tab-separated rows, "
-            + "images are shown to you. What cannot be read is refused with the reason — relay "
+            + "The same read as read_source on its teq:… source_id, from the start: PDFs and Word "
+            + "documents as text by page, spreadsheets by sheet, images shown to you. Pass part / "
+            + "from to continue a long one. What cannot be read is refused with the reason — relay "
             + "it rather than guessing.",
             AiToolSchema.Object(
                 ("documentId", "string", "The document's id from get_tender_enquiry_context.", true),
+                ("part", "string", "A part named in an earlier read (a page, a sheet) — omit to start from the beginning.", false),
+                ("from", "number", "The unit to continue from within the part, as an earlier read's next.from said.", false),
                 ("maxChars", "number",
                     "How much extracted text to return. Default 20000, minimum 2000, maximum 50000.", false)),
             AiToolKind.Read,
@@ -74,7 +74,7 @@ public static class AiTenderEnquiryTools
         var documents = await context.Db.TenderEnquiryAttachments.AsNoTracking()
             .Where(row => row.TenderEnquiryId == tenderEnquiryId)
             .OrderBy(row => row.AddedAt)
-            .Select(row => new { documentId = row.TenderEnquiryAttachmentId, row.FileName, row.ContentType, row.FileSizeBytes })
+            .Select(row => new { documentId = row.TenderEnquiryAttachmentId, source_id = AiSourceTools.TenderEnquirySourceId(row.TenderEnquiryAttachmentId), row.FileName, row.ContentType, row.FileSizeBytes })
             .ToListAsync(ct);
 
         return Serialise(new
@@ -91,7 +91,7 @@ public static class AiTenderEnquiryTools
             tenderDueAt = enquiry.TenderDueAt,
             answers = answers.Select(answer => new { answer.Position, answer.Question, answer.Answer }),
             documents,
-            note = "Open a document with read_tender_enquiry_document. Tagged emails are separate — "
+            note = "Open a document with read_tender_enquiry_document (or read_source / find_in_source on its source_id). Tagged emails are separate — "
                    + "read_record_emails (record_type tender_enquiry) returns them with full bodies and attachment ids."
         });
     }
@@ -101,24 +101,12 @@ public static class AiTenderEnquiryTools
         var documentId = AiToolSchema.Text(input, "documentId");
         if (string.IsNullOrWhiteSpace(documentId)) return Fail("A documentId is required — get_tender_enquiry_context returns them.");
 
-        var row = await context.Db.TenderEnquiryAttachments.AsNoTracking()
-            .FirstOrDefaultAsync(entity => entity.TenderEnquiryAttachmentId == documentId, ct);
-        if (row is null || string.IsNullOrWhiteSpace(row.BlobRef)) return Fail($"No document found with id {documentId}.");
-
-        var store = context.Services.GetRequiredService<ITenderEnquiryAttachmentStore>();
-        var blob = await store.OpenAsync(row.BlobRef, ct);
-        if (blob is null) return Fail($"\"{row.FileName}\" is registered but its file could not be found in storage.");
-
-        byte[] content;
-        await using (blob.Content)
-        {
-            using var buffer = new MemoryStream();
-            await blob.Content.CopyToAsync(buffer, ct);
-            content = buffer.ToArray();
-        }
-
-        var limit = (int)Math.Clamp(AiToolSchema.Number(input, "maxChars") ?? DefaultMaxChars, MinMaxChars, MaxMaxChars);
-        return AiRecordTools.ReadFileForModel(row.FileName, row.ContentType, content, limit);
+        var part = AiToolSchema.Text(input, "part");
+        var from = (int)Math.Max(1, AiToolSchema.Number(input, "from") ?? 1);
+        var limit = (int)Math.Clamp(
+            AiToolSchema.Number(input, "maxChars") ?? AiSourceReader.DefaultReadChars,
+            AiSourceReader.MinReadChars, AiSourceReader.MaxReadChars);
+        return await AiSourceTools.ReadAsync(context, AiSourceTools.TenderEnquirySourceId(documentId!), part, from, limit, ct);
     }
 
     private static string? EnquiryIdInView(AiToolContext context) =>

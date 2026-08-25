@@ -119,7 +119,7 @@ internal static class AiRecordTools
                 AiToolSchema.Object(
                     ("recordType", "string",
                         "One of: request, bid_package, variation, variation_quote, work_order, defect, "
-                        + "todo, lad, cost_centre, scheduling, subcontractor_comms, valuation_snapshot. "
+                        + "todo, lad, cost_centre, scheduling, subcontractor_comms, valuation_snapshot, tender_enquiry. "
                         + "Defaults to the record in view.", false),
                     ("recordId", "string", "The record's id. Defaults to the record in view.", false),
                     ("maxChars", "number",
@@ -138,7 +138,7 @@ internal static class AiRecordTools
                     {
                         return Fail($"Emails cannot be read for \"{typeText}\" — tagged mail exists for: request, "
                             + "bid_package, variation, variation_quote, work_order, defect, todo, lad, "
-                            + "cost_centre, scheduling, subcontractor_comms, valuation_snapshot.");
+                            + "cost_centre, scheduling, subcontractor_comms, valuation_snapshot, tender_enquiry.");
                     }
 
                     IReadOnlyList<MailboxMessage> messages;
@@ -483,6 +483,7 @@ internal static class AiRecordTools
             "scheduling" or "programme" => RecordType.Scheduling,
             "subcontractor comms" => RecordType.SubcontractorComms,
             "valuation snapshot" or "valuation report snapshot" => RecordType.ValuationReportSnapshot,
+            "tender enquiry" or "tender inquiry" or "teq" => RecordType.TenderEnquiry,
             _ => null
         };
         recordType = mapped ?? default;

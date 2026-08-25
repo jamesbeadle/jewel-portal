@@ -61,6 +61,7 @@ public static class AiToolCatalogue
             .Concat(AiRecordTools.Build())
             .Concat(AiSourceTools.Build())
             .Concat(AiCommercialTools.Build())
+            .Concat(AiTenderEnquiryTools.Build())
             .Concat(AiSkillTools.Build())
             .Concat(AiPageGuideTools.Build())
             .ToList();
