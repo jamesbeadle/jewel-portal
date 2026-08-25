@@ -223,16 +223,23 @@ public static class AiToolCatalogue
 
             new(
                 "list_projects",
-                "Every project that is not completed, with reference, name and stage. Use it to resolve a project "
-                + "the user named in words rather than by reference.",
-                AiToolSchema.Empty(),
+                "Every live project with its id, reference, name and stage. This is how you resolve a project "
+                + "the user named in words (\"By France\") or by reference (JBB-2026-001) to the id a route or "
+                + "a dialog needs — call it BEFORE navigating to another project's pages; the id goes in the "
+                + "route in place of {project}. Completed (handed-over) projects are left out unless you pass "
+                + "include_completed: true, which is what to do when a name matches nothing.",
+                AiToolSchema.Object(
+                    ("include_completed", "boolean",
+                        "true adds completed projects to the list — pass it when the user names a project "
+                        + "that has been handed over, or when the name they used matched nothing.", false)),
                 AiToolKind.Read,
                 readers,
-                async (context, _, ct) =>
+                async (context, input, ct) =>
                 {
+                    var includeCompleted = AiToolSchema.Flag(input, "include_completed") ?? false;
                     var projects = await context.Db.Projects
                         .AsNoTracking()
-                        .Where(row => row.Stage != (int)ProjectStage.Completed)
+                        .Where(row => includeCompleted || row.Stage != (int)ProjectStage.Completed)
                         .OrderBy(row => row.Reference)
                         .Select(row => new { row.ProjectId, row.Reference, row.Name, row.Stage })
                         .ToListAsync(ct);
@@ -240,6 +247,7 @@ public static class AiToolCatalogue
                     return Serialise(new
                     {
                         ok = true,
+                        includes_completed = includeCompleted,
                         projects = projects.Select(row => new
                         {
                             row.ProjectId,
@@ -747,9 +755,16 @@ public static class AiToolCatalogue
             new(
                 "navigate_to",
                 "Take the user to a page in the portal. The page opens beside the chat. Use a route returned by "
-                + "another tool. Say in one short clause where you are taking them and why.",
+                + "another tool, or a site-map route with every {…} segment replaced by a real id. In a "
+                + "site-map route {project} means the project IN VIEW; to go to a DIFFERENT project's page, "
+                + "resolve its id first (list_projects) and put that id in its place — a name, a reference "
+                + "or a placeholder left in the route is refused. The result names the project the page "
+                + "belongs to; what the page shows arrives in the next current-context block. Say in one "
+                + "short clause where you are taking them and why.",
                 AiToolSchema.Object(
-                    ("route", "string", "A portal path, for example /projects/{id}/variations/{id}.", true),
+                    ("route", "string",
+                        "A portal path with real ids, for example /projects/3490f944…/requests/rfis. "
+                        + "Never a full URL, never a project name or reference in place of its id.", true),
                     ("reason", "string", "One clause explaining why.", false)),
                 AiToolKind.Ui,
                 JpmsRoleSets.AllInternal,

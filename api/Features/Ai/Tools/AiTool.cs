@@ -66,6 +66,20 @@ public static class AiToolSchema
             ? value.GetString()
             : null;
 
+    /// <summary>Reads a boolean argument, tolerating a missing or null property — and the string
+    /// "true"/"false" a model sometimes sends for a flag.</summary>
+    public static bool? Flag(JsonElement input, string name)
+    {
+        if (input.ValueKind != JsonValueKind.Object || !input.TryGetProperty(name, out var value)) return null;
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String when bool.TryParse(value.GetString(), out var parsed) => parsed,
+            _ => null
+        };
+    }
+
     public static int? Number(JsonElement input, string name) =>
         input.ValueKind == JsonValueKind.Object
         && input.TryGetProperty(name, out var value)

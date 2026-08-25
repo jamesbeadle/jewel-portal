@@ -1571,8 +1571,10 @@
 
     private void Navigate(string? route)
     {
-        // Relative paths only — never let a tool result become an off-site redirect.
-        if (string.IsNullOrWhiteSpace(route) || !route.StartsWith('/') || route.StartsWith("//")) return;
+        // Relative paths only — never let a tool result become an off-site redirect. A backslash
+        // counts: browsers read "/\host/…" as "//host/…". (The server checks the same in
+        // AiNavigationRoute.IsPortalPath; this is the last line.)
+        if (string.IsNullOrWhiteSpace(route) || !route.StartsWith('/') || route.StartsWith("//") || route.Contains('\\')) return;
         Nav.NavigateTo(route);
     }
 

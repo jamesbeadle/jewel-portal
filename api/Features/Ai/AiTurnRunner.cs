@@ -196,6 +196,28 @@ public sealed class AiTurnRunner
                     output = refusal;
                     ok = false;
                 }
+                else if (string.Equals(call.Name, "navigate_to", StringComparison.OrdinalIgnoreCase))
+                {
+                    // navigate_to: the route is resolved and REWRITTEN here — a "{project}"
+                    // placeholder becomes the project in view, a reference or a name in the
+                    // project segment becomes the real id — or refused in front of the model.
+                    // (Live failure 2026-08-25: "load By France RFIs" from an Abbot Road page
+                    // went out as the site-map template, landed on "Project not found", and the
+                    // model narrated the register it never reached, because a Ui tool's ok meant
+                    // only "posted".) The success payload names the project the route lands on,
+                    // so what the model says next is read from a tool result, not assumed.
+                    var navigation = await ResolveNavigationAsync(call.ArgumentsJson, scope, cancellationToken);
+                    if (navigation.Refusal is not null)
+                    {
+                        output = navigation.Refusal;
+                        ok = false;
+                    }
+                    else
+                    {
+                        uiActions.Add(new AiUiAction(call.Name, navigation.ArgumentsJson));
+                        output = navigation.Output;
+                    }
+                }
                 else
                 {
                     // open_modal only: complete the arguments the server can KNOW — a record
@@ -508,6 +530,125 @@ public sealed class AiTurnRunner
         {
             return argumentsJson;
         }
+    }
+
+    /// <summary>What resolving a navigate_to came to: a refusal for the model to read, or the
+    /// arguments to hand the browser (route rewritten with the real project id) and the tool
+    /// result that says where it lands.</summary>
+    private sealed record NavigationOutcome(string? Refusal, string ArgumentsJson, string Output);
+
+    /// <summary>
+    /// Resolves a navigate_to route before the browser sees it. Off a project route there is
+    /// nothing to check beyond "it is a portal path". Under /projects/… the project segment must
+    /// come out as a real id: a site-map placeholder ("{project}") is filled from the project in
+    /// view, a reference (JBB-2026-001) or a name (By France) is looked up and rewritten, and
+    /// anything that matches nothing — or matches two jobs — is refused with the way to resolve
+    /// it. A placeholder left anywhere else in the path ("/variations/{id}") is refused too: that
+    /// is a record template sent instead of the ready-made route a tool would have returned.
+    /// </summary>
+    private async Task<NavigationOutcome> ResolveNavigationAsync(string argumentsJson, AiScope? scope, CancellationToken ct)
+    {
+        System.Text.Json.Nodes.JsonObject root;
+        try
+        {
+            root = System.Text.Json.Nodes.JsonNode.Parse(string.IsNullOrWhiteSpace(argumentsJson) ? "{}" : argumentsJson)
+                as System.Text.Json.Nodes.JsonObject ?? new System.Text.Json.Nodes.JsonObject();
+        }
+        catch (JsonException)
+        {
+            root = new System.Text.Json.Nodes.JsonObject();
+        }
+
+        var route = root["route"] is System.Text.Json.Nodes.JsonValue routeValue
+                    && routeValue.TryGetValue<string>(out var routeText) ? routeText.Trim() : null;
+
+        if (string.IsNullOrWhiteSpace(route))
+            return Refuse("navigate_to needs a route — a portal path from the site map, or the ready-made "
+                + "route a tool returned.");
+
+        if (!AiNavigationRoute.IsPortalPath(route))
+            return Refuse("navigate_to takes a portal path starting with \"/\" (for example "
+                + "/projects/{id}/requests/rfis), never a full URL. \"" + Truncate(route, 80) + "\" is not one.");
+
+        string? landedOn = null;
+        var segment = AiNavigationRoute.ProjectSegment(route);
+        if (segment is not null)
+        {
+            // Every project, completed ones included — a handed-over job's records stay reachable
+            // by URL (CLAUDE.md: completed projects are ordered last, not hidden), so a route to
+            // one is a valid route. Dozens of rows, three columns: cheap.
+            var projects = (await context.Projects.AsNoTracking()
+                    .Select(row => new { row.ProjectId, row.Reference, row.Name })
+                    .ToListAsync(ct))
+                .Select(row => new AiNavigationRoute.Candidate(row.ProjectId, row.Reference, row.Name))
+                .ToList();
+
+            AiNavigationRoute.Candidate? project;
+            if (AiNavigationRoute.IsPlaceholder(segment))
+            {
+                // "{project} means the project in view" — so fill it from the scope, and only
+                // from the scope. Off a project page there is nothing honest to put there.
+                project = string.IsNullOrWhiteSpace(scope?.ProjectId)
+                    ? null
+                    : projects.FirstOrDefault(row =>
+                        string.Equals(row.ProjectId, scope!.ProjectId, StringComparison.OrdinalIgnoreCase));
+                if (project is null)
+                {
+                    return Refuse($"The route still says {segment} and no project is in view to fill it "
+                        + "with. Resolve the project first — list_projects returns every project's id "
+                        + "(pass include_completed: true for a job that has been handed over), "
+                        + "get_current_context gives the one in view — then put that id in the route "
+                        + "in place of " + segment + ".");
+                }
+            }
+            else
+            {
+                var match = AiNavigationRoute.Resolve(segment, projects);
+                if (match.IsAmbiguous)
+                {
+                    return Refuse($"\"{segment}\" could mean more than one project: "
+                        + string.Join("; ", match.Ambiguous.Select(row => $"{row.Reference} — {row.Name} (id {row.ProjectId})"))
+                        + ". Put the id of the one the user means in the route, or ask which.");
+                }
+                if (!match.Found)
+                {
+                    return Refuse($"No project has the id, reference or name \"{Truncate(segment, 80)}\" — the "
+                        + "route needs the project's real id. list_projects returns ids (include_completed: "
+                        + "true if the job has been handed over); never guess one, and never put a name "
+                        + "or a reference in a route.");
+                }
+                project = match.Project;
+            }
+
+            route = AiNavigationRoute.WithProject(route, project!.ProjectId);
+            landedOn = $"{project.Reference} — {project.Name}";
+        }
+
+        // Anything else left in braces is a record template — the model should have used the
+        // route a tool returned, which carries the record's real id.
+        if (AiNavigationRoute.FirstPlaceholder(route) is { } placeholder)
+        {
+            return Refuse($"The route still carries the placeholder {placeholder}. A record page needs the "
+                + "record's real id: use the ready-made route a tool returned (find_by_reference, "
+                + "list_variations, list_requests and the rest all return one) rather than filling in "
+                + "the site-map template.");
+        }
+
+        root["route"] = route;
+        return new NavigationOutcome(
+            null,
+            root.ToJsonString(),
+            JsonSerializer.Serialize(new
+            {
+                ok = true,
+                handed_to_browser = true,
+                route,
+                project = landedOn,
+                note = "The page is opening beside the chat. Its contents arrive in the next current-context "
+                    + "block — describe what is on it only from that, or from a tool that read it."
+            }));
+
+        static NavigationOutcome Refuse(string message) => new(Fail(message), string.Empty, string.Empty);
     }
 
     /// <summary>stage_triage_todo needs a real title — an empty row would stage nothing and the

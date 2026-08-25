@@ -112,16 +112,30 @@ else
         Projects.OnChanged += StateHasChanged;
         StageFilter.OnChange += StateHasChanged;
         _ = StageFilter.EnsureLoadedAsync();
-        // Every project page passing through the shell marks its project as the one the user is
-        // working on — the side nav's project-scoped entries follow it.
-        _ = CurrentProject.RememberAsync(ProjectId);
         // The cold-load path has to swallow too, for the same reason the background one does: an
         // exception escaping OnInitializedAsync replaces every project page with the error boundary,
         // so a single failed read would take out the whole project section rather than showing
         // "Project not found" and letting the next navigation retry. The failure still reaches the
         // toast via the query client's error sink.
         if (Projects.Current is null) await RefreshInBackgroundAsync();
-        else _ = RefreshInBackgroundAsync(); // stale-while-revalidate: header/stage update on tab nav
+        else
+        {
+            RememberIfReal(); // The cached list already knows it — switch the side nav at once.
+            _ = RefreshInBackgroundAsync(); // stale-while-revalidate: header/stage update on tab nav
+        }
+    }
+
+    /// <summary>
+    /// Every project page passing through the shell marks its project as the one the user is
+    /// working on — the side nav's project-scoped entries follow it — but only a project that
+    /// EXISTS. Remembering the raw route value put whatever a bad URL carried (a site-map
+    /// placeholder, a reference, a typo — live, 2026-08-25, from an assistant navigate_to) at
+    /// the head of the recent-projects list, where it stuck as the "current" project until the
+    /// next real visit while the side nav quietly fell back to the first live project.
+    /// </summary>
+    private void RememberIfReal()
+    {
+        if (Project is not null) _ = CurrentProject.RememberAsync(Project.ProjectId);
     }
 
     private async Task RefreshInBackgroundAsync()
@@ -130,6 +144,9 @@ else
         // navigation retries.
         try { await Projects.RefreshAsync(CancellationToken.None); }
         catch { }
+        // After the fresh list lands: the cold load's first chance, and the warm path's catch-up
+        // for a project created since the list was cached.
+        RememberIfReal();
     }
 
     public void Dispose()

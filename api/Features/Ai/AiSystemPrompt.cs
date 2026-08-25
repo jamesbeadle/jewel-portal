@@ -67,10 +67,15 @@ public static class AiSystemPrompt
         {
             prompt.AppendLine();
             prompt.AppendLine("## The site — every page this user can reach, and what can be done there");
-            prompt.AppendLine("This is the whole portal for this user. `{project}` means the project in view; other");
-            prompt.AppendLine("`{...}` segments are real ids (tools return ready-made routes — prefer those). Use");
-            prompt.AppendLine("navigate_to with one of these, or with a route another tool handed you. When someone");
-            prompt.AppendLine("names a page, a section or a kind of record, THIS is where you resolve what they mean.");
+            prompt.AppendLine("This is the whole portal for this user. `{project}` means the project in view — and ONLY");
+            prompt.AppendLine("that one. When the user names a different project (\"load By France RFIs\" while Abbot");
+            prompt.AppendLine("Road is in view), resolve it first — list_projects returns each project's id (add");
+            prompt.AppendLine("include_completed: true for a handed-over job) — and put that id in the route in place");
+            prompt.AppendLine("of `{project}`. Other `{...}` segments are real record ids (tools return ready-made");
+            prompt.AppendLine("routes — prefer those). A route never goes out with a name, a reference or a `{...}`");
+            prompt.AppendLine("still in it: navigate_to refuses it and the user goes nowhere. Use navigate_to with one");
+            prompt.AppendLine("of these, or with a route another tool handed you. When someone names a page, a");
+            prompt.AppendLine("section or a kind of record, THIS is where you resolve what they mean.");
             prompt.AppendLine("Each row here is one line; every route also has a full working guide — its tabs, buttons,");
             prompt.AppendLine("dialogs, what is done ON the page and what is done elsewhere — one load_page_guide call");
             prompt.AppendLine("away. Read the guide before you work a page, not after you have guessed wrong.");
@@ -159,8 +164,12 @@ public static class AiSystemPrompt
         prompt.AppendLine("page's guide before you tell the user where anything lives on it.");
         prompt.AppendLine();
         prompt.AppendLine("- **Go somewhere** — \"go to / open / show / take me to / bring up <page or section>\":");
-        prompt.AppendLine("  find the route in the site map above and call navigate_to. If they name a section of");
-        prompt.AppendLine("  a record (\"the emails on this bid package\"), go to the record page — the section is on it.");
+        prompt.AppendLine("  find the route in the site map above and call navigate_to. A project page for the");
+        prompt.AppendLine("  project in view takes its id from the current context; for ANY other project, the");
+        prompt.AppendLine("  id comes from list_projects first, then the route — two calls, never one guess. If");
+        prompt.AppendLine("  they name a section of a record (\"the emails on this bid package\"), go to the");
+        prompt.AppendLine("  record page — the section is on it. After navigating, describe the page only from");
+        prompt.AppendLine("  the next current-context block or a tool that read it — never from the route.");
         prompt.AppendLine("- **Open a record** — \"open / show / pull up V72, RFI-049, DEF-0012, the plant room variation\":");
         prompt.AppendLine("  a reference goes straight to find_by_reference; a description goes to the register list tool");
         prompt.AppendLine("  (list_variations, list_requests) to identify it. Then navigate_to the route the tool returned.");
