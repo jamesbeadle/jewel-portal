@@ -1012,6 +1012,36 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("ClaimPeriods");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ClientCostReferenceEntity", b =>
+                {
+                    b.Property<string>("ClientCostReferenceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ClientReference")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("CostCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("ClientCostReferenceId");
+
+                    b.HasIndex("ProjectId", "CostCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ClientCostReferences_ProjectId_CostCode");
+
+                    b.ToTable("ClientCostReferences");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ClientEntity", b =>
                 {
                     b.Property<string>("ClientId")
@@ -1856,12 +1886,19 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<string>("ParentDrawingFolderId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("ProjectId")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
                     b.HasKey("DrawingFolderId");
+
+                    b.HasIndex("ParentDrawingFolderId")
+                        .HasDatabaseName("IX_DrawingFolders_ParentDrawingFolderId");
 
                     b.HasIndex("ProjectId")
                         .HasDatabaseName("IX_DrawingFolders_ProjectId");
@@ -5097,6 +5134,13 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("StartedByEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -5108,6 +5152,41 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasDatabaseName("IX_TodoItems_ProjectId");
 
                     b.ToTable("TodoItems");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.TodoItemActivityEntity", b =>
+                {
+                    b.Property<string>("TodoItemActivityId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ActorEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("TodoItemId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("TodoItemActivityId");
+
+                    b.HasIndex("TodoItemId")
+                        .HasDatabaseName("IX_TodoItemActivities_TodoItemId");
+
+                    b.ToTable("TodoItemActivities");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.TodoItemLinkEntity", b =>
@@ -5673,6 +5752,11 @@ namespace Jewel.JPMS.Api.Migrations
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ValuationReportSnapshotLineEntity", b =>
                 {
                     b.Property<string>("ValuationReportSnapshotLineId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ClientReference")
+                        .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 

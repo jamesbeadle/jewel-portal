@@ -94,6 +94,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<TodoItemEntity> TodoItems => Set<TodoItemEntity>();
     // Undirected to-do ↔ to-do links, one row per pair in canonical id order (TodoItemLinkPairs).
     public DbSet<TodoItemLinkEntity> TodoItemLinks => Set<TodoItemLinkEntity>();
+    // The per-item timeline (created / started / chased / reassigned / … / email sent).
+    public DbSet<TodoItemActivityEntity> TodoItemActivities => Set<TodoItemActivityEntity>();
 
     // Internal-only titled free-text notes per project (door codes, site notes) — the Useful
     // Information tab.
@@ -156,6 +158,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<ValuationInvoiceEventEntity> ValuationInvoiceEvents => Set<ValuationInvoiceEventEntity>();
     public DbSet<ValuationReportSnapshotEntity> ValuationReportSnapshots => Set<ValuationReportSnapshotEntity>();
     public DbSet<ValuationReportSnapshotLineEntity> ValuationReportSnapshotLines => Set<ValuationReportSnapshotLineEntity>();
+    public DbSet<ClientCostReferenceEntity> ClientCostReferences => Set<ClientCostReferenceEntity>();
     public DbSet<DayworkEntity> Dayworks => Set<DayworkEntity>();
     public DbSet<ContraChargeEntity> ContraCharges => Set<ContraChargeEntity>();
     public DbSet<SubcontractorRetentionEntity> SubcontractorRetentions => Set<SubcontractorRetentionEntity>();
@@ -390,6 +393,9 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<DrawingFolderEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_DrawingFolders_ProjectId");
+        modelBuilder.Entity<DrawingFolderEntity>()
+            .HasIndex(row => row.ParentDrawingFolderId)
+            .HasDatabaseName("IX_DrawingFolders_ParentDrawingFolderId");
         modelBuilder.Entity<HsRecordEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_HsRecords_ProjectId");
@@ -408,6 +414,14 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<TodoItemLinkEntity>()
             .HasIndex(row => row.TodoItemBId)
             .HasDatabaseName("IX_TodoItemLinks_TodoItemBId");
+        modelBuilder.Entity<TodoItemActivityEntity>()
+            .HasIndex(row => row.TodoItemId)
+            .HasDatabaseName("IX_TodoItemActivities_TodoItemId");
+        // One client reference per cost centre per project.
+        modelBuilder.Entity<ClientCostReferenceEntity>()
+            .HasIndex(row => new { row.ProjectId, row.CostCode })
+            .IsUnique()
+            .HasDatabaseName("IX_ClientCostReferences_ProjectId_CostCode");
         modelBuilder.Entity<DefectEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_Defects_ProjectId");
@@ -441,8 +455,8 @@ public sealed class JpmsContext : DbContext
             .HasDatabaseName("IX_BidPackageAttachments_BidPackageId");
 
         // ---- Tender enquiries -----------------------------------------------------------------------
-        // Read per project and by number (the TEQ-#### tag resolves back to its record); answers
-        // and attachments are read per enquiry.
+        // Read per project (the Tender Enquiries tab) and by number (the TEQ-#### tag resolves back
+        // to its record); answers and attachments are read per enquiry.
         modelBuilder.Entity<TenderEnquiryEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_TenderEnquiries_ProjectId");

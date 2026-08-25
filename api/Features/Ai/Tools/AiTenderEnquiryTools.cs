@@ -74,7 +74,7 @@ public static class AiTenderEnquiryTools
         var documents = await context.Db.TenderEnquiryAttachments.AsNoTracking()
             .Where(row => row.TenderEnquiryId == tenderEnquiryId)
             .OrderBy(row => row.AddedAt)
-            .Select(row => new { documentId = row.TenderEnquiryAttachmentId, source_id = AiSourceTools.TenderEnquirySourceId(row.TenderEnquiryAttachmentId), row.FileName, row.ContentType, row.FileSizeBytes })
+            .Select(row => new { documentId = row.TenderEnquiryAttachmentId, source_id = AiFiledDocuments.TenderEnquiryPrefix + row.TenderEnquiryAttachmentId, row.FileName, row.ContentType, row.FileSizeBytes })
             .ToListAsync(ct);
 
         return Serialise(new
@@ -106,7 +106,7 @@ public static class AiTenderEnquiryTools
         var limit = (int)Math.Clamp(
             AiToolSchema.Number(input, "maxChars") ?? AiSourceReader.DefaultReadChars,
             AiSourceReader.MinReadChars, AiSourceReader.MaxReadChars);
-        return await AiSourceTools.ReadAsync(context, AiSourceTools.TenderEnquirySourceId(documentId!), part, from, limit, ct);
+        return await AiSourceTools.ReadAsync(context, AiFiledDocuments.TenderEnquiryPrefix + documentId!, part, from, limit, ct);
     }
 
     private static string? EnquiryIdInView(AiToolContext context) =>
