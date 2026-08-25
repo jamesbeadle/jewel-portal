@@ -963,6 +963,36 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("ClaimPeriods");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ClientCostReferenceEntity", b =>
+                {
+                    b.Property<string>("ClientCostReferenceId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ClientReference")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("CostCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("ClientCostReferenceId");
+
+                    b.HasIndex("ProjectId", "CostCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_ClientCostReferences_ProjectId_CostCode");
+
+                    b.ToTable("ClientCostReferences");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ClientEntity", b =>
                 {
                     b.Property<string>("ClientId")
@@ -5673,6 +5703,11 @@ namespace Jewel.JPMS.Api.Migrations
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.ValuationReportSnapshotLineEntity", b =>
                 {
                     b.Property<string>("ValuationReportSnapshotLineId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ClientReference")
+                        .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 

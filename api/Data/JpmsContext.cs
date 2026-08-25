@@ -158,6 +158,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<ValuationInvoiceEventEntity> ValuationInvoiceEvents => Set<ValuationInvoiceEventEntity>();
     public DbSet<ValuationReportSnapshotEntity> ValuationReportSnapshots => Set<ValuationReportSnapshotEntity>();
     public DbSet<ValuationReportSnapshotLineEntity> ValuationReportSnapshotLines => Set<ValuationReportSnapshotLineEntity>();
+    public DbSet<ClientCostReferenceEntity> ClientCostReferences => Set<ClientCostReferenceEntity>();
     public DbSet<DayworkEntity> Dayworks => Set<DayworkEntity>();
     public DbSet<ContraChargeEntity> ContraCharges => Set<ContraChargeEntity>();
     public DbSet<SubcontractorRetentionEntity> SubcontractorRetentions => Set<SubcontractorRetentionEntity>();
@@ -409,6 +410,11 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<TodoItemActivityEntity>()
             .HasIndex(row => row.TodoItemId)
             .HasDatabaseName("IX_TodoItemActivities_TodoItemId");
+        // One client reference per cost centre per project.
+        modelBuilder.Entity<ClientCostReferenceEntity>()
+            .HasIndex(row => new { row.ProjectId, row.CostCode })
+            .IsUnique()
+            .HasDatabaseName("IX_ClientCostReferences_ProjectId_CostCode");
         modelBuilder.Entity<DefectEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_Defects_ProjectId");
