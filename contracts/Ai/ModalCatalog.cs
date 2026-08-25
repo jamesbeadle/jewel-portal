@@ -802,12 +802,55 @@ public static class ModalCatalog
                 "What the VO expressly does not price. Leave it out to keep what stands.")
         });
 
+    /// <summary>
+    /// The PQQ response editor on a tender enquiry's page — the questionnaire's numbered questions
+    /// with Jewel's answer under each. Page-anchored like tender_reply: the user presses "Draft
+    /// with AI" on the PQQ tab and the editor is already open beside the chat; the assistant reads
+    /// the questionnaire as received (get_tender_enquiry_context → read_tender_enquiry_document),
+    /// lifts the questions and drafts the answers. The user reviews and presses Save themselves.
+    /// </summary>
+    public static readonly ModalDescriptor TenderEnquiryAnswers = new(
+        "tender_enquiry_answers",
+        "PQQ response",
+        "It drafts Jewel's response to an architect's pre-qualification questionnaire: the questions "
+        + "exactly as the architect asked them, each with Jewel's answer beneath. The editor is already "
+        + "open beside the chat with whatever has been typed so far — send the complete list; the user "
+        + "reviews every answer and presses Save answers themselves.",
+        "/tender-enquiries/{record}",
+        new[]
+        {
+            Role.Admin,
+            Role.ManagingDirector,
+            Role.ProjectManager,
+            Role.QuantitySurveyor
+        },
+        new ModalField[]
+        {
+            new("answers", "array",
+                "The complete questionnaire as it should stand — this replaces the editor's list, so "
+                + "carry every existing row forward (edited or not) and keep the architect's order. "
+                + "Questions come from the questionnaire document or email, numbering stripped, wording "
+                + "kept. Answers are plain UK English in Jewel Bespoke Build's own voice, first person "
+                + "plural, no markdown. Only state facts you have READ — in the enquiry, its documents, "
+                + "its emails, the conversation, or a loaded skill. Where a question needs a fact you "
+                + "do not have (turnover, insurance limits, company number, referees, staff numbers), "
+                + "write the answer's frame and leave the figure as a bracketed prompt such as "
+                + "[turnover FY2025], and say which ones you left for the user. Never invent an "
+                + "accreditation, a figure, a client or a project.",
+                Required: true,
+                ItemFields: new ModalField[]
+                {
+                    new("question", "string", "The question as the architect asked it, without its number.", Required: true),
+                    new("answer", "string", "Jewel's answer, plain text. Blank lines between paragraphs.")
+                })
+        });
+
     public static IReadOnlyList<ModalDescriptor> All { get; } =
         new[]
         {
             VariationDraft, ManualVariation, ComposeEmail, ReplyEmail, BidPackageDetails, TenderReply,
             ManualTimesheet, RecordAbsence, WorkerWeek, WorkOrderEdit, WorkOrderCreate,
-            VariationEditLines, ClaimProgress, VariationBuildUp
+            VariationEditLines, ClaimProgress, VariationBuildUp, TenderEnquiryAnswers
         };
 
     public static ModalDescriptor? Find(string? modalKey) =>
