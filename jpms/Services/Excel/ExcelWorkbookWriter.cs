@@ -331,9 +331,19 @@ public static class ExcelWorkbookWriter
         var builder = new StringBuilder();
         builder.Append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>""");
         builder.Append("""<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">""");
-        if (sheet.PrintLandscapeFitToWidth)
+        if (sheet.PrintLandscapeFitToWidth || sheet.TabColour is not null)
         {
-            builder.Append("""<sheetPr><pageSetUpPr fitToPage="1"/></sheetPr>""");
+            // Schema order inside sheetPr: tabColor before pageSetUpPr.
+            builder.Append("<sheetPr>");
+            if (sheet.TabColour is not null)
+            {
+                builder.Append($"""<tabColor rgb="{sheet.TabColour}"/>""");
+            }
+            if (sheet.PrintLandscapeFitToWidth)
+            {
+                builder.Append("""<pageSetUpPr fitToPage="1"/>""");
+            }
+            builder.Append("</sheetPr>");
         }
         builder.Append($"""<dimension ref="A1:{lastColumn}{Math.Max(lastRow, 1)}"/>""");
 

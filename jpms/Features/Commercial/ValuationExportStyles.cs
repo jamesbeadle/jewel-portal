@@ -8,6 +8,11 @@ namespace Jewel.JPMS.Features.Commercial;
 /// </summary>
 internal static class ValuationExportStyles
 {
+    // Sheet-tab colours: the workbook's tab bar reads as a status strip — green tabs are
+    // accepted variation orders (on the report), the red tab is money still awaiting approval.
+    public const string AcceptedTabColour = "FF107C41";
+    public const string AwaitingApprovalTabColour = "FFC00000";
+
     public static readonly ExcelCellStyle Band = new(Fill: ExcelFill.Navy);
     public static readonly ExcelCellStyle BandTitle = new(Font: ExcelFont.Title, Fill: ExcelFill.Navy);
     public static readonly ExcelCellStyle BandGold = new(Font: ExcelFont.Gold, Fill: ExcelFill.Navy);

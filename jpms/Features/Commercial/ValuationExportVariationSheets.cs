@@ -37,6 +37,7 @@ internal static class ValuationExportVariationSheets
     {
         var sheet = workbook.AddSheet(name, ValuationExportStatementSheet.BillColumns());
         ValuationExportStatementSheet.SetPresentationFlags(sheet);
+        sheet.TabColour = AcceptedTabColour; // accepted — this order is on the report
 
         ValuationExportTitleBand.Add(sheet, meta,
             "One variation order's lines as they stand on the report — its consolidated row is on the Summary tab · "

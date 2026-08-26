@@ -128,6 +128,9 @@ public sealed class ExcelSheet
     /// <summary>Print landscape, fitted to one page wide — for presentation sheets an accountant may print.</summary>
     public bool PrintLandscapeFitToWidth { get; set; }
 
+    /// <summary>ARGB hex (e.g. "FFC00000") to colour the sheet's tab in Excel's tab bar; null keeps the default grey.</summary>
+    public string? TabColour { get; set; }
+
     /// <summary>A1-style ranges to merge (e.g. "A1:F1"). Content and style come from the top-left cell;
     /// give the other cells in the range the same fill so the band reads as one block.</summary>
     public List<string> MergedRanges { get; } = new();

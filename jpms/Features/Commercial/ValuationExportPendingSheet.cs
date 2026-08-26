@@ -86,6 +86,7 @@ internal static class ValuationExportPendingSheet
             new ExcelColumn("Amount", Width: 14),
             new ExcelColumn("Status", Width: 40));
         ValuationExportStatementSheet.SetPresentationFlags(sheet);
+        sheet.TabColour = AwaitingApprovalTabColour; // still awaiting approval
         ValuationExportTitleBand.Add(sheet, meta, Legend);
 
         // The register is live data: saying it couldn't be read beats passing an empty tab off
