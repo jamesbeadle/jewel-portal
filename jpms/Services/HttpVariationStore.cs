@@ -109,6 +109,13 @@ public sealed class HttpVariationStore : IVariationStore
         return order;
     }
 
+    public async Task<VariationOrder> SetEstimateAsync(string variationOrderId, decimal? estimatedValue, CancellationToken cancellationToken = default)
+    {
+        var order = await commands.SendAsync(new SetVariationOrderEstimate(variationOrderId, estimatedValue), cancellationToken);
+        OnChange?.Invoke();
+        return order;
+    }
+
     public async Task<VariationOrder> ReviseVariationOrderValueAsync(string variationOrderId, decimal value, CancellationToken cancellationToken = default)
     {
         // RevisedByEmail is stamped from the signed-in user server-side.

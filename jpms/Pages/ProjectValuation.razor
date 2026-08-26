@@ -11,6 +11,7 @@
 @inject IProjectRetentionStore Retention
 @inject ICostCenterStore CostCenters
 @inject IVariationStore Variations
+@inject IClientCostReferenceStore ClientReferences
 @inject NavigationManager Nav
 @inject AiTaskState AiTasks
 @inject ChatPanelState Chat
@@ -47,7 +48,7 @@ else
                     @* Also waits for the variations register: the workbook's Pending tab reads it,
                        and exporting before it has answered would pass "not loaded" off as "none". *@
                     <ExportToExcelButton FileName="@LiveExportFileName" FileDate="@DateTimeOffset.UtcNow"
-                                         Disabled="@(!ReportReady || PendingVariationsUnanswered)"
+                                         Disabled="@(!ReportReady || PendingVariationsUnanswered || ClientReferencesUnanswered)"
                                          BuildWorkbook="BuildLiveExportWorkbook" />
                     @* Report setup, apart from the document actions: the client's schedule-of-works
                        references per cost centre, printed as a "Client ref" column on the PDF. *@
@@ -745,7 +746,8 @@ else
                     title, line.ElementType, ExportAreaFor(line), ExportCodeFor(line), ExportTitleFor(line), LineTypeLabel(line.LineType),
                     line.CountsTowardTotals, line.Unit, line.Quantity, line.Rate, line.LineAmount,
                     PercentIn(entries, line), previous, claimed - previous, claimed, line.Comments,
-                    line.VariationRef, line.VariationTitle, line.CostCode, line.DisplayOrder));
+                    line.VariationRef, line.VariationTitle, line.CostCode, line.DisplayOrder,
+                    ClientReferenceFor(line)));
             }
         }
 
@@ -800,6 +802,31 @@ else
         try { variationOrders = await Variations.ListForProjectAsync(ProjectId); }
         catch { variationOrdersFailed = true; }
         await InvokeAsync(StateHasChanged);
+    }
+
+    // ---- Client references for the export's Client ref column ---------------
+    // Same nullable-until-answered rule. On failure the export still runs with the lines' own
+    // references — the map is an enrichment, not a gate the whole workbook should fail on.
+    private IReadOnlyList<ClientCostReference>? clientReferences;
+    private bool clientReferencesFailed;
+
+    private bool ClientReferencesUnanswered => clientReferences is null && !clientReferencesFailed;
+
+    private async Task LoadClientReferencesAsync()
+    {
+        try { clientReferences = await ClientReferences.ListAsync(ProjectId); }
+        catch { clientReferencesFailed = true; }
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // The line's own reference beats the per-cost-centre map — the same rule snapshot capture
+    // freezes by, so the working-copy workbook and the PDF always print the same reference.
+    private string ClientReferenceFor(ValuationLineItem line)
+    {
+        if (!string.IsNullOrWhiteSpace(line.ClientReference)) return line.ClientReference;
+        var mapped = clientReferences?.FirstOrDefault(reference =>
+            string.Equals(reference.CostCode, line.CostCode, StringComparison.OrdinalIgnoreCase));
+        return mapped?.ClientReference ?? "";
     }
 
     // The area sub-heading this line falls under in the workbook — same shared rule as the
@@ -857,6 +884,8 @@ else
         Retention.Refresh(ProjectId);
         // The Excel export's Pending tab reads the variations register — load it alongside.
         _ = LoadVariationOrdersAsync();
+        // …and its Client ref column reads the project's client-reference map.
+        _ = LoadClientReferencesAsync();
         // Revalidate the cost-centre master (stale-while-revalidate) — the report table's
         // Variations section and the line form both offer it as a dropdown.
         _ = CostCenters.ListAllAsync();

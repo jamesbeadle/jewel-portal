@@ -78,7 +78,10 @@ public static class ValuationReportSnapshotRenderer
         var setup = section.PageSetup;
         setup.PageFormat = PageFormat.A4;
         setup.TopMargin = Unit.FromCentimeter(1.3);
-        setup.BottomMargin = Unit.FromCentimeter(1.6);
+        // The footer (orange rule + one line) sits FooterDistance up from the page edge; the
+        // bottom margin must clear it or the rule prints over the last bill row on a full page.
+        setup.BottomMargin = Unit.FromCentimeter(2.1);
+        setup.FooterDistance = Unit.FromCentimeter(1.0);
         setup.LeftMargin = Unit.FromCentimeter(1.6);
         setup.RightMargin = Unit.FromCentimeter(1.6);
 
@@ -260,6 +263,7 @@ public static class ValuationReportSnapshotRenderer
         row.TopPadding = Unit.FromMillimeter(1.0);
         row.BottomPadding = Unit.FromMillimeter(1.0);
         row.Cells[0].MergeRight = columns.Last;
+        row.Cells[0].Format.LeftIndent = Unit.FromMillimeter(1.5);
         var heading = row.Cells[0].AddParagraph(title);
         heading.Format.Font.Size = 8.5;
         heading.Format.Font.Bold = true;
@@ -268,9 +272,8 @@ public static class ValuationReportSnapshotRenderer
 
     private static Table BillTable(Section section, ValuationReportBillColumns columns)
     {
+        // No cell grid: a financial statement reads on horizontal rules alone, added per row.
         var table = section.AddTable();
-        table.Borders.Color = Hair;
-        table.Borders.Width = 0.5;
         table.AddColumn(Unit.FromCentimeter(columns.CodeWidthCentimetres));
         if (columns.HasClientReference)
             table.AddColumn(Unit.FromCentimeter(columns.ClientReferenceWidthCentimetres));
@@ -299,6 +302,8 @@ public static class ValuationReportSnapshotRenderer
         header.TopPadding = Unit.FromMillimeter(1.2);
         header.BottomPadding = Unit.FromMillimeter(1.2);
         header.HeadingFormat = true;
+        header.Borders.Bottom.Width = 0.75;
+        header.Borders.Bottom.Color = Hair;
         HeaderCell(header.Cells[columns.Code], "Code");
         if (columns.HasClientReference)
             HeaderCell(header.Cells[columns.ClientReference], "Client ref");
@@ -318,20 +323,23 @@ public static class ValuationReportSnapshotRenderer
         var row = table.AddRow();
         row.TopPadding = Unit.FromMillimeter(1.2);
         row.BottomPadding = Unit.FromMillimeter(1.2);
+        row.Borders.Bottom.Width = 0.5;
+        row.Borders.Bottom.Color = Hair;
         // The gold tint is the accountant's scan line: only rows that moved carry it.
         if (moved) row.Shading.Color = Highlight;
 
+        // The code is provenance, not the story — small, quiet, never competing with the money.
+        row.Cells[columns.Code].Format.LeftIndent = Unit.FromMillimeter(1.5);
         var code = row.Cells[columns.Code].AddParagraph(line.Code);
-        code.Format.Font.Size = 8;
-        code.Format.Font.Bold = true;
-        code.Format.Font.Color = line.CountsTowardTotals ? Navy : Muted;
+        code.Format.Font.Size = 7;
+        code.Format.Font.Color = Muted;
 
         // The client's own schedule-of-works item number — the figure they reconcile by.
         if (columns.HasClientReference)
         {
             var clientReference = row.Cells[columns.ClientReference].AddParagraph(line.ClientReference);
             clientReference.Format.Font.Size = 8;
-            clientReference.Format.Font.Color = line.CountsTowardTotals ? Navy : Muted;
+            clientReference.Format.Font.Color = line.CountsTowardTotals ? Ink : Muted;
         }
 
         AddDescription(row.Cells[columns.Description], line);
@@ -340,6 +348,7 @@ public static class ValuationReportSnapshotRenderer
         MoneyCell(row.Cells[columns.Amount], line.Amount,
             colour: line.Amount < 0 ? Negative : line.CountsTowardTotals ? null : Muted);
 
+        row.Cells[columns.Percent].Format.RightIndent = Unit.FromMillimeter(1.5);
         var pct = row.Cells[columns.Percent].AddParagraph(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—");
         pct.Format.Font.Size = 8;
         pct.Format.Font.Color = Muted;
@@ -360,6 +369,8 @@ public static class ValuationReportSnapshotRenderer
 
     private static void AddDescription(Cell cell, ValuationReportBillRow line)
     {
+        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        cell.Format.RightIndent = Unit.FromMillimeter(1.5);
         var title = cell.AddParagraph(line.Title);
         title.Format.Font.Size = 8.5;
         title.Format.Font.Color = line.CountsTowardTotals ? Ink : Muted;
@@ -383,6 +394,9 @@ public static class ValuationReportSnapshotRenderer
         totals.Shading.Color = Panel;
         totals.TopPadding = Unit.FromMillimeter(1.4);
         totals.BottomPadding = Unit.FromMillimeter(1.4);
+        totals.Borders.Bottom.Width = 0.75;
+        totals.Borders.Bottom.Color = Hair;
+        totals.Cells[columns.Description].Format.LeftIndent = Unit.FromMillimeter(1.5);
         var label = totals.Cells[columns.Description].AddParagraph($"{title} total");
         label.Format.Font.Size = 8.5;
         label.Format.Font.Bold = true;
@@ -454,11 +468,13 @@ public static class ValuationReportSnapshotRenderer
         var note = section.AddParagraph(document.IsDraft
             ? "All figures are net of VAT. This is a WORKING COPY of the live valuation report as it stood "
               + $"when prepared on {Date(snapshot.TakenAt)} — figures may change until the claim is locked "
-              + "and a snapshot is taken; nothing here has been issued to anyone. Each row consolidates "
-              + "the items priced under that area; declined and to-be-confirmed items are not priced into any total."
+              + "and a snapshot is taken; nothing here has been issued to anyone. Contract, provisional and "
+              + "contingency items are shown individually under their area headings; each variation shows as one "
+              + "consolidated row per order. Declined and to-be-confirmed items are not priced into any total."
             : "All figures are net of VAT. This statement is a frozen record of the valuation report exactly "
               + $"as it stood when the snapshot was taken on {Date(snapshot.TakenAt)}; work recorded since is "
-              + "not reflected here. Each row consolidates the items priced under that area; declined and "
+              + "not reflected here. Contract, provisional and contingency items are shown individually under "
+              + "their area headings; each variation shows as one consolidated row per order. Declined and "
               + "to-be-confirmed items are not priced into any total. If anything on this statement doesn't "
               + "match your records, please get "
               + "in touch so we can reconcile it together.");
@@ -482,7 +498,7 @@ public static class ValuationReportSnapshotRenderer
         footer.AddTab();
         footer.AddFormattedText(
             document.IsDraft
-                ? $"Prepared {DateTime(snapshot.TakenAt)} · working copy of the live report — not an issued statement"
+                ? $"Prepared {DateTime(snapshot.TakenAt)} · working copy of the live report"
                 : $"Snapshot taken {DateTime(snapshot.TakenAt)} · immutable record from the JPMS register",
             new Font { Color = Muted, Size = 7 });
 
@@ -527,6 +543,7 @@ public static class ValuationReportSnapshotRenderer
     // Quantity / rate: a consolidated variation row has neither, and prints a dash instead.
     private static void NumberCell(Cell cell, decimal? value)
     {
+        cell.Format.RightIndent = Unit.FromMillimeter(1.5);
         var p = cell.AddParagraph(value is { } number ? Num(number) : "—");
         p.Format.Font.Size = 8;
         p.Format.Font.Color = Muted;

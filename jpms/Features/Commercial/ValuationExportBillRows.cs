@@ -8,8 +8,10 @@ internal static class ValuationExportBillRows
 {
     private const decimal WholePercent = 100m;
 
-    public static void AddColumnHeadings(ExcelSheet sheet) =>
-        sheet.AddRow(
+    public static void AddColumnHeadings(ExcelSheet sheet, bool hasClientReference)
+    {
+        var cells = new List<object?>
+        {
             new ExcelStyledCell("Code", ColHead),
             new ExcelStyledCell("Description", ColHead),
             new ExcelStyledCell("Unit", ColHead),
@@ -19,12 +21,17 @@ internal static class ValuationExportBillRows
             new ExcelStyledCell("% Complete", ColHeadRight),
             new ExcelStyledCell("Previous £", ColHeadRight),
             new ExcelStyledCell("This period £", ColHeadRight),
-            new ExcelStyledCell("Claimed £", ColHeadRight));
+            new ExcelStyledCell("Claimed £", ColHeadRight),
+        };
+        if (hasClientReference) cells.Insert(1, new ExcelStyledCell("Client ref", ColHead));
+        sheet.AddRow(cells.ToArray());
+    }
 
-    public static void AddLine(ExcelSheet sheet, ValuationExportLine line)
+    public static void AddLine(ExcelSheet sheet, ValuationExportLine line, bool hasClientReference)
     {
         var moved = line.MovedThisPeriod;
-        sheet.AddRow(
+        var cells = new List<object?>
+        {
             new ExcelStyledCell(line.Code, Code(moved)),
             new ExcelStyledCell(DescriptionFor(line), Desc(moved)),
             new ExcelStyledCell(line.Unit, Text(moved)),
@@ -34,7 +41,10 @@ internal static class ValuationExportBillRows
             ClaimCell(line, line.PercentComplete / WholePercent, Pct(moved)),
             ClaimCell(line, line.PreviousClaimed, Money(moved)),
             ClaimCell(line, line.ThisPeriod, Money(moved, negative: line.ThisPeriod < 0m, strong: moved)),
-            ClaimCell(line, line.CumulativeClaimed, Money(moved)));
+            ClaimCell(line, line.CumulativeClaimed, Money(moved)),
+        };
+        if (hasClientReference) cells.Insert(1, new ExcelStyledCell(line.ClientReference, Text(moved)));
+        sheet.AddRow(cells.ToArray());
     }
 
     // The description carries the comment beneath the title, and flags a line that is
@@ -53,19 +63,17 @@ internal static class ValuationExportBillRows
             ? new ExcelStyledCell(value, style)
             : new ExcelStyledCell(null, Text(line.MovedThisPeriod));
 
+    // Money columns are addressed from the END of the row, so the same code serves the grid
+    // with and without the client-reference column.
     public static void AddSectionTotal(ExcelSheet sheet, string sectionTitle, IReadOnlyList<ValuationExportLine> lines)
     {
         var counting = lines.Where(line => line.CountsTowardTotals).ToList();
-        sheet.AddRow(
-            new ExcelStyledCell(null, TotalFill),
-            new ExcelStyledCell($"{sectionTitle} total", TotalLabel),
-            new ExcelStyledCell(null, TotalFill),
-            new ExcelStyledCell(null, TotalFill),
-            new ExcelStyledCell(null, TotalFill),
-            new ExcelStyledCell(counting.Sum(line => line.LineAmount), TotalMoney),
-            new ExcelStyledCell(null, TotalFill),
-            new ExcelStyledCell(counting.Sum(line => line.PreviousClaimed), TotalMoney),
-            new ExcelStyledCell(counting.Sum(line => line.ThisPeriod), TotalMoney),
-            new ExcelStyledCell(counting.Sum(line => line.CumulativeClaimed), TotalMoney));
+        var cells = ValuationExportStatementSheet.FilledCells(sheet, TotalFill);
+        cells[^9] = new ExcelStyledCell($"{sectionTitle} total", TotalLabel); // the Description column in either grid
+        cells[^5] = new ExcelStyledCell(counting.Sum(line => line.LineAmount), TotalMoney);
+        cells[^3] = new ExcelStyledCell(counting.Sum(line => line.PreviousClaimed), TotalMoney);
+        cells[^2] = new ExcelStyledCell(counting.Sum(line => line.ThisPeriod), TotalMoney);
+        cells[^1] = new ExcelStyledCell(counting.Sum(line => line.CumulativeClaimed), TotalMoney);
+        sheet.AddRow(cells);
     }
 }

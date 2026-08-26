@@ -36,7 +36,10 @@ public sealed record ValuationExportLine(
     string VariationRef,        // variation lines only; "" otherwise
     string VariationTitle,
     string CostCode,
-    int DisplayOrder) : IVariationBillLine
+    int DisplayOrder,
+    // The client's schedule-of-works reference for the line — same line-level-beats-map rule as
+    // the PDF. Trailing default keeps the positional constructor stable for older callers.
+    string ClientReference = "") : IVariationBillLine
 {
     public bool MovedThisPeriod => CountsTowardTotals && ThisPeriod != 0m;
     public bool IsVariation => ElementType == ValuationElementType.Variation;
@@ -75,10 +78,13 @@ public static class ValuationReportExportWorkbook
     {
         var workbook = new ExcelWorkbook();
         var ordered = InStatementOrder(lines);
+        // The client-reference column appears on every statement tab or none, decided by the
+        // export's lines as a whole — the same one-layout rule as the PDF.
+        var hasClientReference = ordered.Any(line => !string.IsNullOrWhiteSpace(line.ClientReference));
         ValuationExportStatementSheet.Add(workbook,
             new ValuationExportStatementLayout("Summary", SummaryLegend, SummaryBandTitleFor),
-            meta, ValuationExportRollUps.Summarise(ordered), summary);
-        ValuationExportVariationSheets.Add(workbook, meta, ordered);
+            meta, ValuationExportRollUps.Summarise(ordered), summary, hasClientReference);
+        ValuationExportVariationSheets.Add(workbook, meta, ordered, hasClientReference);
         ValuationExportPendingSheet.Add(workbook, meta, pendingVariations);
         return workbook;
     }

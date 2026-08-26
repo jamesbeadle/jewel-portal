@@ -93,6 +93,12 @@ public static class VariationsRouteRegistration
             new CommandRoute("POST", "/api/variation-orders/{voId}/title",
                 command => $"/api/variation-orders/{((RenameVariationOrder)command).VariationOrderId}/title"));
 
+        // Re-state a pre-approval estimate — null/zero says the order is currently unpriced,
+        // which is what takes it off the valuation export's Pending tab.
+        commands.Register<SetVariationOrderEstimate, VariationOrder>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/estimate",
+                command => $"/api/variation-orders/{((SetVariationOrderEstimate)command).VariationOrderId}/estimate"));
+
         // The official document's narrative sections (commercial basis, programme impact,
         // exclusions) — wording only, same any-stage rule as the retitle. The document itself is
         // fetched straight from /api/variation-orders/{voId}/document (a file, not a query route).

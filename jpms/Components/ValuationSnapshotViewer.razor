@@ -438,7 +438,8 @@ else
             line.VariationRef,
             line.VariationTitle,
             line.CostCode,
-            line.DisplayOrder);
+            line.DisplayOrder,
+            line.ClientReference);
 
     // Same wording as the PDF renderer, so the workbook and the statement agree.
     private static string LineTypeLabel(ValuationLineType type) => type switch

@@ -65,6 +65,11 @@ public interface IVariationStore
     /// already written to the valuation report and CVR keep the wording they were issued with.</summary>
     Task<VariationOrder> RenameAsync(string variationOrderId, string title, CancellationToken cancellationToken = default);
 
+    /// <summary>Re-states a PRE-approval variation's estimate. Null or zero says the order is
+    /// currently unpriced — the valuation export's Pending tab then leaves it out. Refused once a
+    /// build-up is staged (the staged total is the estimate) and on approved/rejected orders.</summary>
+    Task<VariationOrder> SetEstimateAsync(string variationOrderId, decimal? estimatedValue, CancellationToken cancellationToken = default);
+
     /// <summary>Deletes a non-approved variation order — a VOQ raised in error. Refused for an
     /// approved order (reject / return to quoting first). Bid packages are separate records and
     /// are never deleted with a variation.</summary>

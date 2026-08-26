@@ -41,7 +41,20 @@ public static class ValuationExportRollUps
             counting.Sum(line => line.ThisPeriod),
             claimed,
             ItemCount(rollUp.Lines.Count),
-            rollUp.VariationRef, rollUp.VariationTitle, rollUp.CostCode, first.DisplayOrder);
+            rollUp.VariationRef, rollUp.VariationTitle, rollUp.CostCode, first.DisplayOrder,
+            SharedClientReference(rollUp.Lines));
+    }
+
+    // The client's reference prints on the order's row only when every line under it agrees;
+    // a mixed order shows none rather than one line's reference posing as the order's.
+    private static string SharedClientReference(IEnumerable<ValuationExportLine> lines)
+    {
+        var distinct = lines
+            .Select(line => line.ClientReference.Trim())
+            .Where(reference => reference.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return distinct.Count == 1 ? distinct[0] : "";
     }
 
     private static string ItemCount(int count) => count == 1 ? "1 item" : $"{count} items";

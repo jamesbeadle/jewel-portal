@@ -15,20 +15,26 @@ public sealed record ValuationExportStatementLayout(string SheetName, string Leg
 /// </summary>
 internal static class ValuationExportStatementSheet
 {
-    /// <summary>The statement's 10-column bill grid — shared with the per-variation tabs.</summary>
-    public static ExcelColumn[] BillColumns() => new[]
+    /// <summary>The statement's bill grid — shared with the per-variation tabs. The client's
+    /// schedule-of-works reference column exists only when the export's lines carry one.</summary>
+    public static ExcelColumn[] BillColumns(bool hasClientReference)
     {
-        new ExcelColumn("Code", Width: 13),
-        new ExcelColumn("Description", Width: 52),
-        new ExcelColumn("Unit", Width: 7),
-        new ExcelColumn("Qty", Width: 9),
-        new ExcelColumn("Rate", Width: 11),
-        new ExcelColumn("Amount", Width: 14),
-        new ExcelColumn("% Complete", Width: 11),
-        new ExcelColumn("Previous", Width: 14),
-        new ExcelColumn("This period", Width: 14),
-        new ExcelColumn("Claimed", Width: 14),
-    };
+        var columns = new List<ExcelColumn>
+        {
+            new("Code", Width: 13),
+            new("Description", Width: hasClientReference ? 46 : 52),
+            new("Unit", Width: 7),
+            new("Qty", Width: 9),
+            new("Rate", Width: 11),
+            new("Amount", Width: 14),
+            new("% Complete", Width: 11),
+            new("Previous", Width: 14),
+            new("This period", Width: 14),
+            new("Claimed", Width: 14),
+        };
+        if (hasClientReference) columns.Insert(1, new ExcelColumn("Client ref", Width: 10));
+        return columns.ToArray();
+    }
 
     /// <summary>Turn off the data-table dressing — these are presentation sheets.</summary>
     public static void SetPresentationFlags(ExcelSheet sheet)
@@ -45,15 +51,16 @@ internal static class ValuationExportStatementSheet
         ValuationExportStatementLayout layout,
         ValuationExportMeta meta,
         IReadOnlyList<ValuationExportLine> lines,
-        IReadOnlyList<ValuationExportSummaryRow> summary)
+        IReadOnlyList<ValuationExportSummaryRow> summary,
+        bool hasClientReference)
     {
-        var sheet = workbook.AddSheet(layout.SheetName, BillColumns());
+        var sheet = workbook.AddSheet(layout.SheetName, BillColumns(hasClientReference));
         SetPresentationFlags(sheet);
 
         ValuationExportTitleBand.Add(sheet, meta, layout.Legend);
         foreach (var section in lines.GroupBy(line => line.Section))
         {
-            AddSection(sheet, section.Key, section.ToList(), layout.BandTitle);
+            AddSection(sheet, section.Key, section.ToList(), layout.BandTitle, hasClientReference);
         }
         ValuationExportSummaryFooter.Add(sheet, summary);
     }
@@ -71,10 +78,11 @@ internal static class ValuationExportStatementSheet
         Enumerable.Repeat<object?>(new ExcelStyledCell(null, fill), sheet.Columns.Count).ToArray();
 
     private static void AddSection(
-        ExcelSheet sheet, string title, IReadOnlyList<ValuationExportLine> lines, Func<ValuationExportLine, string> bandTitleFor)
+        ExcelSheet sheet, string title, IReadOnlyList<ValuationExportLine> lines,
+        Func<ValuationExportLine, string> bandTitleFor, bool hasClientReference)
     {
         AddHeadingRow(sheet, new ExcelStyledCell(title, SectionHead), SectionHeadFill);
-        ValuationExportBillRows.AddColumnHeadings(sheet);
+        ValuationExportBillRows.AddColumnHeadings(sheet, hasClientReference);
         var currentBand = "";
         foreach (var line in lines)
         {
@@ -84,7 +92,7 @@ internal static class ValuationExportStatementSheet
                 currentBand = band;
                 AddHeadingRow(sheet, new ExcelStyledCell(band, BandHead), BandFill);
             }
-            ValuationExportBillRows.AddLine(sheet, line);
+            ValuationExportBillRows.AddLine(sheet, line, hasClientReference);
         }
         ValuationExportBillRows.AddSectionTotal(sheet, title, lines);
         sheet.AddRow();

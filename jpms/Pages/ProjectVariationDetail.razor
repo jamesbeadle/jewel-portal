@@ -466,7 +466,40 @@ else
                     <LoadGate IsLoading="@(!Subcontractors.IsLoaded)" Label="Loading details">
                     <div class="flex justify-between"><span class="text-content-subtle">Reference</span><span class="font-mono">@order.Reference</span></div>
                     <div class="flex justify-between"><span class="text-content-subtle">Status</span><span>@order.Status.DisplayName()</span></div>
-                    <div class="flex justify-between"><span class="text-content-subtle">Estimated value</span><span>@(order.EstimatedValue is null ? "—" : Money(order.EstimatedValue.Value))</span></div>
+                    @* The estimate is editable while the order is pre-approval and nothing else owns
+                       the figure (a staged build-up's total IS the estimate; an approved order's
+                       figure is the contract value). Blank or zero = currently unpriced — the
+                       valuation export's Pending tab then leaves the order out. *@
+                    <div class="flex justify-between items-center gap-2">
+                        <span class="text-content-subtle">Estimated value</span>
+                        <span class="flex items-center gap-1.5">
+                            @(order.EstimatedValue is null ? "—" : Money(order.EstimatedValue.Value))
+                            @if (CanEditEstimate && !editingEstimate)
+                            {
+                                <button type="button" class="btn-secondary text-xs px-2 py-0.5 shrink-0"
+                                        title="Edit the estimate — blank or zero marks the order unpriced, taking it off the export's Pending tab"
+                                        disabled="@busy" @onclick="StartEditEstimate">Edit</button>
+                            }
+                        </span>
+                    </div>
+                    @if (editingEstimate)
+                    {
+                        <div class="space-y-2">
+                            <FormField Label="Estimate £" Value="@estimateText" OnChange="v => estimateText = v" />
+                            <p class="text-xs text-content-subtle">
+                                Blank or zero marks the order as currently unpriced — the valuation export's
+                                Pending tab lists only orders carrying a figure.
+                            </p>
+                            @if (estimateError is not null)
+                            {
+                                <p class="text-xs text-negative">@estimateError</p>
+                            }
+                            <div class="flex gap-2">
+                                <button type="button" class="btn-primary text-xs px-2 py-1" disabled="@busy" @onclick="SaveEstimate">Save estimate</button>
+                                <button type="button" class="btn-neutral text-xs px-2 py-1" disabled="@busy" @onclick="CancelEditEstimate">Cancel</button>
+                            </div>
+                        </div>
+                    }
                     <div class="flex justify-between"><span class="text-content-subtle">Selected sub</span><span>@SelectedSubName()</span></div>
                     @* Issued is the official date the client was notified (stamped when the status
                        enters Issued); Created is the system's own stamp for when the record was
@@ -1220,6 +1253,49 @@ else
         renamingOrder = false;
         // The banner belongs to the edit being abandoned — it must not outlive it.
         error = null;
+    }
+
+    // ---- Estimate (pre-approval only) ---------------------------------------
+    private bool editingEstimate;
+    private string estimateText = "";
+    private string? estimateError;
+
+    // A staged build-up owns the figure (its total is the estimate), and approval moves the
+    // money story to the contract Value — the edit only exists while the estimate is free-standing.
+    private bool CanEditEstimate =>
+        CanManage && order is not null && order.Status.IsPreApproval()
+        && (order.DraftLines is null || order.DraftLines.Count == 0);
+
+    private void StartEditEstimate()
+    {
+        estimateText = order?.EstimatedValue?.ToString("0.##") ?? "";
+        estimateError = null;
+        editingEstimate = true;
+    }
+
+    private void CancelEditEstimate() => editingEstimate = false;
+
+    private async Task SaveEstimate()
+    {
+        if (busy || order is null) return;
+        estimateError = null;
+        decimal? estimate = null;
+        var text = estimateText.Trim().TrimStart('£').Replace(",", "");
+        if (text.Length > 0)
+        {
+            if (!decimal.TryParse(text, out var parsed)) { estimateError = "Enter a number, or leave blank for unpriced."; return; }
+            if (parsed < 0m) { estimateError = "An estimate cannot be negative."; return; }
+            estimate = parsed;
+        }
+        try
+        {
+            busy = true;
+            order = await Variations.SetEstimateAsync(VariationOrderId, estimate);
+            editingEstimate = false;
+        }
+        catch (CommandFailedException ex) { estimateError = ex.Message; }
+        catch { estimateError = "Couldn't save the estimate. Please try again."; }
+        finally { busy = false; }
     }
 
     private async Task SaveTitle()

@@ -16,7 +16,8 @@ internal static class ValuationExportVariationSheets
     private static readonly char[] ForbiddenNameChars = { ':', '\\', '/', '?', '*', '[', ']' };
     private const int MaxSheetNameLength = 31;
 
-    public static void Add(ExcelWorkbook workbook, ValuationExportMeta meta, IReadOnlyList<ValuationExportLine> orderedLines)
+    public static void Add(
+        ExcelWorkbook workbook, ValuationExportMeta meta, IReadOnlyList<ValuationExportLine> orderedLines, bool hasClientReference)
     {
         var variationLines = orderedLines.Where(line => line.IsVariation).ToList();
         if (variationLines.Count == 0) return;
@@ -28,14 +29,21 @@ internal static class ValuationExportVariationSheets
         };
         foreach (var rollUp in VariationOrderRollUps.Build(variationLines))
         {
-            AddSheet(workbook, meta, rollUp, UniqueName(RefOr(rollUp, "Variation"), taken));
+            // Only orders actually priced into the totals earn a tab. The report also records
+            // unpriced variation lines (TBC / redesign / declined) as placeholders — those orders
+            // are not accepted, so a green tab would misstate them; their consolidated row stays
+            // on the Summary and their money story lives on the Pending tab (accountant
+            // 2026-08-26: V05 in redesign and quoting-stage V31 must not read as accepted).
+            if (!rollUp.CountsTowardTotals) continue;
+            AddSheet(workbook, meta, rollUp, UniqueName(RefOr(rollUp, "Variation"), taken), hasClientReference);
         }
     }
 
     private static void AddSheet(
-        ExcelWorkbook workbook, ValuationExportMeta meta, VariationRollUp<ValuationExportLine> rollUp, string name)
+        ExcelWorkbook workbook, ValuationExportMeta meta, VariationRollUp<ValuationExportLine> rollUp, string name,
+        bool hasClientReference)
     {
-        var sheet = workbook.AddSheet(name, ValuationExportStatementSheet.BillColumns());
+        var sheet = workbook.AddSheet(name, ValuationExportStatementSheet.BillColumns(hasClientReference));
         ValuationExportStatementSheet.SetPresentationFlags(sheet);
         sheet.TabColour = AcceptedTabColour; // accepted — this order is on the report
 
@@ -43,10 +51,10 @@ internal static class ValuationExportVariationSheets
             "One variation order's lines as they stand on the report — its consolidated row is on the Summary tab · "
             + "Shaded lines moved this period · “This period” is the movement since the previous statement · All figures net of VAT.");
         ValuationExportStatementSheet.AddHeadingRow(sheet, new ExcelStyledCell(HeadingFor(rollUp), SectionHead), SectionHeadFill);
-        ValuationExportBillRows.AddColumnHeadings(sheet);
+        ValuationExportBillRows.AddColumnHeadings(sheet, hasClientReference);
         foreach (var line in rollUp.Lines)
         {
-            ValuationExportBillRows.AddLine(sheet, line);
+            ValuationExportBillRows.AddLine(sheet, line, hasClientReference);
         }
         ValuationExportBillRows.AddSectionTotal(sheet, RefOr(rollUp, "Order"), rollUp.Lines);
     }
