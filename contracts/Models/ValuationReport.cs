@@ -50,7 +50,12 @@ public sealed record ValuationLineItem(
     decimal Rate,
     decimal LineAmount,        // qty x rate; negative for omits
     string Comments,
-    int DisplayOrder) : IVariationBillLine
+    int DisplayOrder,
+    // The client's schedule-of-works item number for THIS line ("1.03") — the ref the client
+    // reconciles against, line by line. Beats the per-cost-centre ClientCostReferences map at
+    // snapshot capture; empty falls back to the map. Trailing default keeps the positional
+    // constructor stable for older callers.
+    string ClientReference = "") : IVariationBillLine
 {
     // Declined / TBC lines are recorded but never priced into any total.
     public bool CountsTowardTotals => LineType is not (ValuationLineType.Declined or ValuationLineType.Tbc);

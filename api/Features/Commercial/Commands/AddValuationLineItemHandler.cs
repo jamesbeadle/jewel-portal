@@ -37,7 +37,8 @@ public sealed class AddValuationLineItemHandler : ICommandHandler<AddValuationLi
             Rate = command.Rate,
             LineAmount = ValuationCalculations.LineAmount(command.LineType, command.Quantity, command.Rate),
             Comments = command.Comments ?? "",
-            DisplayOrder = command.DisplayOrder
+            DisplayOrder = command.DisplayOrder,
+            ClientReference = (command.ClientReference ?? "").Trim()
         };
         context.ValuationLineItems.Add(entity);
         await context.SaveChangesAsync(cancellationToken);

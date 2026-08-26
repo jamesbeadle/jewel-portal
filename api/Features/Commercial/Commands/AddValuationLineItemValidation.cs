@@ -13,6 +13,8 @@ public sealed class AddValuationLineItemValidation
         if (string.IsNullOrWhiteSpace(command.Description)) errors.Add("Description is required.");
         if (command.ElementType == ValuationElementType.Variation && string.IsNullOrWhiteSpace(command.VariationRef))
             errors.Add("Variation lines require a variation reference (e.g. V18).");
+        if ((command.ClientReference ?? "").Trim().Length > SetClientCostReferencesValidation.MaximumReferenceLength)
+            errors.Add($"The client reference is longer than {SetClientCostReferencesValidation.MaximumReferenceLength} characters.");
         if (errors.Count == 0) return ValidationOutcome.Passed;
         return new ValidationOutcome(errors);
     }

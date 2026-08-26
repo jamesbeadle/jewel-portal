@@ -37,6 +37,7 @@ public sealed class UpdateValuationLineItemHandler : ICommandHandler<UpdateValua
         entity.LineAmount = ValuationCalculations.LineAmount(command.LineType, command.Quantity, command.Rate);
         entity.Comments = command.Comments ?? "";
         entity.DisplayOrder = command.DisplayOrder;
+        entity.ClientReference = (command.ClientReference ?? "").Trim();
 
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();

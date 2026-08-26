@@ -13,7 +13,7 @@ internal static class ValuationReportEntityMapping
             (ValuationLineType)entity.LineType,
             entity.CostCode, entity.Description, entity.Unit,
             entity.Quantity, entity.Rate, entity.LineAmount,
-            entity.Comments, entity.DisplayOrder);
+            entity.Comments, entity.DisplayOrder, entity.ClientReference);
 
     public static ValuationClaim ToModel(this ValuationClaimEntity entity) =>
         new(entity.ValuationClaimId, entity.ProjectId, entity.ClaimNumber, entity.ClaimDate,

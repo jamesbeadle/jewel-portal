@@ -64,9 +64,9 @@ internal static class ValuationReportSnapshotCapture
             .Where(line => line.ProjectId == projectId)
             .ToListAsync(cancellationToken);
 
-        // The client's schedule-of-works reference per cost centre, frozen onto each line now:
-        // the PDF prints what the map said at capture, and a later remap never rewrites an
-        // issued statement. Empty when the project has no map.
+        // The client's schedule-of-works references, frozen onto each line now: the line's own
+        // reference when it carries one ("1.03"), else the per-cost-centre map's — the PDF prints
+        // what was known at capture, and a later remap never rewrites an issued statement.
         var clientReferencesByCostCode = await ClientReferencesByCostCodeAsync(context, projectId, cancellationToken);
 
         // The figures come from the latest claim (highest number), whatever its status —
@@ -171,7 +171,9 @@ internal static class ValuationReportSnapshotCapture
                 PeriodIncrement = entry?.PeriodIncrement ?? 0m,
                 Comments = line.Comments,
                 DisplayOrder = displayOrder++,
-                ClientReference = clientReferencesByCostCode.GetValueOrDefault(line.CostCode, "")
+                ClientReference = !string.IsNullOrWhiteSpace(line.ClientReference)
+                    ? line.ClientReference
+                    : clientReferencesByCostCode.GetValueOrDefault(line.CostCode, "")
             };
             // Declined/TBC lines are recorded but never priced into totals — keep the
             // footer reconciling with the viewer's per-section sums.

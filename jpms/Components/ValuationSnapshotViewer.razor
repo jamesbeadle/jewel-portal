@@ -146,7 +146,14 @@ else
                                         }
                                     }
                                     <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
-                                        <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@(row.IsDetail ? "↳ " : "")@CodeFor(line)</td>
+                                        <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+                                            <div>@(row.IsDetail ? "↳ " : "")@CodeFor(line)</div>
+                                            @* The client's item number frozen at capture — how the contract document reads. *@
+                                            @if (!string.IsNullOrWhiteSpace(line.ClientReference))
+                                            {
+                                                <div class="text-[10px] text-content-muted">@line.ClientReference</div>
+                                            }
+                                        </td>
                                         <td class="px-3 py-2 text-content @(row.IsDetail ? "pl-7" : "")">
                                             <div class="font-medium">@TitleFor(line)</div>
                                             @if (!string.IsNullOrWhiteSpace(line.Comments))

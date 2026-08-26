@@ -43,7 +43,7 @@
             }
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cost centre</label>
                 @* Picked from the cost-centre master rather than typed free — a mistyped
@@ -55,6 +55,10 @@
             <div class="sm:col-span-2">
                 <FormField Label="Description" Value="@description" OnChange="@(v => description = v)" />
             </div>
+            @* The client's schedule-of-works item number for THIS line ("1.03") — printed in the
+               PDF's Client ref column and shown under the code on the report. Beats the
+               per-cost-centre map (the toolbar's Client references modal) for this line. *@
+            <FormField Label="Client ref" Value="@clientReference" OnChange="@(v => clientReference = v)" />
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -92,7 +96,7 @@
     private ValuationElementType elementType = ValuationElementType.ContractWorks;
     private ValuationLineType lineType = ValuationLineType.Priced;
     private string sectionCode = "", sectionName = "", variationRef = "", variationTitle = "";
-    private string costCode = "", description = "", unit = "", comments = "";
+    private string costCode = "", description = "", unit = "", comments = "", clientReference = "";
     private string quantity = "1", rate = "0";
     private bool busy;
 
@@ -138,6 +142,7 @@
                 sectionCode = e.SectionCode; sectionName = e.SectionName;
                 variationRef = e.VariationRef; variationTitle = e.VariationTitle;
                 costCode = e.CostCode; description = e.Description; unit = e.Unit; comments = e.Comments;
+                clientReference = e.ClientReference;
                 quantity = e.Quantity.ToString(Gb); rate = e.Rate.ToString(Gb);
             }
         }
@@ -156,13 +161,13 @@
         {
             await Store.UpdateLineAsync(new UpdateValuationLineItem(
                 e.ValuationLineItemId, elementType, sectionCode, sectionName, variationRef, variationTitle,
-                lineType, costCode, description, unit, qty, rt, comments, e.DisplayOrder));
+                lineType, costCode, description, unit, qty, rt, comments, e.DisplayOrder, clientReference));
         }
         else
         {
             await Store.AddLineAsync(new AddValuationLineItem(
                 ProjectId, elementType, sectionCode, sectionName, variationRef, variationTitle,
-                lineType, costCode, description, unit, qty, rt, comments, NextOrder()));
+                lineType, costCode, description, unit, qty, rt, comments, NextOrder(), clientReference));
             Reset();
         }
 
@@ -179,7 +184,7 @@
     private void Reset()
     {
         sectionCode = sectionName = variationRef = variationTitle = "";
-        costCode = description = unit = comments = "";
+        costCode = description = unit = comments = clientReference = "";
         quantity = "1"; rate = "0";
         lineType = ValuationLineType.Priced;
     }

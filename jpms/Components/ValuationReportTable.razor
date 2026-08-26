@@ -253,7 +253,14 @@ else
                                             }
                                         }
                                         <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
-                                            <td class="sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@(row.IsDetail ? "↳ " : "")@CodeFor(line)</td>
+                                            <td class="sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+                                                <div>@(row.IsDetail ? "↳ " : "")@CodeFor(line)</div>
+                                                @* The client's own item number for the line — how the contract document reads. *@
+                                                @if (!string.IsNullOrWhiteSpace(line.ClientReference))
+                                                {
+                                                    <div class="text-[10px] text-content-muted">@line.ClientReference</div>
+                                                }
+                                            </td>
                                             <td class="sticky left-[72px] z-10 bg-surface px-3 py-2 text-content @(row.IsDetail ? "pl-7" : "")">
                                                 <div class="font-medium">@TitleFor(line)</div>
                                                 @if (!string.IsNullOrWhiteSpace(line.Comments))

@@ -20,6 +20,9 @@ public sealed class ValuationLineItemEntity
     public decimal LineAmount { get; set; }
     [MaxLength(512)]     public string Comments { get; set; } = "";
     public int DisplayOrder { get; set; }
+    // The client's schedule-of-works item number for THIS line ("1.03"). Line-level: beats the
+    // per-cost-centre ClientCostReferences map at snapshot capture; empty falls back to the map.
+    [MaxLength(64)]      public string ClientReference { get; set; } = "";
 }
 
 public sealed class ValuationClaimEntity
@@ -116,7 +119,8 @@ public sealed class ValuationReportSnapshotLineEntity
     public decimal PeriodIncrement { get; set; }
     [MaxLength(512)]     public string Comments { get; set; } = "";
     public int DisplayOrder { get; set; }
-    // The client's schedule-of-works reference for the line's cost centre, copied from the
-    // project's ClientCostReferences map at capture. Empty when the project has no map.
+    // The client's schedule-of-works reference frozen at capture: the source line's own
+    // reference when it had one, else the project's ClientCostReferences map's entry for the
+    // line's cost centre. Empty when neither was set.
     [MaxLength(64)]      public string ClientReference { get; set; } = "";
 }

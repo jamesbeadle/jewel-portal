@@ -3,7 +3,8 @@ namespace Jewel.JPMS.Models;
 // The client's own reference for one of our cost centres on one project — the item number in
 // the architect's schedule of works ("3.12", "2.1–2.4") that the client reconciles our valuation
 // against. Project-specific: the same cost centre carries a different reference on every job.
-// Printed beside the code on the client-facing valuation report PDF; nowhere else.
+// Printed beside the code on the client-facing valuation report PDF; nowhere else. This map is
+// the per-centre FALLBACK: a valuation line carrying its own ClientReference wins at capture.
 public sealed record ClientCostReference(
     string ClientCostReferenceId,
     string ProjectId,

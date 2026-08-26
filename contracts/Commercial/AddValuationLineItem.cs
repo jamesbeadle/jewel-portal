@@ -17,4 +17,6 @@ public sealed record AddValuationLineItem(
     decimal Quantity,
     decimal Rate,
     string Comments,
-    int DisplayOrder) : ICommand<ValuationLineItem>;
+    int DisplayOrder,
+    // Line-level client schedule-of-works ref ("1.03"); trailing default keeps older callers stable.
+    string ClientReference = "") : ICommand<ValuationLineItem>;
