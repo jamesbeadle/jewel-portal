@@ -64,6 +64,8 @@ public sealed class VariationOrderRollUpsTests
         Assert.Equal("V3 title", order.Title);
         Assert.Equal("2 items", order.Comments);
         Assert.Equal("", order.ClientReference);
+        Assert.Equal(1m, order.Quantity);
+        Assert.Equal(400m, order.Rate);
         Assert.Equal(400m, order.Amount);
         Assert.Equal(200m, order.CumulativeClaimed);
         Assert.Equal(20m, order.PeriodIncrement);

@@ -700,8 +700,8 @@ else
     private string LiveExportFileName =>
         ValuationReportFileNames.Stem(Projects.Find(ProjectId)?.Reference ?? "", Selected?.DisplayName);
 
-    // The live report in the same three-tab workbook shape as a snapshot export (Summary
-    // consolidated as the PDF, Detail with every line, flat Raw data), stamped as a working
+    // The live report in the same three-tab workbook shape as a snapshot export (Summary with
+    // variations as one row per order, Detail with every line, flat Raw data), stamped as a working
     // copy: figures are the selected claim's as the table currently shows them, with each
     // line's previous/this-period movement read against the claim before it. The client-facing
     // export remains the frozen snapshot's — this one is for checking the statement before it

@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Api.Features.Commercial.Documents;
 /// lines print one row per area grouping (<see cref="ValuationReportAreaRollUps"/>); variations
 /// print one row per variation order (<see cref="VariationOrderRollUps"/>), every cost centre
 /// the order touches folded into it — a consolidated row carries the lines' summed money and
-/// their weighted % complete, and no single quantity or rate.
+/// their weighted % complete, priced as one item at the order's total.
 /// </summary>
 internal sealed record ValuationReportBillRow(
     string Code,
@@ -30,6 +30,8 @@ internal sealed record ValuationReportBillRow(
 
 internal static class ValuationReportBillRows
 {
+    private const decimal OneItem = 1m;
+
     public static IReadOnlyList<ValuationReportBillRow> For(
         IEnumerable<ValuationReportSnapshotLine> lines, ValuationElementType elementType, Func<string, string?> costCentreNameFor)
     {
@@ -54,7 +56,7 @@ internal static class ValuationReportBillRows
         var period = rollUp.CountingLines.Sum(line => line.PeriodIncrement);
         return new(rollUp.VariationRef, SharedClientReference(rollUp), rollUp.VariationTitle,
             $"{rollUp.Lines.Count} items", rollUp.CountsTowardTotals ? "" : "Not priced",
-            null, null, rollUp.Amount, VariationRollUps.WeightedPercent(claimed, rollUp.Amount),
+            OneItem, rollUp.Amount, rollUp.Amount, VariationRollUps.WeightedPercent(claimed, rollUp.Amount),
             claimed - period, period, claimed, rollUp.CountsTowardTotals);
     }
 

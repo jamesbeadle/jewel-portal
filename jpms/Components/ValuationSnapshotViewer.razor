@@ -335,9 +335,9 @@ else
 
     // Every frozen line plus the summary footer, so the workbook and the screen (and the PDF,
     // rendered from the same lines) always agree. The workbook is the shared three-tab shape
-    // (Summary consolidated as the PDF, Detail with every line, flat Raw data) and does its own
-    // consolidating; each line's "Previous" is its cumulative claimed less the period increment
-    // frozen at capture.
+    // (Summary with variations as one row per order, Detail with every line, flat Raw data) and
+    // does its own consolidating; each line's "Previous" is its cumulative claimed less the
+    // period increment frozen at capture.
     private ExcelWorkbook? BuildExportWorkbook(bool _)
     {
         if (detail is null) return null;

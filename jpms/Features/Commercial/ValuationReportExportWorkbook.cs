@@ -25,7 +25,7 @@ public sealed record ValuationExportLine(
     string LineTypeLabel,
     bool CountsTowardTotals,
     string Unit,
-    decimal? Quantity,          // null on a consolidated row — several lines, no single qty/rate
+    decimal? Quantity,
     decimal? Rate,
     decimal LineAmount,
     decimal PercentComplete,
@@ -47,21 +47,22 @@ public sealed record ValuationExportSummaryRow(string Label, decimal Amount, boo
 
 /// <summary>
 /// Builds the three-tab valuation report workbook every export shares. "Summary" is the
-/// statement as the client reads it on the PDF — one row per area of the works, one per
-/// variation order (<see cref="ValuationExportRollUps"/>). "Detail" is the same branded
-/// statement with every line shown under its area or its variation order. "Raw data" is every
-/// line as one flat, filterable table for pivoting and reconciliation. Snapshot and live
-/// (draft) exports differ only in the meta strip and the lines they map in, so the accountant
-/// always opens the same shape of file.
+/// branded statement with every contract, PC and contingency line under its area, and the
+/// variations as one row per variation order, as on the client's PDF
+/// (<see cref="ValuationExportRollUps"/>). "Detail" is the same statement with the variation
+/// lines shown too, each under its order's band. "Raw data" is every line as one flat,
+/// filterable table for pivoting and reconciliation. Snapshot and live (draft) exports differ
+/// only in the meta strip and the lines they map in, so the accountant always opens the same
+/// shape of file.
 /// </summary>
 public static class ValuationReportExportWorkbook
 {
     private const string SummaryLegend =
-        "One row per area of the works and per variation order, as on the issued statement · every line behind these rows is on the Detail tab · "
-        + "Shaded rows moved this period · “This period” is the movement since the previous statement · All figures net of VAT.";
+        "Variations as one row per order, as on the issued statement — their lines are on the Detail tab · "
+        + "Shaded lines moved this period · “This period” is the movement since the previous statement · All figures net of VAT.";
 
     private const string DetailLegend =
-        "Every line, under its area of the works or its variation order · "
+        "Every line, with each variation order's lines under its band · "
         + "Shaded lines moved this period · “This period” is the movement since the previous statement · All figures net of VAT.";
 
     public static ExcelWorkbook Build(
@@ -72,7 +73,7 @@ public static class ValuationReportExportWorkbook
         var workbook = new ExcelWorkbook();
         var ordered = InStatementOrder(lines);
         ValuationExportStatementSheet.Add(workbook,
-            new ValuationExportStatementLayout("Summary", SummaryLegend, BandTitle: _ => ""),
+            new ValuationExportStatementLayout("Summary", SummaryLegend, SummaryBandTitleFor),
             meta, ValuationExportRollUps.Summarise(ordered), summary);
         ValuationExportStatementSheet.Add(workbook,
             new ValuationExportStatementLayout("Detail", DetailLegend, DetailBandTitleFor),
@@ -94,9 +95,12 @@ public static class ValuationReportExportWorkbook
         VariationOrderRollUps.Build(variationLines)
             .SelectMany(rollUp => rollUp.Lines);
 
-    // On the Detail tab a contract/PC/contingency line sits under its area band, a variation
-    // line under its order's band ("V18 — Extra sockets to kitchen"). A blank title continues
-    // the band above, the same consecutive-run rule as every other surface.
+    // A contract/PC/contingency line sits under its area band on both tabs; the Summary tab's
+    // variation rows stand alone, while on the Detail tab each variation line sits under its
+    // order's band ("V18 — Extra sockets to kitchen"). A blank title continues the band above,
+    // the same consecutive-run rule as every other surface.
+    private static string SummaryBandTitleFor(ValuationExportLine line) => line.IsVariation ? "" : line.Area;
+
     private static string DetailBandTitleFor(ValuationExportLine line)
     {
         if (!line.IsVariation) return line.Area;
