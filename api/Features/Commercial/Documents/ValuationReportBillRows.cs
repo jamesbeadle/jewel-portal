@@ -5,9 +5,10 @@ namespace Jewel.JPMS.Api.Features.Commercial.Documents;
 
 /// <summary>
 /// One printed row of a bill section on the valuation report PDF. Contract, PC and contingency
-/// lines print one row each under their area title; variations print one row per variation
-/// order per cost centre (<see cref="VariationRollUps"/>) — a consolidated row carries the
-/// lines' summed money and their weighted % complete, and no single quantity or rate.
+/// lines print one row per area grouping (<see cref="ValuationReportAreaRollUps"/>); variations
+/// print one row per variation order (<see cref="VariationOrderRollUps"/>), every cost centre
+/// the order touches folded into it — a consolidated row carries the lines' summed money and
+/// their weighted % complete, priced as one item at the order's total.
 /// </summary>
 internal sealed record ValuationReportBillRow(
     string Code,
@@ -15,7 +16,6 @@ internal sealed record ValuationReportBillRow(
     string Title,
     string Comments,
     string KindLabel,        // "" for a priced row; "Omit", "Declined", "TBC"… otherwise
-    string AreaTitle,        // "" when the row carries no area (variations, untitled lines)
     decimal? Quantity,
     decimal? Rate,
     decimal Amount,
@@ -30,42 +30,48 @@ internal sealed record ValuationReportBillRow(
 
 internal static class ValuationReportBillRows
 {
+    private const decimal OneItem = 1m;
+
     public static IReadOnlyList<ValuationReportBillRow> For(
         IEnumerable<ValuationReportSnapshotLine> lines, ValuationElementType elementType, Func<string, string?> costCentreNameFor)
     {
         var ofType = lines.Where(line => line.ElementType == elementType).ToList();
         if (elementType == ValuationElementType.Variation)
-            return VariationRollUps.Build(ofType)
-                .Select(rollUp => rollUp.IsRolledUp ? Consolidated(rollUp, costCentreNameFor) : FromLine(rollUp.Lines[0], ""))
+            return VariationOrderRollUps.Build(ofType)
+                .Select(rollUp => rollUp.IsRolledUp ? Consolidated(rollUp) : FromLine(rollUp.Lines[0]))
                 .ToList();
-        return ofType
-            .OrderBy(line => line.DisplayOrder)
-            .Select(line => FromLine(line, ValuationReportAreas.TitleFor(line.SectionName, line.CostCode, costCentreNameFor)))
-            .ToList();
+        return ValuationReportAreaRollUps.For(ofType, costCentreNameFor);
     }
 
-    private static ValuationReportBillRow FromLine(ValuationReportSnapshotLine line, string areaTitle) =>
+    private static ValuationReportBillRow FromLine(ValuationReportSnapshotLine line) =>
         new(CodeFor(line), line.ClientReference, TitleFor(line), line.Comments,
-            line.CountsTowardTotals ? "" : LineTypeLabel(line.LineType), areaTitle,
+            line.CountsTowardTotals ? "" : LineTypeLabel(line.LineType),
             line.Quantity, line.Rate, line.LineAmount, line.PercentComplete,
             line.CumulativeClaimed - line.PeriodIncrement, line.PeriodIncrement, line.CumulativeClaimed,
             line.CountsTowardTotals);
 
-    private static ValuationReportBillRow Consolidated(
-        VariationRollUp<ValuationReportSnapshotLine> rollUp, Func<string, string?> costCentreNameFor)
+    private static ValuationReportBillRow Consolidated(VariationRollUp<ValuationReportSnapshotLine> rollUp)
     {
         var claimed = rollUp.CountingLines.Sum(line => line.CumulativeClaimed);
         var period = rollUp.CountingLines.Sum(line => line.PeriodIncrement);
-        var centre = costCentreNameFor(rollUp.CostCode) ?? rollUp.CostCode;
-        return new(rollUp.VariationRef, ClientReferenceFor(rollUp), rollUp.VariationTitle,
-            $"{rollUp.Lines.Count} items — {centre}", rollUp.CountsTowardTotals ? "" : "Not priced", "",
-            null, null, rollUp.Amount, VariationRollUps.WeightedPercent(claimed, rollUp.Amount),
+        return new(rollUp.VariationRef, SharedClientReference(rollUp), rollUp.VariationTitle,
+            $"{rollUp.Lines.Count} items", rollUp.CountsTowardTotals ? "" : "Not priced",
+            OneItem, rollUp.Amount, rollUp.Amount, VariationRollUps.WeightedPercent(claimed, rollUp.Amount),
             claimed - period, period, claimed, rollUp.CountsTowardTotals);
     }
 
-    // Every line of a roll-up shares a cost centre, so they share the client's reference too.
-    private static string ClientReferenceFor(VariationRollUp<ValuationReportSnapshotLine> rollUp) =>
-        rollUp.Lines.Select(line => line.ClientReference).FirstOrDefault(reference => !string.IsNullOrWhiteSpace(reference)) ?? "";
+    // The client's reference prints on the order's row only when every line under it agrees;
+    // an order spread across differently-referenced cost centres shows none rather than one
+    // line's reference posing as the order's.
+    private static string SharedClientReference(VariationRollUp<ValuationReportSnapshotLine> rollUp)
+    {
+        var distinct = rollUp.Lines
+            .Select(line => line.ClientReference.Trim())
+            .Where(reference => reference.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        return distinct.Count == 1 ? distinct[0] : "";
+    }
 
     // Same code/title fallbacks as the on-screen snapshot viewer, so PDF and screen always agree.
     private static string CodeFor(ValuationReportSnapshotLine line) =>

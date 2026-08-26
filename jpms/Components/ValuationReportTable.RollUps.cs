@@ -36,13 +36,6 @@ public partial class ValuationReportTable
             yield return new BillRow(line, null, true);
     }
 
-    // The export lists consolidated rows only — the lines behind them go on their own sheet.
-    private IEnumerable<BillRow> ExportRowsFor(Section section) =>
-        section.Type == ValuationElementType.Variation
-            ? VariationRollUps.Build(section.Lines).Select(rollUp =>
-                rollUp.IsRolledUp ? new BillRow(null, rollUp, false) : new BillRow(rollUp.Lines[0], null, false))
-            : RowsFor(section);
-
     private bool IsRollUpOpen(VariationRollUp<ValuationLineItem> rollUp) => openRollUps.Contains(rollUp.Key);
 
     private void ToggleRollUp(VariationRollUp<ValuationLineItem> rollUp)

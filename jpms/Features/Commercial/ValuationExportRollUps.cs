@@ -3,35 +3,46 @@ using Jewel.JPMS.Contracts.Commercial;
 namespace Jewel.JPMS.Features.Commercial;
 
 /// <summary>
-/// The consolidated variation row as the Excel exports carry it — one line per variation order
-/// per cost centre, matching the PDF the client receives. The caller supplies the claim figures
-/// (live entries or frozen snapshot values); this only shapes the row.
+/// Shapes the exported lines into the rows the workbook's Summary tab shows. Contract, PC and
+/// contingency lines pass through untouched — the accountant wants every priced item, under
+/// its area sub-heading; only variation lines consolidate, to one row per variation order
+/// (<see cref="VariationOrderRollUps"/>) as on the client's PDF. A consolidated row carries the
+/// summed money of the lines priced under it and their weighted % complete, priced as one item
+/// at the order's total; the lines themselves are on the Detail tab.
 /// </summary>
 public static class ValuationExportRollUps
 {
     private const string ConsolidatedLabel = "Consolidated";
+    private const string ItemUnit = "item";
+    private const decimal OneItem = 1m;
 
-    public static ValuationExportLine Line<TLine>(
-        string sectionTitle,
-        VariationRollUp<TLine> rollUp,
-        string costCentreName,
-        decimal percentComplete,
-        decimal previousClaimed,
-        decimal thisPeriod,
-        decimal cumulativeClaimed) where TLine : IVariationBillLine =>
-        new(sectionTitle,
-            Area: "",
-            Code: rollUp.VariationRef,
-            Title: $"{rollUp.VariationTitle} ({rollUp.Lines.Count} lines)",
-            LineTypeLabel: ConsolidatedLabel,
+    public static IReadOnlyList<ValuationExportLine> Summarise(IReadOnlyList<ValuationExportLine> lines) =>
+        lines
+            .GroupBy(line => line.Section)
+            .SelectMany(section => section.First().IsVariation ? ByVariationOrder(section) : section)
+            .ToList();
+
+    private static IEnumerable<ValuationExportLine> ByVariationOrder(IEnumerable<ValuationExportLine> variationLines) =>
+        VariationOrderRollUps.Build(variationLines)
+            .Select(rollUp => rollUp.IsRolledUp ? OrderRow(rollUp) : rollUp.Lines[0]);
+
+    private static ValuationExportLine OrderRow(VariationRollUp<ValuationExportLine> rollUp)
+    {
+        var first = rollUp.Lines[0];
+        var counting = rollUp.CountingLines.ToList();
+        var claimed = counting.Sum(line => line.CumulativeClaimed);
+        return new ValuationExportLine(
+            first.Section, first.ElementType, Area: "", rollUp.VariationRef, rollUp.VariationTitle,
+            ConsolidatedLabel,
             CountsTowardTotals: rollUp.CountsTowardTotals,
-            Unit: "",
-            Quantity: null,
-            Rate: null,
-            LineAmount: rollUp.Amount,
-            PercentComplete: percentComplete,
-            PreviousClaimed: previousClaimed,
-            ThisPeriod: thisPeriod,
-            CumulativeClaimed: cumulativeClaimed,
-            Comments: costCentreName);
+            ItemUnit, OneItem, rollUp.Amount, rollUp.Amount,
+            VariationRollUps.WeightedPercent(claimed, rollUp.Amount),
+            counting.Sum(line => line.PreviousClaimed),
+            counting.Sum(line => line.ThisPeriod),
+            claimed,
+            ItemCount(rollUp.Lines.Count),
+            rollUp.VariationRef, rollUp.VariationTitle, rollUp.CostCode, first.DisplayOrder);
+    }
+
+    private static string ItemCount(int count) => count == 1 ? "1 item" : $"{count} items";
 }

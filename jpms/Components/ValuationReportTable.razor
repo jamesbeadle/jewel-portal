@@ -6,10 +6,6 @@
 @inject SessionService Session
 @implements IDisposable
 
-<div class="mb-3 flex items-center justify-end">
-    <ExportToExcelButton FileName="Valuation report" Disabled="@(lines.Count == 0)" BuildWorkbook="BuildExportWorkbook" />
-</div>
-
 @if (lines.Count == 0)
 {
     <div class="rounded-xl border border-line bg-surface px-3 py-6 text-center text-content-subtle italic">
@@ -1164,81 +1160,4 @@ else
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
     // Signed for the "what changed" delta: "+20%", "-5%" (negatives already carry their sign).
     private static string SignedPct(decimal v) => (v > 0m ? "+" : "") + v.ToString("0.##", Gb) + "%";
-
-    private static string SectionLabel(ValuationElementType type) => type switch
-    {
-        ValuationElementType.ContractWorks => "Contract works",
-        ValuationElementType.PcSum => "Provisional sums",
-        ValuationElementType.Contingency => "Contingency",
-        ValuationElementType.Variation => "Variations",
-        _ => type.ToString()
-    };
-
-    // One sheet with every line across all four sections (same grouping/order as the
-    // accordion renders), plus a Summary sheet mirroring the totals card below it.
-    private ExcelWorkbook? BuildExportWorkbook(bool _)
-    {
-        if (lines.Count == 0) return null;
-
-        var workbook = new ExcelWorkbook();
-        var linesSheet = workbook.AddSheet("Valuation lines",
-            new ExcelColumn("Section"),
-            new ExcelColumn("Area"),
-            new ExcelColumn("Code"),
-            new ExcelColumn("Description"),
-            new ExcelColumn("Cost centre"),
-            new ExcelColumn("Qty", ExcelFormat.Number),
-            new ExcelColumn("Rate £", ExcelFormat.Currency),
-            new ExcelColumn("Amount £", ExcelFormat.Currency),
-            new ExcelColumn("% complete", ExcelFormat.Percent),
-            new ExcelColumn("Claimed £", ExcelFormat.Currency));
-
-        foreach (var section in Sections)
-        {
-            foreach (var row in ExportRowsFor(section))
-            {
-                if (row.RollUp is { } rollUp)
-                {
-                    AddRollUpExportRow(linesSheet, rollUp);
-                    continue;
-                }
-                var line = row.Line!;
-                linesSheet.AddRow(
-                    SectionLabel(section.Type),
-                    ValuationReportAreas.GroupsByArea(section.Type) ? AreaTitleFor(line) : null,
-                    CodeFor(line),
-                    TitleFor(line),
-                    !string.IsNullOrWhiteSpace(line.CostCode)
-                        ? CostCentreLabel(line.CostCode)
-                        : null,
-                    line.Quantity,
-                    line.Rate,
-                    line.LineAmount,
-                    line.CountsTowardTotals ? (decimal?)(PercentFor(line) / 100m) : null,
-                    line.CountsTowardTotals ? (decimal?)ClaimedFor(line) : null);
-            }
-        }
-        AddVariationLinesSheet(workbook);
-
-        var summarySheet = workbook.AddSheet("Summary",
-            new ExcelColumn("Item"),
-            new ExcelColumn("Amount £", ExcelFormat.Currency));
-        summarySheet.AddRow("Original contract sum", contractSum);
-        summarySheet.AddRow("Net variations", netVariations);
-        summarySheet.AddRow("Revised contract sum", revisedContractSum);
-        summarySheet.AddRow("Total works complete", totalWorksComplete);
-        summarySheet.AddRow($"Retention held ({Pct(retentionPercent)})", retentionHeld);
-        summarySheet.AddRow($"Retention released ({Pct(retentionReleasePercent)})", retentionReleased);
-        if (depositPercent > 0m || depositReleased != 0m)
-            summarySheet.AddRow($"Deposit received ({Pct(depositPercent)})", depositReceived);
-        summarySheet.AddRow("Certified to date", certifiedToDate);
-        if (depositPercent > 0m || depositReleased != 0m)
-        {
-            summarySheet.AddRow("Payment due before deposit (ex VAT)", paymentDueBeforeDeposit);
-            summarySheet.AddRow($"Less deposit released ({Pct(depositPercent)})", depositReleased);
-        }
-        summarySheet.AddRow("Payment due (ex VAT)", paymentDueExVat);
-
-        return workbook;
-    }
 }

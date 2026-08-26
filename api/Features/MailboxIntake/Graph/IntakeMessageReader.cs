@@ -22,7 +22,11 @@ public sealed record IntakeMessageContent(
     // Images embedded in the HTML body (a pasted screenshot travels as an isInline attachment the
     // body references by <img src="cid:{ContentId}">). Never shown as files — InboundEmailBodyBuilder
     // uses these to put the pictures back into the rendered body. Null from older callers/caches.
-    IReadOnlyList<IntakeInlineImage>? InlineImages = null);
+    IReadOnlyList<IntakeInlineImage>? InlineImages = null,
+    // Every Outlook category on the message, unfiltered, read in the same direct GET as the body —
+    // so a caller that opens an email sees its tags as they are NOW, not as the list page had them.
+    // Null from readers that don't select categories.
+    IReadOnlyList<string>? Categories = null);
 
 // Id is the Graph attachment id, used to download the attachment's bytes on demand (e.g. saving a
 // drawing out of a triaged email). Optional so existing metadata-only callers are unchanged.
@@ -92,7 +96,7 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
         // Pull the full body, the envelope (for the composer's reply prefill) and non-inline
         // attachment metadata in a single round trip.
         var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}"
-            + "?$select=body,hasAttachments,subject,from,toRecipients,ccRecipients,replyTo"
+            + "?$select=body,hasAttachments,subject,from,toRecipients,ccRecipients,replyTo,categories"
             // NB: contentId cannot join this $select — it lives on the fileAttachment subtype and
             // Graph rejects derived-type properties here. The full per-attachment fetch carries it.
             + "&$expand=attachments($select=id,name,size,contentType,isInline)";
@@ -179,7 +183,13 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
             var replyTo = Addresses(root, "replyTo").FirstOrDefault();
             var subject = root.TryGetProperty("subject", out var subj) ? subj.GetString() : null;
 
-            return new IntakeMessageContent(body, isHtml, attachments, fromEmail, fromName, to, cc, replyTo, subject, inlineImages);
+            var categories = new List<string>();
+            if (root.TryGetProperty("categories", out var categoryElements) && categoryElements.ValueKind == JsonValueKind.Array)
+                foreach (var categoryElement in categoryElements.EnumerateArray())
+                    if (categoryElement.GetString() is { Length: > 0 } category)
+                        categories.Add(category);
+
+            return new IntakeMessageContent(body, isHtml, attachments, fromEmail, fromName, to, cc, replyTo, subject, inlineImages, categories);
         }
         catch (Exception ex)
         {

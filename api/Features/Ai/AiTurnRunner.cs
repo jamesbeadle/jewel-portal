@@ -529,6 +529,27 @@ public sealed class AiTurnRunner
                 + "(list_projects returns ids); never guess one.");
         }
 
+        // The dialog is ALREADY open beside the user with this very task attached: opening it again
+        // restarts the task — the page honours the fresh ?openModal, starts a fresh task, queues a
+        // fresh kick-off, and the kick-off starts a fresh conversation that does the same again.
+        // (Live, 2026-08-25: three "Agreed build-up for V2" conversations a minute apart, every one
+        // billed, after the lines had already been staged — the model re-opened the dialog it was
+        // sitting in.) Refused in front of the model, which is then told the act it wanted.
+        // (A task with no record — claim_progress is project-scoped — matches on the modal alone:
+        // the scope carries no task project to tell one from another.)
+        if (scope?.Task is { } live
+            && string.Equals(live.ModalKey, modal.ModalKey, StringComparison.OrdinalIgnoreCase)
+            && (string.IsNullOrWhiteSpace(live.RecordId)
+                || string.IsNullOrWhiteSpace(recordId)
+                || string.Equals(live.RecordId, recordId, StringComparison.OrdinalIgnoreCase)))
+        {
+            var who = string.IsNullOrWhiteSpace(live.RecordReference) ? "" : $" for {live.RecordReference}";
+            return Fail($"The {modal.DisplayName} dialog{who} is already open beside the user with your task "
+                + "attached — opening it again would start the task over and bill another conversation. "
+                + "Fill it with update_open_modal; the user presses its button themselves. If the "
+                + "dialog already holds what was asked for, say so in one line and stop.");
+        }
+
         // reply_email is anchored to the Control Centre's SELECTED email — with nothing selected
         // the page would refuse after the turn ended and the model would narrate a reply box that
         // never opened. The scope's selected-mail id is the same signal read_selected_email uses.
@@ -780,6 +801,13 @@ public sealed class AiTurnRunner
         if (string.IsNullOrWhiteSpace(route))
             return Refuse("navigate_to needs a route — a portal path from the site map, or the ready-made "
                 + "route a tool returned.");
+
+        // A dialog is opened with open_modal, which the server checks (the record exists, the
+        // dialog is not already open with its task live); a navigate_to carrying ?openModal= would
+        // walk round every one of those checks and restart the page's task on arrival.
+        if (route.Contains("openModal=", StringComparison.OrdinalIgnoreCase))
+            return Refuse("navigate_to never opens a dialog — drop the openModal query and use open_modal "
+                + "for the dialog (or update_open_modal if it is already open beside the user).");
 
         if (!AiNavigationRoute.IsPortalPath(route))
             return Refuse("navigate_to takes a portal path starting with \"/\" (for example "

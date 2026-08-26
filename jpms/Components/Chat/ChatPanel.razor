@@ -268,7 +268,7 @@
                 }
                 else
                 {
-                    <div class="grow overflow-y-auto px-4 py-4 space-y-3.5">
+                    <div id="@TranscriptId" class="grow overflow-y-auto px-4 py-4 space-y-3.5">
                         @{ var messagePosition = 0; }
                         @foreach (var message in messages)
                         {
@@ -493,6 +493,7 @@
 @code {
     /// <summary>Stable id so the launchers can point aria-controls at the panel.</summary>
     public const string DomId = "jpms-chat-panel";
+    private const string TranscriptId = "jpms-chat-transcript";
 
     private readonly List<AiChatMessage> messages = new();
     // How many bubbles at the top of the pane belong to the chat the user was in when a task
@@ -779,18 +780,58 @@
     // assistant, which lands after the first render). The JS answers false until then; true stops
     // the retries. Dropping a file anywhere on the panel — or pasting an image from the clipboard
     // with focus in it — then feeds the same hidden InputFile the paperclip uses: one upload path.
-    private bool dropZoneWired;
+    // The composer keys listener is the other half of HandleComposerKeyDown: it stops the browser
+    // adding a newline to the plain Enter that sends (Shift+Enter still breaks the line).
+    private bool panelScriptsWired;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (dropZoneWired || !CanUseAssistant) return;
+        if (!CanUseAssistant) return;
+        await WirePanelScriptsAsync();
+        await ScrollTranscriptIfRequestedAsync();
+    }
+
+    private async Task WirePanelScriptsAsync()
+    {
+        if (panelScriptsWired) return;
         try
         {
-            dropZoneWired = await JS.InvokeAsync<bool>("jpmsChatDropZone", DomId, "jpms-chat-attachment");
+            var isDropZoneWired = await JS.InvokeAsync<bool>("jpmsChatDropZone", DomId, "jpms-chat-attachment");
+            var areComposerKeysWired = await JS.InvokeAsync<bool>("jpmsChatComposerKeys", DomId);
+            panelScriptsWired = isDropZoneWired && areComposerKeysWired;
         }
         catch
         {
-            dropZoneWired = true; // No JS (prerender, missing script): don't retry every render.
+            panelScriptsWired = true; // No JS (prerender, missing script): don't retry every render.
+        }
+    }
+
+    // The transcript has no scroll behaviour of its own, so anything that adds to it asks for a
+    // scroll and the render that follows delivers it (wwwroot/js/chat-scroll.js). The user's own
+    // actions always land at the bottom; a hop arriving while they have scrolled up to re-read
+    // something leaves them where they are.
+    private bool isScrollRequested;
+    private bool isScrollFromUserAction;
+
+    private void RequestScrollToBottom(bool isUserAction = false)
+    {
+        isScrollRequested = true;
+        isScrollFromUserAction |= isUserAction;
+    }
+
+    private async Task ScrollTranscriptIfRequestedAsync()
+    {
+        if (!isScrollRequested) return;
+        var isUserAction = isScrollFromUserAction;
+        isScrollRequested = false;
+        isScrollFromUserAction = false;
+        try
+        {
+            await JS.InvokeVoidAsync("jpmsChatScroll.toBottom", TranscriptId, isUserAction);
+        }
+        catch
+        {
+            // No JS, or the transcript is not on screen (history list open): nothing to scroll.
         }
     }
 
@@ -880,6 +921,8 @@
             StartNewChat();
             conversationId = id;
             messages.AddRange(replay);
+            // A past chat opens at its latest exchange — where it would be carried on from.
+            RequestScrollToBottom(isUserAction: true);
         }
         catch
         {
@@ -1165,6 +1208,7 @@
         // draft fills itself in from the record instead.
         if (result.Status == AiTurnStatus.Unavailable) AiTasks.ReportAssistantUnavailable();
 
+        RequestScrollToBottom();
         StateHasChanged();
     }
 
@@ -1190,6 +1234,7 @@
                     Guid.NewGuid().ToString("N"), AiChatRole.Context,
                     $"Attached {attached.FileName} ({attached.Summary}) — the assistant can read it now.",
                     "attachment", DateTimeOffset.UtcNow));
+                RequestScrollToBottom(isUserAction: true);
                 StateHasChanged();
             }
             return;
@@ -1229,6 +1274,8 @@
                 $"Attached {attached.FileName} ({attached.Summary}) — the assistant can read it now.",
                 "attachment", DateTimeOffset.UtcNow));
         }
+        // Their bubble and the working indicator must be in view the moment Send is pressed.
+        RequestScrollToBottom(isUserAction: true);
         StateHasChanged();
 
         try
@@ -1277,6 +1324,8 @@
             busy = false;
             Chat.SetAssistantBusy(false);
             activityLabel = null;
+            // The reply, or the Retry / Carry on chip that stands in for one, must be in view.
+            RequestScrollToBottom();
         }
 
         // A task started while this turn was in flight left its kick-off queued. Send it now.
@@ -1391,6 +1440,7 @@
                && clock.Elapsed < PendingWait)
         {
             if (string.IsNullOrWhiteSpace(activityLabel)) activityLabel = "Still thinking…";
+            RequestScrollToBottom();
             StateHasChanged();
             await Task.Delay(PendingPollGap);
             try
@@ -1430,6 +1480,7 @@
         error = null;
         busy = true;
         Chat.SetAssistantBusy(true);
+        RequestScrollToBottom(isUserAction: true);
         try
         {
             var result = await Commands.SendAsync(
@@ -1447,6 +1498,7 @@
             busy = false;
             Chat.SetAssistantBusy(false);
             activityLabel = null;
+            RequestScrollToBottom();
         }
         await TryStartTaskAsync();
     }
@@ -1476,17 +1528,14 @@
     }
 
     /// <summary>
-    /// Enter sends; Shift+Enter stays a newline. Blazor cannot conditionally preventDefault, so the
-    /// browser still inserts the newline behind Send's back — Send has already captured and cleared
-    /// the draft by then (its synchronous head runs before the input event lands), so the clean-up
-    /// afterwards just clears the stray newline the default action left in the box. The textarea is
-    /// disabled while a turn is in flight, so nothing the user typed can be sitting there to lose.
+    /// Enter sends; Shift+Enter stays a newline. Blazor cannot preventDefault for one key without
+    /// swallowing them all, so chat-composer-keys.js (wired in OnAfterRenderAsync) stops the
+    /// browser's own newline for the sending Enter; this handler only does the sending.
     /// </summary>
     private async Task HandleComposerKeyDown(KeyboardEventArgs e)
     {
         if (e.Key != "Enter" || e.ShiftKey) return;
         await Send();
-        draft = "";
     }
 
     /// <summary>
@@ -1557,9 +1606,24 @@
     /// </summary>
     private void ApplyModalUpdate(AiUiAction action)
     {
-        if (AiTasks.Active is null) return;
-        if (string.IsNullOrWhiteSpace(action.ArgumentsJson)) return;
-        AiTasks.ApplyFromAssistant(action.ArgumentsJson);
+        if (AiTasks.Active is null || string.IsNullOrWhiteSpace(action.ArgumentsJson))
+        {
+            // No task at all: the server offered update_open_modal but nothing is open to receive
+            // it. Say so — a silent drop is the model narrating a filled form that was never filled
+            // (the update_open_modal twin of the open_modal "ok meant only posted" lesson).
+            error = "The assistant tried to fill a dialog, but none is open beside the chat right now. "
+                + "Open the dialog first, then ask again.";
+            return;
+        }
+        // ApplyFromAssistant returns whether a LIVE dialog took the update. A false means the draft
+        // reached no open dialog — the wrong page, or one that just closed — so nothing was filled;
+        // the model finds the same truth in next hop's dialog-contents block, but the user should
+        // not be left looking at an unchanged form while the model says "done".
+        if (!AiTasks.ApplyFromAssistant(action.ArgumentsJson))
+        {
+            error = "The assistant sent lines to a dialog that isn't open on this page any more, so "
+                + "nothing was filled in. Re-open the dialog and ask again — nothing was changed.";
+        }
     }
 
     /// <summary>

@@ -154,8 +154,16 @@ public static class AiSystemPrompt
             prompt.AppendLine($"  ONE dialog open beside you (\"{modal.DisplayName}\"). Nothing else, on any page.");
             prompt.AppendLine("- Filling that dialog changes NOTHING in JPMS. It puts words on a form the user is looking at;");
             prompt.AppendLine("  they read every field and press the button themselves. Say \"I've put a draft in the form\" —");
-            prompt.AppendLine("  never \"I've raised it\", \"created\", \"saved\" or \"issued\". Claiming a variation exists when it");
-            prompt.AppendLine("  does not is the single worst thing you can do here.");
+            prompt.AppendLine("  never \"I've raised it\", \"created\", \"saved\", \"issued\", \"staged\" or \"done\". Claiming a");
+            prompt.AppendLine("  variation exists, or lines are staged, when they are not is the single worst thing you can do here.");
+            prompt.AppendLine("- You have filled the dialog ONLY when you called update_open_modal THIS turn. Reading the");
+            prompt.AppendLine("  evidence is not filling; describing the lines is not filling. If you did not call");
+            prompt.AppendLine("  update_open_modal, the form is unchanged — never tell the user it holds your figures.");
+            prompt.AppendLine("- After update_open_modal, VERIFY: the \"dialog contents\" block on your very next turn is the");
+            prompt.AppendLine("  form as it actually stands. If it does not show the lines you sent (right count, right");
+            prompt.AppendLine("  total), the fill did not land — say so plainly and send them again; never assert a total or a");
+            prompt.AppendLine("  line count you have not seen echoed back in that block. Only once it matches do you tell the");
+            prompt.AppendLine("  user the draft is in the form and name the button they press.");
             prompt.AppendLine("- For anything outside that dialog — sending an email, changing a status, adding a record — say");
             prompt.AppendLine("  plainly that you cannot, and take them to the page where they can.");
         }

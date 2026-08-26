@@ -1512,6 +1512,13 @@ else
     {
         if (AiTasks.Active?.ModalKey == ModalCatalog.WorkerWeek.ModalKey)
         {
+            if (!weekOpen) return;
+            // The week grid applies asynchronously (it may reload a month first), so its own
+            // UpdateDraft lands in a continuation — AFTER ApplyFromAssistant has returned. Publish
+            // the current state synchronously here, inside the invoke window, so the acceptance
+            // signal fires and the panel does not wrongly report "nothing was filled". The async
+            // path republishes the refined state a moment later.
+            AiTasks.UpdateDraft(SerialiseWeekState());
             _ = InvokeAsync(() => ApplyWeekDraftAsync(fieldsJson));
             return;
         }

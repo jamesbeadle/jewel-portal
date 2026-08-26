@@ -4,8 +4,10 @@ namespace Jewel.JPMS.Services.Excel;
 
 /// <summary>
 /// Builds an .xlsx from an <see cref="ExcelWorkbook"/> and hands it to the browser
-/// as a file download. The date is stamped into the filename so repeated exports
-/// don't shadow each other in the user's downloads folder.
+/// as a file download. A date is stamped into the filename so repeated exports don't
+/// shadow each other in the user's downloads folder — today's by default, or the date the
+/// caller supplies when the file must match a companion document (a snapshot's PDF carries
+/// the day the snapshot was taken, so its spreadsheet does too).
 /// </summary>
 public sealed class ExcelExportService
 {
@@ -13,10 +15,13 @@ public sealed class ExcelExportService
 
     public ExcelExportService(IJSRuntime js) => this.js = js;
 
-    public async Task DownloadAsync(ExcelWorkbook workbook, string baseFileName)
+    private const string DateStampFormat = "yyyy-MM-dd";
+
+    public async Task DownloadAsync(ExcelWorkbook workbook, string baseFileName, DateTimeOffset? stampedOn = null)
     {
         var bytes = ExcelWorkbookWriter.Write(workbook);
-        var fileName = $"{SanitizeFileName(baseFileName)} {DateTime.Now:yyyy-MM-dd}.xlsx";
+        var stamp = (stampedOn ?? DateTimeOffset.Now).ToString(DateStampFormat);
+        var fileName = $"{SanitizeFileName(baseFileName)} {stamp}.xlsx";
         await js.InvokeVoidAsync("jpmsExcelExport.download", fileName, Convert.ToBase64String(bytes));
     }
 

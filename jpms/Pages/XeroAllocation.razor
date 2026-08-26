@@ -224,8 +224,17 @@ else
                 </div>
             }
 
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full min-w-[82rem] text-sm">
+            @* The table used to run 82rem wide — date, supplier and description each had a
+               column, and the queue row carried three dropdowns plus seven buttons — so on a
+               laptop the actions sat off the right edge behind a scrollbar. Now the line's
+               identity (supplier, description, date, invoice number, Xero site and code)
+               stacks in ONE cell that flexes to whatever width is left, the coding dropdowns
+               keep their fixed widths, and each row ends in one primary button plus a menu.
+               While a row's menu is open the overflow cap is lifted: the menu positions
+               absolutely inside this container, and with the overflow active its bottom
+               entries would be clipped at the container's edge. *@
+            <div class="rounded-xl border border-line bg-surface @(IsRowMenuOpen ? "" : "overflow-x-auto overflow-y-auto max-h-[85vh]")">
+                <table class="w-full text-sm">
                     <thead class="bg-surface-raised border-b border-line">
                         <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
                             @if (activeTab is XeroAllocationStatus.Unallocated or XeroAllocationStatus.Allocated)
@@ -234,15 +243,12 @@ else
                                     <input type="checkbox" checked="@AllVisibleSelected" @onchange="ToggleSelectAll" />
                                 </th>
                             }
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Date</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Supplier</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Description</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Line</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right">Net</th>
                             @if (activeTab == XeroAllocationStatus.Unallocated)
                             {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Project</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Cost centre</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Bucket</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-44">Project</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-52">Cost centre</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
                             }
                             else if (activeTab == XeroAllocationStatus.Disputed)
@@ -250,9 +256,8 @@ else
                                 @* The dispute workbench: the coding both sides are converging on is
                                    edited and SAVED here (visible to the other party), the thread is a
                                    click away, and either side returns the line to allocation. *@
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Project</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Cost centre</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Dispute</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-44">Project</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-52">Cost centre</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
                             }
                             else
@@ -269,7 +274,11 @@ else
                     <tbody class="divide-y divide-line">
                         @foreach (var line in Paged)
                         {
-                            <tr>
+                            @* Keyed so a row's component state (an open menu, a dropdown's
+                               filter text) stays with its line when paging or searching
+                               re-orders the rows, instead of migrating to whichever line
+                               now sits at that index. *@
+                            <tr @key="line.XeroLedgerLineId">
                                 @if (activeTab is XeroAllocationStatus.Unallocated or XeroAllocationStatus.Allocated)
                                 {
                                     <td class="px-3 py-2.5">
@@ -277,9 +286,10 @@ else
                                                @onchange="() => ToggleSelected(line.XeroLedgerLineId)" />
                                     </td>
                                 }
-                                <td class="px-3 py-2.5 text-content-muted whitespace-nowrap">@DateText(line.Date)</td>
-                                <td class="px-3 py-2.5 text-content font-medium">
-                                    @(line.ContactName ?? "—")
+                                <td class="px-3 py-2.5 max-w-0">
+                                    @* max-w-0 lets the cell shrink below its content so the truncated
+                                       description wraps the column instead of forcing the table wider. *@
+                                    <span class="text-content font-medium">@(line.ContactName ?? "—")</span>
                                     @if (line.Type == "ACCPAYCREDIT")
                                     {
                                         <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5">Credit</span>
@@ -289,9 +299,7 @@ else
                                         <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
                                               title="Awaiting approval in Xero — allocating every line of this bill confirms its cost codes to Xero and approves it">Draft</span>
                                     }
-                                </td>
-                                <td class="px-3 py-2.5 text-content-muted max-w-xs">
-                                    <span class="block truncate" title="@line.Description">@(line.Description ?? "—")</span>
+                                    <span class="block truncate text-content-muted" title="@line.Description">@(line.Description ?? "—")</span>
                                     <span class="flex items-center gap-1 text-xs text-content-subtle">
                                         @if (line.HasAttachments)
                                         {
@@ -306,10 +314,25 @@ else
                                                 </svg>
                                             </button>
                                         }
-                                        <span>@(line.InvoiceNumber ?? "—") · @(line.XeroSite ?? "no site") · @(line.XeroCostCode ?? "no Xero code")</span>
+                                        <span class="truncate" title="@LineMetaText(line)">@LineMetaText(line)</span>
                                     </span>
+                                    @if (activeTab == XeroAllocationStatus.Disputed)
+                                    {
+                                        @* The dispute's state travels with the line rather than in its
+                                           own column — who raised it, when, and the latest word. *@
+                                        <span class="block text-xs text-content-subtle mt-1">
+                                            Disputed by @(line.AllocatedBy ?? "—")
+                                            @(line.AllocatedAtUtc is { } at ? $" · {at.ToLocalTime():d MMM yyyy}" : "")
+                                        </span>
+                                        @if (line.DisputeMessages?.LastOrDefault() is { } latest)
+                                        {
+                                            <span class="block text-xs text-content-subtle truncate" title="@latest.Body">
+                                                “@latest.Body”
+                                            </span>
+                                        }
+                                    }
                                 </td>
-                                <td class="px-3 py-2.5 text-right text-content font-medium whitespace-nowrap">@Money(SignedNet(line))</td>
+                                <td class="px-3 py-2.5 text-right text-content font-medium whitespace-nowrap align-top">@Money(SignedNet(line))</td>
 
                                 @if (activeTab == XeroAllocationStatus.Unallocated)
                                 {
@@ -328,56 +351,45 @@ else
                                                       Value="@SelectedCostCenterFor(line)"
                                                       ValueChanged="value => SetCostCenter(line.XeroLedgerLineId, value)" />
                                     </td>
-                                    <td class="px-3 py-2.5">
-                                        <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-36"
-                                                value="@SelectedBucketFor(line)"
-                                                @onchange="e => SetBucket(line.XeroLedgerLineId, e.Value?.ToString())">
-                                            <option value="">—</option>
-                                            @foreach (var bucket in XeroBuckets.All)
-                                            {
-                                                <option value="@bucket">@bucket</option>
-                                            }
-                                        </select>
-                                    </td>
                                     <td class="px-3 py-2.5 text-right whitespace-nowrap">
-                                        @* Exactly one Allocate is ever active: project + cost centre arms the
-                                           first; a bucket choice arms the second (and wins if both are set,
-                                           since picking a bucket was the later, deliberate act). *@
-                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
-                                                disabled="@(isBusy || !CanAllocate(line) || CanBucket(line))"
-                                                @onclick="() => AllocateAsync(line)">Allocate</button>
+                                        @* One primary button per row. Project + cost centre arms Allocate; a
+                                           bucket (suggested from the Xero code, or chosen in the menu or the
+                                           document viewer) arms "Allocate to <bucket>" instead — and wins if
+                                           both are set, since picking a bucket was the later, deliberate act. *@
+                                        @if (CanBucket(line))
+                                        {
+                                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 max-w-[11rem] truncate align-middle"
+                                                    title="@($"Allocate to the {SelectedBucketFor(line)} bucket — no project, no cost centre")"
+                                                    disabled="@isBusy"
+                                                    @onclick="() => BucketAsync(line, SelectedBucketFor(line))">Allocate to @SelectedBucketFor(line)</button>
+                                        }
+                                        else
+                                        {
+                                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 align-middle"
+                                                    disabled="@(isBusy || !CanAllocate(line))"
+                                                    @onclick="() => AllocateAsync(line)">Allocate</button>
+                                        }
                                         @* The half-step: project decided, allocation not yet. Saves the
                                            project — which is when the row moves to that project's tab —
                                            and writes the Xero site without approving. This is also the
                                            change-of-mind move: pick a different project on a line the
                                            accountant coded and Set re-sites it in Xero and re-tabs it
-                                           here. Pressing it again is the Xero retry. Unset (only on
-                                           lines with a saved project) reverses an accidental Set:
+                                           here. Pressing it again is the Xero retry. Unset (in the menu,
+                                           only on lines with a saved project) reverses an accidental Set:
                                            project cleared here and the site removed in Xero. *@
-                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40"
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40 align-middle"
                                                 title="Save the project and set its Xero site now — moves the line to that project's tab, cost centre to follow"
                                                 disabled="@(isBusy || !CanSetProject(line))"
                                                 @onclick="() => SetProjectAsync(line)">Set</button>
-                                        @if (line.ProjectId is not null)
-                                        {
-                                            <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
-                                                    title="Clear the saved project (and its Xero site) — the line returns to Unallocated"
-                                                    disabled="@isBusy"
-                                                    @onclick="() => UnsetProjectAsync(line)">Unset</button>
-                                        }
-                                        <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
-                                                disabled="@isBusy"
-                                                @onclick="() => OpenSplit(line)">Split…</button>
-                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface ml-2 disabled:opacity-40"
-                                                disabled="@(isBusy || !CanBucket(line))"
-                                                @onclick="() => BucketAsync(line, SelectedBucketFor(line))">Allocate to bucket</button>
-                                        <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
-                                                disabled="@isBusy"
-                                                @onclick="() => IgnoreAsync(line)">Ignore</button>
-                                        <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
-                                                title="Contest this cost — moves it to the Disputed tab and opens a discussion with the accountant"
-                                                disabled="@isBusy"
-                                                @onclick="() => OpenDispute(line)">Dispute…</button>
+                                        @* Everything else — the seven buckets, Split, Ignore, Dispute and
+                                           Unset — lives in the row's menu, so the row stays one line wide. *@
+                                        @* whitespace-normal: the cell's nowrap would otherwise reach the
+                                           menu panel and clip its longer bucket names. *@
+                                        <DropdownMenu Label="More" WidthClass="w-72" Disabled="@isBusy"
+                                                      ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:text-content transition"
+                                                      Class="inline-block text-left ml-2 align-middle whitespace-normal"
+                                                      Items="QueueRowMenuItems(line)"
+                                                      OnOpenChanged="open => TrackRowMenu(line.XeroLedgerLineId, open)" />
                                     </td>
                                 }
                                 else if (activeTab == XeroAllocationStatus.Disputed)
@@ -392,34 +404,23 @@ else
                                                       Value="@SelectedCostCenterFor(line)"
                                                       ValueChanged="value => SetCostCenter(line.XeroLedgerLineId, value)" />
                                     </td>
-                                    <td class="px-3 py-2.5 text-content-muted max-w-sm">
-                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content"
-                                                @onclick="() => OpenDiscussion(line)">
-                                            Discussion (@(line.DisputeMessages?.Count ?? 0))…
-                                        </button>
-                                        <span class="block text-xs text-content-subtle mt-1">
-                                            Disputed by @(line.AllocatedBy ?? "—")
-                                            @(line.AllocatedAtUtc is { } at ? $" · {at.ToLocalTime():d MMM yyyy}" : "")
-                                        </span>
-                                        @if (line.DisputeMessages?.LastOrDefault() is { } latest)
-                                        {
-                                            <span class="block text-xs text-content-subtle truncate" title="@latest.Body">
-                                                “@latest.Body”
-                                            </span>
-                                        }
-                                    </td>
                                     <td class="px-3 py-2.5 text-right whitespace-nowrap">
                                         @* Save persists the coding both sides are converging on — the
                                            line STAYS disputed, but the other party sees the proposal.
                                            Return to allocation is the resolution: back to the queue
                                            with the agreed coding kept, so a fully coded line lands on
                                            its project's tab armed for Allocate. Either side may press
-                                           either button. *@
-                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                                           either button. Who disputed it and the latest word sit in
+                                           the Line cell; the thread itself opens from here. *@
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content align-middle"
+                                                @onclick="() => OpenDiscussion(line)">
+                                            Discussion (@(line.DisputeMessages?.Count ?? 0))…
+                                        </button>
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40 align-middle"
                                                 title="Save the proposed project and cost centre on the line — it stays disputed"
                                                 disabled="@(isBusy || string.IsNullOrEmpty(SelectedProjectFor(line)))"
                                                 @onclick="() => SaveDisputedCodingAsync(line)">Save</button>
-                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface ml-2 disabled:opacity-40"
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface ml-2 disabled:opacity-40 align-middle"
                                                 title="Resolve the dispute — the line returns to the allocation queue keeping the coding set here"
                                                 disabled="@isBusy"
                                                 @onclick="() => ResolveDisputeAsync(line)">Return to allocation</button>
@@ -637,7 +638,9 @@ else
            signal to the accountant, like the Unallocated count — with an optional
            opening message starting the thread. Any coding on the line is kept as the
            position under discussion. *@
-        <Modal IsOpen="@(disputeLine is not null)" Title="Dispute this cost"
+        @* Hidden while the invoice document modal is open — a dispute started from
+           the viewer composes inline there, like a split. *@
+        <Modal IsOpen="@(disputeLine is not null && viewLine is null)" Title="Dispute this cost"
                ConfirmLabel="@(isApplying ? "Disputing…" : "Move to Disputed")" CancelLabel="Cancel"
                ConfirmDisabled="@isBusy" OnConfirm="ConfirmDisputeAsync" OnCancel="CloseDispute" Class="max-w-lg">
             @if (disputeLine is not null)
@@ -770,28 +773,92 @@ else
                                 @SplitEditorCore
                             </div>
                         }
+                        else if (disputeLine?.XeroLedgerLineId == docLine.XeroLedgerLineId)
+                        {
+                            @* Dispute… from the viewer composes inline, like Split…, so the
+                               invoice stays readable while the reason is written. *@
+                            <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-3">
+                                <div class="flex items-center justify-between gap-2 flex-wrap">
+                                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Dispute this cost</span>
+                                    <span class="flex items-center gap-2">
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                                                disabled="@isBusy" @onclick="ConfirmDisputeAsync">
+                                            @(isApplying ? "Disputing…" : "Move to Disputed")
+                                        </button>
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                                                disabled="@isBusy" @onclick="CloseDispute">Cancel</button>
+                                    </span>
+                                </div>
+                                @if (disputeError is not null)
+                                {
+                                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@disputeError</p>
+                                }
+                                <textarea class="w-full min-h-[4.5rem] rounded-lg bg-surface border border-line px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+                                          placeholder="Why is this disputed? (optional — the discussion continues on the Disputed tab)"
+                                          @bind="disputeMessage" @bind:event="oninput"></textarea>
+                            </div>
+                        }
                         else
                         {
-                            <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 flex items-center gap-2 flex-wrap">
-                                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Allocate</span>
-                                <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
-                                              Value="@SelectedProjectFor(docLine)"
-                                              ValueChanged="value => SetProject(docLine.XeroLedgerLineId, value)" />
-                                <SearchSelect Options="@CostCenterOptions" WidthClass="w-52" Placeholder="Cost centre…"
-                                              Value="@SelectedCostCenterFor(docLine)"
-                                              ValueChanged="value => SetCostCenter(docLine.XeroLedgerLineId, value)" />
-                                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
-                                        disabled="@(isBusy || !CanAllocate(docLine))"
-                                        @onclick="AllocateFromViewAsync">
-                                    @(isApplying ? "Allocating…" : "Allocate")
-                                </button>
-                                <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
-                                        title="Save the project and set its Xero site now — cost centre to follow"
-                                        disabled="@(isBusy || !CanSetProject(docLine))"
-                                        @onclick="SetProjectFromViewAsync">Set</button>
-                                <button class="text-xs text-content-subtle underline underline-offset-4 disabled:opacity-40"
-                                        title="Share this line's value across several cost centres (or projects) — one Xero line per share on approval"
-                                        disabled="@isBusy" @onclick="() => OpenSplit(docLine)">Split…</button>
+                            @* The full set of row choices, in two rows: code the line to a project
+                               and cost centre, or send it to a bucket / ignore it / dispute it. *@
+                            <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-2">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16">Allocate</span>
+                                    <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
+                                                  Value="@SelectedProjectFor(docLine)"
+                                                  ValueChanged="value => SetProject(docLine.XeroLedgerLineId, value)" />
+                                    <SearchSelect Options="@CostCenterOptions" WidthClass="w-52" Placeholder="Cost centre…"
+                                                  Value="@SelectedCostCenterFor(docLine)"
+                                                  ValueChanged="value => SetCostCenter(docLine.XeroLedgerLineId, value)" />
+                                    @* Same rule as the row: an armed bucket takes the primary slot, so
+                                       it is visible WHY a coded line isn't offering plain Allocate. *@
+                                    @if (CanBucket(docLine))
+                                    {
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 max-w-[11rem] truncate"
+                                                title="@($"Allocate to the {SelectedBucketFor(docLine)} bucket — pick a project or cost centre to code it instead")"
+                                                disabled="@isBusy" @onclick="BucketFromViewAsync">
+                                            @(isApplying ? "Allocating…" : $"Allocate to {SelectedBucketFor(docLine)}")
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                                                disabled="@(isBusy || !CanAllocate(docLine))"
+                                                @onclick="AllocateFromViewAsync">
+                                            @(isApplying ? "Allocating…" : "Allocate")
+                                        </button>
+                                    }
+                                    <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                                            title="Save the project and set its Xero site now — cost centre to follow"
+                                            disabled="@(isBusy || !CanSetProject(docLine))"
+                                            @onclick="SetProjectFromViewAsync">Set</button>
+                                    <button class="text-xs text-content-subtle underline underline-offset-4 disabled:opacity-40"
+                                            title="Share this line's value across several cost centres (or projects) — one Xero line per share on approval"
+                                            disabled="@isBusy" @onclick="() => OpenSplit(docLine)">Split…</button>
+                                </div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    @* Choosing a bucket arms the primary button above as "Allocate to
+                                       <bucket>"; picking a project or cost centre disarms it again. *@
+                                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16">Or</span>
+                                    <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
+                                            title="Send this line to a bucket instead of a project — no project, no cost centre"
+                                            value="@SelectedBucketFor(docLine)"
+                                            @onchange="e => SetBucket(docLine.XeroLedgerLineId, e.Value?.ToString())">
+                                        <option value="">Bucket…</option>
+                                        @foreach (var bucket in XeroBuckets.All)
+                                        {
+                                            <option value="@bucket">@bucket</option>
+                                        }
+                                    </select>
+                                    <span class="text-content-subtle text-xs">·</span>
+                                    <button class="text-xs text-content-subtle underline underline-offset-4 disabled:opacity-40"
+                                            title="Not a project cost — moves the line to the Ignored tab"
+                                            disabled="@isBusy" @onclick="IgnoreFromViewAsync">Ignore</button>
+                                    <button class="text-xs text-content-subtle underline underline-offset-4 disabled:opacity-40"
+                                            title="Contest this cost — moves it to the Disputed tab and opens a discussion with the accountant"
+                                            disabled="@isBusy" @onclick="() => OpenDispute(docLine)">Dispute…</button>
+                                </div>
                             </div>
                         }
                     }
@@ -1404,6 +1471,9 @@ else
                 Note: string.IsNullOrWhiteSpace(disputeMessage) ? null : disputeMessage.Trim()));
             selectedIds.Remove(line.XeroLedgerLineId);
             CloseDispute();
+            // A dispute composed inside the document viewer closes it too — same
+            // contract as Allocate and Split from the viewer: back to the queue.
+            if (viewLine?.XeroLedgerLineId == line.XeroLedgerLineId) CloseInvoiceView();
             syncMessage = $"{line.ContactName ?? "The line"} · {Money(SignedNet(line))} moved to Disputed — the discussion lives on that tab.";
         }
         catch (CommandFailedException failure) { disputeError = failure.Message; }
@@ -1544,6 +1614,84 @@ else
 
     private async Task BucketAsync(XeroLedgerLine line, string bucket) =>
         await ApplyAsync(new SetXeroAllocation(new[] { line.XeroLedgerLineId }, XeroAllocationAction.AllocateToBucket, Bucket: bucket));
+
+    // -- queue row menu -----------------------------------------------------------
+    // Everything a queue row can do beyond Allocate and Set. A bucket entry
+    // allocates in one click (there is no arming step — the row's primary button
+    // already covers a suggested bucket); the suggested one is ticked.
+
+    private const int BucketMenuGroup = 1;
+    private const int DecisionMenuGroup = 2;
+    private const int UndoMenuGroup = 3;
+
+    private IReadOnlyList<DropdownMenu.Item> QueueRowMenuItems(XeroLedgerLine line)
+    {
+        var items = new List<DropdownMenu.Item>
+        {
+            new("Split…",
+                OnSelect: EventCallback.Factory.Create(this, () => OpenSplit(line)),
+                Hint: "Share this line's value across several cost centres (or projects) — one Xero line per share on approval")
+        };
+        items.AddRange(BucketMenuItems(line));
+        items.Add(new DropdownMenu.Item("Ignore",
+            OnSelect: EventCallback.Factory.Create(this, () => IgnoreAsync(line)),
+            Hint: "Not a project cost — moves the line to the Ignored tab",
+            Group: DecisionMenuGroup));
+        items.Add(new DropdownMenu.Item("Dispute…",
+            OnSelect: EventCallback.Factory.Create(this, () => OpenDispute(line)),
+            Hint: "Contest this cost — moves it to the Disputed tab and opens a discussion with the accountant",
+            Group: DecisionMenuGroup));
+        if (line.ProjectId is not null)
+        {
+            items.Add(new DropdownMenu.Item("Unset project",
+                OnSelect: EventCallback.Factory.Create(this, () => UnsetProjectAsync(line)),
+                Hint: "Clear the saved project (and its Xero site) — the line returns to Unallocated",
+                Group: UndoMenuGroup));
+        }
+        return items;
+    }
+
+    private IEnumerable<DropdownMenu.Item> BucketMenuItems(XeroLedgerLine line)
+    {
+        var armed = SelectedBucketFor(line);
+        foreach (var bucket in XeroBuckets.All)
+        {
+            var chosen = bucket;
+            yield return new DropdownMenu.Item($"Allocate to {chosen}",
+                OnSelect: EventCallback.Factory.Create(this, () => BucketAsync(line, chosen)),
+                Hint: $"Allocate to the {chosen} bucket — no project, no cost centre",
+                Selected: chosen == armed,
+                Group: BucketMenuGroup);
+        }
+        if (!string.IsNullOrEmpty(armed))
+        {
+            yield return new DropdownMenu.Item("Clear bucket",
+                OnSelect: EventCallback.Factory.Create(this, () => SetBucket(line.XeroLedgerLineId, null)),
+                Hint: "Disarm the bucket so the row allocates to its project and cost centre instead",
+                Group: BucketMenuGroup);
+        }
+    }
+
+    // The queue row whose menu is open — while set, the table container's
+    // overflow cap is lifted so the menu isn't clipped (see the container).
+    private string? openRowMenuKey;
+
+    private void TrackRowMenu(string lineId, bool isOpen)
+    {
+        if (isOpen) { openRowMenuKey = lineId; return; }
+        if (openRowMenuKey == lineId) openRowMenuKey = null;
+    }
+
+    // Only a menu on a row that is still on the page keeps the cap lifted — a
+    // line that left the page mid-menu (allocated elsewhere, filtered out) must
+    // not leave every later table uncapped.
+    private bool IsRowMenuOpen =>
+        openRowMenuKey is not null && Paged.Any(line => line.XeroLedgerLineId == openRowMenuKey);
+
+    // Date, invoice number, Xero site and Xero code on one small line under the
+    // description — what used to be the Date column and the description's footnote.
+    private string LineMetaText(XeroLedgerLine line) =>
+        $"{DateText(line.Date)} · {line.InvoiceNumber ?? "—"} · {line.XeroSite ?? "no site"} · {line.XeroCostCode ?? "no Xero code"}";
 
     // The bucket dropdown works like the project/cost-centre ones: pre-selected with
     // the suggestion when one was inferred, blank otherwise, always overridable.
@@ -1824,6 +1972,9 @@ else
         // unbidden the moment the viewer goes.
         if (splitLine is not null && splitLine.XeroLedgerLineId == viewLine?.XeroLedgerLineId)
             CloseSplit();
+        // Likewise a dispute being composed inside the viewer.
+        if (disputeLine is not null && disputeLine.XeroLedgerLineId == viewLine?.XeroLedgerLineId)
+            CloseDispute();
         viewLine = null;
         viewAttachments = null;
         viewSelected = null;
@@ -1884,6 +2035,51 @@ else
             if (viewLine == line) viewError = failure.Message;
         }
         finally { isApplying = false; }
+    }
+
+    private async Task IgnoreFromViewAsync() =>
+        await ApplyFromViewAsync(line => new SetXeroAllocation(
+            new[] { line.XeroLedgerLineId },
+            XeroAllocationAction.Ignore));
+
+    private async Task BucketFromViewAsync()
+    {
+        if (viewLine is null || !CanBucket(viewLine)) return;
+        await ApplyFromViewAsync(line => new SetXeroAllocation(
+            new[] { line.XeroLedgerLineId },
+            XeroAllocationAction.AllocateToBucket,
+            Bucket: SelectedBucketFor(line)));
+    }
+
+    /// <summary>
+    /// The viewer's counterpart of ApplyAsync for the one-shot decisions (Ignore,
+    /// bucket): the line leaves the queue, so its picks are forgotten and the
+    /// viewer closes; a failure stays readable inside the modal.
+    /// </summary>
+    private async Task ApplyFromViewAsync(Func<XeroLedgerLine, SetXeroAllocation> buildCommand)
+    {
+        if (viewLine is null || isBusy) return;
+        var line = viewLine;
+        isApplying = true; viewError = null;
+        try
+        {
+            await Ledger.ApplyAsync(buildCommand(line));
+            ForgetPicks(line.XeroLedgerLineId);
+            if (viewLine == line) CloseInvoiceView();
+        }
+        catch (CommandFailedException failure)
+        {
+            if (viewLine == line) viewError = failure.Message;
+        }
+        finally { isApplying = false; }
+    }
+
+    private void ForgetPicks(string lineId)
+    {
+        selectedIds.Remove(lineId);
+        chosenProject.Remove(lineId);
+        chosenCostCenter.Remove(lineId);
+        chosenBucket.Remove(lineId);
     }
 
     // Same previewable set as the triage and drawing viewers: browsers render PDFs
@@ -1988,9 +2184,20 @@ else
 
     // A dropdown pick arms the row's buttons but moves nothing — the row changes
     // tab only when Set or Allocate persists the project.
-    private void SetProject(string lineId, string? projectId) => chosenProject[lineId] = projectId;
+    // A project or cost-centre pick is the later, deliberate act, so it disarms a
+    // bucket (suggested or chosen) — otherwise the row's primary button would
+    // still read "Allocate to Fuel" after the reader coded the line to a project.
+    private void SetProject(string lineId, string? projectId)
+    {
+        chosenProject[lineId] = projectId;
+        chosenBucket[lineId] = null;
+    }
 
-    private void SetCostCenter(string lineId, string? code) => chosenCostCenter[lineId] = code;
+    private void SetCostCenter(string lineId, string? code)
+    {
+        chosenCostCenter[lineId] = code;
+        chosenBucket[lineId] = null;
+    }
 
     private bool CanAllocate(XeroLedgerLine line) =>
         !string.IsNullOrEmpty(SelectedProjectFor(line)) && !string.IsNullOrEmpty(SelectedCostCenterFor(line));
@@ -2076,6 +2283,7 @@ else
         CloseSendToProject();
         CloseDispute();
         CloseDiscussion();
+        openRowMenuKey = null;
         page = 0;
         // On a project tab every line is already pointed at that project, so
         // pre-arm the bulk bar's project with it.

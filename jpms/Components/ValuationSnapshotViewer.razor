@@ -6,6 +6,7 @@
 @inject IValuationReportStore Store
 @inject IQueryClient Queries
 @inject ICostCenterStore CostCenters
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @implements IDisposable
 
 @* Read-only rendering of one frozen valuation-report snapshot: the same grouped-bill +
@@ -43,7 +44,8 @@ else
             @* Document group: the report as a file, out of the system. *@
             <ToolbarButton Icon="download" Label="Download PDF" Target="_blank"
                            Href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")" />
-            <ExportToExcelButton FileName="@($"Valuation report {snapshot.Label}")" BuildWorkbook="BuildExportWorkbook" />
+            @* Named as the PDF above is (ValuationReportFileNames): the pair share one name. *@
+            <ExportToExcelButton FileName="@ExportFileName(snapshot)" FileDate="@snapshot.TakenAt" BuildWorkbook="BuildExportWorkbook" />
             @if (OnEmailRequested.HasDelegate)
             {
                 <ToolbarDivider />
@@ -93,9 +95,9 @@ else
                                 @{ var currentArea = ""; }
                                 @foreach (var row in RowsFor(section))
                                 {
-                                    @* Variations consolidate per variation per cost centre (VariationRollUps),
-                                       exactly as the client's PDF shows them; a consolidated row opens to show
-                                       the frozen lines beneath it. *@
+                                    @* Variations consolidate per variation per cost centre (VariationRollUps);
+                                       a consolidated row opens to show the frozen lines beneath it. The client's
+                                       PDF and the workbook's Summary tab go one further, to one row per order. *@
                                     @if (row.RollUp is { } rollUp)
                                     {
                                         var isRollUpOpen = IsRollUpOpen(rollUp);
@@ -225,6 +227,9 @@ else
     private bool loadFailed;
     private string? loadedSnapshotId;
 
+    private string ExportFileName(ValuationReportSnapshot snapshot) =>
+        ValuationReportFileNames.Stem(Projects.Find(snapshot.ProjectId)?.Reference ?? "", snapshot.Label);
+
     // Null until the mailbox has ANSWERED — an empty list is a real "none", never a placeholder
     // (the loading convention: nullable backing field, gate on the null).
     private IReadOnlyList<MailboxMessage>? emails;
@@ -294,6 +299,8 @@ else
     protected override void OnInitialized()
     {
         CostCenters.OnChange += OnCostCentresChanged;
+        // The export file name carries the project reference — re-render when the list lands.
+        Projects.OnChanged += OnCostCentresChanged;
         // Revalidate the master (stale-while-revalidate; fetch-once underneath) — the host
         // page usually warmed it already, but the snapshots register opens this viewer too.
         _ = CostCenters.ListAllAsync();
@@ -301,7 +308,11 @@ else
 
     private void OnCostCentresChanged() => InvokeAsync(StateHasChanged);
 
-    public void Dispose() => CostCenters.OnChange -= OnCostCentresChanged;
+    public void Dispose()
+    {
+        CostCenters.OnChange -= OnCostCentresChanged;
+        Projects.OnChanged -= OnCostCentresChanged;
+    }
 
     private static string CodeFor(ValuationReportSnapshotLine line) =>
         line.ElementType == ValuationElementType.Variation
@@ -322,10 +333,11 @@ else
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
 
-    // Every frozen line plus the summary footer — exactly what the viewer shows, so the workbook
-    // and the screen (and the PDF, rendered from the same lines) always agree. The workbook is
-    // the shared two-tab shape (branded presentation + flat raw data); each line's "Previous" is
-    // its cumulative claimed less the period increment frozen at capture.
+    // Every frozen line plus the summary footer, so the workbook and the screen (and the PDF,
+    // rendered from the same lines) always agree. The workbook is the shared three-tab shape
+    // (Summary with variations as one row per order, Detail with every line, flat Raw data) and
+    // does its own consolidating; each line's "Previous" is its cumulative claimed less the
+    // period increment frozen at capture.
     private ExcelWorkbook? BuildExportWorkbook(bool _)
     {
         if (detail is null) return null;
@@ -334,30 +346,9 @@ else
         var exportLines = new List<ValuationExportLine>();
         foreach (var section in Sections)
         {
-            foreach (var row in ExportRowsFor(section))
+            foreach (var line in section.Lines)
             {
-                if (row.RollUp is { } rollUp)
-                {
-                    exportLines.Add(RollUpExportLine(section.Title, rollUp));
-                    continue;
-                }
-                var line = row.Line!;
-                exportLines.Add(new ValuationExportLine(
-                    section.Title,
-                    ValuationReportAreas.GroupsByArea(section.Type) ? AreaTitleFor(line) : "",
-                    CodeFor(line),
-                    TitleFor(line),
-                    LineTypeLabel(line.LineType),
-                    line.CountsTowardTotals,
-                    line.Unit,
-                    line.Quantity,
-                    line.Rate,
-                    line.LineAmount,
-                    line.PercentComplete,
-                    line.CumulativeClaimed - line.PeriodIncrement,
-                    line.PeriodIncrement,
-                    line.CumulativeClaimed,
-                    line.Comments));
+                exportLines.Add(ExportLineFor(section, line));
             }
         }
 
@@ -391,6 +382,28 @@ else
             exportLines,
             summary);
     }
+
+    private ValuationExportLine ExportLineFor(Section section, ValuationReportSnapshotLine line) =>
+        new(section.Title,
+            line.ElementType,
+            ValuationReportAreas.GroupsByArea(section.Type) ? AreaTitleFor(line) : "",
+            CodeFor(line),
+            TitleFor(line),
+            LineTypeLabel(line.LineType),
+            line.CountsTowardTotals,
+            line.Unit,
+            line.Quantity,
+            line.Rate,
+            line.LineAmount,
+            line.PercentComplete,
+            line.CumulativeClaimed - line.PeriodIncrement,
+            line.PeriodIncrement,
+            line.CumulativeClaimed,
+            line.Comments,
+            line.VariationRef,
+            line.VariationTitle,
+            line.CostCode,
+            line.DisplayOrder);
 
     // Same wording as the PDF renderer, so the workbook and the statement agree.
     private static string LineTypeLabel(ValuationLineType type) => type switch

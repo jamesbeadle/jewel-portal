@@ -53,8 +53,8 @@ public sealed class ValuationReportSnapshotPdfBuilder
             detail,
             CostCentreNames: await CostCentreNamesAsync(cancellationToken)));
 
-        var fileName = SanitiseFileName(
-            $"{project.Reference} - Valuation report - {snapshot.Label} - {snapshot.TakenAt:yyyy-MM-dd}.pdf");
+        // Named exactly as the snapshot viewer names its spreadsheet, so the pair match.
+        var fileName = PdfFileName(project.Reference, snapshot.Label, snapshot.TakenAt);
 
         return new ValuationReportSnapshotPdf(pdf, fileName, snapshot.ProjectId, project.Name, snapshot);
     }
@@ -96,11 +96,15 @@ public sealed class ValuationReportSnapshotPdfBuilder
             IsDraft: true,
             CostCentreNames: await CostCentreNamesAsync(cancellationToken)));
 
-        var fileName = SanitiseFileName(
-            $"{project.Reference} - Valuation report - Working copy - {DateTimeOffset.UtcNow:yyyy-MM-dd}.pdf");
+        // The file is named by the claim alone — the working-copy wording stays inside the
+        // document, so this PDF and the page's spreadsheet of the same claim share a name.
+        var fileName = PdfFileName(project.Reference, claimName, DateTimeOffset.UtcNow);
 
         return new ValuationReportSnapshotPdf(pdf, fileName, projectId, project.Name, detail.Snapshot);
     }
+
+    private static string PdfFileName(string projectReference, string? statementLabel, DateTimeOffset producedOn) =>
+        SanitiseFileName($"{ValuationReportFileNames.For(projectReference, statementLabel, producedOn)}.pdf");
 
     // Cost code → master name, for the bill's area sub-headings when a line carries no
     // estimate section (the ValuationReportAreas rule the renderer applies). Grouped rather

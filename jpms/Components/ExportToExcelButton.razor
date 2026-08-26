@@ -39,8 +39,14 @@ else
 }
 
 @code {
-    /// <summary>Base filename without extension; the export date and .xlsx are appended.</summary>
+    /// <summary>Base filename without extension; a date and .xlsx are appended.</summary>
     [Parameter, EditorRequired] public string FileName { get; set; } = "export";
+
+    /// <summary>
+    /// The date stamped after the base name — today when left unset. Set it when the workbook
+    /// must sit beside a PDF of the same statement, so the two files share one name.
+    /// </summary>
+    [Parameter] public DateTimeOffset? FileDate { get; set; }
 
     /// <summary>
     /// Builds the workbook to download. The bool argument is true when the user picked the
@@ -91,7 +97,7 @@ else
             var workbook = BuildWorkbook(includeAllRows);
             if (workbook is not null && workbook.Sheets.Count > 0)
             {
-                await ExcelExport.DownloadAsync(workbook, FileName);
+                await ExcelExport.DownloadAsync(workbook, FileName, FileDate);
             }
         }
         finally

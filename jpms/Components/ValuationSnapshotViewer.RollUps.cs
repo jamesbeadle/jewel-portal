@@ -1,12 +1,12 @@
 using Jewel.JPMS.Contracts.Commercial;
-using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Components;
 
 // The consolidated variation rows of a frozen snapshot (VariationRollUps): one row per variation
-// order per cost centre — the shape the client's PDF shows — with the frozen lines reachable
-// beneath it on screen. Every figure is a sum of what was frozen; nothing is recomputed.
+// order per cost centre, with the frozen lines reachable beneath it on screen. The client's PDF
+// and the workbook's Summary tab consolidate one level further, to the whole variation order.
+// Every figure is a sum of what was frozen; nothing is recomputed.
 public partial class ValuationSnapshotViewer
 {
     private sealed record BillRow(ValuationReportSnapshotLine? Line, VariationRollUp<ValuationReportSnapshotLine>? RollUp, bool IsDetail);
@@ -33,13 +33,6 @@ public partial class ValuationSnapshotViewer
             yield return new BillRow(line, null, true);
     }
 
-    // The workbook lists the consolidated rows only, matching the PDF the client received.
-    private IEnumerable<BillRow> ExportRowsFor(Section section) =>
-        section.Type == ValuationElementType.Variation
-            ? VariationRollUps.Build(section.Lines).Select(rollUp =>
-                rollUp.IsRolledUp ? new BillRow(null, rollUp, false) : new BillRow(rollUp.Lines[0], null, false))
-            : RowsFor(section);
-
     private bool IsRollUpOpen(VariationRollUp<ValuationReportSnapshotLine> rollUp) => openRollUps.Contains(rollUp.Key);
 
     private void ToggleRollUp(VariationRollUp<ValuationReportSnapshotLine> rollUp)
@@ -56,17 +49,6 @@ public partial class ValuationSnapshotViewer
     private static decimal RollUpClaimed(VariationRollUp<ValuationReportSnapshotLine> rollUp) =>
         rollUp.CountingLines.Sum(line => line.CumulativeClaimed);
 
-    private static decimal RollUpPeriod(VariationRollUp<ValuationReportSnapshotLine> rollUp) =>
-        rollUp.CountingLines.Sum(line => line.PeriodIncrement);
-
     private static decimal RollUpPercent(VariationRollUp<ValuationReportSnapshotLine> rollUp) =>
         VariationRollUps.WeightedPercent(RollUpClaimed(rollUp), rollUp.Amount);
-
-    private ValuationExportLine RollUpExportLine(string sectionTitle, VariationRollUp<ValuationReportSnapshotLine> rollUp) =>
-        ValuationExportRollUps.Line(sectionTitle, rollUp,
-            CostCentreNameFor(rollUp.CostCode) ?? rollUp.CostCode,
-            RollUpPercent(rollUp),
-            RollUpClaimed(rollUp) - RollUpPeriod(rollUp),
-            RollUpPeriod(rollUp),
-            RollUpClaimed(rollUp));
 }
