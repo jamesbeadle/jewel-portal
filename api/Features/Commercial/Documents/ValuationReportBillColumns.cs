@@ -26,14 +26,16 @@ internal sealed record ValuationReportBillColumns(bool HasClientReference)
     public int Claimed => Description + 7;
     public int Last => Claimed;
 
-    public double CodeWidthCentimetres => 1.5;
+    // Description takes the room the numbers don't need — itemised lines wrap hard in a narrow
+    // column (accountant 2026-08-26) and every other column holds figures of a known width.
+    public double CodeWidthCentimetres => 1.4;
     public double ClientReferenceWidthCentimetres => 1.3;
-    public double DescriptionWidthCentimetres => HasClientReference ? 3.8 : 4.9;
-    public double QuantityWidthCentimetres => HasClientReference ? 0.9 : 1.0;
-    public double RateWidthCentimetres => 1.4;
-    public double AmountWidthCentimetres => 1.9;
-    public double PercentWidthCentimetres => HasClientReference ? 1.0 : 1.1;
-    public double PreviousWidthCentimetres => 1.9;
-    public double PeriodWidthCentimetres => 2.0;
-    public double ClaimedWidthCentimetres => 2.1;
+    public double DescriptionWidthCentimetres => HasClientReference ? 4.9 : 6.2;
+    public double QuantityWidthCentimetres => 0.8;
+    public double RateWidthCentimetres => 1.2;
+    public double AmountWidthCentimetres => 1.8;
+    public double PercentWidthCentimetres => 0.9;
+    public double PreviousWidthCentimetres => 1.8;
+    public double PeriodWidthCentimetres => 1.8;
+    public double ClaimedWidthCentimetres => 1.9;
 }

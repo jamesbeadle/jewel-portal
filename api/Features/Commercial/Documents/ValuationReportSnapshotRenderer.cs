@@ -160,7 +160,7 @@ public static class ValuationReportSnapshotRenderer
 
         if (document.IsDraft)
         {
-            var draft = row.Cells[1].AddParagraph("WORKING COPY — NOT AN ISSUED STATEMENT");
+            var draft = row.Cells[1].AddParagraph("WORKING COPY OF THE LIVE REPORT");
             draft.Format.Font.Size = 8;
             draft.Format.Font.Bold = true;
             draft.Format.Font.Color = Orange;
@@ -263,7 +263,6 @@ public static class ValuationReportSnapshotRenderer
         row.TopPadding = Unit.FromMillimeter(1.0);
         row.BottomPadding = Unit.FromMillimeter(1.0);
         row.Cells[0].MergeRight = columns.Last;
-        row.Cells[0].Format.LeftIndent = Unit.FromMillimeter(1.5);
         var heading = row.Cells[0].AddParagraph(title);
         heading.Format.Font.Size = 8.5;
         heading.Format.Font.Bold = true;
@@ -272,8 +271,9 @@ public static class ValuationReportSnapshotRenderer
 
     private static Table BillTable(Section section, ValuationReportBillColumns columns)
     {
-        // No cell grid: a financial statement reads on horizontal rules alone, added per row.
         var table = section.AddTable();
+        table.Borders.Color = Hair;
+        table.Borders.Width = 0.5;
         table.AddColumn(Unit.FromCentimeter(columns.CodeWidthCentimetres));
         if (columns.HasClientReference)
             table.AddColumn(Unit.FromCentimeter(columns.ClientReferenceWidthCentimetres));
@@ -302,8 +302,6 @@ public static class ValuationReportSnapshotRenderer
         header.TopPadding = Unit.FromMillimeter(1.2);
         header.BottomPadding = Unit.FromMillimeter(1.2);
         header.HeadingFormat = true;
-        header.Borders.Bottom.Width = 0.75;
-        header.Borders.Bottom.Color = Hair;
         HeaderCell(header.Cells[columns.Code], "Code");
         if (columns.HasClientReference)
             HeaderCell(header.Cells[columns.ClientReference], "Client ref");
@@ -323,13 +321,10 @@ public static class ValuationReportSnapshotRenderer
         var row = table.AddRow();
         row.TopPadding = Unit.FromMillimeter(1.2);
         row.BottomPadding = Unit.FromMillimeter(1.2);
-        row.Borders.Bottom.Width = 0.5;
-        row.Borders.Bottom.Color = Hair;
         // The gold tint is the accountant's scan line: only rows that moved carry it.
         if (moved) row.Shading.Color = Highlight;
 
         // The code is provenance, not the story — small, quiet, never competing with the money.
-        row.Cells[columns.Code].Format.LeftIndent = Unit.FromMillimeter(1.5);
         var code = row.Cells[columns.Code].AddParagraph(line.Code);
         code.Format.Font.Size = 7;
         code.Format.Font.Color = Muted;
@@ -348,7 +343,6 @@ public static class ValuationReportSnapshotRenderer
         MoneyCell(row.Cells[columns.Amount], line.Amount,
             colour: line.Amount < 0 ? Negative : line.CountsTowardTotals ? null : Muted);
 
-        row.Cells[columns.Percent].Format.RightIndent = Unit.FromMillimeter(1.5);
         var pct = row.Cells[columns.Percent].AddParagraph(line.CountsTowardTotals ? Pct(line.PercentComplete) : "—");
         pct.Format.Font.Size = 8;
         pct.Format.Font.Color = Muted;
@@ -369,8 +363,6 @@ public static class ValuationReportSnapshotRenderer
 
     private static void AddDescription(Cell cell, ValuationReportBillRow line)
     {
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
-        cell.Format.RightIndent = Unit.FromMillimeter(1.5);
         var title = cell.AddParagraph(line.Title);
         title.Format.Font.Size = 8.5;
         title.Format.Font.Color = line.CountsTowardTotals ? Ink : Muted;
@@ -394,9 +386,6 @@ public static class ValuationReportSnapshotRenderer
         totals.Shading.Color = Panel;
         totals.TopPadding = Unit.FromMillimeter(1.4);
         totals.BottomPadding = Unit.FromMillimeter(1.4);
-        totals.Borders.Bottom.Width = 0.75;
-        totals.Borders.Bottom.Color = Hair;
-        totals.Cells[columns.Description].Format.LeftIndent = Unit.FromMillimeter(1.5);
         var label = totals.Cells[columns.Description].AddParagraph($"{title} total");
         label.Format.Font.Size = 8.5;
         label.Format.Font.Bold = true;
@@ -545,7 +534,6 @@ public static class ValuationReportSnapshotRenderer
     // Quantity / rate: a consolidated variation row has neither, and prints a dash instead.
     private static void NumberCell(Cell cell, decimal? value)
     {
-        cell.Format.RightIndent = Unit.FromMillimeter(1.5);
         var p = cell.AddParagraph(value is { } number ? Num(number) : "—");
         p.Format.Font.Size = 8;
         p.Format.Font.Color = Muted;

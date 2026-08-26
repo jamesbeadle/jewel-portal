@@ -781,7 +781,7 @@ else
         return ValuationReportExportWorkbook.Build(
             new ValuationExportMeta(
                 $"{Selected?.DisplayName ?? "Valuation report"} — working copy",
-                $"Prepared {DateTime.Now.ToString("dd MMM yyyy HH:mm", Gb)} · live report, not an issued statement",
+                $"Prepared {DateTime.Now.ToString("dd MMM yyyy HH:mm", Gb)} · working copy of the live report",
                 IsDraft: true),
             exportLines,
             summary,
