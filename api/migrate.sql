@@ -3,20 +3,38 @@ GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260826100000_AddValuationLineItemClientReference'
+    WHERE [MigrationId] = N'20260826180000_DropAgentTables'
 )
 BEGIN
-    ALTER TABLE [ValuationLineItems] ADD [ClientReference] nvarchar(64) NOT NULL DEFAULT N'';
+    DROP TABLE [RequestAgents];
 END;
 GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260826100000_AddValuationLineItemClientReference'
+    WHERE [MigrationId] = N'20260826180000_DropAgentTables'
+)
+BEGIN
+    DROP TABLE [AgentChatMessages];
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260826180000_DropAgentTables'
+)
+BEGIN
+    DROP TABLE [AgentProposals];
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20260826180000_DropAgentTables'
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20260826100000_AddValuationLineItemClientReference', N'8.0.10');
+    VALUES (N'20260826180000_DropAgentTables', N'8.0.10');
 END;
 GO
 
