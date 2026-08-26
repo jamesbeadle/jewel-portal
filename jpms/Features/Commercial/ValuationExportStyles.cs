@@ -18,7 +18,6 @@ internal static class ValuationExportStyles
     public static readonly ExcelCellStyle BandGold = new(Font: ExcelFont.Gold, Fill: ExcelFill.Navy);
     public static readonly ExcelCellStyle BandGoldRight = new(Font: ExcelFont.Gold, Fill: ExcelFill.Navy, Align: ExcelAlign.Right);
     public static readonly ExcelCellStyle BandTextRight = new(Font: ExcelFont.BandText, Fill: ExcelFill.Navy, Align: ExcelAlign.Right);
-    public static readonly ExcelCellStyle DraftWarning = new(Font: ExcelFont.Negative);
     public static readonly ExcelCellStyle Legend = new(Font: ExcelFont.SmallMuted);
     public static readonly ExcelCellStyle SectionHead = new(Font: ExcelFont.NavyBold, Border: ExcelBorder.Accent);
     public static readonly ExcelCellStyle SectionHeadFill = new(Border: ExcelBorder.Accent);

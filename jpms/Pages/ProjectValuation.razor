@@ -76,7 +76,7 @@ else
                             class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
                         @foreach (var claim in Claims)
                         {
-                            <option value="@claim.ValuationClaimId">@claim.DisplayName — @claim.Status (@claim.ClaimDate.ToString("dd MMM yyyy"))</option>
+                            <option value="@claim.ValuationClaimId">@claim.DisplayName — @claim.Status.DisplayName() (@claim.ClaimDate.ToString("dd MMM yyyy"))</option>
                         }
                     </select>
                 }
@@ -123,7 +123,7 @@ else
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="font-semibold text-content">@s.DisplayName</span>
                             <span class="@ClaimBadgeClass(s.Status)"
-                                  title="@(s.Status == ValuationClaimStatus.Preapproved && s.PreapprovedAt is { } pa ? $"Preapproved {pa:dd MMM yyyy}" : "")">@s.Status</span>
+                                  title="@(s.Status == ValuationClaimStatus.Preapproved && s.PreapprovedAt is { } pa ? $"Issued {pa:dd MMM yyyy}" : "")">@s.Status.DisplayName()</span>
                         </div>
                         <p class="text-sm text-content-muted mt-1.5">@StageHint(s)</p>
                     </div>
@@ -601,7 +601,7 @@ else
             {
                 items.Add(new(Label: "Reopen as draft",
                     OnSelect: EventCallback.Factory.Create(this, ReopenAsync),
-                    Hint: "Undo the preapproval — back to Draft, % complete editable again",
+                    Hint: "Un-issue the claim — back to Draft, % complete editable again",
                     Disabled: busy, Group: 1));
                 if (StageFor(claim) != ClaimStage.ReadyToConfirm)
                     items.Add(new(Label: "Confirm & roll over",
@@ -1258,7 +1258,7 @@ else
         }
         if (claim.Status != ValuationClaimStatus.Draft)
         {
-            assistantRouteError = $"The assistant tried to open the Set % complete dialog, but {claim.DisplayName} is {claim.Status} — % complete can only be recorded on a Draft claim.";
+            assistantRouteError = $"The assistant tried to open the Set % complete dialog, but {claim.DisplayName} is {claim.Status.DisplayName()} — % complete can only be recorded on a Draft claim.";
             StateHasChanged();
             return;
         }
@@ -1306,8 +1306,8 @@ else
         if (!Store.ReportLoadedFor(ProjectId)) return null;
         var lines = Store.LinesFor(ProjectId);
         var note = Selected is { } claim
-            ? $"The selected claim is «{claim.DisplayName}» ({claim.Status})"
-              + (PreviousClaim is { } prev ? $", previous «{prev.DisplayName}» ({prev.Status})" : ", the first claim")
+            ? $"The selected claim is «{claim.DisplayName}» ({claim.Status.DisplayName()})"
+              + (PreviousClaim is { } prev ? $", previous «{prev.DisplayName}» ({prev.Status.DisplayName()})" : ", the first claim")
               + $"; the report has {lines.Count} line{(lines.Count == 1 ? "" : "s")}."
             : "No claim exists yet — % complete needs a Draft claim, started here with New claim.";
         if (claimProgressOpen)

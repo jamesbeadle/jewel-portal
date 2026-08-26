@@ -41,7 +41,7 @@
     @if (!ClaimIsDraft)
     {
         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
-            @(Claim is null ? "No claim is selected." : $"{Claim.DisplayName} is {Claim.Status} — % complete can only be recorded on a Draft claim.")
+            @(Claim is null ? "No claim is selected." : $"{Claim.DisplayName} is {Claim.Status.DisplayName()} — % complete can only be recorded on a Draft claim.")
         </p>
     }
     else

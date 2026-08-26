@@ -32,6 +32,21 @@ public enum ValuationClaimStatus
     Confirmed = 2
 }
 
+public static class ValuationClaimStatusExtensions
+{
+    // The one shared status wording (same arrangement as VariationOrderStatusExtensions): the
+    // reader's word for a Preapproved claim is "Issued" — it has been locked and put to the
+    // client for a decision (accountant 2026-08-26). The enum member keeps its name: it is a
+    // persisted identifier (stored as an int, threaded through API routes), never UI copy.
+    public static string DisplayName(this ValuationClaimStatus status) => status switch
+    {
+        ValuationClaimStatus.Draft => "Draft",
+        ValuationClaimStatus.Preapproved => "Issued",
+        ValuationClaimStatus.Confirmed => "Confirmed",
+        _ => status.ToString()
+    };
+}
+
 // One priced row of the bill — a contract/PC/contingency line, or a variation line.
 // Entered manually through the UI; no BoQ seeding.
 public sealed record ValuationLineItem(

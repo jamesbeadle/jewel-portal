@@ -8,16 +8,14 @@ namespace Jewel.JPMS.Features.Commercial;
 /// and the narrower Pending tab all carry the same band.</summary>
 internal static class ValuationExportTitleBand
 {
-    private const string WorkingCopyWarning =
-        "WORKING COPY — the live report as it stands right now; figures may change until the claim is locked.";
-
     public static void Add(ExcelSheet sheet, ValuationExportMeta meta, string legend)
     {
+        // A draft export carries no extra warning row: the band's statement label ("… — WORKING
+        // COPY") and the prepared line already say what this is (accountant 2026-08-26).
         AddSplitBandRow(sheet, new ExcelStyledCell("VALUATION REPORT", BandTitle),
             new ExcelStyledCell(meta.StatementLabel.ToUpperInvariant(), BandGoldRight));
         AddSplitBandRow(sheet, new ExcelStyledCell("Jewel Bespoke Build", BandGold),
             new ExcelStyledCell(meta.PreparedLabel, BandTextRight));
-        if (meta.IsDraft) AddMergedRow(sheet, new ExcelStyledCell(WorkingCopyWarning, DraftWarning));
         AddMergedRow(sheet, new ExcelStyledCell(legend, Legend));
         sheet.AddRow();
     }
