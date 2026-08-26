@@ -350,7 +350,7 @@ else
 
     private static string CodeFor(ValuationReportSnapshotLine line) =>
         line.ElementType == ValuationElementType.Variation
-            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
+            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : VariationRefs.Padded(line.VariationRef))
             : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
 
     // Variation lines lead with their own line description; VO title is the fallback —

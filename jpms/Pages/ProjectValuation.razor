@@ -840,7 +840,7 @@ else
     // Same fallbacks as the report table and the snapshot renderer, so every surface agrees.
     private static string ExportCodeFor(ValuationLineItem line) =>
         line.ElementType == ValuationElementType.Variation
-            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
+            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : VariationRefs.Padded(line.VariationRef))
             : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
 
     private static string ExportTitleFor(ValuationLineItem line)

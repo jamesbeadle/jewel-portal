@@ -36,7 +36,7 @@ public static class ValuationExportRollUps
         var counting = rollUp.CountingLines.ToList();
         var claimed = counting.Sum(line => line.CumulativeClaimed);
         return new ValuationExportLine(
-            first.Section, first.ElementType, Area: "", rollUp.VariationRef, rollUp.VariationTitle,
+            first.Section, first.ElementType, Area: "", VariationRefs.Padded(rollUp.VariationRef), rollUp.VariationTitle,
             ConsolidatedLabel,
             CountsTowardTotals: rollUp.CountsTowardTotals,
             ItemUnit, OneItem, rollUp.Amount, rollUp.Amount,

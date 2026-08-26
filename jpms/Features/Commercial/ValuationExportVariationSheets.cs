@@ -61,13 +61,14 @@ internal static class ValuationExportVariationSheets
 
     // "V08 — West Valley SD8 + Ridge/Hip …" — same wording the old Detail tab's bands carried.
     private static string HeadingFor(VariationRollUp<ValuationExportLine> rollUp) =>
-        string.Join(" — ", new[] { rollUp.VariationRef, rollUp.VariationTitle }
+        string.Join(" — ", new[] { VariationRefs.Padded(rollUp.VariationRef), rollUp.VariationTitle }
             .Where(part => !string.IsNullOrWhiteSpace(part))
             .Select(part => part.Trim()));
 
-    // The V-ref names the tab; a line with no ref (legacy data) falls back so the sheet still exists.
+    // The V-ref names the tab, in the export's uniform two-digit spelling (VariationRefs);
+    // a line with no ref (legacy data) falls back so the sheet still exists.
     private static string RefOr(VariationRollUp<ValuationExportLine> rollUp, string fallback) =>
-        string.IsNullOrWhiteSpace(rollUp.VariationRef) ? fallback : rollUp.VariationRef.Trim();
+        string.IsNullOrWhiteSpace(rollUp.VariationRef) ? fallback : VariationRefs.Padded(rollUp.VariationRef);
 
     private static string UniqueName(string wanted, HashSet<string> taken)
     {

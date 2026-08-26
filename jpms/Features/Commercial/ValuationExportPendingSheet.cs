@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Models;
 using Jewel.JPMS.Services.Excel;
@@ -43,7 +44,7 @@ public static class ValuationExportPendingVariations
             .Where(HasValue)
             .OrderBy(order => order.Number)
             .Select(order => new ValuationExportPendingVariation(
-                string.IsNullOrWhiteSpace(order.DisplayNumber) ? order.Reference : order.DisplayNumber,
+                order.Number > 0 ? VariationRefs.Padded(order.Number) : order.Reference,
                 order.Title,
                 order.Status.DisplayName(),
                 order.Status.Hint(),

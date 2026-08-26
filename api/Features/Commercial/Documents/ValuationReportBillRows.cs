@@ -95,7 +95,7 @@ internal static class ValuationReportBillRows
     {
         var claimed = rollUp.CountingLines.Sum(line => line.CumulativeClaimed);
         var period = rollUp.CountingLines.Sum(line => line.PeriodIncrement);
-        return new(rollUp.VariationRef, SharedClientReference(rollUp), rollUp.VariationTitle,
+        return new(VariationRefs.Padded(rollUp.VariationRef), SharedClientReference(rollUp), rollUp.VariationTitle,
             $"{rollUp.Lines.Count} items", rollUp.CountsTowardTotals ? "" : "Not priced",
             OneItem, rollUp.Amount, rollUp.Amount, VariationRollUps.WeightedPercent(claimed, rollUp.Amount),
             claimed - period, period, claimed, rollUp.CountsTowardTotals);
@@ -117,7 +117,7 @@ internal static class ValuationReportBillRows
     // Same code/title fallbacks as the on-screen snapshot viewer, so PDF and screen always agree.
     private static string CodeFor(ValuationReportSnapshotLine line) =>
         line.ElementType == ValuationElementType.Variation
-            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : line.VariationRef)
+            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : VariationRefs.Padded(line.VariationRef))
             : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
 
     private static string TitleFor(ValuationReportSnapshotLine line)
