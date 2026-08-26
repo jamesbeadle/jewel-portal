@@ -40,6 +40,11 @@ public static class RequestsFeatureRegistration
         // Reads a request's emails live from the mailbox by its workflow tag — the replacement for the
         // old stored email snapshot. Used by the conversation view, LLM context, and document builder.
         services.AddScoped<RequestEmailReader>();
+        services.AddScoped<RequestContextAssembler>();
+
+        services.AddScoped<ICommandHandler<CloseRequest, RequestCloseOutcome>, CloseRequestHandler>();
+        services.AddScoped<CloseRequestAuthorisation>();
+        services.AddScoped<CloseRequestValidation>();
 
         // Live-read triage: read the Inbox (queue) / General (discarded) folder straight from the
         // mailbox, move messages (discard/restore), and assign/create requests from a message.

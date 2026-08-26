@@ -3,7 +3,7 @@ using System.Text;
 using System.Xml.Linq;
 using ClosedXML.Excel;
 using Ganss.Xss;
-using Jewel.JPMS.Api.Features.Agents;
+using Jewel.JPMS.Api.Features.Requests;
 
 namespace Jewel.JPMS.Api.Features.Ai.Sources;
 

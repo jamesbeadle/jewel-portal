@@ -2,7 +2,6 @@
 @using Jewel.JPMS.Contracts.Requests
 @implements IDisposable
 @inject IRequestRegister RequestRegister
-@inject IAgentDesk Agents
 @inject AuthService Auth
 @inject IIntakeQueue Intake
 
@@ -145,21 +144,17 @@
     private Func<Task> ExecutorFor(Request picked, DateTimeOffset? closedAt)
     {
         var register = RequestRegister;
-        var agents = Agents;
         var email = Auth.CurrentUser?.Email;
         return Kind switch
         {
             SystemActionKind.PromoteRequestToRfi => async () =>
                 await register.PromoteToRfiAsync(picked.RequestId, picked.ProjectId),
 
-            // Closing goes through the agent gate, same as the request page: the request only
-            // closes if every applied agent agrees its work is complete.
             SystemActionKind.CloseRfi => async () =>
             {
-                var outcome = await agents.AttemptCloseAsync(picked.RequestId, closedAt!.Value);
-                if (!outcome.Closed)
-                    throw new CommandFailedException(
-                        $"{picked.Reference} wasn't closed — an applied agent reports its work incomplete. Close it from the request page to see the detail.");
+                var closed = await register.CloseAsync(picked.RequestId, picked.ProjectId, closedAt!.Value);
+                if (!closed)
+                    throw new CommandFailedException($"{picked.Reference} no longer exists.");
             },
 
             // Reopening puts the ball back in our court — the same UpdateRequestDetails the page

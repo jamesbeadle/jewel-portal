@@ -25,6 +25,10 @@ public static class RequestsRouteRegistration
             new QueryRoute("/api/requests/{requestId}",
                 query => $"/api/requests/{((GetRequestById)query).RequestId}"));
 
+        commands.Register<CloseRequest, RequestCloseOutcome>(
+            new CommandRoute("POST", "/api/requests/{requestId}/close",
+                command => $"/api/requests/{((CloseRequest)command).RequestId}/close"));
+
         // Recipients preview: the exact To/CC/BCC set an issue or draft would use right now,
         // resolved through the same shared resolver as the send paths.
         queries.Register<ResolveRequestRecipients, RequestRecipientSet>(

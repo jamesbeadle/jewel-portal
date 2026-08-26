@@ -17,7 +17,6 @@
 @inject IArchitectStore ArchitectStore
 @inject ICorrespondenceStore Correspondence
 @inject IVariationStore Variations
-@inject IAgentDesk Agents
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 @inject ChatPanelState Chat
@@ -187,19 +186,6 @@ else
                     <button type="button" class="btn-primary text-xs" disabled="@busy" @onclick="() => AnswerCriticalPathNudge(true)">Yes — tag as critical path</button>
                     <button type="button" class="btn-neutral text-xs" disabled="@busy" @onclick="() => AnswerCriticalPathNudge(false)" title="Hides this prompt for this RFI, for everyone — the tag can still be set from the Actions menu">No</button>
                 </div>
-            </div>
-        }
-        @if (blockingAgents.Count > 0)
-        {
-            <div class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 mb-5">
-                <p class="text-sm font-medium text-amber-700 mb-1">This request can't be closed yet.</p>
-                <p class="text-xs text-content-subtle mb-2">The following agents have outstanding work:</p>
-                <ul class="space-y-1">
-                    @foreach (var blocker in blockingAgents)
-                    {
-                        <li class="text-xs text-content"><span class="font-medium">@blocker.DisplayName</span> — @blocker.Message</li>
-                    }
-                </ul>
             </div>
         }
 
@@ -415,9 +401,6 @@ else
                                     Title="History" />
                 }
                 }
-
-                @* Agents are parked for now — the workspace is hidden until we settle on whether
-                   attaching agents to requests is the right model. Re-add <AgentWorkspace> here. *@
             </div>
 
             <div class="space-y-5">
@@ -963,7 +946,6 @@ else
     private bool confirmingDelete;
     private bool confirmingReturn;
     private bool respondingOpen;
-    private IReadOnlyList<AgentCompletionState> blockingAgents = Array.Empty<AgentCompletionState>();
     private IReadOnlyList<Client> clients = Array.Empty<Client>();
     private IReadOnlyList<Architect> architects = Array.Empty<Architect>();
 
@@ -1461,14 +1443,12 @@ else
         await CloseRequest(closedAt.Value);
     }
 
-    // Closing goes through the agent gate: the request only closes if every applied agent agrees
-    // its work is complete. Any drafted response is persisted first so it isn't lost. The stub
-    // agents always report incomplete, so a request with an applied agent stays open by design.
+    // Closes the request as at the user-chosen date. Any drafted response is persisted first so
+    // it isn't lost.
     private async Task CloseRequest(DateTimeOffset closedAt)
     {
         if (record is null || busy) return;
         actionError = null;
-        blockingAgents = Array.Empty<AgentCompletionState>();
 
         if (!string.IsNullOrWhiteSpace(responseDraft) && responseDraft.Trim() != (record.ResponseText ?? "").Trim())
             await Apply(RequestStatus.NeedsAction, responseDraft);
@@ -1477,15 +1457,15 @@ else
         try
         {
             busy = true;
-            var outcome = await Agents.AttemptCloseAsync(record.RequestId, closedAt);
-            if (outcome.Closed)
+            var closed = await RequestRegister.CloseAsync(record.RequestId, record.ProjectId, closedAt);
+            if (closed)
             {
                 record = await RequestRegister.GetAsync(RequestId);
                 responseDraft = record?.ResponseText ?? "";
             }
             else
             {
-                blockingAgents = outcome.BlockingAgents;
+                actionError = "This request no longer exists — refresh the page.";
             }
         }
         catch

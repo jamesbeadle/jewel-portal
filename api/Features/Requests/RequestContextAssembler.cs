@@ -5,12 +5,11 @@ using Ganss.Xss;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.MailboxIntake;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
-using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Jewel.JPMS.Api.Features.Agents;
+namespace Jewel.JPMS.Api.Features.Requests;
 
 // Gathers everything an agent needs to "see" a request — the request header, its in-app/email
 // conversation (RequestMessages) and the originating intake emails — into one text context.

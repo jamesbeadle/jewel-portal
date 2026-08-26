@@ -1,11 +1,11 @@
 using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Contracts.Agents;
+using Jewel.JPMS.Contracts.Requests;
 
-namespace Jewel.JPMS.Api.Features.Agents.Commands;
+namespace Jewel.JPMS.Api.Features.Requests.Commands;
 
-public sealed class AttemptCloseRequestValidation
+public sealed class CloseRequestValidation
 {
-    public ValidationOutcome Check(AttemptCloseRequest command)
+    public ValidationOutcome Check(CloseRequest command)
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.RequestId)) errors.Add("RequestId is required.");

@@ -1,6 +1,5 @@
 using Jewel.JPMS;
 using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Features.Agents;
 using Jewel.JPMS.Features.Architects;
 using Jewel.JPMS.Features.ArchitectInstructions;
 using Jewel.JPMS.Features.Audit;
@@ -90,7 +89,6 @@ builder.Services.AddRequestsReadModels();
 builder.Services.AddClientsReadModels();
 builder.Services.AddArchitectsReadModels();
 builder.Services.AddCostCentersReadModels();
-builder.Services.AddAgentsReadModels();
 builder.Services.AddXeroReadModels();
 builder.Services.AddRecordLinksReadModels();
 
@@ -135,7 +133,6 @@ builder.Services.AddScoped<ICommercialInputsStore, HttpCommercialInputsStore>();
 builder.Services.AddScoped<IProjectRetentionStore, HttpProjectRetentionStore>();
 builder.Services.AddScoped<ICloseoutStore, HttpCloseoutStore>();
 builder.Services.AddScoped<ICostCenterStore, HttpCostCenterStore>();
-builder.Services.AddScoped<IAgentDesk, HttpAgentDesk>();
 builder.Services.AddScoped<IXeroTransactionStore, HttpXeroTransactionStore>();
 builder.Services.AddScoped<IXeroCashSummaryStore, HttpXeroCashSummaryStore>();
 builder.Services.AddScoped<IXeroAgedPayablesStore, HttpXeroAgedPayablesStore>();
@@ -213,7 +210,6 @@ using (var routeScope = app.Services.CreateScope())
     UsefulInformationRouteRegistration.RegisterUsefulInformationRoutes(queryRoutes, commandRoutes);
     LadsRouteRegistration.RegisterLadsRoutes(queryRoutes, commandRoutes);
     CostCentersRouteRegistration.RegisterCostCentersRoutes(queryRoutes, commandRoutes);
-    AgentsRouteRegistration.RegisterAgentsRoutes(queryRoutes, commandRoutes);
     XeroRouteRegistration.RegisterXeroRoutes(queryRoutes, commandRoutes);
     PlatformRouteRegistration.RegisterPlatformRoutes(queryRoutes, commandRoutes);
 }

@@ -6,7 +6,6 @@
 @inject SessionService Session
 @inject IRequestRegister RequestRegister
 @inject RecordActivityReadModel Activity
-@inject IAgentDesk Agents
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -337,8 +336,8 @@ else
     private string? statusError;
 
     // Same routing as the detail page's status pill, adapted for one-click register use: Closed
-    // goes through the agent gate (with today's date — the record's own close flow remains the
-    // place to backdate); everything else applies directly, keeping the recorded response text.
+    // closes as at today (the record's own close flow remains the place to backdate); everything
+    // else applies directly, keeping the recorded response text.
     private async Task ChangeRequestStatus((Request Record, RequestStatus Status) change)
     {
         var (record, status) = change;
@@ -350,12 +349,9 @@ else
 
             if (status == RequestStatus.Closed)
             {
-                var outcome = await Agents.AttemptCloseAsync(record.RequestId, DateTimeOffset.Now);
-                if (!outcome.Closed)
-                {
-                    var blocking = string.Join(", ", outcome.BlockingAgents.Select(agent => agent.DisplayName));
-                    statusError = $"{RowRef(record)} can't close yet — {(string.IsNullOrEmpty(blocking) ? "its agents still report work outstanding" : $"still being worked by: {blocking}")}.";
-                }
+                var closed = await RequestRegister.CloseAsync(record.RequestId, record.ProjectId, DateTimeOffset.Now);
+                if (!closed)
+                    statusError = $"{RowRef(record)} couldn't be closed — it no longer exists.";
                 return;
             }
 

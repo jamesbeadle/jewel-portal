@@ -129,6 +129,13 @@ public sealed class HttpRequestRegister : IRequestRegister
         return updated;
     }
 
+    public async Task<bool> CloseAsync(string requestId, string projectId, DateTimeOffset? closedAt = null, CancellationToken cancellationToken = default)
+    {
+        var outcome = await commands.SendAsync(new CloseRequest(requestId, ClosedAt: closedAt), cancellationToken);
+        await readModel.RefreshAsync(projectId, cancellationToken);
+        return outcome.Closed;
+    }
+
     public Task<Request> SaveFormAsync(UpdateRequestForm command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 

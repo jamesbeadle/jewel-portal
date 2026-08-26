@@ -205,7 +205,6 @@ public static class PortalMapCapabilities
         "Nurture → /nurture — leads and early-stage projects being nurtured",
         "Architects → /architects — the architect practice directory",
         "Clients → /clients — the client directory",
-        "Agent queue → /agents — requests being watched by applied discipline agents",
         "Sales analytics → /sales-analytics — pipeline and conversion analytics",
         "Revoked users → /admin/users/revoked — access that has been revoked",
         "Stale rates → /rate-library/stale — library rates due a re-price",

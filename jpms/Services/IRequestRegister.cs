@@ -32,6 +32,10 @@ public interface IRequestRegister
     Task<Request> EnableRfqAsync(string requestId, string projectId, CancellationToken cancellationToken = default);
     Task<Request> LinkToPartyAsync(string requestId, PartyKind partyKind, string? partyId, string? onBehalfOfClientId, string projectId, CancellationToken cancellationToken = default);
 
+    /// <summary>Closes the request as at the user-chosen date (today or earlier; null closes as at
+    /// now). Returns false only when the request no longer exists.</summary>
+    Task<bool> CloseAsync(string requestId, string projectId, DateTimeOffset? closedAt = null, CancellationToken cancellationToken = default);
+
     /// <summary>Saves the official document's structured body: the itemised queries plus the
     /// basis-of-queries / response-action-required / impact sections (replace-all for the items).</summary>
     Task<Request> SaveFormAsync(UpdateRequestForm command, CancellationToken cancellationToken = default);

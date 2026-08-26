@@ -79,9 +79,6 @@ public sealed class DeleteProjectHandler : ICommandHandler<DeleteProject, Acknow
             var requestIds = context.Requests.Where(r => r.ProjectId == projectId).Select(r => r.RequestId);
             await context.RequestItems.Where(x => requestIds.Contains(x.RequestId)).ExecuteDeleteAsync(cancellationToken);
             await context.RequestMessages.Where(x => requestIds.Contains(x.RequestId)).ExecuteDeleteAsync(cancellationToken);
-            await context.RequestAgents.Where(x => requestIds.Contains(x.RequestId)).ExecuteDeleteAsync(cancellationToken);
-            await context.AgentChatMessages.Where(x => requestIds.Contains(x.RequestId)).ExecuteDeleteAsync(cancellationToken);
-            await context.AgentProposals.Where(x => requestIds.Contains(x.RequestId)).ExecuteDeleteAsync(cancellationToken);
 
             var drawingIds = context.Drawings.Where(d => d.ProjectId == projectId).Select(d => d.DrawingId);
             var revisionIds = context.DrawingRevisions.Where(r => drawingIds.Contains(r.DrawingId)).Select(r => r.DrawingRevisionId);

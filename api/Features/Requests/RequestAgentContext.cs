@@ -1,4 +1,4 @@
-namespace Jewel.JPMS.Api.Features.Agents;
+namespace Jewel.JPMS.Api.Features.Requests;
 
 // The single text picture of a request handed to an agent: the request header, its in-app /
 // emailed conversation, and the originating intake email(s). Assembled by RequestContextAssembler
@@ -32,11 +32,3 @@ public sealed record RequestAgentContext(
         return sb.ToString();
     }
 }
-
-// The structured result of an agent analysing a request. A real agent fills StructuredJson with its
-// discipline-specific object; a stub returns Status = Unavailable with an empty object.
-public sealed record AgentAnalysisResult(
-    Jewel.JPMS.Models.AgentProposalStatus Status,
-    string Summary,
-    string StructuredJson,
-    string? Rationale);

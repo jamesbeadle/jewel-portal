@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Ganss.Xss;
-using Jewel.JPMS.Api.Features.Agents;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph; // IIntakeMessageReader (read_selected_email)
 using Jewel.JPMS.Api.Features.Requests; // TriageRoles (internal, same assembly)
 using Jewel.JPMS.Api.Gates;
