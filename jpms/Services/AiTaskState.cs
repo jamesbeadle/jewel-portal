@@ -126,15 +126,34 @@ public sealed class AiTaskState
     public void UpdateDraft(string draftJson)
     {
         if (Active is null) return;
+        // Every dialog republishes its live state through here the instant it applies an assistant
+        // draft — so a republish DURING an ApplyFromAssistant invocation is the proof a real dialog
+        // took the update. This is what lets ApplyFromAssistant tell the panel (and, next hop, the
+        // model) that update_open_modal actually landed rather than fell into a closed dialog.
+        if (applyInProgress) draftAcceptedThisApply = true;
         DraftJson = string.IsNullOrWhiteSpace(draftJson) ? "{}" : draftJson;
         DraftPublishedSinceStart = true;
     }
 
-    /// <summary>From the chat panel, when a update_open_modal action comes back from the server.</summary>
-    public void ApplyFromAssistant(string fieldsJson)
+    private bool applyInProgress;
+    private bool draftAcceptedThisApply;
+
+    /// <summary>
+    /// From the chat panel, when an update_open_modal action comes back from the server. Returns
+    /// whether a live dialog ACTUALLY took it — true when the open dialog applied the draft and
+    /// republished its state, false when the update reached no dialog (none open for this task, the
+    /// wrong page, a panel not yet rendered). A false is the update_open_modal equivalent of the
+    /// open_modal "a Ui ok meant only posted" lesson: without it the model narrates a form it
+    /// filled that was never filled.
+    /// </summary>
+    public bool ApplyFromAssistant(string fieldsJson)
     {
-        if (Active is null || string.IsNullOrWhiteSpace(fieldsJson)) return;
-        OnDraftApplied?.Invoke(fieldsJson);
+        if (Active is null || string.IsNullOrWhiteSpace(fieldsJson)) return false;
+        applyInProgress = true;
+        draftAcceptedThisApply = false;
+        try { OnDraftApplied?.Invoke(fieldsJson); }
+        finally { applyInProgress = false; }
+        return draftAcceptedThisApply;
     }
 
     public void ReportAssistantUnavailable()

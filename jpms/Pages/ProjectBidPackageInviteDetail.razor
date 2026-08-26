@@ -1631,8 +1631,12 @@ else
             {
                 // The composer has not rendered yet (its @ref lands after the first render) —
                 // hold the proposal and apply it on the composer's first publish rather than
-                // dropping it on the floor while the model narrates success.
+                // dropping it on the floor while the model narrates success. Publishing the held
+                // fields as the draft now both signals acceptance (so the panel does not report
+                // "nothing was filled") and gives the model a truthful next-hop preview — the
+                // composer applies these same fields the moment it renders.
                 pendingTenderReplyFields = fieldsJson;
+                AiTasks.UpdateDraft(fieldsJson);
             }
             return;
         }

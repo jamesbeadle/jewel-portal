@@ -1606,9 +1606,24 @@
     /// </summary>
     private void ApplyModalUpdate(AiUiAction action)
     {
-        if (AiTasks.Active is null) return;
-        if (string.IsNullOrWhiteSpace(action.ArgumentsJson)) return;
-        AiTasks.ApplyFromAssistant(action.ArgumentsJson);
+        if (AiTasks.Active is null || string.IsNullOrWhiteSpace(action.ArgumentsJson))
+        {
+            // No task at all: the server offered update_open_modal but nothing is open to receive
+            // it. Say so — a silent drop is the model narrating a filled form that was never filled
+            // (the update_open_modal twin of the open_modal "ok meant only posted" lesson).
+            error = "The assistant tried to fill a dialog, but none is open beside the chat right now. "
+                + "Open the dialog first, then ask again.";
+            return;
+        }
+        // ApplyFromAssistant returns whether a LIVE dialog took the update. A false means the draft
+        // reached no open dialog — the wrong page, or one that just closed — so nothing was filled;
+        // the model finds the same truth in next hop's dialog-contents block, but the user should
+        // not be left looking at an unchanged form while the model says "done".
+        if (!AiTasks.ApplyFromAssistant(action.ArgumentsJson))
+        {
+            error = "The assistant sent lines to a dialog that isn't open on this page any more, so "
+                + "nothing was filled in. Re-open the dialog and ask again — nothing was changed.";
+        }
     }
 
     /// <summary>
