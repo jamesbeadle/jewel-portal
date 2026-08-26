@@ -95,9 +95,9 @@ else
                                 @{ var currentArea = ""; }
                                 @foreach (var row in RowsFor(section))
                                 {
-                                    @* Variations consolidate per variation per cost centre (VariationRollUps),
-                                       exactly as the client's PDF shows them; a consolidated row opens to show
-                                       the frozen lines beneath it. *@
+                                    @* Variations consolidate per variation per cost centre (VariationRollUps);
+                                       a consolidated row opens to show the frozen lines beneath it. The client's
+                                       PDF and the workbook's Summary tab go one further, to one row per order. *@
                                     @if (row.RollUp is { } rollUp)
                                     {
                                         var isRollUpOpen = IsRollUpOpen(rollUp);
@@ -333,10 +333,11 @@ else
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
 
-    // Every frozen line plus the summary footer — exactly what the viewer shows, so the workbook
-    // and the screen (and the PDF, rendered from the same lines) always agree. The workbook is
-    // the shared two-tab shape (branded presentation + flat raw data); each line's "Previous" is
-    // its cumulative claimed less the period increment frozen at capture.
+    // Every frozen line plus the summary footer, so the workbook and the screen (and the PDF,
+    // rendered from the same lines) always agree. The workbook is the shared three-tab shape
+    // (Summary consolidated as the PDF, Detail with every line, flat Raw data) and does its own
+    // consolidating; each line's "Previous" is its cumulative claimed less the period increment
+    // frozen at capture.
     private ExcelWorkbook? BuildExportWorkbook(bool _)
     {
         if (detail is null) return null;
@@ -345,30 +346,9 @@ else
         var exportLines = new List<ValuationExportLine>();
         foreach (var section in Sections)
         {
-            foreach (var row in ExportRowsFor(section))
+            foreach (var line in section.Lines)
             {
-                if (row.RollUp is { } rollUp)
-                {
-                    exportLines.Add(RollUpExportLine(section.Title, rollUp));
-                    continue;
-                }
-                var line = row.Line!;
-                exportLines.Add(new ValuationExportLine(
-                    section.Title,
-                    ValuationReportAreas.GroupsByArea(section.Type) ? AreaTitleFor(line) : "",
-                    CodeFor(line),
-                    TitleFor(line),
-                    LineTypeLabel(line.LineType),
-                    line.CountsTowardTotals,
-                    line.Unit,
-                    line.Quantity,
-                    line.Rate,
-                    line.LineAmount,
-                    line.PercentComplete,
-                    line.CumulativeClaimed - line.PeriodIncrement,
-                    line.PeriodIncrement,
-                    line.CumulativeClaimed,
-                    line.Comments));
+                exportLines.Add(ExportLineFor(section, line));
             }
         }
 
@@ -402,6 +382,28 @@ else
             exportLines,
             summary);
     }
+
+    private ValuationExportLine ExportLineFor(Section section, ValuationReportSnapshotLine line) =>
+        new(section.Title,
+            line.ElementType,
+            ValuationReportAreas.GroupsByArea(section.Type) ? AreaTitleFor(line) : "",
+            CodeFor(line),
+            TitleFor(line),
+            LineTypeLabel(line.LineType),
+            line.CountsTowardTotals,
+            line.Unit,
+            line.Quantity,
+            line.Rate,
+            line.LineAmount,
+            line.PercentComplete,
+            line.CumulativeClaimed - line.PeriodIncrement,
+            line.PeriodIncrement,
+            line.CumulativeClaimed,
+            line.Comments,
+            line.VariationRef,
+            line.VariationTitle,
+            line.CostCode,
+            line.DisplayOrder);
 
     // Same wording as the PDF renderer, so the workbook and the statement agree.
     private static string LineTypeLabel(ValuationLineType type) => type switch

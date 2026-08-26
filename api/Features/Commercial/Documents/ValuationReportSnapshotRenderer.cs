@@ -30,7 +30,7 @@ public sealed record ValuationReportSnapshotDocument(
 /// same section + summary-footer layout as the on-screen snapshot viewer (Contract Works,
 /// Provisional Sums, Contingency Sums, Variations), fed entirely from the snapshot's copied lines
 /// — live report edits never show here, exactly as on screen — but printed at grouping level:
-/// one row per area of the works, one per variation per cost centre, never the individual items
+/// one row per area of the works, one per variation order, never the individual items
 /// (those stay on screen and in the spreadsheet). Each row carries the movement
 /// story the accountant traces a claim by: Previous / This period / Claimed, with lines that
 /// moved this period shaded gold. Pure function of the document model, so the download endpoint
@@ -225,8 +225,8 @@ public static class ValuationReportSnapshotRenderer
         Section section, ValuationReportSnapshotDocument document, ValuationReportBillColumns columns,
         string title, ValuationElementType elementType)
     {
-        // Every row is a grouping: an area for contract/PC/contingency work, a variation per
-        // cost centre for variations (ValuationReportBillRows) — never an individual item.
+        // Every row is a grouping: an area for contract/PC/contingency work, a whole variation
+        // order for variations (ValuationReportBillRows) — never an individual item.
         var rows = ValuationReportBillRows.For(document.Detail.Lines, elementType,
             code => document.CostCentreNames is { } names && names.TryGetValue(code, out var name) ? name : null);
         if (rows.Count == 0)
