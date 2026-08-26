@@ -64,7 +64,7 @@ public sealed record ValuationExportSummaryRow(string Label, decimal Amount, boo
 public static class ValuationReportExportWorkbook
 {
     private const string SummaryLegend =
-        "Variations as one row per order, as on the issued statement — each order's lines are on its own tab · "
+        "Approved variations only, one row per order, as on the issued statement — each order's lines are on its own tab; anything awaiting a decision is on the Pending tab · "
         + "Shaded lines moved this period · “This period” is the movement since the previous statement · All figures net of VAT.";
 
     /// <param name="pendingVariations">The register's pre-approval orders for the Pending tab —

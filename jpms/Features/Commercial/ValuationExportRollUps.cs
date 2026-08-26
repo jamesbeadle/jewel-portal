@@ -6,9 +6,12 @@ namespace Jewel.JPMS.Features.Commercial;
 /// Shapes the exported lines into the rows the workbook's Summary tab shows. Contract, PC and
 /// contingency lines pass through untouched — the accountant wants every priced item, under
 /// its area sub-heading; only variation lines consolidate, to one row per variation order
-/// (<see cref="VariationOrderRollUps"/>) as on the client's PDF. A consolidated row carries the
-/// summed money of the lines priced under it and their weighted % complete, priced as one item
-/// at the order's total; the lines themselves are on the order's own tab.
+/// (<see cref="VariationOrderRollUps"/>) as on the client's PDF. Only APPROVED orders are
+/// listed — an order with nothing priced into the totals (TBC placeholders left by a return to
+/// quoting, declined work) is not on the statement at all; its story is the Pending tab and the
+/// register (accountant 2026-08-26). A consolidated row carries the summed money of the lines
+/// priced under it and their weighted % complete, priced as one item at the order's total; the
+/// lines themselves are on the order's own tab.
 /// </summary>
 public static class ValuationExportRollUps
 {
@@ -24,6 +27,7 @@ public static class ValuationExportRollUps
 
     private static IEnumerable<ValuationExportLine> ByVariationOrder(IEnumerable<ValuationExportLine> variationLines) =>
         VariationOrderRollUps.Build(variationLines)
+            .Where(rollUp => rollUp.CountsTowardTotals)
             .Select(rollUp => rollUp.IsRolledUp ? OrderRow(rollUp) : rollUp.Lines[0]);
 
     private static ValuationExportLine OrderRow(VariationRollUp<ValuationExportLine> rollUp)

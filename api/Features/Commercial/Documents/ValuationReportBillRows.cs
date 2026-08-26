@@ -47,10 +47,16 @@ internal static class ValuationReportBillRows
         if (elementType == ValuationElementType.Variation)
         {
             // Variations never sub-head: the one-row-per-order consolidation IS the grouping.
+            // Only approved orders print — an order with nothing priced into the totals (TBC
+            // placeholders left by a return to quoting, declined work) is not on the statement
+            // at all; the register holds its story (accountant 2026-08-26).
             var rows = VariationOrderRollUps.Build(ofType)
+                .Where(rollUp => rollUp.CountsTowardTotals)
                 .Select(rollUp => rollUp.IsRolledUp ? Consolidated(rollUp) : FromLine(rollUp.Lines[0]))
                 .ToList();
-            return new[] { new ValuationReportBillGroup("", rows) };
+            return rows.Count == 0
+                ? Array.Empty<ValuationReportBillGroup>()
+                : new[] { new ValuationReportBillGroup("", rows) };
         }
         return AreaGroups(ofType, costCentreNameFor);
     }

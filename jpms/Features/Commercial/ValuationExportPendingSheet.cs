@@ -28,17 +28,18 @@ public sealed record ValuationExportPendingVariation(
 }
 
 /// <summary>
-/// Maps the variations register to the export's pending rows: the pre-approval orders only
-/// (Quoting, Issued, Awaiting AI), in number order, and only those carrying a figure — a staged
-/// build-up or an estimate. An order with no money against it yet is a placeholder someone has
-/// just raised, and listing it would read as a claim-in-waiting (accountant's request
-/// 2026-08-26). Rejected orders are decided, not pending, and approved ones are on the report.
+/// Maps the variations register to the export's pending rows: orders ISSUED to the client and
+/// awaiting their decision — status Issued, or Awaiting AI (issued, waiting on the Architect's
+/// Instruction) — in number order, and only those carrying a figure (a staged build-up or an
+/// estimate). Quoting-stage orders are internal pricing, not a claim-in-waiting, so they stay
+/// off entirely, as do unpriced placeholders (accountant's requests 2026-08-26). Rejected
+/// orders are decided, not pending, and approved ones are on the report.
 /// </summary>
 public static class ValuationExportPendingVariations
 {
     public static IReadOnlyList<ValuationExportPendingVariation> From(IEnumerable<VariationOrder> orders) =>
         orders
-            .Where(order => order.Status.IsPreApproval())
+            .Where(order => order.Status is VariationOrderStatus.Issued or VariationOrderStatus.AwaitingArchitectInstruction)
             .Where(HasValue)
             .OrderBy(order => order.Number)
             .Select(order => new ValuationExportPendingVariation(
@@ -68,8 +69,8 @@ internal static class ValuationExportPendingSheet
     public const string SheetName = "Pending variations";
 
     private const string Legend =
-        "Variations awaiting a decision — not approved, so nothing here is in the contract sum or any other tab · "
-        + "Only orders carrying a figure are listed; raised-but-unpriced ones are not · "
+        "Variations issued to the client and awaiting a decision — not approved, so nothing here is in the contract sum or any other tab · "
+        + "Only issued orders carrying a figure are listed; quoting-stage pricing and unpriced placeholders are not · "
         + "Read from the variations register at the moment of export · The status on each order is why it is pending · All figures net of VAT.";
 
     private static readonly ExcelCellStyle BandStatus = BandHead with { Align = ExcelAlign.Right, WrapText = true };
@@ -98,7 +99,7 @@ internal static class ValuationExportPendingSheet
         }
         if (pending.Count == 0)
         {
-            AddNote(sheet, "No pending variations with a value — anything else awaiting a decision has no figure against it yet.");
+            AddNote(sheet, "No issued variations are awaiting a decision — orders still being priced are not listed here.");
             return;
         }
 
