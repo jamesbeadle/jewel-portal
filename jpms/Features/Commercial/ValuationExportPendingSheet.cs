@@ -29,14 +29,17 @@ public sealed record ValuationExportPendingVariation(
 
 /// <summary>
 /// Maps the variations register to the export's pending rows: the pre-approval orders only
-/// (Quoting, Issued, Awaiting AI), in number order. Rejected orders are decided, not pending,
-/// and approved ones are on the report itself.
+/// (Quoting, Issued, Awaiting AI), in number order, and only those carrying a figure — a staged
+/// build-up or an estimate. An order with no money against it yet is a placeholder someone has
+/// just raised, and listing it would read as a claim-in-waiting (accountant's request
+/// 2026-08-26). Rejected orders are decided, not pending, and approved ones are on the report.
 /// </summary>
 public static class ValuationExportPendingVariations
 {
     public static IReadOnlyList<ValuationExportPendingVariation> From(IEnumerable<VariationOrder> orders) =>
         orders
             .Where(order => order.Status.IsPreApproval())
+            .Where(HasValue)
             .OrderBy(order => order.Number)
             .Select(order => new ValuationExportPendingVariation(
                 string.IsNullOrWhiteSpace(order.DisplayNumber) ? order.Reference : order.DisplayNumber,
@@ -48,6 +51,9 @@ public static class ValuationExportPendingVariations
                     .Select(line => new ValuationExportPendingLine(line.CostCode, line.Description, line.Quantity, line.Rate))
                     .ToList()))
             .ToList();
+
+    private static bool HasValue(VariationOrder order) =>
+        order.DraftLines is { Count: > 0 } || (order.EstimatedValue is { } estimate && estimate != 0m);
 }
 
 /// <summary>
@@ -63,6 +69,7 @@ internal static class ValuationExportPendingSheet
 
     private const string Legend =
         "Variations awaiting a decision — not approved, so nothing here is in the contract sum or any other tab · "
+        + "Only orders carrying a figure are listed; raised-but-unpriced ones are not · "
         + "Read from the variations register at the moment of export · The status on each order is why it is pending · All figures net of VAT.";
 
     private static readonly ExcelCellStyle BandStatus = BandHead with { Align = ExcelAlign.Right, WrapText = true };
@@ -90,7 +97,7 @@ internal static class ValuationExportPendingSheet
         }
         if (pending.Count == 0)
         {
-            AddNote(sheet, "No pending variations — every order raised on this project has been decided.");
+            AddNote(sheet, "No pending variations with a value — anything else awaiting a decision has no figure against it yet.");
             return;
         }
 

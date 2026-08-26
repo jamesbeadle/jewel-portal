@@ -5,10 +5,12 @@ namespace Jewel.JPMS.Api.Features.Commercial.Documents;
 
 /// <summary>
 /// One printed row of a bill section on the valuation report PDF. Contract, PC and contingency
-/// lines print one row per area grouping (<see cref="ValuationReportAreaRollUps"/>); variations
-/// print one row per variation order (<see cref="VariationOrderRollUps"/>), every cost centre
-/// the order touches folded into it — a consolidated row carries the lines' summed money and
-/// their weighted % complete, priced as one item at the order's total.
+/// work prints EVERY line, grouped under its area heading — the accountant reconciles item by
+/// item, so nothing there consolidates (accountant's request 2026-08-26; area roll-ups were the
+/// old behaviour). Only variations consolidate: one row per variation order
+/// (<see cref="VariationOrderRollUps"/>), every cost centre the order touches folded into it —
+/// the consolidated row carries the lines' summed money and their weighted % complete, priced
+/// as one item at the order's total, with the itemised detail on the workbook's per-order tabs.
 /// </summary>
 internal sealed record ValuationReportBillRow(
     string Code,
@@ -28,19 +30,52 @@ internal sealed record ValuationReportBillRow(
     public bool MovedThisPeriod => CountsTowardTotals && PeriodIncrement != 0m;
 }
 
+/// <summary>A run of bill rows under one area sub-heading; a blank title prints no heading row
+/// (a section whose lines carry no area at all reads as one flat run).</summary>
+internal sealed record ValuationReportBillGroup(string AreaTitle, IReadOnlyList<ValuationReportBillRow> Rows);
+
 internal static class ValuationReportBillRows
 {
     private const decimal OneItem = 1m;
 
-    public static IReadOnlyList<ValuationReportBillRow> For(
+    public static IReadOnlyList<ValuationReportBillGroup> GroupsFor(
         IEnumerable<ValuationReportSnapshotLine> lines, ValuationElementType elementType, Func<string, string?> costCentreNameFor)
     {
         var ofType = lines.Where(line => line.ElementType == elementType).ToList();
+        if (ofType.Count == 0)
+            return Array.Empty<ValuationReportBillGroup>();
         if (elementType == ValuationElementType.Variation)
-            return VariationOrderRollUps.Build(ofType)
+        {
+            // Variations never sub-head: the one-row-per-order consolidation IS the grouping.
+            var rows = VariationOrderRollUps.Build(ofType)
                 .Select(rollUp => rollUp.IsRolledUp ? Consolidated(rollUp) : FromLine(rollUp.Lines[0]))
                 .ToList();
-        return ValuationReportAreaRollUps.For(ofType, costCentreNameFor);
+            return new[] { new ValuationReportBillGroup("", rows) };
+        }
+        return AreaGroups(ofType, costCentreNameFor);
+    }
+
+    // The same consecutive-run rule as the screen and the workbook (ValuationReportAreas): a
+    // line whose title matches the run above continues it, a blank title continues it too, so
+    // the PDF's area headings sit exactly where the other surfaces put theirs.
+    private static IReadOnlyList<ValuationReportBillGroup> AreaGroups(
+        IEnumerable<ValuationReportSnapshotLine> linesOfOneType, Func<string, string?> costCentreNameFor)
+    {
+        var groups = new List<(string Title, List<ValuationReportBillRow> Rows)>();
+        var currentArea = "";
+        foreach (var line in linesOfOneType.OrderBy(line => line.DisplayOrder))
+        {
+            var title = ValuationReportAreas.TitleFor(line.SectionName, line.CostCode, costCentreNameFor);
+            if (groups.Count == 0 || ValuationReportAreas.StartsNewArea(title, currentArea))
+            {
+                currentArea = title;
+                groups.Add((title, new List<ValuationReportBillRow>()));
+            }
+            groups[^1].Rows.Add(FromLine(line));
+        }
+        return groups
+            .Select(group => new ValuationReportBillGroup(group.Title, group.Rows))
+            .ToList();
     }
 
     private static ValuationReportBillRow FromLine(ValuationReportSnapshotLine line) =>

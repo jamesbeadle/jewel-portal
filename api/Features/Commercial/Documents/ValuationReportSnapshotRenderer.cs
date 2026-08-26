@@ -29,9 +29,9 @@ public sealed record ValuationReportSnapshotDocument(
 /// Renders one frozen valuation-report snapshot into a branded PDF using PDFsharp/MigraDoc: the
 /// same section + summary-footer layout as the on-screen snapshot viewer (Contract Works,
 /// Provisional Sums, Contingency Sums, Variations), fed entirely from the snapshot's copied lines
-/// — live report edits never show here, exactly as on screen — but printed at grouping level:
-/// one row per area of the works, one per variation order, never the individual items
-/// (those stay on screen and in the spreadsheet). Each row carries the movement
+/// — live report edits never show here, exactly as on screen. Contract, PC and contingency
+/// work prints every line under its area heading (the accountant reconciles item by item);
+/// only variations consolidate, to one row per order. Each row carries the movement
 /// story the accountant traces a claim by: Previous / This period / Claimed, with lines that
 /// moved this period shaded gold. Pure function of the document model, so the download endpoint
 /// and the email attachment render identically.
@@ -225,24 +225,45 @@ public static class ValuationReportSnapshotRenderer
         Section section, ValuationReportSnapshotDocument document, ValuationReportBillColumns columns,
         string title, ValuationElementType elementType)
     {
-        // Every row is a grouping: an area for contract/PC/contingency work, a whole variation
-        // order for variations (ValuationReportBillRows) — never an individual item.
-        var rows = ValuationReportBillRows.For(document.Detail.Lines, elementType,
+        // Contract, PC and contingency work prints every line under its area heading — the
+        // accountant reconciles item by item; only variations consolidate, to one row per
+        // variation order (ValuationReportBillRows).
+        var groups = ValuationReportBillRows.GroupsFor(document.Detail.Lines, elementType,
             code => document.CostCentreNames is { } names && names.TryGetValue(code, out var name) ? name : null);
-        if (rows.Count == 0)
+        if (groups.Count == 0)
             return;
 
         SectionHeading(section, title);
         var table = BillTable(section, columns);
         AddBillHeader(table, columns);
 
-        foreach (var row in rows)
+        foreach (var group in groups)
         {
-            AddBillRow(table, columns, row);
+            if (!string.IsNullOrWhiteSpace(group.AreaTitle))
+                AddAreaHeadingRow(table, columns, group.AreaTitle);
+            foreach (var row in group.Rows)
+            {
+                AddBillRow(table, columns, row);
+            }
         }
 
-        AddBillTotals(table, columns, title, rows);
+        AddBillTotals(table, columns, title, groups.SelectMany(group => group.Rows).ToList());
         SpaceAfterTable(section);
+    }
+
+    // An area sub-heading inside the bill — the panel band the screen and workbook use, spanning
+    // the full row so the itemised lines beneath read as one run ("Electrics", "Plumbing & Heating").
+    private static void AddAreaHeadingRow(Table table, ValuationReportBillColumns columns, string title)
+    {
+        var row = table.AddRow();
+        row.Shading.Color = Panel;
+        row.TopPadding = Unit.FromMillimeter(1.0);
+        row.BottomPadding = Unit.FromMillimeter(1.0);
+        row.Cells[0].MergeRight = columns.Last;
+        var heading = row.Cells[0].AddParagraph(title);
+        heading.Format.Font.Size = 8.5;
+        heading.Format.Font.Bold = true;
+        heading.Format.Font.Color = Navy;
     }
 
     private static Table BillTable(Section section, ValuationReportBillColumns columns)
