@@ -8,9 +8,8 @@ internal static class ValuationExportSummaryFooter
 {
     public static void Add(ExcelSheet sheet, IReadOnlyList<ValuationExportSummaryRow> summary)
     {
-        var heading = Enumerable.Repeat<object?>(new ExcelStyledCell(null, SectionHeadFill), ValuationExportTitleBand.ColumnCount).ToArray();
-        heading[0] = new ExcelStyledCell("Valuation summary", SectionHead);
-        sheet.AddRow(heading);
+        ValuationExportStatementSheet.AddHeadingRow(sheet,
+            new ExcelStyledCell("Valuation summary", SectionHead), SectionHeadFill);
         foreach (var row in summary)
         {
             AddSummaryRow(sheet, row);
@@ -20,7 +19,7 @@ internal static class ValuationExportSummaryFooter
     private static void AddSummaryRow(ExcelSheet sheet, ValuationExportSummaryRow row)
     {
         var fill = row.Strong ? SummaryFillStrong : Plain;
-        var cells = Enumerable.Repeat<object?>(new ExcelStyledCell(null, fill), ValuationExportTitleBand.ColumnCount).ToArray();
+        var cells = ValuationExportStatementSheet.FilledCells(sheet, fill);
         cells[1] = new ExcelStyledCell(row.Label, row.Strong ? SummaryLabelStrong : SummaryLabel);
         cells[^1] = new ExcelStyledCell(row.Amount, MoneyStyleFor(row));
         sheet.AddRow(cells);

@@ -6,6 +6,7 @@
 @inject IValuationReportStore Store
 @inject IQueryClient Queries
 @inject ICostCenterStore CostCenters
+@inject IVariationStore Variations
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @implements IDisposable
 
@@ -45,7 +46,11 @@ else
             <ToolbarButton Icon="download" Label="Download PDF" Target="_blank"
                            Href="@($"/api/valuation-report-snapshots/{snapshot.ValuationReportSnapshotId}/pdf")" />
             @* Named as the PDF above is (ValuationReportFileNames): the pair share one name. *@
-            <ExportToExcelButton FileName="@ExportFileName(snapshot)" FileDate="@snapshot.TakenAt" BuildWorkbook="BuildExportWorkbook" />
+            @* Waits for the variations register too: the workbook's Pending tab reads it live,
+               and exporting before it answers would pass "not loaded" off as "none pending". *@
+            <ExportToExcelButton FileName="@ExportFileName(snapshot)" FileDate="@snapshot.TakenAt"
+                                 Disabled="@PendingVariationsUnanswered"
+                                 BuildWorkbook="BuildExportWorkbook" />
             @if (OnEmailRequested.HasDelegate)
             {
                 <ToolbarDivider />
@@ -235,6 +240,27 @@ else
     private IReadOnlyList<MailboxMessage>? emails;
     private string? emailsError;
 
+    // ---- Pending variations for the export's Pending tab --------------------
+    // A snapshot freezes the report, not the register, so the workbook's Pending tab reads the
+    // LIVE register at export time (the tab says so). Nullable until answered (the loading
+    // convention); on failure the export still runs and the tab reports the register unread.
+    private IReadOnlyList<VariationOrder>? variationOrders;
+    private bool variationOrdersFailed;
+    private string? variationOrdersProjectId;
+
+    private bool PendingVariationsUnanswered => variationOrders is null && !variationOrdersFailed;
+
+    private async Task LoadVariationOrdersAsync(string projectId)
+    {
+        if (projectId == variationOrdersProjectId) return;
+        variationOrdersProjectId = projectId;
+        variationOrders = null;
+        variationOrdersFailed = false;
+        try { variationOrders = await Variations.ListForProjectAsync(projectId); }
+        catch { variationOrdersFailed = true; }
+        await InvokeAsync(StateHasChanged);
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         if (SnapshotId == loadedSnapshotId) return;
@@ -245,6 +271,7 @@ else
         emailsError = null;
         try { detail = await Store.GetSnapshotAsync(SnapshotId); }
         catch { loadFailed = true; }
+        if (detail is not null) _ = LoadVariationOrdersAsync(detail.Snapshot.ProjectId);
         await LoadEmailsAsync();
     }
 
@@ -334,10 +361,10 @@ else
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
 
     // Every frozen line plus the summary footer, so the workbook and the screen (and the PDF,
-    // rendered from the same lines) always agree. The workbook is the shared three-tab shape
-    // (Summary with variations as one row per order, Detail with every line, flat Raw data) and
-    // does its own consolidating; each line's "Previous" is its cumulative claimed less the
-    // period increment frozen at capture.
+    // rendered from the same lines) always agree. The workbook is the shared shape (Summary with
+    // variations as one row per order, one tab per variation order carrying its lines, and the
+    // Pending variations tab read from the live register) and does its own consolidating; each
+    // line's "Previous" is its cumulative claimed less the period increment frozen at capture.
     private ExcelWorkbook? BuildExportWorkbook(bool _)
     {
         if (detail is null) return null;
@@ -380,7 +407,8 @@ else
                 $"Snapshot taken {snapshot.TakenAt.ToString("dd MMM yyyy HH:mm", Gb)} · immutable record from the JPMS register",
                 IsDraft: false),
             exportLines,
-            summary);
+            summary,
+            variationOrders is null ? null : ValuationExportPendingVariations.From(variationOrders));
     }
 
     private ValuationExportLine ExportLineFor(Section section, ValuationReportSnapshotLine line) =>

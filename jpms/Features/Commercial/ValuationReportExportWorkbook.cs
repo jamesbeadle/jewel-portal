@@ -46,39 +46,40 @@ public sealed record ValuationExportLine(
 public sealed record ValuationExportSummaryRow(string Label, decimal Amount, bool Strong = false);
 
 /// <summary>
-/// Builds the three-tab valuation report workbook every export shares. "Summary" is the
-/// branded statement with every contract, PC and contingency line under its area, and the
-/// variations as one row per variation order, as on the client's PDF
-/// (<see cref="ValuationExportRollUps"/>). "Detail" is the same statement with the variation
-/// lines shown too, each under its order's band. "Raw data" is every line as one flat,
-/// filterable table for pivoting and reconciliation. Snapshot and live (draft) exports differ
-/// only in the meta strip and the lines they map in, so the accountant always opens the same
-/// shape of file.
+/// Builds the valuation report workbook every export shares. "Summary" is the branded statement
+/// with every contract, PC and contingency line under its area, and the variations as one row
+/// per variation order, as on the client's PDF (<see cref="ValuationExportRollUps"/>). Each
+/// variation order then has its OWN tab carrying its lines — the detail behind the Summary's
+/// consolidated row, ready for the day specific percentages are claimed on individual lines
+/// (<see cref="ValuationExportVariationSheets"/>). "Pending variations" lists the orders still
+/// awaiting a decision, their staged build-up and why each is pending
+/// (<see cref="ValuationExportPendingSheet"/>). (The old Detail and Raw data tabs are gone —
+/// accountant's request 2026-08-26: the per-order tabs ARE the detail.) Snapshot and live
+/// (draft) exports differ only in the meta strip and the lines they map in, so the accountant
+/// always opens the same shape of file.
 /// </summary>
 public static class ValuationReportExportWorkbook
 {
     private const string SummaryLegend =
-        "Variations as one row per order, as on the issued statement — their lines are on the Detail tab · "
+        "Variations as one row per order, as on the issued statement — each order's lines are on its own tab · "
         + "Shaded lines moved this period · “This period” is the movement since the previous statement · All figures net of VAT.";
 
-    private const string DetailLegend =
-        "Every line, with each variation order's lines under its band · "
-        + "Shaded lines moved this period · “This period” is the movement since the previous statement · All figures net of VAT.";
-
+    /// <param name="pendingVariations">The register's pre-approval orders for the Pending tab —
+    /// null when the register could not be read, which the tab says outright rather than
+    /// passing off an empty list as "none pending".</param>
     public static ExcelWorkbook Build(
         ValuationExportMeta meta,
         IReadOnlyList<ValuationExportLine> lines,
-        IReadOnlyList<ValuationExportSummaryRow> summary)
+        IReadOnlyList<ValuationExportSummaryRow> summary,
+        IReadOnlyList<ValuationExportPendingVariation>? pendingVariations)
     {
         var workbook = new ExcelWorkbook();
         var ordered = InStatementOrder(lines);
         ValuationExportStatementSheet.Add(workbook,
             new ValuationExportStatementLayout("Summary", SummaryLegend, SummaryBandTitleFor),
             meta, ValuationExportRollUps.Summarise(ordered), summary);
-        ValuationExportStatementSheet.Add(workbook,
-            new ValuationExportStatementLayout("Detail", DetailLegend, DetailBandTitleFor),
-            meta, ordered, summary);
-        ValuationExportRawDataSheet.Add(workbook, ordered);
+        ValuationExportVariationSheets.Add(workbook, meta, ordered);
+        ValuationExportPendingSheet.Add(workbook, meta, pendingVariations);
         return workbook;
     }
 
@@ -95,18 +96,8 @@ public static class ValuationReportExportWorkbook
         VariationOrderRollUps.Build(variationLines)
             .SelectMany(rollUp => rollUp.Lines);
 
-    // A contract/PC/contingency line sits under its area band on both tabs; the Summary tab's
-    // variation rows stand alone, while on the Detail tab each variation line sits under its
-    // order's band ("V18 — Extra sockets to kitchen"). A blank title continues the band above,
-    // the same consecutive-run rule as every other surface.
+    // A contract/PC/contingency line sits under its area band; the variation rows stand alone —
+    // one consolidated row per order, whose lines live on the order's own tab. A blank title
+    // continues the band above, the same consecutive-run rule as every other surface.
     private static string SummaryBandTitleFor(ValuationExportLine line) => line.IsVariation ? "" : line.Area;
-
-    private static string DetailBandTitleFor(ValuationExportLine line)
-    {
-        if (!line.IsVariation) return line.Area;
-        var parts = new[] { line.VariationRef, line.VariationTitle }
-            .Where(part => !string.IsNullOrWhiteSpace(part))
-            .Select(part => part.Trim());
-        return string.Join(" — ", parts);
-    }
 }

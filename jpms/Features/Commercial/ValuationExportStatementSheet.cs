@@ -10,11 +10,36 @@ public sealed record ValuationExportStatementLayout(string SheetName, string Leg
 
 /// <summary>
 /// Writes one branded statement tab: navy title band, sectioned bill with Previous / This
-/// period / Claimed columns, gold-shaded moved lines, summary footer. The Summary and Detail
-/// tabs are the same sheet fed different rows.
+/// period / Claimed columns, gold-shaded moved lines, summary footer. The per-variation tabs
+/// borrow its column grid and heading-row machinery so every tab reads as one document.
 /// </summary>
 internal static class ValuationExportStatementSheet
 {
+    /// <summary>The statement's 10-column bill grid — shared with the per-variation tabs.</summary>
+    public static ExcelColumn[] BillColumns() => new[]
+    {
+        new ExcelColumn("Code", Width: 13),
+        new ExcelColumn("Description", Width: 52),
+        new ExcelColumn("Unit", Width: 7),
+        new ExcelColumn("Qty", Width: 9),
+        new ExcelColumn("Rate", Width: 11),
+        new ExcelColumn("Amount", Width: 14),
+        new ExcelColumn("% Complete", Width: 11),
+        new ExcelColumn("Previous", Width: 14),
+        new ExcelColumn("This period", Width: 14),
+        new ExcelColumn("Claimed", Width: 14),
+    };
+
+    /// <summary>Turn off the data-table dressing — these are presentation sheets.</summary>
+    public static void SetPresentationFlags(ExcelSheet sheet)
+    {
+        sheet.ShowHeaderRow = false;
+        sheet.AutoFilter = false;
+        sheet.FreezeHeaderRow = false;
+        sheet.ShowGridLines = false;
+        sheet.PrintLandscapeFitToWidth = true;
+    }
+
     public static void Add(
         ExcelWorkbook workbook,
         ValuationExportStatementLayout layout,
@@ -22,22 +47,8 @@ internal static class ValuationExportStatementSheet
         IReadOnlyList<ValuationExportLine> lines,
         IReadOnlyList<ValuationExportSummaryRow> summary)
     {
-        var sheet = workbook.AddSheet(layout.SheetName,
-            new ExcelColumn("Code", Width: 13),
-            new ExcelColumn("Description", Width: 52),
-            new ExcelColumn("Unit", Width: 7),
-            new ExcelColumn("Qty", Width: 9),
-            new ExcelColumn("Rate", Width: 11),
-            new ExcelColumn("Amount", Width: 14),
-            new ExcelColumn("% Complete", Width: 11),
-            new ExcelColumn("Previous", Width: 14),
-            new ExcelColumn("This period", Width: 14),
-            new ExcelColumn("Claimed", Width: 14));
-        sheet.ShowHeaderRow = false;
-        sheet.AutoFilter = false;
-        sheet.FreezeHeaderRow = false;
-        sheet.ShowGridLines = false;
-        sheet.PrintLandscapeFitToWidth = true;
+        var sheet = workbook.AddSheet(layout.SheetName, BillColumns());
+        SetPresentationFlags(sheet);
 
         ValuationExportTitleBand.Add(sheet, meta, layout.Legend);
         foreach (var section in lines.GroupBy(line => line.Section))
@@ -49,15 +60,15 @@ internal static class ValuationExportStatementSheet
 
     // A heading in the first cell with the fill (or accent border) carried across every other
     // cell, unmerged, so the band's border and shading render on each cell.
-    private static void AddHeadingRow(ExcelSheet sheet, ExcelStyledCell first, ExcelCellStyle fill)
+    public static void AddHeadingRow(ExcelSheet sheet, ExcelStyledCell first, ExcelCellStyle fill)
     {
-        var cells = FilledCells(fill);
+        var cells = FilledCells(sheet, fill);
         cells[0] = first;
         sheet.AddRow(cells);
     }
 
-    private static object?[] FilledCells(ExcelCellStyle fill) =>
-        Enumerable.Repeat<object?>(new ExcelStyledCell(null, fill), ValuationExportTitleBand.ColumnCount).ToArray();
+    public static object?[] FilledCells(ExcelSheet sheet, ExcelCellStyle fill) =>
+        Enumerable.Repeat<object?>(new ExcelStyledCell(null, fill), sheet.Columns.Count).ToArray();
 
     private static void AddSection(
         ExcelSheet sheet, string title, IReadOnlyList<ValuationExportLine> lines, Func<ValuationExportLine, string> bandTitleFor)

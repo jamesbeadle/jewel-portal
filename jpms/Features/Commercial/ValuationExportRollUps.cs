@@ -8,7 +8,7 @@ namespace Jewel.JPMS.Features.Commercial;
 /// its area sub-heading; only variation lines consolidate, to one row per variation order
 /// (<see cref="VariationOrderRollUps"/>) as on the client's PDF. A consolidated row carries the
 /// summed money of the lines priced under it and their weighted % complete, priced as one item
-/// at the order's total; the lines themselves are on the Detail tab.
+/// at the order's total; the lines themselves are on the order's own tab.
 /// </summary>
 public static class ValuationExportRollUps
 {

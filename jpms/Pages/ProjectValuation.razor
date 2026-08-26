@@ -10,6 +10,7 @@
 @inject IValuationInvoiceStore Invoices
 @inject IProjectRetentionStore Retention
 @inject ICostCenterStore CostCenters
+@inject IVariationStore Variations
 @inject NavigationManager Nav
 @inject AiTaskState AiTasks
 @inject ChatPanelState Chat
@@ -43,8 +44,10 @@ else
                     <ToolbarButton Icon="download" Label="Download PDF — working copy of the report as it stands" Target="_blank"
                                    Disabled="@(!ReportReady)"
                                    Href="@($"/api/projects/{ProjectId}/valuation-report/pdf")" />
+                    @* Also waits for the variations register: the workbook's Pending tab reads it,
+                       and exporting before it has answered would pass "not loaded" off as "none". *@
                     <ExportToExcelButton FileName="@LiveExportFileName" FileDate="@DateTimeOffset.UtcNow"
-                                         Disabled="@(!ReportReady)"
+                                         Disabled="@(!ReportReady || PendingVariationsUnanswered)"
                                          BuildWorkbook="BuildLiveExportWorkbook" />
                     @* Report setup, apart from the document actions: the client's schedule-of-works
                        references per cost centre, printed as a "Client ref" column on the PDF. *@
@@ -700,12 +703,12 @@ else
     private string LiveExportFileName =>
         ValuationReportFileNames.Stem(Projects.Find(ProjectId)?.Reference ?? "", Selected?.DisplayName);
 
-    // The live report in the same three-tab workbook shape as a snapshot export (Summary with
-    // variations as one row per order, Detail with every line, flat Raw data), stamped as a working
-    // copy: figures are the selected claim's as the table currently shows them, with each
-    // line's previous/this-period movement read against the claim before it. The client-facing
-    // export remains the frozen snapshot's — this one is for checking the statement before it
-    // goes anywhere.
+    // The live report in the same workbook shape as a snapshot export (Summary with variations
+    // as one row per order, one tab per variation order carrying its lines, and the Pending
+    // variations tab from the register), stamped as a working copy: figures are the selected
+    // claim's as the table currently shows them, with each line's previous/this-period movement
+    // read against the claim before it. The client-facing export remains the frozen snapshot's —
+    // this one is for checking the statement before it goes anywhere.
     private ExcelWorkbook? BuildLiveExportWorkbook(bool _)
     {
         if (!ReportReady) return null;
@@ -779,7 +782,24 @@ else
                 $"Prepared {DateTime.Now.ToString("dd MMM yyyy HH:mm", Gb)} · live report, not an issued statement",
                 IsDraft: true),
             exportLines,
-            summary);
+            summary,
+            variationOrders is null ? null : ValuationExportPendingVariations.From(variationOrders));
+    }
+
+    // ---- Pending variations for the export's Pending tab --------------------
+    // Nullable until the register has ANSWERED (the loading convention): an unanswered fetch and
+    // "no pending variations" must never look alike. On failure the export still runs — the
+    // Pending tab says the register couldn't be read (Build receives null).
+    private IReadOnlyList<VariationOrder>? variationOrders;
+    private bool variationOrdersFailed;
+
+    private bool PendingVariationsUnanswered => variationOrders is null && !variationOrdersFailed;
+
+    private async Task LoadVariationOrdersAsync()
+    {
+        try { variationOrders = await Variations.ListForProjectAsync(ProjectId); }
+        catch { variationOrdersFailed = true; }
+        await InvokeAsync(StateHasChanged);
     }
 
     // The area sub-heading this line falls under in the workbook — same shared rule as the
@@ -835,6 +855,8 @@ else
         Store.Refresh(ProjectId);
         // Warm the retention terms for the new-claim form's read-only summary.
         Retention.Refresh(ProjectId);
+        // The Excel export's Pending tab reads the variations register — load it alongside.
+        _ = LoadVariationOrdersAsync();
         // Revalidate the cost-centre master (stale-while-revalidate) — the report table's
         // Variations section and the line form both offer it as a dropdown.
         _ = CostCenters.ListAllAsync();
