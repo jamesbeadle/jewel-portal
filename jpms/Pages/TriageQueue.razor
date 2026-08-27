@@ -1180,16 +1180,22 @@
                 <p class="text-sm text-content-subtle flex-1">Write a reply in the email window, or stage tags, new records and to-dos in the pathway panes — Client, Subcontractor, Supplier, Internal — then apply it all in one go here.</p>
             }
             <div class="flex items-center gap-2">
+                @* The disable reason stands NEXT TO the button it disables (2026-08-27: "I
+                   shouldn't have to go around checking whether I've done things — the UX should
+                   guide me"). A tooltip on a disabled button is invisible; this isn't. *@
+                @if (!busy && PendingSummary is not null && TriageDecisionsMissing)
+                {
+                    <p class="text-xs text-amber-600 max-w-xs text-right">@DecisionsMissingHint</p>
+                }
                 <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
-                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null || TagPickingOpen || TriageDecisionsMissing)"
-                        title="@(TagPickingOpen ? "A pathway pane is still open — press Done to confirm the picks first" : TriageDecisionsMissing ? DecisionsMissingHint : null)"
+                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null || TriageDecisionsMissing)"
                         @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
                     @ApplyButtonLabel
                 </button>
                 @if (OutboxSendCount > 0)
                 {
-                    <button type="button" class="btn-secondary" disabled="@(busy || TagPickingOpen || TriageDecisionsMissing)" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
-                            title="@(TagPickingOpen ? "A pathway pane is still open — press Done to confirm the picks first" : TriageDecisionsMissing ? DecisionsMissingHint : "Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it")">
+                    <button type="button" class="btn-secondary" disabled="@(busy || TriageDecisionsMissing)" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
+                            title="Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it">
                         @(OutboxSendCount == 1 ? "Save reply as draft" : "Save replies as drafts")
                     </button>
                 }
@@ -3250,18 +3256,12 @@ else
         if (!emailVisible) workspace.Show(PanelKind.Email, paneSide);
     }
 
-    private static readonly PanelKind[] PathwayPanelKinds =
-    {
-        PanelKind.Client, PanelKind.Subcontractor, PanelKind.Supplier, PanelKind.Internal
-    };
-
-    // True while a pathway pane is on show for the open email — a pick in progress.
-    // Apply stands down until the pane's Done confirms the staged list (the pane closes on Done),
-    // so a half-made tagging can't be applied by accident. Same "decision not yet made" rule as
-    // the half-built lined-up reply below.
-    private bool TagPickingOpen =>
-        view == QueueView.Active && selected is not null
-        && PathwayPanelKinds.Any(pane => workspace.SideShowing(pane) is not null);
+    // NOTE (2026-08-27): the old "Apply stands down while a tags window is open" rule is GONE.
+    // It fit the one modal System Tags pane; with four standing pathway panes (which also host
+    // browsable registers) it left Apply disabled almost permanently, with the reason buried in
+    // a tooltip — Nigel filled everything in, pressed Done everywhere he could see, and still
+    // couldn't apply. Picks and ticks stage LIVE into the page's one list, and every staged
+    // record form is readiness-checked by DoApplyAll itself, so an open pane holds nothing back.
 
     // True while either of the bar's Yes/No pairs is still blank for the open email. Apply (and
     // save-as-drafts) stand down until both are answered — the pairs deliberately start with
@@ -3418,9 +3418,8 @@ else
             && stagedSystemActions.Count == 0 && queuedReplies.Count == 0 && stagedDocControlIds.Count == 0) return;
 
         // The bar's two Yes/No pairs start blank on purpose — an apply with either unanswered is
-        // a decision not yet made, same rule as an open pathway pane. Belt-and-braces
-        // behind the disabled button, so no other route into the apply (the cross-filing re-run
-        // included) can land with a blank answer.
+        // a decision not yet made. Belt-and-braces behind the disabled button, so no other route
+        // into the apply (the cross-filing re-run included) can land with a blank answer.
         if (anchorEmail is not null && (relevantEventStaged is null || triageEntireThread is null))
         {
             actionError = relevantEventStaged is null && triageEntireThread is null
@@ -3428,15 +3427,6 @@ else
                 : relevantEventStaged is null
                     ? "Answer Relevant Event for Programme — Yes or No — then Apply."
                     : "Answer Entire thread — Yes or No — then Apply.";
-            return;
-        }
-
-        // An open pathway pane is the same decision not yet made — its Done is the "yes,
-        // that's the list" step. Belt-and-braces behind the disabled button, so no other route
-        // into the apply (the cross-filing re-run included) can land a half-made tagging.
-        if (TagPickingOpen)
-        {
-            actionError = "A pathway pane is still open — press Done to confirm the picks, then Apply.";
             return;
         }
 
@@ -4265,9 +4255,6 @@ else
                 note.Append(" Apply is DISABLED right now: ").Append(DecisionsMissingHint)
                     .Append(". Those two Yes/No answers are the user's own decisions in the bar —"
                             + " you cannot set them; say what is missing.");
-            else if (TagPickingOpen)
-                note.Append(" Apply is DISABLED right now: a pathway pane is open — the"
-                            + " user presses Done there first.");
         }
 
         AppendAssistantActionError(note);
