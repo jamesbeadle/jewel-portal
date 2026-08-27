@@ -65,6 +65,10 @@ public sealed record PathwayPaneConfig(
                 SystemActionKind.RaiseDefect,
             }),
             (SystemActionGuide.MoveGroup, new[] { SystemActionKind.FileBidPackageTender }),
+            // Logging the trade you're emailing is a subcontractor-side act — the same kind is
+            // offered on the Supplier and Internal panes; StagedSystemAction.Pathway keeps the
+            // badges honest about which pane staged it.
+            (SystemActionGuide.PeopleGroup, new[] { SystemActionKind.AddDirectoryContact }),
         });
 
     public static PathwayPaneConfig Supplier { get; } = new(
@@ -72,9 +76,15 @@ public sealed record PathwayPaneConfig(
         "A materials or goods supplier, as distinct from a subcontractor",
         Array.Empty<RecordType>(),
         CommunicationFamily.Supplier,
-        // No supplier-side actions yet (supplier record types are a later phase) — the pane
-        // renders no Actions group at all rather than padding one out.
-        Array.Empty<(string, IReadOnlyList<SystemActionKind>)>());
+        // Supplier record types (purchase orders split from work orders) are a later phase, but
+        // the pane still carries the supplier-side acts an email prompts today — a delivery or
+        // rep visit to put on the calendar, a new supplier to keep on file — so the Actions tab
+        // exists on every pane and the UX reads the same all four ways (Nigel, 2026-08-27).
+        new (string, IReadOnlyList<SystemActionKind>)[]
+        {
+            (SystemActionGuide.RaiseGroup, new[] { SystemActionKind.RaiseCalendarEvent }),
+            (SystemActionGuide.PeopleGroup, new[] { SystemActionKind.AddDirectoryContact }),
+        });
 
     // Bid packages and work orders came OUT of the Internal link types in this restructure
     // (Nigel, 2026-08-27): they are subcontractor records and live on the Subcontractor pane.

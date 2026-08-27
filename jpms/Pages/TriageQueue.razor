@@ -2075,7 +2075,11 @@ else
     private int PathwayBadge(PathwayPaneConfig config) =>
         pickedRecords.Count(record => config.LinkTypes.Contains(record.Type)
             || (config.Family is { } family && family.All.Any(familyRecord => familyRecord.RecordId == record.RecordId)))
-        + stagedSystemActions.Count(action => config.AllActionKinds.Contains(action.Kind))
+        // Kinds can be offered on more than one pane (directory contact: Subcontractor,
+        // Supplier, Internal), so staged actions count where they were STAGED, not by kind.
+        + stagedSystemActions.Count(action => action.Pathway is { } stagedFrom
+            ? stagedFrom == config.Pathway
+            : config.AllActionKinds.Contains(action.Kind))
         + (config.Pathway == "Internal" ? CurrentTodoDrafts().Count : 0)
         + (StagedCreateReady && StagedCreatePathway(stagedCreate!.Kind) == config.Pathway ? 1 : 0);
 

@@ -298,8 +298,13 @@
         if (Enum.TryParse<SystemActionKind>(e.Value?.ToString(), out var parsed)) kind = parsed;
     }
 
+    /// <summary>The pane this section serves ("Client", "Supplier", …) — stamped onto every
+    /// staged action so badges count by the pane that staged it.</summary>
+    [Parameter] public string Pathway { get; set; } = "";
+
     private async Task StagedAsync(StagedSystemAction action)
     {
+        action = action with { Pathway = string.IsNullOrWhiteSpace(Pathway) ? null : Pathway };
         // An action on an existing record tags the email to it: the target's pick is staged the
         // moment the action stages, exactly as if it had been ticked in System Tags by hand. A
         // record the triager already picked stays theirs (TargetAutoTagged false), so removing

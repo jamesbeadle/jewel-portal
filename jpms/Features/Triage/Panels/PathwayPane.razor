@@ -126,6 +126,13 @@
 
             @if (Config.Family is { } family)
             {
+                @* Answers "how do I create a Materials record to tag later" (Nigel, 2026-08-27):
+                   there is nothing to create — these registers are record-less, the tick IS the
+                   filing. Said here, where the question arises. *@
+                @if (HasOpenEmail)
+                {
+                    <p class="text-xs text-content-subtle">These registers need no record — tick one and Apply files this email straight into it. Expand a register to read what's already there.</p>
+                }
                 @foreach (var familyRecord in family.All)
                 {
                     var record = familyRecord;
@@ -168,6 +175,7 @@
             else
             {
                 <PathwayActionsSection @key="EmailKey" Groups="Config.ActionGroups"
+                                       Pathway="@Config.Pathway"
                                        Projects="@Projects"
                                        ProjectId="@ProjectId"
                                        StagedActions="StagedActions"
@@ -291,8 +299,12 @@
         Picked.Count(record => Config.LinkTypes.Contains(record.Type)
             || (Config.Family is { } family && family.All.Any(familyRecord => familyRecord.RecordId == record.RecordId)));
 
+    // Counts by the pane that STAGED each action (kinds can be offered on more than one pane);
+    // actions staged before the stamp existed fall back to the kind test.
     private int StagedActionCountHere =>
-        StagedActions.Count(action => Config.AllActionKinds.Contains(action.Kind));
+        StagedActions.Count(action => action.Pathway is { } stagedFrom
+            ? stagedFrom == Config.Pathway
+            : Config.AllActionKinds.Contains(action.Kind));
 
     private bool IsPicked(LinkableRecord record) =>
         Picked.Any(picked => picked.RecordId == record.RecordId);

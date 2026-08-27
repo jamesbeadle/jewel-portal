@@ -110,4 +110,10 @@ public sealed record StagedSystemAction(
     Jewel.JPMS.Models.LinkableRecord? Target = null)
 {
     public bool TargetAutoTagged { get; init; }
+
+    /// <summary>Which pathway pane staged this action ("Client", "Supplier", …). Some kinds are
+    /// offered on more than one pane (a directory contact can be logged from the Subcontractor
+    /// or the Supplier side), so the badge and the pane's own staged list count by where the
+    /// action was actually staged, never by kind alone. Null = staged outside a pane.</summary>
+    public string? Pathway { get; init; }
 }
