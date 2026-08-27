@@ -3,7 +3,13 @@
 
 @* Only the file is required. Code, title, revision and issuer are all optional — a drawing
    uploaded with none of them is shown on the register by its original file name and can be
-   named, labelled and filed later from its page. *@
+   named, labelled and filed later from its page.
+
+   The file field accepts MANY files at once — dragged onto the drop zone or multi-selected in
+   the dialog. One file keeps the full form; several switch it to bulk mode: each file becomes
+   its own drawing (blank code and title, revision label extracted from the file name where it
+   is obvious) filed into the chosen folder, so a register can be populated quickly and the
+   details attached later through each drawing's page. *@
 
 <EditForm Model="this" OnValidSubmit="HandleUpload"
       class="rounded-2xl border border-line bg-surface p-5 space-y-3">
@@ -13,22 +19,62 @@
                 class="rounded-md text-sm px-3 py-1.5 transition @(!isRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
             New drawing
         </button>
-        <button type="button" @onclick="() => SetMode(isRevision: true)" disabled="@(ExistingDrawings.Count == 0)"
+        <button type="button" @onclick="() => SetMode(isRevision: true)" disabled="@(ExistingDrawings.Count == 0 || IsBulk)"
+                title="@(IsBulk ? "A revision is one file into one drawing — reduce the selection to one file first." : null)"
                 class="rounded-md text-sm px-3 py-1.5 transition disabled:opacity-50 @(isRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
             Revision of existing drawing
         </button>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing file *</label>
-        <InputFile OnChange="OnFileSelected" class="w-full text-sm text-content-muted" />
-        @if (selectedFile is not null)
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
+            @(isRevision ? "Drawing file *" : "Drawing files *")
+        </label>
+        <div class="relative rounded-xl border-2 border-dashed px-4 py-6 text-center transition @(isDragOver ? "border-accent bg-surface-raised" : "border-line-strong")"
+             @ondragenter="() => isDragOver = true"
+             @ondragleave="() => isDragOver = false"
+             @ondrop="() => isDragOver = false">
+            <InputFile OnChange="OnFilesSelected" multiple="@(!isRevision)" disabled="@busy"
+                       class="absolute inset-0 h-full w-full opacity-0 cursor-pointer" />
+            <p class="text-sm text-content-muted pointer-events-none">
+                @(isRevision
+                    ? "Drag the revised file here, or click to choose it."
+                    : "Drag drawing files here, or click to choose — select as many as needed.")
+            </p>
+        </div>
+
+        @if (selectedFiles.Count == 1)
         {
             <p class="mt-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm text-content">
                 <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-2">Original file</span>
-                <span class="font-medium break-all">@selectedFile.Name</span>
-                <span class="text-content-subtle"> · @FormatSize(selectedFile.Size)</span>
+                <span class="font-medium break-all">@selectedFiles[0].Name</span>
+                <span class="text-content-subtle"> · @FormatSize(selectedFiles[0].Size)</span>
             </p>
+        }
+        else if (IsBulk)
+        {
+            <div class="mt-2 rounded-lg border border-line bg-surface-raised">
+                <div class="flex items-center justify-between px-3 py-2 border-b border-line">
+                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">@selectedFiles.Count files · @FormatSize(selectedFiles.Sum(file => file.Size))</span>
+                    <button type="button" @onclick="ClearSelection" disabled="@busy"
+                            class="text-xs text-content-muted hover:text-content transition disabled:opacity-50">
+                        Clear all
+                    </button>
+                </div>
+                <ul class="max-h-56 overflow-y-auto divide-y divide-line">
+                    @foreach (var file in selectedFiles)
+                    {
+                        <li class="flex items-center gap-2 px-3 py-1.5 text-sm">
+                            <span class="flex-1 min-w-0 truncate text-content" title="@file.Name">@file.Name</span>
+                            <span class="text-content-subtle shrink-0">@FormatSize(file.Size)</span>
+                            <button type="button" @onclick="() => RemoveFile(file)" disabled="@busy" aria-label="Remove @file.Name"
+                                    class="shrink-0 text-content-subtle hover:text-red-700 transition disabled:opacity-50">
+                                ✕
+                            </button>
+                        </li>
+                    }
+                </ul>
+            </div>
         }
     </div>
 
@@ -46,7 +92,7 @@
             </select>
         </div>
     }
-    else
+    else if (!IsBulk)
     {
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing code</label>
@@ -63,29 +109,60 @@
 
         <DrawingFolderPicker @ref="folderPicker" ProjectId="@ProjectId" />
     }
+    else
+    {
+        <DrawingFolderPicker @ref="folderPicker" ProjectId="@ProjectId" />
+    }
 
-    <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Revision</label>
-        <input type="text" @bind="revisionLabel" placeholder="A (optional)"
-               class="field" />
-    </div>
+    @if (!IsBulk)
+    {
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Revision</label>
+            <input type="text" @bind="revisionLabel" placeholder="A (optional)"
+                   class="field" />
+        </div>
 
-    <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Issued by</label>
-        <input type="email" @bind="issuedBy" placeholder="architect@example.com (optional)"
-               class="field" />
-    </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Issued by</label>
+            <input type="email" @bind="issuedBy" placeholder="architect@example.com (optional)"
+                   class="field" />
+        </div>
+    }
 
     @if (error is not null)
     {
         <p class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@error</p>
     }
 
-    <p class="text-xs text-content-subtle">New uploads are saved as <span class="font-medium">Unapproved</span>. They become the latest drawing only once approved.</p>
+    @if (failures.Count > 0)
+    {
+        <div class="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 space-y-1">
+            <p class="font-medium">@failures.Count file@(failures.Count == 1 ? "" : "s") failed to upload — still listed above, press Upload to retry:</p>
+            <ul class="list-disc ml-5 space-y-0.5">
+                @foreach (var failure in failures)
+                {
+                    <li><span class="font-medium break-all">@failure.Name</span> — @failure.Message</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (IsBulk)
+    {
+        <p class="text-xs text-content-subtle">
+            Each file becomes its own drawing, shown on the register by its file name and saved as
+            <span class="font-medium">Unapproved</span>. Codes, titles, revisions and issuers can be
+            added later from each drawing's page.
+        </p>
+    }
+    else
+    {
+        <p class="text-xs text-content-subtle">New uploads are saved as <span class="font-medium">Unapproved</span>. They become the latest drawing only once approved.</p>
+    }
 
     <button type="submit" disabled="@busy"
             class="w-full rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition disabled:opacity-60">
-        @(busy ? "Uploading…" : isRevision ? "Upload revision" : "Upload drawing")
+        @SubmitLabel
     </button>
 </EditForm>
 
@@ -93,9 +170,13 @@
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
     [Parameter] public EventCallback OnUploaded { get; set; }
 
+    // Well beyond any real drawing issue; the browser needs SOME ceiling for GetMultipleFiles.
+    private const int MaxBulkFiles = 200;
+
     private DrawingFolderPicker? folderPicker;
-    private IBrowserFile? selectedFile;
+    private List<IBrowserFile> selectedFiles = new();
     private bool isRevision;
+    private bool isDragOver;
     private string selectedDrawingId = "";
     private string drawingCode = "";
     private string title = "";
@@ -104,7 +185,23 @@
     private bool busy;
     private string? error;
 
+    // Bulk progress and recovery: which file is in flight, what failed (kept in selectedFiles so
+    // Upload retries exactly the failures), and drawings already registered for a file whose
+    // revision upload then failed — so a retry doesn't register a second, empty drawing.
+    private int bulkDone;
+    private int bulkTotal;
+    private readonly List<(string Name, string Message)> failures = new();
+    private readonly Dictionary<IBrowserFile, string> registeredIds = new();
+
+    private bool IsBulk => selectedFiles.Count > 1;
+
     private IReadOnlyList<Drawing> ExistingDrawings => DrawingStore.DrawingsFor(ProjectId);
+
+    private string SubmitLabel =>
+        busy
+            ? IsBulk ? $"Uploading {bulkDone} of {bulkTotal}…" : "Uploading…"
+            : IsBulk ? $"Upload {selectedFiles.Count} drawings"
+            : isRevision ? "Upload revision" : "Upload drawing";
 
     private void SetMode(bool isRevision)
     {
@@ -112,20 +209,51 @@
         error = null;
     }
 
-    private void OnFileSelected(InputFileChangeEventArgs e)
+    private void OnFilesSelected(InputFileChangeEventArgs e)
     {
-        selectedFile = e.File;
-        error = null;
-        if (string.IsNullOrWhiteSpace(revisionLabel))
+        if (e.FileCount > MaxBulkFiles)
         {
-            var extracted = ExtractRevisionLabel(selectedFile.Name);
+            error = $"That's {e.FileCount} files — upload at most {MaxBulkFiles} at a time.";
+            return;
+        }
+        selectedFiles = e.GetMultipleFiles(MaxBulkFiles).ToList();
+        failures.Clear();
+        registeredIds.Clear();
+        error = null;
+        if (selectedFiles.Count == 1 && string.IsNullOrWhiteSpace(revisionLabel))
+        {
+            var extracted = ExtractRevisionLabel(selectedFiles[0].Name);
             if (extracted.Length > 0) revisionLabel = extracted;
         }
     }
 
+    private void RemoveFile(IBrowserFile file)
+    {
+        selectedFiles.Remove(file);
+        registeredIds.Remove(file);
+        error = null;
+    }
+
+    private void ClearSelection()
+    {
+        selectedFiles = new List<IBrowserFile>();
+        failures.Clear();
+        registeredIds.Clear();
+        error = null;
+    }
+
     private async Task HandleUpload()
     {
-        if (selectedFile is null) { error = "Choose a file to upload."; return; }
+        if (selectedFiles.Count == 0) { error = "Choose a file to upload."; return; }
+
+        if (IsBulk)
+        {
+            if (isRevision) { error = "A revision is one file into one drawing — switch to “New drawing” for a bulk upload."; return; }
+            await HandleBulkUpload();
+            return;
+        }
+
+        var selectedFile = selectedFiles[0];
 
         string drawingId;
         if (isRevision)
@@ -161,14 +289,24 @@
                 // name) the folder, then the drawing is registered straight into it.
                 var folderId = folderPicker is null ? null : await folderPicker.ResolveFolderAsync(CancellationToken.None);
 
-                drawingId = (await DrawingStore.RegisterDrawingAsync(ProjectId, drawingCode.Trim(), title.Trim(), folderId, CancellationToken.None)).DrawingId;
+                // A file left over from a partly-failed bulk upload may already have its drawing
+                // registered — upload into that rather than registering a second, empty one.
+                if (registeredIds.TryGetValue(selectedFile, out var registeredId))
+                {
+                    drawingId = registeredId;
+                }
+                else
+                {
+                    drawingId = (await DrawingStore.RegisterDrawingAsync(ProjectId, drawingCode.Trim(), title.Trim(), folderId, CancellationToken.None)).DrawingId;
+                    registeredIds[selectedFile] = drawingId;
+                }
             }
 
             await DrawingStore.UploadRevisionAsync(
                 ProjectId, drawingId, revisionLabel.Trim().ToUpperInvariant(), issuedBy.Trim(), selectedFile, CancellationToken.None);
 
-            selectedFile = null; drawingCode = ""; title = ""; revisionLabel = ""; issuedBy = ""; selectedDrawingId = "";
-            folderPicker?.Reset();
+            registeredIds.Remove(selectedFile);
+            ResetForm();
             await OnUploaded.InvokeAsync();
         }
         catch (Exception ex)
@@ -179,6 +317,78 @@
         {
             busy = false;
         }
+    }
+
+    // One drawing per file, uploaded one after another so a slow connection isn't saturated.
+    // A failure doesn't stop the rest: the file stays selected, its message is listed, and
+    // pressing Upload again retries only what's left.
+    private async Task HandleBulkUpload()
+    {
+        if (folderPicker?.Problem is { } folderProblem)
+        {
+            error = folderProblem;
+            return;
+        }
+
+        busy = true;
+        error = null;
+        failures.Clear();
+        bulkTotal = selectedFiles.Count;
+        bulkDone = 0;
+        try
+        {
+            // Resolved once for the whole batch; "New folder…" creates (or finds, by name) the
+            // folder first, so a retry after failures files into the same folder.
+            var folderId = folderPicker is null ? null : await folderPicker.ResolveFolderAsync(CancellationToken.None);
+
+            var stillFailing = new List<IBrowserFile>();
+            foreach (var file in selectedFiles.ToList())
+            {
+                bulkDone++;
+                StateHasChanged();
+                try
+                {
+                    if (!registeredIds.TryGetValue(file, out var drawingId))
+                    {
+                        drawingId = (await DrawingStore.RegisterDrawingAsync(ProjectId, "", "", folderId, CancellationToken.None)).DrawingId;
+                        registeredIds[file] = drawingId;
+                    }
+                    await DrawingStore.UploadRevisionAsync(
+                        ProjectId, drawingId, ExtractRevisionLabel(file.Name), "", file, CancellationToken.None);
+                    registeredIds.Remove(file);
+                }
+                catch (Exception ex)
+                {
+                    failures.Add((file.Name, ex.Message));
+                    stillFailing.Add(file);
+                }
+            }
+
+            selectedFiles = stillFailing;
+            if (stillFailing.Count == 0)
+            {
+                ResetForm();
+                await OnUploaded.InvokeAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Folder resolution is the only await outside the per-file try — nothing uploaded yet.
+            error = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        selectedFiles = new List<IBrowserFile>();
+        failures.Clear();
+        registeredIds.Clear();
+        drawingCode = ""; title = ""; revisionLabel = ""; issuedBy = ""; selectedDrawingId = "";
+        folderPicker?.Reset();
     }
 
     private Drawing? DuplicateOfCode(string code) =>
