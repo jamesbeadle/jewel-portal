@@ -1,0 +1,529 @@
+@page "/projects/{ProjectId}/calendar"
+@using Jewel.JPMS.Contracts.Calendar
+@using Jewel.JPMS.Contracts.RecordLinks
+@using Jewel.JPMS.Features.Calendar
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+@inject CalendarReadModel Calendar
+@inject ICommandSender Commands
+@inject IQueryClient Queries
+@implements IDisposable
+
+<PageTitle>Calendar · JPMS</PageTitle>
+
+@*
+    The project's calendar: what is coming up on site — visits, deliveries, meetings,
+    subcontractor attendance. An event is raised here directly or from an email in the Control
+    Centre (System Actions → Raise calendar event); either way it carries a sequential CAL-####
+    reference, which is also its mailbox tag stem — so every email filed to the event reads back
+    live under it here, exactly like a to-do or a defect. Events marked "Visible to client" are
+    the client-safe subset, ready for the client surface when that access is built.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="calendar">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h2 class="text-lg font-semibold text-content">Calendar</h2>
+            <div class="flex items-center gap-2">
+                <button type="button" class="btn-secondary" @onclick="() => MoveMonth(-1)">‹ Prev</button>
+                <span class="text-content-subtle w-32 text-center text-sm">@MonthLabel</span>
+                <button type="button" class="btn-secondary" @onclick="() => MoveMonth(1)">Next ›</button>
+                <button type="button" class="btn-secondary" @onclick="GoToday">Today</button>
+                <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition ml-2"
+                        @onclick="OpenAdd">
+                    Add event
+                </button>
+            </div>
+        </div>
+
+        @if (actionError is { } error)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/40 px-3 py-2 text-sm text-content mb-4">@error</p>
+        }
+
+        @if (!Calendar.LoadedFor(ProjectId) && !dataFailed)
+        {
+            <LoadGate IsLoading="true" Prominent="true" Label="Loading calendar" />
+        }
+        else if (dataFailed && !Calendar.LoadedFor(ProjectId))
+        {
+            <p class="text-sm text-content-muted">The calendar couldn't be loaded just now — the error toast has the detail. Reload the page to retry.</p>
+        }
+        else
+        {
+            var eventsByDay = EventsByDay;
+            var upcoming = Upcoming;
+            <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+                <div class="grid grid-cols-7 border-b border-line">
+                    @foreach (var dayName in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
+                    {
+                        <div class="px-2 py-2 text-xs uppercase tracking-wider text-content-subtle font-semibold text-center">@dayName</div>
+                    }
+                </div>
+                @foreach (var week in CalendarMaths.Weeks(year, month))
+                {
+                    <div class="grid grid-cols-7 border-b border-line last:border-0">
+                        @foreach (var day in week)
+                        {
+                            var inMonth = day.Month == month;
+                            var isToday = day == Today;
+                            var dayEvents = eventsByDay.TryGetValue(day, out var list) ? list : NoEvents;
+                            var showAll = expandedDay == day;
+                            var visible = showAll ? dayEvents : dayEvents.Take(3).ToList();
+                            <div class="min-h-[6.5rem] border-r border-line last:border-0 px-1.5 py-1.5 @(inMonth ? "" : "bg-surface-raised/40")">
+                                <div class="flex justify-end mb-1">
+                                    <span class="text-xs w-6 h-6 inline-flex items-center justify-center rounded-full
+                                                 @(isToday ? "bg-accent text-accent-ink font-semibold" : inMonth ? "text-content-muted" : "text-content-subtle/60")">
+                                        @day.Day
+                                    </span>
+                                </div>
+                                <div class="space-y-1">
+                                    @foreach (var item in visible)
+                                    {
+                                        <button type="button" @key="@($"{day:yyyyMMdd}-{item.CalendarEventId}")"
+                                                class="w-full flex items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-xs hover:bg-surface-raised transition"
+                                                title="@ChipTitle(item)"
+                                                @onclick="() => OpenEdit(item)">
+                                            <span class="w-2 h-2 rounded-full shrink-0 @KindDot(item.Kind)"></span>
+                                            @if (item.StartTime is { } time)
+                                            {
+                                                <span class="text-content-subtle shrink-0">@time</span>
+                                            }
+                                            <span class="text-content truncate">@item.Title</span>
+                                            @if (item.ClientVisible)
+                                            {
+                                                <span class="text-[10px] font-semibold rounded-full px-1.5 bg-info/10 text-info shrink-0">Client</span>
+                                            }
+                                        </button>
+                                    }
+                                    @if (!showAll && dayEvents.Count > 3)
+                                    {
+                                        <button type="button" class="w-full text-left text-xs text-content-subtle hover:text-content px-1.5"
+                                                @onclick="() => expandedDay = day">
+                                            +@(dayEvents.Count - 3) more
+                                        </button>
+                                    }
+                                    else if (showAll && dayEvents.Count > 3)
+                                    {
+                                        <button type="button" class="w-full text-left text-xs text-content-subtle hover:text-content px-1.5"
+                                                @onclick="() => expandedDay = null">
+                                            Show fewer
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <section>
+                <h3 class="text-sm font-medium text-content-muted mb-3">Upcoming</h3>
+                @if (upcoming.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">Nothing on the calendar from today onwards. Add an event here, or raise one from an email in the Control Centre.</p>
+                }
+                else
+                {
+                    <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                        @foreach (var group in upcoming.GroupBy(e => AgendaDay(e)))
+                        {
+                            <div class="border-b border-line last:border-0 px-4 py-3">
+                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1.5">
+                                    @group.Key.ToDateTime(TimeOnly.MinValue).ToString("ddd dd MMM")@(group.Key == Today ? " · Today" : "")
+                                </p>
+                                <div class="space-y-1">
+                                    @foreach (var item in group)
+                                    {
+                                        <button type="button" class="w-full flex items-center gap-3 rounded px-1.5 py-1 text-left text-sm hover:bg-surface-raised transition"
+                                                @onclick="() => OpenEdit(item)">
+                                            <span class="w-2 h-2 rounded-full shrink-0 @KindDot(item.Kind)"></span>
+                                            <span class="text-content-subtle w-12 shrink-0">@(item.StartTime ?? "—")</span>
+                                            <span class="text-content truncate">@item.Title</span>
+                                            <span class="text-content-subtle text-xs shrink-0">@CalendarEventKinds.Label(item.Kind)</span>
+                                            @if (item.IsMultiDay)
+                                            {
+                                                <span class="text-content-subtle text-xs shrink-0">
+                                                    to @item.LastDate.ToString("d MMM")
+                                                </span>
+                                            }
+                                            @if (item.ClientVisible)
+                                            {
+                                                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-info/10 text-info shrink-0">Client</span>
+                                            }
+                                            <span class="ml-auto font-mono text-xs text-content-subtle shrink-0">@item.Reference</span>
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </ProjectPageShell>
+}
+
+<Modal IsOpen="@editOpen" Title="@(editingId is null ? "Add a calendar event" : $"Calendar event {editingReference}")"
+       OnCancel="CloseEdit" DismissOnOverlayClick="false">
+    <ChildContent>
+        <div class="space-y-3">
+            @if (modalError is { } problem)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/40 px-3 py-2 text-sm text-content">@problem</p>
+            }
+            <FormField Label="Title" Value="@fTitle" OnChange="v => fTitle = v" Required="true" />
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Kind</label>
+                    <select class="field" value="@((int)fKind)" @onchange="OnKindChanged">
+                        @foreach (var kind in CalendarEventKinds.All)
+                        {
+                            <option value="@((int)kind)">@CalendarEventKinds.Label(kind)</option>
+                        }
+                    </select>
+                </div>
+                <FormField Label="Start time" Value="@fStartTime" OnChange="v => fStartTime = v" InputType="time" />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField Label="Date" Value="@fDate" OnChange="v => fDate = v" InputType="date" Required="true" />
+                <FormField Label="End date (multi-day)" Value="@fEndDate" OnChange="v => fEndDate = v" InputType="date" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                <textarea class="field" rows="3" maxlength="4096" placeholder="Detail and who's attending"
+                          value="@fNotes" @oninput="e => fNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+            <label class="flex items-center gap-2 text-sm text-content cursor-pointer">
+                <input type="checkbox" checked="@fClientVisible" @onchange="e => fClientVisible = e.Value is true" />
+                Visible to client
+                <span class="text-content-subtle text-xs">— safe to show when the client's view is built</span>
+            </label>
+
+            @if (editingId is not null)
+            {
+                <div class="pt-2 border-t border-line">
+                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Linked mail</p>
+                    @if (linkedEmails is null)
+                    {
+                        <p class="text-sm text-content-subtle italic">Loading emails…</p>
+                    }
+                    else if (linkedEmails.Count == 0)
+                    {
+                        <p class="text-sm text-content-subtle italic">
+                            No emails filed to @editingReference yet — file one from the Control Centre (System Tags → @editingReference).
+                        </p>
+                    }
+                    else
+                    {
+                        <div class="space-y-1.5">
+                            @foreach (var email in linkedEmails)
+                            {
+                                <div class="flex items-baseline gap-3 text-sm">
+                                    <span class="text-content-subtle whitespace-nowrap shrink-0">@email.ReceivedAt.ToLocalTime().ToString("d MMM yyyy")</span>
+                                    <span class="text-content truncate" title="@email.BodyPreview">@email.Subject</span>
+                                    <span class="text-content-subtle truncate shrink-0">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                                    @if (email.HasAttachments)
+                                    {
+                                        <span class="text-content-subtle shrink-0" title="Has attachments">📎</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </ChildContent>
+    <FooterContent>
+        @if (editingId is not null)
+        {
+            <button type="button" class="text-sm font-medium text-negative hover:underline underline-offset-4 mr-auto disabled:opacity-50"
+                    disabled="@busy" @onclick="DeleteAsync">
+                @(confirmingDelete ? "Really delete?" : "Delete")
+            </button>
+        }
+        <button type="button" class="btn-neutral" disabled="@busy" @onclick="CloseEdit">Cancel</button>
+        <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(fTitle) || string.IsNullOrWhiteSpace(fDate))"
+                @onclick="SaveAsync">
+            @(editingId is null ? "Add event" : "Save changes")
+        </button>
+    </FooterContent>
+</Modal>
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    // Deep link from record chips/hrefs elsewhere: /projects/{id}/calendar?event={eventId} opens
+    // that event's dialog and jumps the grid to its month.
+    [SupplyParameterFromQuery(Name = "event")] public string? FocusEventId { get; set; }
+
+    private static readonly IReadOnlyList<CalendarEvent> NoEvents = Array.Empty<CalendarEvent>();
+
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool busy;
+    private string? actionError;
+
+    private int year;
+    private int month;
+    private DateOnly? expandedDay;
+
+    // The add/edit dialog's fields — dates as "yyyy-MM-dd" and time as "HH:mm", the inputs' own text.
+    private bool editOpen;
+    private string? editingId;
+    private string editingReference = "";
+    private bool confirmingDelete;
+    private string? modalError;
+    private string fTitle = "";
+    private CalendarEventKind fKind = CalendarEventKind.Meeting;
+    private string fDate = "";
+    private string fStartTime = "";
+    private string fEndDate = "";
+    private string fNotes = "";
+    private bool fClientVisible;
+    private IReadOnlyList<MailboxMessage>? linkedEmails;
+    private string? focusHandledFor;
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+    private string MonthLabel => new DateTime(year, month, 1).ToString("MMMM yyyy");
+
+    private Dictionary<DateOnly, List<CalendarEvent>> EventsByDay =>
+        CalendarMaths.ByDay(Calendar.Current(ProjectId));
+
+    private IReadOnlyList<CalendarEvent> Upcoming =>
+        CalendarMaths.UpcomingFrom(Calendar.Current(ProjectId), Today);
+
+    // Agenda rows group under the event's start day — or under today for a multi-day event
+    // already running, so "what's happening today" includes the visit that began yesterday.
+    private DateOnly AgendaDay(CalendarEvent item)
+    {
+        var start = DateOnly.FromDateTime(item.Date.UtcDateTime);
+        return start < Today ? Today : start;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        year = DateTime.Today.Year;
+        month = DateTime.Today.Month;
+        Calendar.OnChanged += StateHasChanged;
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        sessionReady = true;
+        await LoadAsync();
+        OpenFocusedEvent();
+    }
+
+    private string loadedForProjectId = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!sessionReady) return;
+        if (loadedForProjectId != ProjectId)
+        {
+            // Project switch via the shell's arrows: same page, new key — load the new calendar
+            // (and give a previously failed project a fresh chance).
+            dataFailed = false;
+            expandedDay = null;
+            actionError = null;
+            CloseEditState();
+            await LoadAsync();
+        }
+        OpenFocusedEvent();
+    }
+
+    private async Task LoadAsync()
+    {
+        loadedForProjectId = ProjectId;
+        try { await Calendar.RefreshAsync(ProjectId, CancellationToken.None); }
+        catch { dataFailed = true; } // the query client has already toasted the detail
+    }
+
+    private void OpenFocusedEvent()
+    {
+        if (FocusEventId is not { Length: > 0 } targetId || focusHandledFor == targetId) return;
+        if (!Calendar.LoadedFor(ProjectId)) return;
+        focusHandledFor = targetId;
+        var target = Calendar.Current(ProjectId).FirstOrDefault(e => e.CalendarEventId == targetId);
+        if (target is null) return;
+        year = target.Date.Year;
+        month = target.Date.Month;
+        OpenEdit(target);
+    }
+
+    private void OnKindChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var value)) fKind = (CalendarEventKind)value;
+    }
+
+    private void MoveMonth(int delta)
+    {
+        var moved = new DateTime(year, month, 1).AddMonths(delta);
+        year = moved.Year;
+        month = moved.Month;
+        expandedDay = null;
+    }
+
+    private void GoToday()
+    {
+        year = DateTime.Today.Year;
+        month = DateTime.Today.Month;
+        expandedDay = null;
+    }
+
+    private void OpenAdd()
+    {
+        CloseEditState();
+        fDate = Today.ToString("yyyy-MM-dd");
+        editOpen = true;
+    }
+
+    private void OpenEdit(CalendarEvent item)
+    {
+        CloseEditState();
+        editingId = item.CalendarEventId;
+        editingReference = item.Reference;
+        fTitle = item.Title;
+        fKind = item.Kind;
+        fDate = item.Date.ToString("yyyy-MM-dd");
+        fStartTime = item.StartTime ?? "";
+        fEndDate = item.EndDate?.ToString("yyyy-MM-dd") ?? "";
+        fNotes = item.Notes;
+        fClientVisible = item.ClientVisible;
+        editOpen = true;
+        _ = LoadLinkedEmailsAsync(item.CalendarEventId);
+    }
+
+    private async Task LoadLinkedEmailsAsync(string calendarEventId)
+    {
+        try
+        {
+            var emails = await Queries.AskAsync(new ListRecordEmails(RecordType.CalendarEvent, calendarEventId), CancellationToken.None);
+            if (editingId == calendarEventId) { linkedEmails = emails; StateHasChanged(); }
+        }
+        catch
+        {
+            // The toast has the detail; an empty list is the honest fallback for this visit.
+            if (editingId == calendarEventId) { linkedEmails = Array.Empty<MailboxMessage>(); StateHasChanged(); }
+        }
+    }
+
+    private void CloseEdit() => CloseEditState();
+
+    private void CloseEditState()
+    {
+        editOpen = false;
+        editingId = null;
+        editingReference = "";
+        confirmingDelete = false;
+        modalError = null;
+        linkedEmails = null;
+        fTitle = ""; fKind = CalendarEventKind.Meeting; fDate = ""; fStartTime = ""; fEndDate = ""; fNotes = "";
+        fClientVisible = false;
+    }
+
+    private CalendarEventDetails? BuildDetails()
+    {
+        if (!DateTime.TryParseExact(fDate, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var date))
+        {
+            modalError = "A date is required.";
+            return null;
+        }
+        DateTimeOffset? endDate = null;
+        if (!string.IsNullOrWhiteSpace(fEndDate))
+        {
+            if (!DateTime.TryParseExact(fEndDate, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var end))
+            {
+                modalError = "The end date isn't a date.";
+                return null;
+            }
+            if (end < date)
+            {
+                modalError = "End date can't be before the start date.";
+                return null;
+            }
+            if (end != date) endDate = new DateTimeOffset(end, TimeSpan.Zero);
+        }
+        return new CalendarEventDetails(
+            fTitle.Trim(),
+            fKind,
+            new DateTimeOffset(date, TimeSpan.Zero),
+            string.IsNullOrWhiteSpace(fStartTime) ? null : fStartTime,
+            endDate,
+            fNotes.Trim(),
+            fClientVisible);
+    }
+
+    private async Task SaveAsync()
+    {
+        modalError = null;
+        var details = BuildDetails();
+        if (details is null) return;
+        busy = true;
+        try
+        {
+            if (editingId is null)
+                await Commands.SendAsync(new CreateCalendarEvent(ProjectId, details), CancellationToken.None);
+            else
+                await Commands.SendAsync(new UpdateCalendarEvent(editingId, details), CancellationToken.None);
+            CloseEditState();
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { modalError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (editingId is null) return;
+        if (!confirmingDelete) { confirmingDelete = true; return; }
+        busy = true;
+        try
+        {
+            await Commands.SendAsync(new DeleteCalendarEvent(editingId), CancellationToken.None);
+            CloseEditState();
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { modalError = ex.Message; confirmingDelete = false; }
+        finally { busy = false; }
+    }
+
+    // Post-write reload: swallow query failures (the toast already reported them) so a 502 on the
+    // refetch can't take the page down after a successful write — see post-write-reload rule.
+    private async Task RefreshAfterWriteAsync()
+    {
+        try { await Calendar.RefreshAsync(ProjectId, CancellationToken.None); }
+        catch (OperationCanceledException) { throw; }
+        catch { }
+    }
+
+    private static string ChipTitle(CalendarEvent item)
+    {
+        var time = item.StartTime is { } start ? $" {start}" : "";
+        var span = item.IsMultiDay ? $" (to {item.LastDate:d MMM})" : "";
+        return $"{item.Reference} · {CalendarEventKinds.Label(item.Kind)}{time}{span} — {item.Title}";
+    }
+
+    private static string KindDot(CalendarEventKind kind) => kind switch
+    {
+        CalendarEventKind.SiteVisit => "bg-info",
+        CalendarEventKind.Delivery => "bg-amber-400",
+        CalendarEventKind.Meeting => "bg-accent",
+        CalendarEventKind.SubcontractorAttendance => "bg-positive",
+        _ => "bg-content-subtle"
+    };
+
+    public void Dispose() => Calendar.OnChanged -= StateHasChanged;
+}

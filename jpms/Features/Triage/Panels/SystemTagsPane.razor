@@ -107,7 +107,7 @@
     // Internal carries bid packages and work orders too (Nigel, 2026-08-22): staff-to-staff mail
     // about a package or an order is as common as a to-do. Those picks still file the thread
     // Subcontractor-side (the record type decides), so the cross-filing confirm at Apply says so.
-    private static readonly RecordType[] InternalTypes = { RecordType.Todo, RecordType.BidPackageInvite, RecordType.WorkOrder };
+    private static readonly RecordType[] InternalTypes = { RecordType.Todo, RecordType.CalendarEvent, RecordType.BidPackageInvite, RecordType.WorkOrder };
 
     /// <summary>True while there is an email to stage against — the page renders the pane per
     /// selected email (keyed on the message id), so a fresh selection starts a fresh pane.</summary>
@@ -364,6 +364,7 @@
         RecordType.WorkOrder => "Work Order",
         RecordType.Defect => "Defect",
         RecordType.Todo => "To-do item",
+        RecordType.CalendarEvent => "Calendar event",
         _ => type.ToString()
     };
 

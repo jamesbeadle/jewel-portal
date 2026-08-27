@@ -153,6 +153,11 @@
                                           EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
                                           EmailSubject="@EmailSubject" />
                 break;
+            case SystemActionKind.RaiseCalendarEvent:
+                <StageCalendarEventAction @key="kind"
+                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                          EmailSubject="@EmailSubject" />
+                break;
             case SystemActionKind.CreateTodos:
                 <StageTodosAction TodoRows="TodoRows" TodoAssigneeOptions="@TodoAssigneeOptions"
                                   TodoProjectNote="@TodoProjectNote" OnStagingChanged="OnStagingChanged" />
@@ -228,7 +233,8 @@
             or SystemActionKind.RaiseWorkOrder
             or SystemActionKind.CreateBidPackageInvite
             or SystemActionKind.RaiseDefect
-            or SystemActionKind.LogTenderEnquiry;
+            or SystemActionKind.LogTenderEnquiry
+            or SystemActionKind.RaiseCalendarEvent;
 
     /// <summary>Page-owned to-do draft rows — "Create To-do Items". One to-do per assignee per
     /// row on Apply, the email tagged to every one.</summary>

@@ -477,6 +477,7 @@ internal static class AiRecordTools
             "work order" or "purchase order" or "po" => RecordType.WorkOrder,
             "defect" => RecordType.Defect,
             "todo" or "to do" => RecordType.Todo,
+            "calendar event" or "calendar" or "event" => RecordType.CalendarEvent,
             "lad" or "liquidated damages" => RecordType.Lad,
             "cost centre" or "cost center" => RecordType.CostCentre,
             "scheduling" or "programme" => RecordType.Scheduling,

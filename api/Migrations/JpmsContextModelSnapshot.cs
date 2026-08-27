@@ -882,6 +882,65 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("BoqSignOffs");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.CalendarEventEntity", b =>
+                {
+                    b.Property<string>("CalendarEventId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<bool>("ClientVisible")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("Date")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("EndDate")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("StartTime")
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("CalendarEventId");
+
+                    b.HasIndex("Number")
+                        .HasDatabaseName("IX_CalendarEvents_Number");
+
+                    b.HasIndex("ProjectId", "Date")
+                        .HasDatabaseName("IX_CalendarEvents_ProjectId_Date");
+
+                    b.ToTable("CalendarEvents");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.CashflowSnapshotEntity", b =>
                 {
                     b.Property<string>("CashflowSnapshotId")

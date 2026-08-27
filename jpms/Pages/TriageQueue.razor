@@ -1568,7 +1568,7 @@ else
     // Variation — one record, one number, per the 2026-07-23 unification.
     private static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.Todo
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.Todo, RecordType.CalendarEvent
     };
 
     // What each pathway's "Link to existing" offers (the pathway filters the actions — the plan's
@@ -1589,7 +1589,7 @@ else
     {
         RecordType.BidPackageInvite, RecordType.WorkOrder
     };
-    private static readonly RecordType[] InternalLinkTypes = { RecordType.Todo };
+    private static readonly RecordType[] InternalLinkTypes = { RecordType.Todo, RecordType.CalendarEvent };
 
     // The Tagged tab's "link to another record" pool: since the hard client wall was removed
     // (2026-08-21) every type is offered whatever the thread's pathway. Each option's label shows
@@ -1630,6 +1630,7 @@ else
         RecordType.InternalComms    => "Internal",
         RecordType.CostCentre       => "Client or Subcontractor",
         RecordType.Todo             => "Neutral",
+        RecordType.CalendarEvent    => "Neutral",
         _ => ""
     };
 
@@ -1652,6 +1653,7 @@ else
         RecordType.VariationQuote   => "Variation Order Quote",
         RecordType.Lad              => "LADs claim",
         RecordType.Todo             => "To-do item",
+        RecordType.CalendarEvent    => "Calendar event",
         RecordType.SubcontractorComms => "Subcontractor communication",
         RecordType.InternalComms    => "Internal communication",
         _                           => type.ToString()
@@ -2089,6 +2091,11 @@ else
     private string? StagedTenderEnquiryProblem =>
         stagedCreate is { Kind: StagedRecordKind.TenderEnquiry } sc
             ? sc.TenderEnquiry.Problem(TriageProjectIsLead)
+            : null;
+
+    private string? StagedCalendarEventProblem =>
+        stagedCreate is { Kind: StagedRecordKind.CalendarEvent } stagedEvent
+            ? stagedEvent.CalendarEvent.Problem
             : null;
 
     private string? TodoProjectNote =>
@@ -3173,6 +3180,7 @@ else
                         : "log the tender enquiry from this email",
                     StagedRecordKind.WorkOrder => StagedWorkOrderSummary(stagedCreate),
                     StagedRecordKind.Defect => "raise the defect from this email",
+                    StagedRecordKind.CalendarEvent => "raise the calendar event from this email",
                     _ => stagedCreate.RequestKind == RequestType.Rfi
                         ? "raise the RFI from this email"
                         : "create the request from this email"
@@ -3474,6 +3482,12 @@ else
         if (createReady && StagedTenderEnquiryProblem is { } enquiryProblem)
         {
             actionError = $"The staged tender enquiry isn't ready — {enquiryProblem} Finish it in System Actions, or remove it.";
+            return;
+        }
+        // Same "decision not yet made" rule for a staged calendar event that isn't complete yet.
+        if (createReady && StagedCalendarEventProblem is { } calendarProblem)
+        {
+            actionError = $"The staged calendar event isn't ready — {calendarProblem} Finish it in System Actions, or remove it.";
             return;
         }
         if (replying)
@@ -3858,6 +3872,18 @@ else
                 new CreatedNowRecord(defect.Reference, "defect", staged.DisplayTitle), null);
         }
 
+        if (staged.Kind == StagedRecordKind.CalendarEvent)
+        {
+            // The calendar event staged in System Actions, raised through the same rules as one
+            // added on the Calendar tab (CAL numbering, midnight-UTC date) with the email tagged
+            // to it.
+            busyLabel = "Raising calendar event";
+            var calendarEvent = await Intake.CreateCalendarEventFromMessageAsync(
+                staged.CalendarEvent.ToCommand(anchor.Id, anchor.InternetMessageId, triageProjectId, scope, allowCrossPathway));
+            return new StagedCreateOutcome(
+                new CreatedNowRecord(calendarEvent.Reference, "calendar event", calendarEvent.Title), null);
+        }
+
         if (staged.Kind == StagedRecordKind.TenderEnquiry)
             return await LogStagedTenderEnquiryAsync(staged, anchor, scope, allowCrossPathway);
 
@@ -3936,6 +3962,11 @@ else
         if (StagedTenderEnquiryProblem is { } enquiryProblem)
         {
             actionError = $"The staged tender enquiry isn't ready — {enquiryProblem}";
+            return;
+        }
+        if (StagedCalendarEventProblem is { } calendarNowProblem)
+        {
+            actionError = $"The staged calendar event isn't ready — {calendarNowProblem}";
             return;
         }
         if (staged is { Kind: StagedRecordKind.WorkOrder } stagedOrder
@@ -4153,6 +4184,7 @@ else
                 StagedRecordKind.WorkOrder => stagedRecord.WorkOrderProblem,
                 StagedRecordKind.Defect => stagedRecord.DefectProblem,
                 StagedRecordKind.TenderEnquiry => StagedTenderEnquiryProblem,
+                StagedRecordKind.CalendarEvent => StagedCalendarEventProblem,
                 _ => null
             };
             if (!StagedCreateReady)
@@ -4730,6 +4762,7 @@ else
             "work order" or "purchase order" or "po" => RecordType.WorkOrder,
             "defect" => RecordType.Defect,
             "todo" or "to do" => RecordType.Todo,
+            "calendar event" or "calendar" or "event" => RecordType.CalendarEvent,
             "lad" or "liquidated damages" => RecordType.Lad,
             "scheduling" or "programme" => RecordType.Scheduling,
             _ => null

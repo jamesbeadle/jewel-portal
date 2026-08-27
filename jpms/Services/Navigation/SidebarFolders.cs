@@ -96,6 +96,11 @@ public static class SidebarFolders
                     DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Programme", "/projects/{project}/programme"),
                     DesktopNavigation.DirectorRoles),
+                // What is coming up on site — visits, deliveries, meetings, attendance. Events
+                // carry CAL-#### references (mail tag stems) and a client-visible flag ready for
+                // the client surface when that access is built.
+                new SidebarRow(new NavigationItem("Calendar", "/projects/{project}/calendar"),
+                    DesktopNavigation.DirectorRoles),
                 // The project-specific to-do view — second way in, alongside Internal's master list.
                 new SidebarRow(new NavigationItem("To-do", "/projects/{project}/todos"),
                     DesktopNavigation.DirectorRoles),

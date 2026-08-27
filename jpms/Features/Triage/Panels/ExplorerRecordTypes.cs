@@ -12,7 +12,8 @@ public static class ExplorerRecordTypes
     public static readonly RecordType[] All =
     {
         RecordType.Request, RecordType.Variation, RecordType.TenderEnquiry, RecordType.WorkOrder,
-        RecordType.BidPackageInvite, RecordType.Defect, RecordType.Lad, RecordType.Todo
+        RecordType.BidPackageInvite, RecordType.Defect, RecordType.Lad, RecordType.Todo,
+        RecordType.CalendarEvent
     };
 
     public static string Label(RecordType type) => type switch
@@ -25,6 +26,7 @@ public static class ExplorerRecordTypes
         RecordType.Defect => "Defects",
         RecordType.Lad => "LADs claims",
         RecordType.Todo => "To-do items",
+        RecordType.CalendarEvent => "Calendar events",
         _ => type.ToString()
     };
 
@@ -39,6 +41,7 @@ public static class ExplorerRecordTypes
         RecordType.Defect => $"/projects/{record.ProjectId}/defects",
         RecordType.Scheduling or RecordType.Lad => $"/projects/{record.ProjectId}/programme",
         RecordType.Todo => string.IsNullOrEmpty(record.ProjectId) ? "/todos" : $"/projects/{record.ProjectId}/todos",
+        RecordType.CalendarEvent => $"/projects/{record.ProjectId}/calendar?event={record.RecordId}",
         _ => null
     };
 }

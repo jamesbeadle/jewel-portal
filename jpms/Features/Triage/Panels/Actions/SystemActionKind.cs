@@ -29,7 +29,10 @@ public enum SystemActionKind
     ForwardToQs,
     // An architect inviting Jewel to tender (2026-08-25): logs the enquiry — creating its
     // Lead-stage project when the job is new — with the PQQ and drawings copied off the email.
-    LogTenderEnquiry
+    LogTenderEnquiry,
+    // An email arranging something dated (2026-08-27) — a site visit, a delivery, a meeting:
+    // raises it on the project's Calendar tab with the email tagged to it.
+    RaiseCalendarEvent
 }
 
 public static class SystemActionKinds
@@ -50,6 +53,7 @@ public static class SystemActionKinds
         SystemActionKind.CreateBidPackageInvite,
         SystemActionKind.FileBidPackageTender,
         SystemActionKind.RaiseDefect,
+        SystemActionKind.RaiseCalendarEvent,
         SystemActionKind.CreateTodos,
         SystemActionKind.CompleteTodo,
         SystemActionKind.AddDirectoryContact,
@@ -69,6 +73,7 @@ public static class SystemActionKinds
         SystemActionKind.CreateBidPackageInvite => "Create Bid Package Invite",
         SystemActionKind.FileBidPackageTender => "File Bid Package Tender",
         SystemActionKind.RaiseDefect => "Raise Defect",
+        SystemActionKind.RaiseCalendarEvent => "Raise Calendar Event",
         SystemActionKind.CreateTodos => "Create To-do Items",
         SystemActionKind.CompleteTodo => "Mark To-do Done",
         SystemActionKind.AddDirectoryContact => "Add Directory Contact",

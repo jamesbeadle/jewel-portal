@@ -318,6 +318,7 @@
         RecordType.WorkOrder => $"/projects/{record.ProjectId}/work-orders",
         RecordType.Defect => $"/projects/{record.ProjectId}/defects",
         RecordType.Scheduling or RecordType.Lad => $"/projects/{record.ProjectId}/programme",
+        RecordType.CalendarEvent => $"/projects/{record.ProjectId}/calendar?event={record.RecordId}",
         _ => null
     };
 

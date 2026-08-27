@@ -1,0 +1,138 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+
+@* "Raise Calendar Event" — the email-linked create for something dated being arranged in the
+   open email (a site visit, a delivery, a meeting). Drafts the ONE page-owned StagedRecordCreate
+   (Kind = CalendarEvent) like the other creates, so Apply raises the event through
+   CreateCalendarEventFromMessage and the email is tagged to it (JPMS/CAL-####). The title
+   pre-fills from the subject (minus FW:/RE:) — a suggestion, not a staging; the date defaults a
+   week out because nothing extracts dates from prose, and the triager read the email. *@
+
+<div class="space-y-4">
+    <p class="text-xs text-content-subtle">
+        The event lands on the project's Calendar tab, and this email is tagged to it on apply.
+    </p>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title *</label>
+        <input type="text" class="field" maxlength="256" placeholder="What's happening — Structural engineer site visit"
+               value="@Draft.Title" @oninput="e => Set(draft => draft.Title = e.Value?.ToString() ?? string.Empty)" />
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Kind</label>
+            <select class="field" value="@((int)Draft.Kind)" @onchange="OnKindChanged">
+                @foreach (var kind in CalendarEventKinds.All)
+                {
+                    <option value="@((int)kind)">@CalendarEventKinds.Label(kind)</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Start time</label>
+            <input type="time" class="field"
+                   value="@Draft.StartTime" @onchange="e => Set(draft => draft.StartTime = e.Value?.ToString() ?? string.Empty)" />
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Date *</label>
+            <input type="date" class="field"
+                   value="@Draft.Date" @onchange="e => Set(draft => draft.Date = e.Value?.ToString() ?? string.Empty)" />
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">End date (multi-day)</label>
+            <input type="date" class="field"
+                   value="@Draft.EndDate" @onchange="e => Set(draft => draft.EndDate = e.Value?.ToString() ?? string.Empty)" />
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+        <textarea class="field" rows="2" maxlength="4096" placeholder="Detail and who's attending"
+                  value="@Draft.Notes" @oninput="e => Set(draft => draft.Notes = e.Value?.ToString() ?? string.Empty)"></textarea>
+    </div>
+
+    <label class="flex items-center gap-2 text-sm text-content cursor-pointer">
+        <input type="checkbox" checked="@Draft.ClientVisible" @onchange="e => Set(draft => draft.ClientVisible = e.Value is true)" />
+        Visible to client
+        <span class="text-content-subtle text-xs">— safe to show when the client's view is built</span>
+    </label>
+
+    @if (StagedCreate is not null && Draft.Problem is { } problem)
+    {
+        <p class="text-xs text-amber-600">@problem</p>
+    }
+</div>
+
+@code {
+    [Parameter] public StagedRecordCreate? StagedCreate { get; set; }
+    [Parameter] public EventCallback<StagedRecordCreate?> StagedCreateChanged { get; set; }
+    [Parameter] public string EmailSubject { get; set; } = "";
+
+    // The form binds to a scratch instance until something is typed, so an empty form never
+    // stages a phantom "new record" — the StagedRecordActionEditor arrangement.
+    private StagedRecordCreate scratchCreate = new() { Kind = StagedRecordKind.CalendarEvent };
+    private StagedRecordCreate? lastStaged;
+    private StagedRecordCreate Create => StagedCreate ?? scratchCreate;
+    private StagedCalendarEventDraft Draft => Create.CalendarEvent;
+
+    protected override void OnInitialized()
+    {
+        PrefillFromEmail(scratchCreate);
+        // A draft staged under another action keeps its content — its title becomes the event's —
+        // and is re-stamped to what Apply now raises.
+        if (StagedCreate is not { } staged || staged.Kind == StagedRecordKind.CalendarEvent) return;
+        if (string.IsNullOrWhiteSpace(staged.CalendarEvent.Title)) PrefillFromEmail(staged);
+        if (string.IsNullOrWhiteSpace(staged.CalendarEvent.Title)) staged.CalendarEvent.Title = staged.Title;
+        NotifyCreate();
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Once staged, scratch and page copy are the SAME object — replace the scratch when the
+        // staged draft goes away, or the form would silently re-stage the old content.
+        if (lastStaged is not null && StagedCreate is null)
+        {
+            scratchCreate = new StagedRecordCreate { Kind = StagedRecordKind.CalendarEvent };
+            PrefillFromEmail(scratchCreate);
+        }
+        lastStaged = StagedCreate;
+    }
+
+    // Suggestions only, filled WITHOUT staging: the subject (minus FW:/RE:) as the title.
+    private void PrefillFromEmail(StagedRecordCreate target)
+    {
+        target.CalendarEvent.Title = StripReplyPrefixes(EmailSubject);
+    }
+
+    private static string StripReplyPrefixes(string subject)
+    {
+        const string prefixPattern = @"^(fw|fwd|re)\s*:\s*";
+        var cleaned = subject.Trim();
+        while (System.Text.RegularExpressions.Regex.IsMatch(cleaned, prefixPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, prefixPattern, "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return cleaned;
+    }
+
+    private void OnKindChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var value))
+            Set(draft => draft.Kind = (CalendarEventKind)value);
+    }
+
+    private void Set(Action<StagedCalendarEventDraft> edit)
+    {
+        edit(Draft);
+        NotifyCreate();
+    }
+
+    // First keystroke on the scratch form stages it; a staged form just reports the edit.
+    private void NotifyCreate()
+    {
+        var target = StagedCreate ?? scratchCreate;
+        target.Kind = StagedRecordKind.CalendarEvent;
+        _ = StagedCreateChanged.InvokeAsync(target);
+    }
+}

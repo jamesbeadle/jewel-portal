@@ -31,6 +31,7 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<ILinkableRecordProvider, InternalCommsLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, ValuationReportSnapshotLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, TenderEnquiryLinkProvider>();
+        services.AddScoped<ILinkableRecordProvider, CalendarEventLinkProvider>();
 
         services.AddScoped<RecordProviderRegistry>();
         services.AddScoped<RecordEmailReader>();

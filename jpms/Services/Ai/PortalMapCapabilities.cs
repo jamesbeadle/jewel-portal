@@ -38,6 +38,9 @@ public static class PortalMapCapabilities
             "the drawing register with revisions; open a drawing for its revision history and viewer",
         ["/projects/{project}/programme"] =
             "the project programme (plan of work)",
+        ["/projects/{project}/calendar"] =
+            "the project calendar — upcoming site visits, deliveries, meetings and subcontractor "
+            + "attendance (CAL-#### references); each event reads its tagged mail live",
         ["/projects/{project}/todos"] =
             "this project's to-do list (the master list is /todos)",
         ["/projects/{project}/progress"] =

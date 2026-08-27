@@ -94,6 +94,9 @@ public sealed class JpmsContext : DbContext
     // The per-item timeline (created / started / chased / reassigned / … / email sent).
     public DbSet<TodoItemActivityEntity> TodoItemActivities => Set<TodoItemActivityEntity>();
 
+    // Project calendar entries (site visits, deliveries, meetings, attendance) — the Calendar tab.
+    public DbSet<CalendarEventEntity> CalendarEvents => Set<CalendarEventEntity>();
+
     // Internal-only titled free-text notes per project (door codes, site notes) — the Useful
     // Information tab.
     public DbSet<UsefulInformationNoteEntity> UsefulInformationNotes => Set<UsefulInformationNoteEntity>();
@@ -421,6 +424,12 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<TodoItemActivityEntity>()
             .HasIndex(row => row.TodoItemId)
             .HasDatabaseName("IX_TodoItemActivities_TodoItemId");
+        modelBuilder.Entity<CalendarEventEntity>()
+            .HasIndex(row => new { row.ProjectId, row.Date })
+            .HasDatabaseName("IX_CalendarEvents_ProjectId_Date");
+        modelBuilder.Entity<CalendarEventEntity>()
+            .HasIndex(row => row.Number)
+            .HasDatabaseName("IX_CalendarEvents_Number");
         // One client reference per cost centre per project.
         modelBuilder.Entity<ClientCostReferenceEntity>()
             .HasIndex(row => new { row.ProjectId, row.CostCode })

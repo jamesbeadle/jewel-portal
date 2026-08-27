@@ -8,6 +8,7 @@ using Jewel.JPMS.Api.Features.ArchitectInstructions;
 using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Auth;
 using Jewel.JPMS.Api.Features.Boq;
+using Jewel.JPMS.Api.Features.Calendar;
 using Jewel.JPMS.Api.Features.ValuationInvoices;
 using Jewel.JPMS.Api.Features.Cashflow;
 using Jewel.JPMS.Api.Features.Clients;
@@ -119,6 +120,7 @@ var host = new HostBuilder()
         services.AddRecordLinksFeature();
         services.AddAuditFeature();
         services.AddTodosFeature();
+        services.AddCalendarFeature();
         services.AddUsefulInformationFeature();
         services.AddLadsFeature();
         services.AddCostCentersFeature();

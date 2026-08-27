@@ -76,6 +76,7 @@ public static class TriageCategories
         RecordType.SubcontractorComms => Subcontractor, // general subcontractor correspondence — the tag IS the filing
         RecordType.InternalComms    => Internal,     // general staff-to-staff correspondence — the tag IS the filing
         RecordType.CostCentre       => null,     // triager picks the side, per email
+        RecordType.CalendarEvent    => null,     // neutral: a site visit, a delivery or a meeting belongs to whichever side arranged it
         RecordType.Todo             => null,     // neutral: never sets or changes a pathway
         _ => null
     };

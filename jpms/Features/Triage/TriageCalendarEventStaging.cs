@@ -1,0 +1,72 @@
+using Jewel.JPMS.Contracts.Calendar;
+using Jewel.JPMS.Contracts.RecordLinks;
+using Jewel.JPMS.Models;
+
+namespace Jewel.JPMS.Features.Triage;
+
+/// <summary>
+/// The calendar event drafted by "Raise Calendar Event" in System Actions: an email arranging
+/// something dated — a site visit, a delivery slot, a meeting — becomes an event on the email's
+/// project, with the email tagged to it (JPMS/CAL-####) so the event reads the arranging mail
+/// back live. Dates are held as the inputs' own text ("yyyy-MM-dd" / "HH:mm") until apply, so a
+/// half-typed value never throws — the StagedRecordCreate arrangement.
+/// </summary>
+public sealed class StagedCalendarEventDraft
+{
+    public string Title { get; set; } = "";
+    public CalendarEventKind Kind { get; set; } = CalendarEventKind.Meeting;
+    // New drafts start a week out — the house default for something arranged today (the
+    // TodoDraftRow rule). No date is read out of the email body: nothing extracts dates from
+    // prose anywhere, and a wrong guess on a calendar is worse than a default.
+    public string Date { get; set; } = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
+    public string StartTime { get; set; } = "";
+    public string EndDate { get; set; } = "";
+    public string Notes { get; set; } = "";
+    public bool ClientVisible { get; set; }
+
+    /// <summary>What still stops the event being raised — null when it is complete. Shared by
+    /// the editor (inline hint) and the page's Apply (hard gate), so the wording is decided
+    /// once — the same "decision not yet made" rule as the staged work order and defect.</summary>
+    public string? Problem
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(Title)) return "Give the event a title.";
+            if (ParsedDate is null) return "Give the event a date.";
+            if (!string.IsNullOrWhiteSpace(EndDate) && ParsedEndDate is null) return "The end date isn't a date.";
+            if (ParsedEndDate is { } end && end < ParsedDate) return "End date can't be before the start date.";
+            return null;
+        }
+    }
+
+    public string Outcome => "raise the calendar event on the email's project and tag this email to it";
+
+    public DateTime? ParsedDate => ParseDate(Date);
+    public DateTime? ParsedEndDate => ParseDate(EndDate);
+
+    public CreateCalendarEventFromMessage ToCommand(
+        string messageId, string? internetMessageId, string projectId, LinkThreadScope scope, bool allowCrossPathway)
+    {
+        var date = ParsedDate ?? DateTime.Today;
+        var end = ParsedEndDate;
+        return new CreateCalendarEventFromMessage(
+            messageId,
+            internetMessageId,
+            projectId,
+            new CalendarEventDetails(
+                Title.Trim(),
+                Kind,
+                new DateTimeOffset(date, TimeSpan.Zero),
+                string.IsNullOrWhiteSpace(StartTime) ? null : StartTime,
+                end is { } endDate && endDate != date ? new DateTimeOffset(endDate, TimeSpan.Zero) : null,
+                Notes.Trim(),
+                ClientVisible),
+            Scope: scope,
+            AllowCrossPathway: allowCrossPathway);
+    }
+
+    private static DateTime? ParseDate(string text) =>
+        DateTime.TryParseExact(text, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var value)
+            ? value
+            : null;
+}

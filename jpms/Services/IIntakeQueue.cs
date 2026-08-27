@@ -88,6 +88,12 @@ public interface IIntakeQueue
     // its own tag — the to-do half of "create a new record from this email".
     Task<IReadOnlyList<TodoItem>> CreateTodoItemsFromMessageAsync(CreateTodoItemsFromMessage command, CancellationToken cancellationToken = default);
 
+    // Raise a calendar event on a project from an email arranging something dated (a site visit,
+    // a delivery, a meeting). The email is tagged "JPMS/CAL-####", so the event reads its mail
+    // back live by tag — the calendar half of "create a new record from this email".
+    Task<Jewel.JPMS.Models.CalendarEvent> CreateCalendarEventFromMessageAsync(
+        Jewel.JPMS.Contracts.Calendar.CreateCalendarEventFromMessage command, CancellationToken cancellationToken = default);
+
     // Create a new Defect from an email (the defect raised exactly as a manual one, plus the email
     // linked to it). The Subcontractor pathway's third "create a new record from this email",
     // alongside the bid package and work order above.
