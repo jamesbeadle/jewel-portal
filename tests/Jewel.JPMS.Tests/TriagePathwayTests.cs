@@ -53,12 +53,32 @@ public sealed class TriagePathwayTests
     [Fact]
     public void Materials_movedToTheSupplierFamily_keepingItsTagStem()
     {
-        var materials = Assert.Single(SupplierComms.Categories);
+        var materials = Assert.Single(SupplierComms.Categories, record => record.Title == "Materials");
         Assert.Equal(RecordType.SupplierComms, materials.Type);
         Assert.Equal("JPMS/SubComms-Mats", CommunicationFamily.TagFor(materials));
         // …and left the subcontractor family entirely.
         Assert.DoesNotContain(SubcontractorComms.All, record => record.Title == "Materials");
         Assert.Contains("JPMS/SubComms-Mats", CommunicationFamily.Supplier.Tags);
+    }
+
+    [Fact]
+    public void SupplierFamily_offersMaterialsAndFinishes_notGeneral()
+    {
+        // General survives as the family's structural base (tag stem, route) but the UI offers
+        // only the categories — every supplier email is a Materials or Finishes matter.
+        Assert.Equal(new[] { "Materials", "Finishes" },
+            CommunicationFamily.Supplier.Offered.Select(record => record.Title).ToArray());
+        Assert.Contains("JPMS/SupComms-Fin", CommunicationFamily.Supplier.Tags);
+        // The other families still lead with General.
+        Assert.Equal(CommunicationFamily.Subcontractor.All, CommunicationFamily.Subcontractor.Offered);
+        Assert.Equal(CommunicationFamily.Internal.All, CommunicationFamily.Internal.Offered);
+    }
+
+    [Fact]
+    public void InternalCategories_areSiteInstructionOnly()
+    {
+        var site = Assert.Single(InternalComms.Categories);
+        Assert.Equal("Site instruction", site.Title);
     }
 
     [Fact]

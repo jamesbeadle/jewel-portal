@@ -169,6 +169,8 @@ public static class SidebarFolders
                 // Materials kept its SubComms-Mats tag stem in the move, so mail tagged before the
                 // split reads back here too.
                 new SidebarRow(new NavigationItem("Materials", "/suppliers/communications/materials"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Finishes", "/suppliers/communications/finishes"),
                     DesktopNavigation.DirectorRoles)
             }),
 
@@ -196,12 +198,9 @@ public static class SidebarFolders
                 // (the Control Centre Internal pane's communication ticks), read live.
                 new SidebarRow(new NavigationItem("Communications", "/internal/communications", ExactMatch: true),
                     DesktopNavigation.DirectorRoles),
-                // The category registers (2026-08-27 restructure) — Site instructions first.
+                // The category register (2026-08-27 restructure; Build-ups and Spec Notes were
+                // retired the same day — too fine-grained for staff mail).
                 new SidebarRow(new NavigationItem("Site Instructions", "/internal/communications/site-instruction"),
-                    DesktopNavigation.DirectorRoles),
-                new SidebarRow(new NavigationItem("Build-ups", "/internal/communications/build-up"),
-                    DesktopNavigation.DirectorRoles),
-                new SidebarRow(new NavigationItem("Spec Notes", "/internal/communications/spec-note"),
                     DesktopNavigation.DirectorRoles),
                 // The Monday replacement: insurances, subscriptions, vans, trade accounts.
                 new SidebarRow(new NavigationItem("Registers", "/registers"),

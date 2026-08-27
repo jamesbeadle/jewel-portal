@@ -162,7 +162,7 @@ else
                                 <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— the whole job's % profit to date at each month end, that month's movement beneath · Xero site P&L, @BasisLabel</span>
                             </p>
                             <p class="text-xs text-content-muted mt-1 mb-3">
-                                The main figure is the trend of the whole project; the small print is what the month did to it — spikes and falls live there, so they can't get lost. The last column is where the job stands to date.
+                                The main figure is the trend of the whole project; the small print is what the month did to it, in points and in £ — spikes and falls live there, so they can't get lost. The last column is where the job stands to date.
                             </p>
                         </div>
                         @* The basis switch for every Xero panel on the page (grid, trajectory, cumulative
@@ -209,7 +209,13 @@ else
                                             {
                                                 @* Costs have moved but nothing has EVER been invoiced — no honest running %; the £ is in the hover. *@
                                                 <td class="text-center rounded-md py-2.5 px-2 text-xs text-content-faint" style="background:#12151c"
-                                                    title="@($"{cellMonth:MMM yy} — nothing invoiced to date · profit to date {SignedMoneyCompact(cell.CumProfit)}{AccrualHover(row.Project.ProjectId, cellMonth)}")">n/a</td>
+                                                    title="@($"{cellMonth:MMM yy} — nothing invoiced to date · profit to date {SignedMoneyCompact(cell.CumProfit)}{AccrualHover(row.Project.ProjectId, cellMonth)}")">
+                                                    n/a
+                                                    @if (!cell.Own.Empty)
+                                                    {
+                                                        <span class="block text-[10px] font-normal mt-0.5">@SignedMoneyCompact(cell.Own.Profit)</span>
+                                                    }
+                                                </td>
                                             }
                                             else
                                             {
@@ -220,7 +226,7 @@ else
                                                     title="@(RunningCellHover(cellMonth, cell) + AccrualHover(row.Project.ProjectId, cellMonth))">
                                                     <span class="font-medium @ProfitClass(runningLevel)">@PctCell(runningLevel)</span>@if (AccrualOwnFor(row.Project.ProjectId, cellMonth) > 0m)
                                                     {<span class="text-amber-400 ml-0.5" aria-hidden="true">•</span>}
-                                                    <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(move)</span>
+                                                    <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(move)@(cell.Own.Empty ? "" : $" · {SignedMoneyCompact(cell.Own.Profit)}")</span>
                                                 </td>
                                             }
                                         }
@@ -258,7 +264,7 @@ else
                                                 @if (total.Running is decimal totalPct)
                                                 {
                                                     <span class="@ProfitClass(totalPct)">@PctCell(totalPct)</span>
-                                                    <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(totalMove)</span>
+                                                    <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(totalMove)@(total.Own.Empty ? "" : $" · {SignedMoneyCompact(total.Own.Profit)}")</span>
                                                 }
                                                 else
                                                 {
@@ -288,8 +294,9 @@ else
                         cost of sales less overheads tracked to the site, in Xero) over cumulative invoicing, exactly
                         the accountant's "Running % Profit" row — so the row reads as the project's trend, and the
                         last month always agrees with "Position now" (the £ beneath it is the profit it is made of).
-                        The small print is what the month did to that figure, in percentage points; the month's own
-                        profit and % (his "Current Month % Profit") are in the cell's hover. "6-mo Δ" is the running %
+                        The small print is what the month did to that figure, in percentage points, followed by the
+                        month's own profit or loss in £; the month's invoicing and own % (his "Current Month %
+                        Profit") stay in the cell's hover. "6-mo Δ" is the running %
                         now against six months ago — "—" where the job wasn't invoiced back then. "n/a" is a job with
                         costs but no invoicing at all yet — no honest percentage exists; hover for the £. "—" is a
                         month before anything happened. Young jobs swing wildly by nature — deposits against little
@@ -1238,9 +1245,10 @@ else
     // site-tracked overheads) over cumulative invoicing, the accountant's "Running % Profit"
     // row — so the row is the trend of the whole project and the last month equals "Position
     // now" by construction. The SMALL PRINT is the month's movement in percentage points
-    // (main figure minus the prior month end's), and the month's own profit % (the 2026-08-12
-    // "Current Month % Profit" format this replaced) lives in the hover, so a single month's
-    // spike or fall is visible without being mistakable for the position. A job with cost but
+    // (main figure minus the prior month end's) with the month's own profit £ beside it
+    // (2026-08-27, Jeremy: "I can't see the £ amount on profit"); the month's own % (the
+    // 2026-08-12 "Current Month % Profit" format this replaced) lives in the hover, so a single
+    // month's spike or fall is visible without being mistakable for the position. A job with cost but
     // no invoicing ever has no honest running % — the cell says n/a and carries the £ in its
     // hover rather than printing an exploded figure. The trajectory stays in £ — the running
     // total the cumulative panel's gap shows.

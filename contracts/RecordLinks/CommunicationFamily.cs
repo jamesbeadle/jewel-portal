@@ -15,8 +15,15 @@ public sealed record CommunicationFamily(
     IReadOnlyList<LinkableRecord> Categories,
     IReadOnlyList<LinkableRecord> All,
     IReadOnlyList<string> Tags,
-    string GeneralHint)
+    string GeneralHint,
+    bool OfferGeneral = true)
 {
+    /// <summary>What the UI offers for tagging and filtering: the categories, led by the General
+    /// record unless the family declares it not worth offering (Supplier, 2026-08-27 — every
+    /// supplier email is a Materials or Finishes matter; a General bucket would just collect
+    /// mis-filings).</summary>
+    public IReadOnlyList<LinkableRecord> Offered => OfferGeneral ? All : Categories;
+
     public string Tag => $"JPMS/{General.TagReference}";
 
     public static string TagFor(LinkableRecord record) => $"JPMS/{record.TagReference}";
@@ -51,7 +58,8 @@ public sealed record CommunicationFamily(
         SupplierComms.Categories,
         SupplierComms.All,
         SupplierComms.Tags,
-        "Tags the thread as general supplier correspondence — no record needed. It appears under Supplier → Communications.");
+        "Tags the thread as general supplier correspondence — no record needed. It appears under Supplier → Communications.",
+        OfferGeneral: false);
 
     public static IReadOnlyList<CommunicationFamily> Known { get; } = new[] { Subcontractor, Supplier, Internal };
 

@@ -127,29 +127,39 @@
             @if (Config.Family is { } family)
             {
                 @* Answers "how do I create a Materials record to tag later" (Nigel, 2026-08-27):
-                   there is nothing to create — these registers are record-less, the tick IS the
+                   there is nothing to create — these registers are record-less, the tag IS the
                    filing. Said here, where the question arises. *@
                 @if (HasOpenEmail)
                 {
-                    <p class="text-xs text-content-subtle">These registers need no record — tick one and Apply files this email straight into it. Expand a register to read what's already there.</p>
+                    <p class="text-xs text-content-subtle">These registers need no record — "Tag as…" stages the filing and Apply lands this email straight in the register. Expand one to read what's already there.</p>
                 }
-                @foreach (var familyRecord in family.All)
+                @foreach (var familyRecord in family.Offered)
                 {
                     var record = familyRecord;
                     var sectionKey = $"cat:{record.RecordId}";
                     <div @key="sectionKey" class="rounded-lg border border-line">
                         <div class="w-full flex items-center gap-2 px-3 py-2">
-                            @if (HasOpenEmail)
-                            {
-                                <input type="checkbox" title="@($"Tag the open email {family.ChipLabel(record)} — staged, applied by the inbox's Apply")"
-                                       checked="@IsPicked(record)" @onchange="() => TogglePickAsync(record)" />
-                            }
                             <button type="button" class="flex items-center gap-2 text-left flex-1 min-w-0"
                                     title="@(record.Summary ?? "")" @onclick="() => Toggle(sectionKey)">
+                                @Chevron(IsOpenSection(sectionKey))
                                 <span class="text-sm font-medium text-content truncate">@family.ChipLabel(record)</span>
                                 <span class="text-xs text-content-subtle">register</span>
-                                @Chevron(IsOpenSection(sectionKey))
                             </button>
+                            @if (HasOpenEmail)
+                            {
+                                @if (IsPicked(record))
+                                {
+                                    <button type="button" class="shrink-0 rounded-full border border-accent bg-accent/10 text-accent px-3 py-1 text-xs font-medium transition hover:border-negative hover:text-negative"
+                                            title="@($"Staged — Apply files this email under {family.ChipLabel(record)}. Click to untag.")"
+                                            @onclick="() => TogglePickAsync(record)">✓ Tagged @family.ChipLabel(record)</button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="shrink-0 rounded-full border border-line text-content-muted px-3 py-1 text-xs font-medium transition hover:border-accent hover:text-accent"
+                                            title="@($"Stage this email's filing under {family.ChipLabel(record)} — the inbox's Apply lands it")"
+                                            @onclick="() => TogglePickAsync(record)">Tag as @family.ChipLabel(record)</button>
+                                }
+                            }
                         </div>
                         @if (IsOpenSection(sectionKey))
                         {

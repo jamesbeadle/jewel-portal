@@ -62,7 +62,7 @@ else
         <div class="flex flex-wrap items-center gap-1.5 mb-4">
             <button type="button" class="@ChipClass(null)" title="@($"Every {family.Label.ToLowerInvariant()}, whatever its category")"
                     @onclick="() => SetCategoryFilterAsync(null)">All</button>
-            @foreach (var familyRecord in family.All)
+            @foreach (var familyRecord in family.Offered)
             {
                 var familyTag = CommunicationFamily.TagFor(familyRecord);
                 <button type="button" @key="familyRecord.RecordId" class="@ChipClass(familyTag)" title="@familyRecord.Summary"

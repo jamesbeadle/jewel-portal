@@ -71,7 +71,7 @@ public static class PortalMapCapabilities
 
         // ---- Supplier ----
         ["/suppliers/communications"] =
-            "supplier correspondence (the JPMS/SupComms family — general plus Materials, which moved here from the subcontractor family 2026-08-27 keeping its SubComms-Mats tag), read live with a per-category filter; /suppliers/communications/materials opens the Materials register",
+            "supplier correspondence — the Materials register (moved from the subcontractor family 2026-08-27, keeping its SubComms-Mats tag) and the Finishes register, read live with a per-category filter; /suppliers/communications/materials and /finishes open one register",
 
         // ---- Internal ----
         ["/tender-enquiries"] =

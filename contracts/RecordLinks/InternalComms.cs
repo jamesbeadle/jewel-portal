@@ -26,10 +26,9 @@ public static class InternalComms
     {
         Define("internal-comms-site-instruction", "IntComms-Site", "Site instruction",
             "An instruction to site — what to do, where, by when"),
-        Define("internal-comms-build-up", "IntComms-BuildUp", "Build-up",
-            "Build-ups and construction detail for the site team — walls, ceilings, floors, finishes"),
-        Define("internal-comms-spec-note", "IntComms-Spec", "Spec note",
-            "A note on a specification, product or material choice"),
+        // Build-up (IntComms-BuildUp) and Spec note (IntComms-Spec) retired 2026-08-27 (Nigel):
+        // too fine-grained for staff mail. Mail tagged in their week of life keeps its tags but
+        // reads back only via the Tagged view's tag search, not a register.
     };
 
     public static IReadOnlyList<LinkableRecord> All { get; } = BuildAll();

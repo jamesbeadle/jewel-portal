@@ -33,6 +33,8 @@ public static class SupplierComms
         // Re-homed from SubcontractorComms 2026-08-27 — id and tag stem retained (see class doc).
         Define("subcontractor-comms-materials", "SubComms-Mats", "Materials",
             "Materials — orders, deliveries, availability"),
+        Define("supplier-comms-finishes", "SupComms-Fin", "Finishes",
+            "Finishes — fixtures, fittings and finishes supply"),
     };
 
     public static IReadOnlyList<LinkableRecord> All { get; } = BuildAll();
