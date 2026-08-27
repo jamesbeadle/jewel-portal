@@ -97,7 +97,7 @@ public static class SystemActionKinds
 /// An action on an EXISTING record (an RFI transition, a variation decision) also carries that
 /// record as <see cref="Target"/> — the server's own linkable projection, fetched by the stage
 /// component, never hand-built (tag stems are provider business: project-qualified and
-/// stage-dependent) — so SystemActionsPane can stage the record's tag the moment the action
+/// stage-dependent) — so PathwayActionsSection can stage the record's tag the moment the action
 /// stages: actioning a record from an email files the email against it, same as ticking it in
 /// System Tags by hand. <see cref="TargetAutoTagged"/> remembers whether it was this action that
 /// added the pick (rather than the triager having picked it already), so removing the action

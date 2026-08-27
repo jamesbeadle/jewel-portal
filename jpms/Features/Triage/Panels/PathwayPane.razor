@@ -1,0 +1,299 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.RecordLinks
+@using Jewel.JPMS.Features.Triage.Workspace
+
+@*
+    One pathway's pane (2026-08-27 restructure): the whole "how I deal with this email on the
+    Client / Subcontractor / Supplier / Internal side" surface. An accordion of sections —
+
+    - one TAGGING section per record type the pathway owns (the project's records of that type,
+      candidates first — pick to stage the email's tag);
+    - one section per record-less communication category (General, Chaser, Materials, Site
+      instruction…), its tick in the header and its live REGISTER in the body — every category
+      reads back like Defects does;
+    - an ACTIONS section carrying only this side's system actions.
+
+    Everything is STAGED into the page's one list and applied by the inbox's single Apply. The
+    four panes are this one component fed by PathwayPaneConfig. Registers browse without an open
+    email; tagging and actions ask for one.
+*@
+
+<div class="panel p-5">
+    <div class="flex items-center justify-between gap-3 mb-4">
+        <div class="min-w-0">
+            <h2 class="text-base font-semibold text-content">@Config.Pathway</h2>
+            <p class="text-xs text-content-subtle truncate" title="@Config.Hint">
+                @(HasOpenEmail ? $"Staged against: {EmailSubject}" : Config.Hint)
+            </p>
+        </div>
+    </div>
+    <div class="space-y-3">
+
+        @if (HasOpenEmail && LockedPathway is { } filedPathway && filedPathway != Config.Pathway)
+        {
+            <p class="text-xs text-content-subtle">This thread is filed under <span class="font-medium text-content">@filedPathway</span> — tags from this pane also file it under @Config.Pathway (you'll be asked to confirm).</p>
+        }
+
+        @* What's staged so far, across every pane — the running total. *@
+        @if (HasOpenEmail && Picked.Count > 0)
+        {
+            <div class="flex flex-wrap items-center gap-1.5">
+                @foreach (var picked in Picked.ToList())
+                {
+                    <span @key="picked.RecordId" class="inline-flex items-center gap-1 rounded-full border border-accent/50 bg-accent/5 text-accent pl-2.5 pr-1 py-0.5 text-xs" title="@picked.Title">
+                        <span>🔗 @ChipLabel(picked)</span>
+                        <button type="button" class="leading-none px-1 text-accent/70 hover:text-negative" title="Unpick"
+                                @onclick="() => UnpickAsync(picked)">&times;</button>
+                    </span>
+                }
+            </div>
+        }
+
+        @if (Config.LinkTypes.Count > 0)
+        {
+            @if (!HasOpenEmail)
+            {
+                <p class="text-xs text-content-subtle">Open a queue email to tag it to @Config.Pathway records — the category registers below browse without one.</p>
+            }
+            else if (string.IsNullOrWhiteSpace(ProjectId))
+            {
+                <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
+                    Set the email's <span class="font-medium">Project</span> above first — tags file the email against a project's records. To create a new record from this email, use this pane's <span class="font-medium">Actions</span>.
+                </p>
+            }
+            else
+            {
+                @foreach (var linkType in Config.LinkTypes)
+                {
+                    var type = linkType;
+                    var typeKey = $"type:{type}";
+                    <div @key="typeKey" class="rounded-lg border border-line">
+                        <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-left"
+                                title="@($"The project's {PathwayPaneConfig.TypeLabelPlural(type)} — pick to tag the email")"
+                                @onclick="() => Toggle(typeKey)">
+                            @Chevron(IsOpenSection(typeKey))
+                            <span class="text-sm font-medium text-content flex-1">@PathwayPaneConfig.TypeLabelPlural(type)</span>
+                            @if (PickedCountFor(type) > 0)
+                            {
+                                @SectionCount(PickedCountFor(type))
+                            }
+                        </button>
+                        @if (IsOpenSection(typeKey))
+                        {
+                            <div class="px-3 pb-3">
+                                <RecordLinkSection Type="type" ProjectId="@ProjectId" EmailSubject="@EmailSubject"
+                                                   Picked="Picked" OnStagingChanged="StagingChangedAsync" />
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        }
+
+        @if (Config.Family is { } family)
+        {
+            @foreach (var familyRecord in family.All)
+            {
+                var record = familyRecord;
+                var sectionKey = $"cat:{record.RecordId}";
+                <div @key="sectionKey" class="rounded-lg border border-line">
+                    <div class="w-full flex items-center gap-2 px-3 py-2">
+                        @if (HasOpenEmail)
+                        {
+                            <input type="checkbox" title="@($"Tag the open email {family.ChipLabel(record)} — staged, applied by the inbox's Apply")"
+                                   checked="@IsPicked(record)" @onchange="() => TogglePickAsync(record)" />
+                        }
+                        <button type="button" class="flex items-center gap-2 text-left flex-1 min-w-0"
+                                title="@(record.Summary ?? "")" @onclick="() => Toggle(sectionKey)">
+                            <span class="text-sm font-medium text-content truncate">@family.ChipLabel(record)</span>
+                            <span class="text-xs text-content-subtle">register</span>
+                            @Chevron(IsOpenSection(sectionKey))
+                        </button>
+                    </div>
+                    @if (IsOpenSection(sectionKey))
+                    {
+                        <div class="px-3 pb-3">
+                            <CategoryRegisterSection Family="family" Record="record"
+                                                     EmailSubject="@EmailSubject" ProjectName="@ProjectName"
+                                                     Picked="Picked" OnStagingChanged="StagingChangedAsync"
+                                                     OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward" />
+                        </div>
+                    }
+                </div>
+            }
+        }
+
+        <div class="rounded-lg border border-line">
+            <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-left"
+                    title="@($"Line up {Config.Pathway.ToLowerInvariant()}-side actions to run when this email's triage completes")"
+                    @onclick='() => Toggle("actions")'>
+                @Chevron(IsOpenSection("actions"))
+                <span class="text-sm font-medium text-content flex-1">Actions</span>
+                @if (StagedActionCountHere > 0)
+                {
+                    @SectionCount(StagedActionCountHere)
+                }
+            </button>
+            @if (IsOpenSection("actions"))
+            {
+                <div class="px-3 pb-3">
+                    @if (!HasOpenEmail)
+                    {
+                        <p class="text-xs text-content-subtle">Open a queue email to line up actions — they run with its Apply.</p>
+                    }
+                    else
+                    {
+                        <PathwayActionsSection @key="EmailKey" Groups="Config.ActionGroups"
+                                               Projects="@Projects"
+                                               ProjectId="@ProjectId"
+                                               StagedActions="StagedActions"
+                                               PickedRecords="Picked"
+                                               OnStagingChanged="StagingChangedAsync"
+                                               StagedCreate="@StagedCreate"
+                                               StagedCreateChanged="StagedCreateChanged"
+                                               CreatedRecords="CreatedRecords"
+                                               OnCreateNow="OnCreateNow"
+                                               Busy="@Busy"
+                                               OnClose="OnClose"
+                                               QsRecipients="@QsRecipients"
+                                               OnForwardToQs="OnForwardToQs"
+                                               TodoRows="TodoRows"
+                                               TodoAssigneeOptions="@TodoAssigneeOptions"
+                                               TodoProjectNote="@TodoProjectNote"
+                                               EmailAttachments="@EmailAttachments"
+                                               SenderEmail="@SenderEmail"
+                                               EmailSubject="@EmailSubject" />
+                    }
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (HasOpenEmail)
+    {
+        <div class="flex items-center justify-end pt-4">
+            <button type="button" class="btn-primary" @onclick="CloseAsync"
+                    title="Confirms the staged list and hands this window back to the open email — nothing is applied until the inbox's Apply">Done</button>
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>Which pathway this pane is — its record types, family and action groups.</summary>
+    [Parameter, EditorRequired] public PathwayPaneConfig Config { get; set; } = PathwayPaneConfig.Client;
+
+    /// <summary>The email's project, picked once in the triage bar.</summary>
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    /// <summary>The project's name — the category registers' "This project" scope.</summary>
+    [Parameter] public string ProjectName { get; set; } = "";
+
+    /// <summary>The open queue email's subject — blank when none is open, which puts the pane in
+    /// browse mode: registers readable, tagging and actions waiting for an email.</summary>
+    [Parameter] public string EmailSubject { get; set; } = "";
+
+    /// <summary>The open email's id — keys the Actions section so a fresh selection starts
+    /// fresh scratch forms (the staged work itself is page-owned and resets per selection).
+    /// The registers deliberately are NOT keyed on it: they are standing browsers.</summary>
+    [Parameter] public string EmailKey { get; set; } = "";
+
+    /// <summary>The thread's filed pathway label, when it is already filed — drives the
+    /// cross-filing hint. Null = not yet filed.</summary>
+    [Parameter] public string? LockedPathway { get; set; }
+
+    /// <summary>Page-owned staged record links — ONE list across all four panes; the pane
+    /// mutates and notifies.</summary>
+    [Parameter, EditorRequired] public List<LinkableRecord> Picked { get; set; } = new();
+    [Parameter] public EventCallback OnStagingChanged { get; set; }
+
+    /// <summary>Raised (with the pathway label) whenever the triager stages from this pane — the
+    /// page records it as the email's pathway decision, as the old tab switch did.</summary>
+    [Parameter] public EventCallback<string> OnEngaged { get; set; }
+
+    /// <summary>Done pressed — the page lands this window back on the open email.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    // Register callbacks — the page lines replies/forwards up in the Outbox and opens previews.
+    [Parameter] public EventCallback<PreviewRequest> OnPreview { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnReply { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnForward { get; set; }
+
+    // Actions passthrough — the same page-owned state the retired System Actions pane took.
+    [Parameter] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+    [Parameter] public List<StagedSystemAction> StagedActions { get; set; } = new();
+    [Parameter] public StagedRecordCreate? StagedCreate { get; set; }
+    [Parameter] public EventCallback<StagedRecordCreate?> StagedCreateChanged { get; set; }
+    [Parameter] public List<CreatedNowRecord> CreatedRecords { get; set; } = new();
+    [Parameter] public EventCallback OnCreateNow { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public List<TodoDraftRow> TodoRows { get; set; } = new();
+    [Parameter] public IReadOnlyList<SearchSelect.Option> TodoAssigneeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public string? TodoProjectNote { get; set; }
+    [Parameter] public IReadOnlyList<IntakeAttachment> EmailAttachments { get; set; } = Array.Empty<IntakeAttachment>();
+    [Parameter] public string SenderEmail { get; set; } = "";
+    [Parameter] public IReadOnlyList<TodoAssignablePerson> QsRecipients { get; set; } = Array.Empty<TodoAssignablePerson>();
+    [Parameter] public EventCallback OnForwardToQs { get; set; }
+
+    private bool HasOpenEmail => !string.IsNullOrWhiteSpace(EmailSubject);
+
+    private readonly HashSet<string> openSections = new();
+    private bool IsOpenSection(string key) => openSections.Contains(key);
+    private void Toggle(string key)
+    {
+        if (!openSections.Add(key)) openSections.Remove(key);
+    }
+
+    private int PickedCountFor(RecordType type) => Picked.Count(record => record.Type == type);
+
+    private int StagedActionCountHere =>
+        StagedActions.Count(action => Config.AllActionKinds.Contains(action.Kind));
+
+    private bool IsPicked(LinkableRecord record) =>
+        Picked.Any(picked => picked.RecordId == record.RecordId);
+
+    private async Task TogglePickAsync(LinkableRecord record)
+    {
+        var existing = Picked.FirstOrDefault(picked => picked.RecordId == record.RecordId);
+        if (existing is null) Picked.Add(record);
+        else Picked.Remove(existing);
+        await StagingChangedAsync();
+    }
+
+    private async Task UnpickAsync(LinkableRecord record)
+    {
+        var existing = Picked.FirstOrDefault(picked => picked.RecordId == record.RecordId);
+        if (existing is not null) Picked.Remove(existing);
+        await StagingChangedAsync();
+    }
+
+    // Every staging change from this pane also reports the pathway decision — staging FROM a side
+    // IS choosing that side, as switching the old System Tags tab was.
+    private async Task StagingChangedAsync()
+    {
+        if (HasOpenEmail) await OnEngaged.InvokeAsync(Config.Pathway);
+        await OnStagingChanged.InvokeAsync();
+    }
+
+    private async Task CloseAsync()
+    {
+        await OnStagingChanged.InvokeAsync();
+        await OnClose.InvokeAsync();
+    }
+
+    // The staged chip reads the everyday name: the title for a valuation snapshot (its VRS-… stem
+    // is a minted mail tag, decision 2026-08-20), the reference for everything else.
+    private static string ChipLabel(LinkableRecord record) =>
+        record.Type == RecordType.ValuationReportSnapshot ? record.Title : record.Reference;
+
+    private static RenderFragment Chevron(bool open) => __builder =>
+    {
+        <svg class="@("w-3.5 h-3.5 text-content-subtle transition-transform shrink-0" + (open ? " rotate-90" : ""))"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+    };
+
+    private static RenderFragment SectionCount(int count) => __builder =>
+    {
+        <span class="min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-[10px] font-semibold inline-flex items-center justify-center leading-none shrink-0">@count</span>
+    };
+}

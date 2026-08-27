@@ -4,6 +4,10 @@
     One pane's icon row — the same set on both sides, so either window can load any content.
     Pressing an icon loads that content THIS side; whatever the pane showed before waits in its
     history. The Email and Preview icons only exist while there is an email / a document to show.
+
+    Rail order is the triager's mental path (2026-08-27 restructure): the inbox and the open
+    email, then the four pathway panes — "here's how I deal with this email on the client /
+    subcontractor / supplier / internal side" — then the reference tools.
 *@
 
 <div class="flex items-center gap-1 flex-wrap">
@@ -12,10 +16,11 @@
     {
         @RailButton(PanelKind.Email, EmailLabel)
     }
-    @RailButton(PanelKind.SystemTags, "System tags")
-    @RailButton(PanelKind.SystemActions, "System actions")
+    @RailButton(PanelKind.Client, "Client — tag and action this email on the client side")
+    @RailButton(PanelKind.Subcontractor, "Subcontractor — tag and action this email on the subcontractor side")
+    @RailButton(PanelKind.Supplier, "Supplier — tag and action this email on the supplier side")
+    @RailButton(PanelKind.Internal, "Internal — tag and action this email on the staff side")
     @RailButton(PanelKind.Records, "Record explorer")
-    @RailButton(PanelKind.SubcontractorComms, "Subcontractor communications")
     @RailButton(PanelKind.Xero, "Xero explorer")
     @RailButton(PanelKind.Compose, "New email")
     @RailButton(PanelKind.Outbox, "Outbox — emails lined up for Apply")
@@ -35,11 +40,12 @@
     /// <summary>A document is open from a record, so the Preview icon exists.</summary>
     [Parameter] public bool PreviewAvailable { get; set; }
 
-    /// <summary>How many tags are staged — badged on the System Tags icon like the old button.</summary>
-    [Parameter] public int TagsBadge { get; set; }
-
-    /// <summary>How many system actions are lined up — badged on the System Actions icon.</summary>
-    [Parameter] public int ActionsBadge { get; set; }
+    /// <summary>Staged tags + actions per pathway — badged on that pathway's icon, so the rail
+    /// says at a glance which sides of the triage already carry staged work.</summary>
+    [Parameter] public int ClientBadge { get; set; }
+    [Parameter] public int SubcontractorBadge { get; set; }
+    [Parameter] public int SupplierBadge { get; set; }
+    [Parameter] public int InternalBadge { get; set; }
 
     /// <summary>How many emails are lined up to send — badged on the Outbox icon.</summary>
     [Parameter] public int OutboxBadge { get; set; }
@@ -67,8 +73,10 @@
 
     private int BadgeFor(PanelKind kind) => kind switch
     {
-        PanelKind.SystemTags => TagsBadge,
-        PanelKind.SystemActions => ActionsBadge,
+        PanelKind.Client => ClientBadge,
+        PanelKind.Subcontractor => SubcontractorBadge,
+        PanelKind.Supplier => SupplierBadge,
+        PanelKind.Internal => InternalBadge,
         PanelKind.Outbox => OutboxBadge,
         _ => 0
     };

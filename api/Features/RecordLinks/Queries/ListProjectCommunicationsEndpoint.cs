@@ -58,8 +58,9 @@ public sealed class ListProjectCommunicationsEndpoint
         {
             if (!bucketRaw.Equals("Client", StringComparison.OrdinalIgnoreCase)
                 && !bucketRaw.Equals("Subcontractor", StringComparison.OrdinalIgnoreCase)
+                && !bucketRaw.Equals("Supplier", StringComparison.OrdinalIgnoreCase)
                 && !bucketRaw.Equals("Internal", StringComparison.OrdinalIgnoreCase))
-                return new BadRequestObjectResult("bucket must be Client, Subcontractor or Internal when given.");
+                return new BadRequestObjectResult("bucket must be Client, Subcontractor, Supplier or Internal when given.");
             bucket = char.ToUpperInvariant(bucketRaw[0]) + bucketRaw[1..].ToLowerInvariant();
         }
 

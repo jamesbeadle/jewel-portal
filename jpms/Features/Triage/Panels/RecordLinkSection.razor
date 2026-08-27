@@ -1,0 +1,169 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.RecordLinks
+@inject IIntakeQueue Intake
+
+@*
+    One record type's tagging register inside a pathway pane (2026-08-27 restructure): the
+    project's records of this type — subject-matched candidates first — searchable, each row a
+    pick/unpick into the page's one staged list. The picker logic (candidate scoring, filtering,
+    row styling) moved here verbatim from the retired SystemTagsPane, which offered the same pool
+    behind a record-type dropdown.
+*@
+
+<div class="space-y-3">
+    <input class="field" type="text" placeholder="Search @PathwayPaneConfig.TypeLabelPlural(Type) — reference or title…" value="@search"
+           @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+
+    @if (loading)
+    {
+        <p class="text-sm text-content-subtle italic">Loading @PathwayPaneConfig.TypeLabel(Type) records…</p>
+    }
+    else
+    {
+        var candidates = Filter(Candidates());
+        var others = Filter(records.Except(Candidates()).ToList());
+        @if (candidates.Count > 0)
+        {
+            <p class="text-xs font-semibold text-amber-600">Possible matches for this email</p>
+            <div class="space-y-1">
+                @foreach (var record in candidates) { @RecordRow(record, true) }
+            </div>
+        }
+        @if (others.Count > 0)
+        {
+            <p class="text-xs font-semibold text-content-subtle">@(candidates.Count > 0 ? "Others" : "Records") on this project</p>
+            <div class="space-y-1 max-h-56 overflow-y-auto">
+                @foreach (var record in others) { @RecordRow(record, false) }
+            </div>
+        }
+        @if (candidates.Count == 0 && others.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">Nothing matching on this project.</p>
+        }
+        <p class="text-xs text-content-subtle">Click to add, click again to unpick — the email is tagged to every picked record on apply.</p>
+    }
+</div>
+
+@code {
+    /// <summary>The record type this section serves — one section per type in the pane.</summary>
+    [Parameter, EditorRequired] public RecordType Type { get; set; }
+
+    /// <summary>The email's project — the pool the records come from. The pane only renders the
+    /// section once a project is set.</summary>
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    /// <summary>The open email's subject — drives the candidate scoring.</summary>
+    [Parameter] public string EmailSubject { get; set; } = "";
+
+    /// <summary>Page-owned staged record links; the section mutates and notifies.</summary>
+    [Parameter, EditorRequired] public List<LinkableRecord> Picked { get; set; } = new();
+    [Parameter] public EventCallback OnStagingChanged { get; set; }
+
+    private string search = "";
+    private bool loading;
+    private string loadedKey = "";
+    private IReadOnlyList<LinkableRecord> records = Array.Empty<LinkableRecord>();
+
+    // The section sits beside the triage bar's project picker, so the project can change while it
+    // is open — loadedKey makes the re-read a no-op unless the project actually differs.
+    protected override Task OnParametersSetAsync() => LoadRecordsAsync();
+
+    private async Task LoadRecordsAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ProjectId)) { records = Array.Empty<LinkableRecord>(); loadedKey = ""; return; }
+        var key = $"{ProjectId}|{Type}";
+        if (key == loadedKey) return;
+        loading = true;
+        try
+        {
+            records = await Intake.ListLinkableRecordsAsync(ProjectId, Type);
+            loadedKey = key;
+        }
+        catch { records = Array.Empty<LinkableRecord>(); loadedKey = ""; }
+        finally { loading = false; }
+    }
+
+    private async Task TogglePick(LinkableRecord record)
+    {
+        var existing = Picked.FirstOrDefault(r => r.RecordId == record.RecordId);
+        if (existing is not null) Picked.Remove(existing);
+        else Picked.Add(record);
+        await OnStagingChanged.InvokeAsync();
+    }
+
+    private RenderFragment RecordRow(LinkableRecord record, bool candidate) => __builder =>
+    {
+        <button type="button" @key="record.RecordId" @onclick="() => TogglePick(record)" class="@RowClass(record, candidate)">
+            @if (ShowReference(record))
+            {
+                <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
+            }
+            <span class="text-sm text-content truncate flex-1" title="@RowHint(record)">@record.Title</span>
+            @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
+            {
+                <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
+            }
+        </button>
+    };
+
+    // Valuation snapshots' VRS-… reference is a minted mail-tag stem, not a name any triager
+    // recognises (decision 2026-08-20) — their rows lead with the valuation's own name (the
+    // provider's title) and the stem retreats to the hover hint. Every other type's reference
+    // ("RFI-001", "WO-0003") IS its everyday name, so those rows keep it.
+    private static bool ShowReference(LinkableRecord record) =>
+        record.Type != RecordType.ValuationReportSnapshot;
+
+    private static string RowHint(LinkableRecord record) =>
+        ShowReference(record)
+            ? record.Summary ?? ""
+            : string.IsNullOrWhiteSpace(record.Summary) ? record.Reference : $"{record.Reference} — {record.Summary}";
+
+    private string RowClass(LinkableRecord record, bool candidate)
+    {
+        var baseClass = "w-full text-left rounded-lg border px-3 py-1.5 flex items-center gap-2 transition";
+        if (Picked.Any(r => r.RecordId == record.RecordId)) return $"{baseClass} border-accent bg-surface-raised";
+        return candidate
+            ? $"{baseClass} border-amber-500/40 hover:border-amber-500"
+            : $"{baseClass} border-line hover:border-line-strong";
+    }
+
+    private List<LinkableRecord> Filter(IEnumerable<LinkableRecord> source) =>
+        string.IsNullOrWhiteSpace(search)
+            ? source.ToList()
+            : source.Where(r =>
+                    r.Reference.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || r.Title.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || (r.Summary?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false))
+                .ToList();
+
+    // Records whose reference or title overlaps the email subject — surfaced first so a duplicate
+    // record isn't created for something already tracked.
+    private List<LinkableRecord> Candidates()
+    {
+        var tokens = Tokenise(EmailSubject);
+        return records
+            .Select(r => (r, score: Score(r, tokens)))
+            .Where(x => x.score > 0)
+            .OrderByDescending(x => x.score)
+            .Select(x => x.r)
+            .ToList();
+    }
+
+    private int Score(LinkableRecord record, HashSet<string> subjectTokens)
+    {
+        var score = 0;
+        if (!string.IsNullOrWhiteSpace(record.Reference)
+            && EmailSubject.Contains(record.Reference, StringComparison.OrdinalIgnoreCase))
+            score += 10;
+        foreach (var token in Tokenise(record.Title))
+            if (subjectTokens.Contains(token)) score++;
+        return score;
+    }
+
+    private static HashSet<string> Tokenise(string text) =>
+        (text ?? "")
+        .ToLowerInvariant()
+        .Split(new[] { ' ', ',', '.', ';', ':', '-', '—', '/', '(', ')', '[', ']' }, StringSplitOptions.RemoveEmptyEntries)
+        .Where(t => t.Length >= 4)
+        .ToHashSet();
+}

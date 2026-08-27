@@ -67,7 +67,11 @@ public static class PortalMapCapabilities
             + "MD/FD/PM/estimator — and \"Edit work order\" (work_order_edit) corrects an order's "
             + "title, scope and priced lines, MD/FD/admin for issued orders",
         ["/subcontractors/communications"] =
-            "subcontractor correspondence (everything tagged with the JPMS/SubComms family at triage — general plus the Chaser / Info request / Materials / H&S categories), read live with a per-category filter",
+            "subcontractor correspondence (everything tagged with the JPMS/SubComms family at triage — general plus the Chaser / Info request / H&S categories), read live with a per-category filter; category deep links like /subcontractors/communications/chaser open one register",
+
+        // ---- Supplier ----
+        ["/suppliers/communications"] =
+            "supplier correspondence (the JPMS/SupComms family — general plus Materials, which moved here from the subcontractor family 2026-08-27 keeping its SubComms-Mats tag), read live with a per-category filter; /suppliers/communications/materials opens the Materials register",
 
         // ---- Internal ----
         ["/tender-enquiries"] =

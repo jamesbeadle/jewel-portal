@@ -24,11 +24,17 @@
         // An open envelope — the email currently being read.
         PanelKind.Email => "<path d='m3.5 9.5 8.5-5.5 8.5 5.5v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z'/><path d='m3.5 9.5 8.5 6 8.5-6'/>",
 
-        // A luggage tag — system tags.
-        PanelKind.SystemTags => "<path d='M12.6 3.5h6a1.9 1.9 0 0 1 1.9 1.9v6a1.9 1.9 0 0 1-.56 1.35l-7.7 7.7a1.9 1.9 0 0 1-2.68 0l-5.5-5.5a1.9 1.9 0 0 1 0-2.68l7.7-7.7a1.9 1.9 0 0 1 1.34-.57z'/><circle cx='16.4' cy='7.6' r='1.2'/>",
+        // A person — the client pathway: the people the job is for.
+        PanelKind.Client => "<circle cx='12' cy='8' r='3.6'/><path d='M5 20.5c.8-4 3.6-6 7-6s6.2 2 7 6'/>",
 
-        // A bolt — system actions lined up to fire on apply.
-        PanelKind.SystemActions => "<path d='M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z'/>",
+        // A hard hat — the subcontractor pathway: the trades on site.
+        PanelKind.Subcontractor => "<path d='M4.5 15.5v-1.2A7.5 7.5 0 0 1 9.7 7.2V5.6a1.1 1.1 0 0 1 1.1-1.1h2.4a1.1 1.1 0 0 1 1.1 1.1v1.6a7.5 7.5 0 0 1 5.2 7.1v1.2'/><path d='M3 15.5h18v1.6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z'/>",
+
+        // A delivery van — the supplier pathway: materials and goods arriving.
+        PanelKind.Supplier => "<path d='M2.5 6.5h11v10h-11z'/><path d='M13.5 9.5h4l3 3v4h-7'/><circle cx='6.5' cy='17.5' r='1.8'/><circle cx='17' cy='17.5' r='1.8'/>",
+
+        // An office building — the internal pathway: Jewel's own staff.
+        PanelKind.Internal => "<path d='M5.5 20.5V4.5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16'/><path d='M15.5 9.5h3a1 1 0 0 1 1 1v10'/><path d='M3.5 20.5h17'/><path d='M8.5 7h1.5M11.5 7H13M8.5 10.5h1.5M11.5 10.5H13M8.5 14h1.5M11.5 14H13'/>",
 
         // A document under a magnifier — the record explorer.
         PanelKind.Records => "<path d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5'/><path d='M14 3v5h5v3'/><circle cx='15.5' cy='15.5' r='3.2'/><path d='m17.9 17.9 2.6 2.6'/>",
@@ -41,9 +47,6 @@
 
         // A pencil over a sheet — compose a new email.
         PanelKind.Compose => "<path d='M11 4.5H6a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-5'/><path d='M17.8 3.2a1.9 1.9 0 0 1 2.7 2.7l-8 8-3.6.9.9-3.6z'/>",
-
-        // Two overlapping speech bubbles — the subcontractor communications browser.
-        PanelKind.SubcontractorComms => "<path d='M16.5 11.5V6.7a2.2 2.2 0 0 0-2.2-2.2H5.7a2.2 2.2 0 0 0-2.2 2.2v4.6a2.2 2.2 0 0 0 2.2 2.2h.8v2.7l3-2.7'/><path d='M9.5 13.9v-1.2a2.2 2.2 0 0 1 2.2-2.2h6.6a2.2 2.2 0 0 1 2.2 2.2v3.6a2.2 2.2 0 0 1-2.2 2.2h-.8v2.7l-3-2.7h-2.8a2.2 2.2 0 0 1-2.2-2.2z'/>",
 
         // A paper plane — the Outbox: emails lined up to send when Apply runs.
         PanelKind.Outbox => "<path d='M21 3.5 3.3 10.2a.6.6 0 0 0 .05 1.13l6.1 1.9a1.4 1.4 0 0 1 .92.92l1.9 6.1a.6.6 0 0 0 1.13.05L20.5 3z'/><path d='m10.2 13.8 4.6-4.6'/>",

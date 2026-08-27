@@ -40,21 +40,26 @@ public static class TriageCategories
     /// <summary>Pathway tag: correspondence with the client side (client, architect).</summary>
     public const string Client = "JPMS/Client";
 
-    /// <summary>Pathway tag: correspondence with subcontractors and suppliers.</summary>
+    /// <summary>Pathway tag: correspondence with subcontractors.</summary>
     public const string Subcontractor = "JPMS/Subcontractor";
+
+    /// <summary>Pathway tag: correspondence with materials/goods suppliers, as distinct from
+    /// subcontractors (the Control Centre's pathway restructure, 2026-08-27).</summary>
+    public const string Supplier = "JPMS/Supplier";
 
     /// <summary>Pathway tag: internal Jewel correspondence (to-dos, company admin).</summary>
     public const string Internal = "JPMS/Internal";
 
-    /// <summary>The three pathway tags. Order matters only for display.</summary>
-    public static readonly IReadOnlyList<string> AllBuckets = new[] { Client, Subcontractor, Internal };
+    /// <summary>The four pathway tags. Order matters only for display.</summary>
+    public static readonly IReadOnlyList<string> AllBuckets = new[] { Client, Subcontractor, Supplier, Internal };
 
-    /// <summary>True if a category is one of the three pathway (bucket) tags. Bucket tags share the
+    /// <summary>True if a category is one of the four pathway (bucket) tags. Bucket tags share the
     /// JPMS/ prefix but are NOT workflow tags for queue-membership purposes: an email carrying only a
     /// bucket has no triage decision, so every "does it have a decision" test must exclude them.</summary>
     public static bool IsBucketTag(string category) =>
         category.Equals(Client, StringComparison.OrdinalIgnoreCase)
         || category.Equals(Subcontractor, StringComparison.OrdinalIgnoreCase)
+        || category.Equals(Supplier, StringComparison.OrdinalIgnoreCase)
         || category.Equals(Internal, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The pathway a record type files its thread under, or null when the type is
@@ -76,6 +81,7 @@ public static class TriageCategories
         RecordType.WorkOrder        => Subcontractor, // the order Jewel places with the subcontractor
         RecordType.Defect           => Subcontractor, // the remediation is chased with the subcontractor
         RecordType.SubcontractorComms => Subcontractor, // general subcontractor correspondence — the tag IS the filing
+        RecordType.SupplierComms    => Supplier,     // general supplier correspondence — the tag IS the filing
         RecordType.InternalComms    => Internal,     // general staff-to-staff correspondence — the tag IS the filing
         RecordType.CostCentre       => null,     // triager picks the side, per email
         RecordType.CalendarEvent    => null,     // neutral: a site visit, a delivery or a meeting belongs to whichever side arranged it

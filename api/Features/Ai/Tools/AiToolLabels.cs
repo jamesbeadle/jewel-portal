@@ -27,6 +27,8 @@ public static class AiToolLabels
                                ?? "Reading the requests",
             "find_by_reference" => Named(arguments, "reference", reference => $"Looking up {reference}")
                                    ?? "Looking that up",
+            "list_work_orders" => Named(arguments, "search", search => $"Finding work orders: {search}")
+                                  ?? "Reading the work orders",
             "navigate_to" => "Taking you there",
             "switch_agent" => Named(arguments, "agent", agent => $"Bringing in the {agent} agent")
                               ?? "Changing agent",

@@ -540,6 +540,7 @@
                 <button type="button" class="@PathwayFilterChipClass(null) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(null)">All</button>
                 <button type="button" class="@PathwayFilterChipClass(ClientBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(ClientBucket)">Client</button>
                 <button type="button" class="@PathwayFilterChipClass(SubcontractorBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(SubcontractorBucket)">Subcontractor</button>
+                <button type="button" class="@PathwayFilterChipClass(SupplierBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(SupplierBucket)">Supplier</button>
                 <button type="button" class="@PathwayFilterChipClass(InternalBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(InternalBucket)">Internal</button>
             </div>
 
@@ -1176,19 +1177,19 @@
             }
             else
             {
-                <p class="text-sm text-content-subtle flex-1">Write a reply in the email window, stage tags in System Tags, or line up new records and to-dos in System Actions — then apply it all in one go here.</p>
+                <p class="text-sm text-content-subtle flex-1">Write a reply in the email window, or stage tags, new records and to-dos in the pathway panes — Client, Subcontractor, Supplier, Internal — then apply it all in one go here.</p>
             }
             <div class="flex items-center gap-2">
                 <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
                 <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null || TagPickingOpen || TriageDecisionsMissing)"
-                        title="@(TagPickingOpen ? "System Tags is still open — press Done to confirm the picks first" : TriageDecisionsMissing ? DecisionsMissingHint : null)"
+                        title="@(TagPickingOpen ? "A pathway pane is still open — press Done to confirm the picks first" : TriageDecisionsMissing ? DecisionsMissingHint : null)"
                         @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
                     @ApplyButtonLabel
                 </button>
                 @if (OutboxSendCount > 0)
                 {
                     <button type="button" class="btn-secondary" disabled="@(busy || TagPickingOpen || TriageDecisionsMissing)" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
-                            title="@(TagPickingOpen ? "System Tags is still open — press Done to confirm the picks first" : TriageDecisionsMissing ? DecisionsMissingHint : "Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it")">
+                            title="@(TagPickingOpen ? "A pathway pane is still open — press Done to confirm the picks first" : TriageDecisionsMissing ? DecisionsMissingHint : "Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it")">
                         @(OutboxSendCount == 1 ? "Save reply as draft" : "Save replies as drafts")
                     </button>
                 }
@@ -1226,31 +1227,6 @@
                 }
             </div>
         </div>
-    </div>;
-
-    RenderFragment TagsPaneContent =@<div>
-        @if (view != QueueView.Active || selected is null)
-        {
-            <div class="panel p-8 text-center text-sm text-content-subtle">
-                Open a queue email first — system tags are staged against the email being triaged,
-                then applied all together by the inbox window's Apply.
-            </div>
-        }
-        else
-        {
-            @* Keyed on the message id so a fresh selection starts a fresh pane (the staged work
-               itself is page-owned and already resets per selection). *@
-            <SystemTagsPane @key="selected.Id"
-                            IsOpen="true"
-                            ProjectId="@triageProjectId"
-                            EmailSubject="@(selected?.Subject ?? "")"
-                            LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
-                            ActivePathway="@(pathway is { } chosenPathway ? PathwayLabel(chosenPathway) : null)"
-                            ActivePathwayChanged="OnModalPathwayChanged"
-                            Picked="pickedRecords"
-                            OnStagingChanged="StateHasChanged"
-                            OnClose="CloseSystemTags" />
-        }
     </div>;
 
     RenderFragment ComposePaneContent =@<div class="panel p-5">
@@ -1382,47 +1358,18 @@ else
         <PanelWorkspace State="workspace"
                         EmailAvailable="@(selected is not null)"
                         PreviewAvailable="@(workspace.Preview is not null)"
-                        TagsBadge="@StagedTagCount"
-                        ActionsBadge="@StagedActionCount"
+                        ClientBadge="@PathwayBadge(PathwayPaneConfig.Client)"
+                        SubcontractorBadge="@PathwayBadge(PathwayPaneConfig.Subcontractor)"
+                        SupplierBadge="@PathwayBadge(PathwayPaneConfig.Supplier)"
+                        InternalBadge="@PathwayBadge(PathwayPaneConfig.Internal)"
                         OutboxBadge="@OutboxSendCount">
             <InboxContent>@InboxPaneContent</InboxContent>
             <EmailContent>@EmailPaneContent</EmailContent>
             <EmailMirrorContent>@EmailMirrorPaneContent</EmailMirrorContent>
-            <TagsContent>@TagsPaneContent</TagsContent>
-            <ActionsContent>
-                @if (view != QueueView.Active || selected is null)
-                {
-                    <div class="panel p-8 text-center text-sm text-content-subtle">
-                        Open a queue email first — system actions are lined up against the email
-                        being triaged and fire with its Apply.
-                    </div>
-                }
-                else
-                {
-                    @* Keyed on the message id like the tags pane: a fresh selection starts fresh
-                       scratch forms (the staged work itself is page-owned and resets per selection). *@
-                    <SystemActionsPane @key="selected.Id"
-                                       Projects="@ProjectOptionsFor(null)"
-                                       ProjectId="@triageProjectId"
-                                       StagedActions="stagedSystemActions"
-                                       PickedRecords="pickedRecords"
-                                       OnStagingChanged="StateHasChanged"
-                                       StagedCreate="@stagedCreate"
-                                       StagedCreateChanged="v => stagedCreate = v"
-                                       CreatedRecords="createdNowRecords"
-                                       OnCreateNow="() => DoCreateStagedNow()"
-                                       Busy="@busy"
-                                       OnClose="() => workspace.Close(PanelKind.SystemActions)"
-                                       QsRecipients="@QsRecipients"
-                                       OnForwardToQs="StartForwardToQs"
-                                       TodoRows="createTodoRows"
-                                       TodoAssigneeOptions="todoAssigneeOptions"
-                                       TodoProjectNote="@TodoProjectNote"
-                                       EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
-                                       SenderEmail="@(selected?.FromEmail ?? "")"
-                                       EmailSubject="@(selected?.Subject ?? "")" />
-                }
-            </ActionsContent>
+            <ClientContent>@PathwayPaneFragment(PathwayPaneConfig.Client, PanelKind.Client)</ClientContent>
+            <SubcontractorContent>@PathwayPaneFragment(PathwayPaneConfig.Subcontractor, PanelKind.Subcontractor)</SubcontractorContent>
+            <SupplierContent>@PathwayPaneFragment(PathwayPaneConfig.Supplier, PanelKind.Supplier)</SupplierContent>
+            <InternalContent>@PathwayPaneFragment(PathwayPaneConfig.Internal, PanelKind.Internal)</InternalContent>
             <RecordsContent>
                 <RecordExplorerPane Projects="@ProjectOptionsFor(null)" OnPreview="OpenRecordPreview"
                                     OnReply="message => StartOutboxReply(message, PanelKind.Records)"
@@ -1433,13 +1380,6 @@ else
             </PreviewContent>
             <XeroContent><XeroExplorerPane OnPreview="OpenXeroPreview" /></XeroContent>
             <ComposeContent>@ComposePaneContent</ComposeContent>
-            <SubcontractorCommsContent><SubcontractorCommsPane OnPreview="OpenSubcontractorCommsPreview"
-                                                               OnReply="message => StartOutboxReply(message, PanelKind.SubcontractorComms)"
-                                                               OnForward="message => StartOutboxForward(message, PanelKind.SubcontractorComms)"
-                                                               EmailSubject="@OpenQueueEmailSubject"
-                                                               ProjectName="@TriageProjectName"
-                                                               Picked="pickedRecords"
-                                                               OnStagingChanged="StateHasChanged" /></SubcontractorCommsContent>
             <OutboxContent>
                 <OutboxPane QueuedReplies="queuedReplies"
                             OnChanged="StateHasChanged"
@@ -1507,10 +1447,10 @@ else
     // The communication pathway — WHO the correspondence is with (docs/Pathway-Split-Platform-Flow-
     // Plan.md §2). Triage is pathway-FIRST: the pathway is chosen (or already fixed on the thread)
     // before any action, and it decides which action tabs and record types are offered.
-    private enum TriagePathway { Client, Subcontractor, Internal }
+    private enum TriagePathway { Client, Subcontractor, Supplier, Internal }
     private static readonly TriagePathway[] PathwayOptions =
     {
-        TriagePathway.Client, TriagePathway.Subcontractor, TriagePathway.Internal
+        TriagePathway.Client, TriagePathway.Subcontractor, TriagePathway.Supplier, TriagePathway.Internal
     };
 
     // The triager's pathway choice for the SELECTED email. Pre-set from the thread's own bucket when
@@ -1524,6 +1464,7 @@ else
     // TriageCategories constants aren't visible to it.
     private const string ClientBucket = "JPMS/Client";
     private const string SubcontractorBucket = "JPMS/Subcontractor";
+    private const string SupplierBucket = "JPMS/Supplier";
     private const string InternalBucket = "JPMS/Internal";
 
     private static TriagePathway? PathwayFromBucket(string? bucket)
@@ -1531,6 +1472,7 @@ else
         if (string.IsNullOrEmpty(bucket)) return null;
         if (bucket.Equals(ClientBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Client;
         if (bucket.Equals(SubcontractorBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Subcontractor;
+        if (bucket.Equals(SupplierBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Supplier;
         if (bucket.Equals(InternalBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Internal;
         return null;
     }
@@ -1544,12 +1486,14 @@ else
     // commands accept ("Client" / "Subcontractor" / "Internal") — keep them in sync with MapPathway.
     private static string PathwayLabel(TriagePathway p) => p.ToString();
 
-    // Pathway chip colours: green-ish Client, orange-ish Subcontractor, purple-ish Internal — the
-    // same rounded-pill shape as the tag chips, but distinct hues so rows can be scanned by pathway.
+    // Pathway chip colours: green-ish Client, orange-ish Subcontractor, blue-ish Supplier,
+    // purple-ish Internal — the same rounded-pill shape as the tag chips, but distinct hues so
+    // rows can be scanned by pathway.
     private static string PathwayChipColour(TriagePathway p) => p switch
     {
         TriagePathway.Client        => "bg-emerald-500/10 text-emerald-600",
         TriagePathway.Subcontractor => "bg-orange-500/10 text-orange-600",
+        TriagePathway.Supplier      => "bg-sky-500/10 text-sky-600",
         TriagePathway.Internal      => "bg-purple-500/10 text-purple-600",
         _                           => "bg-accent/10 text-accent"
     };
@@ -1601,6 +1545,8 @@ else
     {
         TriagePathway.Client        => ClientLinkTypes,
         TriagePathway.Subcontractor => SubcontractorLinkTypes,
+        // Suppliers have no linkable record types yet — their side is the SupComms registers.
+        TriagePathway.Supplier      => Array.Empty<RecordType>(),
         TriagePathway.Internal      => InternalLinkTypes,
         _                           => Array.Empty<RecordType>()
     };
@@ -1616,6 +1562,7 @@ else
             or RecordType.Scheduling or RecordType.Lad or RecordType.TenderEnquiry => TriagePathway.Client,
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
+        RecordType.SupplierComms => TriagePathway.Supplier,
         RecordType.InternalComms => TriagePathway.Internal,
         _ => null
     };
@@ -1629,6 +1576,7 @@ else
             or RecordType.BuildingControlCase or RecordType.BuildingControlInspection => "Client",
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => "Subcontractor",
+        RecordType.SupplierComms    => "Supplier",
         RecordType.InternalComms    => "Internal",
         RecordType.CostCentre       => "Client or Subcontractor",
         RecordType.Todo             => "Neutral",
@@ -1659,6 +1607,7 @@ else
         RecordType.BuildingControlInspection => "Building Control Inspection",
         RecordType.BuildingControlCase => "Building Control Case",
         RecordType.SubcontractorComms => "Subcontractor communication",
+        RecordType.SupplierComms    => "Supplier communication",
         RecordType.InternalComms    => "Internal communication",
         _                           => type.ToString()
     };
@@ -1831,6 +1780,7 @@ else
     private static string? RecentHref(AuditEvent entry)
     {
         if (entry.RecordType == RecordType.SubcontractorComms) return "/subcontractors/communications";
+        if (entry.RecordType == RecordType.SupplierComms) return "/suppliers/communications";
         if (entry.RecordType == RecordType.InternalComms) return "/internal/communications";
         if (string.IsNullOrEmpty(entry.ProjectId))
             return entry.RecordType == RecordType.Todo ? "/todos" : null;
@@ -1980,8 +1930,8 @@ else
 
     // An attachment opened from the subcontractor communications browser — same Preview pane,
     // opposite the browser, so the email thread and its document read together.
-    private void OpenSubcontractorCommsPreview(PreviewRequest document) =>
-        workspace.OpenPreview(document, PanelKind.SubcontractorComms);
+    private void OpenPathwayPreview(PreviewRequest document, PanelKind anchor) =>
+        workspace.OpenPreview(document, anchor);
 
     // System actions lined up in the Actions pane, run by the one Apply after the filing —
     // payloads snapshotted at stage time, cleared per selection like all staging.
@@ -2030,7 +1980,7 @@ else
     private void StartForwardToQs()
     {
         if (selected is null) return;
-        StartOutboxForward(selected, PanelKind.SystemActions);
+        StartOutboxForward(selected, PanelKind.Client);
         outboxForwardTo = string.Join("; ", QsRecipients.Select(person => person.Email));
     }
 
@@ -2069,17 +2019,73 @@ else
     private string TriageProjectName =>
         AllProjects.FirstOrDefault(project => project.ProjectId == triageProjectId)?.Name ?? "";
 
-    // The System Tags modal's tab IS the pathway decision — parse the tab label back onto the
-    // page's own pathway state so filing, to-dos and a record-less reply all read one field.
-    private void OnModalPathwayChanged(string tab)
+    // Staging from a pathway pane IS the pathway decision (as the old System Tags tab switch
+    // was) — parse the pane's label back onto the page's own pathway state so filing, to-dos and
+    // a record-less reply all read one field.
+    private void OnPathwayEngaged(string paneLabel)
     {
-        if (Enum.TryParse<TriagePathway>(tab, out var next)) SetPathway(next);
+        if (Enum.TryParse<TriagePathway>(paneLabel, out var next)) SetPathway(next);
     }
 
-    // Tags badge = staged LINKS; actions badge = everything the Actions pane will run (staged
-    // store calls, the drafted new record, the drafted to-dos) — creation moved there 2026-08-10.
-    private int StagedTagCount => pickedRecords.Count;
-    private int StagedActionCount => stagedSystemActions.Count + (StagedCreateReady ? 1 : 0) + CurrentTodoDrafts().Count;
+    // One pathway pane's workspace fragment — the four panes are one component fed by config
+    // (tagging sections, category registers, the pathway's own actions), sharing the page's one
+    // staged list, staged actions and Apply. Registers browse whatever the view; tagging and
+    // actions engage only for the open QUEUE email (OpenQueueEmailSubject is blank otherwise).
+    private RenderFragment PathwayPaneFragment(PathwayPaneConfig config, PanelKind kind) => __builder =>
+    {
+        <PathwayPane Config="config"
+                     EmailKey="@(selected?.Id ?? "")"
+                     ProjectId="@triageProjectId"
+                     ProjectName="@TriageProjectName"
+                     EmailSubject="@OpenQueueEmailSubject"
+                     LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
+                     Picked="pickedRecords"
+                     OnStagingChanged="StateHasChanged"
+                     OnEngaged="OnPathwayEngaged"
+                     OnClose="() => ClosePathwayPane(kind)"
+                     OnPreview="document => OpenPathwayPreview(document, kind)"
+                     OnReply="message => StartOutboxReply(message, kind)"
+                     OnForward="message => StartOutboxForward(message, kind)"
+                     Projects="@ProjectOptionsFor(null)"
+                     StagedActions="stagedSystemActions"
+                     StagedCreate="@stagedCreate"
+                     StagedCreateChanged="v => stagedCreate = v"
+                     CreatedRecords="createdNowRecords"
+                     OnCreateNow="() => DoCreateStagedNow()"
+                     Busy="@busy"
+                     TodoRows="createTodoRows"
+                     TodoAssigneeOptions="@todoAssigneeOptions"
+                     TodoProjectNote="@TodoProjectNote"
+                     EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
+                     SenderEmail="@(selected?.FromEmail ?? "")"
+                     QsRecipients="@QsRecipients"
+                     OnForwardToQs="StartForwardToQs" />
+    };
+
+    // Each pathway icon's badge = the staged work that pane owns: its record picks and category
+    // ticks, its own staged actions, the drafted new record and the drafted to-dos. The
+    // pathway-neutral "General" actions (calendar event, directory contact) are offered on every
+    // pane, so they count on none — one staged action must not light four icons.
+    private static readonly SystemActionKind[] GeneralActionKinds =
+    {
+        SystemActionKind.RaiseCalendarEvent, SystemActionKind.AddDirectoryContact
+    };
+
+    private int PathwayBadge(PathwayPaneConfig config) =>
+        pickedRecords.Count(record => config.LinkTypes.Contains(record.Type)
+            || (config.Family is { } family && family.All.Any(familyRecord => familyRecord.RecordId == record.RecordId)))
+        + stagedSystemActions.Count(action => !GeneralActionKinds.Contains(action.Kind) && config.AllActionKinds.Contains(action.Kind))
+        + (config.Pathway == "Internal" ? CurrentTodoDrafts().Count : 0)
+        + (StagedCreateReady && StagedCreatePathway(stagedCreate!.Kind) == config.Pathway ? 1 : 0);
+
+    // Which pane's badge a drafted record counts on — mirrors which pane offers its create.
+    private static string? StagedCreatePathway(StagedRecordKind kind) => kind switch
+    {
+        StagedRecordKind.Request or StagedRecordKind.TenderEnquiry
+            or StagedRecordKind.BuildingControlInspection => "Client",
+        StagedRecordKind.BidPackage or StagedRecordKind.WorkOrder or StagedRecordKind.Defect => "Subcontractor",
+        _ => null // CalendarEvent is a General action, offered everywhere — counted nowhere.
+    };
 
     private bool StagedCreateReady => stagedCreate is { } sc && sc.IsReady;
 
@@ -3010,7 +3016,7 @@ else
         return $"{bytes} B";
     }
 
-    // Choose the pathway for a not-yet-filed thread (the System Tags modal's tab). Staged picks
+    // Choose the pathway for a not-yet-filed thread (staging from a pathway pane). Staged picks
     // deliberately SURVIVE the switch — the modal shows its running total across every tab, and a
     // genuine cross-pathway combination is caught by the cross-filing confirm at apply. A thread
     // that already carries a pathway ignores this — its routing was decided at first filing.
@@ -3230,31 +3236,36 @@ else
             : $"{label} (keeping {attachmentCount} attachment{(attachmentCount == 1 ? "" : "s")} on the order — not emailed)";
     }
 
-    // Done on the System Tags window: confirm the picks and land that window back on the open
+    // Done on a pathway pane: confirm the picks and land that window back on the open
     // email — the same place every time. The plain pane-history fallback ("whatever this window
     // showed before") read as a bug in practice: with System Actions earlier in the history,
     // Done appeared to open the RFI form out of nowhere (reported 2026-08-20). Close() first so
     // SystemTags leaves the history entirely — closing the email later must not resurface a
     // confirmed tags window and silently re-block Apply. When the email is already on show in
     // the other window, the plain close is enough — no point opening a mirror copy over here.
-    private void CloseSystemTags()
+    private void ClosePathwayPane(PanelKind pane)
     {
-        var side = workspace.SideShowing(PanelKind.SystemTags);
-        workspace.Close(PanelKind.SystemTags);
-        if (side is not { } tagsSide || selected is null) return;
+        var side = workspace.SideShowing(pane);
+        workspace.Close(pane);
+        if (side is not { } paneSide || selected is null) return;
         // On mobile only the left pane is on screen, so the right pane "showing" the email
         // doesn't count as the email being visible — bring it to the one real window.
         var emailVisible = workspace.IsDesktop && workspace.SideShowing(PanelKind.Email) is not null;
-        if (!emailVisible) workspace.Show(PanelKind.Email, tagsSide);
+        if (!emailVisible) workspace.Show(PanelKind.Email, paneSide);
     }
 
-    // True while the System Tags window is on show for the open email — a pick in progress.
+    private static readonly PanelKind[] PathwayPanelKinds =
+    {
+        PanelKind.Client, PanelKind.Subcontractor, PanelKind.Supplier, PanelKind.Internal
+    };
+
+    // True while a pathway pane is on show for the open email — a pick in progress.
     // Apply stands down until the pane's Done confirms the staged list (the pane closes on Done),
     // so a half-made tagging can't be applied by accident. Same "decision not yet made" rule as
     // the half-built lined-up reply below.
     private bool TagPickingOpen =>
         view == QueueView.Active && selected is not null
-        && workspace.SideShowing(PanelKind.SystemTags) is not null;
+        && PathwayPanelKinds.Any(pane => workspace.SideShowing(pane) is not null);
 
     // True while either of the bar's Yes/No pairs is still blank for the open email. Apply (and
     // save-as-drafts) stand down until both are answered — the pairs deliberately start with
@@ -3411,7 +3422,7 @@ else
             && stagedSystemActions.Count == 0 && queuedReplies.Count == 0 && stagedDocControlIds.Count == 0) return;
 
         // The bar's two Yes/No pairs start blank on purpose — an apply with either unanswered is
-        // a decision not yet made, same rule as an open System Tags window. Belt-and-braces
+        // a decision not yet made, same rule as an open pathway pane. Belt-and-braces
         // behind the disabled button, so no other route into the apply (the cross-filing re-run
         // included) can land with a blank answer.
         if (anchorEmail is not null && (relevantEventStaged is null || triageEntireThread is null))
@@ -3424,12 +3435,12 @@ else
             return;
         }
 
-        // An open System Tags window is the same decision not yet made — its Done is the "yes,
+        // An open pathway pane is the same decision not yet made — its Done is the "yes,
         // that's the list" step. Belt-and-braces behind the disabled button, so no other route
         // into the apply (the cross-filing re-run included) can land a half-made tagging.
         if (TagPickingOpen)
         {
-            actionError = "System Tags is still open — press Done to confirm the picks, then Apply.";
+            actionError = "A pathway pane is still open — press Done to confirm the picks, then Apply.";
             return;
         }
 
@@ -3470,7 +3481,7 @@ else
         // it, rather than have Apply quietly skip it.
         if (StagedCreateReady && !createReady)
         {
-            actionError = "To create the record, set the email's Project first — or remove the staged record in System Actions.";
+            actionError = "To create the record, set the email's Project first — or remove the staged record in the pathway pane's Actions.";
             return;
         }
         // A staged work order that isn't complete yet (no subcontractor, no priced line…) is the
@@ -3479,31 +3490,31 @@ else
         if (createReady && stagedCreate is { Kind: StagedRecordKind.WorkOrder } stagedOrder
             && stagedOrder.WorkOrderProblem is { } orderProblem)
         {
-            actionError = $"The staged work order isn't ready — {orderProblem} Finish it in System Actions, or remove it.";
+            actionError = $"The staged work order isn't ready — {orderProblem} Finish it in the pathway pane's Actions, or remove it.";
             return;
         }
         // Same "decision not yet made" rule for a staged defect with no description yet.
         if (createReady && stagedCreate is { Kind: StagedRecordKind.Defect } stagedDefect
             && stagedDefect.DefectProblem is { } defectProblem)
         {
-            actionError = $"The staged defect isn't ready — {defectProblem} Finish it in System Actions, or remove it.";
+            actionError = $"The staged defect isn't ready — {defectProblem} Finish it in the pathway pane's Actions, or remove it.";
             return;
         }
         if (createReady && StagedTenderEnquiryProblem is { } enquiryProblem)
         {
-            actionError = $"The staged tender enquiry isn't ready — {enquiryProblem} Finish it in System Actions, or remove it.";
+            actionError = $"The staged tender enquiry isn't ready — {enquiryProblem} Finish it in the pathway pane's Actions, or remove it.";
             return;
         }
         // Same "decision not yet made" rule for a staged calendar event that isn't complete yet.
         if (createReady && StagedCalendarEventProblem is { } calendarProblem)
         {
-            actionError = $"The staged calendar event isn't ready — {calendarProblem} Finish it in System Actions, or remove it.";
+            actionError = $"The staged calendar event isn't ready — {calendarProblem} Finish it in the pathway pane's Actions, or remove it.";
             return;
         }
         // And for a staged building control inspection.
         if (createReady && StagedBuildingControlInspectionProblem is { } inspectionProblem)
         {
-            actionError = $"The staged inspection isn't ready — {inspectionProblem} Finish it in System Actions, or remove it.";
+            actionError = $"The staged inspection isn't ready — {inspectionProblem} Finish it in the pathway pane's Actions, or remove it.";
             return;
         }
         if (replying)
@@ -4212,7 +4223,7 @@ else
             if (!string.IsNullOrWhiteSpace(stagedRecord.DisplayTitle))
                 note.Append(": \"").Append(stagedRecord.DisplayTitle).Append('"');
             note.Append(" — it is raised (and the email tagged to it) when the user presses Apply,"
-                        + " or immediately via the chip's Create now button in System Actions.");
+                        + " or immediately via the chip's Create now button in the pathway pane's Actions.");
             var stagedProblem = stagedRecord.Kind switch
             {
                 StagedRecordKind.WorkOrder => stagedRecord.WorkOrderProblem,
@@ -4259,7 +4270,7 @@ else
                     .Append(". Those two Yes/No answers are the user's own decisions in the bar —"
                             + " you cannot set them; say what is missing.");
             else if (TagPickingOpen)
-                note.Append(" Apply is DISABLED right now: the System Tags window is open — the"
+                note.Append(" Apply is DISABLED right now: a pathway pane is open — the"
                             + " user presses Done there first.");
         }
 
@@ -4276,7 +4287,7 @@ else
             .Append(" ON THIS PAGE: find the record (search the register on the first call), stage it")
             .Append(" with stage_triage_tag, and the user presses Apply to land it. To-dos are staged")
             .Append(" the same way with stage_triage_todo. RAISING A NEW WORK ORDER from this email is")
-            .Append(" done here too: stage_triage_work_order drafts it into System Actions (read the")
+            .Append(" done here too: stage_triage_work_order drafts it into the Subcontractor pane's Actions (read the")
             .Append(" email first; use real cost codes from list_cost_codes) and the user raises it")
             .Append(" with Apply or the chip's Create now button — never navigate away to the Work")
             .Append(" Orders page for an order that comes from this email.")
@@ -4449,12 +4460,12 @@ else
                 subcontractorId = matches[0].SubcontractorId;
             else
                 problems.Add(matches.Count == 0
-                    ? $"no subcontractor called \"{wanted}\" is in the directory — pick one in System Actions"
-                    : $"\"{wanted}\" matches {matches.Count} subcontractors — pick the right one in System Actions");
+                    ? $"no subcontractor called \"{wanted}\" is in the directory — pick one in the pathway pane's Actions"
+                    : $"\"{wanted}\" matches {matches.Count} subcontractors — pick the right one in the Subcontractor pane's Actions");
         }
         else
         {
-            problems.Add("no supplier was named — pick the subcontractor in System Actions");
+            problems.Add("no supplier was named — pick the subcontractor in the Subcontractor pane's Actions");
         }
 
         // Cost codes must be real master-list codes, spelled as the list spells them; anything
@@ -4502,7 +4513,7 @@ else
         if (staged.Lines.Count == 0) staged.Lines.Add(new StagedWorkOrderLine());
         if (unknownCodes.Count > 0)
             problems.Add($"cost code{(unknownCodes.Count == 1 ? "" : "s")} {string.Join(", ", unknownCodes)} "
-                + "aren't in the master list — pick real codes in System Actions");
+                + "aren't in the master list — pick real codes in the Subcontractor pane's Actions");
 
         stagedCreate = staged;
         if (problems.Count > 0)
@@ -4651,8 +4662,8 @@ else
                 row.Assignees.Add(matches[0].Value);
             else
                 assigneeNote = matches.Count == 0
-                    ? $"nobody called \"{wanted}\" is in the assignee list — pick them in System Actions"
-                    : $"\"{wanted}\" matches {matches.Count} people — pick the right one in System Actions";
+                    ? $"nobody called \"{wanted}\" is in the assignee list — pick them in the Internal pane's Actions"
+                    : $"\"{wanted}\" matches {matches.Count} people — pick the right one in the Internal pane's Actions";
         }
 
         // Reuse the untouched starter row rather than leaving a blank above the staged one.

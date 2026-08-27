@@ -7,6 +7,10 @@ public partial class SubcontractorCommunications
 {
     private const int PageSize = 25;
 
+    /// <summary>The register deep link's category segment ("chaser", "materials", "site-instruction"
+    /// …) — resolved against the route's family; blank or unknown shows the whole family.</summary>
+    [Microsoft.AspNetCore.Components.Parameter] public string? Category { get; set; }
+
     // Which record-less family this page is showing — decided by the route (the one component
     // serves /subcontractors/communications and /internal/communications).
     private CommunicationFamily family = CommunicationFamily.Subcontractor;
@@ -79,6 +83,8 @@ public partial class SubcontractorCommunications
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         family = CommunicationFamily.ForRoute(new Uri(Nav.Uri).AbsolutePath);
+        if (family.ForSlug(Category) is { } routedCategory)
+            categoryTagFilter = CommunicationFamily.TagFor(routedCategory);
         sessionReady = true;
         StateHasChanged();
         // The project list only feeds the reply composer's attachment picker — losing it costs
@@ -93,9 +99,12 @@ public partial class SubcontractorCommunications
     {
         if (!sessionReady) return;
         var routed = CommunicationFamily.ForRoute(new Uri(Nav.Uri).AbsolutePath);
-        if (routed == family) return;
+        var routedFilter = routed.ForSlug(Category) is { } routedCategory
+            ? CommunicationFamily.TagFor(routedCategory)
+            : null;
+        if (routed == family && routedFilter == categoryTagFilter) return;
         family = routed;
-        categoryTagFilter = null;
+        categoryTagFilter = routedFilter;
         loaded = false;
         items.Clear();
         total = 0;

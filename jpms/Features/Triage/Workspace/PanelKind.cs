@@ -14,10 +14,19 @@ public enum PanelKind
     /// pane already shows the email lands this here instead of stealing the email across, so the
     /// original can be read (and copied from) on one side while the reply is typed on the other.</summary>
     EmailMirror,
-    /// <summary>The staged system tags for the open email (was the System Tags modal).</summary>
-    SystemTags,
-    /// <summary>System actions queued to run when the email's triage completes (placeholder).</summary>
-    SystemActions,
+    /// <summary>The Client pathway pane: how this email is dealt with on the client side —
+    /// tagging to client-side records, and the client-side actions (2026-08-27 restructure;
+    /// absorbed the System Tags Client tab and the client half of System Actions).</summary>
+    Client,
+    /// <summary>The Subcontractor pathway pane: subcontractor-side tagging (records + the
+    /// SubComms category registers) and actions.</summary>
+    Subcontractor,
+    /// <summary>The Supplier pathway pane: supplier-side tagging (the SupComms category
+    /// registers — Materials first) and actions. New pathway 2026-08-27.</summary>
+    Supplier,
+    /// <summary>The Internal pathway pane: staff-to-staff tagging (to-dos, calendar events, the
+    /// IntComms category registers) and actions.</summary>
+    Internal,
     /// <summary>The record explorer: search any system document (RFIs first) and read it here.</summary>
     Records,
     /// <summary>A document opened from a record — a linked drawing, a photo, a PDF.</summary>
@@ -26,8 +35,6 @@ public enum PanelKind
     Xero,
     /// <summary>Compose a fresh outbound email from the projects mailbox (was the New email modal).</summary>
     Compose,
-    /// <summary>The subcontractor communications browser: every "JPMS/SubComms" thread, read live.</summary>
-    SubcontractorComms,
     /// <summary>Replies lined up to send when Apply runs — the open email's reply plus replies to
     /// older emails, each of those also tagged with this triage's records.</summary>
     Outbox

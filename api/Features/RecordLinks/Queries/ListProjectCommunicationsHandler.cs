@@ -107,13 +107,14 @@ public sealed class ListProjectCommunicationsHandler
     {
         if (!IsCommunicationFamily(record.Type)) return true;
         if (requestedType == record.Type) return true;
-        return record.RecordId is SubcontractorComms.RecordId or InternalComms.RecordId;
+        return record.RecordId is SubcontractorComms.RecordId or SupplierComms.RecordId or InternalComms.RecordId;
     }
 
-    // The two record-less tag families (Subcontractor 2026-08-17, Internal 2026-08-22) — both
-    // project-less, so both get the general-tag-only treatment in the all-types read.
+    // The record-less tag families (Subcontractor 2026-08-17, Internal 2026-08-22, Supplier
+    // 2026-08-27) — all project-less, so all get the general-tag-only treatment in the
+    // all-types read.
     private static bool IsCommunicationFamily(RecordType type) =>
-        type is RecordType.SubcontractorComms or RecordType.InternalComms;
+        type is RecordType.SubcontractorComms or RecordType.SupplierComms or RecordType.InternalComms;
 
     // Conservatively below Exchange's "restriction or sort order is too complex" threshold for
     // OR'd category clauses.

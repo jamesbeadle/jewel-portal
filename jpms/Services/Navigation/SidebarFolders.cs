@@ -22,6 +22,7 @@ public enum SidebarFolder
 {
     Project,
     Subcontractor,
+    Supplier,
     Internal,
     Time,
     Finance,
@@ -140,8 +141,34 @@ public static class SidebarFolders
                 new SidebarRow(new NavigationItem("Work Orders", "/projects/{project}/work-orders"),
                     DesktopNavigation.DirectorRoles),
                 // General subcontractor correspondence — every email tagged "JPMS/SubComms" at
-                // triage (the System Tags Subcontractor tab's communication tick), read live.
-                new SidebarRow(new NavigationItem("Communications", "/subcontractors/communications"),
+                // triage (the Control Centre Subcontractor pane's communication tick), read live.
+                new SidebarRow(new NavigationItem("Communications", "/subcontractors/communications", ExactMatch: true),
+                    DesktopNavigation.DirectorRoles),
+                // The category registers (2026-08-27 restructure): each record-less category reads
+                // like any other register — the Communications page with that chip preselected.
+                new SidebarRow(new NavigationItem("Chasers", "/subcontractors/communications/chaser"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Info Requests", "/subcontractors/communications/info-request"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("H&S", "/subcontractors/communications/h-s"),
+                    DesktopNavigation.DirectorRoles)
+            }),
+
+        // ---- Supplier: materials and goods suppliers, split from subcontractors 2026-08-27
+        // ("materials are mainly supplier") — the SupComms registers, Materials first. ----
+        new SidebarFolderInfo(
+            SidebarFolder.Supplier,
+            "Supplier",
+            "#supplier",
+            new[]
+            {
+                // General supplier correspondence — every email tagged "JPMS/SupComms" at triage
+                // (the Control Centre Supplier pane's communication tick), read live.
+                new SidebarRow(new NavigationItem("Communications", "/suppliers/communications", ExactMatch: true),
+                    DesktopNavigation.DirectorRoles),
+                // Materials kept its SubComms-Mats tag stem in the move, so mail tagged before the
+                // split reads back here too.
+                new SidebarRow(new NavigationItem("Materials", "/suppliers/communications/materials"),
                     DesktopNavigation.DirectorRoles)
             }),
 
@@ -166,8 +193,15 @@ public static class SidebarFolders
                 new SidebarRow(new NavigationItem("Directory", "/directory"),
                     DesktopNavigation.DirectorRoles),
                 // Staff-to-staff correspondence — every email tagged "JPMS/IntComms" at triage
-                // (the System Tags Internal tab's communication ticks), read live.
-                new SidebarRow(new NavigationItem("Communications", "/internal/communications"),
+                // (the Control Centre Internal pane's communication ticks), read live.
+                new SidebarRow(new NavigationItem("Communications", "/internal/communications", ExactMatch: true),
+                    DesktopNavigation.DirectorRoles),
+                // The category registers (2026-08-27 restructure) — Site instructions first.
+                new SidebarRow(new NavigationItem("Site Instructions", "/internal/communications/site-instruction"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Build-ups", "/internal/communications/build-up"),
+                    DesktopNavigation.DirectorRoles),
+                new SidebarRow(new NavigationItem("Spec Notes", "/internal/communications/spec-note"),
                     DesktopNavigation.DirectorRoles),
                 // The Monday replacement: insurances, subscriptions, vans, trade accounts.
                 new SidebarRow(new NavigationItem("Registers", "/registers"),

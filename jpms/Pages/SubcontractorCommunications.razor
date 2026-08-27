@@ -1,5 +1,9 @@
 @page "/subcontractors/communications"
+@page "/subcontractors/communications/{Category?}"
+@page "/suppliers/communications"
+@page "/suppliers/communications/{Category?}"
 @page "/internal/communications"
+@page "/internal/communications/{Category?}"
 @using Jewel.JPMS.Contracts.RecordLinks
 @using Jewel.JPMS.Features.Triage
 @using Jewel.JPMS.Features.Triage.Panels
@@ -21,8 +25,11 @@
     chip row narrows the list to one category. Tagging (and untagging, from the Control Centre's
     Tagged view) stays in mailbox triage.
 
-    The same page serves Internal → Communications (2026-08-22): the route picks the family
-    (CommunicationFamily.ForRoute), and everything else — chips, copy, the tags read — follows it.
+    The same page serves Supplier → Communications (2026-08-27) and Internal → Communications
+    (2026-08-22): the route picks the family (CommunicationFamily.ForRoute), and everything else —
+    chips, copy, the tags read — follows it. A category segment ("…/communications/chaser") is the
+    register deep link the sidebar rows and the Control Centre panes' "Full register →" use: the
+    page opens with that category's chip preselected.
 *@
 
 @if (!sessionReady)
@@ -78,7 +85,7 @@ else
                 <div class="panel p-8 text-center">
                     <p class="text-sm text-content">@(categoryTagFilter is null ? $"No {family.Label.ToLowerInvariant()}s yet." : $"Nothing tagged {ActiveFilterLabel} yet.")</p>
                     <p class="text-xs text-content-subtle mt-1">
-                        Tick "@family.Label" — or one of its categories — in the Control Centre's System Tags (the @family.Pathway tab) and the thread appears here.
+                        Tick "@family.Label" — or one of its categories — in the Control Centre's @family.Pathway pane and the thread appears here.
                     </p>
                 </div>
             }

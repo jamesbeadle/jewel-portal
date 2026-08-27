@@ -362,7 +362,9 @@ internal static class AiRecordTools
                 + "attachments. Call this FIRST when editing an order (work_order_edit) or "
                 + "answering questions about one; the tagged emails are separate — "
                 + "read_record_emails (record_type work_order) has those, and "
-                + "read_email_attachment opens their files. Accepts the id, or the reference the "
+                + "read_email_attachment opens their files. A DRAFT has no number yet — its "
+                + "workOrderId comes from list_work_orders (status Draft), never from a guessed "
+                + "reference. Accepts the id, or the reference the "
                 + "user actually says (\"WO-0045\") with the project resolved from the page in "
                 + "view. Defaults to the work order in view.",
                 AiToolSchema.Object(
@@ -482,6 +484,7 @@ internal static class AiRecordTools
             "cost centre" or "cost center" => RecordType.CostCentre,
             "scheduling" or "programme" => RecordType.Scheduling,
             "subcontractor comms" => RecordType.SubcontractorComms,
+            "supplier comms" => RecordType.SupplierComms,
             "valuation snapshot" or "valuation report snapshot" => RecordType.ValuationReportSnapshot,
             "tender enquiry" or "tender inquiry" or "teq" => RecordType.TenderEnquiry,
             _ => null

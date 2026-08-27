@@ -585,6 +585,7 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
     private static string? MapPathway(string? pathway) =>
         string.Equals(pathway?.Trim(), "Client", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Client
         : string.Equals(pathway?.Trim(), "Subcontractor", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Subcontractor
+        : string.Equals(pathway?.Trim(), "Supplier", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Supplier
         : string.Equals(pathway?.Trim(), "Internal", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Internal
         : null;
 

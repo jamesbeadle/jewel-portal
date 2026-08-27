@@ -131,7 +131,7 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
         return new Acknowledgement(record.RecordId);
     }
 
-    // The triager's explicit pathway choice ("Client" / "Subcontractor" / "Internal") as its bucket
+    // The triager's explicit pathway choice ("Client" / "Subcontractor" / "Supplier" / "Internal") as its bucket
     // category. Unknown/blank → null (no pathway involvement).
     private static string? MapPathway(string? pathway)
     {
@@ -139,6 +139,7 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
         var p = pathway.Trim();
         if (p.Equals("Client", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (p.Equals("Subcontractor", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
+        if (p.Equals("Supplier", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Supplier;
         if (p.Equals("Internal", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Internal;
         return null;
     }

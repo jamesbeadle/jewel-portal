@@ -21,5 +21,6 @@ public enum RecordType
     TenderEnquiry = 13,    // an architect's invitation for Jewel to tender (PQQ → shortlist → tender) — client-side, on a Lead-stage project
     CalendarEvent = 14,    // a project calendar entry (site visit, delivery, meeting, attendance) — shown on the project's Calendar tab
     BuildingControlCase = 15,       // the project's case with a building control body — case-level correspondence (the notice, the acknowledgement, the contact)
-    BuildingControlInspection = 16  // one building control inspection stage — the inspector's booking/report thread files against it
+    BuildingControlInspection = 16, // one building control inspection stage — the inspector's booking/report thread files against it
+    SupplierComms = 17     // the record-less "supplier communication" tag family (general + categories) — supplier-side correspondence tied to no record
 }

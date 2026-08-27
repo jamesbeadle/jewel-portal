@@ -1,0 +1,183 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.RecordLinks
+@using Jewel.JPMS.Features.Triage.Workspace
+@inject IIntakeQueue Intake
+
+@*
+    One communication category's register inside a pathway pane (2026-08-27 restructure): every
+    email tagged with THIS family record — General, or one category (Chaser, Materials, Site
+    instruction…) — read live from the mailbox, newest thread first, exactly the register the
+    standalone Communications pages serve, scoped to the one tag. The section's tick (the staging)
+    lives in the pane's accordion header; this is the "…I can view" half. Each listed email offers
+    Reply / Forward (lined up in the Outbox, sent by Apply) and — while a queue email is open —
+    "Tag open email like this", which stages the open email with this category's tag.
+*@
+
+<div class="space-y-3">
+    <div class="flex items-center justify-between gap-2">
+        <input class="field flex-1" type="search" placeholder="Filter by sender or subject…"
+               value="@filter" @oninput="e => filter = e.Value?.ToString() ?? string.Empty" />
+        <a class="text-xs text-accent hover:underline shrink-0" href="@Family.RouteFor(Record)"
+           title="The full-page register — every email carrying this tag">Full register →</a>
+    </div>
+
+    @if (ProjectNameMatch.IsUsable(ProjectName))
+    {
+        <div class="flex flex-wrap items-center gap-1.5">
+            <button type="button" class="@ScopeChipClass(isThisProject: true)" title="Emails that name this project in their subject or opening line"
+                    @onclick="() => showAllProjects = false">This project · @ProjectName</button>
+            <button type="button" class="@ScopeChipClass(isThisProject: false)" title="@($"Every email tagged {Label}, whatever the project")"
+                    @onclick="() => showAllProjects = true">All projects</button>
+        </div>
+    }
+
+    @if (loadError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
+    }
+
+    @if (!loaded)
+    {
+        <JewelSpinner Label="Loading register" />
+    }
+    else if (items.Count == 0)
+    {
+        @if (loadError is null)
+        {
+            <p class="text-sm text-content-subtle">Nothing tagged @Label yet — tick the section above and Apply, and the thread appears here.</p>
+        }
+    }
+    else if (Filtered.Count == 0)
+    {
+        <p class="text-sm text-content-subtle">
+            @(IsScopedToProject ? $"No loaded email names {ProjectName}" : $"No loaded email matches \"{filter}\"")@(nextCursor is not null ? " — try loading more below" : "")@(IsScopedToProject ? ", or switch to All projects" : "").
+        </p>
+    }
+    else
+    {
+        <CorrespondenceThreadList Emails="Filtered" ExcludeTag="@Tag" OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward"
+                                  OnTagLike="TagLikeWhenEmailOpen" TagLikeLabel="@($"Tag open email {Label}")" />
+    }
+
+    @if (nextCursor is not null)
+    {
+        <div class="text-center">
+            <button type="button" class="btn-secondary text-sm" disabled="@loadingMore" @onclick="LoadMoreAsync">
+                @(loadingMore ? "Loading…" : "Load more")
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private const int PageSize = 25;
+
+    /// <summary>The family the record belongs to — names the full-register route.</summary>
+    [Parameter, EditorRequired] public CommunicationFamily Family { get; set; } = CommunicationFamily.Subcontractor;
+
+    /// <summary>The family record this register reads — General, or one category.</summary>
+    [Parameter, EditorRequired] public LinkableRecord Record { get; set; } = default!;
+
+    /// <summary>Opens an email attachment in the workspace Preview pane, opposite this window.</summary>
+    [Parameter] public EventCallback<PreviewRequest> OnPreview { get; set; }
+
+    /// <summary>Start a reply to a listed email — the page lines it up in the Outbox.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnReply { get; set; }
+
+    /// <summary>Start a forward of a listed email — the page lines it up in the Outbox.</summary>
+    [Parameter] public EventCallback<MailboxMessage> OnForward { get; set; }
+
+    /// <summary>The open queue email's subject — blank when none is open, which hides the
+    /// per-email "tag like this" buttons.</summary>
+    [Parameter] public string EmailSubject { get; set; } = "";
+
+    /// <summary>The open email's project name (the triage bar's pick) — drives the
+    /// "This project / All projects" scope. Blank or too short = no scope chips.</summary>
+    [Parameter] public string ProjectName { get; set; } = "";
+
+    /// <summary>The page-owned staged picks — the SAME list the pane's ticks mutate, so a tick
+    /// here and a tick there are one staged list, one badge, one Apply.</summary>
+    [Parameter] public List<LinkableRecord> Picked { get; set; } = new();
+    [Parameter] public EventCallback OnStagingChanged { get; set; }
+
+    private string Tag => CommunicationFamily.TagFor(Record);
+    private string Label => Family.ChipLabel(Record);
+
+    private bool HasOpenEmail => !string.IsNullOrWhiteSpace(EmailSubject);
+    private bool showAllProjects;
+    private bool IsScopedToProject => ProjectNameMatch.IsUsable(ProjectName) && !showAllProjects;
+
+    private string ScopeChipClass(bool isThisProject) =>
+        "rounded-full border px-3 py-1 text-xs font-medium transition "
+        + (isThisProject != showAllProjects
+            ? "border-accent bg-accent/10 text-accent"
+            : "border-line text-content-muted hover:text-content hover:border-line-strong");
+
+    // The list only offers "tag like this" while there is an open email to tag.
+    private EventCallback<MailboxMessage> TagLikeWhenEmailOpen =>
+        HasOpenEmail ? EventCallback.Factory.Create<MailboxMessage>(this, TagOpenEmailLikeAsync) : default;
+
+    private async Task TagOpenEmailLikeAsync(MailboxMessage _)
+    {
+        if (Picked.All(picked => picked.RecordId != Record.RecordId)) Picked.Add(Record);
+        await OnStagingChanged.InvokeAsync();
+    }
+
+    // `loaded` opens the gate whether the fetch landed or failed (the banner says which);
+    // the list itself accumulates pages like the Tagged view does.
+    private readonly List<MailboxMessage> items = new();
+    private bool loaded;
+    private bool loadingMore;
+    private string? loadError;
+    private string? nextCursor;
+    private string filter = "";
+
+    protected override Task OnInitializedAsync() => LoadPageAsync(cursor: null);
+
+    // A quick narrowing over the pages fetched so far — sender, subject or opening line. The
+    // thread grouping happens after the filter, so a matching reply still surfaces its card.
+    private IReadOnlyList<MailboxMessage> Filtered
+    {
+        get
+        {
+            var needle = filter.Trim();
+            var inScope = IsScopedToProject
+                ? items.Where(email => ProjectNameMatch.Mentions(email, ProjectName))
+                : items;
+            if (needle.Length == 0) return inScope.ToList();
+            return inScope.Where(email =>
+                    email.Subject.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    || email.FromName.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    || email.FromEmail.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    || email.BodyPreview.Contains(needle, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    // One live read of the tagged mail, newest first — the same query the standalone
+    // Communications pages use, narrowed to this one tag.
+    private async Task LoadPageAsync(string? cursor)
+    {
+        loadError = null;
+        try
+        {
+            var page = await Intake.ListTaggedLiveAsync(cursor, PageSize, new[] { Tag }, newestFirst: true);
+            if (cursor is null) items.Clear();
+            items.AddRange(page.Items);
+            nextCursor = page.NextCursor;
+        }
+        catch
+        {
+            loadError = "Couldn't load the register. Please try again.";
+        }
+        finally { loaded = true; }
+    }
+
+    private async Task LoadMoreAsync()
+    {
+        if (nextCursor is null || loadingMore) return;
+        loadingMore = true;
+        try { await LoadPageAsync(nextCursor); }
+        finally { loadingMore = false; }
+    }
+}

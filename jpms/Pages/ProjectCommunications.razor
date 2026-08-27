@@ -14,7 +14,7 @@
     live from the mailbox in one place. Triage stamps "JPMS/<TagReference>" categories on emails
     (cost centres, requests, bid package invites, programme, to-dos, LADs, variations); the per-record
     views read their own tag, and this tab is the cross-cutting roll-up: all of it, newest paged
-    first, filterable by pathway (the Client / Subcontractor / Internal bucket the thread is filed
+    first, filterable by pathway (the Client / Subcontractor / Supplier / Internal bucket the thread is filed
     under) and by the type of thing tagged. Each row shows the thread's pathway chip plus WHICH
     record(s) the email is tagged to — an email can feed several records at once (e.g. a request
     AND a cost centre). Every row carries the consistent Reply widget — replying from here SENDS
@@ -197,7 +197,7 @@ else
 
     // The pathway segmented control's selection: a short bucket label ("Client"), or null for all.
     private string? bucketFilter;
-    private static readonly string[] BucketLabels = { "Client", "Subcontractor", "Internal" };
+    private static readonly string[] BucketLabels = { "Client", "Subcontractor", "Supplier", "Internal" };
 
     private readonly List<ProjectCommunication> items = new();
     private string? nextCursor;
@@ -336,6 +336,7 @@ else
         {
             "Client"        => baseClass + "bg-accent/10 text-accent",
             "Subcontractor" => baseClass + "bg-positive/10 text-positive",
+            "Supplier"      => baseClass + "bg-sky-500/10 text-sky-600",
             _               => baseClass + "bg-surface-raised border border-line text-content-muted"
         };
     }
@@ -355,6 +356,9 @@ else
         RecordType.VariationQuote   => "Variation",
         RecordType.Defect           => "Defect",
         RecordType.ValuationReportSnapshot => "Valuation snapshot",
+        RecordType.SubcontractorComms => "Subcontractor comms",
+        RecordType.SupplierComms    => "Supplier comms",
+        RecordType.InternalComms    => "Internal comms",
         _                           => type.ToString()
     };
 

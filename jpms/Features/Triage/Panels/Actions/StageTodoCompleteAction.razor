@@ -89,7 +89,7 @@
         todoItemId = "";
     }
 
-    // The action fires on an existing record, so its tag rides along (SystemActionsPane stages
+    // The action fires on an existing record, so its tag rides along (PathwayActionsSection stages
     // the pick into System Tags). The server's own projection is fetched rather than hand-built
     // here: tag stems are provider business, and a guessed stem would silently detach mail.
     private async Task<LinkableRecord?> TargetFor(TodoItem picked)

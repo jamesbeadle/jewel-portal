@@ -5,7 +5,7 @@ namespace Jewel.JPMS.Contracts.RecordLinks;
 /// <summary>
 /// The record-less "subcontractor communication" tags: correspondence with a subcontractor that
 /// belongs to no bid package, work order or defect. One GENERAL record plus a small set of CATEGORY
-/// records (decision 2026-08-17 — "more than just comms"): Chaser, Info request, Materials, H&amp;S.
+/// records (decision 2026-08-17 — "more than just comms"): Chaser, Info request, H&amp;S (Materials moved to <see cref="SupplierComms"/> 2026-08-27).
 /// Defects deliberately have no category — defect chasing files against the project's actual Defect
 /// records. Each is a constant virtual record rather than a table row (decision 2026-08-10): the tag
 /// says WHAT the thread is, and which company it is with is plain from the thread itself. They all
@@ -38,8 +38,8 @@ public static class SubcontractorComms
             "Chasing a subcontractor — outstanding information, attendance or progress"),
         Define("subcontractor-comms-info", "SubComms-Info", "Info request",
             "Information asked of the subcontractor, or sent to them"),
-        Define("subcontractor-comms-materials", "SubComms-Mats", "Materials",
-            "Materials — orders, deliveries, availability"),
+        // Materials moved to the SUPPLIER family 2026-08-27 ("materials are mainly supplier") —
+        // see SupplierComms, which keeps the record id and SubComms-Mats tag stem.
         Define("subcontractor-comms-hs", "SubComms-HS", "H&S",
             "Health and safety correspondence"),
     };

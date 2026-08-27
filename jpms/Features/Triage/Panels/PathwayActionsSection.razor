@@ -1,9 +1,11 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
 
 @*
-    System actions — THE creation surface for triage: line up records and actions against the email
-    being triaged, fired when its Apply runs (System Tags is tagging only — linking the email to
-    records that already exist). Two families share the dropdown:
+    A pathway pane's Actions section (2026-08-27 restructure — the retired System Actions pane,
+    now offered per pathway): line up records and actions against the email being triaged, fired
+    when its Apply runs. The Groups parameter narrows the dropdown to the pane's own side — Raise
+    RFI on the Client pane, Raise Work Order on the Subcontractor pane. Two families share the
+    dropdown:
     - Email-linked creates (Raise RFI, Raise Work Order, Create Bid Package Invite,
       Raise Defect, Create To-do Items): drafted into page-owned staging and raised by Apply
       through the intake commands, so the EMAIL IS TAGGED to the new record.
@@ -16,12 +18,7 @@
       caused the action. Removing the action removes the tag it added (and only that one).
 *@
 
-<div class="panel p-5 space-y-4">
-    <div>
-        <p class="eyebrow mb-1">System actions</p>
-        <h2 class="text-base font-semibold text-content">Line up actions for when triage completes</h2>
-    </div>
-
+<div class="space-y-4">
     @if (StagedActions.Count > 0 || StagedCreate is not null || TitledTodoRows.Count > 0 || CreatedRecords.Count > 0)
     {
         <div class="space-y-1.5">
@@ -87,7 +84,7 @@
     <div class="flex flex-wrap items-center gap-2">
         <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Action</label>
         <select class="field max-w-xs" value="@((int)kind)" @onchange="OnKindChanged">
-            @foreach (var group in SystemActionGuide.Groups)
+            @foreach (var group in EffectiveGroups)
             {
                 <optgroup label="@group.Title">
                     @foreach (var option in group.Kinds)
@@ -206,7 +203,7 @@
     [Parameter, EditorRequired] public List<StagedSystemAction> StagedActions { get; set; } = new();
     [Parameter] public EventCallback OnStagingChanged { get; set; }
 
-    /// <summary>The page's staged System Tags picks — the same list SystemTagsPane mutates. An
+    /// <summary>The page's staged tag picks — the same list the pathway panes mutate. An
     /// action on an existing record stages that record's tag here the moment it stages, so the
     /// email is filed against what it actioned when Apply links the picks (links land before
     /// actions run).</summary>
@@ -256,7 +253,28 @@
     /// defect assignee. Suggestions only.</summary>
     [Parameter] public string SenderEmail { get; set; } = "";
 
-    private SystemActionKind kind = SystemActionKind.RaiseRfi;
+    /// <summary>The dropdown's groups — the pane's own side of the action set. Null = the full
+    /// guide (every group), which no pane uses but keeps the component honest standalone.</summary>
+    [Parameter] public IReadOnlyList<(string Title, IReadOnlyList<SystemActionKind> Kinds)>? Groups { get; set; }
+
+    private IReadOnlyList<(string Title, IReadOnlyList<SystemActionKind> Kinds)> EffectiveGroups =>
+        Groups ?? SystemActionGuide.Groups;
+
+    private SystemActionKind? chosenKind;
+
+    // The selected action: the triager's choice while it belongs to this pane's groups, else the
+    // pane's first offer (the groups differ per pathway, so a stale choice must not linger).
+    private SystemActionKind kind
+    {
+        get
+        {
+            var allowed = EffectiveGroups.SelectMany(group => group.Kinds).ToList();
+            return chosenKind is { } chosen && allowed.Contains(chosen)
+                ? chosen
+                : allowed.FirstOrDefault(SystemActionKind.RaiseRfi);
+        }
+        set => chosenKind = value;
+    }
 
     // To-dos are company-wide until a project is set, a directory contact has no project at all,
     // and a tender enquiry usually creates its own — everything else raises on the email's project.

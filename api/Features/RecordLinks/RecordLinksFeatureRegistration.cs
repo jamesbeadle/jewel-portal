@@ -28,6 +28,7 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<ILinkableRecordProvider, VariationOrderQuoteLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, DefectLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, SubcontractorCommsLinkProvider>();
+        services.AddScoped<ILinkableRecordProvider, SupplierCommsLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, InternalCommsLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, ValuationReportSnapshotLinkProvider>();
         services.AddScoped<ILinkableRecordProvider, TenderEnquiryLinkProvider>();
