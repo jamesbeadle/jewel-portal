@@ -13,7 +13,7 @@ public static class ExplorerRecordTypes
     {
         RecordType.Request, RecordType.Variation, RecordType.TenderEnquiry, RecordType.WorkOrder,
         RecordType.BidPackageInvite, RecordType.Defect, RecordType.Lad, RecordType.Todo,
-        RecordType.CalendarEvent
+        RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase
     };
 
     public static string Label(RecordType type) => type switch
@@ -27,6 +27,8 @@ public static class ExplorerRecordTypes
         RecordType.Lad => "LADs claims",
         RecordType.Todo => "To-do items",
         RecordType.CalendarEvent => "Calendar events",
+        RecordType.BuildingControlInspection => "Building Control Inspections",
+        RecordType.BuildingControlCase => "Building Control Cases",
         _ => type.ToString()
     };
 
@@ -42,6 +44,8 @@ public static class ExplorerRecordTypes
         RecordType.Scheduling or RecordType.Lad => $"/projects/{record.ProjectId}/programme",
         RecordType.Todo => string.IsNullOrEmpty(record.ProjectId) ? "/todos" : $"/projects/{record.ProjectId}/todos",
         RecordType.CalendarEvent => $"/projects/{record.ProjectId}/calendar?event={record.RecordId}",
+        RecordType.BuildingControlInspection => $"/projects/{record.ProjectId}/building-control/inspections/{record.RecordId}",
+        RecordType.BuildingControlCase => $"/projects/{record.ProjectId}/building-control",
         _ => null
     };
 }

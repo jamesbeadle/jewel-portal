@@ -122,4 +122,8 @@ public sealed class HttpIntakeQueue : IIntakeQueue
 
     public Task<Defect> CreateDefectFromMessageAsync(CreateDefectFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
+
+    public Task<Jewel.JPMS.Models.BuildingControlInspection> CreateBuildingControlInspectionFromMessageAsync(
+        Jewel.JPMS.Contracts.BuildingControl.CreateBuildingControlInspectionFromMessage command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
 }

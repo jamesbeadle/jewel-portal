@@ -79,6 +79,10 @@ public sealed class StagedRecordCreate
     //      kept as its own draft so this class stays readable. ----
     public StagedCalendarEventDraft CalendarEvent { get; } = new();
 
+    // ---- Building control inspection (Kind == BuildingControlInspection) — a stage on the
+    //      project's building control case; kept as its own draft so this class stays readable. ----
+    public StagedBuildingControlInspectionDraft BuildingControlInspection { get; } = new();
+
     public string Label => Kind switch
     {
         StagedRecordKind.BidPackage => "new bid package",
@@ -86,6 +90,7 @@ public sealed class StagedRecordCreate
         StagedRecordKind.Defect => "new defect",
         StagedRecordKind.TenderEnquiry => "new tender enquiry",
         StagedRecordKind.CalendarEvent => "new calendar event",
+        StagedRecordKind.BuildingControlInspection => "new building control inspection",
         _ => RequestKind == Jewel.JPMS.Models.RequestType.Rfi ? "new RFI" : "new request"
     };
 
@@ -98,6 +103,7 @@ public sealed class StagedRecordCreate
             : Description.Length > 48 ? Description[..48] + "…" : Description,
         StagedRecordKind.TenderEnquiry => TenderEnquiry.Details.Title,
         StagedRecordKind.CalendarEvent => CalendarEvent.Title,
+        StagedRecordKind.BuildingControlInspection => BuildingControlInspection.StageName,
         _ => Title
     };
 
@@ -108,6 +114,7 @@ public sealed class StagedRecordCreate
         StagedRecordKind.Defect => !string.IsNullOrWhiteSpace(Description),
         StagedRecordKind.TenderEnquiry => !string.IsNullOrWhiteSpace(TenderEnquiry.Details.Title),
         StagedRecordKind.CalendarEvent => !string.IsNullOrWhiteSpace(CalendarEvent.Title),
+        StagedRecordKind.BuildingControlInspection => !string.IsNullOrWhiteSpace(BuildingControlInspection.StageName),
         _ => !string.IsNullOrWhiteSpace(Title)
     };
 
@@ -153,6 +160,7 @@ public sealed class StagedRecordCreate
             // The footer can't see the triage bar; the page's own gate re-checks the project.
             if (Kind == StagedRecordKind.TenderEnquiry) return TenderEnquiry.Problem(isProjectSet: true);
             if (Kind == StagedRecordKind.CalendarEvent) return CalendarEvent.Problem;
+            if (Kind == StagedRecordKind.BuildingControlInspection) return BuildingControlInspection.Problem;
             if (string.IsNullOrWhiteSpace(Title)) return Kind == StagedRecordKind.WorkOrder ? "Give the work order a title." : "Give it a title.";
             return WorkOrderProblem;
         }
@@ -165,6 +173,7 @@ public sealed class StagedRecordCreate
         StagedRecordKind.Defect => "raise the defect and tag this email to it",
         StagedRecordKind.TenderEnquiry => TenderEnquiry.Outcome,
         StagedRecordKind.CalendarEvent => CalendarEvent.Outcome,
+        StagedRecordKind.BuildingControlInspection => BuildingControlInspection.Outcome,
         StagedRecordKind.WorkOrder => SaveAsDraft
             ? "raise the work order as a draft — no purchase-order email until it's approved — and tag this email to it"
             : "raise the work order, email the purchase order to the subcontractor and tag this email to it",
@@ -208,7 +217,7 @@ public sealed class StagedWorkOrderLine
     public decimal? Amount => StagedRecordCreate.ParseDecimal(AmountText);
 }
 
-public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect, TenderEnquiry, CalendarEvent }
+public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect, TenderEnquiry, CalendarEvent, BuildingControlInspection }
 
 /// <summary>
 /// A record ALREADY raised from the selected email — by System Actions' "Create now", or by the

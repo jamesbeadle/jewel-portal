@@ -882,6 +882,217 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("BoqSignOffs");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BuildingControlAttachmentEntity", b =>
+                {
+                    b.Property<string>("BuildingControlAttachmentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("AddedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("BlobRef")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("BuildingControlCaseId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("BuildingControlInspectionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<long>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("int");
+
+                    b.HasKey("BuildingControlAttachmentId");
+
+                    b.HasIndex("BuildingControlCaseId")
+                        .HasDatabaseName("IX_BuildingControlAttachments_BuildingControlCaseId");
+
+                    b.HasIndex("BuildingControlInspectionId")
+                        .HasDatabaseName("IX_BuildingControlAttachments_BuildingControlInspectionId");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_BuildingControlAttachments_ProjectId");
+
+                    b.ToTable("BuildingControlAttachments");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BuildingControlCaseEntity", b =>
+                {
+                    b.Property<string>("BuildingControlCaseId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("AcceptedOn")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("BodyName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("BodyReference")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset?>("CompletionCertifiedOn")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ContactEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ContactName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ContactPhone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("NoticeSubmittedOn")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Regime")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("BuildingControlCaseId");
+
+                    b.HasIndex("Number")
+                        .HasDatabaseName("IX_BuildingControlCases_Number");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_BuildingControlCases_ProjectId");
+
+                    b.ToTable("BuildingControlCases");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.BuildingControlInspectionEntity", b =>
+                {
+                    b.Property<string>("BuildingControlInspectionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset?>("BookedFor")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("BuildingControlCaseId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("InspectedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("InspectorName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("OutcomeNotes")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("RaisedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("RaisedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("StageName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("BuildingControlInspectionId");
+
+                    b.HasIndex("BuildingControlCaseId")
+                        .HasDatabaseName("IX_BuildingControlInspections_BuildingControlCaseId");
+
+                    b.HasIndex("Number")
+                        .HasDatabaseName("IX_BuildingControlInspections_Number");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_BuildingControlInspections_ProjectId");
+
+                    b.ToTable("BuildingControlInspections");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.CalendarEventEntity", b =>
                 {
                     b.Property<string>("CalendarEventId")

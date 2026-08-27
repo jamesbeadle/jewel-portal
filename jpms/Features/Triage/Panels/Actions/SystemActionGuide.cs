@@ -25,6 +25,7 @@ public static class SystemActionGuide
                 SystemActionKind.CreateBidPackageInvite,
                 SystemActionKind.RaiseDefect,
                 SystemActionKind.RaiseCalendarEvent,
+                SystemActionKind.RaiseBuildingControlInspection,
             }),
             (MoveGroup, new[]
             {
@@ -53,6 +54,7 @@ public static class SystemActionGuide
         SystemActionKind.CreateBidPackageInvite => "A package of work you're about to put out to tender — sets up the package so subcontractors can be invited.",
         SystemActionKind.RaiseDefect => "Something a subcontractor has to put right — logs it on the project's Defects tab and chases it with them.",
         SystemActionKind.RaiseCalendarEvent => "This email is arranging something dated — a site visit, a delivery, a meeting, subcontractor attendance. Puts it on the project's Calendar tab so everyone sees it coming.",
+        SystemActionKind.RaiseBuildingControlInspection => "The building control inspector arranging or confirming a visit — logs the stage on the project's Building Control tab and files their thread against it. (An inspection already logged is tagged in System Tags instead.)",
         SystemActionKind.PromoteRequestToRfi => "An older General request that has turned out to need a formal RFI number.",
         SystemActionKind.ReopenRfi => "An answered RFI that this email reopens — the answer was wrong, or more has come up.",
         SystemActionKind.CloseRfi => "This email answers an open RFI — file the answer and close it.",

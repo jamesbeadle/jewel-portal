@@ -1,6 +1,6 @@
 # Building Control tab — design spec
 
-**Status:** Draft for director review (pre-build)
+**Status:** Built — commit "Add Building Control" (27 Aug 2026); §8 recommendations taken as defaults
 **Author:** Cowork (for Nigel Reilly)
 **Date:** 27 August 2026
 **Source artefacts:** SharePoint "Building Control" libraries for By France (Leas Green, Chislehurst BR7 6HD) and 17a Abbot Road, Guildford GU1 3TA

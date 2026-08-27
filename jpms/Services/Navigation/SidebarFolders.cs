@@ -110,6 +110,10 @@ public static class SidebarFolders
                 // subcontractor email in the Control Centre; each reads its mail back live by tag.
                 new SidebarRow(new NavigationItem("Defects", "/projects/{project}/defects"),
                     DesktopNavigation.DirectorRoles),
+                // The statutory sign-off trail — the case with the building control body and its
+                // BCI-#### inspection stages (plus each inspection's own detail page).
+                new SidebarRow(new NavigationItem("Building Control", "/projects/{project}/building-control"),
+                    DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Communications", "/projects/{project}/communications"),
                     DesktopNavigation.DirectorRoles),
                 // Internal-only titled free-text notes for the office — door codes, key safes,

@@ -19,5 +19,7 @@ public enum RecordType
     ValuationReportSnapshot = 11, // a frozen valuation report snapshot — the client-facing statement a valuation email travels with
     InternalComms = 12,    // the record-less "internal communication" tag family (general + categories) — staff-to-staff correspondence tied to no record
     TenderEnquiry = 13,    // an architect's invitation for Jewel to tender (PQQ → shortlist → tender) — client-side, on a Lead-stage project
-    CalendarEvent = 14     // a project calendar entry (site visit, delivery, meeting, attendance) — shown on the project's Calendar tab
+    CalendarEvent = 14,    // a project calendar entry (site visit, delivery, meeting, attendance) — shown on the project's Calendar tab
+    BuildingControlCase = 15,       // the project's case with a building control body — case-level correspondence (the notice, the acknowledgement, the contact)
+    BuildingControlInspection = 16  // one building control inspection stage — the inspector's booking/report thread files against it
 }

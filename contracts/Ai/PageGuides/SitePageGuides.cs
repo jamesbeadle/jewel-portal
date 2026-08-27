@@ -122,6 +122,32 @@ public static class SitePageGuides
             + "Tags → Create new → Defect), and tagging further emails to one happens there "
             + "(stage_triage_tag) — not on this page."),
 
+        new("/projects/{project}/building-control", "Building Control",
+            "The project's building control — the statutory sign-off trail. The case panel holds "
+            + "who signs the work off (local authority or registered approver), their reference, "
+            + "the contact, the official dates and the case documents (notice, acknowledgement, "
+            + "decision notice, completion certificate), with a status ladder Notice submitted → "
+            + "In force → Completion requested → Completion certified (Lapsed for a dead case). "
+            + "Below it is the inspection register: stages seeded from a standard checklist and "
+            + "freely edited, each with a sequential BCI-#### reference that is also its mailbox "
+            + "tag stem. Manually: \"Set up building control\" creates the case; \"Add "
+            + "inspection\" adds a stage (a date makes it Booked); a row click opens the stage's "
+            + "own page; only a Planned stage with no files can be removed. An inspection can also "
+            + "be raised from the inspector's email in the Control Centre (System Actions → Raise "
+            + "Building Control Inspection), and tagging further emails happens there "
+            + "(stage_triage_tag) — not on this page."),
+
+        new("/projects/{project}/building-control/inspections/{inspection}", "Building Control Inspection",
+            "One inspection stage: its status ladder (Planned → Booked → Inspected → Passed / "
+            + "Actions required → Closed — moving to Inspected stamps the visit date; a failed "
+            + "visit is re-booked on the SAME record, not a new row), the official booked/"
+            + "inspected dates and inspector, the outcome notes, the photo evidence grid, the "
+            + "documents list (the inspector's site report), and the correspondence read live by "
+            + "the stage's JPMS/BCI-#### tag. Manually: edit the details and Save; upload photos "
+            + "(on site, from the phone's camera) and documents; \"Copy attachments\" pulls "
+            + "the inspector's report and photos off a linked email into the stage's files; Reply/"
+            + "Forward under an email sends from the projects mailbox and files itself back here."),
+
         new("/projects/{project}/useful-information", "Useful Information",
             "Titled free-text notes for the office's own use — door codes, key safe locations, "
             + "site access. Strictly internal: the API gates reads and writes to internal roles, so "

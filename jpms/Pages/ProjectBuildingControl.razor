@@ -1,0 +1,616 @@
+@page "/projects/{ProjectId}/building-control"
+@using Jewel.JPMS.Contracts.BuildingControl
+@using Jewel.JPMS.Features.BuildingControl
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+@inject BuildingControlReadModel BuildingControl
+@inject IBuildingControlAttachmentClient Attachments
+@inject ICommandSender Commands
+@implements IDisposable
+
+<PageTitle>Building Control · JPMS</PageTitle>
+
+@*
+    The project's building control — the statutory sign-off trail. The case panel says who signs
+    the work off (the body, their reference, the contact) and where the case as a whole has got
+    to; the register below is the inspection stages: Planned → Booked → Inspected → Passed /
+    Actions required → Closed, each with a BCI-#### reference that is also its mailbox tag stem,
+    so the inspector's emails read back live on the stage's own page. The inspector's booking
+    email is filed to a stage — or a new stage raised from it — in the Control Centre.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="building-control">
+        <h2 class="text-lg font-semibold text-content mb-4">Building Control</h2>
+
+        @if (actionError is { } error)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/40 px-3 py-2 text-sm text-content mb-4">@error</p>
+        }
+
+        @if (!BuildingControl.LoadedFor(ProjectId) && !dataFailed)
+        {
+            <LoadGate IsLoading="true" Prominent="true" Label="Loading building control" />
+        }
+        else if (dataFailed && !BuildingControl.LoadedFor(ProjectId))
+        {
+            <p class="text-sm text-content-muted">Building control couldn't be loaded just now — the error toast has the detail. Reload the page to retry.</p>
+        }
+        else
+        {
+            @* ---- Case panel: who signs the work off, and where the case stands. ---- *@
+            @if (ActiveCase is null)
+            {
+                <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+                    <h3 class="text-sm font-medium text-content-muted mb-1">No building control case yet</h3>
+                    <p class="text-sm text-content-subtle mb-4">
+                        Set up the case — the body signing this project off, their reference and the notice dates —
+                        and the inspection checklist starts from a standard set of stages you can edit freely.
+                    </p>
+                    @if (!caseFormOpen)
+                    {
+                        <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
+                                @onclick="OpenCreateCase">
+                            Set up building control
+                        </button>
+                    }
+                </section>
+            }
+            else
+            {
+                <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+                    <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-base font-semibold text-content truncate">@ActiveCase.BodyName</h3>
+                                <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent whitespace-nowrap">@ActiveCase.Status.DisplayName()</span>
+                            </div>
+                            <p class="text-xs text-content-subtle mt-0.5">
+                                @ActiveCase.Regime.Label()
+                                @if (!string.IsNullOrWhiteSpace(ActiveCase.BodyReference))
+                                {
+                                    <span> · Ref <span class="font-mono">@ActiveCase.BodyReference</span></span>
+                                }
+                                <span> · @ActiveCase.Reference</span>
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <select class="field py-1" value="@((int)ActiveCase.Status)" disabled="@busy"
+                                    @onchange="e => SetCaseStatusAsync(ActiveCase, e)">
+                                @foreach (var status in Enum.GetValues<BuildingControlCaseStatus>())
+                                {
+                                    <option value="@((int)status)">@status.DisplayName()</option>
+                                }
+                            </select>
+                            <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                    @onclick="() => OpenEditCase(ActiveCase)">Edit</button>
+                        </div>
+                    </div>
+                    <dl class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 text-sm mb-4">
+                        <div>
+                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Contact</dt>
+                            <dd class="text-content">@(string.IsNullOrWhiteSpace(ActiveCase.ContactName) ? "—" : ActiveCase.ContactName)</dd>
+                            @if (!string.IsNullOrWhiteSpace(ActiveCase.ContactEmail))
+                            {
+                                <dd class="text-content-muted text-xs truncate">@ActiveCase.ContactEmail</dd>
+                            }
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Notice submitted</dt>
+                            <dd class="text-content">@DateText(ActiveCase.NoticeSubmittedOn)</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Accepted</dt>
+                            <dd class="text-content">@DateText(ActiveCase.AcceptedOn)</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Completion certified</dt>
+                            <dd class="text-content">@DateText(ActiveCase.CompletionCertifiedOn)</dd>
+                        </div>
+                    </dl>
+                    @if (!string.IsNullOrWhiteSpace(ActiveCase.Notes))
+                    {
+                        <p class="text-sm text-content-muted mb-4">@ActiveCase.Notes</p>
+                    }
+
+                    @* Case documents: the notice, acknowledgement, decision, completion certificate. *@
+                    <div class="border-t border-line pt-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="eyebrow">Case documents</h4>
+                            <label class="text-xs text-accent hover:underline cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                                + Add files
+                                <InputFile OnChange="e => UploadToCaseAsync(ActiveCase, e)" multiple class="hidden" />
+                            </label>
+                        </div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <label class="text-xs text-content-subtle">Uploading as</label>
+                            <select class="field py-1 max-w-56" value="@((int)caseUploadKind)"
+                                    @onchange="e => caseUploadKind = ParseKind(e) ?? caseUploadKind">
+                                @foreach (var kind in CaseDocumentKinds)
+                                {
+                                    <option value="@((int)kind)">@kind.Label()</option>
+                                }
+                            </select>
+                        </div>
+                        @if (CaseFiles(ActiveCase).Count == 0)
+                        {
+                            <p class="text-sm text-content-subtle italic">No documents on the case yet — the notice, the acknowledgement and the decision notice belong here.</p>
+                        }
+                        else
+                        {
+                            <ul class="space-y-1.5">
+                                @foreach (var file in CaseFiles(ActiveCase))
+                                {
+                                    <li class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                                        <div class="min-w-0">
+                                            <a class="font-medium text-content hover:underline" href="@Attachments.FileUrl(file.BuildingControlAttachmentId)" download>@file.DisplayName</a>
+                                            <span class="text-xs text-content-subtle ml-2">@file.Kind.Label() · @FormatSize(file.FileSizeBytes)</span>
+                                        </div>
+                                        <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy"
+                                                @onclick="() => RemoveFileAsync(file.BuildingControlAttachmentId)">Remove</button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </section>
+            }
+
+            @* ---- Case set-up / edit form. ---- *@
+            @if (caseFormOpen)
+            {
+                <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+                    <h3 class="text-sm font-medium text-content-muted mb-3">@(editingCase is null ? "Set up building control" : "Edit case details")</h3>
+                    <div class="space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Regime</label>
+                                <select class="field" value="@((int)formRegime)" @onchange="e => formRegime = ParseRegime(e)">
+                                    @foreach (var regime in BuildingControlRegimes.All)
+                                    {
+                                        <option value="@((int)regime)">@regime.Label()</option>
+                                    }
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Body *</label>
+                                <input type="text" class="field" maxlength="256" placeholder="Who signs the work off — the council or the approver"
+                                       value="@formBodyName" @oninput="e => formBodyName = e.Value?.ToString() ?? string.Empty" />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Their reference</label>
+                                <input type="text" class="field" maxlength="128" placeholder="e.g. BC2415406DOMFPB"
+                                       value="@formBodyReference" @oninput="e => formBodyReference = e.Value?.ToString() ?? string.Empty" />
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notice submitted</label>
+                                <input type="date" class="field" value="@formNoticeSubmittedOn"
+                                       @onchange="e => formNoticeSubmittedOn = e.Value?.ToString() ?? string.Empty" />
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Accepted / in force</label>
+                                <input type="date" class="field" value="@formAcceptedOn"
+                                       @onchange="e => formAcceptedOn = e.Value?.ToString() ?? string.Empty" />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Contact name</label>
+                                <input type="text" class="field" maxlength="256"
+                                       value="@formContactName" @oninput="e => formContactName = e.Value?.ToString() ?? string.Empty" />
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Contact email</label>
+                                <input type="text" class="field" maxlength="256"
+                                       value="@formContactEmail" @oninput="e => formContactEmail = e.Value?.ToString() ?? string.Empty" />
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Contact phone</label>
+                                <input type="text" class="field" maxlength="64"
+                                       value="@formContactPhone" @oninput="e => formContactPhone = e.Value?.ToString() ?? string.Empty" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                            <textarea class="field" rows="2" maxlength="4096"
+                                      value="@formNotes" @oninput="e => formNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+                        </div>
+                        @if (editingCase is null)
+                        {
+                            <label class="flex items-center gap-2 text-sm text-content cursor-pointer">
+                                <input type="checkbox" checked="@formSeedStages" @onchange="e => formSeedStages = e.Value is true" />
+                                Start the checklist from the standard stages
+                                <span class="text-content-subtle text-xs">— @string.Join(" → ", BuildingControlStages.DefaultChecklist); rename, reorder or delete freely</span>
+                            </label>
+                        }
+                        <div class="flex items-center gap-3">
+                            <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                                    disabled="@(string.IsNullOrWhiteSpace(formBodyName) || busy)"
+                                    @onclick="SaveCaseAsync">
+                                @(editingCase is null ? "Set up case" : "Save changes")
+                            </button>
+                            <button type="button" class="text-xs text-content-subtle hover:text-content underline underline-offset-4"
+                                    @onclick="() => caseFormOpen = false">Cancel</button>
+                        </div>
+                    </div>
+                </section>
+            }
+
+            @* ---- Inspection register. ---- *@
+            @if (ActiveCase is not null)
+            {
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-base font-semibold text-content">Inspections</h3>
+                    <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition"
+                            @onclick="() => addStageOpen = !addStageOpen">
+                        @(addStageOpen ? "Close" : "Add inspection")
+                    </button>
+                </div>
+
+                @if (addStageOpen)
+                {
+                    <section class="rounded-xl border border-line bg-surface p-5 mb-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Stage *</label>
+                                <input type="text" class="field" maxlength="256" placeholder="What's being inspected — Foundations, Drainage, Steel frame…"
+                                       value="@newStageName" @oninput="e => newStageName = e.Value?.ToString() ?? string.Empty" />
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Booked for</label>
+                                <input type="date" class="field" value="@newStageBookedFor"
+                                       @onchange="e => newStageBookedFor = e.Value?.ToString() ?? string.Empty" />
+                            </div>
+                        </div>
+                        <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                                disabled="@(string.IsNullOrWhiteSpace(newStageName) || busy)"
+                                @onclick="AddStageAsync">
+                            Add inspection
+                        </button>
+                    </section>
+                }
+
+                @if (Inspections.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">No inspection stages yet — add the stages this build will be signed off in.</p>
+                }
+                else
+                {
+                    <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-line text-left">
+                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Ref</th>
+                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Stage</th>
+                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Status</th>
+                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Booked for</th>
+                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Inspected</th>
+                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Files</th>
+                                    <th class="px-4 py-2.5"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var inspection in Inspections)
+                                {
+                                    <tr @key="inspection.BuildingControlInspectionId" class="border-b border-line last:border-0 hover:bg-surface-raised/50 cursor-pointer"
+                                        @onclick="() => OpenInspection(inspection)">
+                                        <td class="px-4 py-2.5 font-mono text-xs text-content-muted whitespace-nowrap">@inspection.Reference</td>
+                                        <td class="px-4 py-2.5 text-content font-medium">@inspection.StageName</td>
+                                        <td class="px-4 py-2.5 whitespace-nowrap">
+                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(inspection.Status)">@inspection.Status.DisplayName()</span>
+                                        </td>
+                                        <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@DateText(inspection.BookedFor)</td>
+                                        <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@DateText(inspection.InspectedAt)</td>
+                                        <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@FileCountText(inspection)</td>
+                                        <td class="px-4 py-2.5 whitespace-nowrap text-right" @onclick:stopPropagation>
+                                            @if (inspection.Status == BuildingControlInspectionStatus.Planned && FilesFor(inspection).Count == 0)
+                                            {
+                                                <button type="button" class="text-xs text-content-subtle hover:text-negative underline underline-offset-4" disabled="@busy"
+                                                        @onclick="() => DeleteStageAsync(inspection)">Remove</button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool busy;
+    private string? actionError;
+
+    // Case form state (create and edit share it).
+    private bool caseFormOpen;
+    private BuildingControlCase? editingCase;
+    private BuildingControlRegime formRegime = BuildingControlRegime.LocalAuthority;
+    private string formBodyName = "";
+    private string formBodyReference = "";
+    private string formContactName = "";
+    private string formContactEmail = "";
+    private string formContactPhone = "";
+    private string formNoticeSubmittedOn = "";
+    private string formAcceptedOn = "";
+    private string formNotes = "";
+    private bool formSeedStages = true;
+
+    private bool addStageOpen;
+    private string newStageName = "";
+    private string newStageBookedFor = "";
+
+    private BuildingControlAttachmentKind caseUploadKind = BuildingControlAttachmentKind.Notice;
+
+    // The kinds that make sense on the CASE (stage photos and site reports live on inspections).
+    private static readonly BuildingControlAttachmentKind[] CaseDocumentKinds =
+    {
+        BuildingControlAttachmentKind.Notice,
+        BuildingControlAttachmentKind.Acknowledgement,
+        BuildingControlAttachmentKind.DecisionNotice,
+        BuildingControlAttachmentKind.PlanningPermission,
+        BuildingControlAttachmentKind.CompletionCertificate,
+        BuildingControlAttachmentKind.Other
+    };
+
+    private BuildingControlProjectView? View => BuildingControl.Current(ProjectId);
+
+    // The working case: the newest non-lapsed/non-certified one, else the newest of anything —
+    // the tab always shows what there is, even a finished case.
+    private BuildingControlCase? ActiveCase
+    {
+        get
+        {
+            var cases = View?.Cases ?? Array.Empty<BuildingControlCase>();
+            return cases.FirstOrDefault(c =>
+                       c.Status is not (BuildingControlCaseStatus.Lapsed or BuildingControlCaseStatus.CompletionCertified))
+                   ?? cases.FirstOrDefault();
+        }
+    }
+
+    private IReadOnlyList<BuildingControlInspection> Inspections =>
+        ActiveCase is { } activeCase
+            ? (View?.Inspections ?? Array.Empty<BuildingControlInspection>())
+                .Where(i => i.BuildingControlCaseId == activeCase.BuildingControlCaseId).ToList()
+            : Array.Empty<BuildingControlInspection>();
+
+    private IReadOnlyList<BuildingControlAttachment> CaseFiles(BuildingControlCase forCase) =>
+        (View?.Attachments ?? Array.Empty<BuildingControlAttachment>())
+            .Where(a => a.BuildingControlCaseId == forCase.BuildingControlCaseId).ToList();
+
+    private IReadOnlyList<BuildingControlAttachment> FilesFor(BuildingControlInspection inspection) =>
+        (View?.Attachments ?? Array.Empty<BuildingControlAttachment>())
+            .Where(a => a.BuildingControlInspectionId == inspection.BuildingControlInspectionId).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        BuildingControl.OnChanged += StateHasChanged;
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        sessionReady = true;
+        await LoadAsync();
+    }
+
+    private string loadedForProjectId = "";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Project switch via the shell's arrows: same page, new key — load the new register
+        // (and give a previously failed project a fresh chance).
+        if (!sessionReady || loadedForProjectId == ProjectId) return;
+        dataFailed = false;
+        caseFormOpen = false;
+        addStageOpen = false;
+        actionError = null;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loadedForProjectId = ProjectId;
+        try { await BuildingControl.RefreshAsync(ProjectId, CancellationToken.None); }
+        catch { dataFailed = true; } // the query client has already toasted the detail
+    }
+
+    private void OpenInspection(BuildingControlInspection inspection) =>
+        Nav.NavigateTo($"/projects/{ProjectId}/building-control/inspections/{inspection.BuildingControlInspectionId}");
+
+    private void OpenCreateCase()
+    {
+        editingCase = null;
+        formRegime = BuildingControlRegime.LocalAuthority;
+        formBodyName = ""; formBodyReference = "";
+        formContactName = ""; formContactEmail = ""; formContactPhone = "";
+        formNoticeSubmittedOn = ""; formAcceptedOn = ""; formNotes = "";
+        formSeedStages = true;
+        caseFormOpen = true;
+    }
+
+    private void OpenEditCase(BuildingControlCase existing)
+    {
+        editingCase = existing;
+        formRegime = existing.Regime;
+        formBodyName = existing.BodyName;
+        formBodyReference = existing.BodyReference;
+        formContactName = existing.ContactName;
+        formContactEmail = existing.ContactEmail;
+        formContactPhone = existing.ContactPhone;
+        formNoticeSubmittedOn = DateInput(existing.NoticeSubmittedOn);
+        formAcceptedOn = DateInput(existing.AcceptedOn);
+        formNotes = existing.Notes;
+        caseFormOpen = true;
+    }
+
+    private BuildingControlCaseDetails FormDetails() => new(
+        formRegime, formBodyName.Trim(), formBodyReference.Trim(),
+        formContactName.Trim(), formContactEmail.Trim(), formContactPhone.Trim(),
+        ParseDate(formNoticeSubmittedOn), ParseDate(formAcceptedOn), formNotes.Trim());
+
+    private async Task SaveCaseAsync()
+    {
+        if (string.IsNullOrWhiteSpace(formBodyName)) return;
+        busy = true;
+        actionError = null;
+        try
+        {
+            if (editingCase is { } existing)
+                await Commands.SendAsync(new UpdateBuildingControlCase(existing.BuildingControlCaseId, FormDetails()), CancellationToken.None);
+            else
+                await Commands.SendAsync(new CreateBuildingControlCase(ProjectId, FormDetails(), formSeedStages), CancellationToken.None);
+            caseFormOpen = false;
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task SetCaseStatusAsync(BuildingControlCase forCase, ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var statusValue)) return;
+        var status = (BuildingControlCaseStatus)statusValue;
+        if (status == forCase.Status) return;
+        busy = true;
+        actionError = null;
+        try
+        {
+            await Commands.SendAsync(new SetBuildingControlCaseStatus(forCase.BuildingControlCaseId, status), CancellationToken.None);
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task AddStageAsync()
+    {
+        if (ActiveCase is not { } activeCase || string.IsNullOrWhiteSpace(newStageName)) return;
+        busy = true;
+        actionError = null;
+        try
+        {
+            await Commands.SendAsync(new AddBuildingControlInspection(
+                activeCase.BuildingControlCaseId,
+                new BuildingControlInspectionDetails(newStageName.Trim(), ParseDate(newStageBookedFor), null, "", "")), CancellationToken.None);
+            newStageName = ""; newStageBookedFor = "";
+            addStageOpen = false;
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task DeleteStageAsync(BuildingControlInspection inspection)
+    {
+        busy = true;
+        actionError = null;
+        try
+        {
+            await Commands.SendAsync(new DeleteBuildingControlInspection(inspection.BuildingControlInspectionId), CancellationToken.None);
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task UploadToCaseAsync(BuildingControlCase forCase, InputFileChangeEventArgs e)
+    {
+        busy = true;
+        actionError = null;
+        try
+        {
+            await Attachments.UploadToCaseAsync(forCase.BuildingControlCaseId, caseUploadKind, e.GetMultipleFiles(20));
+            await RefreshAfterWriteAsync();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task RemoveFileAsync(string attachmentId)
+    {
+        busy = true;
+        actionError = null;
+        try
+        {
+            await Commands.SendAsync(new RemoveBuildingControlAttachment(attachmentId), CancellationToken.None);
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    // Post-write reload: swallow query failures (the toast already reported them) so a 502 on the
+    // refetch can't take the page down after a successful write — see post-write-reload rule.
+    private async Task RefreshAfterWriteAsync()
+    {
+        try { await BuildingControl.RefreshAsync(ProjectId, CancellationToken.None); }
+        catch (OperationCanceledException) { throw; }
+        catch { }
+    }
+
+    private string FileCountText(BuildingControlInspection inspection)
+    {
+        var files = FilesFor(inspection);
+        if (files.Count == 0) return "—";
+        var photos = files.Count(f => f.IsImage);
+        var documents = files.Count - photos;
+        return (photos, documents) switch
+        {
+            (> 0, > 0) => $"{photos} photo{Plural(photos)}, {documents} doc{Plural(documents)}",
+            (> 0, _)   => $"{photos} photo{Plural(photos)}",
+            _          => $"{documents} doc{Plural(documents)}"
+        };
+    }
+
+    private static string Plural(int count) => count == 1 ? "" : "s";
+
+    private static string StatusClass(BuildingControlInspectionStatus status) => status switch
+    {
+        BuildingControlInspectionStatus.Passed => "bg-positive/10 text-positive",
+        BuildingControlInspectionStatus.ActionsRequired => "bg-negative/10 text-negative",
+        BuildingControlInspectionStatus.Booked or BuildingControlInspectionStatus.Inspected => "bg-accent/10 text-accent",
+        _ => "bg-surface-raised text-content-muted"
+    };
+
+    private static string DateText(DateTimeOffset? value) =>
+        value is { } date ? date.ToString("d MMM yyyy") : "—";
+
+    private static string DateInput(DateTimeOffset? value) =>
+        value is { } date ? date.ToString("yyyy-MM-dd") : "";
+
+    private static DateTimeOffset? ParseDate(string text) =>
+        DateTime.TryParseExact(text, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var value)
+            ? new DateTimeOffset(value, TimeSpan.Zero)
+            : null;
+
+    private static BuildingControlRegime ParseRegime(ChangeEventArgs e) =>
+        int.TryParse(e.Value?.ToString(), out var value) ? (BuildingControlRegime)value : BuildingControlRegime.LocalAuthority;
+
+    private static BuildingControlAttachmentKind? ParseKind(ChangeEventArgs e) =>
+        int.TryParse(e.Value?.ToString(), out var value) ? (BuildingControlAttachmentKind)value : null;
+
+    private static string FormatSize(long bytes) =>
+        bytes >= 1_048_576 ? $"{bytes / 1_048_576.0:0.#} MB"
+        : bytes >= 1024 ? $"{bytes / 1024.0:0.#} KB"
+        : $"{bytes} B";
+
+    public void Dispose() => BuildingControl.OnChanged -= StateHasChanged;
+}

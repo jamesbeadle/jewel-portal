@@ -32,7 +32,11 @@ public enum SystemActionKind
     LogTenderEnquiry,
     // An email arranging something dated (2026-08-27) — a site visit, a delivery, a meeting:
     // raises it on the project's Calendar tab with the email tagged to it.
-    RaiseCalendarEvent
+    RaiseCalendarEvent,
+    // The building control inspector's email (2026-08-27) — a booking confirmation, a visit
+    // arrangement: raises the stage on the project's Building Control tab with the email tagged
+    // to it (JPMS/BCI-####).
+    RaiseBuildingControlInspection
 }
 
 public static class SystemActionKinds
@@ -54,6 +58,7 @@ public static class SystemActionKinds
         SystemActionKind.FileBidPackageTender,
         SystemActionKind.RaiseDefect,
         SystemActionKind.RaiseCalendarEvent,
+        SystemActionKind.RaiseBuildingControlInspection,
         SystemActionKind.CreateTodos,
         SystemActionKind.CompleteTodo,
         SystemActionKind.AddDirectoryContact,
@@ -74,6 +79,7 @@ public static class SystemActionKinds
         SystemActionKind.FileBidPackageTender => "File Bid Package Tender",
         SystemActionKind.RaiseDefect => "Raise Defect",
         SystemActionKind.RaiseCalendarEvent => "Raise Calendar Event",
+        SystemActionKind.RaiseBuildingControlInspection => "Raise Building Control Inspection",
         SystemActionKind.CreateTodos => "Create To-do Items",
         SystemActionKind.CompleteTodo => "Mark To-do Done",
         SystemActionKind.AddDirectoryContact => "Add Directory Contact",

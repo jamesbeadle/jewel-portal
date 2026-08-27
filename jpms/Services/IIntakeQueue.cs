@@ -98,4 +98,10 @@ public interface IIntakeQueue
     // linked to it). The Subcontractor pathway's third "create a new record from this email",
     // alongside the bid package and work order above.
     Task<Defect> CreateDefectFromMessageAsync(CreateDefectFromMessage command, CancellationToken cancellationToken = default);
+
+    // Raise a building control inspection stage from the inspector's email (a booking
+    // confirmation, a visit arrangement). The email is tagged "JPMS/BCI-####", so the stage reads
+    // its thread back live by tag — requires the project's building control case to exist.
+    Task<Jewel.JPMS.Models.BuildingControlInspection> CreateBuildingControlInspectionFromMessageAsync(
+        Jewel.JPMS.Contracts.BuildingControl.CreateBuildingControlInspectionFromMessage command, CancellationToken cancellationToken = default);
 }

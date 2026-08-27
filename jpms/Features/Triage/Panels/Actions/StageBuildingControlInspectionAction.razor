@@ -1,0 +1,115 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+
+@* "Raise Building Control Inspection" — the email-linked create for the inspector's email: a
+   booking confirmation, a visit arrangement, the report for a stage that was never logged.
+   Drafts the ONE page-owned StagedRecordCreate (Kind = BuildingControlInspection) like the other
+   creates, so Apply raises the stage through CreateBuildingControlInspectionFromMessage and the
+   email is tagged to it (JPMS/BCI-####). The project must already carry a building control case
+   (set up on its Building Control tab) — the server refuses otherwise and the red bar says so.
+   No date is read out of the email body: nothing extracts dates from prose, and the triager
+   just read it. *@
+
+<div class="space-y-4">
+    <p class="text-xs text-content-subtle">
+        The stage lands on the project's Building Control tab, and this email is tagged to it on
+        apply. Linking to a stage that already exists is System Tags (Client → Building Control
+        Inspection), not this.
+    </p>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Stage *</label>
+        <input type="text" class="field" maxlength="256" placeholder="What's being inspected — Foundations, Drainage, Steel frame…"
+               value="@Draft.StageName" @oninput="e => Set(draft => draft.StageName = e.Value?.ToString() ?? string.Empty)" />
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Booked for</label>
+            <input type="date" class="field"
+                   value="@Draft.BookedFor" @onchange="e => Set(draft => draft.BookedFor = e.Value?.ToString() ?? string.Empty)" />
+            <p class="text-[11px] text-content-subtle mt-1">Blank = planned, not yet booked.</p>
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Inspector</label>
+            <input type="text" class="field" maxlength="256" placeholder="Who's coming out"
+                   value="@Draft.InspectorName" @oninput="e => Set(draft => draft.InspectorName = e.Value?.ToString() ?? string.Empty)" />
+        </div>
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+        <textarea class="field" rows="2" maxlength="2048" placeholder="Anything the visit hangs on — access, what must be open for inspection"
+                  value="@Draft.OutcomeNotes" @oninput="e => Set(draft => draft.OutcomeNotes = e.Value?.ToString() ?? string.Empty)"></textarea>
+    </div>
+
+    @if (StagedCreate is not null && Draft.Problem is { } problem)
+    {
+        <p class="text-xs text-amber-600">@problem</p>
+    }
+</div>
+
+@code {
+    [Parameter] public StagedRecordCreate? StagedCreate { get; set; }
+    [Parameter] public EventCallback<StagedRecordCreate?> StagedCreateChanged { get; set; }
+    [Parameter] public string EmailSubject { get; set; } = "";
+
+    // The form binds to a scratch instance until something is typed, so an empty form never
+    // stages a phantom "new record" — the StagedRecordActionEditor arrangement.
+    private StagedRecordCreate scratchCreate = new() { Kind = StagedRecordKind.BuildingControlInspection };
+    private StagedRecordCreate? lastStaged;
+    private StagedRecordCreate Create => StagedCreate ?? scratchCreate;
+    private StagedBuildingControlInspectionDraft Draft => Create.BuildingControlInspection;
+
+    protected override void OnInitialized()
+    {
+        PrefillFromEmail(scratchCreate);
+        // A draft staged under another action keeps its content — its title becomes the stage —
+        // and is re-stamped to what Apply now raises.
+        if (StagedCreate is not { } staged || staged.Kind == StagedRecordKind.BuildingControlInspection) return;
+        if (string.IsNullOrWhiteSpace(staged.BuildingControlInspection.StageName)) PrefillFromEmail(staged);
+        if (string.IsNullOrWhiteSpace(staged.BuildingControlInspection.StageName))
+            staged.BuildingControlInspection.StageName = staged.Title;
+        NotifyCreate();
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Once staged, scratch and page copy are the SAME object — replace the scratch when the
+        // staged draft goes away, or the form would silently re-stage the old content.
+        if (lastStaged is not null && StagedCreate is null)
+        {
+            scratchCreate = new StagedRecordCreate { Kind = StagedRecordKind.BuildingControlInspection };
+            PrefillFromEmail(scratchCreate);
+        }
+        lastStaged = StagedCreate;
+    }
+
+    // Suggestions only, filled WITHOUT staging: the subject (minus FW:/RE:) as the stage name.
+    private void PrefillFromEmail(StagedRecordCreate target)
+    {
+        target.BuildingControlInspection.StageName = StripReplyPrefixes(EmailSubject);
+    }
+
+    private static string StripReplyPrefixes(string subject)
+    {
+        const string prefixPattern = @"^(fw|fwd|re)\s*:\s*";
+        var cleaned = subject.Trim();
+        while (System.Text.RegularExpressions.Regex.IsMatch(cleaned, prefixPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+            cleaned = System.Text.RegularExpressions.Regex.Replace(cleaned, prefixPattern, "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return cleaned;
+    }
+
+    private void Set(Action<StagedBuildingControlInspectionDraft> edit)
+    {
+        edit(Draft);
+        NotifyCreate();
+    }
+
+    // First keystroke on the scratch form stages it; a staged form just reports the edit.
+    private void NotifyCreate()
+    {
+        var target = StagedCreate ?? scratchCreate;
+        target.Kind = StagedRecordKind.BuildingControlInspection;
+        _ = StagedCreateChanged.InvokeAsync(target);
+    }
+}

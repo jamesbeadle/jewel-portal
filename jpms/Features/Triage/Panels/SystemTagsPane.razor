@@ -102,7 +102,7 @@
     // (2026-08-07): the programme bucket isn't a record anyone picks — the page's own
     // "Relevant Event for Programme" checkbox files to it instead; the bucket's claims
     // documents stay reachable here via Request / RFI and LADs claim.
-    private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.TenderEnquiry, RecordType.Lad, RecordType.ValuationReportSnapshot };
+    private static readonly RecordType[] ClientTypes = { RecordType.Request, RecordType.Variation, RecordType.TenderEnquiry, RecordType.BuildingControlInspection, RecordType.BuildingControlCase, RecordType.Lad, RecordType.ValuationReportSnapshot };
     private static readonly RecordType[] SubcontractorTypes = { RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Defect };
     // Internal carries bid packages and work orders too (Nigel, 2026-08-22): staff-to-staff mail
     // about a package or an order is as common as a to-do. Those picks still file the thread
@@ -365,6 +365,8 @@
         RecordType.Defect => "Defect",
         RecordType.Todo => "To-do item",
         RecordType.CalendarEvent => "Calendar event",
+        RecordType.BuildingControlInspection => "Building Control Inspection",
+        RecordType.BuildingControlCase => "Building Control Case",
         _ => type.ToString()
     };
 

@@ -1568,7 +1568,7 @@ else
     // Variation — one record, one number, per the 2026-07-23 unification.
     private static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.Todo, RecordType.CalendarEvent
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase
     };
 
     // What each pathway's "Link to existing" offers (the pathway filters the actions — the plan's
@@ -1578,7 +1578,8 @@ else
     // travels with the link command.
     private static readonly RecordType[] ClientLinkTypes =
     {
-        RecordType.Request, RecordType.Variation, RecordType.Lad, RecordType.Scheduling
+        RecordType.Request, RecordType.Variation, RecordType.Lad, RecordType.Scheduling,
+        RecordType.BuildingControlInspection, RecordType.BuildingControlCase
     };
     // Subcontractor covers the whole subcontract lifecycle, not just the tender: an email can land
     // before a package exists (a chase, an H&S request), against the order that followed the award
@@ -1624,7 +1625,8 @@ else
     private static string RecordTypePathwayLabel(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
-            or RecordType.Scheduling or RecordType.Lad or RecordType.TenderEnquiry => "Client",
+            or RecordType.Scheduling or RecordType.Lad or RecordType.TenderEnquiry
+            or RecordType.BuildingControlCase or RecordType.BuildingControlInspection => "Client",
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => "Subcontractor",
         RecordType.InternalComms    => "Internal",
@@ -1654,6 +1656,8 @@ else
         RecordType.Lad              => "LADs claim",
         RecordType.Todo             => "To-do item",
         RecordType.CalendarEvent    => "Calendar event",
+        RecordType.BuildingControlInspection => "Building Control Inspection",
+        RecordType.BuildingControlCase => "Building Control Case",
         RecordType.SubcontractorComms => "Subcontractor communication",
         RecordType.InternalComms    => "Internal communication",
         _                           => type.ToString()
@@ -2096,6 +2100,11 @@ else
     private string? StagedCalendarEventProblem =>
         stagedCreate is { Kind: StagedRecordKind.CalendarEvent } stagedEvent
             ? stagedEvent.CalendarEvent.Problem
+            : null;
+
+    private string? StagedBuildingControlInspectionProblem =>
+        stagedCreate is { Kind: StagedRecordKind.BuildingControlInspection } stagedInspection
+            ? stagedInspection.BuildingControlInspection.Problem
             : null;
 
     private string? TodoProjectNote =>
@@ -3181,6 +3190,7 @@ else
                     StagedRecordKind.WorkOrder => StagedWorkOrderSummary(stagedCreate),
                     StagedRecordKind.Defect => "raise the defect from this email",
                     StagedRecordKind.CalendarEvent => "raise the calendar event from this email",
+                    StagedRecordKind.BuildingControlInspection => "raise the building control inspection from this email",
                     _ => stagedCreate.RequestKind == RequestType.Rfi
                         ? "raise the RFI from this email"
                         : "create the request from this email"
@@ -3488,6 +3498,12 @@ else
         if (createReady && StagedCalendarEventProblem is { } calendarProblem)
         {
             actionError = $"The staged calendar event isn't ready — {calendarProblem} Finish it in System Actions, or remove it.";
+            return;
+        }
+        // And for a staged building control inspection.
+        if (createReady && StagedBuildingControlInspectionProblem is { } inspectionProblem)
+        {
+            actionError = $"The staged inspection isn't ready — {inspectionProblem} Finish it in System Actions, or remove it.";
             return;
         }
         if (replying)
@@ -3884,6 +3900,19 @@ else
                 new CreatedNowRecord(calendarEvent.Reference, "calendar event", calendarEvent.Title), null);
         }
 
+        if (staged.Kind == StagedRecordKind.BuildingControlInspection)
+        {
+            // The inspection staged in System Actions, raised through the same rules as one added
+            // on the Building Control tab (BCI numbering, foot of the running order, Booked when
+            // dated) with the inspector's email tagged to it. Requires the project's case; the
+            // server's refusal lands in the red bar with its own wording.
+            busyLabel = "Raising building control inspection";
+            var inspection = await Intake.CreateBuildingControlInspectionFromMessageAsync(
+                staged.BuildingControlInspection.ToCommand(anchor.Id, anchor.InternetMessageId, triageProjectId, scope, allowCrossPathway));
+            return new StagedCreateOutcome(
+                new CreatedNowRecord(inspection.Reference, "building control inspection", inspection.StageName), null);
+        }
+
         if (staged.Kind == StagedRecordKind.TenderEnquiry)
             return await LogStagedTenderEnquiryAsync(staged, anchor, scope, allowCrossPathway);
 
@@ -3967,6 +3996,11 @@ else
         if (StagedCalendarEventProblem is { } calendarNowProblem)
         {
             actionError = $"The staged calendar event isn't ready — {calendarNowProblem}";
+            return;
+        }
+        if (StagedBuildingControlInspectionProblem is { } inspectionNowProblem)
+        {
+            actionError = $"The staged inspection isn't ready — {inspectionNowProblem}";
             return;
         }
         if (staged is { Kind: StagedRecordKind.WorkOrder } stagedOrder
@@ -4185,6 +4219,7 @@ else
                 StagedRecordKind.Defect => stagedRecord.DefectProblem,
                 StagedRecordKind.TenderEnquiry => StagedTenderEnquiryProblem,
                 StagedRecordKind.CalendarEvent => StagedCalendarEventProblem,
+                StagedRecordKind.BuildingControlInspection => StagedBuildingControlInspectionProblem,
                 _ => null
             };
             if (!StagedCreateReady)
@@ -4763,6 +4798,8 @@ else
             "defect" => RecordType.Defect,
             "todo" or "to do" => RecordType.Todo,
             "calendar event" or "calendar" or "event" => RecordType.CalendarEvent,
+            "building control inspection" or "building control" or "bci" => RecordType.BuildingControlInspection,
+            "building control case" or "bc case" => RecordType.BuildingControlCase,
             "lad" or "liquidated damages" => RecordType.Lad,
             "scheduling" or "programme" => RecordType.Scheduling,
             _ => null

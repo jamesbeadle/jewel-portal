@@ -1,0 +1,472 @@
+@page "/projects/{ProjectId}/building-control/inspections/{InspectionId}"
+@using Jewel.JPMS.Contracts.BuildingControl
+@using Jewel.JPMS.Contracts.MailboxCompose
+@using Jewel.JPMS.Contracts.RecordLinks
+@using Jewel.JPMS.Features.BuildingControl
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+@inject BuildingControlReadModel BuildingControl
+@inject IBuildingControlAttachmentClient Attachments
+@inject ICommandSender Commands
+@inject IQueryClient Queries
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
+@inject IIntakeQueue Intake
+@implements IDisposable
+
+<PageTitle>Building Control Inspection · JPMS</PageTitle>
+
+@*
+    One inspection stage: its status ladder and dates, the photo evidence and the inspector's
+    site report, and the correspondence read live by its JPMS/BCI-#### tag — the inspector's
+    booking email, the follow-up, the report arriving. Replying from here sends from the projects
+    mailbox and files itself back into this list.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="building-control">
+        @if (!BuildingControl.LoadedFor(ProjectId) && !dataFailed)
+        {
+            <LoadGate IsLoading="true" Prominent="true" Label="Loading inspection" />
+        }
+        else if (Inspection is null)
+        {
+            <p class="text-sm text-content-muted">
+                That inspection wasn't found on this project.
+                <a class="text-accent hover:underline" href="/projects/@ProjectId/building-control">Back to Building Control</a>
+            </p>
+        }
+        else
+        {
+            var inspection = Inspection;
+
+            <div class="mb-4">
+                <a class="text-xs text-content-subtle hover:text-content" href="/projects/@ProjectId/building-control">← Building Control</a>
+                <div class="flex flex-wrap items-center gap-3 mt-1">
+                    <h2 class="text-lg font-semibold text-content">@inspection.StageName</h2>
+                    <span class="font-mono text-xs text-content-muted">@inspection.Reference</span>
+                    <select class="field py-1" value="@((int)inspection.Status)" disabled="@busy"
+                            @onchange="e => SetStatusAsync(inspection, e)">
+                        @foreach (var status in Enum.GetValues<BuildingControlInspectionStatus>())
+                        {
+                            <option value="@((int)status)">@status.DisplayName()</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            @if (actionError is { } error)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/40 px-3 py-2 text-sm text-content mb-4">@error</p>
+            }
+
+            @* ---- Details: the official dates lead; Created is a secondary fact. ---- *@
+            <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Booked for</label>
+                        <input type="date" class="field" value="@editBookedFor" disabled="@busy"
+                               @onchange="e => editBookedFor = e.Value?.ToString() ?? string.Empty" />
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Inspected</label>
+                        <input type="date" class="field" value="@editInspectedAt" disabled="@busy"
+                               @onchange="e => editInspectedAt = e.Value?.ToString() ?? string.Empty" />
+                    </div>
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Inspector</label>
+                        <input type="text" class="field" maxlength="256" placeholder="Who carried out the visit"
+                               value="@editInspectorName" @oninput="e => editInspectorName = e.Value?.ToString() ?? string.Empty" />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Outcome / actions required</label>
+                    <textarea class="field" rows="2" maxlength="2048" placeholder="The inspector's outcome — passed subject to…, actions before re-inspection…"
+                              value="@editOutcomeNotes" @oninput="e => editOutcomeNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Stage name</label>
+                    <input type="text" class="field" maxlength="256"
+                           value="@editStageName" @oninput="e => editStageName = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="flex items-center justify-between">
+                    <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
+                            disabled="@(string.IsNullOrWhiteSpace(editStageName) || busy || !HasEdits(inspection))"
+                            @onclick="() => SaveAsync(inspection)">
+                        Save changes
+                    </button>
+                    <p class="text-xs text-content-subtle" title="System stamp — the official dates above are what matters">
+                        Created @inspection.RaisedAt.ToLocalTime().ToString("d MMM yyyy")@(string.IsNullOrWhiteSpace(inspection.RaisedByEmail) ? "" : $" by {inspection.RaisedByEmail}")
+                    </p>
+                </div>
+            </section>
+
+            @* ---- Photos. ---- *@
+            <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="eyebrow">Photos</h3>
+                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                        + Add photos
+                        <InputFile OnChange="e => UploadAsync(inspection, e, BuildingControlAttachmentKind.Photo)" multiple accept="image/*" class="hidden" />
+                    </label>
+                </div>
+                @if (Photos.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">No photos on this stage yet — on site, this page on the phone uploads straight from the camera.</p>
+                }
+                else
+                {
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                        @foreach (var photo in Photos)
+                        {
+                            <figure @key="photo.BuildingControlAttachmentId" class="group relative">
+                                <a href="@Attachments.FileUrl(photo.BuildingControlAttachmentId, isInline: true)" target="_blank" rel="noopener">
+                                    <img src="@Attachments.FileUrl(photo.BuildingControlAttachmentId, isInline: true)" alt="@photo.DisplayName"
+                                         class="w-full h-28 object-cover rounded-lg border border-line" loading="lazy" />
+                                </a>
+                                <button type="button" title="Remove photo"
+                                        class="absolute top-1 right-1 hidden group-hover:flex items-center justify-center w-6 h-6 rounded-full bg-surface/90 text-content-subtle hover:text-negative text-xs"
+                                        disabled="@busy" @onclick="() => RemoveFileAsync(photo.BuildingControlAttachmentId)">✕</button>
+                            </figure>
+                        }
+                    </div>
+                }
+            </section>
+
+            @* ---- Documents: the inspector's site report and anything else that isn't a photo. ---- *@
+            <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="eyebrow">Documents</h3>
+                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                        + Add files
+                        <InputFile OnChange="e => UploadAsync(inspection, e, kind: null)" multiple class="hidden" />
+                    </label>
+                </div>
+                @if (Documents.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic">
+                        No documents on this stage yet — the inspector's site report usually arrives by email:
+                        open it below and copy its attachments onto the stage.
+                    </p>
+                }
+                else
+                {
+                    <ul class="space-y-2">
+                        @foreach (var file in Documents)
+                        {
+                            <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                                <div class="min-w-0">
+                                    <a class="text-sm font-medium text-content hover:underline"
+                                       href="@Attachments.FileUrl(file.BuildingControlAttachmentId)" download>@file.DisplayName</a>
+                                    <span class="text-xs text-content-subtle ml-2">@file.Kind.Label() · @FormatSize(file.FileSizeBytes)</span>
+                                    <span class="text-xs text-content-subtle ml-2">· @SourceLabel(file.Source) @file.AddedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                </div>
+                                <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy"
+                                        @onclick="() => RemoveFileAsync(file.BuildingControlAttachmentId)">Remove</button>
+                            </li>
+                        }
+                    </ul>
+                }
+            </section>
+
+            @* ---- Correspondence, read live by the JPMS/BCI-#### tag. ---- *@
+            <section class="rounded-xl border border-line bg-surface p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="eyebrow">Correspondence</h3>
+                    <div class="flex items-center gap-3">
+                        @if (emails is not null && Emails.Count > 0)
+                        {
+                            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@Emails.Count</span>
+                        }
+                        <EmailFinder Type="RecordType.BuildingControlInspection" RecordId="@inspection.BuildingControlInspectionId"
+                                     RecordReference="@inspection.Reference" ExcludeTag="@OwnTag" OnLinked="ReloadEmailsAsync" />
+                    </div>
+                </div>
+                <LoadGate IsLoading="@(emails is null && !emailsFailed)" Prominent="true" Label="Loading correspondence">
+                @if (sentNote is not null)
+                {
+                    <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+                        <p class="text-sm text-content">@sentNote</p>
+                        <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss" @onclick="() => sentNote = null">✕</button>
+                    </div>
+                }
+                @if (replyingTo is { } anchor)
+                {
+                    <div class="mb-3 space-y-2">
+                        <p class="text-sm text-content-muted">
+                            @(isForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(anchor.FromName) ? anchor.FromEmail : anchor.FromName)</span> —
+                            <span class="italic">@anchor.Subject</span>
+                        </p>
+                        <MailReplyComposer @key="@($"{anchor.Id}:{isForward}")" ReplyTo="anchor" Forward="isForward"
+                                           Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@ProjectId"
+                                           FooterNote="The email sends now from the projects mailbox and files itself back into this list."
+                                           OnSent="OnSent" OnCancel="() => replyingTo = null" />
+                    </div>
+                }
+                @if (Emails.Count == 0)
+                {
+                    @if (emails is not null)
+                    {
+                        <p class="text-sm text-content-subtle italic">
+                            No emails tagged to this inspection. Tag them with @inspection.Reference in the Control Centre and they appear here.
+                        </p>
+                    }
+                }
+                else
+                {
+                    <div class="space-y-3">
+                        @foreach (var email in Emails)
+                        {
+                            @if (email.HasAttachments)
+                            {
+                                <div class="text-right">
+                                    <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
+                                            title="Copy this email's attachments onto the stage — the inspector's report and photos"
+                                            @onclick="() => CopyEmailFilesAsync(inspection, email)">
+                                        Copy attachments from “@email.Subject”
+                                    </button>
+                                </div>
+                            }
+                        }
+                        <CorrespondenceThreadList Emails="Emails" ExcludeTag="@OwnTag"
+                                                  OnReply="email => StartCompose(email, forward: false)"
+                                                  OnForward="email => StartCompose(email, forward: true)"
+                                                  OnUntagged="_ => ReloadEmailsAsync()" />
+                    </div>
+                }
+                </LoadGate>
+            </section>
+        }
+    </ProjectPageShell>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string InspectionId { get; set; } = "";
+
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool busy;
+    private string? actionError;
+
+    private string editStageName = "";
+    private string editBookedFor = "";
+    private string editInspectedAt = "";
+    private string editOutcomeNotes = "";
+    private string editInspectorName = "";
+    private string editsSeededFor = "";
+
+    private IReadOnlyList<MailboxMessage>? emails;
+    private IReadOnlyList<MailboxMessage> Emails => emails ?? Array.Empty<MailboxMessage>();
+    private bool emailsFailed;
+    private MailboxMessage? replyingTo;
+    private bool isForward;
+    private string? sentNote;
+
+    private BuildingControlProjectView? View => BuildingControl.Current(ProjectId);
+
+    private BuildingControlInspection? Inspection =>
+        View?.Inspections.FirstOrDefault(i => i.BuildingControlInspectionId == InspectionId);
+
+    private IReadOnlyList<BuildingControlAttachment> Files =>
+        (View?.Attachments ?? Array.Empty<BuildingControlAttachment>())
+            .Where(a => a.BuildingControlInspectionId == InspectionId).ToList();
+
+    private IReadOnlyList<BuildingControlAttachment> Photos => Files.Where(f => f.IsImage).ToList();
+    private IReadOnlyList<BuildingControlAttachment> Documents => Files.Where(f => !f.IsImage).ToList();
+
+    private string OwnTag => Inspection is { } inspection ? $"JPMS/{inspection.Reference}" : "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        BuildingControl.OnChanged += OnStoreChanged;
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        sessionReady = true;
+        try { await BuildingControl.RefreshAsync(ProjectId, CancellationToken.None); }
+        catch { dataFailed = true; } // the query client has already toasted the detail
+        SeedEdits();
+        await ReloadEmailsAsync();
+    }
+
+    // The edit fields seed once per inspection from the loaded record — refreshes never clobber
+    // half-typed edits (KeyedPageRouteView recreates the page per route values, so a different
+    // inspection is a fresh page).
+    private void SeedEdits()
+    {
+        if (Inspection is not { } inspection || editsSeededFor == inspection.BuildingControlInspectionId) return;
+        editsSeededFor = inspection.BuildingControlInspectionId;
+        editStageName = inspection.StageName;
+        editBookedFor = DateInput(inspection.BookedFor);
+        editInspectedAt = DateInput(inspection.InspectedAt);
+        editOutcomeNotes = inspection.OutcomeNotes;
+        editInspectorName = inspection.InspectorName;
+    }
+
+    private void OnStoreChanged()
+    {
+        SeedEdits();
+        StateHasChanged();
+    }
+
+    private bool HasEdits(BuildingControlInspection inspection) =>
+        editStageName.Trim() != inspection.StageName
+        || ParseDate(editBookedFor) != inspection.BookedFor
+        || ParseDate(editInspectedAt) != inspection.InspectedAt
+        || editOutcomeNotes.Trim() != inspection.OutcomeNotes
+        || editInspectorName.Trim() != inspection.InspectorName;
+
+    private async Task SaveAsync(BuildingControlInspection inspection)
+    {
+        if (string.IsNullOrWhiteSpace(editStageName)) return;
+        busy = true;
+        actionError = null;
+        try
+        {
+            await Commands.SendAsync(new UpdateBuildingControlInspection(
+                inspection.BuildingControlInspectionId,
+                new BuildingControlInspectionDetails(
+                    editStageName.Trim(), ParseDate(editBookedFor), ParseDate(editInspectedAt),
+                    editOutcomeNotes.Trim(), editInspectorName.Trim())), CancellationToken.None);
+            editsSeededFor = ""; // re-seed from the saved answer (status may have moved with the date)
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task SetStatusAsync(BuildingControlInspection inspection, ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var statusValue)) return;
+        var status = (BuildingControlInspectionStatus)statusValue;
+        if (status == inspection.Status) return;
+        busy = true;
+        actionError = null;
+        try
+        {
+            await Commands.SendAsync(new SetBuildingControlInspectionStatus(
+                inspection.BuildingControlInspectionId, status), CancellationToken.None);
+            editsSeededFor = ""; // InspectedAt may have been stamped/cleared by the move
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task UploadAsync(BuildingControlInspection inspection, InputFileChangeEventArgs e, BuildingControlAttachmentKind? kind)
+    {
+        busy = true;
+        actionError = null;
+        try
+        {
+            await Attachments.UploadToInspectionAsync(inspection.BuildingControlInspectionId, kind, e.GetMultipleFiles(20));
+            await RefreshAfterWriteAsync();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task RemoveFileAsync(string attachmentId)
+    {
+        busy = true;
+        actionError = null;
+        try
+        {
+            await Commands.SendAsync(new RemoveBuildingControlAttachment(attachmentId), CancellationToken.None);
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task CopyEmailFilesAsync(BuildingControlInspection inspection, MailboxMessage email)
+    {
+        busy = true;
+        actionError = null;
+        try
+        {
+            // Every file attachment on the email; kinds are inferred server-side (images →
+            // Photo, PDFs → Site inspection report). The detail read gives the Graph ids the
+            // copy route needs.
+            var detail = await Intake.GetMessageDetailAsync(email.Id, email.InternetMessageId, CancellationToken.None);
+            var attachmentIds = detail.Attachments
+                .Where(a => !string.IsNullOrWhiteSpace(a.Id))
+                .Select(a => a.Id)
+                .ToList();
+            if (attachmentIds.Count == 0)
+            {
+                actionError = "That email's attachments couldn't be listed — open it in the Control Centre instead.";
+                return;
+            }
+            await Commands.SendAsync(new CopyEmailAttachmentsToBuildingControlInspection(
+                inspection.BuildingControlInspectionId, email.Id, attachmentIds), CancellationToken.None);
+            await RefreshAfterWriteAsync();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task ReloadEmailsAsync()
+    {
+        if (Inspection is null) { emails = Array.Empty<MailboxMessage>(); return; }
+        try
+        {
+            emails = await Queries.AskAsync(
+                new ListRecordEmails(RecordType.BuildingControlInspection, InspectionId), CancellationToken.None);
+            emailsFailed = false;
+        }
+        catch { emailsFailed = true; }
+    }
+
+    private void StartCompose(MailboxMessage email, bool forward)
+    {
+        sentNote = null;
+        isForward = forward;
+        replyingTo = email;
+    }
+
+    private async Task OnSent(ComposeOutcome outcome)
+    {
+        replyingTo = null;
+        sentNote = outcome.Sent ? $"Sent: {outcome.Subject}" : $"Saved as a draft in Outlook: {outcome.Subject}";
+        await ReloadEmailsAsync();
+    }
+
+    // Post-write reload: swallow query failures (the toast already reported them) so a 502 on
+    // the refetch can't take the page down after a successful write — see post-write-reload rule.
+    private async Task RefreshAfterWriteAsync()
+    {
+        try { await BuildingControl.RefreshAsync(ProjectId, CancellationToken.None); }
+        catch (OperationCanceledException) { throw; }
+        catch { }
+    }
+
+    private static string SourceLabel(BuildingControlAttachmentSource source) =>
+        source == BuildingControlAttachmentSource.Email ? "from the linked email," : "uploaded";
+
+    private static string DateInput(DateTimeOffset? value) =>
+        value is { } date ? date.ToString("yyyy-MM-dd") : "";
+
+    private static DateTimeOffset? ParseDate(string text) =>
+        DateTime.TryParseExact(text, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var value)
+            ? new DateTimeOffset(value, TimeSpan.Zero)
+            : null;
+
+    private static string FormatSize(long bytes) =>
+        bytes >= 1_048_576 ? $"{bytes / 1_048_576.0:0.#} MB"
+        : bytes >= 1024 ? $"{bytes / 1024.0:0.#} KB"
+        : $"{bytes} B";
+
+    public void Dispose() => BuildingControl.OnChanged -= OnStoreChanged;
+}

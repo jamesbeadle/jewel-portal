@@ -183,6 +183,12 @@ public sealed class JpmsContext : DbContext
     public DbSet<SkillRevisionEntity> SkillRevisions => Set<SkillRevisionEntity>();
 
     public DbSet<DefectEntity> Defects => Set<DefectEntity>();
+
+    // Building control — the statutory sign-off trail: the case with the body, its inspection
+    // stages, and the files (photos, site reports, notices, the completion certificate).
+    public DbSet<BuildingControlCaseEntity> BuildingControlCases => Set<BuildingControlCaseEntity>();
+    public DbSet<BuildingControlInspectionEntity> BuildingControlInspections => Set<BuildingControlInspectionEntity>();
+    public DbSet<BuildingControlAttachmentEntity> BuildingControlAttachments => Set<BuildingControlAttachmentEntity>();
     public DbSet<PracticalCompletionEntity> PracticalCompletions => Set<PracticalCompletionEntity>();
     public DbSet<HandoverPackItemEntity> HandoverPackItems => Set<HandoverPackItemEntity>();
     public DbSet<SettlementRecordEntity> SettlementRecords => Set<SettlementRecordEntity>();
@@ -438,6 +444,34 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<DefectEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_Defects_ProjectId");
+
+        // ---- Building control ---------------------------------------------------------------------
+        // Read per project (the tab's one view); numbers resolve BC-####/BCI-#### tags back to
+        // their records; attachments are read per case and per inspection.
+        modelBuilder.Entity<BuildingControlCaseEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_BuildingControlCases_ProjectId");
+        modelBuilder.Entity<BuildingControlCaseEntity>()
+            .HasIndex(row => row.Number)
+            .HasDatabaseName("IX_BuildingControlCases_Number");
+        modelBuilder.Entity<BuildingControlInspectionEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_BuildingControlInspections_ProjectId");
+        modelBuilder.Entity<BuildingControlInspectionEntity>()
+            .HasIndex(row => row.BuildingControlCaseId)
+            .HasDatabaseName("IX_BuildingControlInspections_BuildingControlCaseId");
+        modelBuilder.Entity<BuildingControlInspectionEntity>()
+            .HasIndex(row => row.Number)
+            .HasDatabaseName("IX_BuildingControlInspections_Number");
+        modelBuilder.Entity<BuildingControlAttachmentEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_BuildingControlAttachments_ProjectId");
+        modelBuilder.Entity<BuildingControlAttachmentEntity>()
+            .HasIndex(row => row.BuildingControlCaseId)
+            .HasDatabaseName("IX_BuildingControlAttachments_BuildingControlCaseId");
+        modelBuilder.Entity<BuildingControlAttachmentEntity>()
+            .HasIndex(row => row.BuildingControlInspectionId)
+            .HasDatabaseName("IX_BuildingControlAttachments_BuildingControlInspectionId");
         modelBuilder.Entity<ComplianceDocumentEntity>()
             .HasIndex(row => row.SubcontractorId)
             .HasDatabaseName("IX_ComplianceDocuments_SubcontractorId");

@@ -47,6 +47,10 @@ public static class PortalMapCapabilities
             "progress updates and photos from site",
         ["/projects/{project}/defects"] =
             "the defect register (DEF-#### references); each defect reads its tagged mail live",
+        ["/projects/{project}/building-control"] =
+            "building control — the case with the signing-off body (BC-####) and its inspection "
+            + "stages (BCI-#### references); each stage holds photos, the site inspection report "
+            + "and its tagged mail, read live",
         ["/projects/{project}/communications"] =
             "ALL correspondence tagged to this project's records, in one stream",
         ["/projects/{project}/useful-information"] =
