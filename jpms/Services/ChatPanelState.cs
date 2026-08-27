@@ -45,6 +45,31 @@ public sealed class ChatPanelState
     /// </summary>
     public bool CoexistingModalOpen { get; private set; }
 
+    // ---- the live conversation --------------------------------------------------------------
+    // Which server-side conversation the panel is showing right now, published by ChatPanel (the
+    // only writer of its private conversationId) for the chat-aware dialogs beside it. The
+    // work-order form reads these to list the files attached to the chat, so the quote the order
+    // was drafted from can be kept on the order without anyone re-picking it from disk.
+
+    /// <summary>The conversation on screen, or null between chats. Set by ChatPanel alone.</summary>
+    public string? ActiveConversationId { get; private set; }
+
+    /// <summary>
+    /// The conversation the user was in just before the active task started — the one whose tail
+    /// (and attached files) the server carried across as the handover. Files attached before
+    /// "draft this order" live HERE, not on the task's fresh conversation. Null outside a task.
+    /// </summary>
+    public string? TaskHandoverConversationId { get; private set; }
+
+    /// <summary>ChatPanel's write of the live conversation id. Deliberately no OnChange: the id
+    /// changes on every first send, and dialogs read it when they need it rather than repainting
+    /// on it.</summary>
+    public void PublishConversation(string? conversationId) => ActiveConversationId = conversationId;
+
+    /// <summary>ChatPanel's write of the handover conversation id at task kick-off (and its clear
+    /// on every fresh chat). Same no-event contract as <see cref="PublishConversation"/>.</summary>
+    public void PublishTaskHandoverConversation(string? conversationId) => TaskHandoverConversationId = conversationId;
+
     public void Toggle()
     {
         IsOpen = !IsOpen;

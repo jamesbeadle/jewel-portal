@@ -4,14 +4,19 @@
 
 @*
     One pathway's pane (2026-08-27 restructure): the whole "how I deal with this email on the
-    Client / Subcontractor / Supplier / Internal side" surface. An accordion of sections —
+    Client / Subcontractor / Supplier / Internal side" surface, in two clearly separated groups —
 
-    - one TAGGING section per record type the pathway owns (the project's records of that type,
-      candidates first — pick to stage the email's tag);
-    - one section per record-less communication category (General, Chaser, Materials, Site
-      instruction…), its tick in the header and its live REGISTER in the body — every category
-      reads back like Defects does;
-    - an ACTIONS section carrying only this side's system actions.
+    TAGGING — file the email against what this side already has: one accordion section per record
+    type (the project's records, candidates first — pick to stage the tag) and one per record-less
+    communication category (General, Chaser, Materials, Site instruction…), its tick in the header
+    and its live REGISTER in the body, so every category reads back like Defects does. The
+    sections are ALWAYS visible (Nigel, 2026-08-27: a pane that hides its tagging until a project
+    is picked reads as "actions only") — a section that can't load yet says exactly what it needs.
+
+    ACTIONS — raise new records or move existing ones on, offering ONLY this side's actions (no
+    shared "General" group: calendar events and directory contacts live on the Internal side,
+    where the Calendar and the Directory live). Rendered open, not behind a chevron, so tagging
+    and acting read as the pane's two distinct halves.
 
     Everything is STAGED into the page's one list and applied by the inbox's single Apply. The
     four panes are this one component fed by PathwayPaneConfig. Registers browse without an open
@@ -49,40 +54,88 @@
             </div>
         }
 
-        @if (Config.LinkTypes.Count > 0)
+        @* ---------------- TAGGING ---------------- *@
+        @if (Config.LinkTypes.Count > 0 || Config.Family is not null)
         {
-            @if (!HasOpenEmail)
-            {
-                <p class="text-xs text-content-subtle">Open a queue email to tag it to @Config.Pathway records — the category registers below browse without one.</p>
-            }
-            else if (string.IsNullOrWhiteSpace(ProjectId))
+            <div>
+                <p class="eyebrow">Tagging</p>
+                <p class="text-xs text-content-subtle">Link this email to records and registers this side already has — every pick is staged and filed by Apply.</p>
+            </div>
+
+            @if (HasOpenEmail && Config.LinkTypes.Count > 0 && string.IsNullOrWhiteSpace(ProjectId))
             {
                 <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
-                    Set the email's <span class="font-medium">Project</span> above first — tags file the email against a project's records. To create a new record from this email, use this pane's <span class="font-medium">Actions</span>.
+                    Set the email's <span class="font-medium">Project</span> in the bar above — the record sections below fill with that project's records.
                 </p>
             }
-            else
+            @if (!HasOpenEmail && Config.LinkTypes.Count > 0)
             {
-                @foreach (var linkType in Config.LinkTypes)
-                {
-                    var type = linkType;
-                    var typeKey = $"type:{type}";
-                    <div @key="typeKey" class="rounded-lg border border-line">
-                        <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-left"
-                                title="@($"The project's {PathwayPaneConfig.TypeLabelPlural(type)} — pick to tag the email")"
-                                @onclick="() => Toggle(typeKey)">
-                            @Chevron(IsOpenSection(typeKey))
-                            <span class="text-sm font-medium text-content flex-1">@PathwayPaneConfig.TypeLabelPlural(type)</span>
-                            @if (PickedCountFor(type) > 0)
-                            {
-                                @SectionCount(PickedCountFor(type))
-                            }
-                        </button>
-                        @if (IsOpenSection(typeKey))
+                <p class="text-xs text-content-subtle">Open a queue email to tag it@(Config.Family is null ? "." : " — the registers below browse without one.")</p>
+            }
+
+            @foreach (var linkType in Config.LinkTypes)
+            {
+                var type = linkType;
+                var typeKey = $"type:{type}";
+                <div @key="typeKey" class="rounded-lg border border-line">
+                    <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-left"
+                            title="@($"The project's {PathwayPaneConfig.TypeLabelPlural(type)} — pick to tag the email")"
+                            @onclick="() => Toggle(typeKey)">
+                        @Chevron(IsOpenSection(typeKey))
+                        <span class="text-sm font-medium text-content flex-1">@PathwayPaneConfig.TypeLabelPlural(type)</span>
+                        @if (PickedCountFor(type) > 0)
                         {
-                            <div class="px-3 pb-3">
+                            @SectionCount(PickedCountFor(type))
+                        }
+                    </button>
+                    @if (IsOpenSection(typeKey))
+                    {
+                        <div class="px-3 pb-3">
+                            @if (!HasOpenEmail)
+                            {
+                                <p class="text-xs text-content-subtle">Open a queue email first — these records are tagged against the email being triaged.</p>
+                            }
+                            else if (string.IsNullOrWhiteSpace(ProjectId))
+                            {
+                                <p class="text-xs text-content-subtle">Set the email's Project in the bar above to see this project's @PathwayPaneConfig.TypeLabelPlural(type).</p>
+                            }
+                            else
+                            {
                                 <RecordLinkSection Type="type" ProjectId="@ProjectId" EmailSubject="@EmailSubject"
                                                    Picked="Picked" OnStagingChanged="StagingChangedAsync" />
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (Config.Family is { } family)
+            {
+                @foreach (var familyRecord in family.All)
+                {
+                    var record = familyRecord;
+                    var sectionKey = $"cat:{record.RecordId}";
+                    <div @key="sectionKey" class="rounded-lg border border-line">
+                        <div class="w-full flex items-center gap-2 px-3 py-2">
+                            @if (HasOpenEmail)
+                            {
+                                <input type="checkbox" title="@($"Tag the open email {family.ChipLabel(record)} — staged, applied by the inbox's Apply")"
+                                       checked="@IsPicked(record)" @onchange="() => TogglePickAsync(record)" />
+                            }
+                            <button type="button" class="flex items-center gap-2 text-left flex-1 min-w-0"
+                                    title="@(record.Summary ?? "")" @onclick="() => Toggle(sectionKey)">
+                                <span class="text-sm font-medium text-content truncate">@family.ChipLabel(record)</span>
+                                <span class="text-xs text-content-subtle">register</span>
+                                @Chevron(IsOpenSection(sectionKey))
+                            </button>
+                        </div>
+                        @if (IsOpenSection(sectionKey))
+                        {
+                            <div class="px-3 pb-3">
+                                <CategoryRegisterSection Family="family" Record="record"
+                                                         EmailSubject="@EmailSubject" ProjectName="@ProjectName"
+                                                         Picked="Picked" OnStagingChanged="StagingChangedAsync"
+                                                         OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward" />
                             </div>
                         }
                     </div>
@@ -90,83 +143,42 @@
             }
         }
 
-        @if (Config.Family is { } family)
+        @* ---------------- ACTIONS ---------------- *@
+        @if (Config.ActionGroups.Count > 0)
         {
-            @foreach (var familyRecord in family.All)
+            <div class="pt-3 border-t border-line">
+                <p class="eyebrow">Actions</p>
+                <p class="text-xs text-content-subtle">Raise something new from this email, or move one of this side's records on — lined up and fired by Apply.</p>
+            </div>
+
+            @if (!HasOpenEmail)
             {
-                var record = familyRecord;
-                var sectionKey = $"cat:{record.RecordId}";
-                <div @key="sectionKey" class="rounded-lg border border-line">
-                    <div class="w-full flex items-center gap-2 px-3 py-2">
-                        @if (HasOpenEmail)
-                        {
-                            <input type="checkbox" title="@($"Tag the open email {family.ChipLabel(record)} — staged, applied by the inbox's Apply")"
-                                   checked="@IsPicked(record)" @onchange="() => TogglePickAsync(record)" />
-                        }
-                        <button type="button" class="flex items-center gap-2 text-left flex-1 min-w-0"
-                                title="@(record.Summary ?? "")" @onclick="() => Toggle(sectionKey)">
-                            <span class="text-sm font-medium text-content truncate">@family.ChipLabel(record)</span>
-                            <span class="text-xs text-content-subtle">register</span>
-                            @Chevron(IsOpenSection(sectionKey))
-                        </button>
-                    </div>
-                    @if (IsOpenSection(sectionKey))
-                    {
-                        <div class="px-3 pb-3">
-                            <CategoryRegisterSection Family="family" Record="record"
-                                                     EmailSubject="@EmailSubject" ProjectName="@ProjectName"
-                                                     Picked="Picked" OnStagingChanged="StagingChangedAsync"
-                                                     OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward" />
-                        </div>
-                    }
-                </div>
+                <p class="text-xs text-content-subtle">Open a queue email to line up actions — they run with its Apply.</p>
+            }
+            else
+            {
+                <PathwayActionsSection @key="EmailKey" Groups="Config.ActionGroups"
+                                       Projects="@Projects"
+                                       ProjectId="@ProjectId"
+                                       StagedActions="StagedActions"
+                                       PickedRecords="Picked"
+                                       OnStagingChanged="StagingChangedAsync"
+                                       StagedCreate="@StagedCreate"
+                                       StagedCreateChanged="StagedCreateChanged"
+                                       CreatedRecords="CreatedRecords"
+                                       OnCreateNow="OnCreateNow"
+                                       Busy="@Busy"
+                                       OnClose="OnClose"
+                                       QsRecipients="@QsRecipients"
+                                       OnForwardToQs="OnForwardToQs"
+                                       TodoRows="TodoRows"
+                                       TodoAssigneeOptions="@TodoAssigneeOptions"
+                                       TodoProjectNote="@TodoProjectNote"
+                                       EmailAttachments="@EmailAttachments"
+                                       SenderEmail="@SenderEmail"
+                                       EmailSubject="@EmailSubject" />
             }
         }
-
-        <div class="rounded-lg border border-line">
-            <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-left"
-                    title="@($"Line up {Config.Pathway.ToLowerInvariant()}-side actions to run when this email's triage completes")"
-                    @onclick='() => Toggle("actions")'>
-                @Chevron(IsOpenSection("actions"))
-                <span class="text-sm font-medium text-content flex-1">Actions</span>
-                @if (StagedActionCountHere > 0)
-                {
-                    @SectionCount(StagedActionCountHere)
-                }
-            </button>
-            @if (IsOpenSection("actions"))
-            {
-                <div class="px-3 pb-3">
-                    @if (!HasOpenEmail)
-                    {
-                        <p class="text-xs text-content-subtle">Open a queue email to line up actions — they run with its Apply.</p>
-                    }
-                    else
-                    {
-                        <PathwayActionsSection @key="EmailKey" Groups="Config.ActionGroups"
-                                               Projects="@Projects"
-                                               ProjectId="@ProjectId"
-                                               StagedActions="StagedActions"
-                                               PickedRecords="Picked"
-                                               OnStagingChanged="StagingChangedAsync"
-                                               StagedCreate="@StagedCreate"
-                                               StagedCreateChanged="StagedCreateChanged"
-                                               CreatedRecords="CreatedRecords"
-                                               OnCreateNow="OnCreateNow"
-                                               Busy="@Busy"
-                                               OnClose="OnClose"
-                                               QsRecipients="@QsRecipients"
-                                               OnForwardToQs="OnForwardToQs"
-                                               TodoRows="TodoRows"
-                                               TodoAssigneeOptions="@TodoAssigneeOptions"
-                                               TodoProjectNote="@TodoProjectNote"
-                                               EmailAttachments="@EmailAttachments"
-                                               SenderEmail="@SenderEmail"
-                                               EmailSubject="@EmailSubject" />
-                    }
-                </div>
-            }
-        </div>
     </div>
 
     @if (HasOpenEmail)
@@ -237,16 +249,27 @@
     private bool HasOpenEmail => !string.IsNullOrWhiteSpace(EmailSubject);
 
     private readonly HashSet<string> openSections = new();
+    private string autoExpandedFor = "";
+
     private bool IsOpenSection(string key) => openSections.Contains(key);
     private void Toggle(string key)
     {
         if (!openSections.Add(key)) openSections.Remove(key);
     }
 
-    private int PickedCountFor(RecordType type) => Picked.Count(record => record.Type == type);
+    // The first record section opens itself once per email (once the project is known), so
+    // landing on the pane leads with the most likely tagging target and its candidate matches —
+    // not a wall of closed drawers. The triager's own opens/closes are never overridden.
+    protected override void OnParametersSet()
+    {
+        if (!HasOpenEmail || string.IsNullOrWhiteSpace(ProjectId) || Config.LinkTypes.Count == 0) return;
+        var key = $"{EmailKey}|{ProjectId}";
+        if (autoExpandedFor == key) return;
+        autoExpandedFor = key;
+        openSections.Add($"type:{Config.LinkTypes[0]}");
+    }
 
-    private int StagedActionCountHere =>
-        StagedActions.Count(action => Config.AllActionKinds.Contains(action.Kind));
+    private int PickedCountFor(RecordType type) => Picked.Count(record => record.Type == type);
 
     private bool IsPicked(LinkableRecord record) =>
         Picked.Any(picked => picked.RecordId == record.RecordId);

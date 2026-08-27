@@ -51,7 +51,7 @@ window.jpmsChatDropZone = function (zoneId, inputId) {
         if (!input || e.dataTransfer.files.length === 0) return;
 
         const transfer = new DataTransfer();
-        transfer.items.add(e.dataTransfer.files[0]); // one file per message, same as the paperclip
+        for (const file of e.dataTransfer.files) transfer.items.add(file); // every dropped file stages, same as the paperclip's multi-pick
         input.files = transfer.files;
         input.dispatchEvent(new Event("change", { bubbles: true }));
     });
@@ -67,7 +67,7 @@ window.jpmsChatDropZone = function (zoneId, inputId) {
         if (!input) return;
         e.preventDefault();
 
-        let file = files[0]; // one file per message, same as the paperclip
+        let file = files[0]; // a clipboard carries one file; it stages ALONGSIDE anything already staged
         if (file.type && file.type.indexOf("image/") === 0) {
             // Clipboard images all arrive named "image.png" — stamp the name so two pastes into
             // one conversation read back as two attachments, not the same one twice.

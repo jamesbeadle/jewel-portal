@@ -18,6 +18,12 @@ public static class AiRouteRegistration
             new QueryRoute("/api/ai/conversations",
                 query => $"/api/ai/conversations?take={((ListAiConversations)query).Take}"));
 
+        // A conversation's attached files (names and sizes, never bytes) — read by chat-aware
+        // dialogs so the work-order form can keep the drafted-from quote on the order.
+        queries.Register<ListAiConversationAttachments, IReadOnlyList<AiConversationAttachment>>(
+            new QueryRoute("/api/ai/conversations/{conversationId}/attachments",
+                query => $"/api/ai/conversations/{((ListAiConversationAttachments)query).ConversationId}/attachments"));
+
         queries.Register<ListAgentActivity, IReadOnlyList<AgentActivity>>(
             new QueryRoute("/api/agents/activity", BuildAgentActivityPath));
 

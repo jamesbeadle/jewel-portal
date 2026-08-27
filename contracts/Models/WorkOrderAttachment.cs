@@ -6,7 +6,10 @@ public enum WorkOrderAttachmentSource
     /// <summary>A file uploaded from the computer (the Add/Edit order form or the PO page).</summary>
     Upload = 0,
     /// <summary>Copied off the triaged email the order was raised from (Control Centre).</summary>
-    Email = 1
+    Email = 1,
+    /// <summary>Copied off the assistant conversation the order was drafted from — the quote the
+    /// user attached to the chat, kept on the order without being re-picked from disk.</summary>
+    Chat = 2
 }
 
 /// <summary>

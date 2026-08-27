@@ -21,15 +21,6 @@ public sealed record PathwayPaneConfig(
     public IReadOnlyList<SystemActionKind> AllActionKinds { get; } =
         ActionGroups.SelectMany(group => group.Kinds).ToList();
 
-    // The pathway-neutral actions every pane closes with: arranging something dated and keeping
-    // a contact on file belong to whichever side the email came from.
-    private const string GeneralGroup = "General";
-    private static readonly SystemActionKind[] GeneralKinds =
-    {
-        SystemActionKind.RaiseCalendarEvent,
-        SystemActionKind.AddDirectoryContact,
-    };
-
     public static PathwayPaneConfig Client { get; } = new(
         "Client",
         "The client, or their architect and team",
@@ -58,7 +49,6 @@ public sealed record PathwayPaneConfig(
                 SystemActionKind.RejectVariationOrder,
             }),
             (SystemActionGuide.PeopleGroup, new[] { SystemActionKind.ForwardToQs }),
-            (GeneralGroup, GeneralKinds),
         });
 
     public static PathwayPaneConfig Subcontractor { get; } = new(
@@ -75,7 +65,6 @@ public sealed record PathwayPaneConfig(
                 SystemActionKind.RaiseDefect,
             }),
             (SystemActionGuide.MoveGroup, new[] { SystemActionKind.FileBidPackageTender }),
-            (GeneralGroup, GeneralKinds),
         });
 
     public static PathwayPaneConfig Supplier { get; } = new(
@@ -83,10 +72,9 @@ public sealed record PathwayPaneConfig(
         "A materials or goods supplier, as distinct from a subcontractor",
         Array.Empty<RecordType>(),
         CommunicationFamily.Supplier,
-        new (string, IReadOnlyList<SystemActionKind>)[]
-        {
-            (GeneralGroup, GeneralKinds),
-        });
+        // No supplier-side actions yet (supplier record types are a later phase) — the pane
+        // renders no Actions group at all rather than padding one out.
+        Array.Empty<(string, IReadOnlyList<SystemActionKind>)>());
 
     // Bid packages and work orders came OUT of the Internal link types in this restructure
     // (Nigel, 2026-08-27): they are subcontractor records and live on the Subcontractor pane.
@@ -97,12 +85,13 @@ public sealed record PathwayPaneConfig(
         CommunicationFamily.Internal,
         new (string, IReadOnlyList<SystemActionKind>)[]
         {
+            (SystemActionGuide.RaiseGroup, new[] { SystemActionKind.RaiseCalendarEvent }),
             (SystemActionGuide.PeopleGroup, new[]
             {
                 SystemActionKind.CreateTodos,
                 SystemActionKind.CompleteTodo,
+                SystemActionKind.AddDirectoryContact,
             }),
-            (GeneralGroup, GeneralKinds),
         });
 
     public static IReadOnlyList<PathwayPaneConfig> All { get; } =
@@ -138,6 +127,7 @@ public sealed record PathwayPaneConfig(
     {
         RecordType.Request => "Requests / RFIs",
         RecordType.Lad => "LADs claims",
+        RecordType.TenderEnquiry => "Tender Enquiries",
         _ => TypeLabel(type) + "s"
     };
 }

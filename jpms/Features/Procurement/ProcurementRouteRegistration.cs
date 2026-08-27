@@ -97,6 +97,12 @@ public static class ProcurementRouteRegistration
                     return $"/api/work-orders/{c.WorkOrderId}/attachments/{c.WorkOrderAttachmentId}";
                 }));
 
+        // Copies files off the assistant conversation onto the order (the drafted-from quote) —
+        // JSON only; the bytes move server-side between the two blob stores.
+        commands.Register<AttachChatFilesToWorkOrder, IReadOnlyList<WorkOrderAttachment>>(
+            new CommandRoute("POST", "/api/work-orders/{workOrderId}/attachments/from-chat",
+                command => $"/api/work-orders/{((AttachChatFilesToWorkOrder)command).WorkOrderId}/attachments/from-chat"));
+
         commands.Register<CreateBidPackage, BidPackage>(
             new CommandRoute("POST", "/api/projects/{projectId}/bid-packages",
                 command => $"/api/projects/{((CreateBidPackage)command).ProjectId}/bid-packages"));

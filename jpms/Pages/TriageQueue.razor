@@ -2063,18 +2063,13 @@ else
     };
 
     // Each pathway icon's badge = the staged work that pane owns: its record picks and category
-    // ticks, its own staged actions, the drafted new record and the drafted to-dos. The
-    // pathway-neutral "General" actions (calendar event, directory contact) are offered on every
-    // pane, so they count on none — one staged action must not light four icons.
-    private static readonly SystemActionKind[] GeneralActionKinds =
-    {
-        SystemActionKind.RaiseCalendarEvent, SystemActionKind.AddDirectoryContact
-    };
-
+    // ticks, its own staged actions, the drafted new record and the drafted to-dos. Every action
+    // kind lives on exactly one pane (no shared "General" group — 2026-08-27 review), so the
+    // kind→pane map is the pane configs themselves.
     private int PathwayBadge(PathwayPaneConfig config) =>
         pickedRecords.Count(record => config.LinkTypes.Contains(record.Type)
             || (config.Family is { } family && family.All.Any(familyRecord => familyRecord.RecordId == record.RecordId)))
-        + stagedSystemActions.Count(action => !GeneralActionKinds.Contains(action.Kind) && config.AllActionKinds.Contains(action.Kind))
+        + stagedSystemActions.Count(action => config.AllActionKinds.Contains(action.Kind))
         + (config.Pathway == "Internal" ? CurrentTodoDrafts().Count : 0)
         + (StagedCreateReady && StagedCreatePathway(stagedCreate!.Kind) == config.Pathway ? 1 : 0);
 
@@ -2084,7 +2079,8 @@ else
         StagedRecordKind.Request or StagedRecordKind.TenderEnquiry
             or StagedRecordKind.BuildingControlInspection => "Client",
         StagedRecordKind.BidPackage or StagedRecordKind.WorkOrder or StagedRecordKind.Defect => "Subcontractor",
-        _ => null // CalendarEvent is a General action, offered everywhere — counted nowhere.
+        StagedRecordKind.CalendarEvent => "Internal", // raised from the Internal pane, beside the Calendar
+        _ => null
     };
 
     private bool StagedCreateReady => stagedCreate is { } sc && sc.IsReady;

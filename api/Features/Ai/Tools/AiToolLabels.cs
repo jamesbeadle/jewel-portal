@@ -29,6 +29,12 @@ public static class AiToolLabels
                                    ?? "Looking that up",
             "list_work_orders" => Named(arguments, "search", search => $"Finding work orders: {search}")
                                   ?? "Reading the work orders",
+            "list_bid_packages" => Named(arguments, "search", search => $"Finding bid packages: {search}")
+                                   ?? "Reading the bid packages",
+            "list_defects" => Named(arguments, "search", search => $"Finding defects: {search}")
+                              ?? "Reading the defects",
+            "list_todos" => Named(arguments, "search", search => $"Finding to-dos: {search}")
+                            ?? "Reading the to-do list",
             "navigate_to" => "Taking you there",
             "switch_agent" => Named(arguments, "agent", agent => $"Bringing in the {agent} agent")
                               ?? "Changing agent",

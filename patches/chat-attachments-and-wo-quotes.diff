@@ -1,0 +1,1283 @@
+diff --git a/api/Features/Ai/Commands/SendAiMessageHandler.cs b/api/Features/Ai/Commands/SendAiMessageHandler.cs
+index 202b738..50ffea7 100644
+--- a/api/Features/Ai/Commands/SendAiMessageHandler.cs
++++ b/api/Features/Ai/Commands/SendAiMessageHandler.cs
+@@ -42,7 +42,9 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
+         // account of how the document came to say what it says), but the assistant should still
+         // remember what the user was just discussing. The tail of the previous conversation rides
+         // in ONCE, as a Context row — replayed to the model as background, never shown as a bubble.
+-        if (isNew && await BuildHandoverAsync(command, cancellationToken) is { } handover)
++        // The previous chat's ATTACHMENTS follow properly (rows copied, source ids rewritten), so
++        // read_source works on them here — see BuildHandoverAsync.
++        if (isNew && await BuildHandoverAsync(command, conversation.ConversationId, cancellationToken) is { } handover)
+         {
+             context.AiConversationMessages.Add(new AiConversationMessageEntity
+             {
+@@ -138,8 +140,15 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
+     /// across) plus the most recent Context rows VERBATIM: attached files above all. Null when
+     /// there is nothing to carry: no previous id, a previous conversation the caller does not own
+     /// (an id is not a capability, here as everywhere), or one with nothing carryable.
++    ///
++    /// <para>The previous chat's attachment ROWS are copied into the fresh conversation too (same
++    /// blob — the bytes are not duplicated), with every carried source id rewritten to the copy.
++    /// Without this, "populate the form from my spreadsheet" — the flow the handover exists for —
++    /// handed the task conversation a manifest whose read_source refused every call: the sources
++    /// were scoped to the OLD conversation, and the model could read nothing past the preview.</para>
+     /// </summary>
+-    private async Task<string?> BuildHandoverAsync(SendAiMessage command, CancellationToken ct)
++    private async Task<string?> BuildHandoverAsync(
++        SendAiMessage command, string newConversationId, CancellationToken ct)
+     {
+         if (string.IsNullOrWhiteSpace(command.PreviousConversationId)) return null;
+ 
+@@ -199,6 +208,38 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
+                 handover.AppendLine($"[{speaker}] {body}");
+             }
+         }
+-        return handover.ToString();
++
++        // The files themselves follow the user across: each of the previous conversation's
++        // attachment rows is copied onto the fresh conversation (same blob ref — a copy of the
++        // register entry, not of the bytes; the container's age-based retention treats both alike)
++        // and every carried source id is rewritten to the copy, so read_source and list_sources
++        // answer here exactly as they did in the chat the file was attached to.
++        var text = handover.ToString();
++        var carriedAttachments = await context.AiAttachments
++            .AsNoTracking()
++            .Where(row => row.ConversationId == command.PreviousConversationId)
++            .OrderBy(row => row.UploadedAt)
++            .ToListAsync(ct);
++        foreach (var source in carriedAttachments)
++        {
++            var copyId = Guid.NewGuid().ToString("N");
++            context.AiAttachments.Add(new AiAttachmentEntity
++            {
++                AttachmentId = copyId,
++                ConversationId = newConversationId,
++                FileName = source.FileName,
++                ContentType = source.ContentType,
++                SizeBytes = source.SizeBytes,
++                BlobRef = source.BlobRef,
++                ManifestJson = source.ManifestJson,
++                UploadedByEmail = source.UploadedByEmail,
++                UploadedAt = source.UploadedAt
++            });
++            text = text.Replace(
++                Tools.AiSourceTools.ChatSourceId(source.AttachmentId),
++                Tools.AiSourceTools.ChatSourceId(copyId),
++                StringComparison.Ordinal);
++        }
++        return text;
+     }
+ }
+diff --git a/api/Features/Ai/Queries/ListAiConversationAttachmentsEndpoint.cs b/api/Features/Ai/Queries/ListAiConversationAttachmentsEndpoint.cs
+new file mode 100644
+index 0000000..415a54a
+--- /dev/null
++++ b/api/Features/Ai/Queries/ListAiConversationAttachmentsEndpoint.cs
+@@ -0,0 +1,58 @@
++using Jewel.JPMS.Api.Data;
++using Jewel.JPMS.Api.Gates;
++using Jewel.JPMS.Contracts.Ai;
++using Microsoft.AspNetCore.Http;
++using Microsoft.AspNetCore.Mvc;
++using Microsoft.Azure.Functions.Worker;
++using Microsoft.EntityFrameworkCore;
++
++namespace Jewel.JPMS.Api.Features.Ai.Queries;
++
++/// <summary>
++/// GET /api/ai/conversations/{conversationId}/attachments — the files attached to one
++/// conversation: names, types and sizes, never the bytes. Read by chat-aware dialogs (the
++/// work-order form's "files from this chat" list) so the quote an order was drafted from can be
++/// kept on the order. Scoped like the replay endpoint: only the conversation's own starter gets
++/// rows back — anyone else's id answers an empty list, indistinguishable from a bare
++/// conversation, so the endpoint leaks nothing about other people's chats. No separate handler on
++/// purpose — the scoping IS the query (the ListAiConversations reasoning).
++/// </summary>
++public sealed class ListAiConversationAttachmentsEndpoint
++{
++    private readonly SignedInUserResolver users;
++    private readonly JpmsContext context;
++
++    public ListAiConversationAttachmentsEndpoint(SignedInUserResolver users, JpmsContext context)
++    {
++        this.users = users;
++        this.context = context;
++    }
++
++    [Function(nameof(ListAiConversationAttachments))]
++    public async Task<IActionResult> Run(
++        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "ai/conversations/{conversationId}/attachments")] HttpRequest request,
++        string conversationId)
++    {
++        var cancellationToken = request.HttpContext.RequestAborted;
++
++        var signedInUser = await users.ResolveAsync(request, cancellationToken);
++        if (signedInUser is null) return new UnauthorizedResult();
++        if (!AiRoles.AllowedToUseAssistant.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
++
++        var owned = await context.AiConversations
++            .AsNoTracking()
++            .AnyAsync(row => row.ConversationId == conversationId
++                             && row.StartedByEmail == signedInUser.Email, cancellationToken);
++        if (!owned) return new OkObjectResult(Array.Empty<AiConversationAttachment>());
++
++        var rows = await context.AiAttachments
++            .AsNoTracking()
++            .Where(row => row.ConversationId == conversationId)
++            .OrderBy(row => row.UploadedAt)
++            .Select(row => new AiConversationAttachment(
++                row.AttachmentId, row.FileName, row.ContentType, row.SizeBytes, row.UploadedAt))
++            .ToListAsync(cancellationToken);
++
++        return new OkObjectResult(rows);
++    }
++}
+diff --git a/api/Features/Procurement/Attachments/AttachChatFilesToWorkOrderHandler.cs b/api/Features/Procurement/Attachments/AttachChatFilesToWorkOrderHandler.cs
+new file mode 100644
+index 0000000..9e19b75
+--- /dev/null
++++ b/api/Features/Procurement/Attachments/AttachChatFilesToWorkOrderHandler.cs
+@@ -0,0 +1,147 @@
++using Jewel.JPMS.Api.Cqrs;
++using Jewel.JPMS.Api.Data;
++using Jewel.JPMS.Api.Data.Entities;
++using Jewel.JPMS.Api.Features.Ai.Storage;
++using Jewel.JPMS.Contracts.Procurement;
++using Jewel.JPMS.Models;
++using Microsoft.EntityFrameworkCore;
++
++namespace Jewel.JPMS.Api.Features.Procurement.Attachments;
++
++/// <summary>
++/// Copies files off an assistant conversation onto a work order's attachment register — the quote
++/// the order was drafted from, kept for reference exactly like a file picked from disk. The bytes
++/// move server-side, ai-attachments store → work-order store (a COPY: the chat keeps its own,
++/// because the assistant may still be asked to read it, and the chat store's retention rule must
++/// never quietly empty an order's records). Rows land with
++/// <see cref="WorkOrderAttachmentSource.Chat"/> so the register says where each file came from.
++///
++/// <para>Guards, in order: the order must exist; the conversation must belong to the caller (an
++/// id is not a capability — the same rule as every conversation read); and a file already copied
++/// onto this order (same name and size, chat-sourced) is skipped rather than doubled, so saving
++/// an edit twice cannot litter the register. A file whose blob the retention rule has already
++/// reached refuses with its name — silently keeping a register row with no bytes behind it would
++/// be a record that lies.</para>
++/// </summary>
++public sealed class AttachChatFilesToWorkOrderHandler
++    : ICommandHandler<AttachChatFilesToWorkOrder, IReadOnlyList<WorkOrderAttachment>>
++{
++    private readonly JpmsContext context;
++    private readonly IAiAttachmentStore chatStore;
++    private readonly IWorkOrderAttachmentStore orderStore;
++
++    public AttachChatFilesToWorkOrderHandler(
++        JpmsContext context, IAiAttachmentStore chatStore, IWorkOrderAttachmentStore orderStore)
++    {
++        this.context = context;
++        this.chatStore = chatStore;
++        this.orderStore = orderStore;
++    }
++
++    public async Task<IReadOnlyList<WorkOrderAttachment>> HandleAsync(
++        AttachChatFilesToWorkOrder command, CancellationToken cancellationToken)
++    {
++        var order = await context.WorkOrders
++            .AsNoTracking()
++            .FirstOrDefaultAsync(row => row.WorkOrderId == command.WorkOrderId, cancellationToken)
++            ?? throw new InvalidOperationException($"Work order {command.WorkOrderId} not found.");
++
++        var conversationOwned = await context.AiConversations
++            .AsNoTracking()
++            .AnyAsync(row => row.ConversationId == command.ConversationId
++                             && row.StartedByEmail == command.RequestedByEmail, cancellationToken);
++        if (!conversationOwned)
++            throw new InvalidOperationException("That chat could not be found — its files can't be copied.");
++
++        var wanted = command.AttachmentIds
++            .Where(id => !string.IsNullOrWhiteSpace(id))
++            .Distinct(StringComparer.OrdinalIgnoreCase)
++            .ToList();
++        if (wanted.Count == 0)
++            return await WorkOrderAttachmentMapping.ListAsync(context, command.WorkOrderId, cancellationToken);
++
++        var sources = await context.AiAttachments
++            .AsNoTracking()
++            .Where(row => row.ConversationId == command.ConversationId && wanted.Contains(row.AttachmentId))
++            .OrderBy(row => row.UploadedAt)
++            .ToListAsync(cancellationToken);
++        if (sources.Count < wanted.Count)
++            throw new InvalidOperationException(
++                "One of those chat files is no longer on the conversation — refresh and try again.");
++
++        // What the order already holds from a chat, so a second save of the same dialog is a
++        // no-op for the files that landed the first time.
++        var alreadyCopied = await context.WorkOrderAttachments
++            .AsNoTracking()
++            .Where(row => row.WorkOrderId == command.WorkOrderId
++                          && row.Source == (int)WorkOrderAttachmentSource.Chat)
++            .Select(row => new { row.FileName, row.FileSizeBytes })
++            .ToListAsync(cancellationToken);
++
++        var now = DateTimeOffset.UtcNow;
++        foreach (var source in sources)
++        {
++            if (alreadyCopied.Any(existing =>
++                    string.Equals(existing.FileName, source.FileName, StringComparison.OrdinalIgnoreCase)
++                    && existing.FileSizeBytes == source.SizeBytes))
++            {
++                continue;
++            }
++
++            byte[]? bytes;
++            try
++            {
++                bytes = await chatStore.OpenAsync(source.BlobRef, cancellationToken);
++            }
++            catch (Exception ex) when (ex is not OperationCanceledException)
++            {
++                await context.SaveChangesAsync(cancellationToken); // keep the files that DID copy
++                throw new InvalidOperationException(
++                    $"\"{source.FileName}\" could not be fetched from the chat's storage ({ex.Message}).");
++            }
++            if (bytes is null)
++            {
++                await context.SaveChangesAsync(cancellationToken);
++                throw new InvalidOperationException(
++                    $"\"{source.FileName}\" is no longer held on the chat — attachments are kept for a "
++                    + "limited time. Add it to the order with \"Add files\" instead.");
++            }
++
++            var attachmentId = Guid.NewGuid().ToString("N");
++            var contentType = string.IsNullOrWhiteSpace(source.ContentType)
++                ? "application/octet-stream"
++                : source.ContentType;
++
++            string blobRef;
++            try
++            {
++                using var content = new MemoryStream(bytes, writable: false);
++                blobRef = await orderStore.UploadAsync(
++                    order.ProjectId, command.WorkOrderId, attachmentId,
++                    source.FileName, contentType, content, cancellationToken);
++            }
++            catch (Exception ex) when (ex is not OperationCanceledException)
++            {
++                await context.SaveChangesAsync(cancellationToken); // keep the files that DID copy
++                throw new InvalidOperationException($"Could not store \"{source.FileName}\". ({ex.Message})");
++            }
++
++            context.WorkOrderAttachments.Add(new WorkOrderAttachmentEntity
++            {
++                WorkOrderAttachmentId = attachmentId,
++                WorkOrderId = command.WorkOrderId,
++                ProjectId = order.ProjectId,
++                FileName = source.FileName,
++                ContentType = contentType,
++                FileSizeBytes = source.SizeBytes,
++                BlobRef = blobRef,
++                Source = (int)WorkOrderAttachmentSource.Chat,
++                AddedAt = now,
++                AddedByEmail = command.RequestedByEmail
++            });
++        }
++
++        await context.SaveChangesAsync(cancellationToken);
++        return await WorkOrderAttachmentMapping.ListAsync(context, command.WorkOrderId, cancellationToken);
++    }
++}
+diff --git a/api/Features/Procurement/Attachments/WorkOrderAttachmentEndpoints.cs b/api/Features/Procurement/Attachments/WorkOrderAttachmentEndpoints.cs
+index 6052c46..4d94667 100644
+--- a/api/Features/Procurement/Attachments/WorkOrderAttachmentEndpoints.cs
++++ b/api/Features/Procurement/Attachments/WorkOrderAttachmentEndpoints.cs
+@@ -37,19 +37,22 @@ public sealed class WorkOrderAttachmentEndpoints
+     private readonly IWorkOrderAttachmentStore blobStore;
+     private readonly IQueryHandler<ListWorkOrderAttachments, IReadOnlyList<WorkOrderAttachment>> list;
+     private readonly ICommandHandler<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>> remove;
++    private readonly ICommandHandler<AttachChatFilesToWorkOrder, IReadOnlyList<WorkOrderAttachment>> attachFromChat;
+ 
+     public WorkOrderAttachmentEndpoints(
+         SignedInUserResolver users,
+         JpmsContext context,
+         IWorkOrderAttachmentStore blobStore,
+         IQueryHandler<ListWorkOrderAttachments, IReadOnlyList<WorkOrderAttachment>> list,
+-        ICommandHandler<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>> remove)
++        ICommandHandler<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>> remove,
++        ICommandHandler<AttachChatFilesToWorkOrder, IReadOnlyList<WorkOrderAttachment>> attachFromChat)
+     {
+         this.users = users;
+         this.context = context;
+         this.blobStore = blobStore;
+         this.list = list;
+         this.remove = remove;
++        this.attachFromChat = attachFromChat;
+     }
+ 
+     [Function(nameof(ListWorkOrderAttachments))]
+@@ -136,6 +139,42 @@ public sealed class WorkOrderAttachmentEndpoints
+         return new OkObjectResult(await list.HandleAsync(new ListWorkOrderAttachments(workOrderId), cancellationToken));
+     }
+ 
++    /// <summary>
++    /// POST /api/work-orders/{workOrderId}/attachments/from-chat — copies files the caller
++    /// attached to an assistant conversation onto the order's register (the quote the order was
++    /// drafted from). JSON body, no bytes: the copy happens server-side, ai-attachments store →
++    /// this order's container. Same writer roles as an upload; the handler additionally checks
++    /// the conversation belongs to the signed-in user.
++    /// </summary>
++    [Function(nameof(AttachChatFilesToWorkOrder))]
++    public async Task<IActionResult> AttachFromChat(
++        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "work-orders/{workOrderId}/attachments/from-chat")] HttpRequest request,
++        string workOrderId)
++    {
++        var cancellationToken = request.HttpContext.RequestAborted;
++        var signedInUser = await users.ResolveAsync(request, cancellationToken);
++        if (signedInUser is null) return new UnauthorizedResult();
++        if (!AllowedToAttach.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
++
++        AttachChatFilesToWorkOrder? body;
++        try { body = await request.ReadFromJsonAsync<AttachChatFilesToWorkOrder>(cancellationToken); }
++        catch { body = null; }
++        if (body is null || string.IsNullOrWhiteSpace(body.ConversationId) || body.AttachmentIds is null)
++            return new BadRequestObjectResult("A conversation id and the files to copy are required.");
++
++        var command = body with { WorkOrderId = workOrderId, RequestedByEmail = signedInUser.Email };
++        try
++        {
++            return new OkObjectResult(await attachFromChat.HandleAsync(command, cancellationToken));
++        }
++        catch (InvalidOperationException ex)
++        {
++            // The handler's own refusals (order missing, chat not the caller's, a file's bytes
++            // gone) are sentences worth showing verbatim in the dialog.
++            return new BadRequestObjectResult(ex.Message);
++        }
++    }
++
+     [Function(nameof(RemoveWorkOrderAttachment))]
+     public async Task<IActionResult> Remove(
+         [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "work-orders/{workOrderId}/attachments/{attachmentId}")] HttpRequest request,
+diff --git a/api/Features/Procurement/ProcurementFeatureRegistration.cs b/api/Features/Procurement/ProcurementFeatureRegistration.cs
+index 8fbe676..99ba70d 100644
+--- a/api/Features/Procurement/ProcurementFeatureRegistration.cs
++++ b/api/Features/Procurement/ProcurementFeatureRegistration.cs
+@@ -22,6 +22,9 @@ public static class ProcurementFeatureRegistration
+             ListWorkOrderAttachmentsHandler>();
+         services.AddScoped<ICommandHandler<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>>,
+             RemoveWorkOrderAttachmentHandler>();
++        // The quote the order was drafted from, copied off the assistant conversation server-side.
++        services.AddScoped<ICommandHandler<AttachChatFilesToWorkOrder, IReadOnlyList<WorkOrderAttachment>>,
++            AttachChatFilesToWorkOrderHandler>();
+ 
+         // Tender-document attachments on a bid package (supplier-facing — they travel with the
+         // invite draft alongside the linked drawings).
+diff --git a/contracts/Ai/ListAiConversationAttachments.cs b/contracts/Ai/ListAiConversationAttachments.cs
+new file mode 100644
+index 0000000..e87ffe9
+--- /dev/null
++++ b/contracts/Ai/ListAiConversationAttachments.cs
+@@ -0,0 +1,29 @@
++using Jewel.JPMS.Contracts.Cqrs;
++
++namespace Jewel.JPMS.Contracts.Ai;
++
++/// <summary>
++/// The files attached to one assistant conversation, oldest first — name, type and size, never the
++/// bytes. Read by the chat-aware dialogs beside the panel (the work-order form's "files from this
++/// chat" list above all) so a quote the assistant drafted an order from can be kept ON the order
++/// without anyone re-picking it from disk. Scoped server-side to the caller's own conversations —
++/// a conversation id is not a capability, here as everywhere.
++/// </summary>
++public sealed record ListAiConversationAttachments(string ConversationId)
++    : IQuery<IReadOnlyList<AiConversationAttachment>>;
++
++/// <summary>One attached file's register entry. AttachmentId is what
++/// <c>AttachChatFilesToWorkOrder</c> takes; the bytes stay server-side.</summary>
++public sealed record AiConversationAttachment(
++    string AttachmentId,
++    string FileName,
++    string ContentType,
++    long SizeBytes,
++    DateTimeOffset UploadedAt)
++{
++    /// <summary>True for the image types the panel carries inline — usually pasted screenshots,
++    /// which is why the work-order form leaves them unticked by default.</summary>
++    public bool IsImage =>
++        ContentType is { Length: > 0 } type
++        && type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
++}
+diff --git a/contracts/Models/WorkOrderAttachment.cs b/contracts/Models/WorkOrderAttachment.cs
+index 08ed7ff..4059651 100644
+--- a/contracts/Models/WorkOrderAttachment.cs
++++ b/contracts/Models/WorkOrderAttachment.cs
+@@ -6,7 +6,10 @@ public enum WorkOrderAttachmentSource
+     /// <summary>A file uploaded from the computer (the Add/Edit order form or the PO page).</summary>
+     Upload = 0,
+     /// <summary>Copied off the triaged email the order was raised from (Control Centre).</summary>
+-    Email = 1
++    Email = 1,
++    /// <summary>Copied off the assistant conversation the order was drafted from — the quote the
++    /// user attached to the chat, kept on the order without being re-picked from disk.</summary>
++    Chat = 2
+ }
+ 
+ /// <summary>
+diff --git a/contracts/Procurement/WorkOrderAttachmentContracts.cs b/contracts/Procurement/WorkOrderAttachmentContracts.cs
+index 3573db4..50d9d60 100644
+--- a/contracts/Procurement/WorkOrderAttachmentContracts.cs
++++ b/contracts/Procurement/WorkOrderAttachmentContracts.cs
+@@ -17,6 +17,21 @@ public sealed record RemoveWorkOrderAttachment(
+     string WorkOrderId,
+     string WorkOrderAttachmentId) : ICommand<IReadOnlyList<WorkOrderAttachment>>;
+ 
++/// <summary>
++/// Copies files the user attached to an assistant conversation onto a work order's attachment
++/// register — the quote the order was drafted from, kept for reference without being re-picked
++/// from disk. The bytes move server-side, ai-attachments store → work-order store, so they never
++/// round-trip through the browser (the same shape as the triage path's email-attachment copy).
++/// The conversation must belong to the caller — an id is not a capability — and files land with
++/// <see cref="WorkOrderAttachmentSource.Chat"/> so the register says where they came from.
++/// RequestedByEmail is stamped server-side from the signed-in user, never trusted from the client.
++/// </summary>
++public sealed record AttachChatFilesToWorkOrder(
++    string WorkOrderId,
++    string ConversationId,
++    IReadOnlyList<string> AttachmentIds,
++    string RequestedByEmail = "") : ICommand<IReadOnlyList<WorkOrderAttachment>>;
++
+ // Uploading a file is multipart/form-data and is posted directly by the client store rather than
+ // through the JSON command sender — the same arrangement request attachments use. See
+ // POST /api/work-orders/{workOrderId}/attachments. Email attachments picked during triage travel
+diff --git a/jpms/Components/Chat/ChatPanel.razor b/jpms/Components/Chat/ChatPanel.razor
+index 8b9e46d..d8a62dd 100644
+--- a/jpms/Components/Chat/ChatPanel.razor
++++ b/jpms/Components/Chat/ChatPanel.razor
+@@ -398,36 +398,42 @@
+                 @if (!historyOpen)
+                 {
+                 <footer class="shrink-0 border-t border-line px-3 py-3">
+-                    @* The STAGED file (goes up with Send, like any chat app) and transient upload
+-                       states. A landed attachment shows in the TRANSCRIPT, under the message it
+-                       went with — it never sits here looking like it might re-upload. *@
+-                    @if (stagedFileName is not null || uploadingFileName is not null || attachError is not null)
++                    @* The STAGED files (they go up with Send, like any chat app) and transient
++                       upload states. A landed attachment shows in the TRANSCRIPT, under the message
++                       it went with — it never sits here looking like it might re-upload. *@
++                    @if (stagedFiles.Count > 0 || uploadingFileName is not null || attachError is not null)
+                     {
+                         <div class="px-1 pb-2 space-y-1">
+-                            @if (stagedFileName is not null && uploadingFileName is null)
++                            @if (stagedFiles.Count > 0 && uploadingFileName is null)
+                             {
+-                                <div class="flex items-center gap-1.5">
+-                                    @if (StagedImageDataUrl is not null)
+-                                    {
+-                                        @* The pasted screenshot, seen before it goes — a clipboard
+-                                           paste is invisible until something shows it back. *@
+-                                        <img src="@StagedImageDataUrl" alt="Staged image preview"
+-                                             class="h-9 max-w-[4.5rem] shrink-0 rounded-md border border-line object-cover" />
+-                                    }
+-                                    <span class="inline-flex items-center gap-1 rounded-md border border-line bg-surface-raised px-2 py-0.5 text-[10px] text-content-muted">
+-                                        <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+-                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+-                                            <path d="M21 12.5l-8.5 8.5a5.66 5.66 0 0 1-8-8l9-9a3.77 3.77 0 0 1 5.3 5.3l-9 9a1.89 1.89 0 0 1-2.7-2.7l8.3-8.3" />
+-                                        </svg>
+-                                        @stagedFileName
+-                                    </span>
+-                                    <span class="text-[10px] text-content-faint">sends with your message</span>
+-                                    <button type="button" title="Remove" aria-label="Remove attachment" @onclick="ClearStagedFile"
+-                                            class="inline-flex items-center justify-center w-4 h-4 rounded text-content-subtle hover:text-content">
+-                                        <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+-                                             stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+-                                    </button>
+-                                </div>
++                                @foreach (var staged in stagedFiles)
++                                {
++                                    var file = staged;
++                                    <div class="flex items-center gap-1.5">
++                                        @if (StagedImagePreview(file) is { } preview)
++                                        {
++                                            @* The pasted screenshot, seen before it goes — a clipboard
++                                               paste is invisible until something shows it back. *@
++                                            <img src="@preview" alt="Staged image preview"
++                                                 class="h-9 max-w-[4.5rem] shrink-0 rounded-md border border-line object-cover" />
++                                        }
++                                        <span class="inline-flex min-w-0 items-center gap-1 rounded-md border border-line bg-surface-raised px-2 py-0.5 text-[10px] text-content-muted">
++                                            <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
++                                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
++                                                <path d="M21 12.5l-8.5 8.5a5.66 5.66 0 0 1-8-8l9-9a3.77 3.77 0 0 1 5.3 5.3l-9 9a1.89 1.89 0 0 1-2.7-2.7l8.3-8.3" />
++                                            </svg>
++                                            <span class="truncate">@file.Name</span>
++                                        </span>
++                                        <button type="button" title="Remove" aria-label="@($"Remove {file.Name}")" @onclick="() => RemoveStagedFile(file)"
++                                                class="inline-flex items-center justify-center w-4 h-4 rounded text-content-subtle hover:text-content">
++                                            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
++                                                 stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
++                                        </button>
++                                    </div>
++                                }
++                                <p class="text-[10px] text-content-faint">
++                                    @(stagedFiles.Count == 1 ? "Sends with your message" : $"All {stagedFiles.Count} send with your message")
++                                </p>
+                             }
+                             @if (uploadingFileName is not null)
+                             {
+@@ -446,19 +452,20 @@
+                                   class="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed text-content placeholder:text-content-faint focus:outline-none disabled:opacity-60"></textarea>
+                         <div class="flex items-center justify-between gap-2 px-2 pb-2">
+                             <div class="min-w-0 flex items-center gap-1.5">
+-                                @* Attach a spreadsheet and the assistant reads it — the bridge for
+-                                   work still living in the boss's tracker. Extracted server-side
+-                                   once; the file itself is never stored. Images (attached, dropped
+-                                   or pasted from the clipboard) are the exception: the assistant
+-                                   SEES those, so the image itself persists on the conversation. *@
+-                                <label for="jpms-chat-attachment" title="Attach a spreadsheet, PDF, Word document, text file or image (xlsx, csv, tsv, txt, pdf, docx, png, jpg, gif, webp)"
++                                @* Attach the quotes and the assistant reads them — the bridge for
++                                   work still living in the boss's tracker. Several files stage at
++                                   once (a quote, its SoW, a photo of the scope) and each is
++                                   extracted server-side once. Images (attached, dropped or pasted
++                                   from the clipboard) are the exception: the assistant SEES those,
++                                   so the image itself persists on the conversation. *@
++                                <label for="jpms-chat-attachment" title="Attach spreadsheets, PDFs, Word documents, text files or images — several at once if you need to (xlsx, csv, tsv, txt, pdf, docx, png, jpg, gif, webp)"
+                                        class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-md cursor-pointer text-content-subtle hover:text-content hover:bg-surface-raised @(busy || uploadingFileName is not null ? "pointer-events-none opacity-40" : "")">
+                                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                         <path d="M21 12.5l-8.5 8.5a5.66 5.66 0 0 1-8-8l9-9a3.77 3.77 0 0 1 5.3 5.3l-9 9a1.89 1.89 0 0 1-2.7-2.7l8.3-8.3" />
+                                     </svg>
+                                 </label>
+-                                <InputFile id="jpms-chat-attachment" OnChange="OnFileSelected"
++                                <InputFile id="jpms-chat-attachment" OnChange="OnFileSelected" multiple
+                                            accept=".xlsx,.csv,.tsv,.txt,.pdf,.docx,.png,.jpg,.jpeg,.gif,.webp" class="hidden" />
+                                 <span class="min-w-0 truncate pl-0.5 text-[10px] text-content-faint">@ComposerFootnote</span>
+                             </div>
+@@ -496,6 +503,15 @@
+     private const string TranscriptId = "jpms-chat-transcript";
+ 
+     private readonly List<AiChatMessage> messages = new();
++
++    /// <summary>The one place the live conversation id changes: keeps ChatPanelState's published
++    /// copy in step, so chat-aware dialogs (the work-order form's "files from this chat" list)
++    /// always ask about the conversation actually on screen.</summary>
++    private void SetConversation(string? id)
++    {
++        conversationId = id;
++        Chat.PublishConversation(id);
++    }
+     // How many bubbles at the top of the pane belong to the chat the user was in when a task
+     // started its fresh conversation. Display only — they render dimmed above a divider, because
+     // a transcript that vanishes the moment a dialog opens reads as the panel losing the chat.
+@@ -535,12 +551,14 @@
+     private bool modelLoaded;
+     private string? uploadingFileName;
+     private string? attachError;
+-    // The staged file: picked with the paperclip, dropped, or pasted — sent WITH the next message,
+-    // like any chat app. Nothing reaches the server until Send, so removing the chip costs nothing.
+-    private string? stagedFileName;
+-    private string? stagedFileBase64;
+-    // Set only when the staged file is an image — drives the thumbnail beside the pill.
+-    private string? stagedFileMediaType;
++    // The staged files: picked with the paperclip (several at once), dropped, or pasted — sent
++    // WITH the next message, like any chat app. Nothing reaches the server until Send, so removing
++    // a chip costs nothing. MediaType is set only for images — it drives the thumbnail.
++    private sealed record StagedFile(string Name, string Base64, string? MediaType);
++    private readonly List<StagedFile> stagedFiles = new();
++
++    // Enough for a trade's worth of quotes in one go; anyone with more sends a second message.
++    private const int MaxStagedFiles = 10;
+ 
+     private const long MaxAttachmentBytes = 10 * 1024 * 1024;
+     // Above this an image is downscaled in the browser before staging: Claude reads nothing above
+@@ -558,96 +576,126 @@
+             [".webp"] = "image/webp"
+         };
+ 
+-    private string? StagedImageDataUrl =>
+-        stagedFileMediaType is null || stagedFileBase64 is null
+-            ? null
+-            : $"data:{stagedFileMediaType};base64,{stagedFileBase64}";
++    private static string? StagedImagePreview(StagedFile file) =>
++        file.MediaType is null ? null : $"data:{file.MediaType};base64,{file.Base64}";
+ 
+-    /// <summary>Stages the picked file locally. The upload happens on Send, attachment first so
+-    /// the model reads it with that very message. Oversized images are downscaled in the browser
++    /// <summary>Stages the picked files locally — several at once, so a work order's quote, its
++    /// SoW and a photo travel as one message. The upload happens on Send, attachments first so the
++    /// model reads them with that very message. Oversized images are downscaled in the browser
+     /// first (canvas, via RequestImageFileAsync) rather than refused — the paste that arrives here
+     /// is usually a screenshot the user cannot easily make smaller.</summary>
+     private async Task OnFileSelected(InputFileChangeEventArgs e)
+     {
+-        var file = e.File;
+-        if (file is null || busy || uploadingFileName is not null) return;
++        if (busy || uploadingFileName is not null) return;
+ 
+         attachError = null;
+-        try
++        if (e.FileCount > MaxStagedFiles || stagedFiles.Count + e.FileCount > MaxStagedFiles)
+         {
+-            var isImage = ImageMediaTypes.TryGetValue(Path.GetExtension(file.Name), out var mediaType);
++            attachError = $"Up to {MaxStagedFiles} files can go with one message — send these, then attach the rest.";
++            return;
++        }
+ 
+-            var toRead = file;
+-            var name = file.Name;
+-            if (isImage && file.Size > MaxOriginalImageBytes)
++        foreach (var file in e.GetMultipleFiles(MaxStagedFiles))
++        {
++            try
+             {
+-                // JPEG on purpose: what arrives this big is photographs, and 1568px JPEG keeps a
+-                // drawing or a defect photo perfectly readable at a fraction of the bytes. (An
+-                // animated gif flattens to its first frame — the model only ever saw one anyway.)
+-                toRead = await file.RequestImageFileAsync("image/jpeg", 1568, 1568);
+-                mediaType = "image/jpeg";
+-                name = Path.ChangeExtension(name, ".jpg");
++                await StageOneAsync(file);
+             }
+-
+-            if (toRead.Size > MaxAttachmentBytes)
++            catch (Exception ex)
+             {
+-                attachError = $"\"{file.Name}\" is too big — the limit is 10 MB.";
+-                return;
++                // One unreadable file must not cost the others their staging.
++                attachError = ex.Message;
+             }
++        }
++    }
+ 
+-            await using var stream = toRead.OpenReadStream(maxAllowedSize: MaxAttachmentBytes);
+-            using var buffer = new MemoryStream();
+-            await stream.CopyToAsync(buffer);
++    private async Task StageOneAsync(IBrowserFile file)
++    {
++        var isImage = ImageMediaTypes.TryGetValue(Path.GetExtension(file.Name), out var mediaType);
+ 
+-            stagedFileName = name;
+-            stagedFileBase64 = Convert.ToBase64String(buffer.ToArray());
+-            stagedFileMediaType = isImage ? mediaType : null;
++        var toRead = file;
++        var name = file.Name;
++        if (isImage && file.Size > MaxOriginalImageBytes)
++        {
++            // JPEG on purpose: what arrives this big is photographs, and 1568px JPEG keeps a
++            // drawing or a defect photo perfectly readable at a fraction of the bytes. (An
++            // animated gif flattens to its first frame — the model only ever saw one anyway.)
++            toRead = await file.RequestImageFileAsync("image/jpeg", 1568, 1568);
++            mediaType = "image/jpeg";
++            name = Path.ChangeExtension(name, ".jpg");
+         }
+-        catch (Exception ex)
++
++        if (toRead.Size > MaxAttachmentBytes)
+         {
+-            attachError = ex.Message;
++            attachError = $"\"{file.Name}\" is too big — the limit is 10 MB.";
++            return;
+         }
+-    }
+ 
+-    private void ClearStagedFile()
+-    {
+-        stagedFileName = null;
+-        stagedFileBase64 = null;
+-        stagedFileMediaType = null;
++        await using var stream = toRead.OpenReadStream(maxAllowedSize: MaxAttachmentBytes);
++        using var buffer = new MemoryStream();
++        await stream.CopyToAsync(buffer);
++
++        // Re-picking a file replaces its earlier staging rather than sending it twice.
++        stagedFiles.RemoveAll(existing => string.Equals(existing.Name, name, StringComparison.OrdinalIgnoreCase));
++        stagedFiles.Add(new StagedFile(name, Convert.ToBase64String(buffer.ToArray()), isImage ? mediaType : null));
+     }
+ 
++    private void RemoveStagedFile(StagedFile file) => stagedFiles.Remove(file);
++
++    private void ClearStagedFiles() => stagedFiles.Clear();
++
+     /// <summary>
+-    /// Sends the staged file: the server extracts the contents to text ONCE onto the conversation
+-    /// and every later turn replays it to the model. Returns the receipt, or null on failure (the
+-    /// error is shown and the draft is left intact for a retry).
++    /// Sends the staged files, one command each in the order they were staged: the server keeps
++    /// each file's bytes and persists its manifest Context row onto the conversation, so every
++    /// later turn replays them all to the model. Returns the receipts, or null when one failed —
++    /// the files that DID land are pilled into the transcript (they are on the conversation,
++    /// whatever happens next), the failed file stays staged with the server's sentence shown, and
++    /// the draft is left intact for a retry.
+     /// </summary>
+-    private async Task<AiAttachmentReceipt?> UploadStagedFileAsync()
++    private async Task<List<AiAttachmentReceipt>?> UploadStagedFilesAsync()
+     {
+-        if (stagedFileBase64 is null || stagedFileName is null) return null;
+-
+-        uploadingFileName = stagedFileName;
+-        StateHasChanged();
+-        try
++        var receipts = new List<AiAttachmentReceipt>();
++        foreach (var file in stagedFiles.ToList())
+         {
+-            var receipt = await Commands.SendAsync(
+-                new AddAiAttachment(conversationId, stagedFileName, stagedFileBase64, BuildScope(), string.Empty),
+-                CancellationToken.None);
++            uploadingFileName = file.Name;
++            StateHasChanged();
++            try
++            {
++                var receipt = await Commands.SendAsync(
++                    new AddAiAttachment(conversationId, file.Name, file.Base64, BuildScope(), string.Empty),
++                    CancellationToken.None);
+ 
+-            conversationId = receipt.ConversationId;
+-            ClearStagedFile();
+-            return receipt;
+-        }
+-        catch (Exception ex)
+-        {
+-            // The server's refusals (wrong format, unreadable, too big) come back as sentences
+-            // worth showing verbatim. The file stays staged; fix or remove it and send again.
+-            attachError = ex.Message;
+-            return null;
++                SetConversation(receipt.ConversationId);
++                stagedFiles.Remove(file);
++                receipts.Add(receipt);
++            }
++            catch (Exception ex)
++            {
++                // The server's refusals (wrong format, unreadable, too big) come back as sentences
++                // worth showing verbatim. This file stays staged; fix or remove it and send again.
++                attachError = ex.Message;
++                uploadingFileName = null;
++                AddAttachmentPills(receipts);
++                return null;
++            }
+         }
+-        finally
++        uploadingFileName = null;
++        return receipts;
++    }
++
++    /// <summary>The transcript's record of what landed: one pill per attachment, in upload order.</summary>
++    private void AddAttachmentPills(IReadOnlyList<AiAttachmentReceipt> receipts)
++    {
++        if (receipts.Count == 0) return;
++        foreach (var receipt in receipts)
+         {
+-            uploadingFileName = null;
++            messages.Add(new AiChatMessage(
++                Guid.NewGuid().ToString("N"), AiChatRole.Context,
++                $"Attached {receipt.FileName} ({receipt.Summary}) — the assistant can read it now.",
++                "attachment", DateTimeOffset.UtcNow));
+         }
++        RequestScrollToBottom(isUserAction: true);
++        StateHasChanged();
+     }
+ 
+     /// <summary>The picker's binding: normalises, remembers per user, and never blocks the UI on
+@@ -717,8 +765,8 @@
+             : $"{baseClass} rounded-bl-md border border-line bg-surface-raised text-content-muted";
+     }
+ 
+-    // A staged file alone is sendable: the attachment goes up and no Claude call happens.
+-    private bool CannotSend => busy || (string.IsNullOrWhiteSpace(draft) && stagedFileBase64 is null);
++    // Staged files alone are sendable: the attachments go up and no Claude call happens.
++    private bool CannotSend => busy || (string.IsNullOrWhiteSpace(draft) && stagedFiles.Count == 0);
+ 
+     // What it is doing right now beats what the task is broadly for, which beats nothing.
+     private string BusyLabel => activityLabel ?? AiTasks.Active?.BusyLabel ?? "Thinking…";
+@@ -919,7 +967,7 @@
+ 
+             if (AiTasks.Active is not null) AiTasks.End();
+             StartNewChat();
+-            conversationId = id;
++            SetConversation(id);
+             messages.AddRange(replay);
+             // A past chat opens at its latest exchange — where it would be carried on from.
+             RequestScrollToBottom(isUserAction: true);
+@@ -1074,6 +1122,10 @@
+             carriedOverMessageCount = visibleTranscript.Count;
+         }
+         pendingPreviousConversationId = previousConversationId;
++        // Published for the dialog beside the panel: files the user attached BEFORE the task
++        // started live on that previous conversation, and the work-order form's "files from this
++        // chat" list must see them as well as anything attached mid-task.
++        Chat.PublishTaskHandoverConversation(previousConversationId);
+         nextSendIsKickoff = true;
+         draft = kickoff;
+         await Send();
+@@ -1118,7 +1170,7 @@
+         messages.Clear();
+         carriedOverMessageCount = 0;
+         lastToolsUsed = new List<string>();
+-        conversationId = null;
++        SetConversation(null);
+         agentKey = null;
+         draft = "";
+         error = null;
+@@ -1126,9 +1178,10 @@
+         showCarryOn = false;
+         showRetryContinue = false;
+         pendingPreviousConversationId = null;
++        Chat.PublishTaskHandoverConversation(null);
+         attachError = null;
+         historyOpen = false;
+-        ClearStagedFile();
++        ClearStagedFiles();
+ 
+         if (hadConversation)
+         {
+@@ -1216,27 +1269,20 @@
+     {
+         if (CannotSend) return;
+ 
+-        // The staged attachment goes up FIRST — its row must precede the message row so the model
+-        // reads the file with this very message. A failed upload aborts the send with the error
+-        // shown and the draft intact; an attachment-only send (no text) stops after the pill.
+-        AiAttachmentReceipt? attached = null;
+-        if (stagedFileBase64 is not null)
++        // The staged attachments go up FIRST — their rows must precede the message row so the
++        // model reads the files with this very message. A failed upload aborts the send with the
++        // error shown and the draft intact (files that landed are pilled by the uploader); an
++        // attachment-only send (no text) stops after the pills.
++        List<AiAttachmentReceipt>? attached = null;
++        if (stagedFiles.Count > 0)
+         {
+-            attached = await UploadStagedFileAsync();
++            attached = await UploadStagedFilesAsync();
+             if (attached is null) return;
+         }
+ 
+         if (string.IsNullOrWhiteSpace(draft))
+         {
+-            if (attached is not null)
+-            {
+-                messages.Add(new AiChatMessage(
+-                    Guid.NewGuid().ToString("N"), AiChatRole.Context,
+-                    $"Attached {attached.FileName} ({attached.Summary}) — the assistant can read it now.",
+-                    "attachment", DateTimeOffset.UtcNow));
+-                RequestScrollToBottom(isUserAction: true);
+-                StateHasChanged();
+-            }
++            if (attached is not null) AddAttachmentPills(attached);
+             return;
+         }
+ 
+@@ -1266,14 +1312,8 @@
+         var optimistic = new AiChatMessage(
+             Guid.NewGuid().ToString("N"), AiChatRole.User, text, isKickoff ? "kickoff" : null, DateTimeOffset.UtcNow);
+         messages.Add(optimistic);
+-        // The attachment pill sits UNDER the message it went with — sent together, shown together.
+-        if (attached is not null)
+-        {
+-            messages.Add(new AiChatMessage(
+-                Guid.NewGuid().ToString("N"), AiChatRole.Context,
+-                $"Attached {attached.FileName} ({attached.Summary}) — the assistant can read it now.",
+-                "attachment", DateTimeOffset.UtcNow));
+-        }
++        // The attachment pills sit UNDER the message they went with — sent together, shown together.
++        if (attached is not null) AddAttachmentPills(attached);
+         // Their bubble and the working indicator must be in view the moment Send is pressed.
+         RequestScrollToBottom(isUserAction: true);
+         StateHasChanged();
+@@ -1289,7 +1329,7 @@
+                 new SendAiMessage(conversationId, text, scope, string.Empty, previousConversationId, modelKey, isKickoff),
+                 CancellationToken.None);
+ 
+-            conversationId = result.ConversationId;
++            SetConversation(result.ConversationId);
+ 
+             // The optimistic user bubble STAYS. The server never echoes the user's message back in
+             // NewMessages (a hop's result carries only what the hop created), so the old
+@@ -1409,7 +1449,7 @@
+                     return;
+                 }
+             }
+-            conversationId = result.ConversationId;
++            SetConversation(result.ConversationId);
+         }
+ 
+         if (result.Status == AiTurnStatus.Truncated)
+@@ -1485,7 +1525,7 @@
+         {
+             var result = await Commands.SendAsync(
+                 new ContinueAiTurn(conversationId, BuildScope(), string.Empty, modelKey), CancellationToken.None);
+-            conversationId = result.ConversationId;
++            SetConversation(result.ConversationId);
+             await RunHopLoopAsync(result);
+         }
+         catch (Exception)
+diff --git a/jpms/Components/ManualWorkOrderModal.razor b/jpms/Components/ManualWorkOrderModal.razor
+index 79a45ef..417282a 100644
+--- a/jpms/Components/ManualWorkOrderModal.razor
++++ b/jpms/Components/ManualWorkOrderModal.razor
+@@ -67,7 +67,7 @@
+                             <a class="text-accent hover:underline truncate"
+                                href="@WorkOrderAttachments.FileUrl(Editing!.Order.WorkOrderId, attachment.WorkOrderAttachmentId)"
+                                target="_blank" rel="noopener" title="@attachment.DisplayName">@attachment.DisplayName</a>
+-                            <span class="text-xs text-content-subtle whitespace-nowrap">@(attachment.Source == WorkOrderAttachmentSource.Email ? "from email" : "uploaded")</span>
++                            <span class="text-xs text-content-subtle whitespace-nowrap">@(attachment.Source == WorkOrderAttachmentSource.Email ? "from email" : attachment.Source == WorkOrderAttachmentSource.Chat ? "from chat" : "uploaded")</span>
+                             <button type="button" class="ml-auto text-xs text-content-subtle hover:text-negative"
+                                     disabled="@busy" @onclick="() => RemoveExistingAttachmentAsync(attachment)">Remove</button>
+                         </li>
+@@ -89,6 +89,33 @@
+                     }
+                 </ul>
+             }
++            @if (AssistantTaskActive && chatFiles.Count > 0)
++            {
++                @* The quotes the user attached to the chat this order is being drafted from —
++                   ticked files copy onto the order when it saves, server-side, so nobody
++                   re-picks from disk what the assistant just read. Images (usually pasted
++                   screenshots) start unticked; a tick keeps them too. *@
++                <div class="mt-3">
++                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1"
++                       title="Files attached to the assistant chat this order is being drafted from. Ticked files are copied onto the order when you save — the quote it was raised from stays on record">
++                        From this chat
++                    </p>
++                    <ul class="space-y-1">
++                        @foreach (var row in chatFiles)
++                        {
++                            var chatFile = row;
++                            <li class="flex items-center gap-2 text-sm text-content">
++                                <input type="checkbox" class="cursor-pointer" disabled="@busy"
++                                       checked="@tickedChatFiles.Contains(TickKey(chatFile.File))"
++                                       @onchange="() => ToggleChatFile(chatFile)" />
++                                <span class="truncate" title="@chatFile.File.FileName">@chatFile.File.FileName</span>
++                                <span class="text-xs text-content-subtle whitespace-nowrap">@FormatBytes(chatFile.File.SizeBytes)</span>
++                            </li>
++                        }
++                    </ul>
++                    <p class="text-xs text-content-subtle mt-1">Ticked files are saved onto the order with it — the quote it was raised from stays on record.</p>
++                </div>
++            }
+             @if (attachmentError is not null)
+             {
+                 <p class="text-xs text-negative mt-2">@attachmentError</p>
+diff --git a/jpms/Components/ManualWorkOrderModal.razor.cs b/jpms/Components/ManualWorkOrderModal.razor.cs
+index 8afd485..c2e2414 100644
+--- a/jpms/Components/ManualWorkOrderModal.razor.cs
++++ b/jpms/Components/ManualWorkOrderModal.razor.cs
+@@ -73,6 +73,21 @@ public partial class ManualWorkOrderModal : IDisposable
+     private string? attachmentNote;
+     private string? attachmentError;
+ 
++    // ---- Files from the assistant chat (assistant-opened dialogs only). The quotes the user
++    // attached to the conversation the order is being drafted from, offered as ticks so they can
++    // be KEPT on the order without re-picking them from disk. The bytes copy server-side on save.
++    // Ticks default to the documents (a quote, a SoW) and leave images (usually pasted
++    // screenshots of the tracker) unticked. Keyed by attachment id; each remembers which
++    // conversation it lives on, because a task's files split across the handover conversation
++    // (attached before "draft this order") and the task's own (attached mid-task). ----
++    private sealed record ChatFileRow(AiConversationAttachment File, string ConversationId);
++    private List<ChatFileRow> chatFiles = new();
++    private readonly HashSet<string> tickedChatFiles = new(StringComparer.OrdinalIgnoreCase);
++    private bool chatFilesLoaded;
++    // The last AssistantBusy seen — a true→false edge means a turn just ended, and the user may
++    // have attached another file mid-conversation, so the list refetches.
++    private bool chatAssistantWasBusy;
++
+     // ---- The dialog ⇄ assistant pipe (work_order_edit / work_order_create) ----------------------
+ 
+     private bool AssistantTaskActive =>
+@@ -88,8 +103,18 @@ public partial class ManualWorkOrderModal : IDisposable
+         // The assistant's proposals, when a task is in force. Subscribed for the component's life —
+         // the handler itself checks the task matches, so another dialog's task never writes here.
+         AiTasks.OnDraftApplied += HandleAssistantDraft;
+-        // Repaints the working banner as the assistant's turn starts and finishes.
+-        Chat.OnChange += StateHasChanged;
++        // Repaints the working banner as the assistant's turn starts and finishes — and, on a
++        // turn ENDING, refetches the chat-file list in case the user attached another quote
++        // mid-conversation.
++        Chat.OnChange += HandleChatChanged;
++    }
++
++    private void HandleChatChanged()
++    {
++        var turnJustEnded = chatAssistantWasBusy && !Chat.AssistantBusy;
++        chatAssistantWasBusy = Chat.AssistantBusy;
++        if (turnJustEnded && IsOpen && AssistantTaskActive) _ = ReloadChatFilesAsync();
++        StateHasChanged();
+     }
+ 
+     protected override void OnAfterRender(bool firstRender)
+@@ -123,7 +148,102 @@ public partial class ManualWorkOrderModal : IDisposable
+     public void Dispose()
+     {
+         AiTasks.OnDraftApplied -= HandleAssistantDraft;
+-        Chat.OnChange -= StateHasChanged;
++        Chat.OnChange -= HandleChatChanged;
++    }
++
++    /// <summary>
++    /// The files attached to the chat the order is being drafted from: the task's own
++    /// conversation plus the handover one (where anything attached BEFORE "draft this order"
++    /// lives), oldest first, deduped by id. Fresh ticks default to documents only — an image here
++    /// is usually a pasted screenshot of the tracker, not a record worth keeping on the order —
++    /// while existing ticks survive a refetch. Failure costs the list, never the dialog: the
++    /// order still saves with the files picked from disk.
++    /// </summary>
++    private async Task ReloadChatFilesAsync()
++    {
++        if (!AssistantTaskActive) return;
++        var conversationIds = new[] { Chat.TaskHandoverConversationId, Chat.ActiveConversationId }
++            .Where(id => !string.IsNullOrWhiteSpace(id))
++            .Select(id => id!)
++            .Distinct()
++            .ToList();
++
++        var rows = new List<ChatFileRow>();
++        foreach (var conversationId in conversationIds)
++        {
++            try
++            {
++                var files = await Queries.AskAsync(
++                    new ListAiConversationAttachments(conversationId), CancellationToken.None);
++                rows.AddRange(files.Select(file => new ChatFileRow(file, conversationId)));
++            }
++            catch
++            {
++                // A list that can't load is absent, not fatal — same trade as existing attachments.
++            }
++        }
++
++        // One row per FILE, not per register entry: the handover copies the previous chat's
++        // attachment rows onto the task's own conversation, so the same quote can answer from
++        // both ids. The task conversation's copy wins (it is the one the model reads), and ticks
++        // key on name+size so a refetch that swaps which copy is shown cannot lose a tick.
++        chatFiles = rows
++            .GroupBy(row => TickKey(row.File))
++            .Select(group => group
++                .OrderByDescending(row => string.Equals(row.ConversationId, Chat.ActiveConversationId, StringComparison.Ordinal))
++                .First())
++            .OrderBy(row => row.File.UploadedAt)
++            .ToList();
++
++        if (!chatFilesLoaded)
++        {
++            chatFilesLoaded = true;
++            foreach (var row in chatFiles.Where(row => !row.File.IsImage))
++                tickedChatFiles.Add(TickKey(row.File));
++        }
++        // Ticks for files that vanished from the conversation must not ride into the save.
++        tickedChatFiles.RemoveWhere(key => chatFiles.All(row => !string.Equals(TickKey(row.File), key, StringComparison.Ordinal)));
++        StateHasChanged();
++    }
++
++    private static string TickKey(AiConversationAttachment file) =>
++        $"{file.FileName.ToLowerInvariant()}|{file.SizeBytes}";
++
++    private void ToggleChatFile(ChatFileRow row)
++    {
++        var key = TickKey(row.File);
++        if (!tickedChatFiles.Remove(key)) tickedChatFiles.Add(key);
++    }
++
++    /// <summary>
++    /// Copies the ticked chat files onto the order, one command per source conversation (the
++    /// server checks each conversation is the caller's own). Successes untick and fold into the
++    /// existing-attachments list; a failure leaves its ticks in place and returns the server's
++    /// sentence, so save-again only re-sends what missed — the same shape as the staged uploads.
++    /// </summary>
++    private async Task<string?> CopyTickedChatFilesAsync(string workOrderId)
++    {
++        if (tickedChatFiles.Count == 0) return null;
++        var failures = new List<string>();
++        foreach (var group in chatFiles
++                     .Where(row => tickedChatFiles.Contains(TickKey(row.File)))
++                     .GroupBy(row => row.ConversationId))
++        {
++            var picked = group.ToList();
++            try
++            {
++                existingAttachments = (await WorkOrderAttachments.AttachFromChatAsync(
++                    workOrderId, group.Key, picked.Select(row => row.File.AttachmentId).ToList())).ToList();
++                foreach (var row in picked) tickedChatFiles.Remove(TickKey(row.File));
++            }
++            catch (Exception ex) when (ex is not OperationCanceledException)
++            {
++                failures.Add(ex.Message);
++            }
++        }
++        if (failures.Count == 0) return null;
++        return "The chat file(s) couldn't be copied onto the order: " + string.Join(" ", failures)
++            + " — the order itself saved; add the file(s) from its PO page.";
+     }
+ 
+     protected override async Task OnParametersSetAsync()
+@@ -152,6 +272,12 @@ public partial class ManualWorkOrderModal : IDisposable
+         existingAttachments = new List<WorkOrderAttachment>();
+         attachmentNote = null;
+         attachmentError = null;
++        chatFiles = new List<ChatFileRow>();
++        tickedChatFiles.Clear();
++        chatFilesLoaded = false;
++        // Fire-and-forget on purpose: the list arriving late costs nothing (the section simply
++        // appears), while awaiting it would hold the whole dialog's seeding on a network call.
++        if (AssistantTaskActive) _ = ReloadChatFilesAsync();
+         if (IsEditing)
+         {
+             await LoadExistingAttachmentsAsync();
+@@ -269,9 +395,12 @@ public partial class ManualWorkOrderModal : IDisposable
+                     DepositRequired: draft.DepositRequired,
+                     DepositPercent: draft.DepositPercent), CancellationToken.None);
+                 var editAttachmentNote = await UploadStagedAttachmentsAsync(Editing.Order.WorkOrderId);
++                var editChatNote = await CopyTickedChatFilesAsync(Editing.Order.WorkOrderId);
+                 seeded = false; // reseed fresh on next open
+                 await OnSaved.InvokeAsync();
+-                if (editAttachmentNote is not null) await OnPoEmailNote.InvokeAsync(editAttachmentNote);
++                var editNote = string.Join(" ", new[] { editAttachmentNote, editChatNote }
++                    .Where(note => !string.IsNullOrWhiteSpace(note)));
++                if (!string.IsNullOrWhiteSpace(editNote)) await OnPoEmailNote.InvokeAsync(editNote);
+                 return;
+             }
+ 
+@@ -286,8 +415,13 @@ public partial class ManualWorkOrderModal : IDisposable
+                 DepositPercent: draft.DepositPercent,
+                 UncoveredCostCentresAcknowledged: uncoveredCostCentres.Count > 0), CancellationToken.None);
+ 
+-            // Step 1.5 — the staged record-keeping attachments, straight onto the fresh order.
++            // Step 1.5 — the record-keeping attachments, straight onto the fresh order: the
++            // staged files from this computer, then the ticked quotes off the assistant chat
++            // (copied server-side, store to store).
+             attachmentNote = await UploadStagedAttachmentsAsync(createdOrder.WorkOrderId) ?? attachmentNote;
++            var chatCopyNote = await CopyTickedChatFilesAsync(createdOrder.WorkOrderId);
++            if (chatCopyNote is not null)
++                attachmentNote = string.IsNullOrWhiteSpace(attachmentNote) ? chatCopyNote : $"{attachmentNote} {chatCopyNote}";
+ 
+             // Step 2 — the package, with the fresh order already assigned. Never for a draft:
+             // packages carry approved scope, and a draft hasn't been approved yet.
+diff --git a/jpms/Components/WorkOrderAttachmentsPanel.razor b/jpms/Components/WorkOrderAttachmentsPanel.razor
+index ec75ae6..1d461c5 100644
+--- a/jpms/Components/WorkOrderAttachmentsPanel.razor
++++ b/jpms/Components/WorkOrderAttachmentsPanel.razor
+@@ -54,7 +54,7 @@
+                     <span class="min-w-0 flex-1">
+                         <span class="block text-content truncate" title="@attachment.DisplayName">@attachment.DisplayName</span>
+                         <span class="block text-[11px] text-content-subtle">
+-                            @(attachment.Source == WorkOrderAttachmentSource.Email ? "From the triaged email" : "Uploaded")
++                            @(attachment.Source == WorkOrderAttachmentSource.Email ? "From the triaged email" : attachment.Source == WorkOrderAttachmentSource.Chat ? "From the assistant chat" : "Uploaded")
+                             @(attachment.FileSizeBytes > 0 ? $" · {Size(attachment.FileSizeBytes)}" : "")
+                             · @attachment.AddedAt.LocalDateTime.ToString("d MMM yyyy")
+                         </span>
+diff --git a/jpms/Features/Ai/AiRouteRegistration.cs b/jpms/Features/Ai/AiRouteRegistration.cs
+index 29d4486..0792c6f 100644
+--- a/jpms/Features/Ai/AiRouteRegistration.cs
++++ b/jpms/Features/Ai/AiRouteRegistration.cs
+@@ -18,6 +18,12 @@ public static class AiRouteRegistration
+             new QueryRoute("/api/ai/conversations",
+                 query => $"/api/ai/conversations?take={((ListAiConversations)query).Take}"));
+ 
++        // A conversation's attached files (names and sizes, never bytes) — read by chat-aware
++        // dialogs so the work-order form can keep the drafted-from quote on the order.
++        queries.Register<ListAiConversationAttachments, IReadOnlyList<AiConversationAttachment>>(
++            new QueryRoute("/api/ai/conversations/{conversationId}/attachments",
++                query => $"/api/ai/conversations/{((ListAiConversationAttachments)query).ConversationId}/attachments"));
++
+         queries.Register<ListAgentActivity, IReadOnlyList<AgentActivity>>(
+             new QueryRoute("/api/agents/activity", BuildAgentActivityPath));
+ 
+diff --git a/jpms/Features/Procurement/ProcurementRouteRegistration.cs b/jpms/Features/Procurement/ProcurementRouteRegistration.cs
+index 12b7bc4..b89360b 100644
+--- a/jpms/Features/Procurement/ProcurementRouteRegistration.cs
++++ b/jpms/Features/Procurement/ProcurementRouteRegistration.cs
+@@ -97,6 +97,12 @@ public static class ProcurementRouteRegistration
+                     return $"/api/work-orders/{c.WorkOrderId}/attachments/{c.WorkOrderAttachmentId}";
+                 }));
+ 
++        // Copies files off the assistant conversation onto the order (the drafted-from quote) —
++        // JSON only; the bytes move server-side between the two blob stores.
++        commands.Register<AttachChatFilesToWorkOrder, IReadOnlyList<WorkOrderAttachment>>(
++            new CommandRoute("POST", "/api/work-orders/{workOrderId}/attachments/from-chat",
++                command => $"/api/work-orders/{((AttachChatFilesToWorkOrder)command).WorkOrderId}/attachments/from-chat"));
++
+         commands.Register<CreateBidPackage, BidPackage>(
+             new CommandRoute("POST", "/api/projects/{projectId}/bid-packages",
+                 command => $"/api/projects/{((CreateBidPackage)command).ProjectId}/bid-packages"));
+diff --git a/jpms/Services/ChatPanelState.cs b/jpms/Services/ChatPanelState.cs
+index 3b4fc32..0339f63 100644
+--- a/jpms/Services/ChatPanelState.cs
++++ b/jpms/Services/ChatPanelState.cs
+@@ -45,6 +45,31 @@ public sealed class ChatPanelState
+     /// </summary>
+     public bool CoexistingModalOpen { get; private set; }
+ 
++    // ---- the live conversation --------------------------------------------------------------
++    // Which server-side conversation the panel is showing right now, published by ChatPanel (the
++    // only writer of its private conversationId) for the chat-aware dialogs beside it. The
++    // work-order form reads these to list the files attached to the chat, so the quote the order
++    // was drafted from can be kept on the order without anyone re-picking it from disk.
++
++    /// <summary>The conversation on screen, or null between chats. Set by ChatPanel alone.</summary>
++    public string? ActiveConversationId { get; private set; }
++
++    /// <summary>
++    /// The conversation the user was in just before the active task started — the one whose tail
++    /// (and attached files) the server carried across as the handover. Files attached before
++    /// "draft this order" live HERE, not on the task's fresh conversation. Null outside a task.
++    /// </summary>
++    public string? TaskHandoverConversationId { get; private set; }
++
++    /// <summary>ChatPanel's write of the live conversation id. Deliberately no OnChange: the id
++    /// changes on every first send, and dialogs read it when they need it rather than repainting
++    /// on it.</summary>
++    public void PublishConversation(string? conversationId) => ActiveConversationId = conversationId;
++
++    /// <summary>ChatPanel's write of the handover conversation id at task kick-off (and its clear
++    /// on every fresh chat). Same no-event contract as <see cref="PublishConversation"/>.</summary>
++    public void PublishTaskHandoverConversation(string? conversationId) => TaskHandoverConversationId = conversationId;
++
+     public void Toggle()
+     {
+         IsOpen = !IsOpen;
+diff --git a/jpms/Services/WorkOrderAttachmentStore.cs b/jpms/Services/WorkOrderAttachmentStore.cs
+index e19fed4..da19994 100644
+--- a/jpms/Services/WorkOrderAttachmentStore.cs
++++ b/jpms/Services/WorkOrderAttachmentStore.cs
+@@ -24,6 +24,12 @@ public interface IWorkOrderAttachmentStore
+     Task<IReadOnlyList<WorkOrderAttachment>> RemoveAsync(
+         string workOrderId, string attachmentId, CancellationToken cancellationToken = default);
+ 
++    /// <summary>Copies files the caller attached to an assistant conversation onto the order —
++    /// the quote it was drafted from. The bytes move server-side; nothing re-uploads.</summary>
++    Task<IReadOnlyList<WorkOrderAttachment>> AttachFromChatAsync(
++        string workOrderId, string conversationId, IReadOnlyList<string> attachmentIds,
++        CancellationToken cancellationToken = default);
++
+     /// <summary>The API URL that streams a stored file. <paramref name="inline"/> renders it in
+     /// place (thumbnails and previews); otherwise the browser downloads it.</summary>
+     string FileUrl(string workOrderId, string attachmentId, bool inline = false) =>
+@@ -79,4 +85,10 @@ public sealed class HttpWorkOrderAttachmentStore : IWorkOrderAttachmentStore
+     public Task<IReadOnlyList<WorkOrderAttachment>> RemoveAsync(
+         string workOrderId, string attachmentId, CancellationToken cancellationToken = default) =>
+         commands.SendAsync(new RemoveWorkOrderAttachment(workOrderId, attachmentId), cancellationToken);
++
++    public Task<IReadOnlyList<WorkOrderAttachment>> AttachFromChatAsync(
++        string workOrderId, string conversationId, IReadOnlyList<string> attachmentIds,
++        CancellationToken cancellationToken = default) =>
++        commands.SendAsync(
++            new AttachChatFilesToWorkOrder(workOrderId, conversationId, attachmentIds), cancellationToken);
+ }
+diff --git a/jpms/wwwroot/js/chat-drop.js b/jpms/wwwroot/js/chat-drop.js
+index 0cf5c54..ae081d9 100644
+--- a/jpms/wwwroot/js/chat-drop.js
++++ b/jpms/wwwroot/js/chat-drop.js
+@@ -51,7 +51,7 @@ window.jpmsChatDropZone = function (zoneId, inputId) {
+         if (!input || e.dataTransfer.files.length === 0) return;
+ 
+         const transfer = new DataTransfer();
+-        transfer.items.add(e.dataTransfer.files[0]); // one file per message, same as the paperclip
++        for (const file of e.dataTransfer.files) transfer.items.add(file); // every dropped file stages, same as the paperclip's multi-pick
+         input.files = transfer.files;
+         input.dispatchEvent(new Event("change", { bubbles: true }));
+     });
+@@ -67,7 +67,7 @@ window.jpmsChatDropZone = function (zoneId, inputId) {
+         if (!input) return;
+         e.preventDefault();
+ 
+-        let file = files[0]; // one file per message, same as the paperclip
++        let file = files[0]; // a clipboard carries one file; it stages ALONGSIDE anything already staged
+         if (file.type && file.type.indexOf("image/") === 0) {
+             // Clipboard images all arrive named "image.png" — stamp the name so two pastes into
+             // one conversation read back as two attachments, not the same one twice.

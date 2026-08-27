@@ -37,19 +37,22 @@ public sealed class WorkOrderAttachmentEndpoints
     private readonly IWorkOrderAttachmentStore blobStore;
     private readonly IQueryHandler<ListWorkOrderAttachments, IReadOnlyList<WorkOrderAttachment>> list;
     private readonly ICommandHandler<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>> remove;
+    private readonly ICommandHandler<AttachChatFilesToWorkOrder, IReadOnlyList<WorkOrderAttachment>> attachFromChat;
 
     public WorkOrderAttachmentEndpoints(
         SignedInUserResolver users,
         JpmsContext context,
         IWorkOrderAttachmentStore blobStore,
         IQueryHandler<ListWorkOrderAttachments, IReadOnlyList<WorkOrderAttachment>> list,
-        ICommandHandler<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>> remove)
+        ICommandHandler<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>> remove,
+        ICommandHandler<AttachChatFilesToWorkOrder, IReadOnlyList<WorkOrderAttachment>> attachFromChat)
     {
         this.users = users;
         this.context = context;
         this.blobStore = blobStore;
         this.list = list;
         this.remove = remove;
+        this.attachFromChat = attachFromChat;
     }
 
     [Function(nameof(ListWorkOrderAttachments))]
@@ -134,6 +137,42 @@ public sealed class WorkOrderAttachmentEndpoints
 
         await context.SaveChangesAsync(cancellationToken);
         return new OkObjectResult(await list.HandleAsync(new ListWorkOrderAttachments(workOrderId), cancellationToken));
+    }
+
+    /// <summary>
+    /// POST /api/work-orders/{workOrderId}/attachments/from-chat — copies files the caller
+    /// attached to an assistant conversation onto the order's register (the quote the order was
+    /// drafted from). JSON body, no bytes: the copy happens server-side, ai-attachments store →
+    /// this order's container. Same writer roles as an upload; the handler additionally checks
+    /// the conversation belongs to the signed-in user.
+    /// </summary>
+    [Function(nameof(AttachChatFilesToWorkOrder))]
+    public async Task<IActionResult> AttachFromChat(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "work-orders/{workOrderId}/attachments/from-chat")] HttpRequest request,
+        string workOrderId)
+    {
+        var cancellationToken = request.HttpContext.RequestAborted;
+        var signedInUser = await users.ResolveAsync(request, cancellationToken);
+        if (signedInUser is null) return new UnauthorizedResult();
+        if (!AllowedToAttach.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+
+        AttachChatFilesToWorkOrder? body;
+        try { body = await request.ReadFromJsonAsync<AttachChatFilesToWorkOrder>(cancellationToken); }
+        catch { body = null; }
+        if (body is null || string.IsNullOrWhiteSpace(body.ConversationId) || body.AttachmentIds is null)
+            return new BadRequestObjectResult("A conversation id and the files to copy are required.");
+
+        var command = body with { WorkOrderId = workOrderId, RequestedByEmail = signedInUser.Email };
+        try
+        {
+            return new OkObjectResult(await attachFromChat.HandleAsync(command, cancellationToken));
+        }
+        catch (InvalidOperationException ex)
+        {
+            // The handler's own refusals (order missing, chat not the caller's, a file's bytes
+            // gone) are sentences worth showing verbatim in the dialog.
+            return new BadRequestObjectResult(ex.Message);
+        }
     }
 
     [Function(nameof(RemoveWorkOrderAttachment))]

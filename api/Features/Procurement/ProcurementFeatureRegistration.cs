@@ -22,6 +22,9 @@ public static class ProcurementFeatureRegistration
             ListWorkOrderAttachmentsHandler>();
         services.AddScoped<ICommandHandler<RemoveWorkOrderAttachment, IReadOnlyList<WorkOrderAttachment>>,
             RemoveWorkOrderAttachmentHandler>();
+        // The quote the order was drafted from, copied off the assistant conversation server-side.
+        services.AddScoped<ICommandHandler<AttachChatFilesToWorkOrder, IReadOnlyList<WorkOrderAttachment>>,
+            AttachChatFilesToWorkOrderHandler>();
 
         // Tender-document attachments on a bid package (supplier-facing — they travel with the
         // invite draft alongside the linked drawings).

@@ -398,36 +398,42 @@
                 @if (!historyOpen)
                 {
                 <footer class="shrink-0 border-t border-line px-3 py-3">
-                    @* The STAGED file (goes up with Send, like any chat app) and transient upload
-                       states. A landed attachment shows in the TRANSCRIPT, under the message it
-                       went with — it never sits here looking like it might re-upload. *@
-                    @if (stagedFileName is not null || uploadingFileName is not null || attachError is not null)
+                    @* The STAGED files (they go up with Send, like any chat app) and transient
+                       upload states. A landed attachment shows in the TRANSCRIPT, under the message
+                       it went with — it never sits here looking like it might re-upload. *@
+                    @if (stagedFiles.Count > 0 || uploadingFileName is not null || attachError is not null)
                     {
                         <div class="px-1 pb-2 space-y-1">
-                            @if (stagedFileName is not null && uploadingFileName is null)
+                            @if (stagedFiles.Count > 0 && uploadingFileName is null)
                             {
-                                <div class="flex items-center gap-1.5">
-                                    @if (StagedImageDataUrl is not null)
-                                    {
-                                        @* The pasted screenshot, seen before it goes — a clipboard
-                                           paste is invisible until something shows it back. *@
-                                        <img src="@StagedImageDataUrl" alt="Staged image preview"
-                                             class="h-9 max-w-[4.5rem] shrink-0 rounded-md border border-line object-cover" />
-                                    }
-                                    <span class="inline-flex items-center gap-1 rounded-md border border-line bg-surface-raised px-2 py-0.5 text-[10px] text-content-muted">
-                                        <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <path d="M21 12.5l-8.5 8.5a5.66 5.66 0 0 1-8-8l9-9a3.77 3.77 0 0 1 5.3 5.3l-9 9a1.89 1.89 0 0 1-2.7-2.7l8.3-8.3" />
-                                        </svg>
-                                        @stagedFileName
-                                    </span>
-                                    <span class="text-[10px] text-content-faint">sends with your message</span>
-                                    <button type="button" title="Remove" aria-label="Remove attachment" @onclick="ClearStagedFile"
-                                            class="inline-flex items-center justify-center w-4 h-4 rounded text-content-subtle hover:text-content">
-                                        <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                                             stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                                    </button>
-                                </div>
+                                @foreach (var staged in stagedFiles)
+                                {
+                                    var file = staged;
+                                    <div class="flex items-center gap-1.5">
+                                        @if (StagedImagePreview(file) is { } preview)
+                                        {
+                                            @* The pasted screenshot, seen before it goes — a clipboard
+                                               paste is invisible until something shows it back. *@
+                                            <img src="@preview" alt="Staged image preview"
+                                                 class="h-9 max-w-[4.5rem] shrink-0 rounded-md border border-line object-cover" />
+                                        }
+                                        <span class="inline-flex min-w-0 items-center gap-1 rounded-md border border-line bg-surface-raised px-2 py-0.5 text-[10px] text-content-muted">
+                                            <svg class="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <path d="M21 12.5l-8.5 8.5a5.66 5.66 0 0 1-8-8l9-9a3.77 3.77 0 0 1 5.3 5.3l-9 9a1.89 1.89 0 0 1-2.7-2.7l8.3-8.3" />
+                                            </svg>
+                                            <span class="truncate">@file.Name</span>
+                                        </span>
+                                        <button type="button" title="Remove" aria-label="@($"Remove {file.Name}")" @onclick="() => RemoveStagedFile(file)"
+                                                class="inline-flex items-center justify-center w-4 h-4 rounded text-content-subtle hover:text-content">
+                                            <svg class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                                                 stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                                        </button>
+                                    </div>
+                                }
+                                <p class="text-[10px] text-content-faint">
+                                    @(stagedFiles.Count == 1 ? "Sends with your message" : $"All {stagedFiles.Count} send with your message")
+                                </p>
                             }
                             @if (uploadingFileName is not null)
                             {
@@ -446,19 +452,20 @@
                                   class="w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed text-content placeholder:text-content-faint focus:outline-none disabled:opacity-60"></textarea>
                         <div class="flex items-center justify-between gap-2 px-2 pb-2">
                             <div class="min-w-0 flex items-center gap-1.5">
-                                @* Attach a spreadsheet and the assistant reads it — the bridge for
-                                   work still living in the boss's tracker. Extracted server-side
-                                   once; the file itself is never stored. Images (attached, dropped
-                                   or pasted from the clipboard) are the exception: the assistant
-                                   SEES those, so the image itself persists on the conversation. *@
-                                <label for="jpms-chat-attachment" title="Attach a spreadsheet, PDF, Word document, text file or image (xlsx, csv, tsv, txt, pdf, docx, png, jpg, gif, webp)"
+                                @* Attach the quotes and the assistant reads them — the bridge for
+                                   work still living in the boss's tracker. Several files stage at
+                                   once (a quote, its SoW, a photo of the scope) and each is
+                                   extracted server-side once. Images (attached, dropped or pasted
+                                   from the clipboard) are the exception: the assistant SEES those,
+                                   so the image itself persists on the conversation. *@
+                                <label for="jpms-chat-attachment" title="Attach spreadsheets, PDFs, Word documents, text files or images — several at once if you need to (xlsx, csv, tsv, txt, pdf, docx, png, jpg, gif, webp)"
                                        class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-md cursor-pointer text-content-subtle hover:text-content hover:bg-surface-raised @(busy || uploadingFileName is not null ? "pointer-events-none opacity-40" : "")">
                                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
                                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                         <path d="M21 12.5l-8.5 8.5a5.66 5.66 0 0 1-8-8l9-9a3.77 3.77 0 0 1 5.3 5.3l-9 9a1.89 1.89 0 0 1-2.7-2.7l8.3-8.3" />
                                     </svg>
                                 </label>
-                                <InputFile id="jpms-chat-attachment" OnChange="OnFileSelected"
+                                <InputFile id="jpms-chat-attachment" OnChange="OnFileSelected" multiple
                                            accept=".xlsx,.csv,.tsv,.txt,.pdf,.docx,.png,.jpg,.jpeg,.gif,.webp" class="hidden" />
                                 <span class="min-w-0 truncate pl-0.5 text-[10px] text-content-faint">@ComposerFootnote</span>
                             </div>
@@ -496,6 +503,15 @@
     private const string TranscriptId = "jpms-chat-transcript";
 
     private readonly List<AiChatMessage> messages = new();
+
+    /// <summary>The one place the live conversation id changes: keeps ChatPanelState's published
+    /// copy in step, so chat-aware dialogs (the work-order form's "files from this chat" list)
+    /// always ask about the conversation actually on screen.</summary>
+    private void SetConversation(string? id)
+    {
+        conversationId = id;
+        Chat.PublishConversation(id);
+    }
     // How many bubbles at the top of the pane belong to the chat the user was in when a task
     // started its fresh conversation. Display only — they render dimmed above a divider, because
     // a transcript that vanishes the moment a dialog opens reads as the panel losing the chat.
@@ -535,12 +551,14 @@
     private bool modelLoaded;
     private string? uploadingFileName;
     private string? attachError;
-    // The staged file: picked with the paperclip, dropped, or pasted — sent WITH the next message,
-    // like any chat app. Nothing reaches the server until Send, so removing the chip costs nothing.
-    private string? stagedFileName;
-    private string? stagedFileBase64;
-    // Set only when the staged file is an image — drives the thumbnail beside the pill.
-    private string? stagedFileMediaType;
+    // The staged files: picked with the paperclip (several at once), dropped, or pasted — sent
+    // WITH the next message, like any chat app. Nothing reaches the server until Send, so removing
+    // a chip costs nothing. MediaType is set only for images — it drives the thumbnail.
+    private sealed record StagedFile(string Name, string Base64, string? MediaType);
+    private readonly List<StagedFile> stagedFiles = new();
+
+    // Enough for a trade's worth of quotes in one go; anyone with more sends a second message.
+    private const int MaxStagedFiles = 10;
 
     private const long MaxAttachmentBytes = 10 * 1024 * 1024;
     // Above this an image is downscaled in the browser before staging: Claude reads nothing above
@@ -558,96 +576,126 @@
             [".webp"] = "image/webp"
         };
 
-    private string? StagedImageDataUrl =>
-        stagedFileMediaType is null || stagedFileBase64 is null
-            ? null
-            : $"data:{stagedFileMediaType};base64,{stagedFileBase64}";
+    private static string? StagedImagePreview(StagedFile file) =>
+        file.MediaType is null ? null : $"data:{file.MediaType};base64,{file.Base64}";
 
-    /// <summary>Stages the picked file locally. The upload happens on Send, attachment first so
-    /// the model reads it with that very message. Oversized images are downscaled in the browser
+    /// <summary>Stages the picked files locally — several at once, so a work order's quote, its
+    /// SoW and a photo travel as one message. The upload happens on Send, attachments first so the
+    /// model reads them with that very message. Oversized images are downscaled in the browser
     /// first (canvas, via RequestImageFileAsync) rather than refused — the paste that arrives here
     /// is usually a screenshot the user cannot easily make smaller.</summary>
     private async Task OnFileSelected(InputFileChangeEventArgs e)
     {
-        var file = e.File;
-        if (file is null || busy || uploadingFileName is not null) return;
+        if (busy || uploadingFileName is not null) return;
 
         attachError = null;
-        try
+        if (e.FileCount > MaxStagedFiles || stagedFiles.Count + e.FileCount > MaxStagedFiles)
         {
-            var isImage = ImageMediaTypes.TryGetValue(Path.GetExtension(file.Name), out var mediaType);
-
-            var toRead = file;
-            var name = file.Name;
-            if (isImage && file.Size > MaxOriginalImageBytes)
-            {
-                // JPEG on purpose: what arrives this big is photographs, and 1568px JPEG keeps a
-                // drawing or a defect photo perfectly readable at a fraction of the bytes. (An
-                // animated gif flattens to its first frame — the model only ever saw one anyway.)
-                toRead = await file.RequestImageFileAsync("image/jpeg", 1568, 1568);
-                mediaType = "image/jpeg";
-                name = Path.ChangeExtension(name, ".jpg");
-            }
-
-            if (toRead.Size > MaxAttachmentBytes)
-            {
-                attachError = $"\"{file.Name}\" is too big — the limit is 10 MB.";
-                return;
-            }
-
-            await using var stream = toRead.OpenReadStream(maxAllowedSize: MaxAttachmentBytes);
-            using var buffer = new MemoryStream();
-            await stream.CopyToAsync(buffer);
-
-            stagedFileName = name;
-            stagedFileBase64 = Convert.ToBase64String(buffer.ToArray());
-            stagedFileMediaType = isImage ? mediaType : null;
+            attachError = $"Up to {MaxStagedFiles} files can go with one message — send these, then attach the rest.";
+            return;
         }
-        catch (Exception ex)
+
+        foreach (var file in e.GetMultipleFiles(MaxStagedFiles))
         {
-            attachError = ex.Message;
+            try
+            {
+                await StageOneAsync(file);
+            }
+            catch (Exception ex)
+            {
+                // One unreadable file must not cost the others their staging.
+                attachError = ex.Message;
+            }
         }
     }
 
-    private void ClearStagedFile()
+    private async Task StageOneAsync(IBrowserFile file)
     {
-        stagedFileName = null;
-        stagedFileBase64 = null;
-        stagedFileMediaType = null;
+        var isImage = ImageMediaTypes.TryGetValue(Path.GetExtension(file.Name), out var mediaType);
+
+        var toRead = file;
+        var name = file.Name;
+        if (isImage && file.Size > MaxOriginalImageBytes)
+        {
+            // JPEG on purpose: what arrives this big is photographs, and 1568px JPEG keeps a
+            // drawing or a defect photo perfectly readable at a fraction of the bytes. (An
+            // animated gif flattens to its first frame — the model only ever saw one anyway.)
+            toRead = await file.RequestImageFileAsync("image/jpeg", 1568, 1568);
+            mediaType = "image/jpeg";
+            name = Path.ChangeExtension(name, ".jpg");
+        }
+
+        if (toRead.Size > MaxAttachmentBytes)
+        {
+            attachError = $"\"{file.Name}\" is too big — the limit is 10 MB.";
+            return;
+        }
+
+        await using var stream = toRead.OpenReadStream(maxAllowedSize: MaxAttachmentBytes);
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer);
+
+        // Re-picking a file replaces its earlier staging rather than sending it twice.
+        stagedFiles.RemoveAll(existing => string.Equals(existing.Name, name, StringComparison.OrdinalIgnoreCase));
+        stagedFiles.Add(new StagedFile(name, Convert.ToBase64String(buffer.ToArray()), isImage ? mediaType : null));
     }
+
+    private void RemoveStagedFile(StagedFile file) => stagedFiles.Remove(file);
+
+    private void ClearStagedFiles() => stagedFiles.Clear();
 
     /// <summary>
-    /// Sends the staged file: the server extracts the contents to text ONCE onto the conversation
-    /// and every later turn replays it to the model. Returns the receipt, or null on failure (the
-    /// error is shown and the draft is left intact for a retry).
+    /// Sends the staged files, one command each in the order they were staged: the server keeps
+    /// each file's bytes and persists its manifest Context row onto the conversation, so every
+    /// later turn replays them all to the model. Returns the receipts, or null when one failed —
+    /// the files that DID land are pilled into the transcript (they are on the conversation,
+    /// whatever happens next), the failed file stays staged with the server's sentence shown, and
+    /// the draft is left intact for a retry.
     /// </summary>
-    private async Task<AiAttachmentReceipt?> UploadStagedFileAsync()
+    private async Task<List<AiAttachmentReceipt>?> UploadStagedFilesAsync()
     {
-        if (stagedFileBase64 is null || stagedFileName is null) return null;
+        var receipts = new List<AiAttachmentReceipt>();
+        foreach (var file in stagedFiles.ToList())
+        {
+            uploadingFileName = file.Name;
+            StateHasChanged();
+            try
+            {
+                var receipt = await Commands.SendAsync(
+                    new AddAiAttachment(conversationId, file.Name, file.Base64, BuildScope(), string.Empty),
+                    CancellationToken.None);
 
-        uploadingFileName = stagedFileName;
+                SetConversation(receipt.ConversationId);
+                stagedFiles.Remove(file);
+                receipts.Add(receipt);
+            }
+            catch (Exception ex)
+            {
+                // The server's refusals (wrong format, unreadable, too big) come back as sentences
+                // worth showing verbatim. This file stays staged; fix or remove it and send again.
+                attachError = ex.Message;
+                uploadingFileName = null;
+                AddAttachmentPills(receipts);
+                return null;
+            }
+        }
+        uploadingFileName = null;
+        return receipts;
+    }
+
+    /// <summary>The transcript's record of what landed: one pill per attachment, in upload order.</summary>
+    private void AddAttachmentPills(IReadOnlyList<AiAttachmentReceipt> receipts)
+    {
+        if (receipts.Count == 0) return;
+        foreach (var receipt in receipts)
+        {
+            messages.Add(new AiChatMessage(
+                Guid.NewGuid().ToString("N"), AiChatRole.Context,
+                $"Attached {receipt.FileName} ({receipt.Summary}) — the assistant can read it now.",
+                "attachment", DateTimeOffset.UtcNow));
+        }
+        RequestScrollToBottom(isUserAction: true);
         StateHasChanged();
-        try
-        {
-            var receipt = await Commands.SendAsync(
-                new AddAiAttachment(conversationId, stagedFileName, stagedFileBase64, BuildScope(), string.Empty),
-                CancellationToken.None);
-
-            conversationId = receipt.ConversationId;
-            ClearStagedFile();
-            return receipt;
-        }
-        catch (Exception ex)
-        {
-            // The server's refusals (wrong format, unreadable, too big) come back as sentences
-            // worth showing verbatim. The file stays staged; fix or remove it and send again.
-            attachError = ex.Message;
-            return null;
-        }
-        finally
-        {
-            uploadingFileName = null;
-        }
     }
 
     /// <summary>The picker's binding: normalises, remembers per user, and never blocks the UI on
@@ -717,8 +765,8 @@
             : $"{baseClass} rounded-bl-md border border-line bg-surface-raised text-content-muted";
     }
 
-    // A staged file alone is sendable: the attachment goes up and no Claude call happens.
-    private bool CannotSend => busy || (string.IsNullOrWhiteSpace(draft) && stagedFileBase64 is null);
+    // Staged files alone are sendable: the attachments go up and no Claude call happens.
+    private bool CannotSend => busy || (string.IsNullOrWhiteSpace(draft) && stagedFiles.Count == 0);
 
     // What it is doing right now beats what the task is broadly for, which beats nothing.
     private string BusyLabel => activityLabel ?? AiTasks.Active?.BusyLabel ?? "Thinking…";
@@ -919,7 +967,7 @@
 
             if (AiTasks.Active is not null) AiTasks.End();
             StartNewChat();
-            conversationId = id;
+            SetConversation(id);
             messages.AddRange(replay);
             // A past chat opens at its latest exchange — where it would be carried on from.
             RequestScrollToBottom(isUserAction: true);
@@ -1074,6 +1122,10 @@
             carriedOverMessageCount = visibleTranscript.Count;
         }
         pendingPreviousConversationId = previousConversationId;
+        // Published for the dialog beside the panel: files the user attached BEFORE the task
+        // started live on that previous conversation, and the work-order form's "files from this
+        // chat" list must see them as well as anything attached mid-task.
+        Chat.PublishTaskHandoverConversation(previousConversationId);
         nextSendIsKickoff = true;
         draft = kickoff;
         await Send();
@@ -1118,7 +1170,7 @@
         messages.Clear();
         carriedOverMessageCount = 0;
         lastToolsUsed = new List<string>();
-        conversationId = null;
+        SetConversation(null);
         agentKey = null;
         draft = "";
         error = null;
@@ -1126,9 +1178,10 @@
         showCarryOn = false;
         showRetryContinue = false;
         pendingPreviousConversationId = null;
+        Chat.PublishTaskHandoverConversation(null);
         attachError = null;
         historyOpen = false;
-        ClearStagedFile();
+        ClearStagedFiles();
 
         if (hadConversation)
         {
@@ -1216,27 +1269,20 @@
     {
         if (CannotSend) return;
 
-        // The staged attachment goes up FIRST — its row must precede the message row so the model
-        // reads the file with this very message. A failed upload aborts the send with the error
-        // shown and the draft intact; an attachment-only send (no text) stops after the pill.
-        AiAttachmentReceipt? attached = null;
-        if (stagedFileBase64 is not null)
+        // The staged attachments go up FIRST — their rows must precede the message row so the
+        // model reads the files with this very message. A failed upload aborts the send with the
+        // error shown and the draft intact (files that landed are pilled by the uploader); an
+        // attachment-only send (no text) stops after the pills.
+        List<AiAttachmentReceipt>? attached = null;
+        if (stagedFiles.Count > 0)
         {
-            attached = await UploadStagedFileAsync();
+            attached = await UploadStagedFilesAsync();
             if (attached is null) return;
         }
 
         if (string.IsNullOrWhiteSpace(draft))
         {
-            if (attached is not null)
-            {
-                messages.Add(new AiChatMessage(
-                    Guid.NewGuid().ToString("N"), AiChatRole.Context,
-                    $"Attached {attached.FileName} ({attached.Summary}) — the assistant can read it now.",
-                    "attachment", DateTimeOffset.UtcNow));
-                RequestScrollToBottom(isUserAction: true);
-                StateHasChanged();
-            }
+            if (attached is not null) AddAttachmentPills(attached);
             return;
         }
 
@@ -1266,14 +1312,8 @@
         var optimistic = new AiChatMessage(
             Guid.NewGuid().ToString("N"), AiChatRole.User, text, isKickoff ? "kickoff" : null, DateTimeOffset.UtcNow);
         messages.Add(optimistic);
-        // The attachment pill sits UNDER the message it went with — sent together, shown together.
-        if (attached is not null)
-        {
-            messages.Add(new AiChatMessage(
-                Guid.NewGuid().ToString("N"), AiChatRole.Context,
-                $"Attached {attached.FileName} ({attached.Summary}) — the assistant can read it now.",
-                "attachment", DateTimeOffset.UtcNow));
-        }
+        // The attachment pills sit UNDER the message they went with — sent together, shown together.
+        if (attached is not null) AddAttachmentPills(attached);
         // Their bubble and the working indicator must be in view the moment Send is pressed.
         RequestScrollToBottom(isUserAction: true);
         StateHasChanged();
@@ -1289,7 +1329,7 @@
                 new SendAiMessage(conversationId, text, scope, string.Empty, previousConversationId, modelKey, isKickoff),
                 CancellationToken.None);
 
-            conversationId = result.ConversationId;
+            SetConversation(result.ConversationId);
 
             // The optimistic user bubble STAYS. The server never echoes the user's message back in
             // NewMessages (a hop's result carries only what the hop created), so the old
@@ -1409,7 +1449,7 @@
                     return;
                 }
             }
-            conversationId = result.ConversationId;
+            SetConversation(result.ConversationId);
         }
 
         if (result.Status == AiTurnStatus.Truncated)
@@ -1485,7 +1525,7 @@
         {
             var result = await Commands.SendAsync(
                 new ContinueAiTurn(conversationId, BuildScope(), string.Empty, modelKey), CancellationToken.None);
-            conversationId = result.ConversationId;
+            SetConversation(result.ConversationId);
             await RunHopLoopAsync(result);
         }
         catch (Exception)

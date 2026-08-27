@@ -67,7 +67,7 @@
                             <a class="text-accent hover:underline truncate"
                                href="@WorkOrderAttachments.FileUrl(Editing!.Order.WorkOrderId, attachment.WorkOrderAttachmentId)"
                                target="_blank" rel="noopener" title="@attachment.DisplayName">@attachment.DisplayName</a>
-                            <span class="text-xs text-content-subtle whitespace-nowrap">@(attachment.Source == WorkOrderAttachmentSource.Email ? "from email" : "uploaded")</span>
+                            <span class="text-xs text-content-subtle whitespace-nowrap">@(attachment.Source == WorkOrderAttachmentSource.Email ? "from email" : attachment.Source == WorkOrderAttachmentSource.Chat ? "from chat" : "uploaded")</span>
                             <button type="button" class="ml-auto text-xs text-content-subtle hover:text-negative"
                                     disabled="@busy" @onclick="() => RemoveExistingAttachmentAsync(attachment)">Remove</button>
                         </li>
@@ -88,6 +88,33 @@
                         </li>
                     }
                 </ul>
+            }
+            @if (AssistantTaskActive && chatFiles.Count > 0)
+            {
+                @* The quotes the user attached to the chat this order is being drafted from —
+                   ticked files copy onto the order when it saves, server-side, so nobody
+                   re-picks from disk what the assistant just read. Images (usually pasted
+                   screenshots) start unticked; a tick keeps them too. *@
+                <div class="mt-3">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1"
+                       title="Files attached to the assistant chat this order is being drafted from. Ticked files are copied onto the order when you save — the quote it was raised from stays on record">
+                        From this chat
+                    </p>
+                    <ul class="space-y-1">
+                        @foreach (var row in chatFiles)
+                        {
+                            var chatFile = row;
+                            <li class="flex items-center gap-2 text-sm text-content">
+                                <input type="checkbox" class="cursor-pointer" disabled="@busy"
+                                       checked="@tickedChatFiles.Contains(TickKey(chatFile.File))"
+                                       @onchange="() => ToggleChatFile(chatFile)" />
+                                <span class="truncate" title="@chatFile.File.FileName">@chatFile.File.FileName</span>
+                                <span class="text-xs text-content-subtle whitespace-nowrap">@FormatBytes(chatFile.File.SizeBytes)</span>
+                            </li>
+                        }
+                    </ul>
+                    <p class="text-xs text-content-subtle mt-1">Ticked files are saved onto the order with it — the quote it was raised from stays on record.</p>
+                </div>
             }
             @if (attachmentError is not null)
             {

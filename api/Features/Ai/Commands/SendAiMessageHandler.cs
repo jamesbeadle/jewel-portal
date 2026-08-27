@@ -42,7 +42,9 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
         // account of how the document came to say what it says), but the assistant should still
         // remember what the user was just discussing. The tail of the previous conversation rides
         // in ONCE, as a Context row — replayed to the model as background, never shown as a bubble.
-        if (isNew && await BuildHandoverAsync(command, cancellationToken) is { } handover)
+        // The previous chat's ATTACHMENTS follow properly (rows copied, source ids rewritten), so
+        // read_source works on them here — see BuildHandoverAsync.
+        if (isNew && await BuildHandoverAsync(command, conversation.ConversationId, cancellationToken) is { } handover)
         {
             context.AiConversationMessages.Add(new AiConversationMessageEntity
             {
@@ -138,8 +140,15 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
     /// across) plus the most recent Context rows VERBATIM: attached files above all. Null when
     /// there is nothing to carry: no previous id, a previous conversation the caller does not own
     /// (an id is not a capability, here as everywhere), or one with nothing carryable.
+    ///
+    /// <para>The previous chat's attachment ROWS are copied into the fresh conversation too (same
+    /// blob — the bytes are not duplicated), with every carried source id rewritten to the copy.
+    /// Without this, "populate the form from my spreadsheet" — the flow the handover exists for —
+    /// handed the task conversation a manifest whose read_source refused every call: the sources
+    /// were scoped to the OLD conversation, and the model could read nothing past the preview.</para>
     /// </summary>
-    private async Task<string?> BuildHandoverAsync(SendAiMessage command, CancellationToken ct)
+    private async Task<string?> BuildHandoverAsync(
+        SendAiMessage command, string newConversationId, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(command.PreviousConversationId)) return null;
 
@@ -199,6 +208,38 @@ public sealed class SendAiMessageHandler : ICommandHandler<SendAiMessage, AiTurn
                 handover.AppendLine($"[{speaker}] {body}");
             }
         }
-        return handover.ToString();
+
+        // The files themselves follow the user across: each of the previous conversation's
+        // attachment rows is copied onto the fresh conversation (same blob ref — a copy of the
+        // register entry, not of the bytes; the container's age-based retention treats both alike)
+        // and every carried source id is rewritten to the copy, so read_source and list_sources
+        // answer here exactly as they did in the chat the file was attached to.
+        var text = handover.ToString();
+        var carriedAttachments = await context.AiAttachments
+            .AsNoTracking()
+            .Where(row => row.ConversationId == command.PreviousConversationId)
+            .OrderBy(row => row.UploadedAt)
+            .ToListAsync(ct);
+        foreach (var source in carriedAttachments)
+        {
+            var copyId = Guid.NewGuid().ToString("N");
+            context.AiAttachments.Add(new AiAttachmentEntity
+            {
+                AttachmentId = copyId,
+                ConversationId = newConversationId,
+                FileName = source.FileName,
+                ContentType = source.ContentType,
+                SizeBytes = source.SizeBytes,
+                BlobRef = source.BlobRef,
+                ManifestJson = source.ManifestJson,
+                UploadedByEmail = source.UploadedByEmail,
+                UploadedAt = source.UploadedAt
+            });
+            text = text.Replace(
+                Tools.AiSourceTools.ChatSourceId(source.AttachmentId),
+                Tools.AiSourceTools.ChatSourceId(copyId),
+                StringComparison.Ordinal);
+        }
+        return text;
     }
 }
