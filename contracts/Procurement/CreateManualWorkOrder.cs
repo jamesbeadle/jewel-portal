@@ -43,5 +43,13 @@ public sealed record CreateManualWorkOrder(
 
 /// <summary>One priced line: its cost centre, what it covers, and its £ amount. Description
 /// is the longer detail printed in the purchase order's Description column — optional, so the
-/// title can stay a short label instead of carrying the whole scope (titles cap at 256).</summary>
-public sealed record ManualWorkOrderLine(string CostCode, string Title, decimal Amount, string Description = "");
+/// title can stay a short label instead of carrying the whole scope (titles cap at 256).
+/// Quantity / Unit / UnitCost are the measured breakdown ("14 m2 @ £54.00") printed in the PO's
+/// Qty/Unit and Unit Cost columns: give Quantity AND UnitCost together (Amount is then their
+/// product — the form derives it), or leave them out and the line prints the legacy
+/// "1 item" at Amount. They exist so a measured quote stops being squeezed into the
+/// description as prose while the printed PO said "1 item" (2026-08-27, the accountant's
+/// tiling order).</summary>
+public sealed record ManualWorkOrderLine(
+    string CostCode, string Title, decimal Amount, string Description = "",
+    decimal? Quantity = null, string Unit = "", decimal? UnitCost = null);

@@ -555,16 +555,32 @@ public static class ModalCatalog
                         "The line as the purchase order prints it — an existing line's title "
                         + "verbatim to keep it, or a new line's short label.", Required: true),
                     new("description", "string",
-                        "The longer detail for the PO's Description column — optional."),
+                        "The longer detail for the PO's Description column — optional, and never "
+                        + "the place for quantities or rates (those have their own fields)."),
                     new("costCode", "string",
                         "The cost centre this line's committed value lands on. It must be a Code "
                         + "returned by list_cost_codes, spelled exactly as that tool returned it. "
                         + "If no code clearly fits, leave this out — the user picks it from a "
                         + "list. A wrong cost code sends real money to the wrong place."),
+                    new("quantity", "number",
+                        "How much, in the unit — 14 for \"14 m2\". Give quantity, unit and "
+                        + "unitCost TOGETHER whenever the quote prices by measure: they print in "
+                        + "the PO's own Qty/Unit and Unit Cost columns and the line's amount "
+                        + "becomes quantity × unitCost. NEVER restate them as prose in the "
+                        + "description — \"14 m2 @ £54.00/m2\" in the description prints beside "
+                        + "a Qty/Unit column reading \"1 item\", which is exactly the confusion "
+                        + "these fields exist to end."),
+                    new("unit", "string",
+                        "The measure the quantity counts — m2, m, no., day, load. Printed beside "
+                        + "the quantity."),
+                    new("unitCost", "number",
+                        "The rate per unit in GBP, NET of VAT — 54 for £54.00/m2. Only rates the "
+                        + "correspondence actually states."),
                     new("amount", "number",
-                        "The line's value in GBP as a plain number, NET of VAT. Negative only for "
-                        + "a credit line. Only figures the correspondence actually states.",
-                        Required: true)
+                        "The line's TOTAL value in GBP as a plain number, NET of VAT. Negative "
+                        + "only for a credit line. Only figures the correspondence actually "
+                        + "states. Leave it out when quantity and unitCost are given — the "
+                        + "dialog computes quantity × unitCost itself.")
                 })
         });
 
@@ -632,16 +648,32 @@ public static class ModalCatalog
                     new("title", "string",
                         "The line as the purchase order prints it — a short label.", Required: true),
                     new("description", "string",
-                        "The longer detail for the PO's Description column — optional."),
+                        "The longer detail for the PO's Description column — optional, and never "
+                        + "the place for quantities or rates (those have their own fields)."),
                     new("costCode", "string",
                         "The cost centre this line's committed value lands on. It must be a Code "
                         + "returned by list_cost_codes, spelled exactly as that tool returned it. "
                         + "If no code clearly fits, leave this out — the user picks it from a "
                         + "list. A wrong cost code sends real money to the wrong place."),
+                    new("quantity", "number",
+                        "How much, in the unit — 14 for \"14 m2\". Give quantity, unit and "
+                        + "unitCost TOGETHER whenever the quote prices by measure: they print in "
+                        + "the PO's own Qty/Unit and Unit Cost columns and the line's amount "
+                        + "becomes quantity × unitCost. NEVER restate them as prose in the "
+                        + "description — \"14 m2 @ £54.00/m2\" in the description prints beside "
+                        + "a Qty/Unit column reading \"1 item\", which is exactly the confusion "
+                        + "these fields exist to end."),
+                    new("unit", "string",
+                        "The measure the quantity counts — m2, m, no., day, load. Printed beside "
+                        + "the quantity."),
+                    new("unitCost", "number",
+                        "The rate per unit in GBP, NET of VAT — 54 for £54.00/m2. Only rates the "
+                        + "correspondence actually states."),
                     new("amount", "number",
-                        "The line's value in GBP as a plain number, NET of VAT. Only figures the "
-                        + "correspondence actually states.",
-                        Required: true)
+                        "The line's TOTAL value in GBP as a plain number, NET of VAT. Only "
+                        + "figures the correspondence actually states. Leave it out when "
+                        + "quantity and unitCost are given — the dialog computes "
+                        + "quantity × unitCost itself.")
                 })
         });
 

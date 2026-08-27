@@ -102,9 +102,27 @@
                            class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
                            value="@line.Title"
                            @onchange="e => SetLineTitle(line, e.Value?.ToString())" />
-                    <input type="number" step="any" placeholder="Amount £" disabled="@Busy"
+                    @* The measured breakdown — optional, but qty and rate come as a pair. When
+                       both are given the amount derives (qty × rate) and its box locks, so the
+                       printed Qty/Unit, Unit Cost and Price columns can never disagree. *@
+                    <input type="number" step="any" min="0" placeholder="Qty" disabled="@Busy"
+                           title="How many of the unit — 14 for 14 m2. Leave qty and rate empty for a lump-sum line"
+                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-20"
+                           value="@line.QuantityText"
+                           @onchange="e => SetLineQuantity(line, e.Value?.ToString())" />
+                    <input type="text" maxlength="32" placeholder="Unit" disabled="@Busy"
+                           title="The measure — m2, m, no., day"
+                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm w-20"
+                           value="@line.Unit"
+                           @onchange="e => SetLineUnit(line, e.Value?.ToString())" />
+                    <input type="number" step="any" placeholder="Rate £" disabled="@Busy"
+                           title="The cost per unit, net of VAT — 54.00 for £54.00/m2"
+                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-24"
+                           value="@line.UnitCostText"
+                           @onchange="e => SetLineUnitCost(line, e.Value?.ToString())" />
+                    <input type="number" step="any" placeholder="Amount £" disabled="@(Busy || IsMeasured(line))"
+                           title="@(IsMeasured(line) ? "Quantity × rate — edit those to change it" : line.PaidToDate != 0m ? $"{Money(line.PaidToDate)} already paid against this line — the amount can't drop below that" : "")"
                            class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-32"
-                           title="@(line.PaidToDate != 0m ? $"{Money(line.PaidToDate)} already paid against this line — the amount can't drop below that" : "")"
                            value="@line.AmountText"
                            @onchange="e => SetLineAmount(line, e.Value?.ToString())" />
                     <button type="button" aria-label="Remove this line"

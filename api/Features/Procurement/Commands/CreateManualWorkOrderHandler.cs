@@ -77,6 +77,12 @@ public sealed class CreateManualWorkOrderHandler
         var sortOrder = 0;
         foreach (var line in command.Lines)
         {
+            // A measured line ("14 m2 @ £54.00") keeps its real quantity, unit and rate for the
+            // PO's Qty/Unit and Unit Cost columns; anything else prints the long-standing
+            // "1 item" at the line's amount. Quantity and UnitCost only count together — one
+            // without the other cannot make a printable rate line.
+            var isMeasured = line.Quantity is > 0m && line.UnitCost is not null;
+            var unit = string.IsNullOrWhiteSpace(line.Unit) ? "item" : line.Unit.Trim();
             context.WorkOrderLines.Add(new WorkOrderLineEntity
             {
                 WorkOrderLineId = ProcurementIdentifierFactory.NextWorkOrderLineId(),
@@ -85,9 +91,9 @@ public sealed class CreateManualWorkOrderHandler
                 Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description,
                 CostType = "Subcontractor",
                 CostCode = line.CostCode,
-                Quantity = 1m,
-                Unit = "item",
-                UnitCost = line.Amount,
+                Quantity = isMeasured ? line.Quantity!.Value : 1m,
+                Unit = isMeasured ? (unit.Length > 32 ? unit[..32] : unit) : "item",
+                UnitCost = isMeasured ? line.UnitCost!.Value : line.Amount,
                 LineTotal = line.Amount,
                 PaidToDate = 0m,
                 SortOrder = sortOrder++

@@ -1,0 +1,375 @@
+diff --git a/api/Features/Procurement/Commands/CreateManualWorkOrderHandler.cs b/api/Features/Procurement/Commands/CreateManualWorkOrderHandler.cs
+index d398c0e..f4031fb 100644
+--- a/api/Features/Procurement/Commands/CreateManualWorkOrderHandler.cs
++++ b/api/Features/Procurement/Commands/CreateManualWorkOrderHandler.cs
+@@ -77,6 +77,12 @@ public sealed class CreateManualWorkOrderHandler
+         var sortOrder = 0;
+         foreach (var line in command.Lines)
+         {
++            // A measured line ("14 m2 @ £54.00") keeps its real quantity, unit and rate for the
++            // PO's Qty/Unit and Unit Cost columns; anything else prints the long-standing
++            // "1 item" at the line's amount. Quantity and UnitCost only count together — one
++            // without the other cannot make a printable rate line.
++            var isMeasured = line.Quantity is > 0m && line.UnitCost is not null;
++            var unit = string.IsNullOrWhiteSpace(line.Unit) ? "item" : line.Unit.Trim();
+             context.WorkOrderLines.Add(new WorkOrderLineEntity
+             {
+                 WorkOrderLineId = ProcurementIdentifierFactory.NextWorkOrderLineId(),
+@@ -85,9 +91,9 @@ public sealed class CreateManualWorkOrderHandler
+                 Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description,
+                 CostType = "Subcontractor",
+                 CostCode = line.CostCode,
+-                Quantity = 1m,
+-                Unit = "item",
+-                UnitCost = line.Amount,
++                Quantity = isMeasured ? line.Quantity!.Value : 1m,
++                Unit = isMeasured ? (unit.Length > 32 ? unit[..32] : unit) : "item",
++                UnitCost = isMeasured ? line.UnitCost!.Value : line.Amount,
+                 LineTotal = line.Amount,
+                 PaidToDate = 0m,
+                 SortOrder = sortOrder++
+diff --git a/api/Features/Procurement/Commands/UpdateManualWorkOrderHandler.cs b/api/Features/Procurement/Commands/UpdateManualWorkOrderHandler.cs
+index c9dc7cd..8850830 100644
+--- a/api/Features/Procurement/Commands/UpdateManualWorkOrderHandler.cs
++++ b/api/Features/Procurement/Commands/UpdateManualWorkOrderHandler.cs
+@@ -107,14 +107,21 @@ public sealed class UpdateManualWorkOrderHandler
+                 existing.Title = line.Title.Length > 256 ? line.Title[..256] : line.Title;
+                 existing.Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description;
+                 existing.CostCode = line.CostCode;
+-                existing.Quantity = 1m;
+-                existing.Unit = "item";
+-                existing.UnitCost = line.Amount;
++                // Same measured-line rule as CreateManualWorkOrderHandler: quantity and rate keep
++                // the PO's Qty/Unit and Unit Cost columns honest; without both, "1 item". (This
++                // used to FORCE 1/item, flattening a seeded order's real quantities on any edit.)
++                var isMeasured = line.Quantity is > 0m && line.UnitCost is not null;
++                var unit = string.IsNullOrWhiteSpace(line.Unit) ? "item" : line.Unit.Trim();
++                existing.Quantity = isMeasured ? line.Quantity!.Value : 1m;
++                existing.Unit = isMeasured ? (unit.Length > 32 ? unit[..32] : unit) : "item";
++                existing.UnitCost = isMeasured ? line.UnitCost!.Value : line.Amount;
+                 existing.LineTotal = line.Amount;
+                 existing.SortOrder = sortOrder++;
+             }
+             else
+             {
++                var isMeasuredNew = line.Quantity is > 0m && line.UnitCost is not null;
++                var newUnit = string.IsNullOrWhiteSpace(line.Unit) ? "item" : line.Unit.Trim();
+                 context.WorkOrderLines.Add(new WorkOrderLineEntity
+                 {
+                     WorkOrderLineId = ProcurementIdentifierFactory.NextWorkOrderLineId(),
+@@ -123,9 +130,9 @@ public sealed class UpdateManualWorkOrderHandler
+                     Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description,
+                     CostType = "Subcontractor",
+                     CostCode = line.CostCode,
+-                    Quantity = 1m,
+-                    Unit = "item",
+-                    UnitCost = line.Amount,
++                    Quantity = isMeasuredNew ? line.Quantity!.Value : 1m,
++                    Unit = isMeasuredNew ? (newUnit.Length > 32 ? newUnit[..32] : newUnit) : "item",
++                    UnitCost = isMeasuredNew ? line.UnitCost!.Value : line.Amount,
+                     LineTotal = line.Amount,
+                     PaidToDate = 0m,
+                     SortOrder = sortOrder++
+diff --git a/contracts/Ai/ModalCatalog.cs b/contracts/Ai/ModalCatalog.cs
+index 273fbb8..c3787ec 100644
+--- a/contracts/Ai/ModalCatalog.cs
++++ b/contracts/Ai/ModalCatalog.cs
+@@ -555,16 +555,32 @@ public static class ModalCatalog
+                         "The line as the purchase order prints it — an existing line's title "
+                         + "verbatim to keep it, or a new line's short label.", Required: true),
+                     new("description", "string",
+-                        "The longer detail for the PO's Description column — optional."),
++                        "The longer detail for the PO's Description column — optional, and never "
++                        + "the place for quantities or rates (those have their own fields)."),
+                     new("costCode", "string",
+                         "The cost centre this line's committed value lands on. It must be a Code "
+                         + "returned by list_cost_codes, spelled exactly as that tool returned it. "
+                         + "If no code clearly fits, leave this out — the user picks it from a "
+                         + "list. A wrong cost code sends real money to the wrong place."),
++                    new("quantity", "number",
++                        "How much, in the unit — 14 for \"14 m2\". Give quantity, unit and "
++                        + "unitCost TOGETHER whenever the quote prices by measure: they print in "
++                        + "the PO's own Qty/Unit and Unit Cost columns and the line's amount "
++                        + "becomes quantity × unitCost. NEVER restate them as prose in the "
++                        + "description — \"14 m2 @ £54.00/m2\" in the description prints beside "
++                        + "a Qty/Unit column reading \"1 item\", which is exactly the confusion "
++                        + "these fields exist to end."),
++                    new("unit", "string",
++                        "The measure the quantity counts — m2, m, no., day, load. Printed beside "
++                        + "the quantity."),
++                    new("unitCost", "number",
++                        "The rate per unit in GBP, NET of VAT — 54 for £54.00/m2. Only rates the "
++                        + "correspondence actually states."),
+                     new("amount", "number",
+-                        "The line's value in GBP as a plain number, NET of VAT. Negative only for "
+-                        + "a credit line. Only figures the correspondence actually states.",
+-                        Required: true)
++                        "The line's TOTAL value in GBP as a plain number, NET of VAT. Negative "
++                        + "only for a credit line. Only figures the correspondence actually "
++                        + "states. Leave it out when quantity and unitCost are given — the "
++                        + "dialog computes quantity × unitCost itself.")
+                 })
+         });
+ 
+@@ -632,16 +648,32 @@ public static class ModalCatalog
+                     new("title", "string",
+                         "The line as the purchase order prints it — a short label.", Required: true),
+                     new("description", "string",
+-                        "The longer detail for the PO's Description column — optional."),
++                        "The longer detail for the PO's Description column — optional, and never "
++                        + "the place for quantities or rates (those have their own fields)."),
+                     new("costCode", "string",
+                         "The cost centre this line's committed value lands on. It must be a Code "
+                         + "returned by list_cost_codes, spelled exactly as that tool returned it. "
+                         + "If no code clearly fits, leave this out — the user picks it from a "
+                         + "list. A wrong cost code sends real money to the wrong place."),
++                    new("quantity", "number",
++                        "How much, in the unit — 14 for \"14 m2\". Give quantity, unit and "
++                        + "unitCost TOGETHER whenever the quote prices by measure: they print in "
++                        + "the PO's own Qty/Unit and Unit Cost columns and the line's amount "
++                        + "becomes quantity × unitCost. NEVER restate them as prose in the "
++                        + "description — \"14 m2 @ £54.00/m2\" in the description prints beside "
++                        + "a Qty/Unit column reading \"1 item\", which is exactly the confusion "
++                        + "these fields exist to end."),
++                    new("unit", "string",
++                        "The measure the quantity counts — m2, m, no., day, load. Printed beside "
++                        + "the quantity."),
++                    new("unitCost", "number",
++                        "The rate per unit in GBP, NET of VAT — 54 for £54.00/m2. Only rates the "
++                        + "correspondence actually states."),
+                     new("amount", "number",
+-                        "The line's value in GBP as a plain number, NET of VAT. Only figures the "
+-                        + "correspondence actually states.",
+-                        Required: true)
++                        "The line's TOTAL value in GBP as a plain number, NET of VAT. Only "
++                        + "figures the correspondence actually states. Leave it out when "
++                        + "quantity and unitCost are given — the dialog computes "
++                        + "quantity × unitCost itself.")
+                 })
+         });
+ 
+diff --git a/contracts/Procurement/CreateManualWorkOrder.cs b/contracts/Procurement/CreateManualWorkOrder.cs
+index 80db8dc..ce975a7 100644
+--- a/contracts/Procurement/CreateManualWorkOrder.cs
++++ b/contracts/Procurement/CreateManualWorkOrder.cs
+@@ -43,5 +43,13 @@ public sealed record CreateManualWorkOrder(
+ 
+ /// <summary>One priced line: its cost centre, what it covers, and its £ amount. Description
+ /// is the longer detail printed in the purchase order's Description column — optional, so the
+-/// title can stay a short label instead of carrying the whole scope (titles cap at 256).</summary>
+-public sealed record ManualWorkOrderLine(string CostCode, string Title, decimal Amount, string Description = "");
++/// title can stay a short label instead of carrying the whole scope (titles cap at 256).
++/// Quantity / Unit / UnitCost are the measured breakdown ("14 m2 @ £54.00") printed in the PO's
++/// Qty/Unit and Unit Cost columns: give Quantity AND UnitCost together (Amount is then their
++/// product — the form derives it), or leave them out and the line prints the legacy
++/// "1 item" at Amount. They exist so a measured quote stops being squeezed into the
++/// description as prose while the printed PO said "1 item" (2026-08-27, the accountant's
++/// tiling order).</summary>
++public sealed record ManualWorkOrderLine(
++    string CostCode, string Title, decimal Amount, string Description = "",
++    decimal? Quantity = null, string Unit = "", decimal? UnitCost = null);
+diff --git a/contracts/Procurement/UpdateManualWorkOrder.cs b/contracts/Procurement/UpdateManualWorkOrder.cs
+index 1fe5592..f3edbb4 100644
+--- a/contracts/Procurement/UpdateManualWorkOrder.cs
++++ b/contracts/Procurement/UpdateManualWorkOrder.cs
+@@ -53,4 +53,10 @@ public sealed record UpdatedManualWorkOrderLine(
+     decimal Amount,
+     // The longer detail printed in the purchase order's Description column — optional,
+     // so the title can stay a short label instead of carrying the whole scope.
+-    string Description = "");
++    string Description = "",
++    // The measured breakdown printed in the PO's Qty/Unit and Unit Cost columns — same
++    // contract as ManualWorkOrderLine: Quantity and UnitCost travel together (Amount is
++    // their product) or not at all (the line prints "1 item" at Amount).
++    decimal? Quantity = null,
++    string Unit = "",
++    decimal? UnitCost = null);
+diff --git a/jpms/Components/ManualWorkOrderModal.razor.cs b/jpms/Components/ManualWorkOrderModal.razor.cs
+index c2e2414..2c5c01e 100644
+--- a/jpms/Components/ManualWorkOrderModal.razor.cs
++++ b/jpms/Components/ManualWorkOrderModal.razor.cs
+@@ -454,8 +454,14 @@ public partial class ManualWorkOrderModal : IDisposable
+                 {
+                     poEmailAttempted = true;
+                     var projectName = Projects.Find(ProjectId)?.Name ?? "";
++                    // A measured line emails as it prints: its real quantity, unit and total.
+                     var emailLines = draft.Lines
+-                        .Select(line => new WorkOrderPoEmail.Line(line.Title, 1m, "item", line.Amount))
++                        .Select(line => line.Quantity is > 0m && line.UnitCost is not null
++                            ? new WorkOrderPoEmail.Line(
++                                line.Title, line.Quantity.Value,
++                                string.IsNullOrWhiteSpace(line.Unit) ? "item" : line.Unit.Trim(),
++                                line.Amount)
++                            : new WorkOrderPoEmail.Line(line.Title, 1m, "item", line.Amount))
+                         .ToList();
+                     try
+                     {
+diff --git a/jpms/Components/WorkOrderForm.razor b/jpms/Components/WorkOrderForm.razor
+index 84b6bab..0312301 100644
+--- a/jpms/Components/WorkOrderForm.razor
++++ b/jpms/Components/WorkOrderForm.razor
+@@ -102,9 +102,27 @@
+                            class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
+                            value="@line.Title"
+                            @onchange="e => SetLineTitle(line, e.Value?.ToString())" />
+-                    <input type="number" step="any" placeholder="Amount £" disabled="@Busy"
++                    @* The measured breakdown — optional, but qty and rate come as a pair. When
++                       both are given the amount derives (qty × rate) and its box locks, so the
++                       printed Qty/Unit, Unit Cost and Price columns can never disagree. *@
++                    <input type="number" step="any" min="0" placeholder="Qty" disabled="@Busy"
++                           title="How many of the unit — 14 for 14 m2. Leave qty and rate empty for a lump-sum line"
++                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-20"
++                           value="@line.QuantityText"
++                           @onchange="e => SetLineQuantity(line, e.Value?.ToString())" />
++                    <input type="text" maxlength="32" placeholder="Unit" disabled="@Busy"
++                           title="The measure — m2, m, no., day"
++                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm w-20"
++                           value="@line.Unit"
++                           @onchange="e => SetLineUnit(line, e.Value?.ToString())" />
++                    <input type="number" step="any" placeholder="Rate £" disabled="@Busy"
++                           title="The cost per unit, net of VAT — 54.00 for £54.00/m2"
++                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-24"
++                           value="@line.UnitCostText"
++                           @onchange="e => SetLineUnitCost(line, e.Value?.ToString())" />
++                    <input type="number" step="any" placeholder="Amount £" disabled="@(Busy || IsMeasured(line))"
++                           title="@(IsMeasured(line) ? "Quantity × rate — edit those to change it" : line.PaidToDate != 0m ? $"{Money(line.PaidToDate)} already paid against this line — the amount can't drop below that" : "")"
+                            class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-32"
+-                           title="@(line.PaidToDate != 0m ? $"{Money(line.PaidToDate)} already paid against this line — the amount can't drop below that" : "")"
+                            value="@line.AmountText"
+                            @onchange="e => SetLineAmount(line, e.Value?.ToString())" />
+                     <button type="button" aria-label="Remove this line"
+diff --git a/jpms/Components/WorkOrderForm.razor.cs b/jpms/Components/WorkOrderForm.razor.cs
+index 8f04afa..84dde41 100644
+--- a/jpms/Components/WorkOrderForm.razor.cs
++++ b/jpms/Components/WorkOrderForm.razor.cs
+@@ -45,6 +45,29 @@ public partial class WorkOrderForm : IDisposable
+         public string Title { get; set; } = "";
+         public string Description { get; set; } = "";
+         public string AmountText { get; set; } = "";
++        // The measured breakdown ("14" / "m2" / "54.00"): all optional, but quantity and rate
++        // come as a pair — when both parse, the amount is DERIVED (qty × rate) and its input
++        // locks, so the printed Qty/Unit, Unit Cost and Price columns can never disagree.
++        public string QuantityText { get; set; } = "";
++        public string Unit { get; set; } = "";
++        public string UnitCostText { get; set; } = "";
++    }
++
++    /// <summary>True when the line carries a full measured breakdown — a positive quantity and a
++    /// parseable rate. Only then do quantity, unit and rate travel to the server; a lone
++    /// quantity or lone rate is a validation problem, not a silent "1 item".</summary>
++    internal static bool IsMeasured(LineRow line) =>
++        Parse(line.QuantityText) is { } quantity && quantity > 0m && Parse(line.UnitCostText) is not null;
++
++    /// <summary>Qty × rate, kept in the amount box whenever both halves parse.</summary>
++    private static void RecalculateAmount(LineRow line)
++    {
++        if (Parse(line.QuantityText) is { } quantity && quantity > 0m
++            && Parse(line.UnitCostText) is { } rate)
++        {
++            line.AmountText = Math.Round(quantity * rate, 2)
++                .ToString(System.Globalization.CultureInfo.InvariantCulture);
++        }
+     }
+ 
+     private string subcontractorId = "";
+@@ -93,6 +116,19 @@ public partial class WorkOrderForm : IDisposable
+             if (filledLines.Any(line => string.IsNullOrWhiteSpace(line.Title))) return "Every line needs a title.";
+             if (filledLines.Any(line => Parse(line.AmountText) is not { } amount || amount == 0m))
+                 return "Every line needs a non-zero amount.";
++            // Quantity and rate are a pair: one without the other would print as "1 item" while
++            // looking measured on screen — refuse rather than mislead.
++            foreach (var line in filledLines)
++            {
++                var hasQuantity = !string.IsNullOrWhiteSpace(line.QuantityText);
++                var hasRate = !string.IsNullOrWhiteSpace(line.UnitCostText);
++                if (hasQuantity != hasRate)
++                    return $"\"{Truncate(line.Title, 40)}\" — give a quantity AND a unit rate together, or neither.";
++                if (hasQuantity && (Parse(line.QuantityText) is not { } quantity || quantity <= 0m))
++                    return $"\"{Truncate(line.Title, 40)}\" — the quantity must be a number above zero.";
++                if (hasRate && Parse(line.UnitCostText) is null)
++                    return $"\"{Truncate(line.Title, 40)}\" — the unit rate isn't a number.";
++            }
+             if (depositRequired && (Parse(depositPercentText) is not { } depositPercent
+                                     || depositPercent <= 0m || depositPercent > 100m))
+                 return "A required deposit needs a percentage above 0 and no more than 100.";
+@@ -116,7 +152,10 @@ public partial class WorkOrderForm : IDisposable
+         if (ValidationProblem is { } problem) { error = problem; return null; }
+         var orderLines = EnteredLines()
+             .Select(line => new ManualWorkOrderLine(
+-                line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value, line.Description.Trim()))
++                line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value, line.Description.Trim(),
++                Quantity: IsMeasured(line) ? Parse(line.QuantityText) : null,
++                Unit: IsMeasured(line) ? line.Unit.Trim() : "",
++                UnitCost: IsMeasured(line) ? Parse(line.UnitCostText) : null))
+             .ToList();
+         if (orderLines.Count == 0) { error = "Add at least one priced line."; return null; }
+         StateHasChanged();
+@@ -134,7 +173,10 @@ public partial class WorkOrderForm : IDisposable
+         EnteredLines()
+             .Select(line => new UpdatedManualWorkOrderLine(
+                 line.WorkOrderLineId, line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value,
+-                line.Description.Trim()))
++                line.Description.Trim(),
++                Quantity: IsMeasured(line) ? Parse(line.QuantityText) : null,
++                Unit: IsMeasured(line) ? line.Unit.Trim() : "",
++                UnitCost: IsMeasured(line) ? Parse(line.UnitCostText) : null))
+             .ToList();
+ 
+     public void ShowError(string message)
+@@ -163,8 +205,11 @@ public partial class WorkOrderForm : IDisposable
+             title = line.Title,
+             description = line.Description,
+             costCode = line.CostCode,
+-            // A NUMBER, as the schema declares it — null while blank or unparseable. Serialising
++            // NUMBERS, as the schema declares them — null while blank or unparseable. Serialising
+             // the raw text ("" included) taught the model the wrong shape.
++            quantity = decimal.TryParse(line.QuantityText, out var lineQuantity) ? (decimal?)lineQuantity : null,
++            unit = line.Unit,
++            unitCost = decimal.TryParse(line.UnitCostText, out var lineRate) ? (decimal?)lineRate : null,
+             amount = decimal.TryParse(line.AmountText, out var lineAmount) ? (decimal?)lineAmount : null,
+             // Says which lines are anchored: a paid line can't be removed and can't drop below this.
+             paidToDate = line.PaidToDate
+@@ -226,7 +271,14 @@ public partial class WorkOrderForm : IDisposable
+                     row.Title = lineTitle;
+                     if (ReadText(element, "description") is { } lineDescription) row.Description = lineDescription;
+                     if (ReadText(element, "costCode") is { } lineCode && !string.IsNullOrWhiteSpace(lineCode)) row.CostCode = lineCode;
++                    // The measured breakdown, when the model sends one: quantity and unitCost land
++                    // in their own boxes and the amount derives from them (RecalculateAmount), so
++                    // "14 m2 @ £54.00" prints as columns rather than description prose.
++                    if (ReadNumberText(element, "quantity") is { } lineQuantity) row.QuantityText = lineQuantity;
++                    if (ReadText(element, "unit") is { } lineUnit && !string.IsNullOrWhiteSpace(lineUnit)) row.Unit = lineUnit.Trim();
++                    if (ReadNumberText(element, "unitCost") is { } lineRate) row.UnitCostText = lineRate;
+                     if (ReadNumberText(element, "amount") is { } lineAmount) row.AmountText = lineAmount;
++                    RecalculateAmount(row);
+                     next.Add(row);
+                 }
+                 foreach (var anchored in unmatched.Where(row => row.PaidToDate != 0m)) next.Add(anchored);
+@@ -325,7 +377,17 @@ public partial class WorkOrderForm : IDisposable
+                 CostCode = line.CostCode,
+                 Title = line.Title,
+                 Description = line.Description,
+-                AmountText = line.LineTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)
++                AmountText = line.LineTotal.ToString(System.Globalization.CultureInfo.InvariantCulture),
++                // A real measured breakdown round-trips into the qty/unit/rate boxes; the
++                // long-standing "1 item" placeholder stays out of them — showing it would
++                // dress every legacy line up as measured.
++                QuantityText = line.Quantity == 1m && line.Unit == "item"
++                    ? ""
++                    : line.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture),
++                Unit = line.Quantity == 1m && line.Unit == "item" ? "" : line.Unit,
++                UnitCostText = line.Quantity == 1m && line.Unit == "item"
++                    ? ""
++                    : line.UnitCost.ToString(System.Globalization.CultureInfo.InvariantCulture)
+             })
+             .ToList();
+         if (lines.Count == 0) lines = new List<LineRow> { new LineRow() };
+@@ -387,6 +449,9 @@ public partial class WorkOrderForm : IDisposable
+     private void SetLineTitle(LineRow line, string? value) { line.Title = value ?? ""; _ = OnChanged.InvokeAsync(); }
+     private void SetLineDescription(LineRow line, string? value) { line.Description = value ?? ""; _ = OnChanged.InvokeAsync(); }
+     private void SetLineAmount(LineRow line, string? value) { line.AmountText = value ?? ""; _ = OnChanged.InvokeAsync(); }
++    private void SetLineQuantity(LineRow line, string? value) { line.QuantityText = value ?? ""; RecalculateAmount(line); _ = OnChanged.InvokeAsync(); }
++    private void SetLineUnit(LineRow line, string? value) { line.Unit = value ?? ""; _ = OnChanged.InvokeAsync(); }
++    private void SetLineUnitCost(LineRow line, string? value) { line.UnitCostText = value ?? ""; RecalculateAmount(line); _ = OnChanged.InvokeAsync(); }
+     private void SetDepositPercent(string? value) { depositPercentText = value ?? ""; _ = OnChanged.InvokeAsync(); }
+ 
+     // ---- Cost-centre picker options (typed-to-find; cached against the master list) ----

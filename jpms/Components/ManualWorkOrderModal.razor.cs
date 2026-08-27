@@ -454,8 +454,14 @@ public partial class ManualWorkOrderModal : IDisposable
                 {
                     poEmailAttempted = true;
                     var projectName = Projects.Find(ProjectId)?.Name ?? "";
+                    // A measured line emails as it prints: its real quantity, unit and total.
                     var emailLines = draft.Lines
-                        .Select(line => new WorkOrderPoEmail.Line(line.Title, 1m, "item", line.Amount))
+                        .Select(line => line.Quantity is > 0m && line.UnitCost is not null
+                            ? new WorkOrderPoEmail.Line(
+                                line.Title, line.Quantity.Value,
+                                string.IsNullOrWhiteSpace(line.Unit) ? "item" : line.Unit.Trim(),
+                                line.Amount)
+                            : new WorkOrderPoEmail.Line(line.Title, 1m, "item", line.Amount))
                         .ToList();
                     try
                     {

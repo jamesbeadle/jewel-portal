@@ -45,6 +45,29 @@ public partial class WorkOrderForm : IDisposable
         public string Title { get; set; } = "";
         public string Description { get; set; } = "";
         public string AmountText { get; set; } = "";
+        // The measured breakdown ("14" / "m2" / "54.00"): all optional, but quantity and rate
+        // come as a pair — when both parse, the amount is DERIVED (qty × rate) and its input
+        // locks, so the printed Qty/Unit, Unit Cost and Price columns can never disagree.
+        public string QuantityText { get; set; } = "";
+        public string Unit { get; set; } = "";
+        public string UnitCostText { get; set; } = "";
+    }
+
+    /// <summary>True when the line carries a full measured breakdown — a positive quantity and a
+    /// parseable rate. Only then do quantity, unit and rate travel to the server; a lone
+    /// quantity or lone rate is a validation problem, not a silent "1 item".</summary>
+    internal static bool IsMeasured(LineRow line) =>
+        Parse(line.QuantityText) is { } quantity && quantity > 0m && Parse(line.UnitCostText) is not null;
+
+    /// <summary>Qty × rate, kept in the amount box whenever both halves parse.</summary>
+    private static void RecalculateAmount(LineRow line)
+    {
+        if (Parse(line.QuantityText) is { } quantity && quantity > 0m
+            && Parse(line.UnitCostText) is { } rate)
+        {
+            line.AmountText = Math.Round(quantity * rate, 2)
+                .ToString(System.Globalization.CultureInfo.InvariantCulture);
+        }
     }
 
     private string subcontractorId = "";
@@ -93,6 +116,19 @@ public partial class WorkOrderForm : IDisposable
             if (filledLines.Any(line => string.IsNullOrWhiteSpace(line.Title))) return "Every line needs a title.";
             if (filledLines.Any(line => Parse(line.AmountText) is not { } amount || amount == 0m))
                 return "Every line needs a non-zero amount.";
+            // Quantity and rate are a pair: one without the other would print as "1 item" while
+            // looking measured on screen — refuse rather than mislead.
+            foreach (var line in filledLines)
+            {
+                var hasQuantity = !string.IsNullOrWhiteSpace(line.QuantityText);
+                var hasRate = !string.IsNullOrWhiteSpace(line.UnitCostText);
+                if (hasQuantity != hasRate)
+                    return $"\"{Truncate(line.Title, 40)}\" — give a quantity AND a unit rate together, or neither.";
+                if (hasQuantity && (Parse(line.QuantityText) is not { } quantity || quantity <= 0m))
+                    return $"\"{Truncate(line.Title, 40)}\" — the quantity must be a number above zero.";
+                if (hasRate && Parse(line.UnitCostText) is null)
+                    return $"\"{Truncate(line.Title, 40)}\" — the unit rate isn't a number.";
+            }
             if (depositRequired && (Parse(depositPercentText) is not { } depositPercent
                                     || depositPercent <= 0m || depositPercent > 100m))
                 return "A required deposit needs a percentage above 0 and no more than 100.";
@@ -116,7 +152,10 @@ public partial class WorkOrderForm : IDisposable
         if (ValidationProblem is { } problem) { error = problem; return null; }
         var orderLines = EnteredLines()
             .Select(line => new ManualWorkOrderLine(
-                line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value, line.Description.Trim()))
+                line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value, line.Description.Trim(),
+                Quantity: IsMeasured(line) ? Parse(line.QuantityText) : null,
+                Unit: IsMeasured(line) ? line.Unit.Trim() : "",
+                UnitCost: IsMeasured(line) ? Parse(line.UnitCostText) : null))
             .ToList();
         if (orderLines.Count == 0) { error = "Add at least one priced line."; return null; }
         StateHasChanged();
@@ -134,7 +173,10 @@ public partial class WorkOrderForm : IDisposable
         EnteredLines()
             .Select(line => new UpdatedManualWorkOrderLine(
                 line.WorkOrderLineId, line.CostCode, line.Title.Trim(), Parse(line.AmountText)!.Value,
-                line.Description.Trim()))
+                line.Description.Trim(),
+                Quantity: IsMeasured(line) ? Parse(line.QuantityText) : null,
+                Unit: IsMeasured(line) ? line.Unit.Trim() : "",
+                UnitCost: IsMeasured(line) ? Parse(line.UnitCostText) : null))
             .ToList();
 
     public void ShowError(string message)
@@ -163,8 +205,11 @@ public partial class WorkOrderForm : IDisposable
             title = line.Title,
             description = line.Description,
             costCode = line.CostCode,
-            // A NUMBER, as the schema declares it — null while blank or unparseable. Serialising
+            // NUMBERS, as the schema declares them — null while blank or unparseable. Serialising
             // the raw text ("" included) taught the model the wrong shape.
+            quantity = decimal.TryParse(line.QuantityText, out var lineQuantity) ? (decimal?)lineQuantity : null,
+            unit = line.Unit,
+            unitCost = decimal.TryParse(line.UnitCostText, out var lineRate) ? (decimal?)lineRate : null,
             amount = decimal.TryParse(line.AmountText, out var lineAmount) ? (decimal?)lineAmount : null,
             // Says which lines are anchored: a paid line can't be removed and can't drop below this.
             paidToDate = line.PaidToDate
@@ -226,7 +271,14 @@ public partial class WorkOrderForm : IDisposable
                     row.Title = lineTitle;
                     if (ReadText(element, "description") is { } lineDescription) row.Description = lineDescription;
                     if (ReadText(element, "costCode") is { } lineCode && !string.IsNullOrWhiteSpace(lineCode)) row.CostCode = lineCode;
+                    // The measured breakdown, when the model sends one: quantity and unitCost land
+                    // in their own boxes and the amount derives from them (RecalculateAmount), so
+                    // "14 m2 @ £54.00" prints as columns rather than description prose.
+                    if (ReadNumberText(element, "quantity") is { } lineQuantity) row.QuantityText = lineQuantity;
+                    if (ReadText(element, "unit") is { } lineUnit && !string.IsNullOrWhiteSpace(lineUnit)) row.Unit = lineUnit.Trim();
+                    if (ReadNumberText(element, "unitCost") is { } lineRate) row.UnitCostText = lineRate;
                     if (ReadNumberText(element, "amount") is { } lineAmount) row.AmountText = lineAmount;
+                    RecalculateAmount(row);
                     next.Add(row);
                 }
                 foreach (var anchored in unmatched.Where(row => row.PaidToDate != 0m)) next.Add(anchored);
@@ -325,7 +377,17 @@ public partial class WorkOrderForm : IDisposable
                 CostCode = line.CostCode,
                 Title = line.Title,
                 Description = line.Description,
-                AmountText = line.LineTotal.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                AmountText = line.LineTotal.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                // A real measured breakdown round-trips into the qty/unit/rate boxes; the
+                // long-standing "1 item" placeholder stays out of them — showing it would
+                // dress every legacy line up as measured.
+                QuantityText = line.Quantity == 1m && line.Unit == "item"
+                    ? ""
+                    : line.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Unit = line.Quantity == 1m && line.Unit == "item" ? "" : line.Unit,
+                UnitCostText = line.Quantity == 1m && line.Unit == "item"
+                    ? ""
+                    : line.UnitCost.ToString(System.Globalization.CultureInfo.InvariantCulture)
             })
             .ToList();
         if (lines.Count == 0) lines = new List<LineRow> { new LineRow() };
@@ -387,6 +449,9 @@ public partial class WorkOrderForm : IDisposable
     private void SetLineTitle(LineRow line, string? value) { line.Title = value ?? ""; _ = OnChanged.InvokeAsync(); }
     private void SetLineDescription(LineRow line, string? value) { line.Description = value ?? ""; _ = OnChanged.InvokeAsync(); }
     private void SetLineAmount(LineRow line, string? value) { line.AmountText = value ?? ""; _ = OnChanged.InvokeAsync(); }
+    private void SetLineQuantity(LineRow line, string? value) { line.QuantityText = value ?? ""; RecalculateAmount(line); _ = OnChanged.InvokeAsync(); }
+    private void SetLineUnit(LineRow line, string? value) { line.Unit = value ?? ""; _ = OnChanged.InvokeAsync(); }
+    private void SetLineUnitCost(LineRow line, string? value) { line.UnitCostText = value ?? ""; RecalculateAmount(line); _ = OnChanged.InvokeAsync(); }
     private void SetDepositPercent(string? value) { depositPercentText = value ?? ""; _ = OnChanged.InvokeAsync(); }
 
     // ---- Cost-centre picker options (typed-to-find; cached against the master list) ----

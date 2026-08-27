@@ -107,14 +107,21 @@ public sealed class UpdateManualWorkOrderHandler
                 existing.Title = line.Title.Length > 256 ? line.Title[..256] : line.Title;
                 existing.Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description;
                 existing.CostCode = line.CostCode;
-                existing.Quantity = 1m;
-                existing.Unit = "item";
-                existing.UnitCost = line.Amount;
+                // Same measured-line rule as CreateManualWorkOrderHandler: quantity and rate keep
+                // the PO's Qty/Unit and Unit Cost columns honest; without both, "1 item". (This
+                // used to FORCE 1/item, flattening a seeded order's real quantities on any edit.)
+                var isMeasured = line.Quantity is > 0m && line.UnitCost is not null;
+                var unit = string.IsNullOrWhiteSpace(line.Unit) ? "item" : line.Unit.Trim();
+                existing.Quantity = isMeasured ? line.Quantity!.Value : 1m;
+                existing.Unit = isMeasured ? (unit.Length > 32 ? unit[..32] : unit) : "item";
+                existing.UnitCost = isMeasured ? line.UnitCost!.Value : line.Amount;
                 existing.LineTotal = line.Amount;
                 existing.SortOrder = sortOrder++;
             }
             else
             {
+                var isMeasuredNew = line.Quantity is > 0m && line.UnitCost is not null;
+                var newUnit = string.IsNullOrWhiteSpace(line.Unit) ? "item" : line.Unit.Trim();
                 context.WorkOrderLines.Add(new WorkOrderLineEntity
                 {
                     WorkOrderLineId = ProcurementIdentifierFactory.NextWorkOrderLineId(),
@@ -123,9 +130,9 @@ public sealed class UpdateManualWorkOrderHandler
                     Description = line.Description.Length > 1024 ? line.Description[..1024] : line.Description,
                     CostType = "Subcontractor",
                     CostCode = line.CostCode,
-                    Quantity = 1m,
-                    Unit = "item",
-                    UnitCost = line.Amount,
+                    Quantity = isMeasuredNew ? line.Quantity!.Value : 1m,
+                    Unit = isMeasuredNew ? (newUnit.Length > 32 ? newUnit[..32] : newUnit) : "item",
+                    UnitCost = isMeasuredNew ? line.UnitCost!.Value : line.Amount,
                     LineTotal = line.Amount,
                     PaidToDate = 0m,
                     SortOrder = sortOrder++

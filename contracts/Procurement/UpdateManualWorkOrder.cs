@@ -53,4 +53,10 @@ public sealed record UpdatedManualWorkOrderLine(
     decimal Amount,
     // The longer detail printed in the purchase order's Description column — optional,
     // so the title can stay a short label instead of carrying the whole scope.
-    string Description = "");
+    string Description = "",
+    // The measured breakdown printed in the PO's Qty/Unit and Unit Cost columns — same
+    // contract as ManualWorkOrderLine: Quantity and UnitCost travel together (Amount is
+    // their product) or not at all (the line prints "1 item" at Amount).
+    decimal? Quantity = null,
+    string Unit = "",
+    decimal? UnitCost = null);
