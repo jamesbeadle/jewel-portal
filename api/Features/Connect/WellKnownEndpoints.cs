@@ -11,6 +11,12 @@ namespace Jewel.JPMS.Api.Features.Connect;
 /// from the MCP URL alone. Served under /api/well-known/… and surfaced at the standard
 /// /.well-known/… paths by rewrites in staticwebapp.config.json — Static Web Apps reserves the
 /// site root for the SPA, so the functions cannot claim those paths directly.
+///
+/// <para>The MCP endpoint itself lives on a SEPARATE Function App host (Mcp:PublicUrl), because
+/// Static Web Apps strips the client's Authorization header before it reaches managed functions
+/// (github.com/Azure/static-web-apps issues 158/275) — sign-in worked, every bearer call 401'd.
+/// The browser-facing OAuth flow stays on the portal domain; only the resource identifier here
+/// has to name the real MCP URL, so the client's audience check matches the host it talks to.</para>
 /// </summary>
 public sealed class WellKnownEndpoints
 {
@@ -30,7 +36,7 @@ public sealed class WellKnownEndpoints
         var site = SiteBaseUrl.Resolve(configuration, request);
         return Json(new Dictionary<string, object>
         {
-            ["resource"] = $"{site}/api/mcp",
+            ["resource"] = McpPublicUrl(site),
             ["authorization_servers"] = new[] { site },
             ["bearer_methods_supported"] = new[] { "header" },
             ["scopes_supported"] = new[] { OAuthDefaults.Scope }
@@ -54,6 +60,14 @@ public sealed class WellKnownEndpoints
             ["token_endpoint_auth_methods_supported"] = new[] { "none" },
             ["scopes_supported"] = new[] { OAuthDefaults.Scope }
         });
+    }
+
+    /// <summary>Where the MCP endpoint actually lives: the standalone Function App host when
+    /// configured (Mcp__PublicUrl app setting), else this site's own /api/mcp.</summary>
+    private string McpPublicUrl(string site)
+    {
+        var configured = configuration["Mcp:PublicUrl"];
+        return string.IsNullOrWhiteSpace(configured) ? $"{site}/api/mcp" : configured.TrimEnd('/');
     }
 
     private static OkObjectResult Json(object payload) => new(payload);

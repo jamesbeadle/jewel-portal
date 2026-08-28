@@ -61,6 +61,24 @@ Three pieces, all in the api project:
 Images still work: a tool returning an `AiImageToolResult` marker is translated into an MCP
 `image` content block, so the model sees drawings and photos, not base64 text.
 
+### 2b. Why the MCP endpoint lives on its own host
+
+Found live on launch day: Azure Static Web Apps **strips/overwrites the client's `Authorization`
+header** before requests reach its managed functions (github.com/Azure/static-web-apps issues
+158 & 275) — the OAuth flow worked end to end, then every bearer call answered 401. So `/api/mcp`
+is served by a **standalone Function App** running the same api project
+(`infra/azure-mcp-host-setup.sh` provisions it; `.github/workflows/jpms-mcp.yml` deploys it),
+where the header passes through untouched. The split of responsibilities:
+
+- **Portal domain (SWA)** — the SPA, every cookie-authed endpoint, the whole OAuth flow
+  (register/authorize/approve/token) and the `/.well-known` discovery documents.
+- **MCP host (Function App)** — the AI tools' JSON-RPC calls with the bearer. Its 401 points
+  `resource_metadata` back at the portal's discovery documents, whose `resource` field names the
+  MCP host's URL (`Mcp__PublicUrl`, set on both apps), so the client's audience check matches.
+
+The Function App necessarily exposes the rest of the api's endpoints on its host too; they are
+all session-cookie gated and simply answer 401 there — only `/api/mcp` accepts bearers.
+
 ## 3. Audit
 
 Every `tools/call` writes one `AgentActivity` row (`AgentTrigger.Mcp`, actor = the token's user,
@@ -91,5 +109,5 @@ exactly as before. Write tools additionally append to the client-facing `AuditTr
 - The `ai-attachments` blob container is orphaned once the chat tables drop —
   `infra/run-ai-attachments-lifecycle.sh` (or container deletion) reclaims it.
 - Kill switch: revoke connections per user on the AI Connections page; for everything at once,
-  disable the `McpServer` function or roll back the deploy.
+  stop the MCP Function App (`az functionapp stop`) — the portal itself is untouched.
 - Team setup instructions: `docs/Portal-AI-Connector-Team-Guide.md`.
