@@ -658,10 +658,19 @@ else
     private AbsenceKind absenceKind = AbsenceKind.Holiday;
     private string absenceNote = "";
 
-    // Contract editing (inside the worker detail row).
+    // Contract editing (inside the worker detail row). The CIS select binds a STRING: the rate
+    // arrives from the API as a decimal whose scale follows the stored value ("20.00"), and a
+    // <select @bind> matches its options by string — bound to the decimal, "20.00" matched no
+    // option, the select rendered blank, and picking "20" then compared numerically equal to the
+    // current value, so Save sent nothing. loaded* keep what the panel opened with so Save knows
+    // what genuinely changed.
     private decimal editContractedDays;
-    private decimal editCisRate;
+    private string editCisRate = "20";
+    private decimal loadedContractedDays;
+    private decimal loadedCisRate;
     private bool planSaving;
+    private bool planSaved;
+    private string? planError;
 
     private bool Loading => !Labour.OverviewLoadedFor(year, month) && !dataFailed;
     private string MonthLabel => new DateTime(year, month, 1).ToString("MMMM yyyy");
@@ -731,8 +740,11 @@ else
         if (expandedWorkerId == workerId) { expandedWorkerId = null; return; }
         expandedWorkerId = workerId;
         var worker = Labour.Overview(year, month)?.Workers.FirstOrDefault(row => row.WorkerId == workerId);
-        editContractedDays = worker?.ContractedDays ?? 0m;
-        editCisRate = worker?.CisRatePercent ?? 20m;
+        loadedContractedDays = worker?.ContractedDays ?? 0m;
+        loadedCisRate = worker?.CisRatePercent ?? 20m;
+        editContractedDays = loadedContractedDays;
+        editCisRate = loadedCisRate.ToString("0");
+        planSaved = false; planError = null;
     }
 
     private void OpenAbsence(string workerId, string workerName, DateTimeOffset date)
@@ -757,15 +769,30 @@ else
 
     private async Task SavePlanAsync(LabourOverviewWorker worker)
     {
-        planSaving = true; actionError = null;
+        planSaving = true; planSaved = false; planError = null; actionError = null;
         try
         {
-            if (editContractedDays != worker.ContractedDays)
+            var cisRate = decimal.TryParse(editCisRate, out var parsed) ? parsed : loadedCisRate;
+            var changed = false;
+            if (editContractedDays != loadedContractedDays)
+            {
                 await Labour.SetWorkerContractAsync(year, month, worker.WorkerId, editContractedDays);
-            if (editCisRate != worker.CisRatePercent)
-                await Labour.SetWorkerCisStatusAsync(year, month, worker.WorkerId, editCisRate, "");
+                changed = true;
+            }
+            if (cisRate != loadedCisRate)
+            {
+                await Labour.SetWorkerCisStatusAsync(year, month, worker.WorkerId, cisRate, "");
+                changed = true;
+            }
+            // Show the saved values back from the server — without this, a successful save
+            // changed nothing on screen and read as "it does nothing".
+            if (changed) await Labour.RefreshOverviewAsync(year, month);
+            loadedContractedDays = editContractedDays;
+            loadedCisRate = cisRate;
+            planSaved = true;
         }
-        catch (Exception) { actionError = "Could not save the contract settings — try again."; }
+        catch (CommandFailedException failure) { planError = failure.Message; }
+        catch (Exception) { planError = "Could not save the contract settings — try again."; }
         finally { planSaving = false; }
     }
 
@@ -888,7 +915,15 @@ else
                     <div class="flex items-center gap-2">
                         <button type="button" class="btn-secondary" disabled="@planSaving" @onclick="() => SavePlanAsync(worker)">Save</button>
                         <button type="button" class="btn-secondary" @onclick="() => OpenAbsence(worker.WorkerId, worker.Name, DateTimeOffset.UtcNow)">Record absence</button>
+                        @if (planSaved)
+                        {
+                            <span class="text-sm text-positive">Saved</span>
+                        }
                     </div>
+                    @if (planError is not null)
+                    {
+                        <p class="text-sm text-negative">@planError</p>
+                    }
                 </div>
             </div>
         </div>
