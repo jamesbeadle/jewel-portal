@@ -21,14 +21,16 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 
 /// <summary>Labour and back-office commands as connector actions. Mirrors the command endpoints
-/// under Features/CostCenters, Features/Rates, Features/Hs, Features/UsefulInformation,
-/// Features/Platform and Features/AccessRequests. The Labour, Xero and Registers command
-/// endpoints all gate with inline role checks and have no Authorisation classes, so none of them
-/// can be mirrored here — every one is recorded in the skip list at the bottom of this file. The
-/// one exception is the week entry: SubmitWorkerWeekByName is a connector-shaped command with
-/// its own gate classes, built for this registry (2026-08-28) because the only timesheet entry
-/// the connector had was the legacy Commercial SubmitTimesheet, whose email-and-cost-code schema
-/// taught models to demand data the portal does not need.
+/// under Features/Labour, Features/CostCenters, Features/Rates, Features/Hs,
+/// Features/UsefulInformation, Features/Platform and Features/AccessRequests. Most Labour, Xero
+/// and Registers command endpoints still gate with inline role checks and have no Authorisation
+/// classes, so they cannot be mirrored here — each is recorded in the skip list at the bottom of
+/// this file. The Labour exceptions (2026-08-28): AddWorker now has real gate classes its
+/// endpoint composes, and the by-name connector-shaped commands SubmitWorkerWeekByName and
+/// RecordWorkerAbsenceByName carry their own gates and resolve workers by NAME — built because
+/// the only timesheet entry the connector once had was the legacy Commercial SubmitTimesheet
+/// (slices deleted 2026-08-28), whose email-and-cost-code schema taught models to demand data
+/// the portal does not need.
 /// Where an authorisation keeps its role set as a private field, the VisibleTo below replicates
 /// the identical roles with RoleSet.Of(...) and a comment names the source; where the set is an
 /// accessible internal static (UsefulInformationRoles), it is referenced directly.</summary>
@@ -68,6 +70,49 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
     public IEnumerable<AiAction> Build() => new[]
     {
         // ---- Labour -------------------------------------------------------------------------
+
+        new AiAction(
+            Name: "add_worker",
+            Area: "Labour",
+            Description: "Adds a worker to the company-wide worker register with their hourly "
+                + "rate — the register that week entry, approvals and the Labour overview all key "
+                + "on. Creates no portal account and sends nothing; the worker simply becomes "
+                + "available to log time and absences against. The rate is money-facing: approved "
+                + "hours are costed at it.",
+            CommandType: typeof(AddWorker),
+            ResultType: typeof(Worker),
+            AuthorisationType: typeof(AddWorkerAuthorisation),
+            ValidationType: typeof(AddWorkerValidation),
+            VisibleTo: LabourRoleSets.ManageWorkers,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "Only name and hourlyRate are needed — NEVER ask the user for a worker's email "
+                + "or id. contactEmail exists solely to link the worker's own portal sign-in "
+                + "later and is normally left out; contactPhone likewise. subcontractorId links "
+                + "the worker to their subcontractor company where the user names one — omit it "
+                + "rather than guessing. A worker added by mistake can be deactivated on the "
+                + "Workers page."),
+
+        new AiAction(
+            Name: "record_worker_absence",
+            Area: "Labour",
+            Description: "Records one worker's absence on one date — Holiday, HalfDay, NotWorked "
+                + "or Sick — visible at once on the company-wide Labour overview and its "
+                + "forecast. One absence per worker per date: recording the same day again "
+                + "replaces the kind and note. Week entry (submit_worker_week) skips days already "
+                + "covered by an absence.",
+            CommandType: typeof(RecordWorkerAbsenceByName),
+            ResultType: typeof(WorkerAbsence),
+            AuthorisationType: typeof(RecordWorkerAbsenceByNameAuthorisation),
+            ValidationType: typeof(RecordWorkerAbsenceByNameValidation),
+            VisibleTo: LabourRoleSets.ManageWorkers,
+            EmailStamps: new[] { "RecordedByEmail" },
+            NameStamps: Array.Empty<string>(),
+            Notes: "workerName is the worker's name as the user says it, matched server-side "
+                + "against the worker register — NEVER ask the user for worker emails or ids; "
+                + "names are how workers are identified. date is the single day the absence "
+                + "covers; a run of days off is one call per day. kind is Holiday, HalfDay, "
+                + "NotWorked or Sick; note is optional."),
 
         new AiAction(
             Name: "submit_worker_week",
@@ -318,14 +363,14 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
     };
 
     // Skipped: AddLabourSettlementVariance — no Authorisation class (inline LabourRoleSets.ManageSettlement check only); handler is also dispatched concretely with a createdByEmail overload, not via the registered ICommandHandler.
-    // Skipped: AddWorker — no Authorisation class (inline LabourRoleSets.ManageWorkers check only).
-    // Skipped: UpdateWorker — no Authorisation class (inline LabourRoleSets.ManageWorkers check only).
+    // (AddWorker is no longer skipped — gate classes added 2026-08-28, action add_worker above.)
+    // Skipped: UpdateWorker — gate classes exist (2026-08-28, endpoint composes them), but the command is keyed by an opaque WorkerId the connector cannot resolve; expose via a by-name wrapper (the SubmitWorkerWeekByName pattern) if a need appears.
     // Skipped: DeleteWorker — no Authorisation class (inline LabourRoleSets.ManageWorkers check only).
     // Skipped: AddWorkerTimesheet — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only).
-    // Skipped: AdjustTimesheet — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only).
-    // Skipped: ApproveTimesheets — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only). (Distinct from Commercial's ApproveTimesheet, which is out of this file's scope.)
+    // Skipped: AdjustTimesheet — gate classes exist (2026-08-28, endpoint composes them), but the command is keyed by an opaque TimesheetId the connector cannot resolve, and adjustment/coding is the approver's portal activity (the queue carries the context).
+    // Skipped: ApproveTimesheets — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only). (Distinct from the legacy Commercial ApproveTimesheet, whose slices were deleted 2026-08-28.)
     // Skipped: RejectTimesheet — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only).
-    // Skipped: SubmitWorkerWeek — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only); the connector enters weeks through SubmitWorkerWeekByName (submit_worker_week above), which delegates to the same handler. (Distinct from Commercial's SubmitTimesheet, whose legacy action was removed from CommercialActions 2026-08-28.)
+    // Skipped: SubmitWorkerWeek — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only); the connector enters weeks through SubmitWorkerWeekByName (submit_worker_week above), which delegates to the same handler. (Distinct from the legacy Commercial SubmitTimesheet — action removed from CommercialActions and slices deleted, both 2026-08-28.)
     // Skipped: MySiteSignIn — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).
     // Skipped: MySiteSignOut — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).
     // Skipped: MyResubmitTimesheet — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).
@@ -334,7 +379,7 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
     // Skipped: SetProjectWorkerAssignment — no Authorisation class (inline LabourRoleSets.ManageWorkers check only).
     // Skipped: SetWorkerContract — no Authorisation class (inline LabourRoleSets.ManageWorkers check only).
     // Skipped: SetWorkerCisStatus — no Authorisation class (inline LabourRoleSets.ManageWorkers check only).
-    // Skipped: RecordWorkerAbsence — no Authorisation class (inline LabourRoleSets.ManageWorkers check only); concrete handler dispatched with a recordedByEmail overload.
+    // (RecordWorkerAbsence is no longer skipped — the connector records absences through RecordWorkerAbsenceByName (record_worker_absence above), which delegates to the same handler with the recordedByEmail overload's stamp carried as an EmailStamps parameter; the endpoint gained RecordWorkerAbsenceAuthorisation 2026-08-28.)
     // Skipped: RemoveWorkerAbsence — no Authorisation class (inline LabourRoleSets.ManageWorkers check only).
     // Skipped: AddWorkerSettlementLine — no Authorisation class (inline LabourRoleSets.ManageSettlement check only).
     // Skipped: RemoveWorkerSettlementLine — no Authorisation class (inline LabourRoleSets.ManageSettlement check only).

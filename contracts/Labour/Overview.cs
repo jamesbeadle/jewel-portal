@@ -28,6 +28,19 @@ public sealed record RecordWorkerAbsence(string WorkerId, DateTimeOffset Date, A
 
 public sealed record RemoveWorkerAbsence(string WorkerAbsenceId) : ICommand<Acknowledgement>;
 
+/// <summary>The connector's absence entry (the record_worker_absence action): RecordWorkerAbsence
+/// keyed by worker NAME, because an AI caller meets workers as names and worker ids are opaque.
+/// No HTTP endpoint — the portal's overview grid posts RecordWorkerAbsence with a picker-chosen
+/// WorkerId. RecordedByEmail is stamped server-side from the signed-in connector user (an
+/// EmailStamps parameter — never model-supplied), mirroring what RecordWorkerAbsenceEndpoint
+/// passes alongside the command.</summary>
+public sealed record RecordWorkerAbsenceByName(
+    string WorkerName,
+    DateTimeOffset Date,
+    AbsenceKind Kind,
+    string? Note = null,
+    string RecordedByEmail = "") : ICommand<WorkerAbsence>;
+
 /// <summary>
 /// Signs off one worker's week (WeekStart = Monday). Server enforces ForecastRules.WeekIsSignable:
 /// every elapsed weekday is approved, rejected-with-reason, or covered by an absence. Sign-off is

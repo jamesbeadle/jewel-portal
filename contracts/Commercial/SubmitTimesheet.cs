@@ -1,11 +1,4 @@
-using Jewel.JPMS.Contracts.Cqrs;
-using Jewel.JPMS.Models;
-
-namespace Jewel.JPMS.Contracts.Commercial;
-
-public sealed record SubmitTimesheet(
-    string ProjectId,
-    string PersonEmail,
-    DateTimeOffset WorkedOn,
-    decimal Hours,
-    string CostCode) : ICommand<Timesheet>;
+// Retired 2026-08-28: legacy pre-worker-register timesheet slice (free-typed PersonEmail, no
+// WorkerId — rows the Labour approval refuses). The live paths are the Labour slices
+// (SubmitWorkerWeek / ApproveTimesheets) and the connector's SubmitWorkerWeekByName. This
+// tombstone exists only because the retiring session could not delete files remotely — git rm it.

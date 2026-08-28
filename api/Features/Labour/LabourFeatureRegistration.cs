@@ -16,7 +16,11 @@ public static class LabourFeatureRegistration
         services.AddScoped<IQueryHandler<ListWorkers, IReadOnlyList<Worker>>, ListWorkersHandler>();
         services.AddScoped<IQueryHandler<ListWorkerAssignmentsForProject, IReadOnlyList<ProjectWorkerAssignment>>, ListWorkerAssignmentsForProjectHandler>();
         services.AddScoped<ICommandHandler<AddWorker, Worker>, AddWorkerHandler>();
+        services.AddScoped<AddWorkerAuthorisation>();
+        services.AddScoped<AddWorkerValidation>();
         services.AddScoped<ICommandHandler<UpdateWorker, Worker>, UpdateWorkerHandler>();
+        services.AddScoped<UpdateWorkerAuthorisation>();
+        services.AddScoped<UpdateWorkerValidation>();
         services.AddScoped<ICommandHandler<DeleteWorker, Acknowledgement>, DeleteWorkerHandler>();
         services.AddScoped<ICommandHandler<SetProjectWorkerAssignment, ProjectWorkerAssignment>, SetProjectWorkerAssignmentHandler>();
 
@@ -35,6 +39,8 @@ public static class LabourFeatureRegistration
         services.AddScoped<IQueryHandler<ListTimesheetDetailsForProject, IReadOnlyList<TimesheetDetail>>>(
             provider => provider.GetRequiredService<ListTimesheetDetailsForProjectHandler>());
         services.AddScoped<ICommandHandler<AdjustTimesheet, TimesheetDetail>, AdjustTimesheetHandler>();
+        services.AddScoped<AdjustTimesheetAuthorisation>();
+        services.AddScoped<AdjustTimesheetValidation>();
         services.AddScoped<ICommandHandler<AddWorkerTimesheet, TimesheetDetail>, AddWorkerTimesheetHandler>();
         services.AddScoped<SubmitWorkerWeekHandler>();
         services.AddScoped<ICommandHandler<SubmitWorkerWeek, WorkerWeekResult>>(
@@ -53,8 +59,13 @@ public static class LabourFeatureRegistration
         services.AddScoped<ICommandHandler<SetWorkerContract, Acknowledgement>, SetWorkerContractHandler>();
         services.AddScoped<ICommandHandler<SetWorkerCisStatus, Acknowledgement>, SetWorkerCisStatusHandler>();
         services.AddScoped<RecordWorkerAbsenceHandler>();
+        services.AddScoped<RecordWorkerAbsenceAuthorisation>();
         services.AddScoped<ICommandHandler<RecordWorkerAbsence, WorkerAbsence>>(
             provider => provider.GetRequiredService<RecordWorkerAbsenceHandler>());
+        // Connector absence entry (record_worker_absence action): by-name wrapper over the handler above.
+        services.AddScoped<ICommandHandler<RecordWorkerAbsenceByName, WorkerAbsence>, RecordWorkerAbsenceByNameHandler>();
+        services.AddScoped<RecordWorkerAbsenceByNameAuthorisation>();
+        services.AddScoped<RecordWorkerAbsenceByNameValidation>();
         services.AddScoped<ICommandHandler<RemoveWorkerAbsence, Acknowledgement>, RemoveWorkerAbsenceHandler>();
         services.AddScoped<SignOffLabourWeekHandler>();
         services.AddScoped<ICommandHandler<SignOffLabourWeek, LabourWeekSignOff>>(

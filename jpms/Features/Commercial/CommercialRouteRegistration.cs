@@ -106,11 +106,8 @@ public static class CommercialRouteRegistration
             new CommandRoute("PUT", "/api/valuations/{valuationId}",
                 command => $"/api/valuations/{((ReviseValuation)command).ValuationId}"));
 
-        commands.Register<SubmitTimesheet, Timesheet>(CommandRoute.Post("/api/timesheets"));
-
-        commands.Register<ApproveTimesheet, Timesheet>(
-            new CommandRoute("POST", "/api/timesheets/{timesheetId}/approval",
-                command => $"/api/timesheets/{((ApproveTimesheet)command).TimesheetId}/approval"));
+        // The legacy SubmitTimesheet/ApproveTimesheet command routes were retired 2026-08-28 —
+        // timesheet writes go through the Labour routes (LabourRouteRegistration).
 
         // Valuation Report — bill lines, claims, claim entries, and the claim lifecycle.
         queries.Register<ListValuationLinesForProject, IReadOnlyList<ValuationLineItem>>(

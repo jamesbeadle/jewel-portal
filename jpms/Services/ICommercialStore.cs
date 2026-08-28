@@ -13,8 +13,6 @@ public interface ICommercialStore
     CostCodeBudget SaveBudget(CostCodeBudget budget);
 
     IReadOnlyList<Timesheet> TimesheetsFor(string projectId);
-    Timesheet SaveTimesheet(Timesheet timesheet);
-    Timesheet ApproveTimesheet(string timesheetId);
 
     CashflowSnapshot LatestCashflow();
 

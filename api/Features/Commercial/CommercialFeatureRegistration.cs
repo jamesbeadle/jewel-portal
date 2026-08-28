@@ -66,13 +66,9 @@ public static class CommercialFeatureRegistration
         services.AddScoped<ReviseValuationAuthorisation>();
         services.AddScoped<ReviseValuationValidation>();
 
-        services.AddScoped<ICommandHandler<SubmitTimesheet, Timesheet>, SubmitTimesheetHandler>();
-        services.AddScoped<SubmitTimesheetAuthorisation>();
-        services.AddScoped<SubmitTimesheetValidation>();
-
-        services.AddScoped<ICommandHandler<ApproveTimesheet, Timesheet>, ApproveTimesheetHandler>();
-        services.AddScoped<ApproveTimesheetAuthorisation>();
-        services.AddScoped<ApproveTimesheetValidation>();
+        // The legacy SubmitTimesheet/ApproveTimesheet slices (pre-worker-register) were retired
+        // 2026-08-28 — labour entry lives in Features/Labour (SubmitWorkerWeek / ApproveTimesheets).
+        // ListTimesheetsForProject above stays: it reads the Timesheet table, whose data is kept.
 
         // Valuation Report — the bill, its claims, and the claim lifecycle.
         services.AddScoped<IQueryHandler<ListValuationLinesForProject, IReadOnlyList<ValuationLineItem>>, ListValuationLinesForProjectHandler>();

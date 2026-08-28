@@ -558,14 +558,15 @@ internal sealed class CommercialActions : IAiActionSource
                 + "order ids come from list_work_orders; no slice may take an order past its value."),
 
         // ── Commercial: timesheets ───────────────────────────────────────────────────────
-        // Deliberately NO actions here any more (removed 2026-08-28). The legacy Commercial
-        // SubmitTimesheet/ApproveTimesheet slices predate the worker register: their rows carry a
-        // free-typed personEmail and no WorkerId, so the Labour approval refuses them ("No worker
-        // record"), and the schema taught models to demand worker emails the portal does not need
-        // — the accountant's first connector session was asked to invent emails for the whole
-        // crew. The connector's labour entry is submit_worker_week (LabourAndBackOfficeActions);
+        // Deliberately NO actions here any more (actions removed 2026-08-28; the slices
+        // themselves were deleted the same day). The legacy Commercial SubmitTimesheet/
+        // ApproveTimesheet slices predated the worker register: their rows carried a free-typed
+        // personEmail and no WorkerId, so the Labour approval refused them ("No worker record"),
+        // and the schema taught models to demand worker emails the portal does not need — the
+        // accountant's first connector session was asked to invent emails for the whole crew.
+        // The connector's labour entry is submit_worker_week (LabourAndBackOfficeActions);
         // approval stays in the portal's Labour tab, where the rate snapshot and the budget
-        // hard-block live (the legacy ApproveTimesheet sets IsApproved without either).
+        // hard-block live (the legacy ApproveTimesheet set IsApproved without either).
 
         // ── Commercial inputs: dayworks, contra charges, subcontractor retentions ────────
 

@@ -173,7 +173,12 @@ The smallest pack, and the best candidate for proving the whole architecture end
 - **Tools**
   - `R` `get_my_worker_profile`, `list_my_recent_timesheets`, `list_my_project_assignments`
   - `R` `list_cost_codes_for_project`
-  - `W` `submit_timesheet` — `SubmitTimesheet(ProjectId, PersonEmail, WorkedOn, Hours, CostCode)`
+  - `W` `submit_worker_week` — `SubmitWorkerWeekByName(WorkerName, WeekStart, Days)` *(updated
+    2026-08-28: the legacy `SubmitTimesheet(ProjectId, PersonEmail, WorkedOn, Hours, CostCode)`
+    this spec originally named was deleted — pre-worker-register rows the Labour approval
+    refuses. Workers are identified by NAME, never email; for a worker logging their own day
+    the MyDay slices — `MySiteSignIn` / `MySiteSignOut` / `MyResubmitTimesheet` — are the
+    surface, and would need connector-shaped gate classes before this pack is built.)*
   - `U` `ask_user`
 - **Pinned** `TimesheetStatus` (`Submitted 0, Approved 1, Rejected 2`); the rule that hours are
   recorded against a cost code and a date, and that unapproved time is never costed.

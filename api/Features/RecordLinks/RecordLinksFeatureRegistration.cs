@@ -54,6 +54,15 @@ public static class RecordLinksFeatureRegistration
         services.AddScoped<IQueryHandler<ListRecordActivity, IReadOnlyList<RecordActivitySummary>>, ListRecordActivityHandler>();
         services.AddScoped<IQueryHandler<ListProjectCommunications, ProjectCommunicationsPage>, ListProjectCommunicationsHandler>();
         services.AddScoped<ICommandHandler<LinkMessageToRecord, Acknowledgement>, LinkMessageToRecordHandler>();
+        // Gate classes for the connector's file_email_to_record action (2026-08-28) — the HTTP
+        // family keeps its shared Gate; both read TriageRoles.AllowedToTriage.
+        services.AddScoped<LinkMessageToRecordAuthorisation>();
+        services.AddScoped<LinkMessageToRecordValidation>();
+        // Connector "File them all here" (file_unfiled_replies action): server-side twin of the
+        // record pages' unfiled-replies banner button. No HTTP endpoint.
+        services.AddScoped<ICommandHandler<FileUnfiledReplies, FileUnfiledRepliesResult>, FileUnfiledRepliesHandler>();
+        services.AddScoped<FileUnfiledRepliesAuthorisation>();
+        services.AddScoped<FileUnfiledRepliesValidation>();
         services.AddScoped<ICommandHandler<PrepareProgrammeReplyDraft, ProgrammeReplyDraft>, PrepareProgrammeReplyDraftHandler>();
 
         return services;

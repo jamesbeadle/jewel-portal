@@ -79,16 +79,22 @@
             <p class="text-sm text-content-muted pointer-events-none">
                 @(isRevision
                     ? "Drag the revised file here, or click to choose it."
-                    : "Drag drawing files here, or click to choose — select as many as needed.")
+                    : selectedFiles.Count == 0
+                        ? "Drag drawing files here, or click to choose — select as many as needed."
+                        : "Drop or choose more files to add them to the selection.")
             </p>
         </div>
 
         @if (selectedFiles.Count == 1)
         {
-            <p class="mt-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm text-content">
-                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-2">Original file</span>
-                <span class="font-medium break-all">@selectedFiles[0].Name</span>
-                <span class="text-content-subtle"> · @FormatSize(selectedFiles[0].Size)</span>
+            <p class="mt-2 flex items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm text-content">
+                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Original file</span>
+                <span class="flex-1 min-w-0 font-medium break-all">@selectedFiles[0].Name</span>
+                <span class="text-content-subtle shrink-0">@FormatSize(selectedFiles[0].Size)</span>
+                <button type="button" @onclick="() => RemoveFile(selectedFiles[0])" disabled="@busy" aria-label="Remove @selectedFiles[0].Name"
+                        class="shrink-0 text-content-subtle hover:text-red-700 transition disabled:opacity-50">
+                    ✕
+                </button>
             </p>
         }
         else if (IsBulk)
@@ -243,15 +249,40 @@
             error = $"That's {e.FileCount} files — upload at most {MaxBulkFiles} at a time.";
             return;
         }
-        selectedFiles = e.GetMultipleFiles(MaxBulkFiles).ToList();
-        failures.Clear();
-        registeredIds.Clear();
         error = null;
-        if (selectedFiles.Count == 1 && string.IsNullOrWhiteSpace(revisionLabel))
+
+        // A revision is one file into one drawing — a new pick REPLACES the old one.
+        if (isRevision)
         {
-            var extracted = ExtractRevisionLabel(selectedFiles[0].Name);
-            if (extracted.Length > 0) revisionLabel = extracted;
+            selectedFiles = e.GetMultipleFiles(1).ToList();
+            failures.Clear();
+            registeredIds.Clear();
+            MaybeExtractRevisionLabel();
+            return;
         }
+
+        // New-drawing mode APPENDS: a second drag adds to the selection rather than wiping it,
+        // so a register can be gathered from several drops (each file has its ✕ to take it back
+        // out). A file already selected — same name and size — is skipped, so dropping the same
+        // batch twice doesn't double anything up. Kept files keep their failure notes and
+        // already-registered drawing ids, so a retry after adding more still works.
+        var incoming = e.GetMultipleFiles(MaxBulkFiles)
+            .Where(file => !selectedFiles.Any(existing => existing.Name == file.Name && existing.Size == file.Size))
+            .ToList();
+        if (selectedFiles.Count + incoming.Count > MaxBulkFiles)
+        {
+            error = $"That would make {selectedFiles.Count + incoming.Count} files — upload at most {MaxBulkFiles} at a time.";
+            return;
+        }
+        selectedFiles.AddRange(incoming);
+        MaybeExtractRevisionLabel();
+    }
+
+    private void MaybeExtractRevisionLabel()
+    {
+        if (selectedFiles.Count != 1 || !string.IsNullOrWhiteSpace(revisionLabel)) return;
+        var extracted = ExtractRevisionLabel(selectedFiles[0].Name);
+        if (extracted.Length > 0) revisionLabel = extracted;
     }
 
     private void RemoveFile(IBrowserFile file)

@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Calendar;
 
@@ -11,19 +10,20 @@ namespace Jewel.JPMS.Api.Features.Calendar;
 /// calendar date stored as midnight UTC), so a client posting a zoned timestamp still lands on
 /// the calendar day it named.
 /// </summary>
-internal static partial class CalendarEventDetailsRules
+internal static class CalendarEventDetailsRules
 {
-    [GeneratedRegex("^([01][0-9]|2[0-3]):[0-5][0-9]$")]
-    private static partial Regex StartTimePattern();
-
     public static IReadOnlyList<string> Problems(CalendarEventDetails details)
     {
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(details.Title)) errors.Add("Title is required.");
         if (details.Title is { Length: > 256 }) errors.Add("Title must be 256 characters or fewer.");
         if (details.Date == default) errors.Add("Date is required.");
-        if (details.StartTime is { } time && !StartTimePattern().IsMatch(time))
-            errors.Add("Start time must be HH:mm (24-hour), e.g. 09:30.");
+        // Any way a person writes a wall-clock time is accepted and canonicalised on the way in
+        // (CalendarStartTime — "8:00", "0800", "8.30am", "08:00:00" all land as "HH:mm"); only
+        // text that doesn't read as a time at all is refused, the same refusal the client's own
+        // gate gives before the command is ever sent.
+        if (!CalendarStartTime.TryNormalise(details.StartTime, out _))
+            errors.Add("Start time must be a time — e.g. 09:30 — or blank for all-day.");
         if (details.EndDate is { } end && AsCalendarDate(end) < AsCalendarDate(details.Date))
             errors.Add("End date can't be before the start date.");
         if (details.Notes is { Length: > 4096 }) errors.Add("Notes must be 4096 characters or fewer.");
@@ -35,7 +35,7 @@ internal static partial class CalendarEventDetailsRules
         entity.Title = details.Title.Trim();
         entity.Kind = (int)details.Kind;
         entity.Date = AsCalendarDate(details.Date);
-        entity.StartTime = string.IsNullOrWhiteSpace(details.StartTime) ? null : details.StartTime;
+        entity.StartTime = CalendarStartTime.TryNormalise(details.StartTime, out var startTime) ? startTime : null;
         entity.EndDate = details.EndDate is { } end ? AsCalendarDate(end) : null;
         entity.Notes = details.Notes?.Trim() ?? "";
         entity.ClientVisible = details.ClientVisible;

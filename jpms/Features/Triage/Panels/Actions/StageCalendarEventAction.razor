@@ -15,7 +15,7 @@
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title *</label>
         <input type="text" class="field" maxlength="256" placeholder="What's happening — Structural engineer site visit"
-               value="@Draft.Title" @oninput="e => Set(draft => draft.Title = e.Value?.ToString() ?? string.Empty)" />
+               value="@Draft.Title" @oninput="e => SetTitle(e.Value?.ToString() ?? string.Empty)" />
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -99,6 +99,12 @@
             PrefillFromEmail(scratchCreate);
         }
         lastStaged = StagedCreate;
+        // A subject that arrives after the first render still becomes the title suggestion —
+        // the pane can mount before the email's subject parameter does, and an untitled form
+        // that LOOKS untitled is the honest state to recover from. Blank titles only: nothing
+        // anyone typed is ever overwritten.
+        if (StagedCreate is null && string.IsNullOrWhiteSpace(scratchCreate.CalendarEvent.Title))
+            PrefillFromEmail(scratchCreate);
     }
 
     // Suggestions only, filled WITHOUT staging: the subject (minus FW:/RE:) as the title.
@@ -128,11 +134,25 @@
         NotifyCreate();
     }
 
+    // The title is the one field whose emptying is a choice — its edits must never be
+    // "corrected" back to the suggestion mid-keystroke.
+    private void SetTitle(string title)
+    {
+        Draft.Title = title;
+        NotifyCreate(allowTitlePrefill: false);
+    }
+
     // First keystroke on the scratch form stages it; a staged form just reports the edit.
-    private void NotifyCreate()
+    private void NotifyCreate(bool allowTitlePrefill = true)
     {
         var target = StagedCreate ?? scratchCreate;
         target.Kind = StagedRecordKind.CalendarEvent;
+        // The title suggestion becomes REAL the moment anything stages: a draft must never
+        // stage untitled while a title sits on screen from the email's subject (2026-08-28 —
+        // "give the event a title" with the title showing). Blank titles only, and never on a
+        // title edit itself, so a title someone typed or deliberately cleared is always theirs.
+        if (allowTitlePrefill && string.IsNullOrWhiteSpace(target.CalendarEvent.Title))
+            PrefillFromEmail(target);
         _ = StagedCreateChanged.InvokeAsync(target);
     }
 }

@@ -33,6 +33,10 @@ public sealed class StagedCalendarEventDraft
         {
             if (string.IsNullOrWhiteSpace(Title)) return "Give the event a title.";
             if (ParsedDate is null) return "Give the event a date.";
+            // The same reading the server applies (CalendarStartTime), so a time the server
+            // would refuse is caught HERE, in the pane, before Apply ever sends the command.
+            if (!CalendarStartTime.TryNormalise(StartTime, out _))
+                return "The start time isn't a time — try 09:30, or leave it blank for all-day.";
             if (!string.IsNullOrWhiteSpace(EndDate) && ParsedEndDate is null) return "The end date isn't a date.";
             if (ParsedEndDate is { } end && end < ParsedDate) return "End date can't be before the start date.";
             return null;
@@ -49,6 +53,8 @@ public sealed class StagedCalendarEventDraft
     {
         var date = ParsedDate ?? DateTime.Today;
         var end = ParsedEndDate;
+        // Canonical "HH:mm" (null = all-day) — Problem has already refused anything unreadable.
+        CalendarStartTime.TryNormalise(StartTime, out var startTime);
         return new CreateCalendarEventFromMessage(
             messageId,
             internetMessageId,
@@ -57,7 +63,7 @@ public sealed class StagedCalendarEventDraft
                 Title.Trim(),
                 Kind,
                 new DateTimeOffset(date, TimeSpan.Zero),
-                string.IsNullOrWhiteSpace(StartTime) ? null : StartTime,
+                startTime,
                 end is { } endDate && endDate != date ? new DateTimeOffset(endDate, TimeSpan.Zero) : null,
                 Notes.Trim(),
                 ClientVisible),

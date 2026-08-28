@@ -1,17 +1,20 @@
 using Jewel.JPMS.Api.Features.DocumentControl;
 using Jewel.JPMS.Api.Features.DocumentControl.Commands;
+using Jewel.JPMS.Api.Features.RecordLinks.Commands;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Features.Requests.Commands;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.DocumentControl;
+using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 
-/// <summary>Requests/RFIs and Document Control commands as connector actions. Mirrors
-/// Features/Requests/Commands and Features/DocumentControl/Commands — each entry's VisibleTo
+/// <summary>Requests/RFIs, Document Control and correspondence-filing commands as connector
+/// actions. Mirrors Features/Requests/Commands, Features/DocumentControl/Commands and the
+/// record-agnostic Features/RecordLinks filing commands — each entry's VisibleTo
 /// copies its Authorisation class's role set (replicated where the set is a private field), and
 /// the stamps copy exactly what the endpoint stamps server-side. Follows CalendarActions, the
 /// exemplar file.</summary>
@@ -333,6 +336,58 @@ internal sealed class RequestsActions : IAiActionSource
             Notes: "documentControlItemId comes from the Document Control queue. kind is the "
                 + "compliance document kind as the portal names it; expiresAt sets the new version's "
                 + "expiry where the kind carries one."),
+
+        // ---------------------------------------------------------------- Correspondence filing
+
+        new AiAction(
+            Name: "file_unfiled_replies",
+            Area: "Correspondence",
+            Description: "Files every newer thread reply a record's page reports as not yet filed "
+                + "to it — the amber \"newer replies on this thread aren't filed yet\" banner's "
+                + "\"File them all here\", performed server-side. Each reply is tagged to the "
+                + "record exactly as the button would (message-only: untagged thread siblings keep "
+                + "queueing in the Control Centre for their own decisions), it appears in the "
+                + "record's Communications list immediately, and the per-reply outcomes say what "
+                + "filed and what refused.",
+            CommandType: typeof(FileUnfiledReplies),
+            ResultType: typeof(FileUnfiledRepliesResult),
+            AuthorisationType: typeof(FileUnfiledRepliesAuthorisation),
+            ValidationType: typeof(FileUnfiledRepliesValidation),
+            VisibleTo: TriageRoles.AllowedToTriage,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "type is the record type (Todo, Request, Variation, WorkOrder, Defect, "
+                + "BidPackageInvite, …); recordId via find_by_reference — \"TODO-0083\" resolves "
+                + "to it. read_record_emails lists any unfiled replies under unfiledReplies, so "
+                + "read first, tell the user what would be filed, then call. found 0 means the "
+                + "record's list is already complete. A refused reply's error says why (e.g. a "
+                + "cross-pathway conflict) — the rest still file; relay refusals rather than "
+                + "retrying."),
+
+        new AiAction(
+            Name: "file_email_to_record",
+            Area: "Correspondence",
+            Description: "Files ONE mailbox email to a record by tagging it JPMS/<reference> — the "
+                + "same act as tagging it in the Control Centre or \"Find & tag emails\" on a "
+                + "record page. The tag IS the association (no copy is stored) and the record's "
+                + "Communications list shows the email immediately. The default scope also tags "
+                + "the thread behind the email; newer replies still queue for their own decisions.",
+            CommandType: typeof(LinkMessageToRecord),
+            ResultType: typeof(Acknowledgement),
+            AuthorisationType: typeof(LinkMessageToRecordAuthorisation),
+            ValidationType: typeof(LinkMessageToRecordValidation),
+            VisibleTo: TriageRoles.AllowedToTriage,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "messageId is the mailbox message id as read_record_emails / read_selected_email "
+                + "return it (internetMessageId is an optional stable fallback). type + recordId "
+                + "name the record (recordId via find_by_reference). scope is ThreadBehindAnchor "
+                + "(default), MessageOnly or EntireThread. If the answer says the thread is "
+                + "already filed under another pathway, ASK THE USER before re-calling with "
+                + "allowCrossPathway true — never confirm a cross-filing on your own. pathway "
+                + "(Client/Subcontractor/Supplier/Internal) matters only for pathway-neutral "
+                + "record types like CostCentre. For catching a record up on its own threads, "
+                + "prefer file_unfiled_replies."),
     };
 
     // Skipped: PostRequestMessage — already dispatched by AiWriteTools.post_request_message; do not duplicate.
@@ -344,7 +399,7 @@ internal sealed class RequestsActions : IAiActionSource
     // Skipped: ReplyInThreadFromMessage (MailboxTriageEndpoints) — same reason: inline TriageRoles gate, no authorisation class (stamps RaisedByEmail inline).
     // Skipped: RetagRequestWorkflowTags — one-off admin sweep with an inline TriageRoles gate; no authorisation or validation classes exist.
     // Skipped: SendMailboxEmail (MailboxIntake/Compose) — multipart/form-data upload shape dispatched to a concrete handler (not an ICommandHandler registration), inline role gate, no authorisation class.
-    // Skipped: LinkMessageToRecord (RecordLinksEndpoints) — no Authorisation class: inline TriageRoles gate.
+    // (LinkMessageToRecord is no longer skipped — gate classes added 2026-08-28, actions file_email_to_record and file_unfiled_replies above; RecordLinksEndpoints.Gate reads the same TriageRoles.AllowedToTriage set.)
     // Skipped: PrepareProgrammeReplyDraft (RecordLinks) — no Authorisation class: the role set is a private field of the endpoint itself, and there is no validation class either.
     // Skipped: BackfillBucketsEndpoint (RecordLinks) — no command dispatch: the endpoint performs the Graph sweep directly.
     // Skipped: DiscardDocumentControlItem — no Authorisation class: inline DocumentControlRoles gate in DocumentControlItemCommandEndpoints.

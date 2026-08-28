@@ -42,32 +42,6 @@ public sealed partial class HttpCommercialStore
         catch { timesheetsRequested.Remove(projectId); }
     }
 
-    public Timesheet SaveTimesheet(Timesheet timesheet)
-    {
-        if (string.IsNullOrEmpty(timesheet.TimesheetId))
-            _ = SubmitAsync(timesheet);
-        return timesheet;
-    }
-
-    public Timesheet ApproveTimesheet(string timesheetId)
-    {
-        _ = ApproveAsync(timesheetId);
-        return new Timesheet(timesheetId, "", "", DateTimeOffset.UtcNow, 0, "", true);
-    }
-
-    private async Task ApproveAsync(string timesheetId)
-    {
-        // Resolve the owning project from the cached lists so the approval can be re-pulled —
-        // previously the timesheet kept showing as unapproved until a manual reload.
-        var projectId = timesheetsRequested.FirstOrDefault(id => timesheetsReadModel.Current(id).Any(sheet =>
-            string.Equals(sheet.TimesheetId, timesheetId, StringComparison.OrdinalIgnoreCase)));
-        await commands.SendAsync(new ApproveTimesheet(timesheetId), CancellationToken.None);
-        if (projectId is not null) await timesheetsReadModel.RefreshAsync(projectId, CancellationToken.None);
-    }
-
-    private async Task SubmitAsync(Timesheet timesheet)
-    {
-        await commands.SendAsync(new SubmitTimesheet(timesheet.ProjectId, timesheet.PersonEmail, timesheet.WorkedOn, timesheet.Hours, timesheet.CostCode), CancellationToken.None);
-        await timesheetsReadModel.RefreshAsync(timesheet.ProjectId, CancellationToken.None);
-    }
+    // SaveTimesheet/ApproveTimesheet were retired 2026-08-28 with the legacy Commercial
+    // SubmitTimesheet/ApproveTimesheet slices — timesheet writes go through ILabourStore.
 }

@@ -1,12 +1,4 @@
-using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Contracts.Commercial;
-
-namespace Jewel.JPMS.Api.Features.Commercial.Commands;
-
-public sealed class ApproveTimesheetAuthorisation
-{
-    private static readonly RoleSet RolesThatMayApproveTimesheets =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
-
-    public bool Allows(SignedInUser user, ApproveTimesheet command) => RolesThatMayApproveTimesheets.IncludesAny(user.Roles);
-}
+// Retired 2026-08-28: legacy pre-worker-register timesheet slice (free-typed PersonEmail, no
+// WorkerId — rows the Labour approval refuses). The live paths are the Labour slices
+// (SubmitWorkerWeek / ApproveTimesheets) and the connector's SubmitWorkerWeekByName. This
+// tombstone exists only because the retiring session could not delete files remotely — git rm it.

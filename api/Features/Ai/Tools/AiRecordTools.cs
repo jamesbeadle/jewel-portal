@@ -1,9 +1,11 @@
 using System.Text.Json;
 using Ganss.Xss;
+using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.RecordLinks;
+using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -213,6 +215,20 @@ internal static class AiRecordTools
                         };
                     }
 
+                    // The replies the record's page is blind to (its amber "newer replies aren't
+                    // filed yet" banner) — the SAME read the banner makes, so a connector session
+                    // sees the gap without needing the user's mailbox connected, and can offer
+                    // the file_unfiled_replies action. Best-effort: a throttled Graph read must
+                    // not cost the tagged list above.
+                    IReadOnlyList<MailboxMessage> unfiled = Array.Empty<MailboxMessage>();
+                    try
+                    {
+                        var unfiledReader = context.Services
+                            .GetRequiredService<IQueryHandler<ListUnfiledReplies, IReadOnlyList<MailboxMessage>>>();
+                        unfiled = await unfiledReader.HandleAsync(new ListUnfiledReplies(recordType, recordId!), ct);
+                    }
+                    catch (Exception) when (!ct.IsCancellationRequested) { /* best-effort aside */ }
+
                     return Serialise(new
                     {
                         ok = true,
@@ -234,8 +250,25 @@ internal static class AiRecordTools
                                         : "none")
                                 }
                         }).ToList(),
+                        unfiledReplies = unfiled.Count == 0
+                            ? null
+                            : unfiled.Select(reply => new
+                            {
+                                messageId = reply.Id,
+                                from = string.IsNullOrWhiteSpace(reply.FromName) ? reply.FromEmail : reply.FromName,
+                                fromEmail = reply.FromEmail,
+                                reply.Subject,
+                                received = reply.ReceivedAt,
+                                preview = reply.BodyPreview
+                            }).ToList<object>(),
                         note = "Oldest first. Attachment ids feed read_email_attachment. Nothing here "
                                + "extracts figures for you — read the bodies and quote only what they say."
+                               + (unfiled.Count == 0
+                                   ? ""
+                                   : $" unfiledReplies lists {unfiled.Count} newer thread "
+                                     + "member(s) NOT yet filed to this record (the page's amber banner) "
+                                     + "— tell the user, and offer the file_unfiled_replies action to "
+                                     + "file them all.")
                     });
                 }),
 

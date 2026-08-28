@@ -73,43 +73,12 @@ public sealed class SubmitWorkerWeekByNameHandler : ICommandHandler<SubmitWorker
 
     public async Task<WorkerWeekResult> HandleAsync(SubmitWorkerWeekByName command, CancellationToken cancellationToken)
     {
+        // Name → register resolution is shared with RecordWorkerAbsenceByName (WorkerNameResolver)
+        // so the connector's by-name commands cannot drift in how they read a name.
         var workers = await context.Workers.AsNoTracking().ToListAsync(cancellationToken);
-        var wanted = Normalise(command.WorkerName);
-        var active = workers.Where(worker => worker.IsActive).ToList();
-
-        var matches = active.Where(worker => Normalise(worker.Name) == wanted).ToList();
-        if (matches.Count == 0)
-            matches = active.Where(worker => Normalise(worker.Name).Contains(wanted)
-                                             || wanted.Contains(Normalise(worker.Name))).ToList();
-
-        if (matches.Count == 1)
-            return await inner.HandleAsync(
-                new SubmitWorkerWeek(matches[0].WorkerId, command.WeekStart, command.Days),
-                cancellationToken);
-
-        if (matches.Count > 1)
-            throw new InvalidOperationException(
-                $"\"{command.WorkerName}\" matches more than one worker on the register: "
-                + string.Join(", ", matches.Select(worker => worker.Name))
-                + ". Use the full name as the register spells it.");
-
-        var inactive = workers.FirstOrDefault(worker =>
-            !worker.IsActive && Normalise(worker.Name) == wanted);
-        if (inactive is not null)
-            throw new InvalidOperationException(
-                $"{inactive.Name} is on the register but marked inactive — reactivate them on the "
-                + "Workers page before logging time against them.");
-
-        throw new InvalidOperationException(
-            $"No worker called \"{command.WorkerName}\" is on the register. "
-            + (active.Count == 0
-                ? "The register has no active workers yet — add them on the Workers page first."
-                : "Active workers: "
-                  + string.Join(", ", active.OrderBy(worker => worker.Name).Select(worker => worker.Name))
-                  + ". Add anyone missing on the Workers page (only a name and hourly rate are "
-                  + "needed — no email)."));
+        var worker = WorkerNameResolver.Resolve(workers, command.WorkerName, "logging time against them");
+        return await inner.HandleAsync(
+            new SubmitWorkerWeek(worker.WorkerId, command.WeekStart, command.Days),
+            cancellationToken);
     }
-
-    private static string Normalise(string name) =>
-        string.Join(' ', name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToLowerInvariant();
 }

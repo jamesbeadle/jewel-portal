@@ -100,21 +100,32 @@ public sealed class SetWorkerCisStatusHandler : ICommandHandler<SetWorkerCisStat
     }
 }
 
+// RecordWorkerAbsence gained an Authorisation class 2026-08-28 (the endpoint composes it instead
+// of an inline check; the connector records absences through RecordWorkerAbsenceByName, which
+// carries the same gate). Same role set as before — LabourRoleSets.ManageWorkers, never widened.
+public sealed class RecordWorkerAbsenceAuthorisation
+{
+    public bool Allows(SignedInUser user, RecordWorkerAbsence command) =>
+        LabourRoleSets.ManageWorkers.IncludesAny(user.Roles);
+}
+
 public sealed class RecordWorkerAbsenceEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly RecordWorkerAbsenceAuthorisation authorisation;
     private readonly RecordWorkerAbsenceHandler handler;
-    public RecordWorkerAbsenceEndpoint(SignedInUserResolver users, RecordWorkerAbsenceHandler handler)
-    { this.users = users; this.handler = handler; }
+    public RecordWorkerAbsenceEndpoint(SignedInUserResolver users, RecordWorkerAbsenceAuthorisation authorisation,
+        RecordWorkerAbsenceHandler handler)
+    { this.users = users; this.authorisation = authorisation; this.handler = handler; }
 
     [Function(nameof(RecordWorkerAbsence))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "labour/absences")] HttpRequest request)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var command = await request.ReadFromJsonAsync<RecordWorkerAbsence>();
         if (command is null) return new BadRequestResult();
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         return new OkObjectResult(await handler.HandleAsync(command, signedInUser.Email, request.HttpContext.RequestAborted));
     }
 }

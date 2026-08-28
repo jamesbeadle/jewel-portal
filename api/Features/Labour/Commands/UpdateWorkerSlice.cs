@@ -10,24 +10,50 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.Labour.Commands;
 
+// Gate classes added 2026-08-28, closing the convention gap (endpoint composes them instead of
+// inline checks). Same role set as before — LabourRoleSets.ManageWorkers, never widened. No
+// registry action yet: the command is keyed by an opaque WorkerId the connector cannot resolve —
+// expose via a by-name wrapper (the SubmitWorkerWeekByName pattern) if a need appears.
+
+public sealed class UpdateWorkerAuthorisation
+{
+    public bool Allows(SignedInUser user, UpdateWorker command) =>
+        LabourRoleSets.ManageWorkers.IncludesAny(user.Roles);
+}
+
+public sealed class UpdateWorkerValidation
+{
+    // Exactly the endpoint's former inline checks.
+    public ValidationOutcome Check(UpdateWorker command)
+    {
+        var errors = new List<string>();
+        if (string.IsNullOrWhiteSpace(command.Name)) errors.Add("Worker name is required.");
+        if (command.HourlyRate <= 0m) errors.Add("Hourly rate must be greater than zero.");
+        return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
+    }
+}
+
 public sealed class UpdateWorkerEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly UpdateWorkerAuthorisation authorisation;
+    private readonly UpdateWorkerValidation validation;
     private readonly ICommandHandler<UpdateWorker, Worker> handler;
-    public UpdateWorkerEndpoint(SignedInUserResolver users, ICommandHandler<UpdateWorker, Worker> handler)
-    { this.users = users; this.handler = handler; }
+    public UpdateWorkerEndpoint(SignedInUserResolver users, UpdateWorkerAuthorisation authorisation,
+        UpdateWorkerValidation validation, ICommandHandler<UpdateWorker, Worker> handler)
+    { this.users = users; this.authorisation = authorisation; this.validation = validation; this.handler = handler; }
 
     [Function(nameof(UpdateWorker))]
     public async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "labour/workers/{workerId}")] HttpRequest request, string workerId)
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
-        if (!LabourRoleSets.ManageWorkers.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         var body = await request.ReadFromJsonAsync<UpdateWorker>();
         if (body is null) return new BadRequestResult();
         var command = body with { WorkerId = workerId };
-        if (string.IsNullOrWhiteSpace(command.Name)) return new BadRequestObjectResult(new[] { "Worker name is required." });
-        if (command.HourlyRate <= 0m) return new BadRequestObjectResult(new[] { "Hourly rate must be greater than zero." });
+        if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        var outcome = validation.Check(command);
+        if (outcome.HasFailed) return new BadRequestObjectResult(outcome.Errors);
         return new OkObjectResult(await handler.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 }

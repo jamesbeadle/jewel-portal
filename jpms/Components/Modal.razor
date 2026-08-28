@@ -1,9 +1,11 @@
 @implements IDisposable
+@inject IJSRuntime JS
 
 @if (IsOpen)
 {
     <div class="@OverlayClass" @onclick="HandleOverlayClick">
-        <div class="modal-panel @Class flex flex-col max-h-[85vh]" @onclick:stopPropagation="true">
+        <div class="modal-panel @Class flex flex-col max-h-[85vh] outline-none" tabindex="-1"
+             @ref="panelRef" @onclick:stopPropagation="true">
             <header class="shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-b border-line">
                 <h2 class="text-base font-semibold text-content">@Title</h2>
                 <button type="button" @onclick="OnCancel" aria-label="Close"
@@ -13,19 +15,19 @@
                 </button>
             </header>
 
-            <div class="px-5 py-4 overflow-y-auto grow">
+            <div class="px-5 py-4 overflow-y-auto grow" data-modal-body>
                 @ChildContent
             </div>
 
             @if (FooterContent is not null)
             {
-                <footer class="shrink-0 flex items-center justify-end gap-2 px-5 py-4 border-t border-line">
+                <footer class="shrink-0 flex items-center justify-end gap-2 px-5 py-4 border-t border-line" data-modal-footer>
                     @FooterContent
                 </footer>
             }
             else if (ShowFooter)
             {
-                <footer class="shrink-0 flex items-center justify-end gap-2 px-5 py-4 border-t border-line">
+                <footer class="shrink-0 flex items-center justify-end gap-2 px-5 py-4 border-t border-line" data-modal-footer>
                     <button type="button" class="btn-neutral" @onclick="OnCancel">@CancelLabel</button>
                     <button type="button" class="btn-primary" disabled="@ConfirmDisabled" @onclick="OnConfirm">@ConfirmLabel</button>
                 </footer>
@@ -64,6 +66,29 @@
     [Parameter] public bool DismissOnOverlayClick { get; set; } = true;
 
     private string OverlayClass => "modal-overlay";
+
+    private ElementReference panelRef;
+    private bool wasOpen;
+    private bool focusPending;
+
+    // Focus the first control the moment the dialog opens, so the user can begin straight
+    // away (type the folder name, hit Enter) instead of reaching for the mouse. Detected as
+    // the closed→open transition — a fresh instance rendered already-open counts too — and
+    // performed after render, once the panel exists in the DOM. jpmsModalAutofocus (wwwroot/
+    // js/modal-autofocus.js) picks the target: first body control, else the footer's Cancel.
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen) focusPending = true;
+        wasOpen = IsOpen;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!focusPending || !IsOpen) return;
+        focusPending = false;
+        try { await JS.InvokeVoidAsync("jpmsModalAutofocus", panelRef); }
+        catch { /* focus is a courtesy — never let it break the dialog */ }
+    }
 
     private Task HandleOverlayClick() =>
         DismissOnOverlayClick ? OnCancel.InvokeAsync() : Task.CompletedTask;

@@ -81,6 +81,8 @@ public sealed class RecordLinksEndpoints
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        // Same set as LinkMessageToRecordAuthorisation (the connector's file_email_to_record /
+        // file_unfiled_replies gate) — both read TriageRoles.AllowedToTriage, so they cannot drift.
         if (!TriageRoles.AllowedToTriage.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
         auditActor.Email = signedInUser.Email; // audit rows record who acted
         return null;
