@@ -18,6 +18,10 @@ RESOURCE_GROUP="${RESOURCE_GROUP:-rg-jpms-prod}"
 LOCATION="${LOCATION:-westeurope}"
 SWA_NAME="${SWA_NAME:-swa-jpms-prod}"
 FUNC_APP="${FUNC_APP:-func-jpms-mcp-prod}"
+# The B1 plan the app runs on (custom domain + free managed cert need Basic or above, and it
+# removes cold starts). Created by hand 2026-08-28; linux consumption apps cannot be migrated
+# onto a plan in place — delete and recreate instead (Azure's own guidance).
+FUNC_PLAN="${FUNC_PLAN:-plan-jpms-mcp}"
 
 command -v jq >/dev/null || { echo "jq is required (Cloud Shell has it)."; exit 1; }
 
@@ -34,16 +38,19 @@ echo "Runtime storage: ${STORAGE_ACCOUNT}"
 
 # ---- The Function App (Linux consumption, dotnet-isolated 8). ----
 if ! az functionapp show --name "${FUNC_APP}" --resource-group "${RESOURCE_GROUP}" --output none 2>/dev/null; then
-  echo "Creating Function App ${FUNC_APP}…"
+  echo "Creating Function App ${FUNC_APP} on plan ${FUNC_PLAN}…"
+  if ! az appservice plan show --name "${FUNC_PLAN}" --resource-group "${RESOURCE_GROUP}" --output none 2>/dev/null; then
+    az appservice plan create --name "${FUNC_PLAN}" --resource-group "${RESOURCE_GROUP}" \
+      --location "${LOCATION}" --sku B1 --is-linux --output none
+  fi
   az functionapp create \
     --name "${FUNC_APP}" \
     --resource-group "${RESOURCE_GROUP}" \
     --storage-account "${STORAGE_ACCOUNT}" \
-    --consumption-plan-location "${LOCATION}" \
+    --plan "${FUNC_PLAN}" \
     --functions-version 4 \
     --runtime dotnet-isolated \
     --runtime-version 8 \
-    --os-type Linux \
     --output none
 fi
 MCP_HOSTNAME="$(az functionapp show --name "${FUNC_APP}" --resource-group "${RESOURCE_GROUP}" \
