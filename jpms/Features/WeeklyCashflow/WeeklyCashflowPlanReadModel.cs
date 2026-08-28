@@ -47,4 +47,42 @@ public sealed class WeeklyCashflowPlanReadModel
         Current = Current with { Placements = placements.ToList() };
         OnChanged?.Invoke();
     }
+
+    /// <summary>Folds a saved supplier group into the plan — created or renamed, the server's
+    /// row replaces whatever the plan held for its id.</summary>
+    public void Apply(WeeklyCashflowSupplierGroup group)
+    {
+        if (Current is null) return;
+        var groups = Current.SupplierGroups
+            .Where(existing => existing.SupplierGroupId != group.SupplierGroupId)
+            .Append(group)
+            .OrderBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        Current = Current with { SupplierGroups = groups };
+        OnChanged?.Invoke();
+    }
+
+    /// <summary>Removes a dissolved supplier group from the plan.</summary>
+    public void RemoveGroup(string supplierGroupId)
+    {
+        if (Current is null) return;
+        Current = Current with
+        {
+            SupplierGroups = Current.SupplierGroups
+                .Where(existing => existing.SupplierGroupId != supplierGroupId)
+                .ToList()
+        };
+        OnChanged?.Invoke();
+    }
+
+    /// <summary>Folds an exclusion answer into the plan — the stored row, or null for a lifted
+    /// exclusion (the entry counts again).</summary>
+    public void ApplyExclusion(string placementKey, WeeklyCashflowExclusion? exclusion)
+    {
+        if (Current is null) return;
+        var exclusions = Current.Exclusions.Where(existing => existing.PlacementKey != placementKey);
+        if (exclusion is not null) exclusions = exclusions.Append(exclusion);
+        Current = Current with { Exclusions = exclusions.ToList() };
+        OnChanged?.Invoke();
+    }
 }

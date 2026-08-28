@@ -8,18 +8,18 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.WeeklyCashflow.Commands;
 
-public sealed class PlaceWeeklyCashflowEntryEndpoint
+public sealed class SetWeeklyCashflowExclusionEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly PlaceWeeklyCashflowEntryAuthorisation authorisation;
-    private readonly PlaceWeeklyCashflowEntryValidation validation;
-    private readonly ICommandHandler<PlaceWeeklyCashflowEntry, WeeklyCashflowPlacementAnswer> handler;
+    private readonly SetWeeklyCashflowExclusionAuthorisation authorisation;
+    private readonly SetWeeklyCashflowExclusionValidation validation;
+    private readonly ICommandHandler<SetWeeklyCashflowExclusion, WeeklyCashflowExclusionAnswer> handler;
 
-    public PlaceWeeklyCashflowEntryEndpoint(
+    public SetWeeklyCashflowExclusionEndpoint(
         SignedInUserResolver users,
-        PlaceWeeklyCashflowEntryAuthorisation authorisation,
-        PlaceWeeklyCashflowEntryValidation validation,
-        ICommandHandler<PlaceWeeklyCashflowEntry, WeeklyCashflowPlacementAnswer> handler)
+        SetWeeklyCashflowExclusionAuthorisation authorisation,
+        SetWeeklyCashflowExclusionValidation validation,
+        ICommandHandler<SetWeeklyCashflowExclusion, WeeklyCashflowExclusionAnswer> handler)
     {
         this.users = users;
         this.authorisation = authorisation;
@@ -27,17 +27,17 @@ public sealed class PlaceWeeklyCashflowEntryEndpoint
         this.handler = handler;
     }
 
-    [Function(nameof(PlaceWeeklyCashflowEntry))]
+    [Function(nameof(SetWeeklyCashflowExclusion))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "weekly-cashflow/placements")] HttpRequest request)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "weekly-cashflow/exclusions")] HttpRequest request)
     {
         var cancellationToken = request.HttpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var posted = await request.ReadFromJsonAsync<PlaceWeeklyCashflowEntry>(cancellationToken);
-        if (posted is null) return new BadRequestObjectResult("A placement body is required.");
-        var command = posted with { MovedByEmail = signedInUser.Email };
+        var posted = await request.ReadFromJsonAsync<SetWeeklyCashflowExclusion>(cancellationToken);
+        if (posted is null) return new BadRequestObjectResult("An exclusion body is required.");
+        var command = posted with { ExcludedByEmail = signedInUser.Email };
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);

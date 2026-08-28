@@ -21,14 +21,18 @@
 
     Three sources, one grid:
       * Every outstanding supplier bill (aged payables read — drafts included, exactly the Aged
-        Payables page's rows) seeded into the week of its Xero due date.
-      * Every outstanding sales invoice (aged receivables read) seeded the same way — the cash
-        coming in that decides what is affordable each week.
+        Payables page's rows) seeded into the week of its Xero due date — or of its Xero
+        "Planned date" when the accountant has set one.
+      * Every outstanding sales invoice (aged receivables read) seeded the same way, honouring
+        Xero's "Expected date" over the due date — the cash coming in that decides what is
+        affordable each week. Retention held back or an agreed late payment is recorded ONCE,
+        in Xero, and this grid follows; a move here remains the portal-only alternative.
       * Manual items — subcontractors, staff, subscriptions, anything that isn't a project cost —
         one-off or recurring, kept on this page because Xero can't see them coming.
 
     The one moving part: any entry can be MOVED to the week it will really be paid (the ‹ › on
-    its cell; ↺ returns it to its due week). A move is a stored placement — who, when, which
+    its cell; ↺ returns it to its natural week — Xero's expected/planned date when set, the due
+    week otherwise). A move is a stored placement — who, when, which
     week — so the plan is one shared truth, not a per-browser scratchpad. Moving changes WHEN,
     never HOW MUCH: the grid's total always equals the payables, receivables and items that went
     in — WeeklyCashflowMaths (pure, unit-tested) owns that arithmetic.
@@ -66,6 +70,8 @@ else
                                          Disabled="@(!GridReady || !XeroReady)"
                                          BuildWorkbook="BuildExportWorkbook" />
                     <ToolbarDivider />
+                    <ToolbarButton Icon="folder" Label="Group suppliers"
+                                   Disabled="@(!GridReady || planFailed)" OnClick="OpenGroupsDialog" />
                     <ToolbarButton Icon="refresh" Label="Refresh from Xero"
                                    Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
                 </Toolbar>
@@ -235,9 +241,16 @@ else
                 <p class="text-xs text-content-subtle mb-3 max-w-4xl">
                     <span class="font-medium text-content-muted">No signs to decode:</span> the band carries the
                     direction — Cash in adds, Cash out subtracts. Anything overdue sits in the current week, never
-                    the past. Use ‹ › on an entry's cell to move it to the week it will really be paid — the
-                    <span class="text-accent">‣</span> marks a moved entry, and ↺ returns it to its due week.
-                    Moves are shared: everyone sees the same plan.
+                    the past. An <span class="font-medium text-content-muted">Expected</span> (invoices) or
+                    <span class="font-medium text-content-muted">Planned</span> (bills) date set in Xero places the
+                    entry at that week instead of its due week — set it there once and this grid follows.
+                    Use ‹ › on an entry's cell to move it to the week it will really be paid — the
+                    <span class="text-accent">‣</span> marks a moved entry, and ↺ returns it to its due (or
+                    Xero-expected) week.
+                    Moves are shared: everyone sees the same plan. <span class="font-medium text-content-muted">Group
+                    suppliers</span> (toolbar) pulls chosen suppliers into one line; ⊘ on a Xero row excludes an
+                    entry that's already covered elsewhere — a direct debit, say — and parks it, struck through
+                    and uncounted, at the foot of its band.
                 </p>
 
                 <div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
@@ -257,11 +270,11 @@ else
                             <tr class="border-b border-line">
                                 <td colspan="@(view.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash in</td>
                             </tr>
-                            @BandSection((view, WeeklyCashflowBand.ClientReceipts, "Client invoices outstanding", "one line per outstanding sales invoice in Xero, at its due week"))
+                            @BandSection((view, WeeklyCashflowBand.ClientReceipts, "Client invoices outstanding", "one line per outstanding sales invoice in Xero, at its due week — or at the Expected date when one is set in Xero"))
                             <tr class="border-b border-line">
                                 <td colspan="@(view.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash out</td>
                             </tr>
-                            @BandSection((view, WeeklyCashflowBand.SupplierBills, "Supplier bills", "one line per outstanding bill in Xero — drafts included, as Aged Payables counts them"))
+                            @BandSection((view, WeeklyCashflowBand.SupplierBills, "Supplier bills", "one line per outstanding bill in Xero — drafts included, as Aged Payables counts them; a Planned date set in Xero picks the week"))
                             @foreach (var category in WeeklyCashflowCategories.All)
                             {
                                 var band = WeeklyCashflowMaths.BandFor(category);
@@ -307,7 +320,9 @@ else
                 <p class="text-xs text-content-subtle mb-10 max-w-4xl">
                     Every figure is an outstanding Xero document or an item added on this page — nothing is
                     invented, and moving an entry changes <span class="font-medium text-content-muted">when</span>,
-                    never <span class="font-medium text-content-muted">how much</span>. Bills tie to
+                    never <span class="font-medium text-content-muted">how much</span>. Excluded entries are the
+                    one deliberate exception: parked, visible and uncounted, so a direct debit isn't paid twice
+                    on paper. Bills tie to
                     <a class="underline underline-offset-2" href="/finance/aged-payables">Aged Payables</a>, invoices to
                     <a class="underline underline-offset-2" href="/finance/aged-receivables">Aged Receivables</a>, to the penny.
                     Xero read at @XeroFetchedText.
@@ -405,6 +420,103 @@ else
             </button>
         </FooterContent>
     </Modal>
+
+    @* ── Supplier groups — pull chosen suppliers into one line under Supplier bills ── *@
+    <Modal IsOpen="@groupsDialogOpen"
+           Title="@(groupEditorOpen ? (editingGroupId is null ? "New supplier group" : "Edit supplier group") : "Supplier groups")"
+           OnCancel="CloseGroupsDialog">
+        <ChildContent>
+        @if (!groupEditorOpen)
+        {
+            <div class="space-y-3">
+                <p class="text-sm text-content-muted">
+                    A group pulls its suppliers' bills together into ONE line under Supplier bills — e.g. a
+                    <span class="text-content">Materials</span> group holding Grant &amp; Stone, HSS Hire and Skip IT.
+                    Totals never change, only how the rows read; the group line expands to the bills behind it,
+                    and its ‹ › move a whole cell's bills at once.
+                </p>
+                @if (Plan.Current is { SupplierGroups.Count: > 0 } plan)
+                {
+                    <ul class="divide-y divide-line rounded-lg border border-line">
+                        @foreach (var group in plan.SupplierGroups)
+                        {
+                            <li class="flex items-center gap-3 px-3 py-2">
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-sm text-content font-medium">@group.Name</p>
+                                    <p class="text-xs text-content-faint truncate" title="@string.Join(", ", group.ContactNames)">@string.Join(", ", group.ContactNames)</p>
+                                </div>
+                                <button type="button" class="btn-neutral" @onclick="() => OpenGroupEditor(group.SupplierGroupId)">Edit</button>
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-sm text-content-faint">No groups yet.</p>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="space-y-4">
+                <FormField Label="Group name" Value="@groupFormName" OnChange="value => groupFormName = value" Required="true" />
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suppliers in this group *</label>
+                    <input type="text" placeholder="Filter suppliers…" value="@groupMemberFilter"
+                           @oninput="args => groupMemberFilter = (string)args.Value!"
+                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content mb-2" />
+                    <div class="max-h-64 overflow-y-auto rounded-lg border border-line divide-y divide-line/50">
+                        @foreach (var supplierName in SupplierNameChoices())
+                        {
+                            if (groupMemberFilter.Trim() is { Length: > 0 } filter
+                                && !supplierName.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                            {
+                                continue;
+                            }
+                            var holder = GroupHolding(supplierName);
+                            var name = supplierName;
+                            <label class="flex items-center gap-2 px-3 py-1.5 text-sm @(holder is null ? "text-content cursor-pointer hover:bg-surface-raised" : "text-content-faint")">
+                                <input type="checkbox" checked="@groupFormMembers.Contains(name)" disabled="@(holder is not null)"
+                                       @onchange="() => ToggleGroupMember(name)" />
+                                <span class="min-w-0 flex-1 truncate">@name</span>
+                                @if (holder is not null)
+                                {
+                                    <span class="text-[11px] text-content-faint whitespace-nowrap">in @holder</span>
+                                }
+                            </label>
+                        }
+                    </div>
+                    <p class="text-[11px] text-content-faint mt-1">
+                        Every supplier with an outstanding bill, plus this group's members. A supplier lives in one group at a time.
+                    </p>
+                </div>
+                @if (groupsDialogError is not null)
+                {
+                    <p class="text-sm text-negative">@groupsDialogError</p>
+                }
+            </div>
+        }
+        </ChildContent>
+        <FooterContent>
+        @if (!groupEditorOpen)
+        {
+            <button type="button" class="btn-neutral" @onclick="CloseGroupsDialog">Close</button>
+            <button type="button" class="btn-primary" @onclick="() => OpenGroupEditor(null)">New group</button>
+        }
+        else
+        {
+            @if (editingGroupId is not null)
+            {
+                <button type="button" class="btn-neutral text-negative mr-auto" disabled="@isSavingGroup" @onclick="DeleteGroupAsync"
+                        title="Dissolve the group — its bills go back to one line per supplier. Nothing else changes.">Delete group</button>
+            }
+            <button type="button" class="btn-neutral" disabled="@isSavingGroup" @onclick="() => groupEditorOpen = false">Back</button>
+            <button type="button" class="btn-primary" disabled="@(isSavingGroup || !GroupFormLooksComplete)" @onclick="SaveGroupAsync">
+                @(editingGroupId is null ? "Create group" : "Save changes")
+            </button>
+        }
+        </FooterContent>
+    </Modal>
 }
 
 @code {
@@ -437,6 +549,16 @@ else
     // Entries with a move in flight — their arrows disable so a double-click can't race.
     private readonly HashSet<string> movingKeys = new(StringComparer.Ordinal);
 
+    // Supplier groups whose member bills are shown (groups start collapsed to their one line),
+    // groups with a whole-cell move in flight, and entries with an exclusion change in flight.
+    private readonly HashSet<string> expandedGroups = new(StringComparer.Ordinal);
+    private readonly HashSet<string> movingGroupIds = new(StringComparer.Ordinal);
+    private readonly HashSet<string> excludingKeys = new(StringComparer.Ordinal);
+
+    // The Xero seeds parked by an exclusion — filled by BuildView each pass, drawn struck-through
+    // at the foot of their band instead of entering the maths.
+    private readonly List<WeeklyCashflowSeed> excludedSeeds = new();
+
     // ---- Dialog state -------------------------------------------------------
 
     private bool itemDialogOpen;
@@ -455,6 +577,20 @@ else
         !string.IsNullOrWhiteSpace(formName)
         && decimal.TryParse(formAmount, out var amount) && amount > 0m
         && DateTime.TryParse(formFirstDue, out _);
+
+    // ---- Supplier groups dialog state ------------------------------------
+
+    private bool groupsDialogOpen;
+    private bool groupEditorOpen;
+    private string? editingGroupId;
+    private bool isSavingGroup;
+    private string? groupsDialogError;
+    private string groupFormName = "";
+    private string groupMemberFilter = "";
+    private readonly HashSet<string> groupFormMembers = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool GroupFormLooksComplete =>
+        !string.IsNullOrWhiteSpace(groupFormName) && groupFormMembers.Count > 0;
 
     // ---- Sources ------------------------------------------------------------
 
@@ -493,27 +629,39 @@ else
     private WeeklyCashflowView BuildView()
     {
         var seeds = new List<WeeklyCashflowSeed>();
+        excludedSeeds.Clear();
+        var excludedKeys = ExcludedKeys();
+
+        // An excluded seed never reaches the maths — it renders struck-through at the foot of
+        // its band instead, so the money is visibly parked rather than silently dropped.
+        void Sort(WeeklyCashflowSeed seed)
+        {
+            if (excludedKeys.Contains(seed.PlacementKey)) excludedSeeds.Add(seed);
+            else seeds.Add(seed);
+        }
 
         foreach (var bill in PayablesSnapshot!.Bills)
         {
-            seeds.Add(new WeeklyCashflowSeed(
+            Sort(new WeeklyCashflowSeed(
                 WeeklyCashflowMaths.BillKeyFor(bill.InvoiceId),
                 WeeklyCashflowBand.SupplierBills,
                 string.IsNullOrWhiteSpace(bill.ContactName) ? "(no supplier)" : bill.ContactName!.Trim(),
                 BillDetail(bill),
                 AgedPayablesMaths.SignedAmountDue(bill),
-                AsDate(bill.DueDate ?? bill.Date)));
+                AsDate(bill.DueDate ?? bill.Date),
+                AsDate(bill.PlannedPaymentDate)));
         }
 
         foreach (var invoice in ReceivablesSnapshot!.Invoices)
         {
-            seeds.Add(new WeeklyCashflowSeed(
+            Sort(new WeeklyCashflowSeed(
                 WeeklyCashflowMaths.ReceiptKeyFor(invoice.InvoiceId),
                 WeeklyCashflowBand.ClientReceipts,
                 string.IsNullOrWhiteSpace(invoice.ContactName) ? "(no client)" : invoice.ContactName!.Trim(),
                 InvoiceDetail(invoice),
                 AgedReceivablesMaths.SignedAmountDue(invoice),
-                AsDate(invoice.DueDate ?? invoice.Date)));
+                AsDate(invoice.DueDate ?? invoice.Date),
+                AsDate(invoice.ExpectedPaymentDate)));
         }
 
         return WeeklyCashflowMaths.Build(
@@ -575,6 +723,50 @@ else
         if (!collapsedBands.Remove(band)) collapsedBands.Add(band);
     }
 
+    private void ToggleGroup(string supplierGroupId)
+    {
+        if (!expandedGroups.Remove(supplierGroupId)) expandedGroups.Add(supplierGroupId);
+    }
+
+    private HashSet<string> ExcludedKeys() =>
+        Plan.Current is { } plan
+            ? plan.Exclusions.Select(exclusion => exclusion.PlacementKey).ToHashSet(StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+
+    private string? ExcludedByFor(string placementKey) =>
+        Plan.Current?.Exclusions.FirstOrDefault(exclusion => exclusion.PlacementKey == placementKey)?.ExcludedByEmail;
+
+    private sealed record GroupSlice(WeeklyCashflowSupplierGroup Group, IReadOnlyList<WeeklyCashflowEntry> Entries);
+
+    /// <summary>The supplier groups as they land on this grid: each group with the band entries
+    /// whose supplier (label) it holds. A group none of whose suppliers has a bill right now
+    /// simply doesn't render. A supplier somehow in two groups counts once — the plan's first
+    /// group wins.</summary>
+    private IReadOnlyList<GroupSlice> GroupSlicesFor(WeeklyCashflowView view)
+    {
+        var plan = Plan.Current;
+        if (plan is null || plan.SupplierGroups.Count == 0) return Array.Empty<GroupSlice>();
+
+        var groupByContact = new Dictionary<string, WeeklyCashflowSupplierGroup>(StringComparer.OrdinalIgnoreCase);
+        foreach (var group in plan.SupplierGroups)
+            foreach (var contactName in group.ContactNames)
+                groupByContact.TryAdd(contactName.Trim(), group);
+
+        var members = new Dictionary<string, List<WeeklyCashflowEntry>>(StringComparer.Ordinal);
+        foreach (var entry in EntriesFor(view, WeeklyCashflowBand.SupplierBills))
+        {
+            if (!groupByContact.TryGetValue(entry.Label, out var group)) continue;
+            if (!members.TryGetValue(group.SupplierGroupId, out var list))
+                members[group.SupplierGroupId] = list = new List<WeeklyCashflowEntry>();
+            list.Add(entry);
+        }
+
+        return plan.SupplierGroups
+            .Where(group => members.ContainsKey(group.SupplierGroupId))
+            .Select(group => new GroupSlice(group, members[group.SupplierGroupId]))
+            .ToList();
+    }
+
     // ---- One band: a totals row (click to expand) plus one movable row per entry ----
 
     private RenderFragment BandSection((WeeklyCashflowView View, WeeklyCashflowBand Band, string Label, string Sub) args) => __builder =>
@@ -603,52 +795,150 @@ else
         </tr>
         @if (expanded)
         {
-            @foreach (var entry in EntriesFor(view, band))
+            // Supplier groups pull their bills out of the flat list and into one combined row
+            // each; everything ungrouped renders exactly as before. Excluded entries close the
+            // band, struck through and uncounted.
+            IReadOnlyList<GroupSlice> grouped = band == WeeklyCashflowBand.SupplierBills
+                ? GroupSlicesFor(view)
+                : Array.Empty<GroupSlice>();
+            var groupedKeys = grouped.SelectMany(slice => slice.Entries)
+                .Select(row => row.PlacementKey)
+                .ToHashSet(StringComparer.Ordinal);
+            @foreach (var slice in grouped)
             {
+                @GroupSection((view, slice))
+            }
+            @foreach (var entry in EntriesFor(view, band).Where(row => !groupedKeys.Contains(row.PlacementKey)))
+            {
+                @EntryRow((view, entry, false))
+            }
+            @foreach (var excluded in excludedSeeds.Where(seed => seed.Band == band))
+            {
+                var restoring = excludingKeys.Contains(excluded.PlacementKey);
                 <tr class="border-b border-line/50 text-[13px]">
                     <td class="pl-9 pr-4 py-1.5">
-                        @if (entry.ItemId is { } itemId)
-                        {
-                            <button type="button" class="text-content-muted hover:text-content underline-offset-2 hover:underline text-left"
-                                    title="Edit this item" @onclick="() => OpenEditDialog(itemId)">@entry.Label</button>
-                        }
-                        else
-                        {
-                            <span class="text-content-muted">@entry.Label</span>
-                        }
+                        <span class="text-content-faint line-through">@excluded.Label</span>
                         <span class="block text-[11px] text-content-faint">
-                            @entry.Detail@(entry.NaturalDueOn is { } due ? $" · due {due.UtcDateTime:d MMM}" : " · no due date")
+                            @excluded.Detail · excluded — not counted@(ExcludedByFor(excluded.PlacementKey) is { } who ? $" · {who}" : "")
                         </span>
                     </td>
-                    @for (var index = 0; index <= view.WeekStarts.Count; index++)
-                    {
-                        var cellIndex = index;
-                        <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == view.WeekStarts.Count ? "border-l border-line" : "")">
-                            @if (entry.WeekIndex == cellIndex)
-                            {
-                                var busy = movingKeys.Contains(entry.PlacementKey);
-                                <span class="inline-flex items-center gap-0.5">
-                                    @if (entry.Moved)
-                                    {
-                                        <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
-                                                title="Back to its due week" disabled="@busy"
-                                                @onclick="() => ResetEntryAsync(entry)">↺</button>
-                                    }
-                                    <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
-                                            title="Pay a week earlier" disabled="@(busy || cellIndex == 0)"
-                                            @onclick="() => MoveEntryAsync(entry, Math.Min(cellIndex, view.WeekStarts.Count) - 1)">‹</button>
-                                    <span class="@(entry.Moved ? "text-accent font-medium" : "text-content")"
-                                          title="@(entry.Moved ? "Moved here — the due week is " + (entry.NaturalDueOn is { } naturalDue ? naturalDue.UtcDateTime.ToString("d MMM") : "unknown") : null)">@(entry.Moved ? "‣ " : "")@CellAmount(entry.Amount)</span>
-                                    <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
-                                            title="Pay a week later" disabled="@(busy || cellIndex >= view.WeekStarts.Count - 1)"
-                                            @onclick="() => MoveEntryAsync(entry, cellIndex + 1)">›</button>
-                                </span>
-                            }
-                        </td>
-                    }
+                    <td colspan="@(view.WeekStarts.Count + 1)" class="px-3 py-1.5 text-right whitespace-nowrap text-content-faint">
+                        <span class="line-through mr-2">@CellAmount(excluded.Amount)</span>
+                        <button type="button" class="text-content-subtle hover:text-content underline underline-offset-2 disabled:opacity-30"
+                                title="Count this entry in the plan again" disabled="@restoring"
+                                @onclick="() => SetExclusionAsync(excluded.PlacementKey, false)">Count again</button>
+                    </td>
                 </tr>
             }
         }
+    };
+
+    // ---- One supplier group: a combined row — weekly totals, whole-cell moves — plus, when
+    // opened, its member bills, each still its own movable row ----
+
+    private RenderFragment GroupSection((WeeklyCashflowView View, GroupSlice Slice) args) => __builder =>
+    {
+        var (view, slice) = args;
+        var open = expandedGroups.Contains(slice.Group.SupplierGroupId);
+        <tr class="border-b border-line/50 text-[13px] bg-surface-raised/40">
+            <td class="pl-9 pr-4 py-1.5">
+                <button type="button" class="flex items-start gap-1.5 text-left w-full" @onclick="() => ToggleGroup(slice.Group.SupplierGroupId)"
+                        title="@(open ? "Collapse to the group line" : $"Show the {slice.Entries.Count} bills behind this line")">
+                    <span class="text-content-subtle mt-0.5 text-[10px]">@(open ? "▾" : "▸")</span>
+                    <span>
+                        <span class="text-content font-medium">@slice.Group.Name</span>
+                        <span class="block text-[11px] text-content-faint font-normal">supplier group · @slice.Entries.Count @(slice.Entries.Count == 1 ? "bill" : "bills") · ‹ › moves the whole cell</span>
+                    </span>
+                </button>
+            </td>
+            @for (var index = 0; index <= view.WeekStarts.Count; index++)
+            {
+                var cellIndex = index;
+                var members = slice.Entries.Where(row => row.WeekIndex == cellIndex).ToList();
+                <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == view.WeekStarts.Count ? "border-l border-line" : "")">
+                    @if (members.Count > 0)
+                    {
+                        var busy = movingGroupIds.Contains(slice.Group.SupplierGroupId) || members.Any(row => movingKeys.Contains(row.PlacementKey));
+                        var anyMoved = members.Any(row => row.Moved);
+                        <span class="inline-flex items-center gap-0.5">
+                            @if (anyMoved)
+                            {
+                                <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                                        title="Send this cell's moved bills back to their due weeks" disabled="@busy"
+                                        @onclick="() => ResetGroupCellAsync(slice, cellIndex)">↺</button>
+                            }
+                            <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                                    title="Pay this cell's bills a week earlier" disabled="@(busy || cellIndex == 0)"
+                                    @onclick="() => MoveGroupCellAsync(slice, cellIndex, Math.Min(cellIndex, view.WeekStarts.Count) - 1)">‹</button>
+                            <span class="@(anyMoved ? "text-accent font-medium" : "text-content")">@(anyMoved ? "‣ " : "")@CellAmount(members.Sum(row => row.Amount))</span>
+                            <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                                    title="Pay this cell's bills a week later" disabled="@(busy || cellIndex >= view.WeekStarts.Count - 1)"
+                                    @onclick="() => MoveGroupCellAsync(slice, cellIndex, cellIndex + 1)">›</button>
+                        </span>
+                    }
+                </td>
+            }
+        </tr>
+        @if (open)
+        {
+            @foreach (var entry in slice.Entries)
+            {
+                @EntryRow((view, entry, true))
+            }
+        }
+    };
+
+    // ---- One movable entry row, shared by the flat bands and the opened groups ----
+
+    private RenderFragment EntryRow((WeeklyCashflowView View, WeeklyCashflowEntry Entry, bool InGroup) args) => __builder =>
+    {
+        var (view, entry, inGroup) = args;
+        <tr class="border-b border-line/50 text-[13px]">
+            <td class="@(inGroup ? "pl-14" : "pl-9") pr-4 py-1.5">
+                @if (entry.ItemId is { } itemId)
+                {
+                    <button type="button" class="text-content-muted hover:text-content underline-offset-2 hover:underline text-left"
+                            title="Edit this item" @onclick="() => OpenEditDialog(itemId)">@entry.Label</button>
+                }
+                else
+                {
+                    <span class="text-content-muted">@entry.Label</span>
+                    <button type="button" class="ml-1.5 text-[11px] text-content-faint hover:text-negative align-middle disabled:opacity-30"
+                            title="Don't count this entry — a direct debit or manual item already covers it. It parks, struck through, at the foot of this band."
+                            disabled="@excludingKeys.Contains(entry.PlacementKey)"
+                            @onclick="() => SetExclusionAsync(entry.PlacementKey, true)">⊘</button>
+                }
+                <span class="block text-[11px] text-content-faint">
+                    @entry.Detail@(entry.NaturalDueOn is { } due ? $" · due {due.UtcDateTime:d MMM}" : " · no due date")@(entry.ExpectedOn is { } expected ? $" · expected {expected.UtcDateTime:d MMM}" : "")
+                </span>
+            </td>
+            @for (var index = 0; index <= view.WeekStarts.Count; index++)
+            {
+                var cellIndex = index;
+                <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == view.WeekStarts.Count ? "border-l border-line" : "")">
+                    @if (entry.WeekIndex == cellIndex)
+                    {
+                        var busy = movingKeys.Contains(entry.PlacementKey);
+                        <span class="inline-flex items-center gap-0.5">
+                            @if (entry.Moved)
+                            {
+                                <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                                        title="@(entry.ExpectedOn is null ? "Back to its due week" : "Back to its Xero expected week")" disabled="@busy"
+                                        @onclick="() => ResetEntryAsync(entry)">↺</button>
+                            }
+                            <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                                    title="Pay a week earlier" disabled="@(busy || cellIndex == 0)"
+                                    @onclick="() => MoveEntryAsync(entry, Math.Min(cellIndex, view.WeekStarts.Count) - 1)">‹</button>
+                            <span class="@(entry.Moved ? "text-accent font-medium" : "text-content")"
+                                  title="@(entry.Moved ? "Moved here — the " + (entry.ExpectedOn is null ? "due" : "Xero expected") + " week is " + (entry.NaturalOn is { } naturalOn ? naturalOn.UtcDateTime.ToString("d MMM") : "unknown") : null)">@(entry.Moved ? "‣ " : "")@CellAmount(entry.Amount)</span>
+                            <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                                    title="Pay a week later" disabled="@(busy || cellIndex >= view.WeekStarts.Count - 1)"
+                                    @onclick="() => MoveEntryAsync(entry, cellIndex + 1)">›</button>
+                        </span>
+                    }
+                </td>
+            }
+        </tr>
     };
 
     // ---- Moving -------------------------------------------------------------
@@ -668,10 +958,12 @@ else
         moveError = null;
         try
         {
-            var placement = await Commands.SendAsync(
+            // The answer is enveloped: a cleared placement comes back as { placement: null }
+            // rather than an empty 204 the JSON read would choke on (JPMS-31996D).
+            var answer = await Commands.SendAsync(
                 new PlaceWeeklyCashflowEntry(entry.PlacementKey, weekStart), CancellationToken.None);
             // The server's answer is the truth the whole grid re-derives from — no refetch needed.
-            Plan.Apply(entry.PlacementKey, placement);
+            Plan.Apply(entry.PlacementKey, answer.Placement);
         }
         catch (CommandFailedException failure)
         {
@@ -684,6 +976,183 @@ else
         finally
         {
             movingKeys.Remove(entry.PlacementKey);
+        }
+    }
+
+    private async Task MoveGroupCellAsync(GroupSlice slice, int cellIndex, int targetIndex)
+    {
+        var view = BuildView();
+        if (targetIndex < 0 || targetIndex >= view.WeekStarts.Count) return;
+        var members = slice.Entries.Where(entry => entry.WeekIndex == cellIndex).ToList();
+        await MoveGroupMembersAsync(slice, members, view.WeekStarts[targetIndex]);
+    }
+
+    private Task ResetGroupCellAsync(GroupSlice slice, int cellIndex) =>
+        MoveGroupMembersAsync(
+            slice,
+            slice.Entries.Where(entry => entry.WeekIndex == cellIndex && entry.Moved).ToList(),
+            null);
+
+    /// <summary>Moves a group cell's bills one by one — each is the same shared placement as
+    /// moving the bill by hand, so colleagues see one plan however it was driven. The first
+    /// failure stops the batch; whatever already moved stays moved, and the grid shows it.</summary>
+    private async Task MoveGroupMembersAsync(GroupSlice slice, IReadOnlyList<WeeklyCashflowEntry> members, DateTimeOffset? weekStart)
+    {
+        if (members.Count == 0 || !movingGroupIds.Add(slice.Group.SupplierGroupId)) return;
+        try
+        {
+            foreach (var member in members)
+            {
+                await PlaceAsync(member, weekStart);
+                if (moveError is not null) break;
+            }
+        }
+        finally
+        {
+            movingGroupIds.Remove(slice.Group.SupplierGroupId);
+        }
+    }
+
+    // ---- Excluding ----------------------------------------------------------
+
+    private async Task SetExclusionAsync(string placementKey, bool excluded)
+    {
+        if (!excludingKeys.Add(placementKey)) return;
+        moveError = null;
+        try
+        {
+            // Enveloped like placements: a lifted exclusion answers { exclusion: null },
+            // never an empty 204 the JSON read would choke on.
+            var answer = await Commands.SendAsync(
+                new SetWeeklyCashflowExclusion(placementKey, excluded), CancellationToken.None);
+            Plan.ApplyExclusion(placementKey, answer.Exclusion);
+        }
+        catch (CommandFailedException failure)
+        {
+            moveError = failure.Message;
+        }
+        catch
+        {
+            // Already reported to the error toast with a reference; the grid simply stays put.
+        }
+        finally
+        {
+            excludingKeys.Remove(placementKey);
+        }
+    }
+
+    // ---- The supplier groups dialog -----------------------------------------
+
+    private void OpenGroupsDialog()
+    {
+        groupEditorOpen = false;
+        groupsDialogError = null;
+        groupsDialogOpen = true;
+    }
+
+    private void CloseGroupsDialog() => groupsDialogOpen = false;
+
+    private void OpenGroupEditor(string? supplierGroupId)
+    {
+        editingGroupId = supplierGroupId;
+        groupFormName = "";
+        groupFormMembers.Clear();
+        groupMemberFilter = "";
+        groupsDialogError = null;
+        if (supplierGroupId is not null
+            && Plan.Current?.SupplierGroups.FirstOrDefault(group => group.SupplierGroupId == supplierGroupId) is { } group)
+        {
+            groupFormName = group.Name;
+            foreach (var contactName in group.ContactNames) groupFormMembers.Add(contactName);
+        }
+        groupEditorOpen = true;
+    }
+
+    private void ToggleGroupMember(string supplierName)
+    {
+        if (!groupFormMembers.Remove(supplierName)) groupFormMembers.Add(supplierName);
+    }
+
+    /// <summary>Every supplier with an outstanding bill right now, plus the editing group's own
+    /// members (a supplier whose bills are momentarily all paid must stay pickable — and
+    /// removable), A–Z.</summary>
+    private IReadOnlyList<string> SupplierNameChoices()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (PayablesSnapshot is { } payables)
+            foreach (var bill in payables.Bills)
+                if (!string.IsNullOrWhiteSpace(bill.ContactName))
+                    names.Add(bill.ContactName!.Trim());
+        foreach (var member in groupFormMembers) names.Add(member);
+        return names.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
+    }
+
+    /// <summary>The name of the OTHER group already holding this supplier, or null. One group
+    /// per supplier — a name in two groups would draw its bills twice.</summary>
+    private string? GroupHolding(string supplierName)
+    {
+        var groups = Plan.Current?.SupplierGroups;
+        if (groups is null) return null;
+        foreach (var group in groups)
+        {
+            if (group.SupplierGroupId == editingGroupId) continue;
+            if (group.ContactNames.Contains(supplierName, StringComparer.OrdinalIgnoreCase)) return group.Name;
+        }
+        return null;
+    }
+
+    private async Task SaveGroupAsync()
+    {
+        isSavingGroup = true;
+        groupsDialogError = null;
+        try
+        {
+            var saved = await Commands.SendAsync(
+                new SaveWeeklyCashflowSupplierGroup(
+                    editingGroupId,
+                    groupFormName.Trim(),
+                    groupFormMembers.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList()),
+                CancellationToken.None);
+            Plan.Apply(saved);
+            groupEditorOpen = false;
+        }
+        catch (CommandFailedException failure)
+        {
+            groupsDialogError = failure.Message;
+        }
+        catch
+        {
+            groupsDialogError = "Something went wrong saving the group — the red bar at the top has the detail.";
+        }
+        finally
+        {
+            isSavingGroup = false;
+        }
+    }
+
+    private async Task DeleteGroupAsync()
+    {
+        if (editingGroupId is not { } supplierGroupId) return;
+        isSavingGroup = true;
+        groupsDialogError = null;
+        try
+        {
+            var deleted = await Commands.SendAsync(
+                new DeleteWeeklyCashflowSupplierGroup(supplierGroupId), CancellationToken.None);
+            Plan.RemoveGroup(deleted.SupplierGroupId);
+            groupEditorOpen = false;
+        }
+        catch (CommandFailedException failure)
+        {
+            groupsDialogError = failure.Message;
+        }
+        catch
+        {
+            groupsDialogError = "Something went wrong deleting the group — the red bar at the top has the detail.";
+        }
+        finally
+        {
+            isSavingGroup = false;
         }
     }
 
@@ -834,6 +1303,7 @@ else
             new ExcelColumn("Name"),
             new ExcelColumn("Detail"),
             new ExcelColumn("Due", ExcelFormat.Date),
+            new ExcelColumn("Expected", ExcelFormat.Date),
             new ExcelColumn("Planned week"),
             new ExcelColumn("Moved"),
             new ExcelColumn("Amount", ExcelFormat.Currency));
@@ -846,6 +1316,7 @@ else
                 entry.Label,
                 entry.Detail,
                 entry.NaturalDueOn?.UtcDateTime,
+                entry.ExpectedOn?.UtcDateTime,
                 entry.WeekIndex == view.LaterIndex ? "Later" : $"w/c {view.WeekStarts[entry.WeekIndex].UtcDateTime:dd/MM/yyyy}",
                 entry.Moved ? "moved" : "",
                 entry.Amount
@@ -861,6 +1332,7 @@ else
         WeeklyCashflowBand.Subcontractors => "Subcontractors",
         WeeklyCashflowBand.Staff => "Staff",
         WeeklyCashflowBand.Subscriptions => "Subscriptions",
+        WeeklyCashflowBand.DirectDebits => "Direct debits",
         _ => "Other"
     };
 

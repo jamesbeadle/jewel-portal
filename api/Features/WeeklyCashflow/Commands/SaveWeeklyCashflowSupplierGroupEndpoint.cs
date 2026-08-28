@@ -8,18 +8,18 @@ using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.WeeklyCashflow.Commands;
 
-public sealed class PlaceWeeklyCashflowEntryEndpoint
+public sealed class SaveWeeklyCashflowSupplierGroupEndpoint
 {
     private readonly SignedInUserResolver users;
-    private readonly PlaceWeeklyCashflowEntryAuthorisation authorisation;
-    private readonly PlaceWeeklyCashflowEntryValidation validation;
-    private readonly ICommandHandler<PlaceWeeklyCashflowEntry, WeeklyCashflowPlacementAnswer> handler;
+    private readonly SaveWeeklyCashflowSupplierGroupAuthorisation authorisation;
+    private readonly SaveWeeklyCashflowSupplierGroupValidation validation;
+    private readonly ICommandHandler<SaveWeeklyCashflowSupplierGroup, WeeklyCashflowSupplierGroup> handler;
 
-    public PlaceWeeklyCashflowEntryEndpoint(
+    public SaveWeeklyCashflowSupplierGroupEndpoint(
         SignedInUserResolver users,
-        PlaceWeeklyCashflowEntryAuthorisation authorisation,
-        PlaceWeeklyCashflowEntryValidation validation,
-        ICommandHandler<PlaceWeeklyCashflowEntry, WeeklyCashflowPlacementAnswer> handler)
+        SaveWeeklyCashflowSupplierGroupAuthorisation authorisation,
+        SaveWeeklyCashflowSupplierGroupValidation validation,
+        ICommandHandler<SaveWeeklyCashflowSupplierGroup, WeeklyCashflowSupplierGroup> handler)
     {
         this.users = users;
         this.authorisation = authorisation;
@@ -27,17 +27,17 @@ public sealed class PlaceWeeklyCashflowEntryEndpoint
         this.handler = handler;
     }
 
-    [Function(nameof(PlaceWeeklyCashflowEntry))]
+    [Function(nameof(SaveWeeklyCashflowSupplierGroup))]
     public async Task<IActionResult> Run(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "weekly-cashflow/placements")] HttpRequest request)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "weekly-cashflow/supplier-groups")] HttpRequest request)
     {
         var cancellationToken = request.HttpContext.RequestAborted;
         var signedInUser = await users.ResolveAsync(request, cancellationToken);
         if (signedInUser is null) return new UnauthorizedResult();
 
-        var posted = await request.ReadFromJsonAsync<PlaceWeeklyCashflowEntry>(cancellationToken);
-        if (posted is null) return new BadRequestObjectResult("A placement body is required.");
-        var command = posted with { MovedByEmail = signedInUser.Email };
+        var posted = await request.ReadFromJsonAsync<SaveWeeklyCashflowSupplierGroup>(cancellationToken);
+        if (posted is null) return new BadRequestObjectResult("A supplier group body is required.");
+        var command = posted with { SavedByEmail = signedInUser.Email };
 
         if (!authorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
         var validationOutcome = validation.Check(command);

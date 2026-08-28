@@ -6234,6 +6234,54 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("WeeklyCashflowPlacements");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.WeeklyCashflowSupplierGroupEntity", b =>
+                {
+                    b.Property<string>("SupplierGroupId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ContactNamesJson")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("SupplierGroupId");
+
+                    b.ToTable("WeeklyCashflowSupplierGroups");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.WeeklyCashflowExclusionEntity", b =>
+                {
+                    b.Property<string>("PlacementKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("ExcludedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ExcludedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("PlacementKey");
+
+                    b.ToTable("WeeklyCashflowExclusions");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.WorkOrderAttachmentEntity", b =>
                 {
                     b.Property<string>("WorkOrderAttachmentId")

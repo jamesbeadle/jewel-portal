@@ -50,6 +50,10 @@ public sealed record XeroAgedPayablesSnapshot(
 /// consumers apply the sign via <see cref="AgedPayablesMaths.SignedAmountDue"/>, the same
 /// convention as the stored ledger. A DRAFT bill has no payments yet, so its AmountDue is
 /// its total — exactly the amount Xero's own aged payables report is not showing.
+/// <see cref="PlannedPaymentDate"/> is Xero's optional "Planned date" (the Awaiting Payment
+/// list's planning column) — when set, the Weekly Cashflow seeds the bill there instead of
+/// its due week, mirroring the receivables side's Expected date. Ageing stays on the due
+/// date. Credit notes never carry one.
 /// </summary>
 public sealed record XeroPayableBill(
     string InvoiceId,
@@ -62,7 +66,8 @@ public sealed record XeroPayableBill(
     string Status,
     decimal Total,
     decimal AmountDue,
-    string? CurrencyCode)
+    string? CurrencyCode,
+    DateTime? PlannedPaymentDate = null)
 {
     public bool IsCreditNote => string.Equals(Type, "ACCPAYCREDIT", StringComparison.OrdinalIgnoreCase);
 

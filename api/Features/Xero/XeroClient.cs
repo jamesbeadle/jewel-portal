@@ -910,7 +910,10 @@ public sealed class XeroClient : IXeroClient
                     Status: StringOf(item, "Status") ?? "UNKNOWN",
                     Total: DecimalOf(item, "Total"),
                     AmountDue: amountDue,
-                    CurrencyCode: StringOf(item, "CurrencyCode")));
+                    CurrencyCode: StringOf(item, "CurrencyCode"),
+                    // Xero's "Planned date" (Awaiting Payment planning column) — bills only,
+                    // absent on credit notes, so DateOf simply returns null there.
+                    PlannedPaymentDate: DateOf(item, "PlannedPaymentDateString", "PlannedPaymentDate")));
             }
 
             if (items.GetArrayLength() < PageSize) return false; // Short page — no more to fetch.
@@ -996,7 +999,10 @@ public sealed class XeroClient : IXeroClient
                     Status: StringOf(item, "Status") ?? "UNKNOWN",
                     Total: DecimalOf(item, "Total"),
                     AmountDue: amountDue,
-                    CurrencyCode: StringOf(item, "CurrencyCode")));
+                    CurrencyCode: StringOf(item, "CurrencyCode"),
+                    // Xero's "Expected date" (set on the invoice or the Awaiting Payment list)
+                    // — invoices only, absent on credit notes, so DateOf simply returns null.
+                    ExpectedPaymentDate: DateOf(item, "ExpectedPaymentDateString", "ExpectedPaymentDate")));
             }
 
             if (items.GetArrayLength() < PageSize) return false; // Short page — no more to fetch.

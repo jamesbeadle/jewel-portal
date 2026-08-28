@@ -24,9 +24,20 @@ public static class WeeklyCashflowFeatureRegistration
         services.AddScoped<ICommandHandler<ArchiveWeeklyCashflowItem, WeeklyCashflowItem>, ArchiveWeeklyCashflowItemHandler>();
         services.AddScoped<ArchiveWeeklyCashflowItemAuthorisation>();
 
-        services.AddScoped<ICommandHandler<PlaceWeeklyCashflowEntry, WeeklyCashflowPlacement?>, PlaceWeeklyCashflowEntryHandler>();
+        services.AddScoped<ICommandHandler<PlaceWeeklyCashflowEntry, WeeklyCashflowPlacementAnswer>, PlaceWeeklyCashflowEntryHandler>();
         services.AddScoped<PlaceWeeklyCashflowEntryAuthorisation>();
         services.AddScoped<PlaceWeeklyCashflowEntryValidation>();
+
+        services.AddScoped<ICommandHandler<SaveWeeklyCashflowSupplierGroup, WeeklyCashflowSupplierGroup>, SaveWeeklyCashflowSupplierGroupHandler>();
+        services.AddScoped<SaveWeeklyCashflowSupplierGroupAuthorisation>();
+        services.AddScoped<SaveWeeklyCashflowSupplierGroupValidation>();
+
+        services.AddScoped<ICommandHandler<DeleteWeeklyCashflowSupplierGroup, WeeklyCashflowSupplierGroup>, DeleteWeeklyCashflowSupplierGroupHandler>();
+        services.AddScoped<DeleteWeeklyCashflowSupplierGroupAuthorisation>();
+
+        services.AddScoped<ICommandHandler<SetWeeklyCashflowExclusion, WeeklyCashflowExclusionAnswer>, SetWeeklyCashflowExclusionHandler>();
+        services.AddScoped<SetWeeklyCashflowExclusionAuthorisation>();
+        services.AddScoped<SetWeeklyCashflowExclusionValidation>();
 
         return services;
     }

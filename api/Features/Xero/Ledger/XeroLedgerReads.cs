@@ -86,7 +86,8 @@ internal static class XeroLedgerReads
 
     public static XeroLedgerLine ToModel(
         XeroLedgerLineEntity entity, IReadOnlyList<XeroCostSplit>? splits, XeroAllocationSuggester? suggester,
-        IReadOnlyList<XeroDisputeMessage>? disputeMessages = null)
+        IReadOnlyList<XeroDisputeMessage>? disputeMessages = null,
+        LabourSupplierRecognition.LineRecognition? labour = null)
     {
         // Suggestions only matter while a line still needs a decision.
         var unallocated = entity.AllocationStatus == (int)XeroAllocationStatus.Unallocated;
@@ -123,6 +124,11 @@ internal static class XeroLedgerReads
             entity.WriteBackError,
             entity.WriteBackAtUtc,
             entity.HasAttachments,
-            disputeMessages);
+            disputeMessages,
+            labour?.MatchedWorkerId,
+            labour?.MatchedWorkerName,
+            labour?.MatchedSubcontractorId,
+            labour?.CoveredByTimesheets ?? false,
+            labour?.CoveredPeriodStart);
     }
 }

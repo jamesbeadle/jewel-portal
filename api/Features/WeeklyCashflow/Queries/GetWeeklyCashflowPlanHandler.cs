@@ -26,8 +26,17 @@ public sealed class GetWeeklyCashflowPlanHandler : IQueryHandler<GetWeeklyCashfl
         var placements = await context.WeeklyCashflowPlacements.AsNoTracking()
             .ToListAsync(cancellationToken);
 
+        var groups = await context.WeeklyCashflowSupplierGroups.AsNoTracking()
+            .OrderBy(group => group.Name)
+            .ToListAsync(cancellationToken);
+
+        var exclusions = await context.WeeklyCashflowExclusions.AsNoTracking()
+            .ToListAsync(cancellationToken);
+
         return new WeeklyCashflowPlan(
             items.Select(item => item.ToModel()).ToList(),
-            placements.Select(placement => placement.ToModel()).ToList());
+            placements.Select(placement => placement.ToModel()).ToList(),
+            groups.Select(group => group.ToModel()).ToList(),
+            exclusions.Select(exclusion => exclusion.ToModel()).ToList());
     }
 }

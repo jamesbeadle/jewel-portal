@@ -35,24 +35,30 @@ public enum WeeklyCashflowBand
     Subcontractors,
     Staff,
     Subscriptions,
-    Other
+    Other,
+    DirectDebits
 }
 
 /// <summary>One Xero-fed movable entry, as the page maps it from the aged snapshots: a supplier
 /// bill (or purchase credit note — negative Amount) or an outstanding sales invoice. DueOn null
-/// = no date on the document: owed now.</summary>
+/// = no date on the document: owed now. ExpectedOn is the accountant's expected/planned payment
+/// date set in Xero — when present it, not DueOn, decides the entry's natural week (retention
+/// held back, an agreed late payment); DueOn stays what the document says is owed.</summary>
 public sealed record WeeklyCashflowSeed(
     string PlacementKey,
     WeeklyCashflowBand Band,
     string Label,
     string? Detail,
     decimal Amount,
-    DateTimeOffset? DueOn);
+    DateTimeOffset? DueOn,
+    DateTimeOffset? ExpectedOn = null);
 
 /// <summary>One entry placed on the grid. WeekIndex is 0-based into the week axis, or
 /// <see cref="WeeklyCashflowView.LaterIndex"/> for the Later bucket. Moved marks a placement in
 /// force — the accountant's week, not the document's. ItemId is set for manual entries so the
-/// row can open its item for editing.</summary>
+/// row can open its item for editing. ExpectedOn carries the Xero expected/planned payment date
+/// when one is set; <see cref="NaturalOn"/> is the week the entry seeds into (and ↺ returns to)
+/// — expected first, due date otherwise.</summary>
 public sealed record WeeklyCashflowEntry(
     string PlacementKey,
     WeeklyCashflowBand Band,
@@ -62,7 +68,11 @@ public sealed record WeeklyCashflowEntry(
     DateTimeOffset? NaturalDueOn,
     int WeekIndex,
     bool Moved,
-    string? ItemId = null);
+    string? ItemId = null,
+    DateTimeOffset? ExpectedOn = null)
+{
+    public DateTimeOffset? NaturalOn => ExpectedOn ?? NaturalDueOn;
+}
 
 /// <summary>
 /// The built grid: the week axis (Mondays, midnight UTC), every entry with its week, and the
@@ -135,6 +145,7 @@ public static class WeeklyCashflowMaths
         WeeklyCashflowCategory.Subcontractor => WeeklyCashflowBand.Subcontractors,
         WeeklyCashflowCategory.Staff => WeeklyCashflowBand.Staff,
         WeeklyCashflowCategory.Subscription => WeeklyCashflowBand.Subscriptions,
+        WeeklyCashflowCategory.DirectDebit => WeeklyCashflowBand.DirectDebits,
         _ => WeeklyCashflowBand.Other
     };
 
@@ -180,10 +191,13 @@ public static class WeeklyCashflowMaths
 
         foreach (var seed in seeds)
         {
-            var (weekIndex, moved) = Place(seed.PlacementKey, seed.DueOn);
+            // The natural week honours the accountant's Xero expected/planned payment date
+            // when one is set — the due date is what's owed, the expected date is when the
+            // money will really move (retention held back, an agreed late payment).
+            var (weekIndex, moved) = Place(seed.PlacementKey, seed.ExpectedOn ?? seed.DueOn);
             entries.Add(new WeeklyCashflowEntry(
                 seed.PlacementKey, seed.Band, seed.Label, seed.Detail, seed.Amount,
-                seed.DueOn, weekIndex, moved));
+                seed.DueOn, weekIndex, moved, null, seed.ExpectedOn));
         }
 
         foreach (var item in items)

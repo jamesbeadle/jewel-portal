@@ -9,14 +9,15 @@ namespace Jewel.JPMS.Api.Features.WeeklyCashflow.Commands;
 
 /// <summary>Upserts (or, with a null week, deletes) the one placement row for an entry. The
 /// stored week is normalised to its Monday, so whatever a client sends the grid's arithmetic
-/// and the stored plan agree on the same axis.</summary>
-public sealed class PlaceWeeklyCashflowEntryHandler : ICommandHandler<PlaceWeeklyCashflowEntry, WeeklyCashflowPlacement?>
+/// and the stored plan agree on the same axis. The answer is enveloped — never a bare null,
+/// which would leave the endpoint as a bodiless 204 (JPMS-31996D).</summary>
+public sealed class PlaceWeeklyCashflowEntryHandler : ICommandHandler<PlaceWeeklyCashflowEntry, WeeklyCashflowPlacementAnswer>
 {
     private readonly JpmsContext context;
 
     public PlaceWeeklyCashflowEntryHandler(JpmsContext context) { this.context = context; }
 
-    public async Task<WeeklyCashflowPlacement?> HandleAsync(PlaceWeeklyCashflowEntry command, CancellationToken cancellationToken)
+    public async Task<WeeklyCashflowPlacementAnswer> HandleAsync(PlaceWeeklyCashflowEntry command, CancellationToken cancellationToken)
     {
         var entity = await context.WeeklyCashflowPlacements
             .FirstOrDefaultAsync(placement => placement.PlacementKey == command.PlacementKey, cancellationToken);
@@ -28,7 +29,7 @@ public sealed class PlaceWeeklyCashflowEntryHandler : ICommandHandler<PlaceWeekl
                 context.WeeklyCashflowPlacements.Remove(entity);
                 await context.SaveChangesAsync(cancellationToken);
             }
-            return null;
+            return new WeeklyCashflowPlacementAnswer(null);
         }
 
         var weekStart = WeeklyCashflowMaths.WeekStartFor(plannedWeek);
@@ -42,6 +43,6 @@ public sealed class PlaceWeeklyCashflowEntryHandler : ICommandHandler<PlaceWeekl
         entity.MovedAt = DateTimeOffset.UtcNow;
 
         await context.SaveChangesAsync(cancellationToken);
-        return entity.ToModel();
+        return new WeeklyCashflowPlacementAnswer(entity.ToModel());
     }
 }

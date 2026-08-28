@@ -30,7 +30,8 @@ public enum WeeklyCashflowCategory
     Subcontractor = 0,
     Staff = 1,
     Subscription = 2,
-    Other = 3
+    Other = 3,
+    DirectDebit = 4
 }
 
 public static class WeeklyCashflowCategories
@@ -40,6 +41,7 @@ public static class WeeklyCashflowCategories
         WeeklyCashflowCategory.Subcontractor,
         WeeklyCashflowCategory.Staff,
         WeeklyCashflowCategory.Subscription,
+        WeeklyCashflowCategory.DirectDebit,
         WeeklyCashflowCategory.Other
     };
 
@@ -48,6 +50,7 @@ public static class WeeklyCashflowCategories
         WeeklyCashflowCategory.Subcontractor => "Subcontractor",
         WeeklyCashflowCategory.Staff => "Staff",
         WeeklyCashflowCategory.Subscription => "Subscription",
+        WeeklyCashflowCategory.DirectDebit => "Direct debit",
         WeeklyCashflowCategory.Other => "Other",
         _ => category.ToString()
     };
@@ -58,6 +61,7 @@ public static class WeeklyCashflowCategories
         WeeklyCashflowCategory.Subcontractor => "Subcontractors",
         WeeklyCashflowCategory.Staff => "Staff",
         WeeklyCashflowCategory.Subscription => "Subscriptions",
+        WeeklyCashflowCategory.DirectDebit => "Direct debits",
         WeeklyCashflowCategory.Other => "Other outgoings",
         _ => category.ToString()
     };
@@ -130,9 +134,37 @@ public sealed record WeeklyCashflowPlacement(
     string MovedByEmail,
     DateTimeOffset MovedAt);
 
+/// <summary>
+/// A set of Xero supplier (contact) names the Supplier bills band pulls together into ONE line —
+/// e.g. "Materials" for Grant &amp; Stone, HSS Hire and Skip IT. Company-wide and purely an
+/// arrangement of the rows: every bill keeps its own placement key, so moves keep working per
+/// bill, and dissolving a group changes nothing but the reading order. Matching is by the
+/// bill's Xero contact name, case-insensitive, as the aged payables read reports it.
+/// </summary>
+public sealed record WeeklyCashflowSupplierGroup(
+    string SupplierGroupId,
+    string Name,
+    IReadOnlyList<string> ContactNames,
+    string CreatedByEmail,
+    DateTimeOffset CreatedAt);
+
+/// <summary>
+/// The accountant's "don't count this one": the Xero-fed entry behind PlacementKey is excluded
+/// from the plan's arithmetic — typically a bill whose money already goes out through a manual
+/// direct-debit item, so counting both would double it. The entry stays visible in the band's
+/// Excluded fold (nothing silently disappears) and is restored by lifting the exclusion. One
+/// row per entry, stamped with who and when.
+/// </summary>
+public sealed record WeeklyCashflowExclusion(
+    string PlacementKey,
+    string ExcludedByEmail,
+    DateTimeOffset ExcludedAt);
+
 /// <summary>Everything the Weekly Cashflow page stores of its own — the manual items (archived
-/// ones excluded) and every placement. The Xero side of the grid comes from the aged payables /
-/// receivables snapshots the page already reads.</summary>
+/// ones excluded), every placement, the supplier groups and the exclusions. The Xero side of
+/// the grid comes from the aged payables / receivables snapshots the page already reads.</summary>
 public sealed record WeeklyCashflowPlan(
     IReadOnlyList<WeeklyCashflowItem> Items,
-    IReadOnlyList<WeeklyCashflowPlacement> Placements);
+    IReadOnlyList<WeeklyCashflowPlacement> Placements,
+    IReadOnlyList<WeeklyCashflowSupplierGroup> SupplierGroups,
+    IReadOnlyList<WeeklyCashflowExclusion> Exclusions);

@@ -28,11 +28,16 @@ public sealed class ListXeroLedgerLinesHandler : IQueryHandler<ListXeroLedgerLin
         var splitsByLine = await XeroLedgerReads.SplitsForAsync(context, entities, cancellationToken);
         var suggester = await XeroLedgerReads.SuggesterForAsync(context, entities, cancellationToken);
         var messagesByLine = await XeroLedgerReads.DisputeMessagesForAsync(context, entities, cancellationToken);
+        // Labour recognition rides the same read as the suggestions (and, like them, is only
+        // computed while unallocated lines are in the response) so the queue, the Labour section
+        // and the "re-check" refresh all see one rule.
+        var labour = await LabourSupplierRecognition.ForAsync(context, entities, cancellationToken);
 
         return entities.Select(entity => XeroLedgerReads.ToModel(
             entity,
             splitsByLine.TryGetValue(entity.XeroLedgerLineId, out var splits) ? splits : null,
             suggester,
-            messagesByLine.TryGetValue(entity.XeroLedgerLineId, out var messages) ? messages : null)).ToList();
+            messagesByLine.TryGetValue(entity.XeroLedgerLineId, out var messages) ? messages : null,
+            labour?.For(entity))).ToList();
     }
 }

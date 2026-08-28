@@ -37,11 +37,20 @@ public sealed class AllocateSuggestedXeroLinesHandler : ICommandHandler<Allocate
             .Where(line => line.AllocationStatus == (int)XeroAllocationStatus.Unallocated)
             .ToListAsync(cancellationToken);
 
+        // The same recognition the queue shows: labour-supplier lines (and anything already
+        // marked as timesheet cover) leave the queue through the settlement pathway — cover →
+        // schedule → the §6a coding run — never through this sweep, which would allocate a cost
+        // the approved timesheets already carry. Skipping here keeps the one-shot consistent
+        // with the Labour section the allocation page draws from the same read.
+        var labour = await LabourSupplierRecognition.ForAsync(context, unallocated, cancellationToken);
+
         var now = DateTimeOffset.UtcNow;
         var allocated = 0;
         var touchedInvoiceIds = new HashSet<string>();
         foreach (var line in unallocated)
         {
+            if (labour?.For(line) is not null) continue;
+
             // Coding already set on the queued line (the SetProject half-step, or the
             // agreement carried out of a resolved dispute) is a human decision — it
             // beats the tracking suggestion, never the other way.

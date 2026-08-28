@@ -49,6 +49,11 @@ public sealed record XeroAgedReceivablesSnapshot(
 /// consumers apply the sign via <see cref="AgedReceivablesMaths.SignedAmountDue"/>, the same
 /// convention as the payables side. A DRAFT invoice has no payments yet, so its AmountDue is
 /// its total — exactly the amount Xero's own aged receivables report is not showing.
+/// <see cref="ExpectedPaymentDate"/> is Xero's optional "Expected date" (set on the invoice or
+/// the Awaiting Payment list) — when the accountant records one, it is the honest answer to
+/// "when will this actually arrive" (retentions, agreed late payment) and the Weekly Cashflow
+/// seeds there instead of the due week. Ageing everywhere stays on the due date. Credit notes
+/// never carry one.
 /// </summary>
 public sealed record XeroReceivableInvoice(
     string InvoiceId,
@@ -61,7 +66,8 @@ public sealed record XeroReceivableInvoice(
     string Status,
     decimal Total,
     decimal AmountDue,
-    string? CurrencyCode)
+    string? CurrencyCode,
+    DateTime? ExpectedPaymentDate = null)
 {
     public bool IsCreditNote => string.Equals(Type, "ACCRECCREDIT", StringComparison.OrdinalIgnoreCase);
 

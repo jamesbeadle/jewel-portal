@@ -182,7 +182,22 @@ public sealed record XeroLedgerLine(
     bool HasAttachments = false,
     // The dispute discussion, oldest first — populated only on Disputed lines
     // (the only place the thread renders); null elsewhere.
-    IReadOnlyList<XeroDisputeMessage>? DisputeMessages = null);
+    IReadOnlyList<XeroDisputeMessage>? DisputeMessages = null,
+    // Labour recognition (Labour scope §6): set on UNALLOCATED lines whose supplier is one of
+    // the labour-only workers — the bill is settlement of approved timesheets, so it belongs to
+    // the allocation page's Labour section and the settlement machinery, not the ordinary queue.
+    // Matched by supplier name against the worker registry (the worker's own name, or the linked
+    // subcontractor company's) server-side, next to the tracking suggester — never guessed from
+    // account codes. MatchedSubcontractorId is null when the worker has no linked subcontractor
+    // company (covering needs one — the settlement schedule reconciles by subcontractor).
+    string? MatchedWorkerId = null,
+    string? MatchedWorkerName = null,
+    string? MatchedSubcontractorId = null,
+    // Whether a XeroLineTimesheetCover row claims this line (scope §6): the approved timesheet
+    // is the actual, this line is settlement of it, and the covered value is excluded from the
+    // cost-of-sales aggregations. CoveredPeriodStart is the cover's month.
+    bool CoveredByTimesheets = false,
+    DateTimeOffset? CoveredPeriodStart = null);
 
 /// <summary>
 /// The attachments Xero holds for one purchase invoice or credit note — the

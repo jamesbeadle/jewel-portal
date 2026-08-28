@@ -32,7 +32,17 @@ public static class WeeklyCashflowRouteRegistration
             new CommandRoute("POST", "/api/weekly-cashflow/items/{weeklyCashflowItemId}/archive",
                 command => $"/api/weekly-cashflow/items/{((ArchiveWeeklyCashflowItem)command).WeeklyCashflowItemId}/archive"));
 
-        commands.Register<PlaceWeeklyCashflowEntry, WeeklyCashflowPlacement?>(
+        commands.Register<PlaceWeeklyCashflowEntry, WeeklyCashflowPlacementAnswer>(
             CommandRoute.Post("/api/weekly-cashflow/placements"));
+
+        commands.Register<SaveWeeklyCashflowSupplierGroup, WeeklyCashflowSupplierGroup>(
+            CommandRoute.Post("/api/weekly-cashflow/supplier-groups"));
+
+        commands.Register<DeleteWeeklyCashflowSupplierGroup, WeeklyCashflowSupplierGroup>(
+            new CommandRoute("POST", "/api/weekly-cashflow/supplier-groups/{supplierGroupId}/delete",
+                command => $"/api/weekly-cashflow/supplier-groups/{((DeleteWeeklyCashflowSupplierGroup)command).SupplierGroupId}/delete"));
+
+        commands.Register<SetWeeklyCashflowExclusion, WeeklyCashflowExclusionAnswer>(
+            CommandRoute.Post("/api/weekly-cashflow/exclusions"));
     }
 }

@@ -326,6 +326,15 @@ public sealed class HttpLabourStore : ILabourStore
         await settlementReadModel.RefreshAsync(projectId, CancellationToken.None);
     }
 
+    // Worker-month cover from the allocation page's Labour section: ProjectId deliberately empty
+    // (a labour bill spans whatever projects the worker's month did; the worker-month
+    // reconciliation never reads it) and no per-project settlement refresh — the caller re-reads
+    // the ledger, which carries the covered flag. Refreshing settlement for "" would fire a
+    // malformed per-project route.
+    public Task SetTimesheetCoverForMonthAsync(string xeroLedgerLineId, bool isCovered, string subcontractorId, DateTimeOffset periodStart) =>
+        commands.SendAsync(new SetXeroLineTimesheetCover(
+            xeroLedgerLineId, isCovered, ProjectId: "", subcontractorId, periodStart, periodStart.AddMonths(1)), CancellationToken.None);
+
     public async Task AddSettlementVarianceAsync(string projectId, string costCode, string subcontractorId, decimal amount, string reason, string? xeroLedgerLineId)
     {
         await commands.SendAsync(new AddLabourSettlementVariance(projectId, costCode, subcontractorId, amount, reason, xeroLedgerLineId), CancellationToken.None);

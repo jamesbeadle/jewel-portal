@@ -6,6 +6,7 @@
 @inject IXeroLedgerStore Ledger
 @inject IQueryClient Queries
 @inject ICostCenterStore CostCenters
+@inject ILabourStore Labour
 @inject ProjectListReadModel ProjectsReadModel
 @inject AllocationTabStorage TabStorage
 @inject NavigationManager Nav
@@ -80,7 +81,7 @@ else
         }
         else
         {
-            @if (activeTab == XeroAllocationStatus.Unallocated && FullyMatchedCount > 0)
+            @if (activeTab == XeroAllocationStatus.Unallocated && !labourTab && FullyMatchedCount > 0)
             {
                 <div class="mb-4 rounded-xl border border-line bg-surface-raised px-4 py-3 flex items-center gap-3 flex-wrap text-sm">
                     <span class="text-content-muted">
@@ -128,6 +129,16 @@ else
                             @tab.Name (@tab.Count)
                         </button>
                     }
+                    @* Labour recognition (scope §6): bills whose supplier is a worker on the
+                       labour registry are settlement of timesheets, not costs to allocate — they
+                       fall in this section instead of the queue. The count is the outstanding
+                       (unmarked) lines, the actionable number, like every other tab. *@
+                    @if (LabourTotalCount > 0 || labourTab)
+                    {
+                        <button class="@LabourTabClass()" @onclick="() => SwitchTab(XeroAllocationStatus.Unallocated, labour: true)">
+                            Labour (@LabourOutstandingCount)
+                        </button>
+                    }
                     <button class="@TabClass(XeroAllocationStatus.Allocated)" @onclick="() => SwitchTab(XeroAllocationStatus.Allocated)">
                         Allocated (@CountOf(XeroAllocationStatus.Allocated))
                     </button>
@@ -162,7 +173,43 @@ else
                 </div>
             </div>
 
-            @if (activeTab == XeroAllocationStatus.Unallocated && selectedIds.Count > 0)
+            @* The Labour section's own strip: what it is, and the covered fold. Sits where the
+               matched banner sits on the plain queue — the section IS the explanation. *@
+            @if (activeTab == XeroAllocationStatus.Unallocated && labourTab)
+            {
+                <div class="mb-4 rounded-xl border border-line bg-surface-raised px-4 py-3 text-sm text-content-muted flex items-start justify-between gap-4 flex-wrap">
+                    <p class="max-w-3xl">
+                        These bills' suppliers are workers on the labour registry, so each is
+                        <span class="text-content font-medium">settlement of timesheets</span>, not a cost to
+                        allocate — the approved time already carries the cost per project.
+                        Mark a bill against its month and the
+                        <a class="underline underline-offset-4 hover:text-content" href="/labour/overview">Labour overview's Settlement view</a>
+                        reconciles it and codes it into Xero, split by site and cost code.
+                    </p>
+                    @if (LabourCoveredCount > 0)
+                    {
+                        <button class="text-xs text-content-subtle underline underline-offset-4 hover:text-content whitespace-nowrap"
+                                @onclick="() => showCoveredLabour = !showCoveredLabour">
+                            @(showCoveredLabour ? "Hide covered" : $"Show covered ({LabourCoveredCount})")
+                        </button>
+                    }
+                </div>
+            }
+
+            @if (activeTab == XeroAllocationStatus.Unallocated && labourTab && selectedIds.Count > 0)
+            {
+                <div class="mb-4 rounded-xl border border-line bg-surface-raised px-4 py-3 flex items-center gap-3 flex-wrap text-sm">
+                    <span class="text-content font-medium">@selectedIds.Count selected</span>
+                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
+                            title="Mark every selected line as settlement of its worker's month — lines without a linked subcontractor company or a bill date are skipped and reported"
+                            disabled="@isBusy" @onclick="BulkMarkCoverAsync">Mark selected as settlement</button>
+                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
+                            disabled="@isBusy" @onclick="BulkUnmarkCoverAsync">Un-mark selected</button>
+                    <button class="text-xs text-content-subtle underline underline-offset-4" @onclick="() => selectedIds.Clear()">Clear</button>
+                </div>
+            }
+
+            @if (activeTab == XeroAllocationStatus.Unallocated && !labourTab && selectedIds.Count > 0)
             {
                 <div class="mb-4 rounded-xl border border-line bg-surface-raised px-4 py-3 flex items-center gap-3 flex-wrap text-sm">
                     <span class="text-content font-medium">@selectedIds.Count selected</span>
@@ -245,7 +292,12 @@ else
                             }
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Line</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right">Net</th>
-                            @if (activeTab == XeroAllocationStatus.Unallocated)
+                            @if (activeTab == XeroAllocationStatus.Unallocated && labourTab)
+                            {
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-44">Worker</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
+                            }
+                            else if (activeTab == XeroAllocationStatus.Unallocated)
                             {
                                 <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-44">Project</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-52">Cost centre</th>
@@ -334,7 +386,54 @@ else
                                 </td>
                                 <td class="px-3 py-2.5 text-right text-content font-medium whitespace-nowrap align-top">@Money(SignedNet(line))</td>
 
-                                @if (activeTab == XeroAllocationStatus.Unallocated)
+                                @if (activeTab == XeroAllocationStatus.Unallocated && labourTab)
+                                {
+                                    <td class="px-3 py-2.5 align-top">
+                                        @if (line.MatchedWorkerName is not null)
+                                        {
+                                            <span class="text-content font-medium whitespace-nowrap">@line.MatchedWorkerName</span>
+                                            @if (line.MatchedSubcontractorId is null)
+                                            {
+                                                <span class="block text-xs text-negative mt-0.5"
+                                                      title="Covering reconciles by subcontractor company. Link one to this worker on the Workers page, then Re-check matches here.">
+                                                    ⚠ No linked subcontractor company
+                                                </span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            @* Covered, but the supplier no longer matches anyone on the
+                                               registry (worker renamed or deactivated). The cover stands;
+                                               only re-marking would need a match. *@
+                                            <span class="text-xs text-content-subtle">No current registry match</span>
+                                        }
+                                    </td>
+                                    <td class="px-3 py-2.5 text-right whitespace-nowrap align-top">
+                                        @if (line.CoveredByTimesheets)
+                                        {
+                                            <span class="inline-block text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface text-content-subtle border border-line align-middle"
+                                                  title="Marked as settlement — the covered value is excluded from cost-of-sales aggregations; the worker-month verdict lives on the Labour overview's Settlement view">
+                                                Covered · @(line.CoveredPeriodStart?.ToString("MMM yyyy") ?? "")
+                                            </span>
+                                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40 align-middle"
+                                                    title="Remove the settlement mark — the line goes back to the outstanding labour list"
+                                                    disabled="@isBusy" @onclick="() => UnmarkCoverAsync(line)">Un-mark</button>
+                                        }
+                                        else
+                                        {
+                                            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 align-middle"
+                                                    title="@MarkCoverHint(line)"
+                                                    disabled="@(isBusy || !CanMarkCover(line))"
+                                                    @onclick="() => MarkCoverAsync(line)">Mark as settlement@(SettlementMonthOf(line) is { } month ? $" · {month:MMM yyyy}" : "")</button>
+                                        }
+                                        <DropdownMenu Label="More" WidthClass="w-72" Disabled="@isBusy"
+                                                      ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:text-content transition"
+                                                      Class="inline-block text-left ml-2 align-middle whitespace-normal"
+                                                      Items="LabourRowMenuItems(line)"
+                                                      OnOpenChanged="open => TrackRowMenu(line.XeroLedgerLineId, open)" />
+                                    </td>
+                                }
+                                else if (activeTab == XeroAllocationStatus.Unallocated)
                                 {
                                     <td class="px-3 py-2.5">
                                         <SearchSelect Options="@ProjectOptions" WidthClass="w-44"
@@ -955,6 +1054,17 @@ else
     private string? bucketFilter;
     private bool confirmAllocateMatched;
 
+    // -- Labour section state (scope §6 recognition) ---------------------------
+    // labourTab is a sub-view of the Unallocated status, like activeProjectId: the tab the
+    // recognised settlement bills fall in instead of the queue. Covered lines fold away once
+    // marked (showCoveredLabour reveals them); notLabourIds is this visit's escape hatch for a
+    // false match — the line rejoins the plain queue for a normal allocation. Recognition is
+    // recomputed server-side on every ledger read, so the set is not persisted: a mis-match is
+    // fixed properly on the Workers page (rename/deactivate), not remembered here.
+    private bool labourTab;
+    private bool showCoveredLabour;
+    private readonly HashSet<string> notLabourIds = new();
+
     // -- Allocated-tab recode state --------------------------------------------
     // "" = all projects. The filter narrows the Allocated tab to one project so
     // its coding can be reviewed, selected and re-sent in bulk.
@@ -1017,14 +1127,16 @@ else
     private int page;
     private IReadOnlyList<XeroLedgerLine>? visibleCache;
     private (IReadOnlyList<XeroLedgerLine>? Lines, object Projects, string Search, XeroAllocationStatus Tab,
-             string? ProjectTab, string? Bucket, string AllocatedProject) visibleCacheKey;
+             string? ProjectTab, string? Bucket, string AllocatedProject,
+             bool LabourTab, bool ShowCovered, int NotLabour) visibleCacheKey;
 
     private IReadOnlyList<XeroLedgerLine> Visible
     {
         get
         {
             // Projects is in the key because GroupProjectFor validates against it.
-            var key = (Lines, (object)Projects, search, activeTab, activeProjectId, bucketFilter, allocatedProjectFilter);
+            var key = (Lines, (object)Projects, search, activeTab, activeProjectId, bucketFilter, allocatedProjectFilter,
+                       labourTab, showCoveredLabour, notLabourIds.Count);
             if (visibleCache is null || key != visibleCacheKey)
             {
                 visibleCache = Lines is null
@@ -1033,8 +1145,13 @@ else
                     // but the check stays as a cheap guard against rendering the previous tab's
                     // rows in the moment between a switch and its fetch landing.
                     : Lines.Where(line => line.AllocationStatus == activeTab)
+                           // The queue and the Labour section partition the unallocated set: a
+                           // recognised line renders only in Labour, everything else only in the
+                           // plain/project queue — nothing appears twice, nothing disappears.
                            .Where(line => activeTab != XeroAllocationStatus.Unallocated
-                                          || GroupProjectFor(line) == (activeProjectId ?? ""))
+                                          || (labourTab
+                                              ? IsLabourLine(line) && (showCoveredLabour || !line.CoveredByTimesheets)
+                                              : !IsLabourLine(line) && GroupProjectFor(line) == (activeProjectId ?? "")))
                            .Where(line => activeTab != XeroAllocationStatus.Bucketed
                                           || bucketFilter is null || line.Bucket == bucketFilter)
                            .Where(line => activeTab != XeroAllocationStatus.Allocated
@@ -1057,17 +1174,19 @@ else
     // the user elsewhere, and a remembered tab restored on load may be empty.
 
     private IReadOnlyList<(string ProjectId, string Name, int Count)>? projectTabsCache;
-    private (IReadOnlyList<XeroLedgerLine>? Lines, object Projects, string? ProjectTab) projectTabsCacheKey;
+    private (IReadOnlyList<XeroLedgerLine>? Lines, object Projects, string? ProjectTab, int NotLabour) projectTabsCacheKey;
 
     private IReadOnlyList<(string ProjectId, string Name, int Count)> ProjectTabs
     {
         get
         {
-            var unallocated = UnallocatedLines;
-            var key = ((IReadOnlyList<XeroLedgerLine>?)unallocated, (object)Projects, activeProjectId);
+            var key = ((IReadOnlyList<XeroLedgerLine>?)UnallocatedLines, (object)Projects, activeProjectId, notLabourIds.Count);
             if (projectTabsCache is null || key != projectTabsCacheKey)
             {
-                var tabs = unallocated
+                // Labour-recognised lines belong to the Labour section, never to a project tab —
+                // even when their Xero tracking suggests a site.
+                var tabs = UnallocatedLines
+                    .Where(line => !IsLabourLine(line))
                     .GroupBy(GroupProjectFor)
                     .Where(group => group.Key != "")
                     .Select(group => (ProjectId: group.Key, Name: ProjectName(group.Key), Count: group.Count()))
@@ -1091,7 +1210,25 @@ else
     }
 
     private int UnassignedCount =>
-        UnallocatedLines.Count(line => GroupProjectFor(line) == "");
+        UnallocatedLines.Count(line => !IsLabourLine(line) && GroupProjectFor(line) == "");
+
+    // -- Labour section (scope §6 recognition) ----------------------------------
+    // Recognition itself is server-side, on the line (matched worker + covered flag, computed
+    // next to the tracking suggester); the page only partitions on it. notLabourIds is the
+    // this-visit escape hatch back to the ordinary queue.
+
+    private bool IsLabourLine(XeroLedgerLine line) =>
+        (line.MatchedWorkerId is not null || line.CoveredByTimesheets)
+        && !notLabourIds.Contains(line.XeroLedgerLineId);
+
+    /// <summary>The actionable number the tab shows: recognised lines not yet marked.</summary>
+    private int LabourOutstandingCount =>
+        UnallocatedLines.Count(line => IsLabourLine(line) && !line.CoveredByTimesheets);
+
+    private int LabourCoveredCount =>
+        UnallocatedLines.Count(line => IsLabourLine(line) && line.CoveredByTimesheets);
+
+    private int LabourTotalCount => LabourOutstandingCount + LabourCoveredCount;
 
     // Every stored line, from the server's counts — what the page-level "has anything been synced
     // yet?" gate asks about. Deliberately not derived from the loaded tab: the tab bar is inside
@@ -1102,7 +1239,7 @@ else
     // Whether the empty tab is empty because of a filter the user set, or just empty.
     private bool HasTabFilters =>
         !string.IsNullOrWhiteSpace(search) || bucketFilter is not null
-        || allocatedProjectFilter != "" || activeProjectId is not null;
+        || allocatedProjectFilter != "" || activeProjectId is not null || labourTab;
 
     private int PageCount => Math.Max(1, (Visible.Count + PageSize - 1) / PageSize);
 
@@ -1125,7 +1262,7 @@ else
         if (lines.Count == 0) return null;
 
         var sheetName = activeTab == XeroAllocationStatus.Unallocated
-            ? (activeProjectId is null ? "Unallocated" : ProjectName(activeProjectId))
+            ? (labourTab ? "Labour" : activeProjectId is null ? "Unallocated" : ProjectName(activeProjectId))
             : activeTab == XeroAllocationStatus.Bucketed ? "Buckets"
             : activeTab.ToString();
 
@@ -1139,7 +1276,12 @@ else
             new("Xero cost code"),
             new("Net", ExcelFormat.Currency),
         };
-        if (activeTab == XeroAllocationStatus.Allocated)
+        if (activeTab == XeroAllocationStatus.Unallocated && labourTab)
+        {
+            columns.Add(new ExcelColumn("Worker"));
+            columns.Add(new ExcelColumn("Settlement"));
+        }
+        else if (activeTab == XeroAllocationStatus.Allocated)
         {
             columns.Add(new ExcelColumn("Allocated to"));
             columns.Add(new ExcelColumn("Cost centre"));
@@ -1178,7 +1320,14 @@ else
                 line.XeroCostCode,
                 SignedNet(line),
             };
-            if (activeTab == XeroAllocationStatus.Allocated)
+            if (activeTab == XeroAllocationStatus.Unallocated && labourTab)
+            {
+                cells.Add(line.MatchedWorkerName);
+                cells.Add(line.CoveredByTimesheets
+                    ? $"Covered · {line.CoveredPeriodStart:MMM yyyy}"
+                    : "Outstanding");
+            }
+            else if (activeTab == XeroAllocationStatus.Allocated)
             {
                 if (line.Splits is { Count: > 0 })
                 {
@@ -1720,9 +1869,13 @@ else
 
     // Mirrors the server's rule: persisted coding (Set, or the agreement carried
     // out of a resolved dispute) counts as matched — a human decision beats the
-    // suggestion, never the other way.
+    // suggestion, never the other way. Labour-recognised lines are excluded by the
+    // SERVER's rule (matched worker or covered, regardless of this visit's
+    // "not labour" picks), because the one-shot allocation skips them server-side:
+    // settlement bills leave the queue through covering and the §6a coding run.
     private int FullyMatchedCount =>
-        UnallocatedLines.Count(line => (line.ProjectId ?? line.SuggestedProjectId) is not null
+        UnallocatedLines.Count(line => line.MatchedWorkerId is null && !line.CoveredByTimesheets
+                                       && (line.ProjectId ?? line.SuggestedProjectId) is not null
                                        && (line.CostCenterCode ?? line.SuggestedCostCenterCode) is not null);
 
     private async Task AllocateMatchedAsync()
@@ -1753,6 +1906,145 @@ else
         }
         catch (CommandFailedException failure) { errorMessage = failure.Message; }
         finally { isApplying = false; }
+    }
+
+    // -- Labour section actions ------------------------------------------------
+    // Marking a line as settlement is the §6 cover, worker-month scoped: the approved timesheet
+    // is the actual, the bill is settlement of it. The re-read of the unallocated queue is what
+    // moves the line into the covered fold — the covered flag rides the ledger line.
+
+    private static DateTimeOffset? SettlementMonthOf(XeroLedgerLine line) =>
+        line.Date is { } date
+            // date.Year/Month only — never the DateTime itself, whose Kind would make the
+            // offset constructor throw for Local kinds (the BST lesson).
+            ? new DateTimeOffset(new DateTime(date.Year, date.Month, 1), TimeSpan.Zero)
+            : null;
+
+    private static bool CanMarkCover(XeroLedgerLine line) =>
+        line.MatchedSubcontractorId is not null && line.Date is not null;
+
+    private string MarkCoverHint(XeroLedgerLine line) =>
+        line.MatchedSubcontractorId is null
+            ? "Covering reconciles by subcontractor company — link one to this worker on the Workers page first"
+            : line.Date is null
+                ? "The line has no bill date, so there is no month to settle against"
+                : $"Mark this line as settlement of {line.MatchedWorkerName}'s {SettlementMonthOf(line):MMMM yyyy} timesheets — covered value is excluded from cost-of-sales aggregations; the worker-month verdict lives on the Labour overview's Settlement view";
+
+    private async Task MarkCoverAsync(XeroLedgerLine line)
+    {
+        if (isBusy || !CanMarkCover(line)) return;
+        var month = SettlementMonthOf(line)!.Value;
+        isApplying = true; errorMessage = null;
+        try
+        {
+            await Labour.SetTimesheetCoverForMonthAsync(line.XeroLedgerLineId, true, line.MatchedSubcontractorId!, month);
+            await Ledger.RefreshAsync(XeroAllocationStatus.Unallocated);
+            selectedIds.Remove(line.XeroLedgerLineId);
+            syncMessage = $"{line.ContactName ?? line.MatchedWorkerName} · {Money(SignedNet(line))} marked as settlement of {month:MMMM yyyy} — reconciled on the Labour overview's Settlement view.";
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    private async Task UnmarkCoverAsync(XeroLedgerLine line)
+    {
+        if (isBusy) return;
+        isApplying = true; errorMessage = null;
+        try
+        {
+            await Labour.SetTimesheetCoverForMonthAsync(
+                line.XeroLedgerLineId, false, line.MatchedSubcontractorId ?? "",
+                line.CoveredPeriodStart ?? SettlementMonthOf(line) ?? DateTimeOffset.UtcNow);
+            await Ledger.RefreshAsync(XeroAllocationStatus.Unallocated);
+            syncMessage = $"{line.ContactName ?? "The line"} · {Money(SignedNet(line))} un-marked — back in the outstanding labour list.";
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    private IReadOnlyList<XeroLedgerLine> SelectedLabour =>
+        Lines is null
+            ? Array.Empty<XeroLedgerLine>()
+            : Lines.Where(line => line.AllocationStatus == XeroAllocationStatus.Unallocated
+                                  && IsLabourLine(line)
+                                  && selectedIds.Contains(line.XeroLedgerLineId)).ToList();
+
+    private async Task BulkMarkCoverAsync()
+    {
+        if (isBusy) return;
+        var outstanding = SelectedLabour.Where(line => !line.CoveredByTimesheets).ToList();
+        var markable = outstanding.Where(CanMarkCover).ToList();
+        var skipped = outstanding.Count - markable.Count;
+        if (markable.Count == 0 && skipped == 0) return;
+
+        isApplying = true; errorMessage = null;
+        try
+        {
+            foreach (var line in markable)
+            {
+                await Labour.SetTimesheetCoverForMonthAsync(
+                    line.XeroLedgerLineId, true, line.MatchedSubcontractorId!, SettlementMonthOf(line)!.Value);
+                // Removed per line, so a failure part-way leaves exactly the unmarked lines
+                // selected for a retry.
+                selectedIds.Remove(line.XeroLedgerLineId);
+            }
+            await Ledger.RefreshAsync(XeroAllocationStatus.Unallocated);
+            syncMessage = $"{markable.Count} {(markable.Count == 1 ? "line" : "lines")} marked as settlement."
+                + (skipped > 0
+                    ? $" {skipped} skipped — no linked subcontractor company or no bill date (fix on the Workers page, then Re-check matches)."
+                    : "");
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    private async Task BulkUnmarkCoverAsync()
+    {
+        if (isBusy) return;
+        var covered = SelectedLabour.Where(line => line.CoveredByTimesheets).ToList();
+        if (covered.Count == 0) return;
+
+        isApplying = true; errorMessage = null;
+        try
+        {
+            foreach (var line in covered)
+            {
+                await Labour.SetTimesheetCoverForMonthAsync(
+                    line.XeroLedgerLineId, false, line.MatchedSubcontractorId ?? "",
+                    line.CoveredPeriodStart ?? DateTimeOffset.UtcNow);
+                selectedIds.Remove(line.XeroLedgerLineId);
+            }
+            await Ledger.RefreshAsync(XeroAllocationStatus.Unallocated);
+            syncMessage = $"{covered.Count} {(covered.Count == 1 ? "line" : "lines")} un-marked — back in the outstanding labour list.";
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    private IReadOnlyList<DropdownMenu.Item> LabourRowMenuItems(XeroLedgerLine line)
+    {
+        var items = new List<DropdownMenu.Item>
+        {
+            new("Not labour — allocate normally",
+                OnSelect: EventCallback.Factory.Create(this, () => TreatAsOrdinaryCost(line)),
+                Hint: "A false match: sends the line back to the ordinary queue for this visit. Fix the real cause — the worker's name or subcontractor link — on the Workers page")
+        };
+        items.Add(new DropdownMenu.Item("Ignore",
+            OnSelect: EventCallback.Factory.Create(this, () => IgnoreAsync(line)),
+            Hint: "Not a project cost — moves the line to the Ignored tab",
+            Group: DecisionMenuGroup));
+        items.Add(new DropdownMenu.Item("Dispute…",
+            OnSelect: EventCallback.Factory.Create(this, () => OpenDispute(line)),
+            Hint: "Contest this cost — moves it to the Disputed tab and opens a discussion with the accountant",
+            Group: DecisionMenuGroup));
+        return items;
+    }
+
+    private void TreatAsOrdinaryCost(XeroLedgerLine line)
+    {
+        notLabourIds.Add(line.XeroLedgerLineId);
+        selectedIds.Remove(line.XeroLedgerLineId);
+        syncMessage = $"{line.ContactName ?? "The line"} treated as an ordinary cost for this visit — it is back in the queue. Recognition recomputes from the worker registry on every read.";
     }
 
     // -- split editor ----------------------------------------------------------
@@ -2272,10 +2564,12 @@ else
             selectedIds.Clear();
     }
 
-    private void SwitchTab(XeroAllocationStatus tab, string? projectId = null)
+    private void SwitchTab(XeroAllocationStatus tab, string? projectId = null, bool labour = false)
     {
         activeTab = tab;
-        activeProjectId = tab == XeroAllocationStatus.Unallocated ? projectId : null;
+        labourTab = tab == XeroAllocationStatus.Unallocated && labour;
+        activeProjectId = tab == XeroAllocationStatus.Unallocated && !labour ? projectId : null;
+        showCoveredLabour = false;
         selectedIds.Clear();
         bucketFilter = null;
         allocatedProjectFilter = "";
@@ -2299,6 +2593,7 @@ else
     // user): project people land straight back on their project's queue.
 
     private const string ProjectTabPrefix = "Project:";
+    private const string LabourTabToken = "Labour";
 
     private async Task RestoreLastTabAsync()
     {
@@ -2310,6 +2605,11 @@ else
             activeProjectId = stored[ProjectTabPrefix.Length..];
             bulkProjectId = activeProjectId;
         }
+        else if (stored == LabourTabToken)
+        {
+            activeTab = XeroAllocationStatus.Unallocated;
+            labourTab = true;
+        }
         else if (Enum.TryParse<XeroAllocationStatus>(stored, out var status))
         {
             activeTab = status;
@@ -2320,7 +2620,8 @@ else
         Auth.CurrentUser is null
             ? Task.CompletedTask
             : TabStorage.WriteAsync(Auth.CurrentUser.Email,
-                activeProjectId is not null ? $"{ProjectTabPrefix}{activeProjectId}" : activeTab.ToString());
+                labourTab ? LabourTabToken
+                : activeProjectId is not null ? $"{ProjectTabPrefix}{activeProjectId}" : activeTab.ToString());
 
     // -- display helpers ------------------------------------------------------
 
@@ -2355,12 +2656,15 @@ else
         return centre is null ? code : $"{centre.Code} {centre.Name}";
     }
 
-    // The plain Unallocated tab is active only when no project tab is open.
+    // The plain Unallocated tab is active only when neither a project tab nor Labour is open.
     private string TabClass(XeroAllocationStatus tab) =>
-        TabCss(activeTab == tab && (tab != XeroAllocationStatus.Unallocated || activeProjectId is null));
+        TabCss(activeTab == tab && (tab != XeroAllocationStatus.Unallocated || (activeProjectId is null && !labourTab)));
 
     private string ProjectTabClass(string projectId) =>
         TabCss(activeTab == XeroAllocationStatus.Unallocated && activeProjectId == projectId);
+
+    private string LabourTabClass() =>
+        TabCss(activeTab == XeroAllocationStatus.Unallocated && labourTab);
 
     private static string TabCss(bool active) =>
         (active ? "bg-content text-surface" : "bg-surface text-content-muted hover:text-content")

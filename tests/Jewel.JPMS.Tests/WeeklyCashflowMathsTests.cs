@@ -251,6 +251,53 @@ public sealed class WeeklyCashflowMathsTests
         Assert.All(view.Entries.Where(e => e.PlacementKey != movedKey), entry => Assert.False(entry.Moved));
     }
 
+    // ---- The Xero expected/planned date --------------------------------------------------
+    // The accountant's "Expected date" (invoices) / "Planned date" (bills) set in Xero is the
+    // natural week when present — the due date stays what the document says is owed, and a
+    // stored placement still outranks both.
+
+    [Fact]
+    public void AnExpectedDate_notTheDueDate_picksTheNaturalWeek()
+    {
+        var seed = Bill("b1", 500m, Today.AddDays(-90)) with { ExpectedOn = WeekStart.AddDays(7 * 3) };
+
+        var view = Build(new[] { seed });
+
+        var entry = Assert.Single(view.Entries);
+        Assert.Equal(3, entry.WeekIndex);
+        Assert.False(entry.Moved);                      // Xero's date is the natural week, not a move
+        Assert.Equal(seed.DueOn, entry.NaturalDueOn);   // the due date survives for display
+        Assert.Equal(seed.ExpectedOn, entry.NaturalOn); // and ↺ returns to the expected week
+    }
+
+    [Fact]
+    public void APlacement_stillWins_overTheExpectedDate()
+    {
+        var seed = Bill("b1", 500m, Today.AddDays(3)) with { ExpectedOn = WeekStart.AddDays(7 * 3) };
+        var placements = new[]
+        {
+            new WeeklyCashflowPlacement("bill:b1", WeekStart.AddDays(7 * 6), "acc@jewelbb.co.uk", Today)
+        };
+
+        var view = Build(new[] { seed }, placements: placements);
+
+        var entry = Assert.Single(view.Entries);
+        Assert.Equal(6, entry.WeekIndex);
+        Assert.True(entry.Moved);
+    }
+
+    [Fact]
+    public void AnOverdueExpectedDate_landsInTheCurrentWeek_likeAnyOverdueEntry()
+    {
+        var seed = Bill("b1", 500m, Today.AddDays(30)) with { ExpectedOn = Today.AddDays(-21) };
+
+        var view = Build(new[] { seed });
+
+        var entry = Assert.Single(view.Entries);
+        Assert.Equal(0, entry.WeekIndex);
+        Assert.False(entry.Moved);
+    }
+
     // ---- The invariant: totals always explain the inputs ---------------------------------
 
     [Fact]

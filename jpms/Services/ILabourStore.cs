@@ -85,5 +85,13 @@ public interface ILabourStore
     bool SettlementLoadedFor(string projectId);
     Task RefreshSettlementAsync(string projectId);
     Task SetTimesheetCoverAsync(string projectId, string xeroLedgerLineId, bool isCovered, string subcontractorId, DateTimeOffset periodStart, DateTimeOffset periodEnd);
+    /// <summary>
+    /// The cover mark as the allocation page's Labour section places it: worker-month scoped,
+    /// no project — a labour bill spans whatever projects the worker's month did, and the
+    /// worker-month reconciliation (schedules, the §6a run) never reads the cover's project.
+    /// Unlike <see cref="SetTimesheetCoverAsync"/> it refreshes no per-project settlement read —
+    /// the caller re-reads the ledger, which carries the covered flag.
+    /// </summary>
+    Task SetTimesheetCoverForMonthAsync(string xeroLedgerLineId, bool isCovered, string subcontractorId, DateTimeOffset periodStart);
     Task AddSettlementVarianceAsync(string projectId, string costCode, string subcontractorId, decimal amount, string reason, string? xeroLedgerLineId);
 }

@@ -156,6 +156,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<CashflowSnapshotEntity> CashflowSnapshots => Set<CashflowSnapshotEntity>();
     public DbSet<WeeklyCashflowItemEntity> WeeklyCashflowItems => Set<WeeklyCashflowItemEntity>();
     public DbSet<WeeklyCashflowPlacementEntity> WeeklyCashflowPlacements => Set<WeeklyCashflowPlacementEntity>();
+    public DbSet<WeeklyCashflowSupplierGroupEntity> WeeklyCashflowSupplierGroups => Set<WeeklyCashflowSupplierGroupEntity>();
+    public DbSet<WeeklyCashflowExclusionEntity> WeeklyCashflowExclusions => Set<WeeklyCashflowExclusionEntity>();
     public DbSet<ValuationInvoiceEntity> ValuationInvoices => Set<ValuationInvoiceEntity>();
     public DbSet<ValuationInvoiceEventEntity> ValuationInvoiceEvents => Set<ValuationInvoiceEventEntity>();
     public DbSet<ValuationReportSnapshotEntity> ValuationReportSnapshots => Set<ValuationReportSnapshotEntity>();
