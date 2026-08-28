@@ -39,6 +39,10 @@ public static class LabourFeatureRegistration
         services.AddScoped<SubmitWorkerWeekHandler>();
         services.AddScoped<ICommandHandler<SubmitWorkerWeek, WorkerWeekResult>>(
             provider => provider.GetRequiredService<SubmitWorkerWeekHandler>());
+        // Connector week entry (submit_worker_week action): by-name wrapper over the handler above.
+        services.AddScoped<ICommandHandler<SubmitWorkerWeekByName, WorkerWeekResult>, SubmitWorkerWeekByNameHandler>();
+        services.AddScoped<SubmitWorkerWeekByNameAuthorisation>();
+        services.AddScoped<SubmitWorkerWeekByNameValidation>();
         services.AddScoped<ApproveTimesheetsHandler>();
         services.AddScoped<ICommandHandler<ApproveTimesheets, LabourApprovalResult>>(
             provider => provider.GetRequiredService<ApproveTimesheetsHandler>());

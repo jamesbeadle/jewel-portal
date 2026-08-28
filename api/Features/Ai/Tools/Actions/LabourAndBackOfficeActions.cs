@@ -1,6 +1,8 @@
 using Jewel.JPMS.Api.Features.AccessRequests.Commands;
 using Jewel.JPMS.Api.Features.CostCenters.Commands;
 using Jewel.JPMS.Api.Features.Hs.Commands;
+using Jewel.JPMS.Api.Features.Labour;
+using Jewel.JPMS.Api.Features.Labour.Commands;
 using Jewel.JPMS.Api.Features.Platform.Commands;
 using Jewel.JPMS.Api.Features.Rates.Commands;
 using Jewel.JPMS.Api.Features.UsefulInformation;
@@ -10,6 +12,7 @@ using Jewel.JPMS.Contracts.AccessRequests;
 using Jewel.JPMS.Contracts.CostCenters;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Hs;
+using Jewel.JPMS.Contracts.Labour;
 using Jewel.JPMS.Contracts.Platform;
 using Jewel.JPMS.Contracts.Rates;
 using Jewel.JPMS.Contracts.UsefulInformation;
@@ -21,7 +24,11 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 /// under Features/CostCenters, Features/Rates, Features/Hs, Features/UsefulInformation,
 /// Features/Platform and Features/AccessRequests. The Labour, Xero and Registers command
 /// endpoints all gate with inline role checks and have no Authorisation classes, so none of them
-/// can be mirrored here — every one is recorded in the skip list at the bottom of this file.
+/// can be mirrored here — every one is recorded in the skip list at the bottom of this file. The
+/// one exception is the week entry: SubmitWorkerWeekByName is a connector-shaped command with
+/// its own gate classes, built for this registry (2026-08-28) because the only timesheet entry
+/// the connector had was the legacy Commercial SubmitTimesheet, whose email-and-cost-code schema
+/// taught models to demand data the portal does not need.
 /// Where an authorisation keeps its role set as a private field, the VisibleTo below replicates
 /// the identical roles with RoleSet.Of(...) and a comment names the source; where the set is an
 /// accessible internal static (UsefulInformationRoles), it is referenced directly.</summary>
@@ -60,6 +67,34 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
 
     public IEnumerable<AiAction> Build() => new[]
     {
+        // ---- Labour -------------------------------------------------------------------------
+
+        new AiAction(
+            Name: "submit_worker_week",
+            Area: "Labour",
+            Description: "Enters one worker's week of site attendance — which site (project) they "
+                + "were on each day and for how many hours — the connector's equivalent of the "
+                + "Labour overview's Enter-a-week form. Each day lands as a Submitted timesheet "
+                + "in that project's approval queue; only approved time becomes actual labour "
+                + "cost. Days already carrying a timesheet or a recorded absence are skipped, "
+                + "never overwritten, and the per-day outcomes say exactly what happened.",
+            CommandType: typeof(SubmitWorkerWeekByName),
+            ResultType: typeof(WorkerWeekResult),
+            AuthorisationType: typeof(SubmitWorkerWeekByNameAuthorisation),
+            ValidationType: typeof(SubmitWorkerWeekByNameValidation),
+            VisibleTo: LabourRoleSets.ApproveTimesheets,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "workerName is the worker's name as the user says it, matched server-side "
+                + "against the worker register — NEVER ask the user for worker emails or ids; "
+                + "names are how timesheets identify people. weekStart is the Monday. Each day "
+                + "needs a projectId from list_projects. costCode is OPTIONAL and normally left "
+                + "out: the person entering records WHERE people were, the approver codes each "
+                + "day at approval, and an uncoded day cannot be approved until coded — so "
+                + "leaving it blank enforces the coding step rather than skipping it. A day "
+                + "split across two sites is two entries with the same date, one per site, with "
+                + "the hours split."),
+
         // ---- Cost centres -------------------------------------------------------------------
 
         new AiAction(
@@ -288,7 +323,7 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
     // Skipped: AdjustTimesheet — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only).
     // Skipped: ApproveTimesheets — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only). (Distinct from Commercial's ApproveTimesheet, which is out of this file's scope.)
     // Skipped: RejectTimesheet — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only).
-    // Skipped: SubmitWorkerWeek — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only). (Distinct from Commercial's SubmitTimesheet, which is out of this file's scope.)
+    // Skipped: SubmitWorkerWeek — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only); the connector enters weeks through SubmitWorkerWeekByName (submit_worker_week above), which delegates to the same handler. (Distinct from Commercial's SubmitTimesheet, whose legacy action was removed from CommercialActions 2026-08-28.)
     // Skipped: MySiteSignIn — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).
     // Skipped: MySiteSignOut — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).
     // Skipped: MyResubmitTimesheet — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).

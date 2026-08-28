@@ -39,14 +39,6 @@ internal sealed class CommercialActions : IAiActionSource
     private static readonly RoleSet CostCentreRecoders =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
 
-    // Replica of ApproveTimesheetAuthorisation.RolesThatMayApproveTimesheets.
-    private static readonly RoleSet TimesheetApprovers =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
-
-    // Replica of SubmitTimesheetAuthorisation.RolesThatMaySubmitTimesheets.
-    private static readonly RoleSet TimesheetSubmitters =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Subcontractor);
-
     // Replica of CreateCostCentreGroupAuthorisation.RolesThatMayManageGroups,
     // ReconciliationPackageAuthorisation.RolesThatMayManagePackages,
     // SetCostCentreCostCompletionAuthorisation.RolesThatMaySetCostCompletion and
@@ -562,36 +554,14 @@ internal sealed class CommercialActions : IAiActionSource
                 + "order ids come from list_work_orders; no slice may take an order past its value."),
 
         // ── Commercial: timesheets ───────────────────────────────────────────────────────
-
-        new AiAction(
-            Name: "submit_timesheet",
-            Area: "Commercial",
-            Description: "Submits a timesheet — hours worked by a named person on a project against a "
-                + "cost code. Pending until approved; only approved time becomes actual labour cost.",
-            CommandType: typeof(SubmitTimesheet),
-            ResultType: typeof(Timesheet),
-            AuthorisationType: typeof(SubmitTimesheetAuthorisation),
-            ValidationType: typeof(SubmitTimesheetValidation),
-            VisibleTo: TimesheetSubmitters,
-            EmailStamps: Array.Empty<string>(),
-            NameStamps: Array.Empty<string>(),
-            Notes: "personEmail is the worker the time is for — pass it explicitly; it is not stamped "
-                + "from the signed-in user. costCode comes from list_cost_codes."),
-
-        new AiAction(
-            Name: "approve_timesheet",
-            Area: "Commercial",
-            Description: "Approves a submitted timesheet, turning its hours into actual labour cost on "
-                + "the project at the applicable rate.",
-            CommandType: typeof(ApproveTimesheet),
-            ResultType: typeof(Timesheet),
-            AuthorisationType: typeof(ApproveTimesheetAuthorisation),
-            ValidationType: typeof(ApproveTimesheetValidation),
-            VisibleTo: TimesheetApprovers,
-            EmailStamps: Array.Empty<string>(),
-            NameStamps: Array.Empty<string>(),
-            Notes: "Confirm with the user before calling — approval is a cost-committing step. "
-                + "timesheetId comes from the project's timesheets list."),
+        // Deliberately NO actions here any more (removed 2026-08-28). The legacy Commercial
+        // SubmitTimesheet/ApproveTimesheet slices predate the worker register: their rows carry a
+        // free-typed personEmail and no WorkerId, so the Labour approval refuses them ("No worker
+        // record"), and the schema taught models to demand worker emails the portal does not need
+        // — the accountant's first connector session was asked to invent emails for the whole
+        // crew. The connector's labour entry is submit_worker_week (LabourAndBackOfficeActions);
+        // approval stays in the portal's Labour tab, where the rate snapshot and the budget
+        // hard-block live (the legacy ApproveTimesheet sets IsApproved without either).
 
         // ── Commercial inputs: dayworks, contra charges, subcontractor retentions ────────
 
