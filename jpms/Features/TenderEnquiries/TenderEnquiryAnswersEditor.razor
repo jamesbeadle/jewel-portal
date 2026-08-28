@@ -1,35 +1,24 @@
 @namespace Jewel.JPMS.Features.TenderEnquiries
 @using System.Text.Json
-@using Jewel.JPMS.Contracts.Ai
 @using Jewel.JPMS.Contracts.TenderEnquiries
 @inject IQueryClient Queries
 @inject ICommandSender Commands
 @inject SessionService Session
-@inject AiTaskState AiTasks
-@inject ChatPanelState Chat
-@implements IDisposable
 
 @* The PQQ response: the architect's numbered questions with Jewel's answers beneath. Read mode
-   shows the sheet; edit mode saves it whole (positions re-minted server-side). "Draft with AI"
-   opens the editor beside the chat as the tender_enquiry_answers task: the assistant reads the
-   questionnaire off the enquiry's documents and emails, lifts the questions and drafts the
-   answers into these rows — the user reviews and presses Save. The PDF renders fresh from the
-   saved answers on every download and every email attach. *@
+   shows the sheet; edit mode saves it whole (positions re-minted server-side). The PDF renders
+   fresh from the saved answers on every download and every email attach. *@
 
 <div class="panel p-5">
     <div class="flex items-start justify-between gap-3 mb-3">
         <div>
             <h3 class="eyebrow">PQQ response</h3>
             <p class="text-xs text-content-subtle mt-0.5">
-                The questions as the architect asked them, each with Jewel's answer. Draft them with the assistant or by hand,
-                save, then send the response from the panel below — the PDF is rendered from what is saved here.
+                The questions as the architect asked them, each with Jewel's answer. Draft them, save, then send the
+                response from the panel below — the PDF is rendered from what is saved here.
             </p>
         </div>
         <div class="flex items-center gap-2">
-            @if (CanEdit && CanUseAssistant)
-            {
-                <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="StartDraftWithAi">Draft with AI</button>
-            }
             <Toolbar>
                 <ToolbarButton Icon="download" Label="Download the PQQ response PDF" Href="@DocumentHref" Download="true"
                                Disabled="@(rows is null || editing)" />
@@ -53,7 +42,7 @@
     }
     else
     {
-        <TenderEnquiryAnswersForm Draft="@draft" Busy="@busy" OnChanged="PublishDraft" OnSave="SaveAsync" OnCancel="CancelEdit" />
+        <TenderEnquiryAnswersForm Draft="@draft" Busy="@busy" OnSave="SaveAsync" OnCancel="CancelEdit" />
     }
     </LoadGate>
 </div>
@@ -72,24 +61,15 @@
     private string? error;
 
     private string DocumentHref => $"/api/tender-enquiries/{TenderEnquiryId}/document";
-    private bool CanUseAssistant => Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
-    private bool TaskIsMine => AiTasks.Active?.ModalKey == ModalCatalog.TenderEnquiryAnswers.ModalKey;
 
     protected override async Task OnInitializedAsync()
     {
-        AiTasks.OnDraftApplied += ApplyAssistantDraft;
         try { rows = await Queries.AskAsync(new ListTenderEnquiryAnswers(TenderEnquiryId), CancellationToken.None); }
         catch
         {
             loadFailed = true;
             error = "Couldn't load the PQQ answers.";
         }
-    }
-
-    public void Dispose()
-    {
-        AiTasks.OnDraftApplied -= ApplyAssistantDraft;
-        EndTask();
     }
 
     private void StartEdit()
@@ -104,63 +84,6 @@
     private void CancelEdit()
     {
         editing = false;
-        EndTask();
-    }
-
-    // The editor opens beside the chat and the assistant is asked to fill it: the task carries the
-    // rows as they stand so the model reads the real form, and every keystroke republishes.
-    private void StartDraftWithAi()
-    {
-        if (!editing) StartEdit();
-        if (Enquiry is null) return;
-        // A second press is a deliberate restart: end the live task first, or AiTaskState's
-        // same-task guard (which exists to stop the ASSISTANT restarting itself) would make the
-        // button a silent no-op.
-        EndTask();
-        AiTasks.Start(
-            new AiTask(
-                TaskKey: "tender-enquiry-answers",
-                ModalKey: ModalCatalog.TenderEnquiryAnswers.ModalKey,
-                BannerLabel: $"Drafting the PQQ response for {Enquiry.Reference}",
-                BusyLabel: "Reading the enquiry, its questionnaire and tagged emails…",
-                KickoffMessage: $"Draft the PQQ response for {Enquiry.Reference} ({Enquiry.Title}) in the editor beside you: "
-                    + "read the questionnaire the architect sent, put every question in, and answer each one from what you can read.",
-                ProjectId: Enquiry.ProjectId,
-                RecordType: "tender_enquiry",
-                RecordId: Enquiry.TenderEnquiryId,
-                RecordReference: Enquiry.Reference),
-            CurrentDraftJson());
-        Chat.Open();
-        Chat.SetCoexistence(true);
-    }
-
-    private void EndTask()
-    {
-        if (!TaskIsMine) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
-    }
-
-    private void PublishDraft()
-    {
-        if (TaskIsMine) AiTasks.UpdateDraft(CurrentDraftJson());
-    }
-
-    private string CurrentDraftJson() =>
-        JsonSerializer.Serialize(new { answers = draft.Select(row => new { question = row.Question, answer = row.Answer }) });
-
-    // The assistant's proposal REPLACES the list (the schema says so) — every row it carries, in
-    // its order; an update whose every item is malformed is a broken update, not an instruction.
-    private void ApplyAssistantDraft(string fieldsJson)
-    {
-        if (!TaskIsMine) return;
-        var proposed = TenderEnquiryAnswerRow.ParseProposal(fieldsJson);
-        if (proposed is null || proposed.Count == 0) return;
-        if (!editing) StartEdit();
-        draft.Clear();
-        draft.AddRange(proposed);
-        AiTasks.UpdateDraft(CurrentDraftJson());
-        _ = InvokeAsync(StateHasChanged);
     }
 
     private async Task SaveAsync()
@@ -173,7 +96,6 @@
             var answers = draft.Select(row => new TenderEnquiryAnswerDraft(row.Question, row.Answer)).ToList();
             rows = await Commands.SendAsync(new SetTenderEnquiryAnswers(TenderEnquiryId, answers), CancellationToken.None);
             editing = false;
-            EndTask();
         }
         catch (CommandFailedException ex) { error = ex.Message; }
         finally { busy = false; }

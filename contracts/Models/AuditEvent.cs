@@ -60,7 +60,12 @@ public enum AuditEventType
     // its email (or by hand), and every move of its status — accepted, PQQ submitted, shortlisted,
     // tender submitted, won/lost. Client-facing: Pathway is "Client", like the request events.
     TenderEnquiryLogged = 21,        // a tender enquiry was logged (its Lead project created when new)
-    TenderEnquiryStatusChanged = 22  // a tender enquiry moved to a new status
+    TenderEnquiryStatusChanged = 22, // a tender enquiry moved to a new status
+    // AI connector writes (since 2026-08-27): actions taken from a team member's own AI tool over
+    // MCP, under their portal identity. Not pathway-specific: Pathway is "".
+    NotePosted = 23,                 // a message was posted on a request's conversation
+    TodoCreated = 24,                // a to-do item was added
+    TodoCompleted = 25               // a to-do item was completed or reopened
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

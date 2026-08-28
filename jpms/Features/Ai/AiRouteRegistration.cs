@@ -9,36 +9,8 @@ public static class AiRouteRegistration
 {
     public static void RegisterAiRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
-        queries.Register<ListAiConversation, IReadOnlyList<AiChatMessage>>(
-            new QueryRoute("/api/ai/conversations/{conversationId}",
-                query => $"/api/ai/conversations/{((ListAiConversation)query).ConversationId}"));
-
-        // The panel's history list — the caller's own past conversations, newest first.
-        queries.Register<ListAiConversations, IReadOnlyList<AiConversationSummary>>(
-            new QueryRoute("/api/ai/conversations",
-                query => $"/api/ai/conversations?take={((ListAiConversations)query).Take}"));
-
-        // A conversation's attached files (names and sizes, never bytes) — read by chat-aware
-        // dialogs so the work-order form can keep the drafted-from quote on the order.
-        queries.Register<ListAiConversationAttachments, IReadOnlyList<AiConversationAttachment>>(
-            new QueryRoute("/api/ai/conversations/{conversationId}/attachments",
-                query => $"/api/ai/conversations/{((ListAiConversationAttachments)query).ConversationId}/attachments"));
-
         queries.Register<ListAgentActivity, IReadOnlyList<AgentActivity>>(
             new QueryRoute("/api/agents/activity", BuildAgentActivityPath));
-
-        commands.Register<SendAiMessage, AiTurnResult>(
-            CommandRoute.Post("/api/ai/messages"));
-
-        commands.Register<ContinueAiTurn, AiTurnResult>(
-            CommandRoute.Post("/api/ai/turn/continue"));
-
-        // A reply that outlived its request's inline wait (docs/ai/07-reply-collection.md).
-        commands.Register<CollectAiReply, AiTurnResult>(
-            CommandRoute.Post("/api/ai/turn/collect"));
-
-        commands.Register<AddAiAttachment, AiAttachmentReceipt>(
-            CommandRoute.Post("/api/ai/attachments"));
 
         // The skill store — the AI Skills admin page (docs/ai/05-agents-and-skills.md §2).
         queries.Register<ListAiSkills, IReadOnlyList<SkillSummary>>(

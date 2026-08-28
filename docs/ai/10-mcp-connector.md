@@ -1,0 +1,95 @@
+# 10 — The MCP connector: the portal in everyone's own AI tool
+
+*Written 2026-08-27, the day the turn-based side chat (06–09) was retired. This document describes
+what replaced it and why, how the pieces fit, and how to extend it. It supersedes 04–09 as the
+description of how AI reaches JPMS; those documents remain as the historical record of the chat.*
+
+## 1. The decision
+
+The in-portal chat ran every conversation through the company's Anthropic API key: the portal was
+the AI product, and Jewel paid per token for it — model calls, transcript replay, reply collection,
+the lot. The inversion: **the portal stops being an AI product and becomes an AI data source.**
+Team members use whatever assistant they already pay for — Claude (web, desktop, mobile, Claude
+Code) or Perplexity — and connect it to JPMS over the Model Context Protocol. Their subscription
+covers the model; the portal serves data and records who did what. The three one-shot Procurement
+helpers (tender extraction, bid-package suggestion, trade resolution) keep the API key — they are
+embedded workflow steps, not chat.
+
+What the chat's fortnight of hardening taught us carries straight over: the tool catalogue, the
+role filtering, the evidence tools (sources, request context, record emails), the skill store and
+the activity log all survive. What died was the conversation machinery — AiTurnRunner, transcript
+budgeting, reply collection, UI actions, dialog tasks — because the conversation now lives in the
+user's own AI tool, which is better at being a chat than a Blazor panel ever was.
+
+## 2. The shape
+
+Three pieces, all in the api project:
+
+- **`Features/Connect`** — a minimal OAuth 2.1 authorisation server: dynamic client registration
+  (RFC 7591), `GET /api/oauth/authorize` → the SPA consent page (`/connect/authorize`) →
+  `POST /api/oauth/approve` (session-cookie authed; mints a single-use code bound to the signed-in
+  user) → `POST /api/oauth/token` (code + PKCE S256, and refresh-token rotation). Public clients
+  only — no client secrets; PKCE and the user's own portal sign-in are the security. Discovery
+  documents are served under `/api/well-known/…` and surfaced at the standard `/.well-known/…`
+  paths by rewrites in `staticwebapp.config.json`. Tokens follow the `SessionManager` contract:
+  raw secret leaves once, SHA-256 hash at rest (`OAuthClients` / `OAuthAuthCodes` / `OAuthTokens`,
+  migration `20260827190000_AddAiConnectorOAuth`). Access tokens live 7 days, refresh 90 with
+  rotation; revoking a family (the AI Connections page, `/settings/ai-connections`) kills the lot.
+
+- **`Features/Mcp`** — `POST /api/mcp`, a stateless Streamable-HTTP MCP server, hand-rolled
+  JSON-RPC (`initialize`, `ping`, `tools/list`, `tools/call`; notifications → 202; GET/DELETE →
+  405). Plain `application/json` responses, no SSE, no session ids — tool calls are short DB
+  reads/writes and the SWA gateway allows ~45s. A missing/invalid bearer answers 401 with
+  `WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource"`, which is
+  what sends Claude and Perplexity into the OAuth flow. A valid token resolves to a
+  `SignedInUser` via `SignedInUserResolver.ResolveByEmailAsync` (same directory + roles as the
+  cookie path, revoked users refused), and `AuditActor` is set so every audit write inside a tool
+  carries the token's user.
+
+- **The tool catalogue** (`Features/Ai/Tools`) — unchanged in spirit. `AiToolCatalogue.ForConnector(user)`
+  is the whole per-user filter: every tool whose `VisibleTo` admits one of the user's roles, and
+  nothing else — the ADR-002 rule (a tool the caller could not use is never described) carried
+  over verbatim. The chat-only tools (navigate_to, open_modal, update_open_modal, switch_agent,
+  the Control-Centre staging tools, read_selected_email, chat attachments) are gone; the read
+  surface (find_by_reference, get_request_context, the list_* family, sources, valuation/variation
+  context, skills) remains, plus the connector's first **write tools** (`AiWriteTools`):
+  `post_request_message`, `add_todo`, `complete_todo`, `log_todo_progress`, `save_skill`. Each
+  write composes the SAME Authorisation + Validation + command handler its HTTP endpoint uses,
+  actor stamped server-side — a write from Claude is indistinguishable in the record from a click.
+  Financial actions, deletion and email sending are deliberately absent.
+
+Images still work: a tool returning an `AiImageToolResult` marker is translated into an MCP
+`image` content block, so the model sees drawings and photos, not base64 text.
+
+## 3. Audit
+
+Every `tools/call` writes one `AgentActivity` row (`AgentTrigger.Mcp`, actor = the token's user,
+the tool name, a clipped argument summary, duration, outcome) — the Agent Activity page reads
+exactly as before. Write tools additionally append to the client-facing `AuditTrail`
+(`NotePosted` / `TodoCreated` / `TodoCompleted`). The AI Connections page lists live connections
+(per user; administrators can list everyone's) and revokes them.
+
+## 4. Extending it
+
+- **A new read tool** declares the RoleSet its backing query gates on — same rule as ever, checked
+  by conscience and review; `AiRegistryDriftCheck` (slimmed, still boot-failing) enforces name
+  uniqueness and record-type reachability. Add the record type's reach entry in the same commit.
+- **A new write tool** goes in `AiWriteTools`, composing the existing Authorisation + Validation +
+  handler for its command, with `AuditTrail` after success. Say plainly in the description that it
+  writes, and what.
+- **Scopes** are deliberately one (`portal`); per-tool permissioning is the user's roles, applied
+  at execution, not OAuth scopes.
+- The connector has no conversation state to budget, no prompts to keep in step — the drift
+  surface is the catalogue itself.
+
+## 5. Operations
+
+- No new secrets. The Anthropic key stays only for the Procurement helpers.
+- New tables are additive (`AddAiConnectorOAuth` — apply before/with deploy); the chat tables drop
+  in `20260827200000_DropAiChatTables` (apply after the deploy). Scoped scripts only, per
+  CLAUDE.md.
+- The `ai-attachments` blob container is orphaned once the chat tables drop —
+  `infra/run-ai-attachments-lifecycle.sh` (or container deletion) reclaims it.
+- Kill switch: revoke connections per user on the AI Connections page; for everything at once,
+  disable the `McpServer` function or roll back the deploy.
+- Team setup instructions: `docs/Portal-AI-Connector-Team-Guide.md`.

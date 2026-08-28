@@ -154,6 +154,8 @@ public sealed class JpmsContext : DbContext
     public DbSet<PolicyDocumentEntity> PolicyDocuments => Set<PolicyDocumentEntity>();
     public DbSet<PolicySignOffEntity> PolicySignOffs => Set<PolicySignOffEntity>();
     public DbSet<CashflowSnapshotEntity> CashflowSnapshots => Set<CashflowSnapshotEntity>();
+    public DbSet<WeeklyCashflowItemEntity> WeeklyCashflowItems => Set<WeeklyCashflowItemEntity>();
+    public DbSet<WeeklyCashflowPlacementEntity> WeeklyCashflowPlacements => Set<WeeklyCashflowPlacementEntity>();
     public DbSet<ValuationInvoiceEntity> ValuationInvoices => Set<ValuationInvoiceEntity>();
     public DbSet<ValuationInvoiceEventEntity> ValuationInvoiceEvents => Set<ValuationInvoiceEventEntity>();
     public DbSet<ValuationReportSnapshotEntity> ValuationReportSnapshots => Set<ValuationReportSnapshotEntity>();
@@ -166,15 +168,13 @@ public sealed class JpmsContext : DbContext
     public DbSet<ProjectContractEntity> ProjectContracts => Set<ProjectContractEntity>();
     public DbSet<ProjectContractAmendmentEntity> ProjectContractAmendments => Set<ProjectContractAmendmentEntity>();
 
-    public DbSet<AiConversationEntity> AiConversations => Set<AiConversationEntity>();
-    public DbSet<AiConversationMessageEntity> AiConversationMessages => Set<AiConversationMessageEntity>();
-    // Files attached to a conversation, kept as bytes in blob storage so any part can be re-read
-    // on demand (docs/ai/06-context-retrieval.md).
-    public DbSet<AiAttachmentEntity> AiAttachments => Set<AiAttachmentEntity>();
-    // Claude calls in flight — the answer is collected by a later request rather than awaited
-    // inside one (docs/ai/07-reply-collection.md).
-    public DbSet<AiPendingReplyEntity> AiPendingReplies => Set<AiPendingReplyEntity>();
     public DbSet<AgentActivityEntity> AgentActivity => Set<AgentActivityEntity>();
+
+    // The AI connector's OAuth state — registered client software, in-flight authorisation codes,
+    // and the per-user bearer tokens the MCP endpoint accepts (docs/ai/10-mcp-connector.md).
+    public DbSet<OAuthClientEntity> OAuthClients => Set<OAuthClientEntity>();
+    public DbSet<OAuthAuthCodeEntity> OAuthAuthCodes => Set<OAuthAuthCodeEntity>();
+    public DbSet<OAuthTokenEntity> OAuthTokens => Set<OAuthTokenEntity>();
 
     // The assistant's skills — the domain half of an agent, edited in the portal
     // (docs/ai/05-agents-and-skills.md). Revisions are append-only.
@@ -259,27 +259,18 @@ public sealed class JpmsContext : DbContext
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_AgentActivity_ProjectId");
 
-        // ---- Assistant conversations -----------------------------------------------------------
-        // Every turn replays the whole conversation in sequence order, so this index is the hot path.
-        modelBuilder.Entity<AiConversationMessageEntity>()
-            .HasIndex(row => new { row.ConversationId, row.Sequence })
-            .HasDatabaseName("IX_AiConversationMessages_ConversationId_Sequence");
-        modelBuilder.Entity<AiConversationEntity>()
-            .HasIndex(row => new { row.StartedByEmail, row.LastMessageAt })
-            .HasDatabaseName("IX_AiConversations_StartedByEmail_LastMessageAt");
-        // "What files are on hand in this conversation" — read every hop for the turn context.
-        modelBuilder.Entity<AiAttachmentEntity>()
-            .HasIndex(row => row.ConversationId)
-            .HasDatabaseName("IX_AiAttachments_ConversationId");
-        // "Is there a reply in flight for this conversation" — read by every collect.
-        modelBuilder.Entity<AiPendingReplyEntity>()
-            .HasIndex(row => new { row.ConversationId, row.Status })
-            .HasDatabaseName("IX_AiPendingReplies_ConversationId_Status");
-        // "Which conversations drafted this variation / this RFI", newest first — the lookup an
-        // argument about a document starts from.
-        modelBuilder.Entity<AiConversationEntity>()
-            .HasIndex(row => new { row.ScopeRecordId, row.LastMessageAt })
-            .HasDatabaseName("IX_AiConversations_ScopeRecordId");
+        // ---- AI connector (OAuth) --------------------------------------------------------------
+        // "This user's connected tools" — the profile list and the revoke sweep both start from
+        // the user; expired-row cleanup scans by expiry.
+        modelBuilder.Entity<OAuthTokenEntity>()
+            .HasIndex(row => new { row.UserEmail, row.Kind })
+            .HasDatabaseName("IX_OAuthTokens_UserEmail_Kind");
+        modelBuilder.Entity<OAuthTokenEntity>()
+            .HasIndex(row => row.FamilyId)
+            .HasDatabaseName("IX_OAuthTokens_FamilyId");
+        modelBuilder.Entity<OAuthAuthCodeEntity>()
+            .HasIndex(row => row.ExpiresAt)
+            .HasDatabaseName("IX_OAuthAuthCodes_ExpiresAt");
 
         // ---- Assistant skills --------------------------------------------------------------------
         // Every turn loads the agent's skills plus the shared set, so the agent-key filter is the

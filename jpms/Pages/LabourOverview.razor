@@ -9,8 +9,6 @@
 @inject CostCentersReadModel CostCenters
 @inject ProjectListReadModel Projects
 @inject NavigationManager Nav
-@inject AiTaskState AiTasks
-@inject ChatPanelState Chat
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -467,7 +465,7 @@ else
            Title="@(string.IsNullOrWhiteSpace(absenceWorkerName) ? "Record absence" : $"Record absence — {absenceWorkerName}")"
            ConfirmLabel="Record" ConfirmDisabled="@(absenceSaving || string.IsNullOrWhiteSpace(absenceWorkerId))"
            OnCancel="CloseAbsence" OnConfirm="SaveAbsenceAsync"
-           ChatAware="true" DismissOnOverlayClick="false">
+           DismissOnOverlayClick="false">
         <div class="space-y-3">
             <label class="block text-sm text-content-muted">Worker
                 <select class="field mt-1" @bind="absenceWorkerId" @bind:after="AbsenceWorkerChanged">
@@ -479,10 +477,10 @@ else
                 </select>
             </label>
             <label class="block text-sm text-content-muted">Date
-                <input class="field mt-1" type="date" @bind="absenceDate" @bind:after="PublishAbsenceDraft" />
+                <input class="field mt-1" type="date" @bind="absenceDate" />
             </label>
             <label class="block text-sm text-content-muted">Kind
-                <select class="field mt-1" @bind="absenceKind" @bind:after="PublishAbsenceDraft">
+                <select class="field mt-1" @bind="absenceKind">
                     <option value="@AbsenceKind.Holiday">Holiday</option>
                     <option value="@AbsenceKind.HalfDay">Half day</option>
                     <option value="@AbsenceKind.NotWorked">Not worked</option>
@@ -490,7 +488,7 @@ else
                 </select>
             </label>
             <label class="block text-sm text-content-muted">Note (optional)
-                <input class="field mt-1" @bind="absenceNote" @bind:after="PublishAbsenceDraft" placeholder="e.g. booked leave" />
+                <input class="field mt-1" @bind="absenceNote" placeholder="e.g. booked leave" />
             </label>
         </div>
     </Modal>
@@ -533,7 +531,7 @@ else
     <Modal IsOpen="@weekOpen" Title="Enter a worker's week" Class="max-w-2xl"
            ConfirmLabel="@(weekSaving ? "Saving…" : "Save week")" ConfirmDisabled="@weekSaving"
            OnCancel="CloseWeekEntry" OnConfirm="SaveWeekAsync"
-           ChatAware="true" DismissOnOverlayClick="false">
+           DismissOnOverlayClick="false">
         <p class="text-xs text-content-subtle mb-3">
             A site per day, straight from how the crews report. Every filled day lands as a
             Submitted timesheet in that site's approval queue — the MD codes the cost code and
@@ -604,10 +602,10 @@ else
                             </td>
                             <td class="py-1.5 pr-3">
                                 <input class="field w-20" type="number" step="0.5" min="0.5" max="24"
-                                       @bind="row.Hours" @bind:after="PublishWeekDraft" />
+                                       @bind="row.Hours" />
                             </td>
                             <td class="py-1.5">
-                                <select class="field w-full" @bind="row.CostCode" @bind:after="PublishWeekDraft"
+                                <select class="field w-full" @bind="row.CostCode"
                                         disabled="@(!CostCenters.IsLoaded)">
                                     <option value="">MD codes at approval…</option>
                                     @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
@@ -677,8 +675,6 @@ else
         Labour.OnChange += HandleChange;
         Projects.OnChanged += HandleChange;
         CostCenters.OnChanged += HandleChange;
-        AiTasks.OnDraftApplied += HandleAssistantDraft;
-        Nav.LocationChanged += HandleLocationChanged;
         sessionReady = true;
         // Paint the chrome before the fetch: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed (Workers.razor has the full story).
@@ -698,22 +694,15 @@ else
             catch { /* reported by the query client; the overview itself is unaffected */ }
         }
 
-        await HonourRequestedModalAsync();
     }
 
     private void HandleChange() => InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
-        // Leaving the page ends its task — a dangling task ships the dialog's stale JSON with
-        // every later turn and leaves the chat panel lifted above every future modal.
-        EndWeekTask();
-        EndAbsenceTask();
         Labour.OnChange -= HandleChange;
         Projects.OnChanged -= HandleChange;
         CostCenters.OnChanged -= HandleChange;
-        AiTasks.OnDraftApplied -= HandleAssistantDraft;
-        Nav.LocationChanged -= HandleLocationChanged;
     }
 
     private async Task MoveMonth(int delta)
@@ -761,7 +750,6 @@ else
             await Labour.RecordAbsenceAsync(year, month, absenceWorkerId,
                 new DateTimeOffset(absenceDate, TimeSpan.Zero), absenceKind, absenceNote);
             absenceOpen = false;
-            EndAbsenceTask();
         }
         catch (Exception) { actionError = "Could not record the absence — try again."; }
         finally { absenceSaving = false; }
@@ -1145,20 +1133,17 @@ else
     private void CloseWeekEntry()
     {
         weekOpen = false;
-        EndWeekTask();
     }
 
     private async Task WeekWorkerChangedAsync()
     {
         await RebuildWeekRowsAsync();
-        PublishWeekDraft();
     }
 
     private async Task MoveEntryWeekAsync(int days)
     {
         entryWeekStart = entryWeekStart.AddDays(days);
         await RebuildWeekRowsAsync();
-        PublishWeekDraft();
     }
 
     /// <summary>Fresh rows for the current worker + week. A day the month snapshot already shows
@@ -1200,7 +1185,6 @@ else
     {
         row.ProjectId = projectId;
         row.UnmatchedSite = "";
-        PublishWeekDraft();
     }
 
     /// <summary>Copies the first filled day's site, hours and cost code over the other unlocked
@@ -1217,7 +1201,6 @@ else
             row.CostCode = source.CostCode;
             row.UnmatchedSite = "";
         }
-        PublishWeekDraft();
     }
 
     private async Task SaveWeekAsync()
@@ -1256,7 +1239,6 @@ else
             weekSummaryLines = lines;
 
             weekOpen = false;
-            EndWeekTask();
         }
         catch (Exception failure)
         {
@@ -1265,13 +1247,6 @@ else
                 : "Could not save the week — check your connection and try again.";
         }
         finally { weekSaving = false; }
-    }
-
-    private void EndWeekTask()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.WorkerWeek.ModalKey) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
     }
 
     private string SiteNameOf(string projectId) =>
@@ -1301,344 +1276,15 @@ else
         return byReference?.ProjectId ?? "";
     }
 
-    private string SerialiseWeekState()
-    {
-        var workerName = Labour.Workers()
-            .FirstOrDefault(worker => worker.WorkerId == weekWorkerId)?.Name ?? "";
-        return System.Text.Json.JsonSerializer.Serialize(new
-        {
-            workerName,
-            weekStart = entryWeekStart.ToString("yyyy-MM-dd"),
-            days = weekRows.Select(row => new
-            {
-                date = row.Date.ToString("yyyy-MM-dd"),
-                siteName = row.Locked ? "" : SiteNameOf(row.ProjectId),
-                hours = row.Hours,
-                costCode = row.CostCode,
-                locked = row.Locked,
-                lockedDetail = row.LockedDetail,
-                unmatchedSite = row.UnmatchedSite,
-            }),
-        });
-    }
-
-    private void PublishWeekDraft()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.WorkerWeek.ModalKey) return;
-        AiTasks.UpdateDraft(SerialiseWeekState());
-    }
-
-    // ---- The assistant's route in: open_modal → ?openModal=record_absence / worker_week --------
-    // Same recipe as manual_variation on the Variations register (and manual_timesheet on the
-    // Labour tab): the query is cleared through history so F5 does not reopen the dialog, and
-    // LocationChanged catches the already-on-this-page case — which is also how the model reopens
-    // worker_week for the next worker after a save.
-
     private void CloseAbsence()
     {
         absenceOpen = false;
-        EndAbsenceTask();
-    }
-
-    private bool modalRequestHonoured;
-
-    private bool RouteWantsModal(string modalKey) =>
-        !modalRequestHonoured
-        && new Uri(Nav.Uri).Query.Contains(
-            $"openModal={modalKey}", StringComparison.OrdinalIgnoreCase);
-
-    private async Task HonourRequestedModalAsync()
-    {
-        if (RouteWantsModal(ModalCatalog.RecordAbsence.ModalKey)) { await HonourAbsenceModalAsync(); return; }
-        if (RouteWantsModal(ModalCatalog.WorkerWeek.ModalKey)) await HonourWeekModalAsync();
-    }
-
-    private async Task StripModalQueryAsync()
-    {
-        // Latched BEFORE the first await: two entry paths (a lifecycle hook and LocationChanged,
-        // which resets the flag) can both enter for one navigation, and both used to cross the
-        // replaceState await before the flag was set — two AiTasks.Start calls, two billed
-        // kick-off turns.
-        modalRequestHonoured = true;
-        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
-        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-    }
-
-    private async Task HonourAbsenceModalAsync()
-    {
-        await StripModalQueryAsync();
-
-        // Honoured only where this user could have opened the dialog by clicking — the same
-        // gate ModalCatalog declares, said out loud on refusal: a silently dropped open_modal
-        // is the worst failure this feature has.
-        if (Session.ActiveRole is not { } absenceRole
-            || !ModalCatalog.CanOpen(ModalCatalog.RecordAbsence, new[] { absenceRole }))
-        {
-            actionError = "The assistant tried to open the Record-absence dialog, but the role "
-                + "you are viewing as can't record absences.";
-            StateHasChanged();
-            return;
-        }
-
-        absenceWorkerId = ""; absenceWorkerName = ""; absenceDate = DateTime.Today;
-        absenceKind = AbsenceKind.Holiday; absenceNote = "";
-        absenceOpen = true;
-
-        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            AiTasks.Start(
-                new AiTask(
-                    TaskKey: "record-absence",
-                    ModalKey: ModalCatalog.RecordAbsence.ModalKey,
-                    BannerLabel: "Recording an absence",
-                    BusyLabel: "Working out the day…",
-                    KickoffMessage:
-                        "Fill in the \"Record absence\" form open beside me from what we were just "
-                        + "discussing: the worker (exactly as the registry spells them), the resolved "
-                        + "date, and the kind (holiday, half-day, not-worked or sick). One date per "
-                        + "confirm — for a run of days, stage them one at a time and keep count. "
-                        + "I read the form and press Record myself.",
-                    ProjectId: null,
-                    RecordType: null,
-                    RecordId: null,
-                    RecordReference: null),
-                SerialiseAbsenceState());
-
-            Chat.Open();
-            Chat.SetCoexistence(true);
-        }
-        StateHasChanged();
-    }
-
-    private async Task HonourWeekModalAsync()
-    {
-        await StripModalQueryAsync();
-
-        if (Session.ActiveRole is not { } weekRole
-            || !ModalCatalog.CanOpen(ModalCatalog.WorkerWeek, new[] { weekRole }))
-        {
-            actionError = "The assistant tried to open the Enter-a-week dialog, but the role you "
-                + "are viewing as can't enter timesheets.";
-            StateHasChanged();
-            return;
-        }
-
-        await OpenWeekEntryAsync();
-
-        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            AiTasks.Start(
-                new AiTask(
-                    TaskKey: "worker-week",
-                    ModalKey: ModalCatalog.WorkerWeek.ModalKey,
-                    BannerLabel: "Entering a worker's week",
-                    BusyLabel: "Working out the week…",
-                    KickoffMessage:
-                        "Fill in the \"Enter a worker's week\" form open beside me from what we were "
-                        + "just discussing — a WhatsApp attendance message, an attached list, the "
-                        + "conversation. ONE worker per fill: their name exactly as the registry "
-                        + "spells it, the resolved w/c Monday (say it back to me in one line), and "
-                        + "one item per worked day with the site named as the crew said it. Hours "
-                        + "default to 8; leave cost codes out unless the data clearly names the work "
-                        + "— the MD codes days when he approves them. Send the WHOLE week in ONE "
-                        + "update. Days marked as recorded are locked — leave them out. I read the "
-                        + "form and press Save myself; when several workers are listed, open this "
-                        + "dialog again for the next one after I save, and keep count.",
-                    ProjectId: null,
-                    RecordType: null,
-                    RecordId: null,
-                    RecordReference: null),
-                SerialiseWeekState());
-
-            Chat.Open();
-            Chat.SetCoexistence(true);
-        }
-        StateHasChanged();
-    }
-
-    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
-        _ = InvokeAsync(async () =>
-        {
-            if (!sessionReady) return;
-            modalRequestHonoured = false; // a fresh navigation is a fresh request
-            await HonourRequestedModalAsync();
-        });
-
-    private void EndAbsenceTask()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.RecordAbsence.ModalKey) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
-    }
-
-    private string SerialiseAbsenceState() =>
-        System.Text.Json.JsonSerializer.Serialize(new
-        {
-            workerName = absenceWorkerName,
-            date = absenceDate.ToString("yyyy-MM-dd"),
-            // The schema's own vocabulary (holiday, half-day, not-worked, sick) — the enum's
-            // "HalfDay" round-tripped through a model that echoes state back used to fall
-            // through the apply's default arm and silently become Holiday.
-            kind = AbsenceKindWord(absenceKind),
-            note = absenceNote,
-        });
-
-    private static string AbsenceKindWord(AbsenceKind kind) => kind switch
-    {
-        AbsenceKind.HalfDay => "half-day",
-        AbsenceKind.NotWorked => "not-worked",
-        AbsenceKind.Sick => "sick",
-        _ => "holiday",
-    };
-
-    /// <summary>Every user edit reaches the task's draft — a dialog the model cannot see the
-    /// user's corrections in gets them silently overwritten by the next proposal.</summary>
-    private void PublishAbsenceDraft()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.RecordAbsence.ModalKey) return;
-        AiTasks.UpdateDraft(SerialiseAbsenceState());
     }
 
     private void AbsenceWorkerChanged()
     {
         absenceWorkerName = Labour.Workers()
             .FirstOrDefault(worker => worker.WorkerId == absenceWorkerId)?.Name ?? "";
-        PublishAbsenceDraft();
-    }
-
-    /// <summary>The model's update_open_modal, landing in whichever form is live: merge, never
-    /// replace. This page hosts two assistant dialogs, so dispatch on the active task's key.</summary>
-    private void HandleAssistantDraft(string fieldsJson)
-    {
-        if (AiTasks.Active?.ModalKey == ModalCatalog.WorkerWeek.ModalKey)
-        {
-            if (!weekOpen) return;
-            // The week grid applies asynchronously (it may reload a month first), so its own
-            // UpdateDraft lands in a continuation — AFTER ApplyFromAssistant has returned. Publish
-            // the current state synchronously here, inside the invoke window, so the acceptance
-            // signal fires and the panel does not wrongly report "nothing was filled". The async
-            // path republishes the refined state a moment later.
-            AiTasks.UpdateDraft(SerialiseWeekState());
-            _ = InvokeAsync(() => ApplyWeekDraftAsync(fieldsJson));
-            return;
-        }
-        ApplyAbsenceDraft(fieldsJson);
-    }
-
-    private void ApplyAbsenceDraft(string fieldsJson)
-    {
-        if (!absenceOpen || AiTasks.Active?.ModalKey != ModalCatalog.RecordAbsence.ModalKey) return;
-        try
-        {
-            using var parsed = System.Text.Json.JsonDocument.Parse(fieldsJson);
-            var root = parsed.RootElement;
-            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return;
-
-            if (root.TryGetProperty("workerName", out var workerName) && workerName.ValueKind == System.Text.Json.JsonValueKind.String)
-            {
-                var name = workerName.GetString() ?? "";
-                var match = Labour.Overview(year, month)?.Workers
-                    .FirstOrDefault(row => string.Equals(row.Name, name, StringComparison.OrdinalIgnoreCase));
-                if (match is not null) { absenceWorkerId = match.WorkerId; absenceWorkerName = match.Name; }
-            }
-            if (root.TryGetProperty("date", out var date) && date.ValueKind == System.Text.Json.JsonValueKind.String
-                && DateTime.TryParse(date.GetString(), out var parsedDate))
-                absenceDate = parsedDate.Date;
-            if (root.TryGetProperty("kind", out var kind) && kind.ValueKind == System.Text.Json.JsonValueKind.String)
-                absenceKind = (kind.GetString() ?? "").ToLowerInvariant() switch
-                {
-                    "half-day" or "halfday" => AbsenceKind.HalfDay,
-                    "not-worked" or "notworked" => AbsenceKind.NotWorked,
-                    "sick" => AbsenceKind.Sick,
-                    "holiday" => AbsenceKind.Holiday,
-                    // An unrecognised word keeps what the form already says rather than silently
-                    // rewriting it to Holiday.
-                    _ => absenceKind,
-                };
-            if (root.TryGetProperty("note", out var note) && note.ValueKind == System.Text.Json.JsonValueKind.String)
-                absenceNote = note.GetString() ?? "";
-        }
-        catch (System.Text.Json.JsonException) { return; }
-
-        AiTasks.UpdateDraft(SerialiseAbsenceState());
-        StateHasChanged();
-    }
-
-    /// <summary>The worker_week draft: worker and week first (they re-derive the locked days),
-    /// then each named day merged into its row. Unmatched site names stay visible on the row —
-    /// a transcription the user can't see failing is worse than no transcription.</summary>
-    private async Task ApplyWeekDraftAsync(string fieldsJson)
-    {
-        if (!weekOpen || AiTasks.Active?.ModalKey != ModalCatalog.WorkerWeek.ModalKey) return;
-        try
-        {
-            using var parsed = System.Text.Json.JsonDocument.Parse(fieldsJson);
-            var root = parsed.RootElement;
-            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return;
-
-            var scaffoldChanged = false;
-            if (root.TryGetProperty("workerName", out var workerName)
-                && workerName.ValueKind == System.Text.Json.JsonValueKind.String)
-            {
-                var match = Labour.Workers().Where(worker => worker.IsActive)
-                    .FirstOrDefault(worker => string.Equals(worker.Name, workerName.GetString(), StringComparison.OrdinalIgnoreCase));
-                if (match is not null && match.WorkerId != weekWorkerId)
-                {
-                    weekWorkerId = match.WorkerId;
-                    scaffoldChanged = true;
-                }
-            }
-            if (root.TryGetProperty("weekStart", out var week)
-                && week.ValueKind == System.Text.Json.JsonValueKind.String
-                && DateTime.TryParse(week.GetString(), out var parsedWeek))
-            {
-                var snapped = ForecastRules.WeekStartOf(parsedWeek.Date);
-                if (snapped != entryWeekStart)
-                {
-                    entryWeekStart = snapped;
-                    scaffoldChanged = true;
-                }
-            }
-            if (scaffoldChanged) await RebuildWeekRowsAsync();
-
-            if (root.TryGetProperty("days", out var days)
-                && days.ValueKind == System.Text.Json.JsonValueKind.Array)
-            {
-                foreach (var item in days.EnumerateArray())
-                {
-                    if (item.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
-                    if (!item.TryGetProperty("date", out var dateElement)
-                        || dateElement.ValueKind != System.Text.Json.JsonValueKind.String
-                        || !DateTime.TryParse(dateElement.GetString(), out var parsedDate)) continue;
-                    var row = weekRows.FirstOrDefault(candidate => candidate.Date == parsedDate.Date);
-                    if (row is null || row.Locked) continue;
-
-                    if (item.TryGetProperty("siteName", out var site)
-                        && site.ValueKind == System.Text.Json.JsonValueKind.String)
-                    {
-                        var name = site.GetString() ?? "";
-                        var projectId = MatchProjectId(name);
-                        if (projectId != "") { row.ProjectId = projectId; row.UnmatchedSite = ""; }
-                        else if (name.Trim() != "") row.UnmatchedSite = name.Trim();
-                    }
-                    if (item.TryGetProperty("hours", out var hours)
-                        && hours.ValueKind == System.Text.Json.JsonValueKind.Number
-                        && LabourRules.IsValidHours(hours.GetDecimal()))
-                        row.Hours = hours.GetDecimal();
-                    if (item.TryGetProperty("costCode", out var costCode)
-                        && costCode.ValueKind == System.Text.Json.JsonValueKind.String)
-                    {
-                        var code = costCode.GetString() ?? "";
-                        if (CostCenters.Alphabetical.Any(centre => centre.IsActive && centre.Code == code))
-                            row.CostCode = code;
-                    }
-                }
-            }
-        }
-        catch (System.Text.Json.JsonException) { return; }
-
-        AiTasks.UpdateDraft(SerialiseWeekState());
-        StateHasChanged();
     }
 
     // ---- Formatting & colours -----------------------------------------------------------------

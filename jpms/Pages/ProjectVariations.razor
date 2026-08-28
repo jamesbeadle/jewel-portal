@@ -10,8 +10,6 @@
 @inject IVariationStore Variations
 @inject IProcurementStore Procurement
 @inject NavigationManager Nav
-@inject AiTaskState AiTasks
-@inject ChatPanelState Chat
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -432,95 +430,14 @@ else
     private void CloseAddVariationDialog()
     {
         addVariationOpen = false;
-        EndManualVariationTask();
     }
 
     private async Task OnManualVariationCreated(VariationOrder created)
     {
         addVariationOpen = false;
-        EndManualVariationTask();
         // The new draft appears as a "No request" row in the register; approve it there (or open it)
         // to write it onto the valuation report.
         await LoadVariationsAsync();
-    }
-
-    // ---- The assistant's route in: open_modal → ?openModal=manual_variation --------------------
-    //
-    // The spreadsheet flow (docs/ai §2.4 recipe, second registration): the user attaches the boss's
-    // tracker to the chat and says "add this variation" — the assistant opens THIS dialog and fills
-    // it in over the conversation. The user still reads every field and presses Add variation.
-
-    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
-    // for the life of this component. This is what stops a later repaint re-honouring it.
-    private bool modalRequestHonoured;
-
-    private bool WantsManualVariationFromRoute() =>
-        !modalRequestHonoured
-        && new Uri(Nav.Uri).Query.Contains(
-            $"openModal={ModalCatalog.ManualVariation.ModalKey}", StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Honoured only where this user could have opened the dialog by clicking — the assistant can
-    /// route somebody to a page; it cannot get them past a gate. The query is cleared first,
-    /// through history rather than the router, so F5 does not reopen the dialog and re-bill a
-    /// kick-off turn.
-    /// </summary>
-    private async Task HonourRequestedModalAsync()
-    {
-        if (!WantsManualVariationFromRoute()) return;
-
-        // Latched BEFORE the first await: OnParametersSetAsync and LocationChanged can both enter
-        // this method for one navigation, and both used to cross the replaceState await before the
-        // flag was set — two AiTasks.Start calls, two billed kick-off turns.
-        modalRequestHonoured = true;
-
-        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
-        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-
-        if (!CanManageVariations)
-        {
-            // Said out loud — the assistant routed here believing the dialog would open, and a
-            // silent no-op leaves the user (and the model) certain something deeper is broken.
-            variationsError = "The assistant tried to open the Add-variation dialog, but the role "
-                + "you are viewing as can't add variations.";
-            StateHasChanged();
-            return;
-        }
-
-        addVariationOpen = true;
-
-        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            AiTasks.Start(
-                new AiTask(
-                    TaskKey: "manual-variation",
-                    ModalKey: ModalCatalog.ManualVariation.ModalKey,
-                    BannerLabel: "Adding a variation manually",
-                    BusyLabel: "Reading your data…",
-                    // A user turn, so it outranks the system prompt — it has to say the same thing.
-                    KickoffMessage:
-                        "Fill in the \"Add variation manually\" form open beside me from the data we "
-                        + "were just working with — the attached file above all. Send only values the "
-                        + "data actually contains (the ex-VAT figure for the value, the V-number only "
-                        + "if the data names one), leave the rest blank, and tell me in one line what "
-                        + "you could not establish.",
-                    ProjectId: ProjectId,
-                    RecordType: null,
-                    RecordId: null,
-                    RecordReference: null),
-                "{}");
-
-            Chat.Open();
-            Chat.SetCoexistence(true);
-        }
-        StateHasChanged();
-    }
-
-    private void EndManualVariationTask()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.ManualVariation.ModalKey) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
     }
 
     // ---- The variation book ---------------------------------------------------------------------
@@ -881,7 +798,6 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
         Activity.OnChanged += StateHasChanged;
-        Nav.LocationChanged += HandleLocationChanged;
         // Refresh on entry (stale-while-revalidate): cached data renders immediately, then
         // updates when the background reload lands.
         RequestRegister.Refresh(ProjectId); // The Request column + search read the register.
@@ -889,39 +805,11 @@ else
         Activity.Refresh(ProjectId);        // Activity badges land in the background — absent until then.
         await LoadVariationsAsync();
         isLoaded = true;
-
-        await HonourRequestedModalAsync();
     }
-
-    // Belt: covers arrivals where the router does re-set parameters.
-    protected override async Task OnParametersSetAsync()
-    {
-        if (isLoaded) await HonourRequestedModalAsync();
-    }
-
-    /// <summary>
-    /// Braces: the case the lifecycle hooks MISS. When the panel's open_modal fires while the user
-    /// is ALREADY on this register, the navigation changes only the query string — the route
-    /// parameter values are identical, so Blazor re-renders nothing and neither OnInitializedAsync
-    /// nor OnParametersSetAsync runs. This event is the one signal that always fires. (Found live:
-    /// ?openModal=manual_variation sat in the address bar, un-stripped, dialog never opened.)
-    /// history.replaceState does not raise it, so honouring cannot loop.
-    /// </summary>
-    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
-        _ = InvokeAsync(async () =>
-        {
-            if (!isLoaded) return;
-            modalRequestHonoured = false; // a fresh navigation is a fresh request
-            await HonourRequestedModalAsync();
-        });
 
     public void Dispose()
     {
-        // Leaving the page ends its task — a dangling task ships this dialog's stale JSON with
-        // every later turn and leaves the chat panel lifted above every future modal.
-        EndManualVariationTask();
         RequestRegister.OnChange -= StateHasChanged;
         Activity.OnChanged -= StateHasChanged;
-        Nav.LocationChanged -= HandleLocationChanged;
     }
 }

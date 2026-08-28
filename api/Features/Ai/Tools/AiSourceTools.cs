@@ -1,7 +1,6 @@
 using System.Text.Json;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Ai.Sources;
-using Jewel.JPMS.Api.Features.Ai.Storage;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Gates;
@@ -14,8 +13,7 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// <summary>
 /// The three tools that find and read evidence wherever it lives — docs/ai/06-context-retrieval.md.
 /// A <b>source</b> is anything readable, with one handle whatever medium it came from:
-/// <c>chat:&lt;attachmentId&gt;</c> for a file attached to this conversation (bytes in the
-/// ai-attachments store), <c>mail:&lt;messageId&gt;|&lt;attachmentId&gt;</c> for an attachment on
+/// <c>mail:&lt;messageId&gt;|&lt;attachmentId&gt;</c> for an attachment on
 /// an email tagged to a record (bytes fetched from the mailbox on demand). Every source opens
 /// through <see cref="AiSourceReader"/> into parts — sheets, pages, the body — and units, so a
 /// forty-tab workbook is read one named tab at a time instead of the first 25,000 characters.
@@ -34,7 +32,6 @@ internal static class AiSourceTools
     /// (AiRegistryDriftCheck asserts it).</summary>
     public static readonly string[] Names = { ListSources, FindInSource, ReadSource };
 
-    private const string ChatPrefix = "chat:";
     private const string MailPrefix = "mail:";
     private const char MailSeparator = '|';
 
@@ -42,12 +39,15 @@ internal static class AiSourceTools
     /// discovered as an opaque upstream 400 a hop later.</summary>
     private const int MaxImageBytes = 4_500_000;
 
+    /// <summary>The largest file opened for reading — beyond this, tell the user which file holds
+    /// the answer instead of loading it.</summary>
+    private const int MaxSourceBytes = 10 * 1024 * 1024;
+
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
     private static string Serialise(object value) => JsonSerializer.Serialize(value, Json);
     private static string Fail(string message) => Serialise(new { ok = false, error = message });
 
-    public static string ChatSourceId(string attachmentId) => ChatPrefix + attachmentId;
     public static string MailSourceId(string messageId, string attachmentId) => $"{MailPrefix}{messageId}{MailSeparator}{attachmentId}";
 
     private const string DataNotInstructions =
@@ -62,9 +62,8 @@ internal static class AiSourceTools
         {
             new(
                 ListSources,
-                "Everything readable around the conversation, a project and a record, with a source_id "
-                + "for each: the files attached to THIS chat (with their manifest — every sheet and its "
-                + "row count, every page); the attachments on every email tagged to the record (names and "
+                "Everything readable around a project and a record, with a source_id "
+                + "for each: the attachments on every email tagged to the record (names and "
                 + "sizes; their manifest arrives with the first read_source); and the documents FILED in "
                 + "the portal for the project — the executed contract and its amendments, every "
                 + "Architect's Instruction, payment certificates, Document Control items and the "
@@ -90,17 +89,6 @@ internal static class AiSourceTools
                 readers,
                 async (context, input, ct) =>
                 {
-                    var chat = await ChatAttachmentsAsync(context, ct);
-                    var chatList = chat.Select(row => new
-                    {
-                        source_id = ChatSourceId(row.AttachmentId),
-                        file = row.FileName,
-                        kind = row.Manifest?.Kind,
-                        summary = row.Manifest?.Summary(),
-                        parts = row.Manifest is null ? null : PartsFor(row.Manifest),
-                        attached = row.Row.UploadedAt
-                    }).ToList();
-
                     var typeText = AiToolSchema.Text(input, "record_type") ?? context.Scope?.RecordType;
                     var recordId = AiToolSchema.Text(input, "record_id") ?? context.Scope?.RecordId;
                     var emailList = new List<object>();
@@ -169,7 +157,6 @@ internal static class AiSourceTools
                     return Serialise(new
                     {
                         ok = true,
-                        conversation_files = chatList,
                         record,
                         email_attachments = emailList,
                         email_note = emailNote,
@@ -191,13 +178,11 @@ internal static class AiSourceTools
                 + "Levelling compound\" answers \"V01\" before any row does) and the rows, lines or "
                 + "paragraphs that contain it, each with its part and unit number so read_source can "
                 + "open exactly there. Case-insensitive; a phrase that matches nothing falls back to "
-                + "every word present. Searches one source, or with source_id omitted every file "
-                + "attached to this chat. This is the tool when the user says \"we are doing V01\" "
-                + "and a file is attached: find it, then read that part.",
+                + "every word present. This is the tool when the user names a reference "
+                + "and a document holds it: find it, then read that part.",
                 AiToolSchema.Object(
                     ("query", "string", "What to look for — a reference, a name, a figure, a phrase.", true),
-                    ("source_id", "string",
-                        "A source_id from list_sources. Omit to search every file attached to this chat.", false),
+                    ("source_id", "string", "A source_id from list_sources.", true),
                     ("max_hits", "number", "How many unit hits to return per source. Default 20, ceiling 100.", false)),
                 AiToolKind.Read,
                 readers,
@@ -208,18 +193,9 @@ internal static class AiSourceTools
                     var maxHits = Math.Clamp(AiToolSchema.Number(input, "max_hits") ?? 20, 1, 100);
 
                     var sourceId = AiToolSchema.Text(input, "source_id");
-                    var targets = new List<string>();
-                    if (!string.IsNullOrWhiteSpace(sourceId))
-                    {
-                        targets.Add(sourceId!.Trim());
-                    }
-                    else
-                    {
-                        targets.AddRange((await ChatAttachmentsAsync(context, ct)).Select(row => ChatSourceId(row.AttachmentId)));
-                        if (targets.Count == 0)
-                            return Fail("Nothing is attached to this chat to search. Pass a source_id from list_sources "
-                                        + "(an email attachment), or ask the user to attach the file.");
-                    }
+                    if (string.IsNullOrWhiteSpace(sourceId))
+                        return Fail("Pass a source_id from list_sources — an email attachment or a filed document.");
+                    var targets = new List<string> { sourceId!.Trim() };
 
                     var results = new List<object>();
                     foreach (var target in targets)
@@ -384,8 +360,6 @@ internal static class AiSourceTools
 
     private static async Task<Opened> OpenAsync(AiToolContext context, string sourceId, CancellationToken ct)
     {
-        if (sourceId.StartsWith(ChatPrefix, StringComparison.OrdinalIgnoreCase))
-            return await OpenChatAsync(context, sourceId[ChatPrefix.Length..], ct);
         if (sourceId.StartsWith(MailPrefix, StringComparison.OrdinalIgnoreCase))
         {
             var rest = sourceId[MailPrefix.Length..];
@@ -403,41 +377,9 @@ internal static class AiSourceTools
             if (filed.Failure is not null) return new Opened(null, filed.FileName, filed.Failure);
             return Load(filed.FileName!, filed.ContentType, filed.Bytes!);
         }
-        return new Opened(null, null, $"\"{sourceId}\" is not a source id. list_sources returns them: chat:… for a file "
-            + "attached to this chat, mail:… for an email attachment, contract:/amendment:/ai:/drawing:/cert:/doc:/compliance:… "
+        return new Opened(null, null, $"\"{sourceId}\" is not a source id. list_sources returns them: mail:… for an "
+            + "email attachment, contract:/amendment:/ai:/drawing:/cert:/doc:/compliance:… "
             + "for a document filed in the portal.");
-    }
-
-    private static async Task<Opened> OpenChatAsync(AiToolContext context, string attachmentId, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(context.ConversationId))
-            return new Opened(null, null, "No conversation is open, so there are no chat files to read.");
-
-        // Scoped to THIS conversation: an attachment id is not a capability, and a file attached
-        // to someone else's chat is theirs.
-        var row = await context.Db.AiAttachments.AsNoTracking()
-            .FirstOrDefaultAsync(candidate => candidate.AttachmentId == attachmentId
-                                              && candidate.ConversationId == context.ConversationId, ct);
-        if (row is null)
-            return new Opened(null, null, $"No file with source id chat:{attachmentId} is attached to this chat — list_sources shows what is.");
-
-        var store = context.Services.GetRequiredService<IAiAttachmentStore>();
-        byte[]? bytes;
-        try
-        {
-            bytes = await store.OpenAsync(row.BlobRef, ct);
-        }
-        catch (Exception ex)
-        {
-            return new Opened(null, null, $"\"{row.FileName}\" could not be fetched from storage ({ex.Message}).");
-        }
-        if (bytes is null)
-        {
-            return new Opened(null, null, $"\"{row.FileName}\" is no longer held — attachments are kept for a limited time. "
-                + "Ask the user to attach it again.");
-        }
-
-        return Load(row.FileName, row.ContentType, bytes);
     }
 
     private static async Task<Opened> OpenMailAsync(AiToolContext context, string messageId, string attachmentId, CancellationToken ct)
@@ -455,7 +397,7 @@ internal static class AiSourceTools
         if (file is null)
             return new Opened(null, null, "That attachment could not be fetched — it may be an attached email or a link rather than a file.");
 
-        if (file.Content.Length > AiAttachmentReader.MaxBytes)
+        if (file.Content.Length > MaxSourceBytes)
         {
             return new Opened(null, null, $"\"{file.Name}\" is {file.Content.Length / 1_048_576.0:0.#} MB — too big to read "
                 + "here. Tell the user which file holds the answer and ask them to open it themselves.");
@@ -480,19 +422,6 @@ internal static class AiSourceTools
     }
 
     // ---- Listing --------------------------------------------------------------------------
-
-    internal sealed record ChatAttachment(string AttachmentId, string FileName, AiAttachmentEntity Row, AiSourceManifest? Manifest);
-
-    /// <summary>The files attached to this conversation, oldest first, with their stored manifests.</summary>
-    internal static async Task<IReadOnlyList<ChatAttachment>> ChatAttachmentsAsync(AiToolContext context, CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(context.ConversationId)) return Array.Empty<ChatAttachment>();
-        var rows = await context.Db.AiAttachments.AsNoTracking()
-            .Where(row => row.ConversationId == context.ConversationId)
-            .OrderBy(row => row.UploadedAt)
-            .ToListAsync(ct);
-        return rows.Select(row => new ChatAttachment(row.AttachmentId, row.FileName, row, ParseManifest(row.ManifestJson))).ToList();
-    }
 
     internal static AiSourceManifest? ParseManifest(string? json)
     {

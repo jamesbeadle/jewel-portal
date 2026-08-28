@@ -1,3 +1,5 @@
+> **Superseded (2026-08-27).** The in-portal chat this document describes was retired in favour of the MCP connector — see [10-mcp-connector.md](10-mcp-connector.md). Kept as the historical record.
+
 # Agent Specifications
 
 > Companion to `00-agent-architecture.md`. Read that first — in particular §6, which establishes

@@ -7,11 +7,14 @@ using Jewel.JPMS.Api.Features.Architects;
 using Jewel.JPMS.Api.Features.ArchitectInstructions;
 using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Auth;
+using Jewel.JPMS.Api.Features.Connect;
+using Jewel.JPMS.Api.Features.Mcp;
 using Jewel.JPMS.Api.Features.Boq;
 using Jewel.JPMS.Api.Features.Calendar;
 using Jewel.JPMS.Api.Features.BuildingControl;
 using Jewel.JPMS.Api.Features.ValuationInvoices;
 using Jewel.JPMS.Api.Features.Cashflow;
+using Jewel.JPMS.Api.Features.WeeklyCashflow;
 using Jewel.JPMS.Api.Features.Clients;
 using Jewel.JPMS.Api.Features.Parties;
 using Jewel.JPMS.Api.Features.CostCenters;
@@ -113,6 +116,7 @@ var host = new HostBuilder()
         services.AddCommercialInputsFeature();
         services.AddRetentionFeature();
         services.AddCashflowFeature();
+        services.AddWeeklyCashflowFeature();
         services.AddValuationInvoicesFeature();
         services.AddCvrFeature();
         services.AddCloseoutFeature();
@@ -128,6 +132,8 @@ var host = new HostBuilder()
         services.AddCostCentersFeature();
         services.AddMailboxIntakeFeature(context.Configuration);
         services.AddAiFeature(context.Configuration);
+        services.AddConnectFeature();
+        services.AddMcpFeature();
         services.AddXeroFeature(context.Configuration);
         services.AddPlatformFeature();
     })

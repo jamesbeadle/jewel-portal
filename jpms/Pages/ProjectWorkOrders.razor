@@ -17,8 +17,6 @@
 @inject ICommandSender Commands
 @inject IQueryClient Queries
 @inject NavigationManager Nav
-@inject AiTaskState AiTasks
-@inject ChatPanelState Chat
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -75,17 +73,6 @@ else
                 @poEmailNote
                 <button type="button" class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                         @onclick="() => poEmailNote = null">Dismiss</button>
-            </p>
-        }
-
-        @* An assistant open_modal request this page had to refuse — said out loud, because a
-           silently dropped open_modal leaves the model narrating a dialog that never appeared. *@
-        @if (assistantRouteError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
-                @assistantRouteError
-                <button type="button" class="text-xs text-content-subtle underline underline-offset-4 ml-2"
-                        @onclick="() => assistantRouteError = null">Dismiss</button>
             </p>
         }
 
@@ -912,232 +899,14 @@ else
     {
         manualOrderOpen = false;
         editingOrder = null;
-        EndWorkOrderEditTask();
     }
 
     private async Task HandleManualOrderSavedAsync()
     {
         manualOrderOpen = false;
         editingOrder = null;
-        EndWorkOrderEditTask();
         await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
     }
-
-    // ---- The assistant's route in: open_modal → ?openModal=work_order_edit&record={id}, or ----
-    // ---- ?openModal=work_order_create with no record (the dialog opens empty) ------------------
-    //
-    // The accountant's flow from the chat: "open WO-0045, add the £80 line from the email" — the
-    // assistant routes here, this page opens the Edit dialog on that order, and the task tells the
-    // model to read the order's tagged emails (read_record_emails) for the context before
-    // proposing the changed fields. The user still reads every field and presses Save changes.
-
-    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
-    // for the life of this component. This is what stops a later repaint re-honouring it.
-    private bool modalRequestHonoured;
-
-    /// <summary>Which of this page's registered dialogs the query asks for — work_order_edit,
-    /// work_order_create, or null. Parsed as a real query value, not a Contains, so one key can
-    /// never match inside the other's name.</summary>
-    private string? RequestedModalKeyFromRoute()
-    {
-        if (modalRequestHonoured) return null;
-        var query = new Uri(Nav.Uri).Query.TrimStart('?');
-        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var separator = pair.IndexOf('=');
-            if (separator <= 0) continue;
-            if (!pair[..separator].Equals("openModal", StringComparison.OrdinalIgnoreCase)) continue;
-            var value = Uri.UnescapeDataString(pair[(separator + 1)..]);
-            if (value.Equals(ModalCatalog.WorkOrderEdit.ModalKey, StringComparison.OrdinalIgnoreCase))
-                return ModalCatalog.WorkOrderEdit.ModalKey;
-            if (value.Equals(ModalCatalog.WorkOrderCreate.ModalKey, StringComparison.OrdinalIgnoreCase))
-                return ModalCatalog.WorkOrderCreate.ModalKey;
-        }
-        return null;
-    }
-
-    /// <summary>The ?record= value carried alongside ?openModal — the work order to open.
-    /// Parsed by hand: System.Web's helper isn't worth trusting to WASM trimming.</summary>
-    private string? RequestedRecordFromRoute()
-    {
-        var query = new Uri(Nav.Uri).Query.TrimStart('?');
-        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
-        {
-            var separator = pair.IndexOf('=');
-            if (separator <= 0) continue;
-            if (!pair[..separator].Equals("record", StringComparison.OrdinalIgnoreCase)) continue;
-            var value = Uri.UnescapeDataString(pair[(separator + 1)..]);
-            return string.IsNullOrWhiteSpace(value) ? null : value;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Honoured only where this user could have opened the dialog by clicking — the assistant can
-    /// route somebody to a page; it cannot get them past a gate. The query is cleared first,
-    /// through history rather than the router, so F5 does not reopen the dialog and re-bill a
-    /// kick-off turn.
-    /// </summary>
-    private async Task HonourRequestedModalAsync()
-    {
-        if (RequestedModalKeyFromRoute() is not { } requestedModalKey) return;
-
-        var requestedId = RequestedRecordFromRoute();
-
-        // Latched BEFORE the first await: two entry paths (a lifecycle hook and LocationChanged,
-        // which resets the flag) can both enter for one navigation, and both used to cross the
-        // replaceState await before the flag was set — two AiTasks.Start calls, two billed
-        // kick-off turns.
-        modalRequestHonoured = true;
-
-        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
-        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-
-        // ---- Add work order: no record — the dialog opens empty and the task points the model
-        // at the correspondence it came from. Gate exactly as ModalCatalog declares (the API's
-        // CreateManualWorkOrder gate), said out loud on refusal like every branch below.
-        if (requestedModalKey == ModalCatalog.WorkOrderCreate.ModalKey)
-        {
-            if (Session.ActiveRole is not { } activeRole
-                || !ModalCatalog.CanOpen(ModalCatalog.WorkOrderCreate, new[] { activeRole }))
-            {
-                assistantRouteError = "The assistant tried to open the Add work order dialog, but the role "
-                    + "you are viewing as can't raise orders — the MD, FD, a project manager, an estimator "
-                    + "or an administrator can.";
-                StateHasChanged();
-                return;
-            }
-
-            OpenAdd();
-
-            if (DesktopNavigation.CanUseAssistant(activeRole))
-            {
-                AiTasks.Start(
-                    new AiTask(
-                        TaskKey: "work-order-create",
-                        ModalKey: ModalCatalog.WorkOrderCreate.ModalKey,
-                        BannerLabel: "Raising a work order",
-                        BusyLabel: "Reading the correspondence…",
-                        // A user turn, so it outranks the system prompt — it has to say the same thing.
-                        KickoffMessage:
-                            "The \"Add work order\" dialog is open beside me, empty. Work from the "
-                            + "correspondence behind this order — if you have not already read it this "
-                            + "turn, read_record_emails on the to-do or record it came from, and "
-                            + "read_email_attachment on any file that holds the figures — then propose "
-                            + "the fields in ONE update: the supplier exactly as the correspondence names "
-                            + "them, a title in the house style, the scope the purchase order should "
-                            + "print, and only lines the correspondence actually prices (leave a cost "
-                            + "code out where none clearly fits — I pick it from the list). Tell me in "
-                            + "one line what you filled in and from where. I review everything and press "
-                            + "the save button myself — saving a live order emails the purchase order to "
-                            + "the supplier at once, so propose saveAsDraft true unless the figures are "
-                            + "confirmed.",
-                        ProjectId: ProjectId,
-                        RecordType: null,
-                        RecordId: null,
-                        RecordReference: null),
-                    "{}");
-
-                Chat.Open();
-                Chat.SetCoexistence(true);
-            }
-            StateHasChanged();
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(requestedId))
-        {
-            assistantRouteError = "The assistant tried to open the Edit work order dialog without saying which order.";
-            StateHasChanged();
-            return;
-        }
-
-        // The dialog seeds itself from the order's detail, so the orders must actually be here —
-        // ensure the fetch has landed rather than racing the fire-and-forget refresh.
-        try { await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None); }
-        catch (OperationCanceledException) { throw; }
-        catch { /* Already toasted; the not-found message below says what to check. */ }
-
-        var detail = Orders.FirstOrDefault(candidate =>
-            string.Equals(candidate.Order.WorkOrderId, requestedId, StringComparison.OrdinalIgnoreCase));
-        if (detail is null)
-        {
-            // Said out loud — a silently dropped open_modal is the worst failure this feature has.
-            assistantRouteError = $"The assistant tried to open a work order (\"{requestedId}\") that isn't on this project.";
-            StateHasChanged();
-            return;
-        }
-        if (!CanEditOrder(detail.Order))
-        {
-            assistantRouteError = $"The assistant tried to open {Reference(detail.Order)} for editing, but the role "
-                + "you are viewing as can't edit it — only the MD, FD or an administrator can edit issued orders.";
-            StateHasChanged();
-            return;
-        }
-        if (detail.Order.IsRejected || detail.Order.IsCancelled)
-        {
-            assistantRouteError = $"{Reference(detail.Order)} is {(detail.Order.IsRejected ? "rejected" : "cancelled")} — a terminal record that can't be edited.";
-            StateHasChanged();
-            return;
-        }
-
-        OpenEdit(detail);
-
-        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            AiTasks.Start(
-                new AiTask(
-                    TaskKey: "work-order-edit",
-                    ModalKey: ModalCatalog.WorkOrderEdit.ModalKey,
-                    BannerLabel: $"Editing {Reference(detail.Order)}",
-                    BusyLabel: $"Reading {Reference(detail.Order)} and the emails tagged to it…",
-                    // A user turn, so it outranks the system prompt — it has to say the same thing.
-                    KickoffMessage:
-                        "The \"Edit work order\" dialog is open beside me, pre-filled with the order as it "
-                        + "stands. Gather the context first — get_work_order_context for the order and its "
-                        + "priced lines, then read_record_emails (record_type work_order) for the "
-                        + "correspondence, and read_email_attachment on any file that holds the figures — "
-                        + "then propose the corrected fields in ONE update: keep every existing line that "
-                        + "still stands (spelled exactly as the dialog shows it, so its payment history "
-                        + "stays attached), add or change only what the correspondence actually supports, "
-                        + "and tell me in one line what you changed and why. I review everything and press "
-                        + "Save changes myself.",
-                    ProjectId: ProjectId,
-                    RecordType: "work order",
-                    RecordId: detail.Order.WorkOrderId,
-                    RecordReference: Reference(detail.Order)),
-                "{}");
-
-            Chat.Open();
-            Chat.SetCoexistence(true);
-        }
-        StateHasChanged();
-    }
-
-    private void EndWorkOrderEditTask()
-    {
-        var activeKey = AiTasks.Active?.ModalKey;
-        if (activeKey != ModalCatalog.WorkOrderEdit.ModalKey
-            && activeKey != ModalCatalog.WorkOrderCreate.ModalKey) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
-    }
-
-    /// <summary>
-    /// Braces: the case the lifecycle hooks MISS. When the panel's open_modal fires while the user
-    /// is ALREADY on this tab, the navigation changes only the query string — the route parameter
-    /// values are identical, so Blazor re-renders nothing and neither OnInitializedAsync nor
-    /// OnParametersSetAsync runs. This event is the one signal that always fires.
-    /// history.replaceState does not raise it, so honouring cannot loop. (The rule from
-    /// ProjectVariations: every ModalCatalog hosting page honours ?openModal from LocationChanged.)
-    /// </summary>
-    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
-        _ = InvokeAsync(async () =>
-        {
-            if (!sessionReady) return;
-            modalRequestHonoured = false; // a fresh navigation is a fresh request
-            await HonourRequestedModalAsync();
-        });
 
     private void Toggle(string key)
     {
@@ -1304,7 +1073,6 @@ else
 
     // An assistant open_modal request this page refused (unknown order, role gate, terminal
     // status) — shown at the top of the page until dismissed.
-    private string? assistantRouteError;
 
     private void ShowPoEmailNote(string note) => poEmailNote = note;
 
@@ -1599,7 +1367,6 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         CostCenters.OnChanged += StateHasChanged;
         WorkOrders.OnChanged += StateHasChanged;
-        Nav.LocationChanged += HandleLocationChanged;
         sessionReady = true;
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
         // data-loading convention) — cached figures render immediately, then update.
@@ -1629,23 +1396,11 @@ else
             dataFailed = true;
         }
 
-        await HonourRequestedModalAsync();
-    }
-
-    // Belt: covers arrivals where the router does re-set parameters. (LocationChanged is the
-    // braces — see HandleLocationChanged.)
-    protected override async Task OnParametersSetAsync()
-    {
-        if (sessionReady) await HonourRequestedModalAsync();
     }
 
     public void Dispose()
     {
         CostCenters.OnChanged -= StateHasChanged;
         WorkOrders.OnChanged -= StateHasChanged;
-        Nav.LocationChanged -= HandleLocationChanged;
-        // Leaving the tab ends the dialog task — the conversation must not keep a remit over a
-        // form that no longer exists.
-        EndWorkOrderEditTask();
     }
 }

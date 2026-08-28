@@ -2,7 +2,6 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject StoreChangeHub Stores
-@inject ChatPanelState Chat
 @implements IDisposable
 
 <div class="min-h-dvh bg-canvas text-content antialiased">
@@ -39,7 +38,6 @@
                     @if (Auth.IsSignedIn)
                     {
                         <RoleSwitcher />
-                        <ChatLauncher />
                     }
                     else
                     {
@@ -63,40 +61,6 @@
         </footer>
     </div>
 
-    @* The takeover: while the assistant is operating the portal (navigating, opening a dialog,
-       writing into a form) the WHOLE viewport — chat panel included — dims behind a breathing
-       green-edged frame and stops taking input, so nothing can be typed anywhere mid-action.
-       Control releases the moment the turn ends and everything is usable again. Raised by
-       ChatPanel on the turn's first UI action; dropped when the turn ends, on every path, by
-       ChatPanelState.SetAssistantBusy(false). Styles: .jpms-takeover* in app.tailwind.css. *@
-    @if (Chat.AssistantControlling)
-    {
-        <div class="jpms-takeover" aria-hidden="true">
-            <div class="jpms-takeover-edge"></div>
-            <div class="jpms-takeover-label">
-                <span class="jpms-takeover-jewel">
-                    <JewelIcon Class="w-6 h-6" />
-                </span>
-                <span class="flex flex-col items-start gap-0.5">
-                    <span class="jpms-takeover-eyebrow">Jewel Assistant</span>
-                    <span class="flex items-center gap-2.5">
-                        <span class="jpms-takeover-title">AI Controlling</span>
-                        <span class="flex items-center gap-1">
-                            <span class="w-1.5 h-1.5 rounded-full bg-accent jpms-typing-dot"></span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-accent jpms-typing-dot jpms-typing-dot-2"></span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-accent jpms-typing-dot jpms-typing-dot-3"></span>
-                        </span>
-                    </span>
-                </span>
-            </div>
-        </div>
-    }
-
-    @* The assistant lives outside the shell so it can pin to the viewport's right edge while the
-       shell's padding (see ShellClass) reserves its width — the page narrows instead of being
-       covered. Both components self-gate on role, so they cost nothing for everyone else. *@
-    <ChatPanel />
-    <ChatLauncher Floating="true" />
 </div>
 
 @code {
@@ -117,12 +81,10 @@
     {
         get
         {
-            // Width mirrors ChatPanel's own md:/lg: widths — change the two together.
-            var column = "chat-push min-h-dvh flex flex-col";
-            var chat = Chat.IsOpen ? "md:pr-[400px] lg:pr-[440px]" : "";
-            if (!CanSeeNavigation) return $"{column} {chat}";
+            var column = "min-h-dvh flex flex-col";
+            if (!CanSeeNavigation) return column;
             var padding = isSideNavExpanded ? "pl-16 md:pl-64" : "pl-16 md:pl-16";
-            return $"{column} {padding} {chat}";
+            return $"{column} {padding}";
         }
     }
 
@@ -130,8 +92,6 @@
     {
         Auth.OnChange += StateHasChanged;
         Session.OnChange += StateHasChanged;
-        // Reserving the panel's width is the layout's job, so the shell repaints when it opens.
-        Chat.OnChange += StateHasChanged;
         // Repaint the current page whenever any data store finishes a background
         // load, so views that read lazily-loaded data fill in on their own instead
         // of staying empty until the user navigates away and back.
@@ -146,7 +106,6 @@
     {
         Auth.OnChange -= StateHasChanged;
         Session.OnChange -= StateHasChanged;
-        Chat.OnChange -= StateHasChanged;
         Stores.OnAnyChange -= Repaint;
     }
 }

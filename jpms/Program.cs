@@ -6,6 +6,7 @@ using Jewel.JPMS.Features.Audit;
 using Jewel.JPMS.Features.Boq;
 using Jewel.JPMS.Features.ValuationInvoices;
 using Jewel.JPMS.Features.Cashflow;
+using Jewel.JPMS.Features.WeeklyCashflow;
 using Jewel.JPMS.Features.Clients;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.Requests;
@@ -85,6 +86,7 @@ builder.Services.AddCommercialReadModels();
 builder.Services.AddLabourReadModels();
 builder.Services.AddRegistersReadModels();
 builder.Services.AddCashflowReadModels();
+builder.Services.AddWeeklyCashflowReadModels();
 builder.Services.AddCvrReadModels();
 builder.Services.AddCloseoutReadModels();
 builder.Services.AddCalendarReadModels();
@@ -165,9 +167,6 @@ builder.Services.AddScoped<ControlCentreOpenEmail>();
 builder.Services.AddScoped<ForecastOverheadsStorage>();
 builder.Services.AddScoped<CurrentProjectService>();
 builder.Services.AddScoped<ProjectStageFilter>();
-builder.Services.AddScoped<ChatPanelState>();
-// The pipe between a task dialog on a page and the assistant panel in MainLayout.
-builder.Services.AddScoped<AiTaskState>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<ExcelExportService>();
 
@@ -200,6 +199,7 @@ using (var routeScope = app.Services.CreateScope())
     CommercialInputsRouteRegistration.RegisterCommercialInputsRoutes(queryRoutes, commandRoutes);
     RetentionRouteRegistration.RegisterRetentionRoutes(queryRoutes, commandRoutes);
     CashflowRouteRegistration.RegisterCashflowRoutes(queryRoutes, commandRoutes);
+    WeeklyCashflowRouteRegistration.RegisterWeeklyCashflowRoutes(queryRoutes, commandRoutes);
     CvrRouteRegistration.RegisterCvrRoutes(queryRoutes, commandRoutes);
     CloseoutRouteRegistration.RegisterCloseoutRoutes(queryRoutes, commandRoutes);
     CalendarRouteRegistration.RegisterCalendarRoutes(queryRoutes, commandRoutes);

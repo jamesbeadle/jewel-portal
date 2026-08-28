@@ -1,0 +1,168 @@
+@page "/settings/ai-connections"
+@using System.Net.Http.Json
+@using Jewel.JPMS.Contracts.Connect
+@using Jewel.JPMS.Models
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+@inject HttpClient Http
+
+<PageTitle>AI Connections · JPMS</PageTitle>
+
+@*
+    The AI tools connected to the portal through the MCP connector (docs/ai/10-mcp-connector.md).
+    Each row is a live connection — an AI tool signed in as a portal user — and Disconnect revokes
+    its tokens, so the tool's next call fails and it has to sign in again. Users see their own;
+    administrators can list everyone's with the toggle.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="px-6 py-6 md:px-8">
+        <div class="flex items-start justify-between gap-3 mb-1">
+            <div>
+                <h1 class="text-2xl font-semibold text-content">AI Connections</h1>
+                <p class="text-sm text-content-muted mt-1 max-w-2xl">
+                    The AI tools (Claude, Perplexity…) connected to the portal as
+                    @(showAll ? "any user" : "you") through the connector. Connect one from the
+                    tool itself using the portal's address — it signs in with your portal email and
+                    password. Disconnect revokes its access immediately.
+                </p>
+            </div>
+            @if (IsAdmin)
+            {
+                <label class="shrink-0 flex items-center gap-2 text-xs text-content-subtle cursor-pointer mt-1">
+                    <input type="checkbox" checked="@showAll" @onchange="ToggleShowAll" />
+                    Everyone's connections
+                </label>
+            }
+        </div>
+
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-4">@error</p>
+        }
+
+        <div class="mt-5">
+            <LoadGate IsLoading="@(rows is null && error is null)" Label="Loading connections">
+                @if (Rows.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle">
+                        Nothing is connected@(showAll ? "" : " for you") yet. Add the portal as a
+                        connector in your AI tool and sign in — the setup guide has the steps.
+                    </p>
+                }
+                else
+                {
+                    <div class="panel overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-line text-left">
+                                    <th class="px-4 py-2.5 eyebrow">Tool</th>
+                                    @if (showAll)
+                                    {
+                                        <th class="px-4 py-2.5 eyebrow">User</th>
+                                    }
+                                    <th class="px-4 py-2.5 eyebrow">Connected</th>
+                                    <th class="px-4 py-2.5 eyebrow">Last used</th>
+                                    <th class="px-4 py-2.5"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in Rows)
+                                {
+                                    <tr class="border-b border-line/60 last:border-0">
+                                        <td class="px-4 py-2.5 font-medium text-content">@row.ClientName</td>
+                                        @if (showAll)
+                                        {
+                                            <td class="px-4 py-2.5 text-content-muted">@row.UserEmail</td>
+                                        }
+                                        <td class="px-4 py-2.5 text-content-muted">@row.ConnectedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")</td>
+                                        <td class="px-4 py-2.5 text-content-muted">@(row.LastUsedAt?.ToLocalTime().ToString("d MMM yyyy HH:mm") ?? "—")</td>
+                                        <td class="px-4 py-2.5 text-right">
+                                            <button type="button" class="btn-secondary text-xs" disabled="@busy"
+                                                    @onclick="() => RevokeAsync(row)">Disconnect</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </LoadGate>
+        </div>
+    </section>
+}
+
+@code {
+    private bool sessionReady;
+    private bool busy;
+    private bool showAll;
+    private string? error;
+    private IReadOnlyList<AiConnection>? rows;
+    private IReadOnlyList<AiConnection> Rows => rows ?? Array.Empty<AiConnection>();
+
+    private bool IsAdmin => Auth.CurrentRoles.Contains(Role.Admin);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        sessionReady = true;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        error = null;
+        try
+        {
+            rows = await Http.GetFromJsonAsync<List<AiConnection>>(
+                showAll ? "/api/oauth/connections?all=true" : "/api/oauth/connections");
+        }
+        catch
+        {
+            error = "Couldn't load the connections. Please try again.";
+        }
+    }
+
+    private async Task ToggleShowAll(ChangeEventArgs e)
+    {
+        showAll = e.Value is true;
+        rows = null;
+        await LoadAsync();
+    }
+
+    private async Task RevokeAsync(AiConnection row)
+    {
+        if (busy) return;
+        busy = true;
+        error = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/oauth/connections/revoke",
+                new RevokeAiConnectionRequest(row.FamilyId));
+            if (!response.IsSuccessStatusCode)
+            {
+                error = "Couldn't disconnect that tool. Please try again.";
+                return;
+            }
+            await LoadAsync();
+        }
+        catch
+        {
+            error = "Couldn't disconnect that tool. Please try again.";
+        }
+        finally { busy = false; }
+    }
+}

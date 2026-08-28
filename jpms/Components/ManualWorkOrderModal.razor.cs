@@ -1,4 +1,3 @@
-using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Cqrs;
@@ -12,9 +11,6 @@ namespace Jewel.JPMS.Components;
 
 public partial class ManualWorkOrderModal : IDisposable
 {
-    [Inject] private AiTaskState AiTasks { get; set; } = default!;
-    [Inject] private ChatPanelState Chat { get; set; } = default!;
-
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public string ProjectId { get; set; } = "";
 
@@ -80,170 +76,10 @@ public partial class ManualWorkOrderModal : IDisposable
     // screenshots of the tracker) unticked. Keyed by attachment id; each remembers which
     // conversation it lives on, because a task's files split across the handover conversation
     // (attached before "draft this order") and the task's own (attached mid-task). ----
-    private sealed record ChatFileRow(AiConversationAttachment File, string ConversationId);
-    private List<ChatFileRow> chatFiles = new();
-    private readonly HashSet<string> tickedChatFiles = new(StringComparer.OrdinalIgnoreCase);
-    private bool chatFilesLoaded;
-    // The last AssistantBusy seen — a true→false edge means a turn just ended, and the user may
-    // have attached another file mid-conversation, so the list refetches.
-    private bool chatAssistantWasBusy;
-
-    // ---- The dialog ⇄ assistant pipe (work_order_edit / work_order_create) ----------------------
-
-    private bool AssistantTaskActive =>
-        AiTasks.Active?.ModalKey == ModalCatalog.WorkOrderEdit.ModalKey
-        || AiTasks.Active?.ModalKey == ModalCatalog.WorkOrderCreate.ModalKey;
-
-    // The form's opening state has been published to the task once for this opening — so the
-    // model's first read sees the order as the dialog pre-filled it, not "{}".
-    private bool initialDraftPublished;
-
-    protected override void OnInitialized()
-    {
-        // The assistant's proposals, when a task is in force. Subscribed for the component's life —
-        // the handler itself checks the task matches, so another dialog's task never writes here.
-        AiTasks.OnDraftApplied += HandleAssistantDraft;
-        // Repaints the working banner as the assistant's turn starts and finishes — and, on a
-        // turn ENDING, refetches the chat-file list in case the user attached another quote
-        // mid-conversation.
-        Chat.OnChange += HandleChatChanged;
-    }
-
-    private void HandleChatChanged()
-    {
-        var turnJustEnded = chatAssistantWasBusy && !Chat.AssistantBusy;
-        chatAssistantWasBusy = Chat.AssistantBusy;
-        if (turnJustEnded && IsOpen && AssistantTaskActive) _ = ReloadChatFilesAsync();
-        StateHasChanged();
-    }
-
-    protected override void OnAfterRender(bool firstRender)
-    {
-        // The Modal renders children only while open, so the form exists (and has seeded itself
-        // from the order) only after the first open render — publish its state to the task then.
-        if (IsOpen && AssistantTaskActive && !initialDraftPublished && form is not null)
-        {
-            initialDraftPublished = true;
-            AiTasks.UpdateDraft(form.SerialiseState());
-        }
-    }
-
-    /// <summary>The model's update_open_modal, landing in the form. Merge, republish, repaint.</summary>
-    private void HandleAssistantDraft(string fieldsJson)
-    {
-        if (!IsOpen || !AssistantTaskActive || form is null) return;
-        form.ApplyAssistant(fieldsJson);
-        AiTasks.UpdateDraft(form.SerialiseState());
-        StateHasChanged();
-    }
-
-    /// <summary>Every human edit republishes the live state, so the model reasons from the form as
-    /// it stands NOW — the same merge-never-replace contract as the other dialogs.</summary>
-    private void HandleFormChanged()
-    {
-        if (AssistantTaskActive && form is not null) AiTasks.UpdateDraft(form.SerialiseState());
-        StateHasChanged();
-    }
+    private void HandleFormChanged() => StateHasChanged();
 
     public void Dispose()
     {
-        AiTasks.OnDraftApplied -= HandleAssistantDraft;
-        Chat.OnChange -= HandleChatChanged;
-    }
-
-    /// <summary>
-    /// The files attached to the chat the order is being drafted from: the task's own
-    /// conversation plus the handover one (where anything attached BEFORE "draft this order"
-    /// lives), oldest first, deduped by id. Fresh ticks default to documents only — an image here
-    /// is usually a pasted screenshot of the tracker, not a record worth keeping on the order —
-    /// while existing ticks survive a refetch. Failure costs the list, never the dialog: the
-    /// order still saves with the files picked from disk.
-    /// </summary>
-    private async Task ReloadChatFilesAsync()
-    {
-        if (!AssistantTaskActive) return;
-        var conversationIds = new[] { Chat.TaskHandoverConversationId, Chat.ActiveConversationId }
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Select(id => id!)
-            .Distinct()
-            .ToList();
-
-        var rows = new List<ChatFileRow>();
-        foreach (var conversationId in conversationIds)
-        {
-            try
-            {
-                var files = await Queries.AskAsync(
-                    new ListAiConversationAttachments(conversationId), CancellationToken.None);
-                rows.AddRange(files.Select(file => new ChatFileRow(file, conversationId)));
-            }
-            catch
-            {
-                // A list that can't load is absent, not fatal — same trade as existing attachments.
-            }
-        }
-
-        // One row per FILE, not per register entry: the handover copies the previous chat's
-        // attachment rows onto the task's own conversation, so the same quote can answer from
-        // both ids. The task conversation's copy wins (it is the one the model reads), and ticks
-        // key on name+size so a refetch that swaps which copy is shown cannot lose a tick.
-        chatFiles = rows
-            .GroupBy(row => TickKey(row.File))
-            .Select(group => group
-                .OrderByDescending(row => string.Equals(row.ConversationId, Chat.ActiveConversationId, StringComparison.Ordinal))
-                .First())
-            .OrderBy(row => row.File.UploadedAt)
-            .ToList();
-
-        if (!chatFilesLoaded)
-        {
-            chatFilesLoaded = true;
-            foreach (var row in chatFiles.Where(row => !row.File.IsImage))
-                tickedChatFiles.Add(TickKey(row.File));
-        }
-        // Ticks for files that vanished from the conversation must not ride into the save.
-        tickedChatFiles.RemoveWhere(key => chatFiles.All(row => !string.Equals(TickKey(row.File), key, StringComparison.Ordinal)));
-        StateHasChanged();
-    }
-
-    private static string TickKey(AiConversationAttachment file) =>
-        $"{file.FileName.ToLowerInvariant()}|{file.SizeBytes}";
-
-    private void ToggleChatFile(ChatFileRow row)
-    {
-        var key = TickKey(row.File);
-        if (!tickedChatFiles.Remove(key)) tickedChatFiles.Add(key);
-    }
-
-    /// <summary>
-    /// Copies the ticked chat files onto the order, one command per source conversation (the
-    /// server checks each conversation is the caller's own). Successes untick and fold into the
-    /// existing-attachments list; a failure leaves its ticks in place and returns the server's
-    /// sentence, so save-again only re-sends what missed — the same shape as the staged uploads.
-    /// </summary>
-    private async Task<string?> CopyTickedChatFilesAsync(string workOrderId)
-    {
-        if (tickedChatFiles.Count == 0) return null;
-        var failures = new List<string>();
-        foreach (var group in chatFiles
-                     .Where(row => tickedChatFiles.Contains(TickKey(row.File)))
-                     .GroupBy(row => row.ConversationId))
-        {
-            var picked = group.ToList();
-            try
-            {
-                existingAttachments = (await WorkOrderAttachments.AttachFromChatAsync(
-                    workOrderId, group.Key, picked.Select(row => row.File.AttachmentId).ToList())).ToList();
-                foreach (var row in picked) tickedChatFiles.Remove(TickKey(row.File));
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                failures.Add(ex.Message);
-            }
-        }
-        if (failures.Count == 0) return null;
-        return "The chat file(s) couldn't be copied onto the order: " + string.Join(" ", failures)
-            + " — the order itself saved; add the file(s) from its PO page.";
     }
 
     protected override async Task OnParametersSetAsync()
@@ -251,7 +87,6 @@ public partial class ManualWorkOrderModal : IDisposable
         if (!IsOpen)
         {
             seeded = false;
-            initialDraftPublished = false;
             return;
         }
         if (seeded) return;
@@ -272,12 +107,6 @@ public partial class ManualWorkOrderModal : IDisposable
         existingAttachments = new List<WorkOrderAttachment>();
         attachmentNote = null;
         attachmentError = null;
-        chatFiles = new List<ChatFileRow>();
-        tickedChatFiles.Clear();
-        chatFilesLoaded = false;
-        // Fire-and-forget on purpose: the list arriving late costs nothing (the section simply
-        // appears), while awaiting it would hold the whole dialog's seeding on a network call.
-        if (AssistantTaskActive) _ = ReloadChatFilesAsync();
         if (IsEditing)
         {
             await LoadExistingAttachmentsAsync();
@@ -395,12 +224,9 @@ public partial class ManualWorkOrderModal : IDisposable
                     DepositRequired: draft.DepositRequired,
                     DepositPercent: draft.DepositPercent), CancellationToken.None);
                 var editAttachmentNote = await UploadStagedAttachmentsAsync(Editing.Order.WorkOrderId);
-                var editChatNote = await CopyTickedChatFilesAsync(Editing.Order.WorkOrderId);
                 seeded = false; // reseed fresh on next open
                 await OnSaved.InvokeAsync();
-                var editNote = string.Join(" ", new[] { editAttachmentNote, editChatNote }
-                    .Where(note => !string.IsNullOrWhiteSpace(note)));
-                if (!string.IsNullOrWhiteSpace(editNote)) await OnPoEmailNote.InvokeAsync(editNote);
+                if (!string.IsNullOrWhiteSpace(editAttachmentNote)) await OnPoEmailNote.InvokeAsync(editAttachmentNote);
                 return;
             }
 
@@ -415,13 +241,8 @@ public partial class ManualWorkOrderModal : IDisposable
                 DepositPercent: draft.DepositPercent,
                 UncoveredCostCentresAcknowledged: uncoveredCostCentres.Count > 0), CancellationToken.None);
 
-            // Step 1.5 — the record-keeping attachments, straight onto the fresh order: the
-            // staged files from this computer, then the ticked quotes off the assistant chat
-            // (copied server-side, store to store).
+            // Step 1.5 — the record-keeping attachments, straight onto the fresh order.
             attachmentNote = await UploadStagedAttachmentsAsync(createdOrder.WorkOrderId) ?? attachmentNote;
-            var chatCopyNote = await CopyTickedChatFilesAsync(createdOrder.WorkOrderId);
-            if (chatCopyNote is not null)
-                attachmentNote = string.IsNullOrWhiteSpace(attachmentNote) ? chatCopyNote : $"{attachmentNote} {chatCopyNote}";
 
             // Step 2 — the package, with the fresh order already assigned. Never for a draft:
             // packages carry approved scope, and a draft hasn't been approved yet.

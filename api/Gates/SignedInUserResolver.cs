@@ -37,7 +37,20 @@ public sealed class SignedInUserResolver
         var now = DateTimeOffset.UtcNow;
         if (cache.Get(session.SessionId, now) is { } cached) return cached;
 
-        var email = session.Email;
+        var user = await ResolveByEmailAsync(session.Email, cancellationToken);
+        if (user is null) return null;
+        cache.Set(session.SessionId, user, session.ExpiresAt, now);
+        return user;
+    }
+
+    /// <summary>
+    /// The directory identity and roles behind an already-authenticated email — the shared tail of
+    /// the cookie path above and the MCP connector's bearer-token path (Features/Mcp). Null when
+    /// the directory row has been revoked: however the caller authenticated, a revoked user must
+    /// read as "not signed in".
+    /// </summary>
+    public async Task<SignedInUser?> ResolveByEmailAsync(string email, CancellationToken cancellationToken)
+    {
         var directoryUser = await context.DirectoryUsers
             .AsNoTracking()
             .FirstOrDefaultAsync(row => row.Email == email, cancellationToken);
@@ -48,9 +61,7 @@ public sealed class SignedInUserResolver
         var displayName = string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
         var roles = await ResolveRolesAsync(email, cancellationToken);
 
-        var user = new SignedInUser(email, displayName, roles, directoryUser?.SubcontractorId);
-        cache.Set(session.SessionId, user, session.ExpiresAt, now);
-        return user;
+        return new SignedInUser(email, displayName, roles, directoryUser?.SubcontractorId);
     }
 
     private async Task<IReadOnlyList<Role>> ResolveRolesAsync(string email, CancellationToken cancellationToken)

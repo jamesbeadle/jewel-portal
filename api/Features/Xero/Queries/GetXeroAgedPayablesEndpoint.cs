@@ -14,9 +14,11 @@ public sealed class GetXeroAgedPayablesEndpoint
     // shows this audience every bill and its amount due; the aged report is an aggregation of
     // the same figures, not a widening. Deliberately looser than the Cash Summary's
     // directors-only gate (no bank balances here). Admins pass because Role.Admin is included
-    // explicitly.
+    // explicitly. Accounts joined 2026-08-27: the Weekly Cashflow — the accountant's working
+    // tool — is seeded from exactly this read, and the bills owed are his day job anyway.
     private static readonly RoleSet AllowedToViewPayables = RoleSet.Of(
-        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
+        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
+        JpmsRoles.Accounts);
 
     private readonly SignedInUserResolver users;
     private readonly IQueryHandler<GetXeroAgedPayables, XeroAgedPayablesSnapshot> handler;

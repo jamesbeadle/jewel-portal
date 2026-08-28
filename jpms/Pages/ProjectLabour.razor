@@ -7,8 +7,6 @@
 @inject CostCentersReadModel CostCenters
 @inject NavigationManager Nav
 @inject IQueryClient Queries
-@inject AiTaskState AiTasks
-@inject ChatPanelState Chat
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -379,11 +377,11 @@ else
     <Modal IsOpen="@addDayOpen" Title="Add a day"
            ConfirmLabel="@(isAddingManual ? "Adding…" : "Add day")" ConfirmDisabled="@isAddingManual"
            OnCancel="CloseAddDay" OnConfirm="AddManualAsync"
-           ChatAware="true" DismissOnOverlayClick="false">
+           DismissOnOverlayClick="false">
         <p class="text-xs text-content-subtle mb-3">For workers who forgot to sign out (or verbal reports), enter their day here — it joins the approval queue as normal.</p>
         <div class="space-y-3">
             <label class="block text-sm text-content-muted">Worker
-                <select class="field mt-1" @bind="manualWorkerId" @bind:after="PublishManualDraft">
+                <select class="field mt-1" @bind="manualWorkerId">
                     <option value="">Worker…</option>
                     @foreach (var assignment in Labour.AssignmentsFor(ProjectId).Where(assignment => assignment.IsActive))
                     {
@@ -392,10 +390,10 @@ else
                 </select>
             </label>
             <label class="block text-sm text-content-muted">Date
-                <input class="field mt-1" type="date" @bind="manualDate" @bind:after="PublishManualDraft" />
+                <input class="field mt-1" type="date" @bind="manualDate" />
             </label>
             <label class="block text-sm text-content-muted">Cost code
-                <select class="field mt-1" @bind="manualCostCode" @bind:after="PublishManualDraft">
+                <select class="field mt-1" @bind="manualCostCode">
                     <option value="">Cost code…</option>
                     @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
                     {
@@ -404,7 +402,7 @@ else
                 </select>
             </label>
             <label class="block text-sm text-content-muted">Hours
-                <input class="field mt-1 w-24" type="number" step="0.5" min="0.5" @bind="manualHours" @bind:after="PublishManualDraft" />
+                <input class="field mt-1 w-24" type="number" step="0.5" min="0.5" @bind="manualHours" />
             </label>
             @if (manualError is not null)
             {
@@ -497,8 +495,6 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Labour.OnChange += StateHasChanged;
         CostCenters.OnChanged += StateHasChanged;
-        AiTasks.OnDraftApplied += HandleAssistantDraft;
-        Nav.LocationChanged += HandleLocationChanged;
         sessionReady = true;
 
         // Revalidate cached data in the background on every visit (stale-while-revalidate —
@@ -519,19 +515,12 @@ else
             // we only need to stop the panels waiting on data that is not coming.
             dataFailed = true;
         }
-
-        await HonourRequestedModalAsync();
     }
 
     public void Dispose()
     {
-        // Leaving the page ends its task — a dangling task ships the dialog's stale JSON with
-        // every later turn and leaves the chat panel lifted above every future modal.
-        EndManualTimesheetTask();
         Labour.OnChange -= StateHasChanged;
         CostCenters.OnChanged -= StateHasChanged;
-        AiTasks.OnDraftApplied -= HandleAssistantDraft;
-        Nav.LocationChanged -= HandleLocationChanged;
     }
 
     private static DateTimeOffset StartOfWeek(DateTimeOffset moment)
@@ -650,7 +639,6 @@ else
     private void CloseAddDay()
     {
         addDayOpen = false;
-        EndManualTimesheetTask();
     }
 
     private async Task AddManualAsync()
@@ -667,146 +655,12 @@ else
             await Labour.AddWorkerTimesheetAsync(ProjectId, manualWorkerId, new DateTimeOffset(DateTime.SpecifyKind(manualDate.Date, DateTimeKind.Unspecified), TimeSpan.Zero), manualHours, manualCostCode);
             manualHours = 0;
             addDayOpen = false;
-            EndManualTimesheetTask();
         }
         catch (Exception failure)
         {
             manualError = DescribeFailure(failure, "Could not add the timesheet — check your connection and try again.");
         }
         finally { isAddingManual = false; }
-    }
-
-    // The assistant's route in: open_modal → ?openModal=manual_timesheet. Same recipe as
-    // manual_variation on the Variations register — the query is cleared through history so F5
-    // does not reopen the dialog, and LocationChanged catches the already-on-this-page case.
-    private bool modalRequestHonoured;
-
-    private bool WantsManualTimesheetFromRoute() =>
-        !modalRequestHonoured
-        && new Uri(Nav.Uri).Query.Contains(
-            $"openModal={ModalCatalog.ManualTimesheet.ModalKey}", StringComparison.OrdinalIgnoreCase);
-
-    private async Task HonourRequestedModalAsync()
-    {
-        if (!WantsManualTimesheetFromRoute()) return;
-
-        // Latched BEFORE the first await: two entry paths (a lifecycle hook and LocationChanged,
-        // which resets the flag) can both enter for one navigation, and both used to cross the
-        // replaceState await before the flag was set — two AiTasks.Start calls, two billed
-        // kick-off turns.
-        modalRequestHonoured = true;
-
-        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
-        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-
-        // Honoured only where this user could have opened the dialog by clicking — the same gate
-        // as ModalCatalog declares (the API's AddWorkerTimesheet gate), said out loud on refusal:
-        // a silently dropped open_modal is the worst failure this feature has.
-        if (Session.ActiveRole is not { } arrivedRole
-            || !ModalCatalog.CanOpen(ModalCatalog.ManualTimesheet, new[] { arrivedRole }))
-        {
-            manualError = "The assistant tried to open the Add-a-day dialog, but the role you are "
-                + "viewing as can't enter timesheets — the MD, the FD, a project manager or an "
-                + "administrator can.";
-            StateHasChanged();
-            return;
-        }
-
-        OpenAddDay();
-
-        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            AiTasks.Start(
-                new AiTask(
-                    TaskKey: "manual-timesheet",
-                    ModalKey: ModalCatalog.ManualTimesheet.ModalKey,
-                    BannerLabel: "Adding a worker's day",
-                    BusyLabel: "Working out the day…",
-                    KickoffMessage:
-                        "Fill in the \"Add a day\" form open beside me from what we were just "
-                        + "discussing: the worker (exactly as this project's list spells them), the "
-                        + "resolved date, the hours in half-hour steps, and the cost code only if "
-                        + "one clearly fits. Say the resolved date back to me in one line. I read "
-                        + "the form and press Add day myself.",
-                    ProjectId: ProjectId,
-                    RecordType: null,
-                    RecordId: null,
-                    RecordReference: null),
-                SerialiseManualState());
-
-            Chat.Open();
-            Chat.SetCoexistence(true);
-        }
-        StateHasChanged();
-    }
-
-    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
-        _ = InvokeAsync(async () =>
-        {
-            if (!sessionReady) return;
-            modalRequestHonoured = false; // a fresh navigation is a fresh request
-            await HonourRequestedModalAsync();
-        });
-
-    private void EndManualTimesheetTask()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.ManualTimesheet.ModalKey) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
-    }
-
-    private string SerialiseManualState()
-    {
-        var workerName = Labour.AssignmentsFor(ProjectId)
-            .FirstOrDefault(assignment => assignment.WorkerId == manualWorkerId)?.WorkerName ?? "";
-        return System.Text.Json.JsonSerializer.Serialize(new
-        {
-            workerName,
-            date = manualDate.ToString("yyyy-MM-dd"),
-            hours = manualHours,
-            costCode = manualCostCode,
-        });
-    }
-
-    private void PublishManualDraft()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.ManualTimesheet.ModalKey) return;
-        AiTasks.UpdateDraft(SerialiseManualState());
-    }
-
-    /// <summary>The model's update_open_modal, landing in the form: merge, never replace — a field
-    /// the assistant did not mention keeps whatever the user chose.</summary>
-    private void HandleAssistantDraft(string fieldsJson)
-    {
-        if (!addDayOpen || AiTasks.Active?.ModalKey != ModalCatalog.ManualTimesheet.ModalKey) return;
-        try
-        {
-            using var parsed = System.Text.Json.JsonDocument.Parse(fieldsJson);
-            var root = parsed.RootElement;
-            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return;
-
-            if (root.TryGetProperty("workerName", out var workerName) && workerName.ValueKind == System.Text.Json.JsonValueKind.String)
-            {
-                var match = Labour.AssignmentsFor(ProjectId).Where(assignment => assignment.IsActive)
-                    .FirstOrDefault(assignment => string.Equals(assignment.WorkerName, workerName.GetString(), StringComparison.OrdinalIgnoreCase));
-                if (match is not null) manualWorkerId = match.WorkerId;
-            }
-            if (root.TryGetProperty("date", out var date) && date.ValueKind == System.Text.Json.JsonValueKind.String
-                && DateTime.TryParse(date.GetString(), out var parsedDate))
-                manualDate = parsedDate.Date;
-            if (root.TryGetProperty("hours", out var hours) && hours.ValueKind == System.Text.Json.JsonValueKind.Number)
-                manualHours = hours.GetDecimal();
-            if (root.TryGetProperty("costCode", out var costCode) && costCode.ValueKind == System.Text.Json.JsonValueKind.String)
-            {
-                var code = costCode.GetString() ?? "";
-                if (CostCenters.Alphabetical.Any(centre => centre.IsActive && centre.Code == code))
-                    manualCostCode = code;
-            }
-        }
-        catch (System.Text.Json.JsonException) { return; }
-
-        AiTasks.UpdateDraft(SerialiseManualState());
-        StateHasChanged();
     }
 
     // ---- Settlement cover sub-view --------------------------------------------------------------

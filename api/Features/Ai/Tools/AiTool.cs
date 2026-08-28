@@ -20,8 +20,13 @@ public enum AiToolKind
 {
     /// <summary>Executes server-side and its result goes back to the model.</summary>
     Read = 0,
-    /// <summary>Returned to the browser to execute. Never touches the server.</summary>
-    Ui = 1
+    /// <summary>Returned to the browser to execute. Never touches the server. Retired with the
+    /// in-portal chat (2026-08-27) — kept so the enum's persisted meaning never shifts.</summary>
+    Ui = 1,
+    /// <summary>Executes server-side and CHANGES something, through the same authorisation,
+    /// validation and command handler its HTTP endpoint uses. Marked so the connector can
+    /// annotate it as non-read-only.</summary>
+    Write = 2
 }
 
 /// <summary>

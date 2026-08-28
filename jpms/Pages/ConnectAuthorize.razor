@@ -1,0 +1,174 @@
+@page "/connect/authorize"
+@layout LandingLayout
+@using System.Net.Http.Json
+@using Jewel.JPMS.Contracts.Connect
+@inject AuthService Auth
+@inject NavigationManager Nav
+@inject HttpClient Http
+
+<PageTitle>Connect an AI tool · JPMS</PageTitle>
+
+@*
+    The consent page of the AI connector's OAuth flow (docs/ai/10-mcp-connector.md). Claude or
+    Perplexity sends the browser to /api/oauth/authorize, which validates the request and lands
+    here with it intact; this page makes sure the user is signed in (bouncing through the normal
+    login with a returnUrl), says WHO is asking, and on Approve asks the server to mint the
+    single-use code and sends the browser back to the AI tool. The server re-validates everything
+    — this page is presentation, not authority.
+*@
+
+<div class="min-h-dvh flex items-center justify-center p-6">
+    <div class="w-full max-w-md">
+        <div class="flex items-center gap-2.5 justify-center mb-8">
+            <JewelIcon Class="w-6 h-6 text-content" />
+            <span class="font-semibold text-content">Jewel Project Management System</span>
+        </div>
+
+        @if (!ready)
+        {
+            <LoadGate IsLoading="true" Prominent="true" Label="Checking the request" />
+        }
+        else if (error is not null)
+        {
+            <div class="panel p-6 text-center">
+                <p class="text-sm text-negative">@error</p>
+                <p class="text-xs text-content-subtle mt-3">
+                    Close this tab and start the connection again from your AI tool. If it keeps
+                    failing, ask an administrator.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="panel p-6">
+                <h1 class="text-xl font-semibold text-content mb-2 text-center">
+                    Connect @(clientName ?? "an AI tool")
+                </h1>
+                <p class="text-sm text-content-muted leading-relaxed text-center mb-5">
+                    <span class="font-medium text-content">@(clientName ?? "This tool")</span> is asking to
+                    use the portal as
+                    <span class="font-medium text-content">@Auth.CurrentUser?.DisplayName</span>
+                    (@Auth.CurrentUser?.Email).
+                </p>
+
+                <div class="rounded-lg bg-surface-raised border border-line px-4 py-3 text-xs text-content-subtle leading-relaxed mb-5">
+                    It will be able to read what you can see in the portal and take the small set of
+                    actions the connector allows (posting request messages, managing to-dos, saving
+                    AI skills) — always as you, with every call recorded in the activity log. You can
+                    disconnect it at any time from the portal's AI Connections page.
+                </div>
+
+                @if (approveError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@approveError</p>
+                }
+
+                <div class="flex gap-3">
+                    <button type="button" class="btn-secondary flex-1" disabled="@busy" @onclick="() => DecideAsync(false)">Cancel</button>
+                    <button type="button" class="btn-primary flex-1" disabled="@busy" @onclick="() => DecideAsync(true)">
+                        @(busy ? "Connecting…" : "Approve")
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool ready;
+    private bool busy;
+    private string? error;
+    private string? approveError;
+    private string? clientName;
+
+    private string clientId = "";
+    private string redirectUri = "";
+    private string state = "";
+    private string codeChallenge = "";
+    private string scope = "";
+    private string? resource;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Auth.EnsureInitialisedAsync();
+        if (!Auth.IsSignedIn)
+        {
+            // Through the normal sign-in, then straight back here with the request intact.
+            var returnUrl = Uri.EscapeDataString(new Uri(Nav.Uri).PathAndQuery);
+            Nav.NavigateTo($"/login?returnUrl={returnUrl}", replace: true);
+            return;
+        }
+
+        // Parsed by hand — System.Web's helper isn't worth trusting to WASM trimming (the
+        // ProjectWorkOrders lesson).
+        var query = ParseQuery(new Uri(Nav.Uri).Query);
+        clientId = query.GetValueOrDefault("client_id", "");
+        redirectUri = query.GetValueOrDefault("redirect_uri", "");
+        state = query.GetValueOrDefault("state", "");
+        codeChallenge = query.GetValueOrDefault("code_challenge", "");
+        scope = query.GetValueOrDefault("scope", "");
+        resource = query.TryGetValue("resource", out var found) && found.Length > 0 ? found : null;
+
+        if (clientId.Length == 0 || redirectUri.Length == 0 || codeChallenge.Length == 0)
+        {
+            error = "This connect request is incomplete — it did not arrive through the AI tool's sign-in flow.";
+            ready = true;
+            return;
+        }
+
+        try
+        {
+            var info = await Http.GetFromJsonAsync<ConnectClientInfo>(
+                $"/api/oauth/client-info?client_id={Uri.EscapeDataString(clientId)}");
+            clientName = info?.ClientName;
+        }
+        catch
+        {
+            error = "This connect request names a tool the portal does not recognise. Start the connection again from your AI tool.";
+        }
+        ready = true;
+    }
+
+    private static Dictionary<string, string> ParseQuery(string query)
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            if (separator <= 0) continue;
+            values[Uri.UnescapeDataString(pair[..separator])] =
+                Uri.UnescapeDataString(pair[(separator + 1)..].Replace('+', ' '));
+        }
+        return values;
+    }
+
+    private async Task DecideAsync(bool approved)
+    {
+        if (busy) return;
+        busy = true;
+        approveError = null;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/oauth/approve",
+                new ApproveConnectRequest(clientId, redirectUri, state, codeChallenge, scope, resource, approved));
+            if (!response.IsSuccessStatusCode)
+            {
+                approveError = "The portal refused this connect request. Start the connection again from your AI tool.";
+                return;
+            }
+            var outcome = await response.Content.ReadFromJsonAsync<ApproveConnectResponse>();
+            if (outcome is null || string.IsNullOrEmpty(outcome.RedirectTo))
+            {
+                approveError = "Something went wrong finishing the connection. Try again.";
+                return;
+            }
+            // Back to the AI tool — an external URL, so a full load, not the SPA router.
+            Nav.NavigateTo(outcome.RedirectTo, forceLoad: true);
+        }
+        catch
+        {
+            approveError = "Couldn't reach the portal — check your connection and try again.";
+        }
+        finally { busy = false; }
+    }
+}

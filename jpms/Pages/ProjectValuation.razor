@@ -13,8 +13,6 @@
 @inject IVariationStore Variations
 @inject IClientCostReferenceStore ClientReferences
 @inject NavigationManager Nav
-@inject AiTaskState AiTasks
-@inject ChatPanelState Chat
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -101,17 +99,6 @@ else
            against it, so the card waits for both — half the picture names the wrong next action,
            and "No claim selected" is a real answer that must not be shown as a guess. *@
         <LoadGate IsLoading="@(!ClaimReady)" Prominent="true" Label="Loading the claim">
-        @* An assistant open_modal request this page had to refuse — said out loud, because a
-           silently dropped open_modal leaves the model narrating a dialog that never appeared. *@
-        @if (assistantRouteError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
-                @assistantRouteError
-                <button type="button" class="text-xs text-content-subtle underline underline-offset-4 ml-2"
-                        @onclick="() => assistantRouteError = null">Dismiss</button>
-            </p>
-        }
-
         <ClaimProgressDialog ProjectId="@ProjectId" IsOpen="claimProgressOpen" Claim="@Selected"
                              OnClose="CloseClaimProgress" OnSaved="ClaimProgressSaved" />
 
@@ -889,22 +876,10 @@ else
         // Revalidate the cost-centre master (stale-while-revalidate) — the report table's
         // Variations section and the line form both offer it as a dropdown.
         _ = CostCenters.ListAllAsync();
-        // The assistant's route in (open_modal → ?openModal=claim_progress) and what this page
-        // reports to it every hop.
-        // The provider is cleared by reference, so the same delegate instance must be kept.
-        Chat.SetPageNoteProvider(pageNoteProvider = PageNote);
-        Nav.LocationChanged += HandleLocationChanged;
         sessionReady = true;
         // The claim card's stage needs the invoice list from first render (the invoices
         // section reports changes later via OnInvoicedToDateChanged).
         await RefreshInvoicesAsync();
-        await HonourRequestedModalAsync();
-    }
-
-    // Belt: covers arrivals where the router does re-set parameters.
-    protected override async Task OnParametersSetAsync()
-    {
-        if (sessionReady) await HonourRequestedModalAsync();
     }
 
     private void OnStoreChanged()
@@ -1144,176 +1119,26 @@ else
         Store.OnChange -= OnStoreChanged;
         Retention.OnChange -= OnStoreChanged;
         Projects.OnChanged -= OnStoreChanged;
-        if (pageNoteProvider is not null) Chat.ClearPageNoteProvider(pageNoteProvider);
-        Nav.LocationChanged -= HandleLocationChanged;
-        // Leaving the tab ends its dialog task — a dangling task ships this dialog's stale JSON
-        // with every later turn and leaves the chat panel lifted above every future modal.
-        EndClaimProgressTask();
     }
 
-    // ---- Set % complete: the dialog, by hand and by the assistant (claim_progress) ------------
+    // ---- Set % complete: the dialog ------------------------------------------------------------
 
     private bool claimProgressOpen;
-    private string? assistantRouteError;
-    private Func<string?>? pageNoteProvider;
 
-    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
-    // for the life of this component. This is what stops a later repaint re-honouring it.
-    private bool modalRequestHonoured;
-
-    private bool ClaimProgressTaskActive =>
-        AiTasks.Active?.ModalKey == ModalCatalog.ClaimProgress.ModalKey
-        && AiTasks.Active.ProjectId == ProjectId;
-
-    private bool WantsClaimProgressFromRoute() =>
-        !modalRequestHonoured
-        && new Uri(Nav.Uri).Query.Contains(
-            $"openModal={ModalCatalog.ClaimProgress.ModalKey}", StringComparison.OrdinalIgnoreCase);
-
-    private AiTask ClaimProgressTask(ValuationClaim claim, string? kickoff) =>
-        new(
-            TaskKey: "claim-progress",
-            ModalKey: ModalCatalog.ClaimProgress.ModalKey,
-            BannerLabel: $"Setting % complete on {claim.DisplayName}",
-            BusyLabel: "Reading the valuation report and the evidence…",
-            KickoffMessage: kickoff,
-            ProjectId: ProjectId,
-            RecordType: null,
-            RecordId: null,
-            RecordReference: claim.DisplayName);
-
-    // Opened by hand: the task attaches SILENTLY — no kick-off, no billed turn — so the assistant
-    // knows the dialog is open (its list rides with every turn) and can fill it when asked.
     private void OpenClaimProgress()
     {
-        if (Selected is not { Status: ValuationClaimStatus.Draft } claim) return;
+        if (Selected is not { Status: ValuationClaimStatus.Draft }) return;
         claimProgressOpen = true;
-        if (!ClaimProgressTaskActive && Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            AiTasks.Start(ClaimProgressTask(claim, kickoff: null), "{}");
-            Chat.SetCoexistence(true);
-        }
     }
 
     private void CloseClaimProgress()
     {
         claimProgressOpen = false;
-        EndClaimProgressTask();
     }
 
     private void ClaimProgressSaved()
     {
         claimProgressOpen = false;
-        EndClaimProgressTask(); // Saved: the dialog is gone, so its task goes with it.
         // The store re-fetched the claim's entries and the claims (totals re-frozen) on save.
-    }
-
-    private void EndClaimProgressTask()
-    {
-        if (!ClaimProgressTaskActive) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
-    }
-
-    /// <summary>
-    /// Honoured only where this user could have opened the dialog by clicking — the assistant can
-    /// route somebody to a page; it cannot get them past a gate. The query is cleared first,
-    /// through history rather than the router, so F5 does not reopen the dialog and re-bill a
-    /// kick-off turn. Every refusal is said out loud in the banner.
-    /// </summary>
-    private async Task HonourRequestedModalAsync()
-    {
-        if (!WantsClaimProgressFromRoute()) return;
-
-        // Latched BEFORE the first await: OnParametersSetAsync and LocationChanged can both enter
-        // this method for one navigation — two AiTasks.Start calls, two billed kick-off turns.
-        modalRequestHonoured = true;
-
-        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
-        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-
-        if (Session.ActiveRole is not { } activeRole || !ModalCatalog.CanOpen(ModalCatalog.ClaimProgress, new[] { activeRole }))
-        {
-            assistantRouteError = "The assistant tried to open the Set % complete dialog, but the role you are viewing as can't record % complete.";
-            StateHasChanged();
-            return;
-        }
-
-        // The dialog needs the claims (and lines) to be in — bounded wait for the store.
-        for (var i = 0; i < 30 && !ClaimReady; i++) await Task.Delay(100);
-        if (!ClaimReady)
-        {
-            assistantRouteError = "The assistant tried to open the Set % complete dialog, but the valuation report has not loaded yet — try again in a moment.";
-            StateHasChanged();
-            return;
-        }
-        // The store may have had this project cached (another tab warmed it) and not yet raised
-        // OnChange, which is where the default selection is normally made.
-        if (string.IsNullOrEmpty(selectedClaimId) && Claims.Count > 0) selectedClaimId = Claims[0].ValuationClaimId;
-        if (Selected is not { } claim)
-        {
-            assistantRouteError = "The assistant tried to open the Set % complete dialog, but this project has no claim yet — start one first.";
-            StateHasChanged();
-            return;
-        }
-        if (claim.Status != ValuationClaimStatus.Draft)
-        {
-            assistantRouteError = $"The assistant tried to open the Set % complete dialog, but {claim.DisplayName} is {claim.Status.DisplayName()} — % complete can only be recorded on a Draft claim.";
-            StateHasChanged();
-            return;
-        }
-
-        claimProgressOpen = true;
-
-        if (DesktopNavigation.CanUseAssistant(activeRole))
-        {
-            AiTasks.Start(
-                ClaimProgressTask(claim,
-                    // A user turn, so it outranks the system prompt — it has to say the same thing.
-                    kickoff: $"The \"Set % complete\" dialog for {claim.DisplayName} is open beside me. Put in the lines "
-                        + "whose cumulative % complete should change, from the evidence we were working with — the "
-                        + "attached file or the tagged emails above all (get_valuation_context for every line's id and "
-                        + "current %, find_in_source and read_source for the evidence). Send only lines that change, "
-                        + "as cumulative percentages, in ONE update, and tell me in one line what you changed and what "
-                        + "you could not establish."),
-                "{}");
-            Chat.Open();
-            Chat.SetCoexistence(true);
-        }
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Braces: the case the lifecycle hooks MISS. When the panel's open_modal fires while the user
-    /// is ALREADY on this tab, the navigation changes only the query string — the route parameter
-    /// values are identical, so neither OnInitializedAsync nor OnParametersSetAsync runs. This
-    /// event is the one signal that always fires; history.replaceState does not raise it, so
-    /// honouring cannot loop.
-    /// </summary>
-    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
-        _ = InvokeAsync(async () =>
-        {
-            if (!sessionReady) return;
-            modalRequestHonoured = false; // a fresh navigation is a fresh request
-            await HonourRequestedModalAsync();
-        });
-
-    /// <summary>What this page reports to the assistant every hop, beyond the route: which claim
-    /// is selected and whether it is Draft, the previous claim, how many lines the report has, and
-    /// whether the Set % complete dialog is open.</summary>
-    private string? PageNote()
-    {
-        if (!Store.ReportLoadedFor(ProjectId)) return null;
-        var lines = Store.LinesFor(ProjectId);
-        var note = Selected is { } claim
-            ? $"The selected claim is «{claim.DisplayName}» ({claim.Status.DisplayName()})"
-              + (PreviousClaim is { } prev ? $", previous «{prev.DisplayName}» ({prev.Status.DisplayName()})" : ", the first claim")
-              + $"; the report has {lines.Count} line{(lines.Count == 1 ? "" : "s")}."
-            : "No claim exists yet — % complete needs a Draft claim, started here with New claim.";
-        if (claimProgressOpen)
-            note += " The Set % complete dialog is open" + (ClaimProgressTaskActive ? " (its list is in the task state)." : ".");
-        else if (Selected is { Status: ValuationClaimStatus.Draft } && CanRecordEntries)
-            note += " Set % complete (claim_progress) can be opened here.";
-        return note;
     }
 }

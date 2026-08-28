@@ -1,4 +1,3 @@
-@inject ChatPanelState Chat
 @implements IDisposable
 
 @if (IsOpen)
@@ -56,7 +55,6 @@
     /// conversation instead of underneath it (.modal-overlay-chat), and ChatPanel raises itself
     /// above the overlay so it stays live. Off by default, so every other dialog is untouched.
     /// </summary>
-    [Parameter] public bool ChatAware { get; set; }
 
     /// <summary>
     /// Clicking the backdrop cancels. Set false for a dialog holding state that reopening cannot
@@ -65,25 +63,12 @@
     /// </summary>
     [Parameter] public bool DismissOnOverlayClick { get; set; } = true;
 
-    // Only a chat-aware dialog listens: otherwise all ~74 modals in the app would re-render every
-    // time the panel slides open or shut, for a class name none of them use.
-    private bool subscribed;
-
-    private string OverlayClass =>
-        ChatAware && Chat.IsOpen ? "modal-overlay modal-overlay-chat" : "modal-overlay";
-
-    protected override void OnInitialized()
-    {
-        if (!ChatAware) return;
-        Chat.OnChange += StateHasChanged;
-        subscribed = true;
-    }
+    private string OverlayClass => "modal-overlay";
 
     private Task HandleOverlayClick() =>
         DismissOnOverlayClick ? OnCancel.InvokeAsync() : Task.CompletedTask;
 
     public void Dispose()
     {
-        if (subscribed) Chat.OnChange -= StateHasChanged;
     }
 }

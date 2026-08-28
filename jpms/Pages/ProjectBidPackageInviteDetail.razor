@@ -21,8 +21,6 @@
 @inject IBidPackageAttachmentStore PackageAttachments
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel SubsReadModel
 @inject NavigationManager Nav
-@inject AiTaskState AiTasks
-@inject ChatPanelState Chat
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -706,7 +704,7 @@ else
                                                ? "The forward sends now from the projects mailbox and files itself back into this list."
                                                : "The reply sends now from the projects mailbox and files itself back into this list.")"
                                            OnSent="OnCommsReplySent" OnCancel="CancelCommsCompose"
-                                           OnFieldsEdited="PublishTenderComposerState" />
+                                           />
                     </div>
                 }
                 @if (emails.Count == 0)
@@ -1112,13 +1110,6 @@ else
                         <li>@issue</li>
                     }
                 </ul>
-                @if (extractSourceEmail is not null && CanUseAssistantForReply)
-                {
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <button type="button" class="btn-secondary px-2 py-1 text-xs" @onclick="StartTenderReplyTask">Draft supplier reply</button>
-                        <span class="text-xs text-content-subtle">Opens the reply composer with the assistant drafting an email asking for what's missing — you review and press Send.</span>
-                    </div>
-                }
             </div>
         }
         else if (extractSourceEmail is not null && extractComplete)
@@ -1440,14 +1431,6 @@ else
     private IReadOnlyList<DropdownMenu.Item> HeaderActions()
     {
         var items = new List<DropdownMenu.Item>();
-        if (CanEdit && Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            items.Add(new DropdownMenu.Item("Create with AI",
-                OnSelect: EventCallback.Factory.Create(this, StartCreateWithAi),
-                Hint: "The assistant reads this package's summary, line items, documents and tagged "
-                    + "emails, then fills the editing dialogs beside the chat for your review — "
-                    + "nothing saves until you press the dialog's own button."));
-        }
         items.Add(IsClosed
             ? new DropdownMenu.Item("Reopen package",
                 OnSelect: EventCallback.Factory.Create(this, ReopenPackage),
@@ -1462,301 +1445,6 @@ else
         return items;
     }
 
-    // ---- Create with AI: the assistant fills the editing dialogs over the conversation ----------
-    //
-    // The manual_variation pattern applied to this record: a dialog opens beside the chat, an
-    // AiTask carries its draft state, the kickoff (a user turn) says what to do, and the model's
-    // update_open_modal proposals land through AiTaskState.OnDraftApplied. Filling writes NOTHING —
-    // the user reads every field and presses the dialog's own Save. The takeover overlay
-    // (AssistantControlling) comes on whenever a turn's UI action lands, exactly as elsewhere.
-
-    private void StartCreateWithAi()
-    {
-        if (busy || package is null || !CanEdit) return;
-        if (Session.ActiveRole is not { } role || !DesktopNavigation.CanUseAssistant(role)) return;
-        activeTab = "details";
-        EditDetails();
-        StartDetailsTask(userInitiated: true);
-        StateHasChanged();
-    }
-
-    private void StartDetailsTask(bool userInitiated)
-    {
-        if (package is null || Session.ActiveRole is not { } role || !DesktopNavigation.CanUseAssistant(role)) return;
-        AiTasks.Start(
-            new AiTask(
-                TaskKey: "bid-package-details",
-                ModalKey: ModalCatalog.BidPackageDetails.ModalKey,
-                BannerLabel: $"Building out {package.Reference}",
-                BusyLabel: "Reading the package, its documents and tagged emails…",
-                // A user turn, so it outranks the system prompt — it has to say the same thing.
-                KickoffMessage: userInitiated
-                    ? "Build out this bid package in the \"Edit package details\" dialog open beside "
-                      + "me. First gather the context: get_bid_package_context for the title, trade, "
-                      + "current summary, lines and document names; read_record_emails (record_type "
-                      + "bid_package) for the tagged tender emails, and read_email_attachment on any "
-                      + "attachment that looks like a specification, schedule or quote; "
-                      + "list_cost_codes for the real cost codes. Then send BOTH fields in ONE "
-                      + "update_open_modal: the specification summary (one point per line, what the "
-                      + "package covers and to what standard) and the full line schedule — "
-                      + "measurable lines a subcontractor can price, each with trade, unit, quantity "
-                      + "and a cost code, keeping any existing lines that are still right. Tell me "
-                      + "in one line anything you could not establish."
-                    : "Fill in the \"Edit package details\" dialog open beside me from this bid "
-                      + "package's context — get_bid_package_context and its tagged emails, if you "
-                      + "have not read them already. Send BOTH fields in one update: the "
-                      + "specification summary and the full line schedule (it replaces the list; "
-                      + "keep existing lines that are still right). Tell me in one line anything "
-                      + "you could not establish.",
-                ProjectId: ProjectId,
-                RecordType: "bid_package",
-                RecordId: BidPackageId,
-                RecordReference: package.Reference),
-            CurrentDetailsDraftJson());
-        Chat.Open();
-        Chat.SetCoexistence(true);
-    }
-
-    private void EndPackageAiTask(string modalKey)
-    {
-        if (AiTasks.Active?.ModalKey != modalKey) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
-    }
-
-    // ---- Draft supplier reply: the assistant answers an incomplete tender ---------------------
-    //
-    // The extraction names the gaps; this opens the Emails tab's own Reply composer on the tender
-    // email (it sends from the projects mailbox and files back under the package by tag) and
-    // starts a tender_reply task so the assistant writes the ask-for-what's-missing reply into
-    // it. Same contract as every task dialog: filling writes nothing — the user reads the reply
-    // and presses Send themselves.
-
-    private MailReplyComposer? commsComposer;
-
-    // An assistant proposal that lands before the composer's first render (@ref is only assigned
-    // after render) — held here and applied on the composer's first publish instead of vanishing.
-    private string? pendingTenderReplyFields;
-
-    /// <summary>Mirrors the Reply composer's live fields into the tender_reply task's draft, so
-    /// the model reads the form as it ACTUALLY stands — the prefilled envelope and every user
-    /// edit. Fired by the composer on prefill, on every keystroke and after applied proposals.</summary>
-    private void PublishTenderComposerState()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.TenderReply.ModalKey) return;
-        if (commsComposer is not { } composer) return;
-        if (pendingTenderReplyFields is { } queued)
-        {
-            pendingTenderReplyFields = null;
-            composer.ApplyAssistantFields(queued);
-        }
-        AiTasks.UpdateDraft(composer.CurrentFieldsJson());
-    }
-
-    private bool CanUseAssistantForReply =>
-        Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role);
-
-    private void StartTenderReplyTask()
-    {
-        if (package is null || extractSourceEmail is not { } email) return;
-        if (!CanUseAssistantForReply) return;
-
-        var issues = extractIssues.ToList();
-        showExtractModal = false;
-        activeTab = "emails";
-        StartCommsCompose(email, forward: false);
-
-        var sender = string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName;
-        AiTasks.Start(
-            new AiTask(
-                TaskKey: "tender-reply",
-                ModalKey: ModalCatalog.TenderReply.ModalKey,
-                BannerLabel: $"Replying about the {package.Reference} tender",
-                BusyLabel: "Reading the tender and drafting the reply…",
-                // A user turn, so it outranks the system prompt — it has to say the same thing.
-                KickoffMessage:
-                    $"{sender}'s tender submission on this bid package is missing information. The "
-                    + "Reply composer open beside me is anchored to their email with the recipients "
-                    + "and subject prefilled. Draft the reply body: thank them for their tender, list "
-                    + "exactly what's missing so they can complete it, and ask them to return the "
-                    + "completed pricing schedule workbook. The gaps found when extracting their tender:\n"
-                    + string.Join("\n", issues.Select(issue => $"- {issue}"))
-                    + "\nRead get_bid_package_context and the tagged emails (read_record_emails, "
-                    + "record_type bid_package) if you need the line schedule or their exact wording. "
-                    + "Then send the reply as PLAIN TEXT in ONE update_open_modal — body only, unless a "
-                    + "prefilled field is blank. I review it and press Send myself.",
-                ProjectId: ProjectId,
-                RecordType: "bid_package",
-                RecordId: BidPackageId,
-                RecordReference: package.Reference),
-            "{}");
-        Chat.Open();
-        Chat.SetCoexistence(true);
-    }
-
-    private string CurrentDetailsDraftJson() => JsonSerializer.Serialize(new
-    {
-        summary = specDraft,
-        lines = lineDrafts.Select(draft => new
-        {
-            trade = draft.Trade,
-            description = draft.Description,
-            unit = draft.Unit,
-            quantity = draft.Quantity,
-            costCode = draft.CostCode
-        })
-    });
-
-    /// <summary>
-    /// The assistant's update_open_modal proposal, raw fields JSON. Summary and schedule arrive
-    /// together (the dialog holds both); either alone still applies, so a partial proposal keeps
-    /// what the user has. Anything malformed costs the model its update, never the page.
-    /// </summary>
-    private void ApplyAssistantDraft(string fieldsJson)
-    {
-        // tender_reply: the proposal belongs to the Reply composer, not the details dialog. The
-        // composer owns its state; the page only forwards and mirrors the result into the task's
-        // draft so the model sees what the form now says.
-        if (AiTasks.Active?.ModalKey == ModalCatalog.TenderReply.ModalKey)
-        {
-            if (commsComposer is { } composer)
-            {
-                if (composer.ApplyAssistantFields(fieldsJson))
-                {
-                    AiTasks.UpdateDraft(composer.CurrentFieldsJson());
-                    StateHasChanged();
-                }
-            }
-            else
-            {
-                // The composer has not rendered yet (its @ref lands after the first render) —
-                // hold the proposal and apply it on the composer's first publish rather than
-                // dropping it on the floor while the model narrates success. Publishing the held
-                // fields as the draft now both signals acceptance (so the panel does not report
-                // "nothing was filled") and gives the model a truthful next-hop preview — the
-                // composer applies these same fields the moment it renders.
-                pendingTenderReplyFields = fieldsJson;
-                AiTasks.UpdateDraft(fieldsJson);
-            }
-            return;
-        }
-
-        // Applied even when the details dialog is not showing: the drafts are page state and the
-        // dialog re-opens onto them, so a proposal that lands just after the user closed it is
-        // waiting when they open it again — matching variation_draft, and never a silent drop.
-        try
-        {
-            using var document = JsonDocument.Parse(fieldsJson);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object) return;
-            var changed = false;
-
-            if (root.TryGetProperty("lines", out var lines) && lines.ValueKind == JsonValueKind.Array)
-            {
-                var drafts = new List<LineDraft>();
-                foreach (var item in lines.EnumerateArray())
-                {
-                    if (item.ValueKind != JsonValueKind.Object) continue;
-                    var description = ReadJsonString(item, "description");
-                    if (string.IsNullOrWhiteSpace(description)) continue;
-                    drafts.Add(new LineDraft
-                    {
-                        Description = description,
-                        Trade = ReadJsonString(item, "trade") ?? package?.Trade ?? "",
-                        Unit = ReadJsonString(item, "unit") ?? "",
-                        Quantity = item.TryGetProperty("quantity", out var quantity)
-                                   && quantity.ValueKind == JsonValueKind.Number
-                                   && quantity.TryGetDecimal(out var parsed) ? parsed : 1m,
-                        CostCode = ReadJsonString(item, "costCode") ?? ""
-                    });
-                }
-                // An explicitly-sent lines array REPLACES the schedule — the schema says so.
-                // That includes an EMPTY one: "the schedule should be empty" is a real proposal,
-                // and ignoring it silently kept lines the model had decided were wrong. The one
-                // case that still keeps the old schedule is an array whose every item was
-                // malformed — that is a broken update, not an instruction.
-                if (lines.GetArrayLength() == 0 || drafts.Count > 0)
-                {
-                    lineDrafts = drafts;
-                    changed = true;
-                }
-            }
-
-            if (root.TryGetProperty("summary", out var summary) && summary.ValueKind == JsonValueKind.String)
-            {
-                specDraft = summary.GetString() ?? "";
-                changed = true;
-            }
-
-            if (changed)
-            {
-                AiTasks.UpdateDraft(CurrentDetailsDraftJson());
-                _ = InvokeAsync(StateHasChanged);
-            }
-        }
-        catch (JsonException) { }
-    }
-
-    private static string? ReadJsonString(JsonElement element, string name) =>
-        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString() : null;
-
-    // ---- The assistant's route in: open_modal → ?openModal=bid_package_details ----------------
-
-    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
-    // for the life of this component — the flag stops a later repaint re-honouring it. A REAL
-    // navigation carrying openModal= (the assistant's second dialog in one conversation) resets it
-    // in HandleLocationChanged.
-    private bool modalRequestHonoured;
-
-    private void HandleLocationChanged(object? sender, LocationChangedEventArgs e)
-    {
-        if (!e.Location.Contains("openModal=", StringComparison.OrdinalIgnoreCase)) return;
-        modalRequestHonoured = false;
-        _ = InvokeAsync(async () =>
-        {
-            await HonourRequestedModalAsync();
-            StateHasChanged();
-        });
-    }
-
-    /// <summary>
-    /// Honoured only where this user could have opened the dialog by clicking — the assistant can
-    /// route somebody to a page; it cannot get them past a gate. The query is cleared first,
-    /// through history rather than the router, so F5 does not reopen the dialog and re-bill a
-    /// kick-off turn.
-    /// </summary>
-    private async Task HonourRequestedModalAsync()
-    {
-        if (modalRequestHonoured || package is null) return;
-        if (!new Uri(Nav.Uri).Query.Contains(
-                $"openModal={ModalCatalog.BidPackageDetails.ModalKey}", StringComparison.OrdinalIgnoreCase))
-            return;
-
-        // Latched BEFORE the first await: two entry paths (a lifecycle hook and LocationChanged,
-        // which resets the flag) can both enter for one navigation, and both used to cross the
-        // replaceState await before the flag was set — two AiTasks.Start calls, two billed
-        // kick-off turns.
-        modalRequestHonoured = true;
-
-        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
-        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-
-        if (!CanEdit)
-        {
-            // Said out loud — a silent no-op leaves the user (and the model) certain something
-            // deeper is broken.
-            error = "The assistant tried to open the package-details dialog, but the role you are viewing as "
-                + (IsClosed ? "can't edit a closed package — reopen it first." : "can't edit this package.");
-            StateHasChanged();
-            return;
-        }
-
-        activeTab = "details";
-        EditDetails();
-        StartDetailsTask(userInitiated: false);
-        StateHasChanged();
-    }
     // Every query in LoadAsync has had its turn. Some may have failed — that is the point: a gate
     // held open by a fetch that is never coming back is worse than an empty panel.
     private bool loadAttempted;
@@ -1801,6 +1489,7 @@ else
     // The email a Reply or Forward was pressed on (the shared composer opens above the list;
     // sending from a record page sends immediately), which of the two it was, and the
     // confirmation left behind by the last send.
+    private MailReplyComposer? commsComposer;
     private MailboxMessage? commsReplyTo;
     private bool commsComposeIsForward;
     private string? commsReplySent;
@@ -1814,9 +1503,6 @@ else
     private void CancelCommsCompose()
     {
         commsReplyTo = null;
-        // Closing the composer ends the assistant's remit over it (a plain reply has no task —
-        // EndPackageAiTask guards on the modal key, so this is a no-op then).
-        EndPackageAiTask(ModalCatalog.TenderReply.ModalKey);
     }
 
     private async Task OnCommsReplySent(Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome outcome)
@@ -1824,7 +1510,6 @@ else
         var wasForward = commsComposeIsForward;
         commsReplyTo = null;
         commsComposeIsForward = false;
-        EndPackageAiTask(ModalCatalog.TenderReply.ModalKey);
         commsReplySent = outcome.Sent
             ? $"{(wasForward ? "Forward" : "Reply")} sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
             : $"The {(wasForward ? "forward" : "reply")} was saved to the mailbox's Drafts — review and send it from Outlook.";
@@ -1887,10 +1572,6 @@ else
             sessionReady = true;
             Subs.OnChange += OnStoreChanged;
             CostCenters.OnChanged += OnStoreChanged;
-            // The assistant's proposals into the editing dialogs, and its route back onto this
-            // page carrying ?openModal= (same-page query navigation raises LocationChanged only).
-            AiTasks.OnDraftApplied += ApplyAssistantDraft;
-            Nav.LocationChanged += HandleLocationChanged;
             // The project list feeds the reply composer's attachment picker (drawings/photos by
             // project) — revalidated in the background like every other read model here.
             ProjectList.OnChanged += OnStoreChanged;
@@ -1899,9 +1580,6 @@ else
             // Cost centres feed the line-item cost-code selects — best-effort background refresh.
             try { _ = CostCenters.RefreshAsync(CancellationToken.None); } catch { }
             await LoadAsync();
-            // Only once the record is here — an openModal request against a package that failed
-            // to load has nothing to open.
-            await HonourRequestedModalAsync();
         }
         catch (Exception ex)
         {
@@ -1921,11 +1599,6 @@ else
         Subs.OnChange -= OnStoreChanged;
         CostCenters.OnChanged -= OnStoreChanged;
         ProjectList.OnChanged -= OnStoreChanged;
-        AiTasks.OnDraftApplied -= ApplyAssistantDraft;
-        Nav.LocationChanged -= HandleLocationChanged;
-        // Navigating away ends the dialog's remit — a task can't outlive the form it fills.
-        EndPackageAiTask(ModalCatalog.BidPackageDetails.ModalKey);
-        EndPackageAiTask(ModalCatalog.TenderReply.ModalKey);
     }
 
     // Losing the project list should cost the composer its drawing/photo sources, not the page.
@@ -3161,13 +2834,11 @@ else
     private void AddLine()
     {
         lineDrafts.Add(new LineDraft());
-        AiTasks.UpdateDraft(CurrentDetailsDraftJson());
     }
 
     private void RemoveLine(LineDraft draft)
     {
         lineDrafts.Remove(draft);
-        AiTasks.UpdateDraft(CurrentDetailsDraftJson());
     }
 
     private void CancelDetails()
@@ -3175,7 +2846,6 @@ else
         if (busy) return;
         showDetailsModal = false;
         lineDrafts.Clear();
-        EndPackageAiTask(ModalCatalog.BidPackageDetails.ModalKey);
     }
 
     private async Task SaveDetails()
@@ -3215,7 +2885,6 @@ else
 
             showDetailsModal = false;
             lineDrafts.Clear();
-            EndPackageAiTask(ModalCatalog.BidPackageDetails.ModalKey);
         }
         catch { error = "Couldn't save the package details — check what's on the record before retrying, the summary may have saved without the lines."; }
         finally { busy = false; }

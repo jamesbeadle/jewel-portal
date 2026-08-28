@@ -1,3 +1,5 @@
+> **Superseded (2026-08-27).** The in-portal chat this document describes was retired in favour of the MCP connector — see [10-mcp-connector.md](10-mcp-connector.md). Kept as the historical record.
+
 # Orchestration — how the assistant, the screen, the forms and the agents fit together
 
 > Companion to `00-agent-architecture.md` (the ADRs), `01-agent-specifications.md` (the packs) and

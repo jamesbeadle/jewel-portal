@@ -13,9 +13,11 @@ public sealed class GetXeroAgedReceivablesEndpoint
     // The same finance-facing audience as Aged Payables — receivables are the valuation
     // invoices this audience already raises and tracks, aggregated by client, not a widening.
     // Deliberately looser than the Cash Summary's directors-only gate (no bank balances here).
-    // Admins pass because Role.Admin is included explicitly.
+    // Admins pass because Role.Admin is included explicitly. Accounts joined 2026-08-27: the
+    // Weekly Cashflow's cash-in band is seeded from exactly this read.
     private static readonly RoleSet AllowedToViewReceivables = RoleSet.Of(
-        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
+        Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
+        JpmsRoles.Accounts);
 
     private readonly SignedInUserResolver users;
     private readonly IQueryHandler<GetXeroAgedReceivables, XeroAgedReceivablesSnapshot> handler;

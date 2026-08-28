@@ -10,7 +10,10 @@ public enum AgentTrigger
     /// <summary>A queue message — work handed off from elsewhere in the system.</summary>
     Queue = 2,
     /// <summary>A person pressed a button that runs an agent, outside the chat.</summary>
-    Manual = 3
+    Manual = 3,
+    /// <summary>A tool call from the person's own AI tool (Claude, Perplexity…) over the MCP
+    /// connector. A person was in the loop — their tool, their portal identity.</summary>
+    Mcp = 4
 }
 
 public enum AgentOutcome

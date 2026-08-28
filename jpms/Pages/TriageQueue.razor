@@ -30,8 +30,6 @@
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel Projects
 @inject Jewel.JPMS.Features.Subcontractors.SubcontractorsReadModel Subcontractors
 @inject Jewel.JPMS.Features.CostCenters.CostCentersReadModel CostCenters
-@inject AiTaskState AiTasks
-@inject ChatPanelState Chat
 @inject IJSRuntime JS
 @implements IDisposable
 
@@ -869,7 +867,7 @@
                                             </div>
                                             <div>
                                                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">@(replyIsForward ? "Your message *" : "Your reply *")</label>
-                                                <RichTextEditor @bind-Value="replyBody" @bind-Value:after="PublishReplyDraft" MinHeight="180"
+                                                <RichTextEditor @bind-Value="replyBody" MinHeight="180"
                                                                 Placeholder="@(replyIsForward ? "Write the message — the forwarded email is quoted behind it…" : "Write the reply — the whole thread is quoted behind it…")" />
                                             </div>
 
@@ -1238,12 +1236,6 @@
     RenderFragment ComposePaneContent =@<div class="panel p-5">
         <h2 class="text-base font-semibold text-content mb-4">New email</h2>
         <div class="space-y-3">
-        @if (AiTasks.Active?.ModalKey == ModalCatalog.ComposeEmail.ModalKey && Chat.AssistantBusy)
-        {
-            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-accent animate-pulse">
-                The assistant is writing into this form — it merges with anything you type, and nothing sends until you press Send.
-            </p>
-        }
         <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
             Sends from the <span class="font-medium text-content">projects mailbox</span>. Optionally file it to a record so the sent copy shows in that record's correspondence — replies will arrive in the queue either way.
         </p>
@@ -2169,13 +2161,6 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         RequestRegister.OnChange += StateHasChanged;
         workspace.OnChange += StateHasChanged;
-        Nav.LocationChanged += HandleLocationChangedForModal;
-        AiTasks.OnDraftApplied += ApplyAssistantEmailDraft;
-        Chat.OnChange += StateHasChanged; // repaints the "assistant is writing" banner
-        Chat.SetPageNoteProvider(pageNoteProvider = BuildAssistantPageNote);
-        Chat.SetPageProjectProvider(pageProjectProvider = CurrentTriageProjectId);
-        Chat.SetPageMailProvider(pageMailProvider = CurrentSelectedMailId);
-        Chat.SetPageActionHandler(pageActionHandler = HandleAssistantPageActionAsync);
         // The sort preference has to land first — LoadAsync pages the mailbox in this order, so
         // reading it late would fetch the first page the wrong way round. It is a local-storage
         // read, so it costs almost nothing.
@@ -2201,10 +2186,6 @@ else
             LoadUnassignedAsync(),
             LoadTodoAssignableRolesAsync(),
             LoadRecentTriageAsync());
-
-        // The assistant's route in: ?openModal=compose_email opens the New email composer as a
-        // shared task. Honoured after the loads so CanTriage is decided from real session state.
-        await HonourRequestedModalAsync();
 
         // A finder elsewhere (the to-do searches' email results) may have sent one specific email
         // here to be opened — select THAT, on the pile it lives in, instead of the default landing.
@@ -2810,7 +2791,6 @@ else
         // The Outbox's own state deliberately survives here: queuedReplies and the open composer
         // anchor are workspace-level, not per-selection staging. Only the outcome banner clears.
         outboxNote = null;
-        EndReplyTask();
         replyBody = "";
         replyToField = replyCcField = replyBccField = replySubject = "";
         replyShowBcc = false;
@@ -3323,14 +3303,8 @@ else
     // the originals on a forward draft automatically).
     private void OpenReplyComposer(bool forward)
     {
-        // The Reply box is a registered assistant dialog (reply_email). Attach the task
-        // SILENTLY — no kick-off, no billed turn — so "draft this reply" works the moment the
-        // box is open; a FORWARD is not that dialog, so it detaches instead.
-        if (forward) EndReplyTask();
-        else StartReplyTask(withKickoff: false);
-
         replyOpen = true;
-        if (replyIsForward == forward) { PublishReplyDraft(); return; }
+        if (replyIsForward == forward) return;
         replyIsForward = forward;
         replyShowBcc = false;
         if (forward)
@@ -3348,12 +3322,10 @@ else
             replyEnvelopePrefilled = false;
             if (selected is { } item && detail is { } loaded) PrefillReplyEnvelope(item, loaded);
         }
-        PublishReplyDraft();
     }
 
     private void DiscardReplyDraft()
     {
-        EndReplyTask();
         replyOpen = false;
         replyBody = "";
         replyAttachments = Array.Empty<ComposeDraftAttachment>();
@@ -3396,15 +3368,6 @@ else
     private async Task DoApplyAll(bool saveAsDraftOnly, bool allowCrossPathway = false)
     {
         if (busy) return;
-        // The assistant may be mid-turn with staged work still arriving: an Apply now snapshots
-        // and clears under its feet, silently discarding whatever it staged between the snapshot
-        // and the clear — and the next context block then reads as "refused" with no cause.
-        if (Chat.AssistantBusy)
-        {
-            actionError = "The assistant is still working — let it finish before pressing Apply, "
-                + "so nothing it is staging is lost.";
-            return;
-        }
         // Lined-up Outbox replies apply on their own — no selection needed (decision 2026-08-12).
         if (selected is null && queuedReplies.Count == 0) return;
 
@@ -3749,7 +3712,6 @@ else
                 replyOpen = false;
                 replyIsForward = false;
                 replyAttachments = Array.Empty<ComposeDraftAttachment>();
-                EndReplyTask();
             }
 
             // Applied in full: refresh the queue in place — the triager stays on the page they
@@ -3968,13 +3930,6 @@ else
     private async Task DoCreateStagedNow(bool allowCrossPathway = false)
     {
         if (busy) return;
-        // Same guard as Apply: a mid-turn assistant may still be writing into the staged form.
-        if (Chat.AssistantBusy)
-        {
-            actionError = "The assistant is still working — let it finish before pressing Create now, "
-                + "so nothing it is staging is lost.";
-            return;
-        }
         if (selected is not { } anchor || stagedCreate is not { } staged) return;
         if (!StagedCreateReady)
         {
@@ -4106,1004 +4061,10 @@ else
         }
     }
 
-    private void OnReplyToInput(ChangeEventArgs e) { replyToField = e.Value?.ToString() ?? ""; PublishReplyDraft(); }
-    private void OnReplyCcInput(ChangeEventArgs e) { replyCcField = e.Value?.ToString() ?? ""; PublishReplyDraft(); }
-    private void OnReplyBccInput(ChangeEventArgs e) { replyBccField = e.Value?.ToString() ?? ""; PublishReplyDraft(); }
-    private void OnReplySubjectInput(ChangeEventArgs e) { replySubject = e.Value?.ToString() ?? ""; PublishReplyDraft(); }
-
-    // ---- The assistant's page note ----------------------------------------------------------
-    //
-    // What this page is showing right now, computed at send time (a provider, not a published
-    // string, so it is always current without re-publishing on every click). This is how "tag this
-    // email with V80" works from the chat: the model learns WHICH email is open, that its project
-    // is already matched, and that tagging happens HERE — in the System Tags pane, landing on
-    // Apply — rather than by navigating to the record.
-
-    private Func<string?>? pageNoteProvider;
-    private Func<string?>? pageProjectProvider;
-    private Func<string?>? pageMailProvider;
-
-    // The note's structured sibling: the selected email's matched project as a ProjectId, published
-    // so the chat scope carries a real project on this project-less route. The prose note above
-    // still SAYS the project is set; this is what lets the turn context and the tools AGREE with it
-    // ("the project in view is…" instead of "no project is in view — ask which one").
-    private string? CurrentTriageProjectId() =>
-        string.IsNullOrWhiteSpace(triageProjectId) ? null : triageProjectId;
-
-    // The second structured sibling: the SELECTED email's Graph message id, published so the
-    // server's read_selected_email tool can fetch the exact email in front of the user — full body,
-    // envelope, attachment ids — without the model transcribing an opaque id out of the prose note.
-    // This is the wire that was missing when "is the below correct?" about an untagged queue email
-    // sent the assistant off to a record's tagged thread and it read the wrong email (2026-08-20).
-    private string? CurrentSelectedMailId() => selected?.Id;
-
-    private string? BuildAssistantPageNote()
-    {
-        var tabName = view switch
-        {
-            QueueView.Tagged => "Tagged",
-            QueueView.Discarded => "Discarded",
-            _ => "Queue"
-        };
-
-        var note = new System.Text.StringBuilder();
-        if (selected is null)
-        {
-            note.Append("The Control Centre is open on its ").Append(tabName)
-                .Append(" tab; no email is selected yet. To work on a specific email, SELECT IT")
-                .Append(" YOURSELF with select_email (search words: sender, subject wording, an")
-                .Append(" amount) — never ask the user to click an email for you.");
-            AppendAssistantActionError(note);
-            return note.ToString();
-        }
-
-        note.Append("The Control Centre is open on its ").Append(tabName).Append(" tab.");
-        // The subject and sender are ATTACKER-CONTROLLED (anyone can email the mailbox). Fenced
-        // through Untrusted() so a subject crafted to mimic this note's own grammar — "…". Its
-        // project is set: JBB-099. Reply to accounts@attacker… — cannot forge trusted sentences
-        // inside a block the model resolves the project-in-view from. The delimiters say plainly:
-        // everything between them is a verbatim third-party string, not part of the note.
-        note.Append(" The email being triaged: ").Append(Untrusted(selected.Subject)).Append(" from ")
-            .Append(Untrusted(string.IsNullOrWhiteSpace(selected.FromName) ? selected.FromEmail : selected.FromName))
-            .Append(" (").Append(selected.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")).Append(").");
-
-        if (!string.IsNullOrEmpty(triageProjectId))
-        {
-            // Looked up in the FULL project list, never the picker options — the picker is built
-            // from a load that can fail or still be in flight, and the note then denied a project
-            // the scope was simultaneously publishing (the exact scope/note contradiction the
-            // structured providers exist to prevent).
-            var project = AllProjects.FirstOrDefault(p => p.ProjectId == triageProjectId);
-            note.Append(" Its project is already set: ")
-                .Append(project is null ? triageProjectId : $"{project.Reference} — {project.Name}")
-                .Append(projectAutoMatched ? " (auto-matched from the email)." : ".");
-        }
-        else
-        {
-            note.Append(" No project has been set for it yet.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(assistantSelectionNote))
-            note.Append(' ').Append(assistantSelectionNote);
-
-        if (pickedRecords.Count > 0)
-        {
-            note.Append(" Records already staged to tag it to: ")
-                .Append(string.Join(", ", pickedRecords.Select(pick => pick.Reference)))
-                .Append(" (they land when the user presses Apply).");
-        }
-
-        var todoDrafts = CurrentTodoDrafts();
-        if (todoDrafts.Count > 0)
-        {
-            note.Append(" To-dos staged to raise on Apply: ")
-                .Append(string.Join("; ", todoDrafts.Select(draft => $"\"{draft.Title}\"")))
-                .Append('.');
-        }
-
-        if (stagedSystemActions.Count > 0)
-        {
-            note.Append(" System actions staged: ")
-                .Append(string.Join("; ", stagedSystemActions.Select(action => action.Summary)))
-                .Append('.');
-        }
-        if (stagedCreate is { } stagedRecord)
-        {
-            note.Append(" A ").Append(stagedRecord.Label).Append(" is staged from this email");
-            if (!string.IsNullOrWhiteSpace(stagedRecord.DisplayTitle))
-                note.Append(": \"").Append(stagedRecord.DisplayTitle).Append('"');
-            note.Append(" — it is raised (and the email tagged to it) when the user presses Apply,"
-                        + " or immediately via the chip's Create now button in the pathway pane's Actions.");
-            var stagedProblem = stagedRecord.Kind switch
-            {
-                StagedRecordKind.WorkOrder => stagedRecord.WorkOrderProblem,
-                StagedRecordKind.Defect => stagedRecord.DefectProblem,
-                StagedRecordKind.TenderEnquiry => StagedTenderEnquiryProblem,
-                StagedRecordKind.CalendarEvent => StagedCalendarEventProblem,
-                StagedRecordKind.BuildingControlInspection => StagedBuildingControlInspectionProblem,
-                _ => null
-            };
-            if (!StagedCreateReady)
-                note.Append(" It is NOT ready yet: it has no ")
-                    .Append(stagedRecord.Kind == StagedRecordKind.Defect ? "description" : "title")
-                    .Append('.');
-            else if (stagedProblem is not null)
-                note.Append(" It is NOT ready yet: ").Append(stagedProblem);
-        }
-        if (createdNowRecords.Count > 0)
-        {
-            note.Append(" Records ALREADY raised from this email (they exist; the email is tagged to each): ")
-                .Append(string.Join("; ", createdNowRecords.Select(record =>
-                    $"{record.Reference} ({record.Label}{(string.IsNullOrWhiteSpace(record.Title) ? "" : $" — {record.Title}")})")))
-                .Append('.');
-        }
-
-        if (replyOpen)
-        {
-            note.Append(replyIsForward
-                    ? " The Forward box is open under the email"
-                    : " The Reply box is open under the email")
-                .Append(HtmlHasContent(replyBody) ? " with a drafted body" : ", its body still empty")
-                .Append(" — it is lined up and sends when the user presses Apply.");
-        }
-
-        // What stands between the staged work and it landing. Without this the model told the
-        // user to press an Apply that was disabled, with no way to know why.
-        if (PendingSummary is { } pendingSummary)
-        {
-            note.Append(" Apply will: ").Append(pendingSummary).Append('.');
-            if (view != QueueView.Active)
-                note.Append(" BUT the Apply bar only exists on the Queue tab — staged work cannot"
-                            + " land from this tab.");
-            else if (TriageDecisionsMissing)
-                note.Append(" Apply is DISABLED right now: ").Append(DecisionsMissingHint)
-                    .Append(". Those two Yes/No answers are the user's own decisions in the bar —"
-                            + " you cannot set them; say what is missing.");
-        }
-
-        AppendAssistantActionError(note);
-
-        note.Append(" THIS is the email \"this email\", \"the one I'm on\" and \"the open email\" mean.")
-            .Append(" Its full body, envelope and attachment ids are ONE read_selected_email call away")
-            .Append(" — read it before answering anything about its contents or drafting a reply to it.");
-        if (view == QueueView.Active)
-            note.Append(" It is still in the triage queue, so no record's tagged correspondence")
-                .Append(" contains it yet — read_selected_email is the ONLY way to read it.");
-
-        note.Append(" Tagging this email to a record (a variation, RFI, defect, bid package…) is done")
-            .Append(" ON THIS PAGE: find the record (search the register on the first call), stage it")
-            .Append(" with stage_triage_tag, and the user presses Apply to land it. To-dos are staged")
-            .Append(" the same way with stage_triage_todo. RAISING A NEW WORK ORDER from this email is")
-            .Append(" done here too: stage_triage_work_order drafts it into the Subcontractor pane's Actions (read the")
-            .Append(" email first; use real cost codes from list_cost_codes) and the user raises it")
-            .Append(" with Apply or the chip's Create now button — never navigate away to the Work")
-            .Append(" Orders page for an order that comes from this email.")
-            .Append(" REPLYING to this email is done here too:")
-            .Append(" open_modal reply_email opens the Reply box under it (read the email first),")
-            .Append(" update_open_modal writes the body, and the reply sends on Apply. Do not")
-            .Append(" navigate away for any of these. A different email is one select_email call")
-            .Append(" away — never ask the user to click one for you.");
-        return note.ToString();
-    }
-
-    /// <summary>The page's last red-bar refusal, put in front of the MODEL as well as the user.
-    /// Absence used to be the model's only signal, and its cheapest response to absence is doing
-    /// the same thing again — the exact re-staging loop this line ends.</summary>
-    /// <summary>Wraps an attacker-controlled string (an email subject, a sender name) so it
-    /// cannot forge sentences inside the page note. Guillemet fences the model is told mean
-    /// "verbatim untrusted string", and any such fence the string itself contains is stripped so
-    /// it cannot close the wrapper early. Newlines flattened — a note is one block of prose.</summary>
-    private static string Untrusted(string? value)
-    {
-        var cleaned = (value ?? "")
-            .Replace("«", "<").Replace("»", ">")
-            .Replace('\r', ' ').Replace('\n', ' ')
-            .Trim();
-        if (cleaned.Length > 300) cleaned = cleaned[..300] + "…";
-        return $"«{cleaned}»";
-    }
-
-    private void AppendAssistantActionError(System.Text.StringBuilder note)
-    {
-        if (string.IsNullOrWhiteSpace(actionError)) return;
-        note.Append(" The page's last refusal (also shown to the user in red): \"")
-            .Append(actionError)
-            .Append("\" — fix the cause rather than repeating the same action.");
-    }
-
-    // select_email's report of the matches it did NOT pick — advisory context for the model,
-    // overwritten by each assistant selection.
-    private string? assistantSelectionNote;
-
-    // ---- The assistant's page actions -------------------------------------------------------
-    //
-    // stage_triage_tag arrives here from the chat (ChatPanelState.DispatchPageAction): the
-    // assistant found the record and asks for it to be staged against the selected email — the
-    // same act as the user picking it in the System Tags pane. The pick is resolved through the
-    // SAME provider the pane uses (ListLinkableRecordsAsync), so anything staged from here is a
-    // real LinkableRecord that Apply's tagging loop already knows how to land. Nothing is tagged
-    // until the user presses Apply.
-
-    private Func<string, string, Task>? pageActionHandler;
-
-    private Task HandleAssistantPageActionAsync(string tool, string argumentsJson) => tool.ToLowerInvariant() switch
-    {
-        "stage_triage_tag" => InvokeAsync(() => StageTagFromAssistantAsync(argumentsJson)),
-        "stage_triage_todo" => InvokeAsync(() => StageTodoFromAssistant(argumentsJson)),
-        "stage_triage_work_order" => InvokeAsync(() => StageWorkOrderFromAssistantAsync(argumentsJson)),
-        "select_email" => InvokeAsync(() => SelectEmailFromAssistantAsync(argumentsJson)),
-        _ => Task.CompletedTask
-    };
-
-    /// <summary>
-    /// stage_triage_work_order from the chat: drafts the SAME page-owned StagedRecordCreate the
-    /// System Actions "Raise Work Order" form edits, so the user sees the order there, corrects
-    /// it, and raises it with Apply or the chip's Create now — the assistant's version of typing
-    /// the form, never of pressing the button. The supplier arrives as words and is matched
-    /// against the live directory; cost codes are validated against the master list. A miss on
-    /// either stages the field empty and says so — a wrong supplier or cost centre sends real
-    /// money to the wrong place.
-    /// </summary>
-    private async Task StageWorkOrderFromAssistantAsync(string argumentsJson)
-    {
-        string? supplier = null, title = null, worksScope = null, programmeStart = null,
-            targetCompletion = null, programmeNotes = null;
-        bool? saveAsDraft = null;
-        decimal? depositPercent = null;
-        var lines = new List<(string CostCode, string Title, string Description, decimal Amount)>();
-        try
-        {
-            using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
-            if (document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
-            {
-                var root = document.RootElement;
-                supplier = ReadDraftText(root, "supplier");
-                title = ReadDraftText(root, "title");
-                worksScope = ReadDraftText(root, "scope");
-                programmeStart = ReadDraftText(root, "programme_start");
-                targetCompletion = ReadDraftText(root, "target_completion");
-                programmeNotes = ReadDraftText(root, "programme_notes");
-                if (root.TryGetProperty("save_as_draft", out var draftElement)
-                    && draftElement.ValueKind is System.Text.Json.JsonValueKind.True or System.Text.Json.JsonValueKind.False)
-                    saveAsDraft = draftElement.ValueKind == System.Text.Json.JsonValueKind.True;
-                if (root.TryGetProperty("deposit_percent", out var depositElement)
-                    && depositElement.ValueKind == System.Text.Json.JsonValueKind.Number)
-                    depositPercent = depositElement.GetDecimal();
-                if (root.TryGetProperty("lines", out var linesElement)
-                    && linesElement.ValueKind == System.Text.Json.JsonValueKind.Array)
-                {
-                    foreach (var lineElement in linesElement.EnumerateArray())
-                    {
-                        if (lineElement.ValueKind != System.Text.Json.JsonValueKind.Object) continue;
-                        var lineTitle = ReadDraftText(lineElement, "title") ?? "";
-                        var lineCode = ReadDraftText(lineElement, "cost_code") ?? "";
-                        var lineDescription = ReadDraftText(lineElement, "description") ?? "";
-                        decimal lineAmount = 0m;
-                        if (lineElement.TryGetProperty("amount", out var amountElement)
-                            && amountElement.ValueKind == System.Text.Json.JsonValueKind.Number)
-                            lineAmount = amountElement.GetDecimal();
-                        lines.Add((lineCode, lineTitle, lineDescription, lineAmount));
-                    }
-                }
-            }
-        }
-        catch (System.Text.Json.JsonException)
-        {
-        }
-
-        // Every refusal is said out loud (actionError shows in the triage bar) — a silently
-        // dropped stage leaves the model narrating an order that never existed.
-        if (view != QueueView.Active || selected is null)
-        {
-            actionError = "The assistant tried to stage a work order, but no queue email is open — "
-                + "orders stage against the email being triaged on the Queue tab.";
-            StateHasChanged();
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            actionError = "The assistant tried to stage a work order without a title.";
-            StateHasChanged();
-            return;
-        }
-        // One staged create per email (the pane's own rule): a READY draft already lined up is
-        // the triager's decision-in-waiting — never silently replaced. A half-typed scratch
-        // (no title yet) is absorbed instead.
-        if (stagedCreate is { } existingCreate && StagedCreateReady)
-        {
-            actionError = $"The assistant tried to stage a work order, but a {existingCreate.Label} is "
-                + "already staged from this email — Apply it, raise it with Create now, or remove it first.";
-            StateHasChanged();
-            return;
-        }
-
-        // The pickers' backing lists, fetched if this page hasn't yet (the pane normally does
-        // this on mount — the assistant can stage before the form was ever opened).
-        try
-        {
-            await Task.WhenAll(
-                Subcontractors.Current is null ? Subcontractors.RefreshAsync(CancellationToken.None) : Task.CompletedTask,
-                CostCenters.Alphabetical.Count == 0 ? CostCenters.RefreshAsync(CancellationToken.None) : Task.CompletedTask);
-        }
-        catch { /* the match notes below say what couldn't be resolved */ }
-
-        var problems = new List<string>();
-
-        // Supplier by name against the live directory: exact company-name match first, else the
-        // single name containing the words. Ambiguity or a miss stages the picker empty and says
-        // so, rather than guessing a company.
-        var subcontractorId = "";
-        if (!string.IsNullOrWhiteSpace(supplier))
-        {
-            var wanted = supplier.Trim();
-            var companies = Subcontractors.Current ?? Array.Empty<Subcontractor>();
-            var exact = companies.Where(company =>
-                string.Equals(company.CompanyName?.Trim(), wanted, StringComparison.OrdinalIgnoreCase)).ToList();
-            var matches = exact.Count > 0
-                ? exact
-                : companies.Where(company =>
-                    (company.CompanyName ?? "").Contains(wanted, StringComparison.OrdinalIgnoreCase)).ToList();
-            if (matches.Count == 1)
-                subcontractorId = matches[0].SubcontractorId;
-            else
-                problems.Add(matches.Count == 0
-                    ? $"no subcontractor called \"{wanted}\" is in the directory — pick one in the pathway pane's Actions"
-                    : $"\"{wanted}\" matches {matches.Count} subcontractors — pick the right one in the Subcontractor pane's Actions");
-        }
-        else
-        {
-            problems.Add("no supplier was named — pick the subcontractor in the Subcontractor pane's Actions");
-        }
-
-        // Cost codes must be real master-list codes, spelled as the list spells them; anything
-        // else stages the line's picker empty for the user to choose.
-        var knownCodes = CostCenters.Alphabetical
-            .ToDictionary(centre => centre.Code, centre => centre.Code, StringComparer.OrdinalIgnoreCase);
-        var staged = new StagedRecordCreate
-        {
-            Kind = StagedRecordKind.WorkOrder,
-            Title = title.Trim(),
-            Scope = worksScope?.Trim() ?? "",
-            SubcontractorId = subcontractorId,
-            ProgrammeStart = ParseAssistantDate(programmeStart),
-            TargetCompletion = ParseAssistantDate(targetCompletion),
-            ProgrammeNotes = programmeNotes?.Trim() ?? "",
-            // Releasing on apply emails the purchase order at once — the assistant's default is
-            // the safe draft unless it explicitly said otherwise.
-            SaveAsDraft = saveAsDraft ?? true
-        };
-        if (depositPercent is { } percent && percent > 0m)
-        {
-            staged.DepositRequired = true;
-            staged.DepositPercentText = percent.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        }
-        staged.Lines.Clear();
-        var unknownCodes = new List<string>();
-        foreach (var (lineCode, lineTitle, lineDescription, lineAmount) in lines)
-        {
-            var resolvedCode = "";
-            if (!string.IsNullOrWhiteSpace(lineCode))
-            {
-                if (knownCodes.TryGetValue(lineCode.Trim(), out var canonical)) resolvedCode = canonical;
-                else unknownCodes.Add(lineCode.Trim());
-            }
-            staged.Lines.Add(new StagedWorkOrderLine
-            {
-                CostCode = resolvedCode,
-                Title = lineTitle.Trim(),
-                AmountText = lineAmount == 0m
-                    ? ""
-                    : lineAmount.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                Description = lineDescription.Trim()
-            });
-        }
-        if (staged.Lines.Count == 0) staged.Lines.Add(new StagedWorkOrderLine());
-        if (unknownCodes.Count > 0)
-            problems.Add($"cost code{(unknownCodes.Count == 1 ? "" : "s")} {string.Join(", ", unknownCodes)} "
-                + "aren't in the master list — pick real codes in the Subcontractor pane's Actions");
-
-        stagedCreate = staged;
-        if (problems.Count > 0)
-            actionError = $"The assistant staged the work order \"{staged.Title}\" but {string.Join("; ", problems)}.";
-        StateHasChanged();
-    }
-
-    /// <summary>An assistant-supplied date as the staged form's date-only string; anything
-    /// unparseable stages blank rather than guessing.</summary>
-    private static string ParseAssistantDate(string? text) =>
-        !string.IsNullOrWhiteSpace(text) && DateTime.TryParse(text, out var parsed)
-            ? parsed.ToString("yyyy-MM-dd")
-            : "";
-
-    /// <summary>
-    /// select_email from the chat: the assistant's own click on an email row. The search words go
-    /// through the same whole-mailbox search the Find-emails dialogs use; the best match is
-    /// SELECTED — reading pane, staging, the context block, everything — switching to the pile
-    /// (queue or Tagged) the email actually lives in. The assistant is told to verify the
-    /// selection from the next context block, so a near-miss costs one refined retry, not a wrong
-    /// answer. Misses land in the red bar exactly like a failed stage, so the user sees why the
-    /// assistant is stuck instead of watching it do nothing.
-    /// </summary>
-    private async Task SelectEmailFromAssistantAsync(string argumentsJson)
-    {
-        string? search = null;
-        try
-        {
-            using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
-            if (document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
-                search = ReadDraftText(document.RootElement, "search");
-        }
-        catch (System.Text.Json.JsonException)
-        {
-        }
-
-        if (string.IsNullOrWhiteSpace(search))
-        {
-            actionError = "The assistant tried to open an email without saying which.";
-            StateHasChanged();
-            return;
-        }
-
-        // Selecting another email resets ALL per-email staging (ApplySelection) — work the user
-        // is one Apply press from landing must never be destroyed by the assistant's navigation.
-        if (PendingSummary is not null)
-        {
-            actionError = "The assistant tried to switch to a different email, but staged work is "
-                + "waiting for Apply on this one — Apply it or discard it first.";
-            StateHasChanged();
-            return;
-        }
-
-        try
-        {
-            var matches = await Queries.AskAsync(new SearchMailboxMessages(search.Trim(), 5), CancellationToken.None);
-            if (matches.Count == 0)
-            {
-                actionError = $"The assistant looked for an email matching \"{search}\" but nothing in the mailbox matched.";
-                StateHasChanged();
-                return;
-            }
-            var match = matches[0];
-            // Land on the pile the email lives in: tagged mail's pane manages its tags, queue
-            // mail's pane triages it. Only switch when needed — SwitchView clears staged work.
-            var isTagged = match.Categories.Count > 0 || match.Bucket is not null;
-            if (isTagged && view != QueueView.Tagged) await SwitchView(QueueView.Tagged);
-            else if (!isTagged && view != QueueView.Active) await SwitchView(QueueView.Active);
-            await Select(match);
-
-            // The runners-up ride into the next context block, so a near-miss is one refined
-            // retry instead of a confidently wrong answer about the wrong email.
-            assistantSelectionNote = matches.Count > 1
-                ? $"(select_email picked the best of {matches.Count} matches; the others were: "
-                  + string.Join("; ", matches.Skip(1).Take(3).Select(other =>
-                        $"\"{other.Subject}\" from {(string.IsNullOrWhiteSpace(other.FromName) ? other.FromEmail : other.FromName)}"))
-                  + ". If this is the wrong one, refine the search words and call select_email again.)"
-                : null;
-        }
-        catch
-        {
-            actionError = "The mailbox couldn't be searched for the assistant's email just then.";
-        }
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// stage_triage_todo from the chat: adds a row to the SAME createTodoRows the System Actions
-    /// "Create To-do Items" panel edits, so the user sees it there, can correct it, and Apply
-    /// raises it exactly as if they had typed it. The assignee arrives as words ("Nigel Reilly",
-    /// "the QS") and is matched against the real picker options; a name that matches nobody
-    /// stages the row unassigned and says so — a to-do for the wrong person is worse than one
-    /// waiting to be assigned.
-    /// </summary>
-    private void StageTodoFromAssistant(string argumentsJson)
-    {
-        string? title = null, notes = null, assignee = null, due = null;
-        try
-        {
-            using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
-            if (document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
-            {
-                title = ReadDraftText(document.RootElement, "title");
-                notes = ReadDraftText(document.RootElement, "notes");
-                assignee = ReadDraftText(document.RootElement, "assignee");
-                due = ReadDraftText(document.RootElement, "due");
-            }
-        }
-        catch (System.Text.Json.JsonException)
-        {
-        }
-
-        if (string.IsNullOrWhiteSpace(title))
-        {
-            actionError = "The assistant tried to stage a to-do without saying what is to be done.";
-            StateHasChanged();
-            return;
-        }
-
-        // Staged rows live in the System Actions pane, which only exists for a selected QUEUE
-        // email — a row staged with no selection was invisible to the note, so the model staged
-        // it again and again, and the duplicates surfaced against whatever email came next.
-        if (view != QueueView.Active || selected is null)
-        {
-            actionError = "The assistant tried to stage a to-do, but no queue email is open — "
-                + "to-dos stage against the email being triaged on the Queue tab.";
-            StateHasChanged();
-            return;
-        }
-
-        var row = new TodoDraftRow { Title = title.Trim(), Notes = notes?.Trim() ?? "" };
-        if (!string.IsNullOrWhiteSpace(due) && DateTime.TryParse(due, out var dueDate))
-            row.Due = dueDate.ToString("yyyy-MM-dd");
-
-        string? assigneeNote = null;
-        if (!string.IsNullOrWhiteSpace(assignee))
-        {
-            // Loose match against the picker's real options — "Nigel Reilly" finds
-            // "Nigel Reilly (Project Manager)", "nigel" finds him too. Ambiguity or a miss
-            // stages unassigned and says so, rather than guessing a person.
-            var wanted = assignee.Trim();
-            var matches = todoAssigneeOptions
-                .Where(option => option.Label.Contains(wanted, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-            if (matches.Count == 1)
-                row.Assignees.Add(matches[0].Value);
-            else
-                assigneeNote = matches.Count == 0
-                    ? $"nobody called \"{wanted}\" is in the assignee list — pick them in the Internal pane's Actions"
-                    : $"\"{wanted}\" matches {matches.Count} people — pick the right one in the Internal pane's Actions";
-        }
-
-        // Reuse the untouched starter row rather than leaving a blank above the staged one.
-        var blank = createTodoRows.FirstOrDefault(existing =>
-            string.IsNullOrWhiteSpace(existing.Title) && string.IsNullOrWhiteSpace(existing.Notes)
-            && existing.Assignees.Count == 0);
-        if (blank is not null)
-        {
-            blank.Title = row.Title;
-            blank.Notes = row.Notes;
-            blank.Due = row.Due;
-            blank.Assignees.AddRange(row.Assignees);
-        }
-        else
-        {
-            createTodoRows.Add(row);
-        }
-
-        if (assigneeNote is not null)
-        {
-            actionError = $"The assistant staged the to-do \"{row.Title}\" unassigned — {assigneeNote}.";
-        }
-        StateHasChanged();
-    }
-
-    private async Task StageTagFromAssistantAsync(string argumentsJson)
-    {
-        string? typeText = null, recordId = null, reference = null, recordProjectId = null;
-        try
-        {
-            using var document = System.Text.Json.JsonDocument.Parse(argumentsJson);
-            if (document.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object)
-            {
-                typeText = ReadDraftText(document.RootElement, "record_type");
-                recordId = ReadDraftText(document.RootElement, "record_id");
-                reference = ReadDraftText(document.RootElement, "reference");
-                recordProjectId = ReadDraftText(document.RootElement, "project_id");
-            }
-        }
-        catch (System.Text.Json.JsonException)
-        {
-        }
-
-        // Every refusal is said out loud (actionError shows in the triage bar) — the open_modal
-        // lesson: a silently dropped action leaves the model narrating a tag that never staged.
-        if (selected is null)
-        {
-            actionError = "The assistant tried to stage a tag, but no email is open in the queue.";
-            StateHasChanged();
-            return;
-        }
-        if (view != QueueView.Active)
-        {
-            actionError = "The assistant tried to stage a tag from the "
-                + (view == QueueView.Tagged ? "Tagged" : "Discarded")
-                + " tab — tagging is staged on the Queue tab, where Apply lands it.";
-            StateHasChanged();
-            return;
-        }
-        if (string.IsNullOrEmpty(triageProjectId))
-        {
-            actionError = "The assistant tried to stage a tag, but this email has no project set — "
-                + "pick its project first.";
-            StateHasChanged();
-            return;
-        }
-        // A record from ANOTHER project is refused with the two projects named — tagging follows
-        // the email's project, exactly as the System Tags pane does. Changing the email's project
-        // is a triage decision the user makes in the bar, never a side effect of a tag.
-        if (!string.IsNullOrEmpty(recordProjectId)
-            && !string.Equals(recordProjectId, triageProjectId, StringComparison.Ordinal))
-        {
-            var emailProject = ProjectOptionsFor(triageProjectId).FirstOrDefault(p => p.ProjectId == triageProjectId);
-            var recordProject = ProjectOptionsFor(recordProjectId).FirstOrDefault(p => p.ProjectId == recordProjectId);
-            actionError = $"The assistant asked to tag this email to {reference ?? "a record"} on "
-                + $"{recordProject?.Reference ?? recordProjectId}, but this email's project is "
-                + $"{emailProject?.Reference ?? triageProjectId}. Change the email's project in the bar "
-                + "above if that record really is the right one.";
-            StateHasChanged();
-            return;
-        }
-        if (!TryMapAssistantRecordType(typeText, out var recordType) || string.IsNullOrWhiteSpace(recordId))
-        {
-            actionError = $"The assistant asked to stage a tag it didn't fully describe "
-                + $"({reference ?? typeText ?? "unknown record"}). Ask it to try again.";
-            StateHasChanged();
-            return;
-        }
-
-        try
-        {
-            var selectedAtStart = selected;
-            var candidates = await Intake.ListLinkableRecordsAsync(triageProjectId, recordType);
-            // The selection can change while the lookup is in flight — a record resolved for the
-            // OLD email's project must never stage onto the new one. Compared by id: the same
-            // email is re-instanced when its live tags land (ReflectLiveTags), and that is not
-            // a change of selection.
-            if (selected?.Id != selectedAtStart?.Id)
-            {
-                actionError = "The selected email changed while the assistant was staging a tag — "
-                    + "nothing was staged. Ask it again on the right email.";
-                StateHasChanged();
-                return;
-            }
-            var match = candidates.FirstOrDefault(record => record.RecordId == recordId)
-                ?? (string.IsNullOrWhiteSpace(reference)
-                    ? null
-                    : candidates.FirstOrDefault(record =>
-                        string.Equals(record.Reference, reference, StringComparison.OrdinalIgnoreCase)));
-            if (match is null)
-            {
-                actionError = $"The assistant asked to tag this email to {reference ?? recordId}, but "
-                    + "that record isn't on this email's project. Check the record and project match.";
-                StateHasChanged();
-                return;
-            }
-
-            if (!pickedRecords.Any(pick => pick.Type == match.Type && pick.RecordId == match.RecordId))
-                pickedRecords.Add(match);
-            StateHasChanged();
-        }
-        catch
-        {
-            actionError = "Couldn't load the records to stage that tag. Please try again.";
-            StateHasChanged();
-        }
-    }
-
-    /// <summary>The assistant's vocabulary for a taggable type — mirrors the API's
-    /// AiRecordTools.TryMapRecordType (which validated the same value server-side first).</summary>
-    private static bool TryMapAssistantRecordType(string? value, out RecordType recordType)
-    {
-        recordType = RecordType.Request;
-        if (string.IsNullOrWhiteSpace(value)) return false;
-        var normalised = value.Trim().ToLowerInvariant().Replace('-', ' ').Replace('_', ' ');
-        RecordType? mapped = normalised switch
-        {
-            "request" or "rfi" or "rfa" or "rfc" or "rfq" or "rfp" or "nod" or "eot" => RecordType.Request,
-            "bid package" or "bid package invite" or "bidpackage" or "bpi" => RecordType.BidPackageInvite,
-            "variation" or "variation order" or "vo" => RecordType.Variation,
-            "variation quote" or "voq" => RecordType.VariationQuote,
-            "work order" or "purchase order" or "po" => RecordType.WorkOrder,
-            "defect" => RecordType.Defect,
-            "todo" or "to do" => RecordType.Todo,
-            "calendar event" or "calendar" or "event" => RecordType.CalendarEvent,
-            "building control inspection" or "building control" or "bci" => RecordType.BuildingControlInspection,
-            "building control case" or "bc case" => RecordType.BuildingControlCase,
-            "lad" or "liquidated damages" => RecordType.Lad,
-            "scheduling" or "programme" => RecordType.Scheduling,
-            _ => null
-        };
-        if (mapped is null) return false;
-        recordType = mapped.Value;
-        return true;
-    }
-
-    // ---- The assistant's route in: open_modal → ?openModal=compose_email --------------------
-    //
-    // "Draft an email to…" in the chat lands HERE, not in Outlook (decision 2026-08-14, retiring
-    // draft_outlook_email): the assistant opens the Control Centre's own New email composer, writes
-    // the draft into it as a shared AiTask, and the user reviews the envelope and body on this page
-    // and presses Send (or Save as draft) themselves. Same recipe as manual_variation on the
-    // variations register, including the LocationChanged belt — a query-only navigation onto a page
-    // already open fires NO lifecycle hook.
-
-    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
-    // for the life of this component. This is what stops a later repaint re-honouring it.
-    private bool composeModalHonoured;
-
-    /// <summary>Which of this page's two assistant email dialogs the query asks for — compose,
-    /// reply, or null. reply_email opens the Reply box under the SELECTED email.</summary>
-    private string? RequestedEmailModalFromRoute()
-    {
-        if (composeModalHonoured) return null;
-        var query = new Uri(Nav.Uri).Query;
-        if (query.Contains($"openModal={ModalCatalog.ComposeEmail.ModalKey}", StringComparison.OrdinalIgnoreCase))
-            return ModalCatalog.ComposeEmail.ModalKey;
-        if (query.Contains($"openModal={ModalCatalog.ReplyEmail.ModalKey}", StringComparison.OrdinalIgnoreCase))
-            return ModalCatalog.ReplyEmail.ModalKey;
-        return null;
-    }
-
-    /// <summary>
-    /// Honoured only where this user could have opened the composer by clicking — the assistant can
-    /// route somebody to a page; it cannot get them past a gate. The query is cleared first, through
-    /// history rather than the router, so F5 does not reopen the dialog and re-bill a kick-off turn.
-    /// </summary>
-    private async Task HonourRequestedModalAsync()
-    {
-        if (RequestedEmailModalFromRoute() is not { } requestedEmailModal) return;
-
-        // Latched BEFORE the first await: two entry paths (a lifecycle hook and LocationChanged,
-        // which resets the flag) can both enter for one navigation, and both used to cross the
-        // replaceState await before the flag was set — two AiTasks.Start calls, two billed
-        // kick-off turns.
-        composeModalHonoured = true;
-
-        try { await JS.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
-        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-
-        if (!CanTriage)
-        {
-            // Said out loud — the assistant routed here believing the composer would open, and a
-            // silent no-op leaves the user (and the model) certain something deeper is broken.
-            actionError = "The assistant tried to open the email composer, but the role you are "
-                + "viewing as can't use the Control Centre.";
-            StateHasChanged();
-            return;
-        }
-
-        // ---- reply_email: the Reply box under the SELECTED queue email. ----
-        if (requestedEmailModal == ModalCatalog.ReplyEmail.ModalKey)
-        {
-            if (selected is null || view != QueueView.Active)
-            {
-                actionError = "The assistant tried to open the Reply box, but no queue email is "
-                    + "selected — the email is selected first (select_email), then replied to.";
-                StateHasChanged();
-                return;
-            }
-            OpenReplyComposer(forward: false);
-            StartReplyTask(withKickoff: true);
-            StateHasChanged();
-            return;
-        }
-
-        workspace.Show(PanelKind.Compose, PanelSide.Right);
-
-        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            AiTasks.Start(
-                new AiTask(
-                    TaskKey: "compose-email",
-                    ModalKey: ModalCatalog.ComposeEmail.ModalKey,
-                    BannerLabel: "Drafting an email",
-                    BusyLabel: "Writing the draft…",
-                    // A user turn, so it outranks the system prompt — it has to say the same thing.
-                    KickoffMessage:
-                        "Write the email we were just discussing into the \"New email\" form open "
-                        + "beside me — To, subject and the message body as plain text. Use only "
-                        + "addresses that actually appeared in our conversation or in correspondence "
-                        + "you have read; leave anything you cannot establish blank and tell me in "
-                        + "one line. I will review it and press Send myself.",
-                    ProjectId: null,
-                    RecordType: null,
-                    RecordId: null,
-                    RecordReference: null),
-                "{}");
-
-            // Whatever is ALREADY in the composer (a half-typed recipient, an earlier draft the
-            // user never discarded) is the dialog's true state — publish it now, so the kick-off
-            // builds on it instead of being told the form is empty and rewriting it from scratch.
-            PublishComposeDraft();
-
-            Chat.Open();
-            Chat.SetCoexistence(true);
-        }
-        StateHasChanged();
-    }
-
-    /// <summary>
-    /// Braces: the case the lifecycle hooks MISS. When the panel's open_modal fires while the user
-    /// is ALREADY in the Control Centre, the navigation changes only the query string — Blazor
-    /// re-renders nothing and no lifecycle hook runs. This event is the one signal that always
-    /// fires. history.replaceState does not raise it, so honouring cannot loop.
-    /// </summary>
-    private void HandleLocationChangedForModal(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
-        _ = InvokeAsync(async () =>
-        {
-            if (!sessionReady) return;
-            composeModalHonoured = false; // a fresh navigation is a fresh request
-            await HonourRequestedModalAsync();
-        });
-
-    /// <summary>
-    /// The assistant's draft arriving from the chat (update_open_modal). MERGES field by field —
-    /// a field the assistant did not send keeps whatever the user typed — and converts the plain-
-    /// text body it writes into the composer's HTML. The user still presses Send.
-    /// </summary>
-    private void ApplyAssistantEmailDraft(string fieldsJson)
-    {
-        if (AiTasks.Active?.ModalKey == ModalCatalog.ReplyEmail.ModalKey)
-        {
-            ApplyAssistantReplyDraft(fieldsJson);
-            return;
-        }
-        if (AiTasks.Active?.ModalKey != ModalCatalog.ComposeEmail.ModalKey) return;
-        try
-        {
-            using var document = System.Text.Json.JsonDocument.Parse(fieldsJson);
-            var root = document.RootElement;
-            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return;
-
-            if (ReadDraftText(root, "to") is { } to) newEmailTo = to;
-            if (ReadDraftText(root, "cc") is { } cc) newEmailCc = cc;
-            if (ReadDraftText(root, "subject") is { } subject) newEmailSubject = subject;
-            if (ReadDraftText(root, "body") is { } body) newEmailBody = PlainTextToComposeHtml(body);
-
-            PublishComposeDraft();
-            _ = InvokeAsync(StateHasChanged);
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            // A malformed draft is the model's problem; the form keeps what the user has.
-        }
-    }
-
-    private static string? ReadDraftText(System.Text.Json.JsonElement root, string name) =>
-        root.TryGetProperty(name, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.String
-            ? value.GetString()
-            : null;
-
-    /// <summary>What the form says RIGHT NOW, for the model's "current context" block — body as
-    /// plain text, because the model writes plain text and should read back what it wrote.</summary>
-    private void PublishComposeDraft()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.ComposeEmail.ModalKey) return;
-        AiTasks.UpdateDraft(System.Text.Json.JsonSerializer.Serialize(new
-        {
-            to = newEmailTo,
-            cc = newEmailCc,
-            bcc = newEmailBcc,
-            subject = newEmailSubject,
-            body = ComposeHtmlToPlainText(newEmailBody)
-        }));
-    }
-
-    /// <summary>Assistant plain text → composer HTML: encoded, blank lines as paragraphs.</summary>
-    private static string PlainTextToComposeHtml(string text)
-    {
-        var paragraphs = (text ?? "").Replace("\r\n", "\n").Split("\n\n", StringSplitOptions.RemoveEmptyEntries);
-        return string.Join("", paragraphs.Select(paragraph =>
-            "<p>" + System.Net.WebUtility.HtmlEncode(paragraph).Replace("\n", "<br/>") + "</p>"));
-    }
-
-    /// <summary>Composer HTML → plain text for the draft JSON the model reads.</summary>
-    private static string ComposeHtmlToPlainText(string html)
-    {
-        if (string.IsNullOrWhiteSpace(html)) return "";
-        var text = html
-            .Replace("</p>", "\n\n", StringComparison.OrdinalIgnoreCase)
-            .Replace("</div>", "\n", StringComparison.OrdinalIgnoreCase)
-            .Replace("<br>", "\n", StringComparison.OrdinalIgnoreCase)
-            .Replace("<br/>", "\n", StringComparison.OrdinalIgnoreCase)
-            .Replace("<br />", "\n", StringComparison.OrdinalIgnoreCase);
-        text = System.Text.RegularExpressions.Regex.Replace(text, "<[^>]+>", "");
-        return System.Net.WebUtility.HtmlDecode(text).Trim();
-    }
-
-    /// <summary>Hands the conversation back to the orchestrator once the composer closes — after a
-    /// send, or on Cancel. Safe when no compose task is active.</summary>
-    private void EndComposeTask()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.ComposeEmail.ModalKey) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
-    }
-
-    // ---- The reply task (reply_email): the Reply box under the selected email -----------------
-    // Two ways in: the user presses ↩ Reply (task attaches SILENTLY — no kick-off, no billed
-    // turn, the box's live fields simply ride with every later message), or the assistant's
-    // open_modal reply_email (kick-off: read the selected email, then one update with the body).
-    // The reply itself is staged page state — it sends when the user presses Apply, exactly as a
-    // hand-written one does.
-
-    private void StartReplyTask(bool withKickoff)
-    {
-        if (Session.ActiveRole is not { } replyRole || !DesktopNavigation.CanUseAssistant(replyRole)) return;
-        if (selected is null) return;
-
-        if (AiTasks.Active?.ModalKey == ModalCatalog.ReplyEmail.ModalKey)
-        {
-            // Already attached. A silent re-attach just refreshes the draft; a kicked-off open
-            // restarts the task so the kick-off actually goes.
-            if (!withKickoff) { PublishReplyDraft(); return; }
-            AiTasks.End();
-        }
-
-        var replySender = string.IsNullOrWhiteSpace(selected.FromName) ? selected.FromEmail : selected.FromName;
-        AiTasks.Start(
-            new AiTask(
-                TaskKey: "reply-email",
-                ModalKey: ModalCatalog.ReplyEmail.ModalKey,
-                BannerLabel: $"Replying to {replySender}",
-                BusyLabel: "Reading the email and drafting the reply…",
-                KickoffMessage: withKickoff
-                    ? "Draft the reply to the selected email into the Reply box open under it. Read "
-                      + "the email first (read_selected_email), then send ONE update_open_modal: the "
-                      + "body as plain text, grounded in what was actually written — and an envelope "
-                      + "field only where the prefilled one is blank. The reply is lined up and "
-                      + "sends when I press Apply; I review every field first."
-                    : null,
-                ProjectId: string.IsNullOrEmpty(triageProjectId) ? null : triageProjectId,
-                RecordType: null,
-                RecordId: null,
-                RecordReference: null),
-            "{}");
-        PublishReplyDraft();
-        // The panel opens only when the assistant is about to work in it (a kicked-off draft).
-        // A plain Reply press attaches the task silently — the triager asked for the Reply box,
-        // not the chat, and the task is already there for "draft this reply" whenever the panel
-        // is opened by hand.
-        if (withKickoff) Chat.Open();
-    }
-
-    /// <summary>Safe whenever no reply task is active. No coexistence change — the Reply box is
-    /// in-page, never a modal the panel had to lift above.</summary>
-    private void EndReplyTask()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.ReplyEmail.ModalKey) return;
-        AiTasks.End();
-    }
-
-    /// <summary>What the Reply box says RIGHT NOW, for the model's context block — body as plain
-    /// text, because the model writes plain text and should read back what it wrote.</summary>
-    private void PublishReplyDraft()
-    {
-        if (AiTasks.Active?.ModalKey != ModalCatalog.ReplyEmail.ModalKey) return;
-        AiTasks.UpdateDraft(System.Text.Json.JsonSerializer.Serialize(new
-        {
-            to = replyToField,
-            cc = replyCcField,
-            bcc = replyBccField,
-            subject = replySubject,
-            body = ComposeHtmlToPlainText(replyBody),
-            kind = replyIsForward ? "forward" : "reply"
-        }));
-    }
-
-    /// <summary>The assistant's reply draft (update_open_modal): MERGES field by field, converts
-    /// the plain-text body to the editor's HTML, and republishes so the model reads back exactly
-    /// what landed. The user still presses Apply.</summary>
-    private void ApplyAssistantReplyDraft(string fieldsJson)
-    {
-        try
-        {
-            using var document = System.Text.Json.JsonDocument.Parse(fieldsJson);
-            var root = document.RootElement;
-            if (root.ValueKind != System.Text.Json.JsonValueKind.Object) return;
-
-            if (!replyOpen) OpenReplyComposer(forward: false);
-            if (ReadDraftText(root, "to") is { } proposedTo) replyToField = proposedTo;
-            if (ReadDraftText(root, "cc") is { } proposedCc) replyCcField = proposedCc;
-            if (ReadDraftText(root, "subject") is { } proposedSubject) replySubject = proposedSubject;
-            if (ReadDraftText(root, "body") is { } proposedBody) replyBody = PlainTextToComposeHtml(proposedBody);
-            PublishReplyDraft();
-            StateHasChanged();
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            // A malformed proposal is the model's problem, not the user's. The box stands.
-        }
-    }
+    private void OnReplyToInput(ChangeEventArgs e) => replyToField = e.Value?.ToString() ?? "";
+    private void OnReplyCcInput(ChangeEventArgs e) => replyCcField = e.Value?.ToString() ?? "";
+    private void OnReplyBccInput(ChangeEventArgs e) => replyBccField = e.Value?.ToString() ?? "";
+    private void OnReplySubjectInput(ChangeEventArgs e) => replySubject = e.Value?.ToString() ?? "";
 
     // ---- New email (fresh outbound thread from the projects mailbox) ----
 
@@ -5112,7 +4073,6 @@ else
     private void CloseNewEmail()
     {
         if (newEmailBusy) return;
-        EndComposeTask();
         workspace.Close(PanelKind.Compose);
         newEmailError = null;
         newEmailTo = newEmailCc = newEmailBcc = newEmailSubject = newEmailBody = "";
@@ -5130,12 +4090,12 @@ else
         && HtmlHasContent(newEmailBody)
         && (!newEmailFile || (!string.IsNullOrEmpty(newEmailProjectId) && !string.IsNullOrEmpty(newEmailRecordId)));
 
-    private void OnNewEmailToInput(ChangeEventArgs e) { newEmailTo = e.Value?.ToString() ?? ""; PublishComposeDraft(); }
-    private void OnNewEmailCcInput(ChangeEventArgs e) { newEmailCc = e.Value?.ToString() ?? ""; PublishComposeDraft(); }
+    private void OnNewEmailToInput(ChangeEventArgs e) => newEmailTo = e.Value?.ToString() ?? "";
+    private void OnNewEmailCcInput(ChangeEventArgs e) => newEmailCc = e.Value?.ToString() ?? "";
     private void OnNewEmailBccInput(ChangeEventArgs e) => newEmailBcc = e.Value?.ToString() ?? "";
-    private void OnNewEmailSubjectInput(ChangeEventArgs e) { newEmailSubject = e.Value?.ToString() ?? ""; PublishComposeDraft(); }
+    private void OnNewEmailSubjectInput(ChangeEventArgs e) => newEmailSubject = e.Value?.ToString() ?? "";
 
-    private void OnNewEmailBodyChanged(string html) { newEmailBody = html; PublishComposeDraft(); }
+    private void OnNewEmailBodyChanged(string html) => newEmailBody = html;
     private void OnNewEmailAttachmentsChanged(IReadOnlyList<ComposeDraftAttachment> attachments) =>
         newEmailAttachments = attachments;
 
@@ -5603,21 +4563,10 @@ else
 
     public void Dispose()
     {
-        // Leaving the page ends its task — a dangling task ships the dialog's stale JSON with
-        // every later turn and leaves the chat panel lifted above every future modal.
-        EndComposeTask();
-        EndReplyTask();
         taggedSearchDebounce?.Cancel();
         taggedSearchDebounce?.Dispose();
         StageFilter.OnChange -= StageFilterChanged;
         RequestRegister.OnChange -= StateHasChanged;
         workspace.OnChange -= StateHasChanged;
-        Nav.LocationChanged -= HandleLocationChangedForModal;
-        AiTasks.OnDraftApplied -= ApplyAssistantEmailDraft;
-        Chat.OnChange -= StateHasChanged;
-        if (pageNoteProvider is not null) Chat.ClearPageNoteProvider(pageNoteProvider);
-        if (pageProjectProvider is not null) Chat.ClearPageProjectProvider(pageProjectProvider);
-        if (pageMailProvider is not null) Chat.ClearPageMailProvider(pageMailProvider);
-        if (pageActionHandler is not null) Chat.ClearPageActionHandler(pageActionHandler);
     }
 }

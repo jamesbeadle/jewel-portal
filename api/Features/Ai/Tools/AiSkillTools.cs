@@ -5,14 +5,11 @@ using Microsoft.EntityFrameworkCore;
 namespace Jewel.JPMS.Api.Features.Ai.Tools;
 
 /// <summary>
-/// The two tools that give an agent its unpinned knowledge on demand
-/// (docs/ai/05-agents-and-skills.md §2.3). Pinned skill bodies ride in the system prompt; these
-/// fetch everything else — specialist skills and reference documents — only when the model decides
-/// it needs them, which is what keeps a ninety-page doctrine affordable.
-///
-/// <para>Both replay latest-only in the transcript (see AiTranscriptBudget), so a skill loaded on
-/// turn two is not paid for again on turn ten.</para>
-/// </summary>
+/// The skill store's read tools: list what the portal has been taught, load one skill's full
+/// text, and load a skill's larger reference documents on demand. The store survives the retired
+/// in-portal chat unchanged (docs/ai/05-agents-and-skills.md §2.3) — over the MCP connector the
+/// model discovers skills with list_skills instead of a system prompt, and the AgentKey column
+/// now reads as the skill's discipline grouping.</summary>
 internal static class AiSkillTools
 {
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
@@ -28,13 +25,33 @@ internal static class AiSkillTools
         return new List<AiTool>
         {
             new(
+                "list_skills",
+                "The portal's stored skills — the working doctrine the team has taught the AI "
+                + "(house style, commercial rules, fact patterns), each with its key, name and when "
+                + "it applies. Call this once early in a piece of portal work, then load_skill for "
+                + "any skill that covers the task in hand and follow what it says.",
+                AiToolSchema.Empty(),
+                AiToolKind.Read,
+                JpmsRoleSets.AllInternal,
+                async (context, _, ct) =>
+                {
+                    var skills = await context.Db.Skills
+                        .AsNoTracking()
+                        .Where(row => row.IsActive)
+                        .OrderBy(row => row.AgentKey).ThenBy(row => row.SkillKey)
+                        .Select(row => new { key = row.SkillKey, name = row.DisplayName, row.Description, discipline = row.AgentKey })
+                        .ToListAsync(ct);
+                    return Serialise(new { ok = true, count = skills.Count, skills,
+                        note = "load_skill(skill_key) returns a skill's full text." });
+                }),
+
+            new(
                 "load_skill",
-                "Load the full text of one of your skills — the discipline manuals listed in your "
-                + "instructions under \"Your skills\". Call it when the task in hand is one a listed "
-                + "skill covers and you have not already loaded it this conversation; then follow "
-                + "what it says. Do not re-load a skill you already loaded — you keep what it told "
-                + "you. Do not guess at keys: only the listed ones exist.",
-                AiToolSchema.Object(("skill_key", "string", "A skill key from your instructions.", true)),
+                "Load the full text of one of the portal's stored skills — the discipline manuals "
+                + "list_skills names. Call it when the task in hand is one a listed skill covers and "
+                + "you have not already loaded it this conversation; then follow what it says. Do "
+                + "not guess at keys: only the listed ones exist.",
+                AiToolSchema.Object(("skill_key", "string", "A skill key from list_skills.", true)),
                 AiToolKind.Read,
                 JpmsRoleSets.AllInternal,
                 async (context, input, ct) =>
@@ -46,14 +63,8 @@ internal static class AiSkillTools
                         .AsNoTracking()
                         .FirstOrDefaultAsync(row => row.SkillKey == key && row.IsActive, ct);
 
-                    // An agent reads its own skills and the shared set — never another agent's.
-                    if (skill is null
-                        || (!string.Equals(skill.AgentKey, context.AgentKey, StringComparison.OrdinalIgnoreCase)
-                            && !string.Equals(skill.AgentKey, SharedAgentKey, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        return Fail($"No skill named {key} is available to you. Only the skills "
-                                    + "listed in your instructions exist.");
-                    }
+                    if (skill is null)
+                        return Fail($"No skill named {key} exists — list_skills shows the keys that do.");
 
                     var references = await context.Db.SkillReferences
                         .AsNoTracking()
@@ -98,12 +109,8 @@ internal static class AiSkillTools
                         .AsNoTracking()
                         .FirstOrDefaultAsync(row => row.SkillKey == skillKey && row.IsActive, ct);
 
-                    if (skill is null
-                        || (!string.Equals(skill.AgentKey, context.AgentKey, StringComparison.OrdinalIgnoreCase)
-                            && !string.Equals(skill.AgentKey, SharedAgentKey, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        return Fail($"No skill named {skillKey} is available to you.");
-                    }
+                    if (skill is null)
+                        return Fail($"No skill named {skillKey} exists — list_skills shows the keys that do.");
 
                     var reference = await context.Db.SkillReferences
                         .AsNoTracking()

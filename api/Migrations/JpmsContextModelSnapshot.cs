@@ -126,194 +126,6 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("AgentActivity");
                 });
 
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.AiAttachmentEntity", b =>
-                {
-                    b.Property<string>("AttachmentId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("BlobRef")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<string>("ConversationId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("FileName")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("ManifestJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("SizeBytes")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTimeOffset>("UploadedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("UploadedByEmail")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("AttachmentId");
-
-                    b.HasIndex("ConversationId")
-                        .HasDatabaseName("IX_AiAttachments_ConversationId");
-
-                    b.ToTable("AiAttachments");
-                });
-
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.AiConversationEntity", b =>
-                {
-                    b.Property<string>("ConversationId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("CapabilityKey")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTimeOffset>("LastMessageAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("ProjectId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Route")
-                        .HasMaxLength(512)
-                        .HasColumnType("nvarchar(512)");
-
-                    b.Property<string>("ScopeRecordId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("ScopeRecordType")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTimeOffset>("StartedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("StartedByEmail")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("Title")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("ConversationId");
-
-                    b.HasIndex("ScopeRecordId", "LastMessageAt")
-                        .HasDatabaseName("IX_AiConversations_ScopeRecordId");
-
-                    b.HasIndex("StartedByEmail", "LastMessageAt")
-                        .HasDatabaseName("IX_AiConversations_StartedByEmail_LastMessageAt");
-
-                    b.ToTable("AiConversations");
-                });
-
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.AiConversationMessageEntity", b =>
-                {
-                    b.Property<string>("MessageId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ConversationId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<DateTimeOffset>("PostedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("int");
-
-                    b.Property<int>("Sequence")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ToolCallsJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ToolName")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.Property<string>("ToolUseId")
-                        .HasMaxLength(128)
-                        .HasColumnType("nvarchar(128)");
-
-                    b.HasKey("MessageId");
-
-                    b.HasIndex("ConversationId", "Sequence")
-                        .HasDatabaseName("IX_AiConversationMessages_ConversationId_Sequence");
-
-                    b.ToTable("AiConversationMessages");
-                });
-
-            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.AiPendingReplyEntity", b =>
-                {
-                    b.Property<string>("ReplyId")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<int>("AfterSequence")
-                        .HasColumnType("int");
-
-                    b.Property<DateTimeOffset?>("AnsweredAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<string>("ConversationId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("Error")
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
-
-                    b.Property<string>("ModelTier")
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
-
-                    b.Property<string>("ReplyJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTimeOffset>("RequestedAt")
-                        .HasColumnType("datetimeoffset");
-
-                    b.Property<int>("Status")
-                        .IsConcurrencyToken()
-                        .HasColumnType("int");
-
-                    b.HasKey("ReplyId");
-
-                    b.HasIndex("ConversationId", "Status")
-                        .HasDatabaseName("IX_AiPendingReplies_ConversationId_Status");
-
-                    b.ToTable("AiPendingReplies");
-                });
-
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.AppVersionEntity", b =>
                 {
                     b.Property<string>("AppVersionId")
@@ -4817,6 +4629,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
+                    b.Property<bool>("IsProspect")
+                        .HasColumnType("bit");
+
                     b.Property<string>("MobileNumber")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -5497,6 +5312,138 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("Email");
 
                     b.ToTable("UserCredentials");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.OAuthAuthCodeEntity", b =>
+                {
+                    b.Property<string>("CodeHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("CodeChallenge")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("RedirectUri")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("Resource")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UserEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("CodeHash");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("IX_OAuthAuthCodes_ExpiresAt");
+
+                    b.ToTable("OAuthAuthCodes");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.OAuthClientEntity", b =>
+                {
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ClientName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("RedirectUrisJson")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("ClientId");
+
+                    b.ToTable("OAuthClients");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.OAuthTokenEntity", b =>
+                {
+                    b.Property<string>("TokenHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ClientName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("FamilyId")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("IssuedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("UserEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("TokenHash");
+
+                    b.HasIndex("FamilyId")
+                        .HasDatabaseName("IX_OAuthTokens_FamilyId");
+
+                    b.HasIndex("UserEmail", "Kind")
+                        .HasDatabaseName("IX_OAuthTokens_UserEmail_Kind");
+
+                    b.ToTable("OAuthTokens");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.UserSessionEntity", b =>
@@ -6208,6 +6155,79 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("WalkRoundNoteId");
 
                     b.ToTable("WalkRoundNotes");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.WeeklyCashflowItemEntity", b =>
+                {
+                    b.Property<string>("WeeklyCashflowItemId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ArchivedByEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("FirstDueOn")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LastDueOn")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("Recurrence")
+                        .HasColumnType("int");
+
+                    b.HasKey("WeeklyCashflowItemId");
+
+                    b.ToTable("WeeklyCashflowItems");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.WeeklyCashflowPlacementEntity", b =>
+                {
+                    b.Property<string>("PlacementKey")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("MovedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("MovedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("PlannedWeekStart")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("PlacementKey");
+
+                    b.ToTable("WeeklyCashflowPlacements");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.WorkOrderAttachmentEntity", b =>

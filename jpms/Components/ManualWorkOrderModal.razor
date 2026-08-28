@@ -16,30 +16,15 @@
    record-keeping attachments, and the released order's automatic purchase-order email. Editing
    covers manual orders for the whole team and ANY order for the MD/FD/administrators (the API
    enforces the split); saving an edit never re-emails the supplier.
-
-   When the assistant opened it (a work_order_edit AiTask is active), this wrapper is also the
-   dialog ⇄ assistant pipe: every edit republishes the form's live state, and the assistant's
-   update_open_modal proposals are MERGED into the form — a field it did not send keeps what the
-   user typed. The user still presses Save changes; filling writes nothing. *@
+ *@
 <Modal IsOpen="IsOpen"
        Title="@(IsEditing ? Editing!.Order.IsDraft ? "Edit draft work order" : $"Edit work order {EditingReference}" : "Add work order")"
        ConfirmLabel="@(busy ? "Saving…" : IsEditing ? "Save changes" : FormSaveAsDraft ? "Save draft" : createPackage && pickedAmounts.Count > 0 ? "Save order + package" : "Save order")"
        ConfirmDisabled="@(busy || form is null || !form.CanSave)"
        OnConfirm="SaveAsync"
        OnCancel="OnClose"
-       ChatAware="true"
-       DismissOnOverlayClick="@(!AssistantTaskActive)"
        Class="max-w-6xl">
     <div class="space-y-4">
-        @if (AssistantTaskActive && Chat.AssistantBusy)
-        {
-            @* The assistant is mid-turn on this very form. Without this, the user watches a blank
-               dialog while the model works through the wire and has no idea anything is happening. *@
-            <div class="flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2">
-                <span class="w-3 h-3 shrink-0 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></span>
-                <p class="text-xs text-accent">The assistant is working on this form — fields fill in as it goes.</p>
-            </div>
-        }
         <WorkOrderForm @ref="form" ProjectId="@ProjectId" Busy="@busy" Editing="@Editing"
                        DraftTickLocked="@(createdOrder is not null)" OnChanged="HandleFormChanged" />
 
@@ -88,33 +73,6 @@
                         </li>
                     }
                 </ul>
-            }
-            @if (AssistantTaskActive && chatFiles.Count > 0)
-            {
-                @* The quotes the user attached to the chat this order is being drafted from —
-                   ticked files copy onto the order when it saves, server-side, so nobody
-                   re-picks from disk what the assistant just read. Images (usually pasted
-                   screenshots) start unticked; a tick keeps them too. *@
-                <div class="mt-3">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1"
-                       title="Files attached to the assistant chat this order is being drafted from. Ticked files are copied onto the order when you save — the quote it was raised from stays on record">
-                        From this chat
-                    </p>
-                    <ul class="space-y-1">
-                        @foreach (var row in chatFiles)
-                        {
-                            var chatFile = row;
-                            <li class="flex items-center gap-2 text-sm text-content">
-                                <input type="checkbox" class="cursor-pointer" disabled="@busy"
-                                       checked="@tickedChatFiles.Contains(TickKey(chatFile.File))"
-                                       @onchange="() => ToggleChatFile(chatFile)" />
-                                <span class="truncate" title="@chatFile.File.FileName">@chatFile.File.FileName</span>
-                                <span class="text-xs text-content-subtle whitespace-nowrap">@FormatBytes(chatFile.File.SizeBytes)</span>
-                            </li>
-                        }
-                    </ul>
-                    <p class="text-xs text-content-subtle mt-1">Ticked files are saved onto the order with it — the quote it was raised from stays on record.</p>
-                </div>
             }
             @if (attachmentError is not null)
             {

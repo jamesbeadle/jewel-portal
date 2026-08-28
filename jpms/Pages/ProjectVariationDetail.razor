@@ -20,8 +20,6 @@
 @inject NavigationManager Nav
 @inject IJSRuntime Js
 @inject IValuationReportStore Valuation
-@inject AiTaskState AiTasks
-@inject ChatPanelState Chat
 @implements IDisposable
 
 <PageTitle>Variation · JPMS</PageTitle>
@@ -66,17 +64,6 @@ else
             <a href="@($"/projects/{ProjectId}/variations")" class="text-sm text-content-muted hover:text-content inline-flex items-center gap-1 mb-4">
                 &larr; Variations
             </a>
-        }
-
-        @* An assistant open_modal request this page had to refuse — said out loud, because a
-           silently dropped open_modal leaves the model narrating a dialog that never appeared. *@
-        @if (assistantRouteError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
-                @assistantRouteError
-                <button type="button" class="text-xs text-content-subtle underline underline-offset-4 ml-2"
-                        @onclick="() => assistantRouteError = null">Dismiss</button>
-            </p>
         }
 
         <div class="flex flex-wrap items-center gap-3 mb-1">
@@ -636,18 +623,7 @@ else
                            Title="@($"Edit lines — {order.Reference}")"
                            ShowFooter="false"
                            OnCancel="CloseEditLines"
-                           ChatAware="true"
-                           DismissOnOverlayClick="@(!EditLinesTaskActive)"
                            Class="max-w-3xl">
-                        @if (EditLinesTaskActive && Chat.AssistantBusy)
-                        {
-                            @* The assistant is mid-turn on this very schedule. Without this the user
-                               watches static rows while the model works through the wire. *@
-                            <div class="mb-3 flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2">
-                                <span class="w-3 h-3 shrink-0 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></span>
-                                <p class="text-xs text-accent">The assistant is working on these lines — rows change as it goes.</p>
-                            </div>
-                        }
                         <VariationApprovePanel @ref="editLinesPanel"
                                                ShowHeading="false"
                                                InitialLines="@CurrentLineInputs"
@@ -655,7 +631,6 @@ else
                                                HelpOverride="Editing re-prices these lines on the Valuation Report and moves the CVR and cost-centre budgets by the difference. Nothing else changes."
                                                Busy="@busy"
                                                SubmitError="@editLinesError"
-                                               OnLinesEdited="PublishEditLinesDraft"
                                                OnApprove="SaveLinesEdit" />
                     </Modal>
                 }
@@ -736,16 +711,7 @@ else
                            Title="@($"Agreed build-up — {order.DisplayNumber}")"
                            ShowFooter="false"
                            OnCancel="CloseBuildUp"
-                           ChatAware="true"
-                           DismissOnOverlayClick="@(!BuildUpTaskActive)"
                            Class="max-w-3xl">
-                        @if (BuildUpTaskActive && Chat.AssistantBusy)
-                        {
-                            <div class="mb-3 flex items-center gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2">
-                                <span class="w-3 h-3 shrink-0 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></span>
-                                <p class="text-xs text-accent">The assistant is working on this build-up — rows change as it goes.</p>
-                            </div>
-                        }
                         <VariationApprovePanel @ref="buildUpPanel"
                                                ShowHeading="false"
                                                InitialLines="@order.DraftLines"
@@ -755,7 +721,6 @@ else
                                                HelpOverride="Stages the client-agreed lines on this variation: their total becomes the estimate and the approve modal opens pre-filled with them. Nothing is written to the Valuation Report until approval."
                                                Busy="@busy"
                                                SubmitError="@buildUpError"
-                                               OnLinesEdited="PublishBuildUpDraft"
                                                OnApprove="StageBuildUp" />
                         <details class="mt-4" open="@buildUpNarrativesOpen">
                             <summary class="text-sm text-content-muted cursor-pointer select-none" @onclick="() => buildUpNarrativesOpen = !buildUpNarrativesOpen" @onclick:preventDefault="true">
@@ -764,15 +729,15 @@ else
                             <div class="mt-3 space-y-3">
                                 <div>
                                     <label class="eyebrow block mb-1">Commercial basis</label>
-                                    <textarea class="field min-h-[4rem]" value="@buildUpCommercialBasis" @oninput="e => { buildUpCommercialBasis = e.Value?.ToString() ?? string.Empty; PublishBuildUpDraft(); }"></textarea>
+                                    <textarea class="field min-h-[4rem]" value="@buildUpCommercialBasis" @oninput="e => { buildUpCommercialBasis = e.Value?.ToString() ?? string.Empty; }"></textarea>
                                 </div>
                                 <div>
                                     <label class="eyebrow block mb-1">Programme impact</label>
-                                    <textarea class="field min-h-[4rem]" value="@buildUpProgrammeImpact" @oninput="e => { buildUpProgrammeImpact = e.Value?.ToString() ?? string.Empty; PublishBuildUpDraft(); }"></textarea>
+                                    <textarea class="field min-h-[4rem]" value="@buildUpProgrammeImpact" @oninput="e => { buildUpProgrammeImpact = e.Value?.ToString() ?? string.Empty; }"></textarea>
                                 </div>
                                 <div>
                                     <label class="eyebrow block mb-1">Exclusions</label>
-                                    <textarea class="field min-h-[4rem]" value="@buildUpExclusions" @oninput="e => { buildUpExclusions = e.Value?.ToString() ?? string.Empty; PublishBuildUpDraft(); }"></textarea>
+                                    <textarea class="field min-h-[4rem]" value="@buildUpExclusions" @oninput="e => { buildUpExclusions = e.Value?.ToString() ?? string.Empty; }"></textarea>
                                 </div>
                             </div>
                         </details>
@@ -1036,22 +1001,12 @@ else
         // project) — revalidated in the background like every other read model here.
         ProjectList.OnChanged += StateHasChanged;
         _ = LoadProjectListAsync();
-        // The assistant's route in (open_modal → ?openModal=variation_edit_lines) and its
-        // proposals while the Edit lines dialog is open beside the chat.
-        AiTasks.OnDraftApplied += HandleAssistantLinesDraft;
-        Chat.OnChange += StateHasChanged;
-        // The provider is cleared by reference, so the same delegate instance must be kept.
-        Chat.SetPageNoteProvider(pageNoteProvider = PageNote);
-        Nav.LocationChanged += HandleLocationChanged;
         sessionReady = true;
         await ReloadAsync();
-        await HonourRequestedModalAsync();
     }
 
-    // Belt: covers arrivals where the router does re-set parameters — and the case where the
-    // component is REUSED for a different variation (the assistant's open_modal for V02 while V01
-    // is in view): the record must be reloaded before anything is honoured against it, or the
-    // dialog would seed from the old variation's lines and save them onto the new one.
+    // Covers the case where the component is REUSED for a different variation while in view:
+    // the record must be reloaded before anything renders against it.
     protected override async Task OnParametersSetAsync()
     {
         if (!sessionReady) return;
@@ -1059,34 +1014,8 @@ else
         {
             orderLoaded = false;
             editLinesModalOpen = false;
-            // The old variation's task, ended by key: EditLinesTaskActive compares against the
-            // NEW route id and would say "not ours".
             buildUpModalOpen = false;
-            if (AiTasks.Active?.ModalKey == ModalCatalog.VariationEditLines.ModalKey
-                || AiTasks.Active?.ModalKey == ModalCatalog.VariationBuildUp.ModalKey)
-            {
-                AiTasks.End();
-                Chat.SetCoexistence(false);
-            }
             await ReloadAsync();
-        }
-        if (orderLoaded) await HonourRequestedModalAsync();
-    }
-
-    protected override void OnAfterRender(bool firstRender)
-    {
-        // The Modal renders its children only while open, so the panel mounts fresh on each
-        // opening — publish its seeded rows once, so the model's first hop sees the schedule as
-        // it stands rather than "{}".
-        if (editLinesModalOpen && EditLinesTaskActive && editLinesPanel is not null && !editLinesDraftPublished)
-        {
-            editLinesDraftPublished = true;
-            AiTasks.UpdateDraft(editLinesPanel.SnapshotLines());
-        }
-        if (buildUpModalOpen && BuildUpTaskActive && buildUpPanel is not null && !buildUpDraftPublished)
-        {
-            buildUpDraftPublished = true;
-            AiTasks.UpdateDraft(BuildUpDraftJson());
         }
     }
 
@@ -1108,14 +1037,6 @@ else
         Valuation.OnChange -= StateHasChanged;
         Activity.OnChanged -= StateHasChanged;
         ProjectList.OnChanged -= StateHasChanged;
-        AiTasks.OnDraftApplied -= HandleAssistantLinesDraft;
-        Chat.OnChange -= StateHasChanged;
-        if (pageNoteProvider is not null) Chat.ClearPageNoteProvider(pageNoteProvider);
-        Nav.LocationChanged -= HandleLocationChanged;
-        // Leaving the page ends its dialog task — a dangling task ships this dialog's stale JSON
-        // with every later turn and leaves the chat panel lifted above every future modal.
-        EndEditLinesTask();
-        EndBuildUpTask();
     }
 
     // Losing the project list should cost the composer its drawing/photo sources, not the page.
@@ -1498,23 +1419,12 @@ else
     {
         editLinesError = null;
         editLinesModalOpen = true;
-        editLinesDraftPublished = false;
-        // Opened by hand: the task attaches SILENTLY — no kick-off, no billed turn — so the
-        // assistant knows the dialog is open (its rows ride with every turn) and can fill it
-        // when asked. Reopened while its own task is live (the assistant opened it, the user
-        // closed and reopened): the task is already there.
-        if (!EditLinesTaskActive && order is not null && Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            AiTasks.Start(TaskFor(ModalCatalog.VariationEditLines, order, kickoff: null), "{}");
-            Chat.SetCoexistence(true);
-        }
     }
 
     private void CloseEditLines()
     {
         editLinesModalOpen = false;
         editLinesError = null;
-        EndEditLinesTask();
     }
 
     private async Task SaveLinesEdit(VariationApprovePanel.ApproveRequest request)
@@ -1526,7 +1436,6 @@ else
             busy = true;
             order = await Variations.ReviseVariationOrderLinesAsync(VariationOrderId, request.Lines);
             editLinesModalOpen = false;
-            EndEditLinesTask(); // Saved: the dialog is gone, so its task goes with it.
             Valuation.Refresh(ProjectId); // pull the re-priced lines for the breakdown
             await ReloadAsync();
         }
@@ -1613,172 +1522,14 @@ else
 
     private static string Money(decimal value) => value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
-    // ---- The assistant's route in: open_modal → ?openModal=variation_edit_lines | variation_build_up
-    //
-    // Two dialogs, one per side of approval (docs/ai/06-context-retrieval.md, Phase 2 and the
-    // rebuilt build-up): "update the draft VO to the agreed details" on an Issued variation opens
-    // the Agreed build-up dialog; "update V01 to the V01 tab" on an Approved one opens Edit lines.
-    // Each is the same modal the user opens by hand; opened by hand it attaches its task silently.
-
     private VariationApprovePanel? editLinesPanel;
-    private bool editLinesDraftPublished;
     private VariationApprovePanel? buildUpPanel;
     private bool buildUpModalOpen;
-    private bool buildUpDraftPublished;
     private bool buildUpNarrativesOpen;
     private string? buildUpError;
     private string buildUpCommercialBasis = "";
     private string buildUpProgrammeImpact = "";
     private string buildUpExclusions = "";
-    private string? assistantRouteError;
-    private Func<string?>? pageNoteProvider;
-
-    // history.replaceState does not raise LocationChanged, so Nav.Uri keeps the stripped-out query
-    // for the life of this component. This is what stops a later repaint re-honouring it.
-    private bool modalRequestHonoured;
-
-    private bool TaskActiveFor(string modalKey) =>
-        AiTasks.Active?.ModalKey == modalKey && AiTasks.Active.RecordId == VariationOrderId;
-
-    private bool EditLinesTaskActive => TaskActiveFor(ModalCatalog.VariationEditLines.ModalKey);
-    private bool BuildUpTaskActive => TaskActiveFor(ModalCatalog.VariationBuildUp.ModalKey);
-
-    /// <summary>Which of this page's dialogs the route asks for, or null.</summary>
-    private ModalDescriptor? RequestedModalFromRoute()
-    {
-        if (modalRequestHonoured) return null;
-        var query = new Uri(Nav.Uri).Query;
-        if (query.Contains($"openModal={ModalCatalog.VariationEditLines.ModalKey}", StringComparison.OrdinalIgnoreCase))
-            return ModalCatalog.VariationEditLines;
-        if (query.Contains($"openModal={ModalCatalog.VariationBuildUp.ModalKey}", StringComparison.OrdinalIgnoreCase))
-            return ModalCatalog.VariationBuildUp;
-        return null;
-    }
-
-    private AiTask TaskFor(ModalDescriptor modal, VariationOrder target, string? kickoff) =>
-        new(
-            TaskKey: modal == ModalCatalog.VariationBuildUp ? "variation-build-up" : "variation-edit-lines",
-            ModalKey: modal.ModalKey,
-            BannerLabel: modal == ModalCatalog.VariationBuildUp
-                ? $"Staging {target.DisplayNumber}'s agreed build-up"
-                : $"Editing {target.DisplayNumber}'s lines",
-            BusyLabel: $"Reading {target.DisplayNumber} and the evidence…",
-            KickoffMessage: kickoff,
-            ProjectId: ProjectId,
-            RecordType: nameof(RecordType.Variation),
-            RecordId: target.VariationOrderId,
-            RecordReference: target.DisplayNumber);
-
-    /// <summary>
-    /// Honoured only where this user could have opened the dialog by clicking — the assistant can
-    /// route somebody to a page; it cannot get them past a gate. The query is cleared first,
-    /// through history rather than the router, so F5 does not reopen the dialog and re-bill a
-    /// kick-off turn. Every refusal is said out loud in the banner.
-    /// </summary>
-    private async Task HonourRequestedModalAsync()
-    {
-        if (RequestedModalFromRoute() is not { } modal) return;
-
-        // Latched BEFORE the first await: OnParametersSetAsync and LocationChanged can both enter
-        // this method for one navigation — two AiTasks.Start calls, two billed kick-off turns.
-        modalRequestHonoured = true;
-
-        try { await Js.InvokeVoidAsync("history.replaceState", null, "", new Uri(Nav.Uri).GetLeftPart(UriPartial.Path)); }
-        catch { /* Address bar cosmetics. Never worth failing the page over. */ }
-
-        var name = modal.DisplayName;
-        if (order is null)
-        {
-            assistantRouteError = $"The assistant tried to open the {name} dialog, but this variation could not be loaded.";
-            StateHasChanged();
-            return;
-        }
-        if (!CanManage)
-        {
-            assistantRouteError = $"The assistant tried to open the {name} dialog, but the role you are viewing as can't edit variations.";
-            StateHasChanged();
-            return;
-        }
-
-        var isBuildUp = modal == ModalCatalog.VariationBuildUp;
-        if (isBuildUp && order.Status is VariationOrderStatus.Approved or VariationOrderStatus.Rejected)
-        {
-            assistantRouteError = $"The assistant tried to open the {name} dialog, but {order.DisplayNumber} is "
-                + $"{order.Status.DisplayName()} — a build-up is staged before approval.";
-            StateHasChanged();
-            return;
-        }
-        if (!isBuildUp && order.Status != VariationOrderStatus.Approved)
-        {
-            assistantRouteError = $"The assistant tried to open the {name} dialog, but {order.DisplayNumber} is "
-                + $"{order.Status.DisplayName()} — lines exist only once a variation is approved.";
-            StateHasChanged();
-            return;
-        }
-        if (!isBuildUp && !ValuationLinesReady)
-        {
-            // The dialog seeds itself from the report lines; opening it before they land would
-            // offer an empty build-up. Wait for the store — bounded.
-            for (var i = 0; i < 30 && !ValuationLinesReady; i++) await Task.Delay(100);
-            if (!ValuationLinesReady)
-            {
-                assistantRouteError = $"The assistant tried to open the {name} dialog, but the Valuation Report's lines have not loaded yet — try again in a moment.";
-                StateHasChanged();
-                return;
-            }
-        }
-
-        if (isBuildUp)
-        {
-            buildUpError = null;
-            SeedBuildUpNarratives();
-            buildUpModalOpen = true;
-            buildUpDraftPublished = false;
-        }
-        else
-        {
-            editLinesError = null;
-            editLinesModalOpen = true;
-            editLinesDraftPublished = false;
-        }
-
-        if (Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            // A user turn, so it outranks the system prompt — it has to say the same thing.
-            var kickoff = isBuildUp
-                ? $"The \"Agreed build-up\" dialog for {order.DisplayNumber} is open beside me. Stage the client-agreed "
-                  + "build-up from the evidence we were working with — the attached file or the tagged emails above all "
-                  + "(get_variation_context for the variation as it stands, find_in_source and read_source for the "
-                  + "evidence). Send the whole agreed schedule in ONE update — one line per cost centre, only figures "
-                  + "the evidence states — and the narrative sections if the evidence gives them, and tell me in one "
-                  + "line what you staged and what you could not establish."
-                : $"The \"Edit variation lines\" dialog for {order.DisplayNumber} is open beside me, "
-                  + "pre-filled with its current build-up. Correct the schedule from the evidence we were "
-                  + "working with — the attached file or the tagged emails above all (get_variation_context "
-                  + "for the lines as they stand, find_in_source and read_source for the evidence). Send the "
-                  + "whole schedule in ONE update: keep every line that is still right with its "
-                  + "valuationLineItemId, change what the evidence changes, add only lines it actually "
-                  + "prices, and tell me in one line what you changed and what you could not establish.";
-            AiTasks.Start(TaskFor(modal, order, kickoff), "{}");
-            Chat.Open();
-            Chat.SetCoexistence(true);
-        }
-        StateHasChanged();
-    }
-
-    private void EndEditLinesTask()
-    {
-        if (!EditLinesTaskActive) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
-    }
-
-    private void EndBuildUpTask()
-    {
-        if (!BuildUpTaskActive) return;
-        AiTasks.End();
-        Chat.SetCoexistence(false);
-    }
 
     // ---- Agreed build-up: open / close / stage ----
 
@@ -1797,21 +1548,12 @@ else
         buildUpError = null;
         SeedBuildUpNarratives();
         buildUpModalOpen = true;
-        buildUpDraftPublished = false;
-        // Opened by hand: the task attaches SILENTLY — no kick-off, no billed turn — so the
-        // assistant knows the dialog is open and can fill it when asked.
-        if (!BuildUpTaskActive && order is not null && Session.ActiveRole is { } role && DesktopNavigation.CanUseAssistant(role))
-        {
-            AiTasks.Start(TaskFor(ModalCatalog.VariationBuildUp, order, kickoff: null), "{}");
-            Chat.SetCoexistence(true);
-        }
     }
 
     private void CloseBuildUp()
     {
         buildUpModalOpen = false;
         buildUpError = null;
-        EndBuildUpTask();
     }
 
     private async Task StageBuildUp(VariationApprovePanel.ApproveRequest request)
@@ -1825,7 +1567,6 @@ else
                 VariationOrderId, request.Lines,
                 buildUpCommercialBasis, buildUpProgrammeImpact, buildUpExclusions);
             buildUpModalOpen = false;
-            EndBuildUpTask(); // Staged: the dialog is gone, so its task goes with it.
             await ReloadAsync();
         }
         // The endpoint answers a refused staging with 400 and its own words (no toast, by
@@ -1833,114 +1574,5 @@ else
         catch (CommandFailedException ex) { buildUpError = ex.Message; }
         catch { buildUpError = "Couldn't stage the build-up. Please try again."; }
         finally { busy = false; }
-    }
-
-    /// <summary>The build-up dialog's live state as the task carries it: the panel's rows plus the
-    /// three narrative fields — the dialog's schema exactly.</summary>
-    private string BuildUpDraftJson()
-    {
-        var root = System.Text.Json.Nodes.JsonNode.Parse(buildUpPanel?.SnapshotLines() ?? "{}") as System.Text.Json.Nodes.JsonObject
-                   ?? new System.Text.Json.Nodes.JsonObject();
-        root["commercialBasis"] = buildUpCommercialBasis;
-        root["programmeImpact"] = buildUpProgrammeImpact;
-        root["exclusions"] = buildUpExclusions;
-        return root.ToJsonString();
-    }
-
-    private void PublishBuildUpDraft()
-    {
-        if (!BuildUpTaskActive) return;
-        AiTasks.UpdateDraft(BuildUpDraftJson());
-    }
-
-    /// <summary>The model's update_open_modal, landing in whichever of this page's dialogs is
-    /// open: the schedule replaces the rows (and, for the build-up, a narrative it sent replaces
-    /// the field — whitespace-only counts as not sent), the live state is republished, the modal
-    /// repaints.</summary>
-    private void HandleAssistantLinesDraft(string fieldsJson)
-    {
-        if (editLinesModalOpen && EditLinesTaskActive && editLinesPanel is not null)
-        {
-            editLinesPanel.ReplaceLines(fieldsJson);
-            AiTasks.UpdateDraft(editLinesPanel.SnapshotLines());
-            StateHasChanged();
-            return;
-        }
-        if (buildUpModalOpen && BuildUpTaskActive && buildUpPanel is not null)
-        {
-            buildUpPanel.ReplaceLines(fieldsJson);
-            try
-            {
-                using var document = System.Text.Json.JsonDocument.Parse(fieldsJson);
-                var root = document.RootElement;
-                if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
-                {
-                    if (ProposedText(root, "commercialBasis") is { } basis) { buildUpCommercialBasis = basis; buildUpNarrativesOpen = true; }
-                    if (ProposedText(root, "programmeImpact") is { } impact) { buildUpProgrammeImpact = impact; buildUpNarrativesOpen = true; }
-                    if (ProposedText(root, "exclusions") is { } exclusions) { buildUpExclusions = exclusions; buildUpNarrativesOpen = true; }
-                }
-            }
-            catch (System.Text.Json.JsonException) { /* the rows were already applied; the fields stand */ }
-            AiTasks.UpdateDraft(BuildUpDraftJson());
-            StateHasChanged();
-        }
-    }
-
-    private static string? ProposedText(System.Text.Json.JsonElement root, string name) =>
-        root.TryGetProperty(name, out var value) && value.ValueKind == System.Text.Json.JsonValueKind.String
-        && !string.IsNullOrWhiteSpace(value.GetString())
-            ? value.GetString()
-            : null;
-
-    /// <summary>Every human edit republishes the live rows, so the model reasons from the
-    /// schedule as it stands NOW.</summary>
-    private void PublishEditLinesDraft()
-    {
-        if (!EditLinesTaskActive || editLinesPanel is null) return;
-        AiTasks.UpdateDraft(editLinesPanel.SnapshotLines());
-    }
-
-    /// <summary>
-    /// Braces: the case the lifecycle hooks MISS. When the panel's open_modal fires while the user
-    /// is ALREADY on this variation, the navigation changes only the query string — the route
-    /// parameter values are identical, so neither OnInitializedAsync nor OnParametersSetAsync
-    /// runs. This event is the one signal that always fires; history.replaceState does not raise
-    /// it, so honouring cannot loop.
-    /// </summary>
-    private void HandleLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs args) =>
-        _ = InvokeAsync(async () =>
-        {
-            if (!sessionReady || !orderLoaded) return;
-            modalRequestHonoured = false; // a fresh navigation is a fresh request
-            await HonourRequestedModalAsync();
-        });
-
-    /// <summary>What this page reports to the assistant every hop, beyond the route: the
-    /// variation's status and value, its staged build-up, how many report lines it has, and
-    /// which of its dialogs is open — so "update it" resolves to the right act without a guess.</summary>
-    private string? PageNote()
-    {
-        if (order is null) return null;
-        var lines = VariationLines;
-        var note = $"Variation {order.DisplayNumber} «{order.Title}» is {order.Status.DisplayName()}"
-                   + (order.Status == VariationOrderStatus.Approved
-                       ? $", approved value {MoneyPennies(order.Value)} across {lines.Count} report line{(lines.Count == 1 ? "" : "s")}"
-                       : order.EstimatedValue is { } estimate ? $", estimate {MoneyPennies(estimate)}" : "")
-                   + ".";
-        if (order.Status != VariationOrderStatus.Approved && order.Status != VariationOrderStatus.Rejected)
-        {
-            note += order.DraftLines is { Count: > 0 } staged
-                ? $" An agreed build-up of {staged.Count} line{(staged.Count == 1 ? "" : "s")} is staged (its total is the estimate)."
-                : " No agreed build-up is staged yet.";
-        }
-        if (editLinesModalOpen)
-            note += " The Edit lines dialog is open" + (EditLinesTaskActive ? " (its rows are in the task state)." : ".");
-        else if (buildUpModalOpen)
-            note += " The Agreed build-up dialog is open" + (BuildUpTaskActive ? " (its rows are in the task state)." : ".");
-        else if (order.Status == VariationOrderStatus.Approved && CanManage)
-            note += " Edit lines (variation_edit_lines) can be opened here.";
-        else if (order.Status != VariationOrderStatus.Rejected && CanManage)
-            note += " The agreed build-up (variation_build_up) can be staged here.";
-        return note;
     }
 }

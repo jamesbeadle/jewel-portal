@@ -1,3 +1,5 @@
+> **Superseded (2026-08-27).** The in-portal chat this document describes was retired in favour of the MCP connector — see [10-mcp-connector.md](10-mcp-connector.md). Kept as the historical record.
+
 # 09 — The turn-based chat from a height: how a message becomes an answer, and where its robustness comes from
 
 *Written 2026-08-26, at the end of a fortnight in which the assistant went from "a chat that reads

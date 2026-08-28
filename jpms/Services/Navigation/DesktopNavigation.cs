@@ -129,6 +129,19 @@ public static class DesktopNavigation
         Role.FinanceDirector
     };
 
+    // The Weekly Cashflow row: the directors plus Accounts — the first (deliberate) exception to
+    // the nav clamp, decision 2026-08-27. The page is the accountant's working tool (he moves
+    // the payment weeks), so hiding it from his rail would leave the one page built FOR him
+    // reachable only by URL. Mirrors the API's WeeklyCashflowGates.WeeklyCashflowRoles — keep
+    // the two lists in step. The bank-balance line inside the page stays directors-only (it
+    // reads the Xero cash summary, whose gate is untouched).
+    internal static readonly Role[] WeeklyCashflowRoles =
+    {
+        Role.ManagingDirector,
+        Role.FinanceDirector,
+        Role.Accounts
+    };
+
     // Decision 2026-07-22: widened from MD-only so the merged Directory page keeps the old
     // Clients/Architects reach for PMs and adds the FD (Admin included via the CanSee bypass).
     internal static readonly Role[] DirectoryRoles =

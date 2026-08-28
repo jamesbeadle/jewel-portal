@@ -24,12 +24,6 @@ public interface IWorkOrderAttachmentStore
     Task<IReadOnlyList<WorkOrderAttachment>> RemoveAsync(
         string workOrderId, string attachmentId, CancellationToken cancellationToken = default);
 
-    /// <summary>Copies files the caller attached to an assistant conversation onto the order —
-    /// the quote it was drafted from. The bytes move server-side; nothing re-uploads.</summary>
-    Task<IReadOnlyList<WorkOrderAttachment>> AttachFromChatAsync(
-        string workOrderId, string conversationId, IReadOnlyList<string> attachmentIds,
-        CancellationToken cancellationToken = default);
-
     /// <summary>The API URL that streams a stored file. <paramref name="inline"/> renders it in
     /// place (thumbnails and previews); otherwise the browser downloads it.</summary>
     string FileUrl(string workOrderId, string attachmentId, bool inline = false) =>
@@ -85,10 +79,4 @@ public sealed class HttpWorkOrderAttachmentStore : IWorkOrderAttachmentStore
     public Task<IReadOnlyList<WorkOrderAttachment>> RemoveAsync(
         string workOrderId, string attachmentId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new RemoveWorkOrderAttachment(workOrderId, attachmentId), cancellationToken);
-
-    public Task<IReadOnlyList<WorkOrderAttachment>> AttachFromChatAsync(
-        string workOrderId, string conversationId, IReadOnlyList<string> attachmentIds,
-        CancellationToken cancellationToken = default) =>
-        commands.SendAsync(
-            new AttachChatFilesToWorkOrder(workOrderId, conversationId, attachmentIds), cancellationToken);
 }

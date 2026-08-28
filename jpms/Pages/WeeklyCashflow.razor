@@ -1,0 +1,946 @@
+@page "/finance/weekly-cashflow"
+@using Jewel.JPMS.Contracts.WeeklyCashflow
+@using Jewel.JPMS.Contracts.Xero
+@using Jewel.JPMS.Features.WeeklyCashflow
+@inject AuthService Auth
+@inject SessionService Session
+@inject IXeroAgedPayablesStore Payables
+@inject IXeroAgedReceivablesStore Receivables
+@inject IXeroCashSummaryStore Cash
+@inject WeeklyCashflowPlanReadModel Plan
+@inject ICommandSender Commands
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Weekly Cashflow · JPMS</PageTitle>
+
+@*
+    The Weekly Cashflow (the sidebar's Financial Reports folder) — the accountant's live payment
+    plan. The Cash Forecast next door is the rough forward position, monthly to completion; this
+    is the NEXT 13 WEEKS as the money will actually move, and it is worked, not just read.
+
+    Three sources, one grid:
+      * Every outstanding supplier bill (aged payables read — drafts included, exactly the Aged
+        Payables page's rows) seeded into the week of its Xero due date.
+      * Every outstanding sales invoice (aged receivables read) seeded the same way — the cash
+        coming in that decides what is affordable each week.
+      * Manual items — subcontractors, staff, subscriptions, anything that isn't a project cost —
+        one-off or recurring, kept on this page because Xero can't see them coming.
+
+    The one moving part: any entry can be MOVED to the week it will really be paid (the ‹ › on
+    its cell; ↺ returns it to its due week). A move is a stored placement — who, when, which
+    week — so the plan is one shared truth, not a per-browser scratchpad. Moving changes WHEN,
+    never HOW MUCH: the grid's total always equals the payables, receivables and items that went
+    in — WeeklyCashflowMaths (pure, unit-tested) owns that arithmetic.
+
+    The bank-anchored line (closing balance per week, lowest week flagged) is directors-only,
+    mirroring the API's gate on the Xero cash summary. Accounts sees the movements — that is the
+    working surface — without the bank position.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4 flex-wrap">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Company</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Weekly Cashflow</h1>
+                <p class="text-sm text-content-muted mt-1">
+                    The next @WeeklyCashflowMaths.DefaultWeekCount weeks, week by week — every outstanding bill and invoice from Xero, plus the
+                    outgoings it can't see. Move any entry to the week it will really be paid.
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <Toolbar>
+                    <ExportToExcelButton FileName="Weekly cashflow"
+                                         Disabled="@(!GridReady || !XeroReady)"
+                                         BuildWorkbook="BuildExportWorkbook" />
+                    <ToolbarDivider />
+                    <ToolbarButton Icon="refresh" Label="Refresh from Xero"
+                                   Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
+                </Toolbar>
+                @* A control, so never gated — disabled until the plan has landed, in its own language. *@
+                <button type="button" class="btn-primary" disabled="@(!GridReady || planFailed)" @onclick="OpenAddDialog">Add item</button>
+            </div>
+        </header>
+
+        @{
+            // Computed ONCE per render and threaded through — the tiles, the bands and the
+            // export must all describe the same grid.
+            var view = GridReady && XeroReady ? BuildView() : null;
+        }
+
+        @* ── KPI strip. The movement tiles are everyone's; the bank-anchored tiles are the
+           directors', mirroring the API's gate. Tiles keep their shape while loading: label
+           stays, figure pulses. ── *@
+        <div class="grid gap-4 sm:grid-cols-2 @(IsDirector ? "lg:grid-cols-4" : "lg:grid-cols-3") mb-8">
+            @if (IsDirector)
+            {
+                <div class="rounded-xl border border-line bg-surface px-5 py-4">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Cash in bank</p>
+                    @if (BankSnapshot is null)
+                    {
+                        @LoadingFigure("Loading cash in bank")
+                    }
+                    else if (!BankReady)
+                    {
+                        <p class="text-sm text-content-muted mt-1">Needs the bank position from Xero.</p>
+                    }
+                    else
+                    {
+                        <p class="text-2xl font-semibold text-content">@Money(BankSnapshot!.TotalCash)</p>
+                        <p class="text-xs text-content-subtle mt-1">Xero, as of @FetchedText</p>
+                    }
+                </div>
+            }
+            <div class="rounded-xl border border-line bg-surface px-5 py-4"
+                 title="Cash out planned for the current week — bills and manual items placed (or due) this week.">
+                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">To pay this week</p>
+                @if (view is null)
+                {
+                    @LoadingFigure("Loading this week's payments")
+                }
+                else
+                {
+                    <p class="text-2xl font-semibold text-content">@Money(view.CashOut[0])</p>
+                    <p class="text-xs text-content-subtle mt-1">incl. everything overdue</p>
+                }
+            </div>
+            @if (IsDirector)
+            {
+                <div class="rounded-xl border border-line bg-surface px-5 py-4"
+                     title="The running bank balance's low point across the visible weeks — the week to plan for.">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Lowest week</p>
+                    @if (view is null || BankSnapshot is null)
+                    {
+                        @LoadingFigure("Loading the lowest week")
+                    }
+                    else if (view.Closing is null)
+                    {
+                        <p class="text-sm text-content-muted mt-1">Needs the bank position from Xero.</p>
+                    }
+                    else
+                    {
+                        var low = view.Closing[view.MinClosingIndex];
+                        <p class="text-2xl font-semibold @(low < 0m ? "text-negative" : "text-content")">@Money(low)</p>
+                        <p class="text-xs text-content-subtle mt-1">@WeekLabel(view.WeekStarts[view.MinClosingIndex], view.MinClosingIndex)</p>
+                    }
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-5 py-4"
+                     title="The running bank balance after the last visible week. Entries in Later are beyond the horizon and not yet counted.">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Balance at horizon end</p>
+                    @if (view is null || BankSnapshot is null)
+                    {
+                        @LoadingFigure("Loading the horizon-end balance")
+                    }
+                    else if (view.Closing is null)
+                    {
+                        <p class="text-sm text-content-muted mt-1">Needs the bank position from Xero.</p>
+                    }
+                    else
+                    {
+                        var horizonEnd = view.Closing[^1];
+                        <p class="text-2xl font-semibold @(horizonEnd < 0m ? "text-negative" : "text-content")">@Money(horizonEnd)</p>
+                        <p class="text-xs text-content-subtle mt-1">after @WeekLabel(view.WeekStarts[^1], view.WeekStarts.Count - 1)</p>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="rounded-xl border border-line bg-surface px-5 py-4">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Cash out, @WeeklyCashflowMaths.DefaultWeekCount weeks</p>
+                    @if (view is null)
+                    {
+                        @LoadingFigure("Loading cash out")
+                    }
+                    else
+                    {
+                        <p class="text-2xl font-semibold text-content">@Money(VisibleTotal(view.CashOut))</p>
+                        <p class="text-xs text-content-subtle mt-1">bills and manual items in the visible weeks</p>
+                    }
+                </div>
+                <div class="rounded-xl border border-line bg-surface px-5 py-4">
+                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Cash in, @WeeklyCashflowMaths.DefaultWeekCount weeks</p>
+                    @if (view is null)
+                    {
+                        @LoadingFigure("Loading cash in")
+                    }
+                    else
+                    {
+                        <p class="text-2xl font-semibold text-content">@Money(VisibleTotal(view.CashIn))</p>
+                        <p class="text-xs text-content-subtle mt-1">outstanding invoices due in the visible weeks</p>
+                    }
+                </div>
+            }
+        </div>
+
+        @if (moveError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">
+                @moveError
+                <button type="button" class="underline underline-offset-2 ml-1" @onclick="() => moveError = null">Dismiss</button>
+            </p>
+        }
+
+        @* One gate for the whole grid: every cell is arithmetic over all three sources, so it
+           reveals in one piece. A failed fetch opens the gate to a message — the toast carries
+           the reference and the detail. *@
+        <LoadGate IsLoading="@(!GridReady)" Prominent="true" Label="Loading the weekly cashflow">
+            @if (planFailed)
+            {
+                <p class="text-sm text-negative">Couldn't load the weekly plan. The details are in the red bar at the top — reload to try again.</p>
+            }
+            else if (PayablesSnapshot is { IsConfigured: false } || ReceivablesSnapshot is { IsConfigured: false })
+            {
+                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                    Xero isn't connected yet. Add the custom connection's credentials as the
+                    <span class="font-mono text-content">Xero__ClientId</span> and
+                    <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
+                </div>
+            }
+            else if (PayablesSnapshot?.Error is { } payablesError)
+            {
+                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                    <p class="text-content font-medium mb-1">Xero returned an error reading the bills</p>
+                    <p>@payablesError</p>
+                </div>
+            }
+            else if (ReceivablesSnapshot?.Error is { } receivablesError)
+            {
+                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+                    <p class="text-content font-medium mb-1">Xero returned an error reading the invoices</p>
+                    <p>@receivablesError</p>
+                </div>
+            }
+            else if (view is not null)
+            {
+                @if (PayablesSnapshot!.Truncated || ReceivablesSnapshot!.Truncated)
+                {
+                    <div class="rounded-xl border border-line bg-surface-raised px-5 py-3 text-sm text-content-muted mb-6">
+                        Xero holds more outstanding documents than the read's page cap could fetch — these totals are
+                        incomplete. Raise the <span class="font-mono text-content">Xero__MaxPages</span> app setting.
+                    </div>
+                }
+
+                <p class="text-xs text-content-subtle mb-3 max-w-4xl">
+                    <span class="font-medium text-content-muted">No signs to decode:</span> the band carries the
+                    direction — Cash in adds, Cash out subtracts. Anything overdue sits in the current week, never
+                    the past. Use ‹ › on an entry's cell to move it to the week it will really be paid — the
+                    <span class="text-accent">‣</span> marks a moved entry, and ↺ returns it to its due week.
+                    Moves are shared: everyone sees the same plan.
+                </p>
+
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
+                    <table class="w-full text-sm border-collapse">
+                        <thead class="bg-surface-raised border-b border-line">
+                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                <th class="px-4 py-3 min-w-[260px]"></th>
+                                @for (var index = 0; index < view.WeekStarts.Count; index++)
+                                {
+                                    <th class="px-3 py-3 text-right whitespace-nowrap">@WeekLabel(view.WeekStarts[index], index)</th>
+                                }
+                                <th class="px-3 py-3 text-right whitespace-nowrap border-l border-line"
+                                    title="Due beyond the visible weeks. Entries here roll into view as the weeks advance.">Later</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-line">
+                                <td colspan="@(view.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash in</td>
+                            </tr>
+                            @BandSection((view, WeeklyCashflowBand.ClientReceipts, "Client invoices outstanding", "one line per outstanding sales invoice in Xero, at its due week"))
+                            <tr class="border-b border-line">
+                                <td colspan="@(view.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash out</td>
+                            </tr>
+                            @BandSection((view, WeeklyCashflowBand.SupplierBills, "Supplier bills", "one line per outstanding bill in Xero — drafts included, as Aged Payables counts them"))
+                            @foreach (var category in WeeklyCashflowCategories.All)
+                            {
+                                var band = WeeklyCashflowMaths.BandFor(category);
+                                if (view.Entries.Any(entry => entry.Band == band))
+                                {
+                                    @BandSection((view, band, WeeklyCashflowCategories.BandLabel(category), "manual items — added on this page"))
+                                }
+                            }
+                            @* ── The running answer ── *@
+                            <tr class="border-t-2 border-line border-b border-line font-semibold">
+                                <td class="px-4 py-3 text-content">
+                                    Net movement
+                                    <span class="block text-[11px] text-content-faint font-normal">cash in less cash out, per week</span>
+                                </td>
+                                @for (var index = 0; index < view.WeekStarts.Count; index++)
+                                {
+                                    var net = view.Net[index];
+                                    <td class="px-3 py-3 text-right whitespace-nowrap @(net < 0m ? "text-negative" : "text-positive")">@Signed(net)</td>
+                                }
+                                <td class="px-3 py-3 text-right whitespace-nowrap border-l border-line @(view.Net[^1] < 0m ? "text-negative" : "text-positive")">@Signed(view.Net[^1])</td>
+                            </tr>
+                            @if (IsDirector && view.Closing is not null)
+                            {
+                                <tr class="bg-surface-raised font-semibold">
+                                    <td class="px-4 py-3 text-content">
+                                        Closing bank balance
+                                        <span class="block text-[11px] text-content-faint font-normal">directors only · seeded from Xero</span>
+                                    </td>
+                                    @for (var index = 0; index < view.WeekStarts.Count; index++)
+                                    {
+                                        var balance = view.Closing[index];
+                                        <td class="px-3 py-3 text-right whitespace-nowrap @(balance < 0m ? "text-negative" : "text-content") @(index == view.MinClosingIndex ? "ring-2 ring-inset ring-negative rounded" : "")"
+                                            title="@(index == view.MinClosingIndex ? "The low point — the week to plan for" : null)">@Money(balance)</td>
+                                    }
+                                    <td class="px-3 py-3 text-right border-l border-line text-content-faint font-normal"
+                                        title="Later entries are beyond the horizon and not in the balance until they roll into view.">—</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <p class="text-xs text-content-subtle mb-10 max-w-4xl">
+                    Every figure is an outstanding Xero document or an item added on this page — nothing is
+                    invented, and moving an entry changes <span class="font-medium text-content-muted">when</span>,
+                    never <span class="font-medium text-content-muted">how much</span>. Bills tie to
+                    <a class="underline underline-offset-2" href="/finance/aged-payables">Aged Payables</a>, invoices to
+                    <a class="underline underline-offset-2" href="/finance/aged-receivables">Aged Receivables</a>, to the penny.
+                    Xero read at @XeroFetchedText.
+                </p>
+            }
+        </LoadGate>
+    </section>
+
+    @* ── Add / edit a manual item ── *@
+    <Modal IsOpen="@itemDialogOpen"
+           Title="@(editingItemId is null ? "Add item" : "Edit item")"
+           OnCancel="CloseItemDialog">
+        <ChildContent>
+        <div class="space-y-4">
+            <FormField Label="Name" Value="@formName" OnChange="value => formName = value" Required="true" />
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Category</label>
+                    <select class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"
+                            value="@((int)formCategory)"
+                            @onchange="args => formCategory = (WeeklyCashflowCategory)int.Parse((string)args.Value!)">
+                        @foreach (var category in WeeklyCashflowCategories.All)
+                        {
+                            <option value="@((int)category)">@WeeklyCashflowCategories.Label(category)</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount (£) *</label>
+                    <input type="number" min="0" step="0.01" value="@formAmount"
+                           @oninput="args => formAmount = (string)args.Value!"
+                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Repeats</label>
+                    <select class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"
+                            value="@((int)formRecurrence)"
+                            @onchange="args => formRecurrence = (WeeklyCashflowRecurrence)int.Parse((string)args.Value!)">
+                        @foreach (var recurrence in WeeklyCashflowRecurrences.All)
+                        {
+                            <option value="@((int)recurrence)">@WeeklyCashflowRecurrences.Label(recurrence)</option>
+                        }
+                    </select>
+                    <p class="text-[11px] text-content-faint mt-1">
+                        @(formRecurrence switch
+                        {
+                            WeeklyCashflowRecurrence.Weekly => "Every week on the first date's weekday.",
+                            WeeklyCashflowRecurrence.Monthly => "Every month on the first date's day (shorter months clamp).",
+                            _ => "A single payment."
+                        })
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
+                        @(formRecurrence == WeeklyCashflowRecurrence.OneOff ? "Due on *" : "First due on *")
+                    </label>
+                    <input type="date" value="@formFirstDue"
+                           @onchange="args => formFirstDue = (string)args.Value!"
+                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
+                </div>
+            </div>
+            @if (formRecurrence != WeeklyCashflowRecurrence.OneOff)
+            {
+                <div>
+                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Last payment on</label>
+                    <input type="date" value="@formLastDue"
+                           @onchange="args => formLastDue = (string)args.Value!"
+                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
+                    <p class="text-[11px] text-content-faint mt-1">Leave empty for open-ended.</p>
+                </div>
+            }
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                <textarea rows="2" value="@formNotes"
+                          @oninput="args => formNotes = (string)args.Value!"
+                          class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"></textarea>
+            </div>
+            @if (dialogError is not null)
+            {
+                <p class="text-sm text-negative">@dialogError</p>
+            }
+        </div>
+        </ChildContent>
+        <FooterContent>
+            @if (editingItemId is not null)
+            {
+                <button type="button" class="btn-neutral text-negative mr-auto" disabled="@isSavingItem" @onclick="ArchiveItemAsync"
+                        title="Remove the item from the grid. Its history is kept.">Archive</button>
+            }
+            <button type="button" class="btn-neutral" disabled="@isSavingItem" @onclick="CloseItemDialog">Cancel</button>
+            <button type="button" class="btn-primary" disabled="@(isSavingItem || !FormLooksComplete)" @onclick="SaveItemAsync">
+                @(editingItemId is null ? "Add item" : "Save changes")
+            </button>
+        </FooterContent>
+    </Modal>
+}
+
+@code {
+    // Session checked and the user is signed in. This is NOT "the figures are here": the header,
+    // the toolbar and the Add item button show at once; the grid waits behind its one gate.
+    private bool sessionReady;
+    private bool isRefreshing;
+    // The plan query throws on failure (no per-row failure to record) — the flag opens the gate
+    // with a message instead of pulsing forever; the toast already carries the detail.
+    private bool planFailed;
+    private string? moveError;
+
+    // One "as of" per render pass keeps every week, tile and export on the same day even across
+    // a midnight rollover mid-session.
+    private DateTimeOffset today = new(DateTime.Today, TimeSpan.Zero);
+
+    // Which bands are collapsed to their totals row. The Xero bands start collapsed (they can
+    // run to dozens of lines); manual bands start open — they are the rows the accountant owns.
+    private readonly HashSet<WeeklyCashflowBand> collapsedBands = new()
+    {
+        WeeklyCashflowBand.ClientReceipts,
+        WeeklyCashflowBand.SupplierBills
+    };
+
+    // Entries with a move in flight — their arrows disable so a double-click can't race.
+    private readonly HashSet<string> movingKeys = new(StringComparer.Ordinal);
+
+    // ---- Dialog state -------------------------------------------------------
+
+    private bool itemDialogOpen;
+    private string? editingItemId;
+    private bool isSavingItem;
+    private string? dialogError;
+    private string formName = "";
+    private WeeklyCashflowCategory formCategory = WeeklyCashflowCategory.Subcontractor;
+    private string formAmount = "";
+    private WeeklyCashflowRecurrence formRecurrence = WeeklyCashflowRecurrence.OneOff;
+    private string formFirstDue = "";
+    private string formLastDue = "";
+    private string formNotes = "";
+
+    private bool FormLooksComplete =>
+        !string.IsNullOrWhiteSpace(formName)
+        && decimal.TryParse(formAmount, out var amount) && amount > 0m
+        && DateTime.TryParse(formFirstDue, out _);
+
+    // ---- Sources ------------------------------------------------------------
+
+    private XeroAgedPayablesSnapshot? PayablesSnapshot => Payables.Snapshot();
+
+    private XeroAgedReceivablesSnapshot? ReceivablesSnapshot => Receivables.Snapshot();
+
+    // Bank rows/tiles are directors-only, mirroring the API's gate on the Xero cash summary.
+    private bool IsDirector =>
+        Session.ActiveRole is { } role && DesktopNavigation.CanSee(role, DesktopNavigation.DirectorRoles);
+
+    private XeroCashSummarySnapshot? BankSnapshot => IsDirector ? Cash.Snapshot() : null;
+
+    private bool BankReady => BankSnapshot is { IsConfigured: true, Error: null };
+
+    private string FetchedText =>
+        BankSnapshot?.FetchedAtUtc is { } fetched ? fetched.ToLocalTime().ToString("HH:mm") : "—";
+
+    private string XeroFetchedText =>
+        PayablesSnapshot?.FetchedAtUtc is { } fetched ? fetched.ToLocalTime().ToString("HH:mm") : "—";
+
+    // The one gate: all three sources answered (or the plan failed and says so). The bank
+    // position is deliberately NOT in the gate — its tiles pulse on their own, and the grid is
+    // fully useful without it.
+    private bool GridReady =>
+        planFailed
+        || (PayablesSnapshot is not null && ReceivablesSnapshot is not null && Plan.Current is not null);
+
+    private bool XeroReady =>
+        PayablesSnapshot is { IsConfigured: true, Error: null }
+        && ReceivablesSnapshot is { IsConfigured: true, Error: null }
+        && Plan.Current is not null;
+
+    // ---- The grid -----------------------------------------------------------
+
+    private WeeklyCashflowView BuildView()
+    {
+        var seeds = new List<WeeklyCashflowSeed>();
+
+        foreach (var bill in PayablesSnapshot!.Bills)
+        {
+            seeds.Add(new WeeklyCashflowSeed(
+                WeeklyCashflowMaths.BillKeyFor(bill.InvoiceId),
+                WeeklyCashflowBand.SupplierBills,
+                string.IsNullOrWhiteSpace(bill.ContactName) ? "(no supplier)" : bill.ContactName!.Trim(),
+                BillDetail(bill),
+                AgedPayablesMaths.SignedAmountDue(bill),
+                AsDate(bill.DueDate ?? bill.Date)));
+        }
+
+        foreach (var invoice in ReceivablesSnapshot!.Invoices)
+        {
+            seeds.Add(new WeeklyCashflowSeed(
+                WeeklyCashflowMaths.ReceiptKeyFor(invoice.InvoiceId),
+                WeeklyCashflowBand.ClientReceipts,
+                string.IsNullOrWhiteSpace(invoice.ContactName) ? "(no client)" : invoice.ContactName!.Trim(),
+                InvoiceDetail(invoice),
+                AgedReceivablesMaths.SignedAmountDue(invoice),
+                AsDate(invoice.DueDate ?? invoice.Date)));
+        }
+
+        return WeeklyCashflowMaths.Build(
+            today,
+            seeds,
+            Plan.Current!.Items,
+            Plan.Current.Placements,
+            IsDirector && BankReady ? BankSnapshot!.TotalCash : null);
+    }
+
+    private static string BillDetail(XeroPayableBill bill)
+    {
+        var reference = bill.Number ?? bill.Reference ?? "no number";
+        var flags = string.Join(" · ", new[]
+        {
+            bill.IsDraft ? "draft" : null,
+            bill.IsCreditNote ? "credit note" : null
+        }.Where(flag => flag is not null));
+        return flags.Length > 0 ? $"{reference} · {flags}" : reference;
+    }
+
+    private static string InvoiceDetail(XeroReceivableInvoice invoice)
+    {
+        var reference = invoice.Number ?? invoice.Reference ?? "no number";
+        var flags = string.Join(" · ", new[]
+        {
+            invoice.IsDraft ? "draft" : null,
+            invoice.IsCreditNote ? "credit note" : null
+        }.Where(flag => flag is not null));
+        return flags.Length > 0 ? $"{reference} · {flags}" : reference;
+    }
+
+    private static DateTimeOffset? AsDate(DateTime? date) =>
+        date is { } value ? new DateTimeOffset(value.Date, TimeSpan.Zero) : null;
+
+    private static decimal VisibleTotal(IReadOnlyList<decimal> totals) =>
+        totals.Take(totals.Count - 1).Sum();
+
+    private IEnumerable<WeeklyCashflowEntry> EntriesFor(WeeklyCashflowView view, WeeklyCashflowBand band) =>
+        view.Entries
+            .Where(entry => entry.Band == band)
+            .OrderBy(entry => entry.WeekIndex)
+            .ThenBy(entry => entry.Label, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(entry => entry.PlacementKey, StringComparer.Ordinal);
+
+    private decimal[] BandTotals(WeeklyCashflowView view, WeeklyCashflowBand band)
+    {
+        var totals = new decimal[view.WeekStarts.Count + 1];
+        foreach (var entry in view.Entries)
+            if (entry.Band == band)
+                totals[entry.WeekIndex] += entry.Amount;
+        return totals;
+    }
+
+    private void ToggleBand(WeeklyCashflowBand band)
+    {
+        if (!collapsedBands.Remove(band)) collapsedBands.Add(band);
+    }
+
+    // ---- One band: a totals row (click to expand) plus one movable row per entry ----
+
+    private RenderFragment BandSection((WeeklyCashflowView View, WeeklyCashflowBand Band, string Label, string Sub) args) => __builder =>
+    {
+        var (view, band, label, sub) = args;
+        var totals = BandTotals(view, band);
+        var expanded = !collapsedBands.Contains(band);
+        var entryCount = view.Entries.Count(entry => entry.Band == band);
+        <tr class="border-b border-line">
+            <td class="px-4 py-2.5">
+                <button type="button" class="flex items-start gap-1.5 text-left w-full" @onclick="() => ToggleBand(band)"
+                        title="@(expanded ? "Collapse to the totals row" : $"Expand to the {entryCount} entries behind these totals")">
+                    <span class="text-content-subtle mt-0.5 text-xs">@(expanded ? "▾" : "▸")</span>
+                    <span>
+                        <span class="text-content font-medium">@label</span>
+                        <span class="block text-[11px] text-content-faint font-normal">@sub</span>
+                    </span>
+                </button>
+            </td>
+            @for (var index = 0; index <= view.WeekStarts.Count; index++)
+            {
+                <td class="px-3 py-2.5 text-right whitespace-nowrap @(index == view.WeekStarts.Count ? "border-l border-line" : "") @(expanded ? "text-content-subtle" : "text-content")">
+                    @CellAmount(totals[index])
+                </td>
+            }
+        </tr>
+        @if (expanded)
+        {
+            @foreach (var entry in EntriesFor(view, band))
+            {
+                <tr class="border-b border-line/50 text-[13px]">
+                    <td class="pl-9 pr-4 py-1.5">
+                        @if (entry.ItemId is { } itemId)
+                        {
+                            <button type="button" class="text-content-muted hover:text-content underline-offset-2 hover:underline text-left"
+                                    title="Edit this item" @onclick="() => OpenEditDialog(itemId)">@entry.Label</button>
+                        }
+                        else
+                        {
+                            <span class="text-content-muted">@entry.Label</span>
+                        }
+                        <span class="block text-[11px] text-content-faint">
+                            @entry.Detail@(entry.NaturalDueOn is { } due ? $" · due {due.UtcDateTime:d MMM}" : " · no due date")
+                        </span>
+                    </td>
+                    @for (var index = 0; index <= view.WeekStarts.Count; index++)
+                    {
+                        var cellIndex = index;
+                        <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == view.WeekStarts.Count ? "border-l border-line" : "")">
+                            @if (entry.WeekIndex == cellIndex)
+                            {
+                                var busy = movingKeys.Contains(entry.PlacementKey);
+                                <span class="inline-flex items-center gap-0.5">
+                                    @if (entry.Moved)
+                                    {
+                                        <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                                                title="Back to its due week" disabled="@busy"
+                                                @onclick="() => ResetEntryAsync(entry)">↺</button>
+                                    }
+                                    <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                                            title="Pay a week earlier" disabled="@(busy || cellIndex == 0)"
+                                            @onclick="() => MoveEntryAsync(entry, Math.Min(cellIndex, view.WeekStarts.Count) - 1)">‹</button>
+                                    <span class="@(entry.Moved ? "text-accent font-medium" : "text-content")"
+                                          title="@(entry.Moved ? "Moved here — the due week is " + (entry.NaturalDueOn is { } naturalDue ? naturalDue.UtcDateTime.ToString("d MMM") : "unknown") : null)">@(entry.Moved ? "‣ " : "")@CellAmount(entry.Amount)</span>
+                                    <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                                            title="Pay a week later" disabled="@(busy || cellIndex >= view.WeekStarts.Count - 1)"
+                                            @onclick="() => MoveEntryAsync(entry, cellIndex + 1)">›</button>
+                                </span>
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        }
+    };
+
+    // ---- Moving -------------------------------------------------------------
+
+    private async Task MoveEntryAsync(WeeklyCashflowEntry entry, int targetIndex)
+    {
+        var view = BuildView();
+        if (targetIndex < 0 || targetIndex >= view.WeekStarts.Count) return;
+        await PlaceAsync(entry, view.WeekStarts[targetIndex]);
+    }
+
+    private Task ResetEntryAsync(WeeklyCashflowEntry entry) => PlaceAsync(entry, null);
+
+    private async Task PlaceAsync(WeeklyCashflowEntry entry, DateTimeOffset? weekStart)
+    {
+        if (!movingKeys.Add(entry.PlacementKey)) return;
+        moveError = null;
+        try
+        {
+            var placement = await Commands.SendAsync(
+                new PlaceWeeklyCashflowEntry(entry.PlacementKey, weekStart), CancellationToken.None);
+            // The server's answer is the truth the whole grid re-derives from — no refetch needed.
+            Plan.Apply(entry.PlacementKey, placement);
+        }
+        catch (CommandFailedException failure)
+        {
+            moveError = failure.Message;
+        }
+        catch
+        {
+            // Already reported to the error toast with a reference; the grid simply stays put.
+        }
+        finally
+        {
+            movingKeys.Remove(entry.PlacementKey);
+        }
+    }
+
+    // ---- The item dialog ----------------------------------------------------
+
+    private void OpenAddDialog()
+    {
+        editingItemId = null;
+        formName = "";
+        formCategory = WeeklyCashflowCategory.Subcontractor;
+        formAmount = "";
+        formRecurrence = WeeklyCashflowRecurrence.OneOff;
+        formFirstDue = today.UtcDateTime.ToString("yyyy-MM-dd");
+        formLastDue = "";
+        formNotes = "";
+        dialogError = null;
+        itemDialogOpen = true;
+    }
+
+    private void OpenEditDialog(string itemId)
+    {
+        var item = Plan.Current?.Items.FirstOrDefault(row => row.WeeklyCashflowItemId == itemId);
+        if (item is null) return;
+        editingItemId = item.WeeklyCashflowItemId;
+        formName = item.Name;
+        formCategory = item.Category;
+        formAmount = item.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        formRecurrence = item.Recurrence;
+        formFirstDue = item.FirstDueOn.UtcDateTime.ToString("yyyy-MM-dd");
+        formLastDue = item.LastDueOn?.UtcDateTime.ToString("yyyy-MM-dd") ?? "";
+        formNotes = item.Notes ?? "";
+        dialogError = null;
+        itemDialogOpen = true;
+    }
+
+    private void CloseItemDialog() => itemDialogOpen = false;
+
+    private WeeklyCashflowItemDetails? ReadForm()
+    {
+        if (!decimal.TryParse(formAmount, out var amount)) return null;
+        if (!DateTime.TryParse(formFirstDue, out var firstDue)) return null;
+        DateTimeOffset? lastDue = null;
+        if (formRecurrence != WeeklyCashflowRecurrence.OneOff
+            && !string.IsNullOrWhiteSpace(formLastDue)
+            && DateTime.TryParse(formLastDue, out var lastDueDate))
+        {
+            lastDue = new DateTimeOffset(lastDueDate.Date, TimeSpan.Zero);
+        }
+        return new WeeklyCashflowItemDetails(
+            formName.Trim(),
+            formCategory,
+            amount,
+            formRecurrence,
+            new DateTimeOffset(firstDue.Date, TimeSpan.Zero),
+            lastDue,
+            string.IsNullOrWhiteSpace(formNotes) ? null : formNotes.Trim());
+    }
+
+    private async Task SaveItemAsync()
+    {
+        if (ReadForm() is not { } details)
+        {
+            dialogError = "Check the amount and dates — one of them doesn't parse.";
+            return;
+        }
+        isSavingItem = true;
+        dialogError = null;
+        try
+        {
+            var saved = editingItemId is { } itemId
+                ? await Commands.SendAsync(new UpdateWeeklyCashflowItem(itemId, details), CancellationToken.None)
+                : await Commands.SendAsync(new CreateWeeklyCashflowItem(details), CancellationToken.None);
+            Plan.Apply(saved);
+            itemDialogOpen = false;
+        }
+        catch (CommandFailedException failure)
+        {
+            dialogError = failure.Message;
+        }
+        catch
+        {
+            dialogError = "Something went wrong saving the item — the red bar at the top has the detail.";
+        }
+        finally
+        {
+            isSavingItem = false;
+        }
+    }
+
+    private async Task ArchiveItemAsync()
+    {
+        if (editingItemId is not { } itemId) return;
+        isSavingItem = true;
+        dialogError = null;
+        try
+        {
+            var archived = await Commands.SendAsync(new ArchiveWeeklyCashflowItem(itemId), CancellationToken.None);
+            Plan.Apply(archived);
+            itemDialogOpen = false;
+        }
+        catch (CommandFailedException failure)
+        {
+            dialogError = failure.Message;
+        }
+        catch
+        {
+            dialogError = "Something went wrong archiving the item — the red bar at the top has the detail.";
+        }
+        finally
+        {
+            isSavingItem = false;
+        }
+    }
+
+    // ---- Export -------------------------------------------------------------
+
+    private ExcelWorkbook? BuildExportWorkbook(bool includeAllRows)
+    {
+        if (!GridReady || !XeroReady) return null;
+        var view = BuildView();
+        var workbook = new ExcelWorkbook();
+
+        var weekColumns = new List<ExcelColumn> { new("Week") };
+        weekColumns.Add(new ExcelColumn("Cash in", ExcelFormat.Currency));
+        weekColumns.Add(new ExcelColumn("Cash out", ExcelFormat.Currency));
+        weekColumns.Add(new ExcelColumn("Net", ExcelFormat.Currency));
+        if (IsDirector && view.Closing is not null) weekColumns.Add(new ExcelColumn("Closing balance", ExcelFormat.Currency));
+        var summary = workbook.AddSheet("By week", weekColumns.ToArray());
+        for (var index = 0; index < view.WeekStarts.Count; index++)
+        {
+            var row = new List<object?>
+            {
+                $"w/c {view.WeekStarts[index].UtcDateTime:dd/MM/yyyy}",
+                view.CashIn[index],
+                view.CashOut[index],
+                view.Net[index]
+            };
+            if (IsDirector && view.Closing is not null) row.Add(view.Closing[index]);
+            summary.Rows.Add(row.ToArray());
+        }
+        var laterRow = new List<object?> { "Later", view.CashIn[^1], view.CashOut[^1], view.Net[^1] };
+        if (IsDirector && view.Closing is not null) laterRow.Add(null);
+        summary.Rows.Add(laterRow.ToArray());
+
+        var entries = workbook.AddSheet("Entries",
+            new ExcelColumn("Band"),
+            new ExcelColumn("Direction"),
+            new ExcelColumn("Name"),
+            new ExcelColumn("Detail"),
+            new ExcelColumn("Due", ExcelFormat.Date),
+            new ExcelColumn("Planned week"),
+            new ExcelColumn("Moved"),
+            new ExcelColumn("Amount", ExcelFormat.Currency));
+        foreach (var entry in view.Entries.OrderBy(row => row.Band).ThenBy(row => row.WeekIndex))
+        {
+            entries.Rows.Add(new object?[]
+            {
+                BandExportLabel(entry.Band),
+                WeeklyCashflowMaths.IsCashIn(entry.Band) ? "In" : "Out",
+                entry.Label,
+                entry.Detail,
+                entry.NaturalDueOn?.UtcDateTime,
+                entry.WeekIndex == view.LaterIndex ? "Later" : $"w/c {view.WeekStarts[entry.WeekIndex].UtcDateTime:dd/MM/yyyy}",
+                entry.Moved ? "moved" : "",
+                entry.Amount
+            });
+        }
+        return workbook;
+    }
+
+    private static string BandExportLabel(WeeklyCashflowBand band) => band switch
+    {
+        WeeklyCashflowBand.ClientReceipts => "Client invoices",
+        WeeklyCashflowBand.SupplierBills => "Supplier bills",
+        WeeklyCashflowBand.Subcontractors => "Subcontractors",
+        WeeklyCashflowBand.Staff => "Staff",
+        WeeklyCashflowBand.Subscriptions => "Subscriptions",
+        _ => "Other"
+    };
+
+    // ---- Formatting ---------------------------------------------------------
+
+    private static RenderFragment LoadingFigure(string label) => __builder =>
+    {
+        <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+            <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+            <span class="sr-only">@label</span>
+        </p>
+    };
+
+    private static string Money(decimal value) =>
+        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    // Grid cells drop the pennies: fourteen columns of £1,234.56 is noise. Totals underneath
+    // stay exact — the display rounds, the arithmetic never does.
+    private static string CellAmount(decimal value) =>
+        value == 0m ? "—" : value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string Signed(decimal value) =>
+        value == 0m ? "—"
+        : (value > 0m ? "+" : "") + value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    private static string WeekLabel(DateTimeOffset weekStart, int index) =>
+        index == 0 ? "This week" : weekStart.UtcDateTime.ToString("d MMM");
+
+    // ---- Loading ------------------------------------------------------------
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        Payables.OnChange += StateHasChanged;
+        Receivables.OnChange += StateHasChanged;
+        Cash.OnChange += StateHasChanged;
+        Plan.OnChanged += StateHasChanged;
+        sessionReady = true;
+
+        // Revalidate cached data in the background on tab entry (stale-while-revalidate) — the
+        // stores' fetch-once guards cover the very first load. The bank position is directors
+        // only, mirroring the API's gate.
+        _ = Payables.RefreshAsync();
+        _ = Receivables.RefreshAsync();
+        if (IsDirector) _ = Cash.RefreshAsync();
+
+        try
+        {
+            await Plan.RefreshAsync(CancellationToken.None);
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference;
+            // here we only need to stop the grid waiting on a plan that is not coming.
+            planFailed = true;
+        }
+    }
+
+    private async Task ForceRefreshAsync()
+    {
+        today = new DateTimeOffset(DateTime.Today, TimeSpan.Zero);
+        isRefreshing = true;
+        try
+        {
+            await Task.WhenAll(
+                Payables.RefreshAsync(force: true),
+                Receivables.RefreshAsync(force: true),
+                IsDirector ? Cash.RefreshAsync(force: true) : Task.CompletedTask,
+                Plan.RefreshAsync(CancellationToken.None));
+            planFailed = false;
+        }
+        catch
+        {
+            // Each store reports its own failure; whatever did land still renders.
+        }
+        finally
+        {
+            isRefreshing = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        Payables.OnChange -= StateHasChanged;
+        Receivables.OnChange -= StateHasChanged;
+        Cash.OnChange -= StateHasChanged;
+        Plan.OnChanged -= StateHasChanged;
+    }
+}

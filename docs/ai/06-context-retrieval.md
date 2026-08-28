@@ -1,3 +1,5 @@
+> **Superseded (2026-08-27).** The in-portal chat this document describes was retired in favour of the MCP connector — see [10-mcp-connector.md](10-mcp-connector.md). Kept as the historical record.
+
 # 06 — Context retrieval: how the assistant finds and reads what a task refers to
 
 *Plan, 2026-08-25. Written after two live failures on the same day: "load By France RFIs" went to a

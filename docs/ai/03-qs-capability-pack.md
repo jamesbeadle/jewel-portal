@@ -1,3 +1,5 @@
+> **Superseded (2026-08-27).** The in-portal chat this document describes was retired in favour of the MCP connector — see [10-mcp-connector.md](10-mcp-connector.md). Kept as the historical record.
+
 # The QS Capability Pack
 
 > Decomposition of *QS & Commercial Controller — Portable Skill Pack v1.0* into the pack model from

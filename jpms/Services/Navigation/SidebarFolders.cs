@@ -274,6 +274,12 @@ public static class SidebarFolders
                 new SidebarRow(new NavigationItem("Cash Forecast", "/finance/cash-forecast",
                         new[] { "/finance$", "/finance/cash-summary" }),
                     DesktopNavigation.DirectorRoles),
+                // The accountant's live 13-week payment plan (Pages/WeeklyCashflow.razor):
+                // Xero-seeded, week by week, every entry movable to the week it will really be
+                // paid, plus the manual outgoings Xero can't see (subcontractors, staff,
+                // subscriptions). The one row Accounts can see — see WeeklyCashflowRoles.
+                new SidebarRow(new NavigationItem("Weekly Cashflow", "/finance/weekly-cashflow"),
+                    DesktopNavigation.WeeklyCashflowRoles),
                 // Gross profit by project: budgeted, current and forecast (finance meeting
                 // 2026-08-03).
                 new SidebarRow(new NavigationItem("Profit Summary", "/finance/profit-summary"),
@@ -321,8 +327,14 @@ public static class SidebarFolders
                 // the old name no longer said WHICH trail.
                 new SidebarRow(new NavigationItem("System Audit Trail", "/audit"),
                     DesktopNavigation.DirectorRoles),
-                // What the assistant has done, on whose behalf, and what it cost.
+                // What the AI connector has done, on whose behalf — every tool call a team
+                // member's own AI made through MCP lands here under their name.
                 new SidebarRow(new NavigationItem("Agent Activity", "/agents/activity"),
+                    DesktopNavigation.DirectorRoles),
+                // The AI tools connected through the MCP connector, and the disconnect switch.
+                // Every signed-in user can open /settings/ai-connections directly (the setup
+                // guide links it); the nav row follows the rail's directors-only clamp.
+                new SidebarRow(new NavigationItem("AI Connections", "/settings/ai-connections"),
                     DesktopNavigation.DirectorRoles)
             }),
 
