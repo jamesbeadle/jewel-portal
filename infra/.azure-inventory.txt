@@ -1,0 +1,61 @@
+
+==================================================================
+== All resources in rg-jpms-prod
+==================================================================
+Name                                  ResourceGroup    Location     Type                                           Status
+------------------------------------  ---------------  -----------  ---------------------------------------------  ---------
+sql-jpms-prod-54cf9e                  rg-jpms-prod     northeurope  Microsoft.Sql/servers                          Succeeded
+sql-jpms-prod-54cf9e/master           rg-jpms-prod     northeurope  Microsoft.Sql/servers/databases                Succeeded
+sql-jpms-prod-54cf9e/jpms             rg-jpms-prod     northeurope  Microsoft.Sql/servers/databases                Succeeded
+swa-jpms-prod                         rg-jpms-prod     westeurope   Microsoft.Web/staticSites                      Succeeded
+jpms-email-prod                       rg-jpms-prod     global       Microsoft.Communication/EmailServices          Succeeded
+jpms-email-prod/mail.jewelbb.co.uk    rg-jpms-prod     global       Microsoft.Communication/EmailServices/Domains  Succeeded
+jpms-comms-prod                       rg-jpms-prod     global       Microsoft.Communication/CommunicationServices  Succeeded
+stjpmsprod54cf9e                      rg-jpms-prod     uksouth      Microsoft.Storage/storageAccounts              Succeeded
+rgjpmsprod9179                        rg-jpms-prod     ukwest       Microsoft.Storage/storageAccounts              Succeeded
+ASP-rgjpmsprod-ae13                   rg-jpms-prod     ukwest       Microsoft.Web/serverFarms                      Succeeded
+func-jpms-worker-prod                 rg-jpms-prod     ukwest       microsoft.insights/components                  Succeeded
+func-jpms-worker-prod                 rg-jpms-prod     ukwest       Microsoft.Web/sites                            Succeeded
+Application Insights Smart Detection  rg-jpms-prod     global       microsoft.insights/actiongroups                Succeeded
+log-jpms-prod                         rg-jpms-prod     westeurope   Microsoft.OperationalInsights/workspaces       Succeeded
+appi-jpms-prod                        rg-jpms-prod     westeurope   Microsoft.Insights/components                  Succeeded
+func-jpms-mcp-prod                    rg-jpms-prod     westeurope   Microsoft.Web/sites                            Succeeded
+func-jpms-mcp-prod                    rg-jpms-prod     westeurope   Microsoft.Insights/components                  Succeeded
+plan-jpms-mcp                         rg-jpms-prod     westeurope   Microsoft.Web/serverFarms                      Succeeded
+mcp.jewelbb.co.uk                     rg-jpms-prod     westeurope   Microsoft.Web/certificates                     Succeeded
+
+==================================================================
+== App Service plans (SKU / workers)
+==================================================================
+Name                 Sku    Tier     Capacity    Linux    Status
+-------------------  -----  -------  ----------  -------  --------
+ASP-rgjpmsprod-ae13  Y1     Dynamic  0           False    Ready
+plan-jpms-mcp        B1     Basic    1           True     Ready
+
+==================================================================
+== Function apps
+==================================================================
+Name                   State    Plan
+---------------------  -------  ---------------------------------------------------------------------------------------------------------------------------------------
+func-jpms-worker-prod  Running  /subscriptions/08c5510c-bb27-4da8-b826-a8e76fb270ec/resourceGroups/rg-jpms-prod/providers/Microsoft.Web/serverfarms/ASP-rgjpmsprod-ae13
+func-jpms-mcp-prod     Running  /subscriptions/08c5510c-bb27-4da8-b826-a8e76fb270ec/resourceGroups/rg-jpms-prod/providers/Microsoft.Web/serverfarms/plan-jpms-mcp
+--- func-jpms-worker-prod config
+AlwaysOn    LinuxFxVersion    Use32Bit    Http20    PreWarmed
+----------  ----------------  ----------  --------  -----------
+False                         False       False     0
+--- func-jpms-mcp-prod config
+AlwaysOn    LinuxFxVersion       Use32Bit    Http20    PreWarmed
+----------  -------------------  ----------  --------  -----------
+True        DOTNET-ISOLATED|8.0  False       True      0
+
+==================================================================
+== Static Web Apps (SKU)
+==================================================================
+Name           Sku       Tier      Host
+-------------  --------  --------  -----------------------------------------
+swa-jpms-prod  Standard  Standard  brave-sea-01dae5403.7.azurestaticapps.net
+
+==================================================================
+== SQL servers + databases (tier / size)
+==================================================================
+--- server: sql-jpms-prod-54cf9e

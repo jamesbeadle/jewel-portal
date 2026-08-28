@@ -24,10 +24,14 @@ drawings and email attachments. Ask things like:
 - “Which work orders on By France are still draft?”
 - “Read the tender email attachments on BPI-0003 and pull out the priced schedule.”
 
-It can also do a small set of safe actions, always confirmed through you before it calls them:
-post a message on a request’s conversation, add or complete a to-do, log to-do progress, and (for
-directors) save an AI skill. It **cannot** approve anything, raise invoices, send emails or delete
-records — those stay in the portal.
+And it can **do** things — everything your portal account can do, not just read. Creating and
+editing requests, RFIs, variations, work orders and bid packages; moving statuses; approving;
+raising and issuing valuation invoices; managing to-dos and calendar events; sending the
+portal’s emails. Ask it *“what can you do for me here?”* and it will list the actions your role
+allows. Your permissions are the AI’s permissions: if you can’t do it by clicking, your AI can’t
+do it either — and every action is performed as you and logged under your name. For anything
+consequential (approvals, money, emails to clients or subcontractors, deletions) a good AI will
+read the details back and get your yes first — and you should expect it to.
 
 Everything runs under your own portal account: the AI sees exactly what your role sees, and every
 call is recorded in the portal’s activity log under your name.

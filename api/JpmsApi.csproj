@@ -13,6 +13,7 @@
   <ItemGroup>
     <!-- The test project pins the AI transcript shape (BuildTranscript) and other internals. -->
     <InternalsVisibleTo Include="Jewel.JPMS.Tests" />
+    <InternalsVisibleTo Include="smoke" />
   </ItemGroup>
 
   <ItemGroup>

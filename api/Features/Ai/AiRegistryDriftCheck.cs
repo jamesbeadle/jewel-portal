@@ -20,6 +20,18 @@ public static class AiRegistryDriftCheck
     {
         var complaints = new List<string>();
 
+        // The action gateway's registry asserts itself (unique names, real stamps, resolvable
+        // gates) lazily on first build; force it HERE so a mis-declared action fails the boot,
+        // never a user's first perform_action call.
+        try
+        {
+            _ = Tools.Actions.AiActionRegistry.All;
+        }
+        catch (InvalidOperationException ex)
+        {
+            complaints.Add(ex.Message);
+        }
+
         // Duplicate tool names would make tools/call ambiguous.
         var duplicates = AiToolCatalogue.All
             .GroupBy(tool => tool.Name, StringComparer.OrdinalIgnoreCase)

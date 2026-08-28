@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Features.Ai;
+using Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 using Jewel.JPMS.Api.Features.Ai.Tools;
 using Jewel.JPMS.Api.Features.Connect;
 using Jewel.JPMS.Api.Gates;
@@ -82,5 +83,41 @@ public sealed class AiConnectorTests
     public void RedirectUris_allowHttpsAndLoopbackOnly(string uri, bool acceptable)
     {
         Assert.Equal(acceptable, OAuthRedirects.IsAcceptable(uri));
+    }
+
+    [Fact]
+    public void ActionRegistry_buildsAndSelfAsserts()
+    {
+        // Construction IS the assertion: unique names, real stamp parameters, and a typed
+        // Allows/Check overload for every command (the 2026-08-28 review found "first overload"
+        // selection breaking 22 actions on shared gate classes — this pins the fix).
+        var actions = AiActionRegistry.All;
+        Assert.True(actions.Count > 150, $"expected a full surface, got {actions.Count}");
+        foreach (var action in actions)
+            _ = AiActionSchema.InputSchema(action);
+    }
+
+    [Fact]
+    public void ActionRegistry_roleFiltersLikeThePortal()
+    {
+        bool Offered(string name, params Role[] roles) =>
+            AiActionRegistry.All.Single(a => a.Name == name).VisibleTo.IncludesAny(roles);
+
+        Assert.True(Offered("approve_variation_order", Role.ManagingDirector));
+        Assert.False(Offered("approve_variation_order", Role.Subcontractor));
+        Assert.False(Offered("delete_project", Role.QuantitySurveyor));
+        Assert.False(Offered("issue_valuation_invoice", Role.Subcontractor));
+    }
+
+    [Fact]
+    public void ActionGateway_toolsExistForEveryRole()
+    {
+        foreach (var role in System.Enum.GetValues<Role>())
+        {
+            var names = AiToolCatalogue.ForConnector(UserWith(role)).Select(t => t.Name).ToList();
+            Assert.Contains("list_actions", names);
+            Assert.Contains("describe_action", names);
+            Assert.Contains("perform_action", names);
+        }
     }
 }

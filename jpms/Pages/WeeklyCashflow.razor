@@ -418,8 +418,13 @@ else
     private string? moveError;
 
     // One "as of" per render pass keeps every week, tile and export on the same day even across
-    // a midnight rollover mid-session.
-    private DateTimeOffset today = new(DateTime.Today, TimeSpan.Zero);
+    // a midnight rollover mid-session. TodayDate re-kinds the local calendar date as UTC —
+    // DateTime.Today is Kind=Local, and DateTimeOffset(local, TimeSpan.Zero) THROWS in any
+    // timezone that isn't UTC (it did, on BST — JPMS-4DA261).
+    private DateTimeOffset today = TodayDate();
+
+    private static DateTimeOffset TodayDate() =>
+        new(DateTime.SpecifyKind(DateTime.Today, DateTimeKind.Utc), TimeSpan.Zero);
 
     // Which bands are collapsed to their totals row. The Xero bands start collapsed (they can
     // run to dozens of lines); manual bands start open — they are the rows the accountant owns.
@@ -541,8 +546,10 @@ else
         return flags.Length > 0 ? $"{reference} · {flags}" : reference;
     }
 
+    // Re-kind before wrapping: a DateTime that arrives Kind=Local (offset-carrying JSON, a
+    // future serializer change) would make DateTimeOffset(date, TimeSpan.Zero) throw off-UTC.
     private static DateTimeOffset? AsDate(DateTime? date) =>
-        date is { } value ? new DateTimeOffset(value.Date, TimeSpan.Zero) : null;
+        date is { } value ? new DateTimeOffset(DateTime.SpecifyKind(value.Date, DateTimeKind.Utc), TimeSpan.Zero) : null;
 
     private static decimal VisibleTotal(IReadOnlyList<decimal> totals) =>
         totals.Take(totals.Count - 1).Sum();
@@ -723,14 +730,14 @@ else
             && !string.IsNullOrWhiteSpace(formLastDue)
             && DateTime.TryParse(formLastDue, out var lastDueDate))
         {
-            lastDue = new DateTimeOffset(lastDueDate.Date, TimeSpan.Zero);
+            lastDue = new DateTimeOffset(DateTime.SpecifyKind(lastDueDate.Date, DateTimeKind.Utc), TimeSpan.Zero);
         }
         return new WeeklyCashflowItemDetails(
             formName.Trim(),
             formCategory,
             amount,
             formRecurrence,
-            new DateTimeOffset(firstDue.Date, TimeSpan.Zero),
+            new DateTimeOffset(DateTime.SpecifyKind(firstDue.Date, DateTimeKind.Utc), TimeSpan.Zero),
             lastDue,
             string.IsNullOrWhiteSpace(formNotes) ? null : formNotes.Trim());
     }
@@ -915,7 +922,7 @@ else
 
     private async Task ForceRefreshAsync()
     {
-        today = new DateTimeOffset(DateTime.Today, TimeSpan.Zero);
+        today = TodayDate();
         isRefreshing = true;
         try
         {
