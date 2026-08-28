@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Contracts.Projects;
 using Jewel.JPMS.Models;
 
@@ -27,6 +28,8 @@ public sealed class CreateProjectShellHandler
             CreatedAt = DateTimeOffset.UtcNow
         };
         context.Projects.Add(entity);
+        // Every project starts with the standard drawing-folder set; one SaveChanges covers both.
+        await StandardDrawingFolders.AddMissingAsync(context, entity.ProjectId, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
         return entity.ToModel();
     }

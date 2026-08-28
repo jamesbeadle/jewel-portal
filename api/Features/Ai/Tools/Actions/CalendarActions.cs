@@ -52,6 +52,7 @@ internal sealed class CalendarActions : IAiActionSource
             VisibleTo: CalendarRoles.Managers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which event, by name and date, before calling."),
 
         new AiAction(

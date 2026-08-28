@@ -28,7 +28,15 @@ else
                     @Drawings.Count drawings
                     @if (Folders.Count > 0)
                     {
-                        <span class="text-content-subtle">· @Folders.Count folders</span>
+                        @* Lead with the top-level count — the folder rows the register actually
+                           shows — and disclose sub-folders as their own number: one figure
+                           covering both levels reads as a wrong count next to a table of fewer
+                           rows. *@
+                        <span class="text-content-subtle">· @TopLevelFolderCount folders</span>
+                        @if (SubFolderCount > 0)
+                        {
+                            <span class="text-content-subtle">· @SubFolderCount sub-folders</span>
+                        }
                     }
                     @if (Ambiguous.Count > 0)
                     {
@@ -148,6 +156,12 @@ else
     private IReadOnlyList<Drawing> Drawings => DrawingStore.DrawingsFor(ProjectId);
     private IReadOnlyList<DrawingFolder> Folders => DrawingStore.FoldersFor(ProjectId);
     private DrawingFolderTree Tree => new(Folders);
+
+    // Counted from the tree, not ParentDrawingFolderId: the tree promotes a folder whose parent
+    // is missing from the list to the top level, so these two always sum to Folders.Count and
+    // always match the rows on show.
+    private int TopLevelFolderCount => Tree.Nodes.Count(node => node.Depth == 0);
+    private int SubFolderCount => Folders.Count - TopLevelFolderCount;
     private IReadOnlyList<DrawingRevision> Ambiguous => DrawingStore.AmbiguousFor(ProjectId);
 
     private IReadOnlyList<Drawing> VisibleDrawings =>

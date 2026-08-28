@@ -25,6 +25,18 @@ internal static class AiActionGatewayTools
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
+    /// <summary>What the model is told when an action gates on confirmation — the same wording from
+    /// describe_action (so it can plan the confirm turn) and from perform_action's refusal (so a
+    /// blind first call learns the protocol). First check the portal for an existing record before
+    /// proposing a create — duplicates are the second thing this gate exists to catch.</summary>
+    private const string ConfirmationProtocol =
+        "Before performing this action: verify it is really needed (for a create, search the portal "
+        + "for an existing record first and tell the user what you found), then show the user in "
+        + "plain language exactly what will happen — every value you are about to send — and wait "
+        + "for their explicit yes in this conversation. Only then call perform_action again with the "
+        + "same name and arguments plus confirm: true. Never send confirm: true on a first attempt, "
+        + "and never treat an earlier or general instruction as the user's yes.";
+
     private static string Serialise(object value) => JsonSerializer.Serialize(value, Json);
 
     private static IEnumerable<AiAction> Permitted(AiToolContext context) =>
@@ -106,6 +118,8 @@ internal static class AiActionGatewayTools
                         area = action.Area,
                         description = action.Description,
                         notes = action.Notes,
+                        requiresConfirmation = action.RequiresConfirmation,
+                        confirmation = action.RequiresConfirmation ? ConfirmationProtocol : null,
                         argumentsSchema = AiActionSchema.InputSchema(action)
                     }));
                 }),
@@ -116,11 +130,16 @@ internal static class AiActionGatewayTools
                 + "immediately through the same authorisation, validation and handler the portal "
                 + "uses, is recorded under their name, and is not previewed or undoable here. For "
                 + "actions that approve, pay, delete, or email people outside the team, state "
-                + "exactly what you are about to do and get the user's yes first. Arguments must "
-                + "follow describe_action's schema.",
+                + "exactly what you are about to do and get the user's yes first. Actions marked "
+                + "requiresConfirmation by describe_action REFUSE their first call: show the user "
+                + "what will happen, get their explicit yes, then re-call with confirm: true. "
+                + "Arguments must follow describe_action's schema.",
                 AiToolSchema.Object(
                     ("name", "string", "The action name from list_actions.", true),
-                    ("arguments", "object", "The action's arguments per describe_action's schema.", true)),
+                    ("arguments", "object", "The action's arguments per describe_action's schema.", true),
+                    ("confirm", "boolean", "Only for an action describe_action marks requiresConfirmation, "
+                        + "and only after the user has seen exactly what will happen and said yes in this "
+                        + "conversation: true performs it. Never sent on the first call.", false)),
                 AiToolKind.Write,
                 AllSignedIn,
                 async (context, input, cancellationToken) =>
@@ -132,6 +151,21 @@ internal static class AiActionGatewayTools
                         {
                             ok = false,
                             error = $"No action named '{name}' is available to this user. Call list_actions."
+                        });
+
+                    // The confirm-first gate (2026-08-28): creating a party/account or doing anything
+                    // irreversible must be a TWO-step act — the server refuses the first call outright,
+                    // so a model can never quietly mint a subcontractor, client or portal user (or
+                    // delete something with no undo) in one move. The re-call must say confirm: true,
+                    // which the model is told to send only after the user's explicit yes.
+                    if (action.RequiresConfirmation && AiToolSchema.Flag(input, "confirm") != true)
+                        return Serialise(new
+                        {
+                            ok = false,
+                            confirmationRequired = true,
+                            action = action.Name,
+                            error = $"NOT performed — '{action.Name}' requires the user's explicit "
+                                + "confirmation first. " + ConfirmationProtocol
                         });
 
                     var arguments = input.ValueKind == JsonValueKind.Object && input.TryGetProperty("arguments", out var element)

@@ -83,6 +83,20 @@ else
                                     <DrawingFolderOptions Folders="Folders" />
                                 }
                             </select>
+                            @* The select saves the moment a folder is picked — there is no confirm
+                               button — so say so while it happens and confirm when it has: without
+                               this the only sign was a briefly greyed control, and users went
+                               looking for a Save button that doesn't exist. *@
+                            @if (moveBusy)
+                            {
+                                <span class="text-xs text-content-subtle">Moving…</span>
+                            }
+                            else if (moveConfirmation is not null)
+                            {
+                                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                                    ✓ @moveConfirmation
+                                </span>
+                            }
                         }
                         else
                         {
@@ -207,6 +221,8 @@ else
     private string? deleteError;
     private bool moveBusy;
     private string? moveError;
+    private string? moveConfirmation;
+    private int moveConfirmationToken;
     private Drawing? drawing;
 
     private bool CanManage =>
@@ -235,9 +251,19 @@ else
         if (folderId == drawing.DrawingFolderId) return;
         moveBusy = true;
         moveError = null;
+        moveConfirmation = null;
         try
         {
             await DrawingStore.MoveToFolderAsync(ProjectId, drawing.DrawingId, folderId, CancellationToken.None);
+            // Wait for the register reload to land, so "Moving…" only clears once the select is
+            // showing the SAVED state — then confirm what happened, since there is no dialog or
+            // Save button to do the confirming.
+            await DrawingStore.RefreshNowAsync(ProjectId, null, CancellationToken.None);
+            var path = new DrawingFolderTree(Folders).PathOf(folderId);
+            moveConfirmation = folderId is null
+                ? "Moved out of its folder — now ungrouped"
+                : $"Moved to “{(path.Length == 0 ? "the folder" : path)}”";
+            _ = ClearMoveConfirmationLaterAsync(++moveConfirmationToken);
         }
         catch (Exception ex)
         {
@@ -247,6 +273,16 @@ else
         {
             moveBusy = false;
         }
+    }
+
+    // The confirmation fades on its own; the token keeps a slow old timer from wiping the
+    // message of a newer move.
+    private async Task ClearMoveConfirmationLaterAsync(int token)
+    {
+        await Task.Delay(TimeSpan.FromSeconds(5));
+        if (token != moveConfirmationToken || moveConfirmation is null) return;
+        moveConfirmation = null;
+        StateHasChanged();
     }
 
     protected override async Task OnInitializedAsync()

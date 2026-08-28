@@ -114,6 +114,19 @@ ones (200+ schemas would drown every MCP client's context):
   the same DI scope. Handler guard exceptions (InvalidOperationException) return as messages,
   mirroring the endpoints.
 
+**Confirm-first actions (2026-08-28, accountant round).** Actions that mint a new party or
+account — a subcontractor/supplier, a client, an architect practice, a portal user — and every
+irreversible action (the "There is no undo" set: deletes, merges, `confirm_valuation_claim`)
+declare `RequiresConfirmation: true`. `perform_action` REFUSES the first call of such an action
+outright (`confirmationRequired: true`) with instructions to check for an existing record, show
+the user exactly what will happen and get their explicit yes, then re-call with `confirm: true`;
+`describe_action` surfaces the same protocol so the model can plan the confirm turn. The gate is
+server-enforced two-step, so a model can never create or destroy one of these in a single move —
+though the honest limit is that `confirm: true` is still asserted by the model: the server cannot
+itself see the user's yes. `AiActionRegistry` asserts at boot that any action whose own text says
+"no undo"/"irreversible"/"permanently" carries the flag, so a new destructive action cannot ship
+without the gate.
+
 Declarations live in `Features/Ai/Tools/Actions/*Actions.cs` — one data-only `AiAction` entry per
 command, one file per area, discovered via `IAiActionSource` at boot. `AiActionRegistry` asserts
 the lot at startup (through `AiRegistryDriftCheck`): duplicate names, stamps that aren't contract

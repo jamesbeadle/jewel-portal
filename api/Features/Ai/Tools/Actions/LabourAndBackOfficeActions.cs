@@ -259,6 +259,7 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
             VisibleTo: UsefulInformationRoles.AllowedToManage,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which note, by title, before calling."),
 
         // ---- Platform -----------------------------------------------------------------------
@@ -311,6 +312,7 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
             VisibleTo: AdminGateRoles,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "email is the requester's email as listed by the pending access requests view. "
                 + "Irreversible — confirm with the user before calling."),
     };

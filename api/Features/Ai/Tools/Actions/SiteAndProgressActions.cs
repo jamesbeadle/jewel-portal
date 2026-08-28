@@ -101,6 +101,7 @@ internal sealed class SiteAndProgressActions : IAiActionSource
             VisibleTo: TodoRoles.AllowedToManageTodos,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which item, by title, before calling. todoItemId comes "
                 + "from list_todos or find_by_reference."),
 
@@ -223,6 +224,7 @@ internal sealed class SiteAndProgressActions : IAiActionSource
             VisibleTo: ProgrammePlanners,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which task, by title, before calling. There is no undo."),
 
         new AiAction(
@@ -283,6 +285,7 @@ internal sealed class SiteAndProgressActions : IAiActionSource
             VisibleTo: ProgrammePlanners,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which baseline, by label, before calling. There is no "
                 + "undo."),
 
@@ -316,6 +319,7 @@ internal sealed class SiteAndProgressActions : IAiActionSource
             VisibleTo: ProgressRoles.Contributors,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which update, by title and date, before calling."),
 
         new AiAction(
@@ -330,6 +334,7 @@ internal sealed class SiteAndProgressActions : IAiActionSource
             VisibleTo: ProgressRoles.Contributors,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user before calling."),
 
         new AiAction(
@@ -374,6 +379,7 @@ internal sealed class SiteAndProgressActions : IAiActionSource
             VisibleTo: ProgressRoles.Contributors,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which report, by title, before calling."),
 
         // ── Drawings ──────────────────────────────────────────────────────────────────────────
@@ -448,6 +454,7 @@ internal sealed class SiteAndProgressActions : IAiActionSource
             VisibleTo: DrawingManagers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which revision, by drawing code and label, before "
                 + "calling."),
 
@@ -464,6 +471,7 @@ internal sealed class SiteAndProgressActions : IAiActionSource
             VisibleTo: DrawingManagers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which drawing, by code and title, before calling."),
 
         new AiAction(

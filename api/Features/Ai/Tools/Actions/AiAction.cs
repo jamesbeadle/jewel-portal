@@ -33,6 +33,13 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 /// <param name="NameStamps">Command constructor parameters stamped with the caller's display name.</param>
 /// <param name="Notes">Extra guidance surfaced by describe_action — prerequisites, id-resolution
 /// hints, irreversibility warnings.</param>
+/// <param name="RequiresConfirmation">Hard confirm-first gate, enforced by perform_action itself
+/// (2026-08-28, asked for by the accountant round): the first call is REFUSED with instructions to
+/// show the user exactly what is about to happen and get their yes; only a re-call carrying
+/// confirm: true runs. Set on actions that mint a new party or account (subcontractor, client,
+/// architect, portal user) and on every irreversible action — <see cref="AiActionRegistry"/>
+/// asserts at boot that any action whose text says "no undo"/"irreversible"/"permanently" carries
+/// it, so a new destructive action cannot ship without the gate.</param>
 public sealed record AiAction(
     string Name,
     string Area,
@@ -44,7 +51,8 @@ public sealed record AiAction(
     RoleSet VisibleTo,
     IReadOnlyList<string> EmailStamps,
     IReadOnlyList<string> NameStamps,
-    string? Notes = null);
+    string? Notes = null,
+    bool RequiresConfirmation = false);
 
 /// <summary>Implemented once per feature area (RequestsActions, VariationsActions…). The registry
 /// discovers implementations by reflection at boot, so adding an area file is the whole job.</summary>

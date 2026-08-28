@@ -143,6 +143,7 @@ internal sealed class VariationsAndValuationsActions : IAiActionSource
             VisibleTo: VariationRoles.AllowedToManageVariations,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user, naming the exact variation, before calling. Refused for "
                 + "an Approved order (reject it or return it to quoting first) and while any work "
                 + "order instructs it. find_by_reference resolves V72."),
@@ -451,6 +452,7 @@ internal sealed class VariationsAndValuationsActions : IAiActionSource
             VisibleTo: ValuationInvoiceRoles.AllowedToManageValuationInvoices,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user, naming the exact invoice and period, before calling."),
 
         // ── BoQ ───────────────────────────────────────────────────────────────────────────────
@@ -496,6 +498,7 @@ internal sealed class VariationsAndValuationsActions : IAiActionSource
             VisibleTo: BoqEditors,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which line, by description, before calling."),
 
         new AiAction(

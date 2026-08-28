@@ -137,6 +137,7 @@ internal sealed class RequestsActions : IAiActionSource
             VisibleTo: RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.ProjectManager),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Both requests must be General (not yet promoted) and on the same project. "
                 + "survivorRequestId keeps its reference and title. Confirm with the user which "
                 + "request survives before calling — the merge cannot be undone. Ids via "
@@ -186,6 +187,7 @@ internal sealed class RequestsActions : IAiActionSource
             VisibleTo: RoleSet.Of(Role.Admin),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Irreversible. Confirm with the user, naming the request's reference and title, "
                 + "before calling. requestId via find_by_reference."),
 

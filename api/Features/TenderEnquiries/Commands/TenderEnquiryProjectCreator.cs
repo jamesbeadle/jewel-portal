@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Contracts.TenderEnquiries;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -42,6 +43,9 @@ public sealed class TenderEnquiryProjectCreator
             Postcode = TenderEnquiryDetailsRules.Clamp(draft.Postcode, 16)
         };
         context.Projects.Add(project);
+        // Every project starts with the standard drawing-folder set — leads included, so the
+        // register is ready the moment the job is won; one SaveChanges covers both.
+        await StandardDrawingFolders.AddMissingAsync(context, project.ProjectId, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
         return project;
     }

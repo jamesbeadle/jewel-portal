@@ -64,6 +64,7 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             VisibleTo: DirectoryCurators,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "tradeIds come from list_trades (add_trade can mint a missing one). Check the directory "
                 + "for an existing record first — duplicates are merged later with "
                 + "consolidate_directory_records, so avoid creating them."),
@@ -113,6 +114,7 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             VisibleTo: DirectoryCurators,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Irreversible. Confirm with the user exactly which record is the master, which are "
                 + "merged away, and each winning field value before calling. mergedSubcontractorIds must "
                 + "never include the master."),
@@ -131,6 +133,7 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             VisibleTo: DirectoryCurators,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "xeroContactId is Xero's contact id. Refused if the supplier is already imported or "
                 + "Xero is unreachable. The import is recorded against the signed-in user."),
 
@@ -162,6 +165,7 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             VisibleTo: DirectoryRecordEditors,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which contact, by name and company, before calling. "
                 + "companyContactId comes from the record's contact list (ListCompanyContacts)."),
 
@@ -226,6 +230,7 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             VisibleTo: DirectoryCurators,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which trade, by name, before calling. tradeId comes from "
                 + "list_trades."),
 
@@ -407,7 +412,8 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             ValidationType: typeof(CreateClientValidation),
             VisibleTo: ClientRoles.AllowedToManageClients,
             EmailStamps: Array.Empty<string>(),
-            NameStamps: Array.Empty<string>()),
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true),
 
         new AiAction(
             Name: "update_client_contact",
@@ -435,7 +441,8 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             ValidationType: typeof(CreateArchitectValidation),
             VisibleTo: ArchitectRoles.AllowedToManageArchitects,
             EmailStamps: Array.Empty<string>(),
-            NameStamps: Array.Empty<string>()),
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true),
 
         new AiAction(
             Name: "update_architect",
@@ -482,6 +489,7 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             VisibleTo: PartyContactManagers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which contact, by name and party, before calling. "
                 + "partyContactId comes from ListPartyContacts."),
 
@@ -501,6 +509,7 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             VisibleTo: UserAdministrators,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm the exact role list with the user before calling — read the current user "
                 + "first and carry forward roles that should not change. The Admin role carries every "
                 + "permission."),
@@ -550,6 +559,7 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             VisibleTo: UserAdministrators,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Irreversible. Confirm with the user which account, by email, before calling — the "
                 + "email comes from the revoked-users list (ListRevokedDirectoryUsers).")
     };

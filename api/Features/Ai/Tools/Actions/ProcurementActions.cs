@@ -129,6 +129,7 @@ internal sealed class ProcurementActions : IAiActionSource
             VisibleTo: PackageCreators,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Deletion is for packages that should never have existed; close_bid_package is "
                 + "the polite no-winner ending for a real tender. Confirm with the user, naming the "
                 + "package, before calling. bidPackageId comes from list_bid_packages."),
@@ -533,6 +534,7 @@ internal sealed class ProcurementActions : IAiActionSource
             VisibleTo: WorkOrderRaisers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Deletion is for drafts that should never have existed (raised in error, "
                 + "duplicated); reject_work_order records a considered no. Confirm with the user "
                 + "before calling. Over HTTP both ids are route parameters — projectId and "

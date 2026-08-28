@@ -192,6 +192,7 @@ internal sealed class CommercialActions : IAiActionSource
             VisibleTo: ValuationBillEditors,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which line, by description and value, before calling."),
 
         // ── Commercial: valuation claim lifecycle ────────────────────────────────────────
@@ -290,6 +291,7 @@ internal sealed class CommercialActions : IAiActionSource
             VisibleTo: ClaimLifecycleManagers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Irreversible. Confirm with the user, naming the claim, before calling."),
 
         new AiAction(
@@ -318,6 +320,7 @@ internal sealed class CommercialActions : IAiActionSource
             VisibleTo: ClaimLifecycleManagers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which claim, by number and name, before calling."),
 
         // ── Commercial: valuation report snapshots ───────────────────────────────────────
@@ -353,6 +356,7 @@ internal sealed class CommercialActions : IAiActionSource
             VisibleTo: ClaimLifecycleManagers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which snapshot, by label and date, before calling."),
 
         new AiAction(

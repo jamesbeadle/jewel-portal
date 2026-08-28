@@ -34,6 +34,19 @@ internal static class AiActionRegistry
 
         foreach (var action in actions)
         {
+            // The confirm-first gate cannot be forgotten on a destructive action: a declaration
+            // whose own text says it is irreversible must carry RequiresConfirmation, or the app
+            // does not boot (2026-08-28 — the gate itself lives in perform_action).
+            var text = action.Description + " " + (action.Notes ?? "");
+            var declaredIrreversible = text.Contains("no undo", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("no unmerge", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("irreversibl", StringComparison.OrdinalIgnoreCase)
+                || text.Contains("permanently", StringComparison.OrdinalIgnoreCase);
+            if (declaredIrreversible && !action.RequiresConfirmation)
+                throw new InvalidOperationException(
+                    $"AiActionRegistry: '{action.Name}' describes itself as irreversible but does not "
+                    + "set RequiresConfirmation — destructive actions must gate on the user's yes.");
+
             var parameters = AiActionSchema.Constructor(action.CommandType).GetParameters()
                 .Select(parameter => parameter.Name!)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);

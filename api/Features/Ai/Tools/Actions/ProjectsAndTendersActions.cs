@@ -194,6 +194,7 @@ internal sealed class ProjectsAndTendersActions : IAiActionSource
             VisibleTo: ProjectDeleters,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Irreversible. Confirm with the user, naming the project, before calling. "
                 + "confirmName must match the project's name exactly — the server re-checks it and "
                 + "refuses a mismatch."),
@@ -259,6 +260,7 @@ internal sealed class ProjectsAndTendersActions : IAiActionSource
             VisibleTo: ProjectContactManagers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which contact, by name and project, before calling. "
                 + "contactId comes from the project's contact list (ListProjectContacts)."),
 
@@ -311,6 +313,7 @@ internal sealed class ProjectsAndTendersActions : IAiActionSource
             VisibleTo: ProjectContractRoles.AllowedToManageContract,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Irreversible. Confirm with the user which amendment, by title and date, before "
                 + "calling. projectContractAmendmentId comes from ListProjectContractAmendments."),
 
@@ -443,6 +446,7 @@ internal sealed class ProjectsAndTendersActions : IAiActionSource
             VisibleTo: BuildingControlRoles.Managers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which stage, by name, before calling."),
 
         new AiAction(
@@ -490,6 +494,7 @@ internal sealed class ProjectsAndTendersActions : IAiActionSource
             VisibleTo: BuildingControlRoles.Managers,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
             Notes: "Confirm with the user which file, by name, before calling."),
 
         new AiAction(
