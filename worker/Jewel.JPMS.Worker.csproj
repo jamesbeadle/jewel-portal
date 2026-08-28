@@ -67,6 +67,9 @@
     <Compile Include="..\api\Features\Xero\XeroApproval.cs" Link="Shared\Xero\XeroApproval.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\SyncXeroLedgerHandler.cs" Link="Shared\Xero\SyncXeroLedgerHandler.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\AllocateSuggestedXeroLinesHandler.cs" Link="Shared\Xero\AllocateSuggestedXeroLinesHandler.cs" />
+    <!-- Labour-supplier recognition: the allocate-suggested sweep above skips labour settlement
+         lines through it, so the nightly run and the page's button apply the same §6 rule. -->
+    <Compile Include="..\api\Features\Xero\Ledger\LabourSupplierRecognition.cs" Link="Shared\Xero\LabourSupplierRecognition.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\XeroAllocationSuggester.cs" Link="Shared\Xero\XeroAllocationSuggester.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\XeroWriteBackService.cs" Link="Shared\Xero\XeroWriteBackService.cs" />
     <Compile Include="..\api\Features\Xero\SitePnl\SyncXeroSitePnlHandler.cs" Link="Shared\Xero\SyncXeroSitePnlHandler.cs" />

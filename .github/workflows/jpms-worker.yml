@@ -23,6 +23,8 @@ on:
       - 'api/Data/**'
       - 'api/Features/MailboxIntake/**'
       - 'api/Features/Requests/**'
+      - 'api/Features/Xero/**'
+      - 'api/Cqrs/**'
       - '.github/workflows/jpms-worker.yml'
   workflow_dispatch:
 
