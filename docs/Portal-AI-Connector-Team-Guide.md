@@ -5,7 +5,7 @@ portal is now a connector you add to your own AI tool — Claude or Perplexity, 
 you already have. You ask questions and get work done in the tool you prefer; the portal answers
 with live data, as you, with everything logged.*
 
-**The one address you need:** `https://portal.jewelbb.co.uk/api/mcp`
+**The one address you need:** `https://func-jpms-mcp-prod.azurewebsites.net/api/mcp`
 
 You sign in with your normal portal email and password. Nothing new to install on the portal side,
 and no shared keys — the connection is yours alone.
@@ -38,7 +38,7 @@ call is recorded in the portal’s activity log under your name.
 
 1. Open **claude.ai** → **Settings** → **Connectors** (on desktop: Settings → Connectors).
 2. Choose **Add custom connector**.
-3. Name: **Jewel Portal**. URL: `https://portal.jewelbb.co.uk/api/mcp`. Leave the advanced
+3. Name: **Jewel Portal**. URL: `https://func-jpms-mcp-prod.azurewebsites.net/api/mcp`. Leave the advanced
    OAuth fields empty. Add it.
 4. Click **Connect** on the new connector. A portal window opens — sign in with your portal email
    and password if asked, then press **Approve**.
@@ -51,7 +51,7 @@ Claude account.
 ## Connect Claude Code (terminal)
 
 ```bash
-claude mcp add --transport http jewel-portal https://portal.jewelbb.co.uk/api/mcp
+claude mcp add --transport http jewel-portal https://func-jpms-mcp-prod.azurewebsites.net/api/mcp
 ```
 
 Then inside Claude Code run `/mcp`, pick **jewel-portal**, and follow the sign-in prompt — the
@@ -60,7 +60,7 @@ browser opens the portal’s approval page; sign in and press Approve.
 ## Connect Perplexity
 
 1. Perplexity → **Settings** → **Connectors** → **Add connector** → **Custom**.
-2. Server URL: `https://portal.jewelbb.co.uk/api/mcp`, transport **HTTP**. Perplexity discovers
+2. Server URL: `https://func-jpms-mcp-prod.azurewebsites.net/api/mcp`, transport **HTTP**. Perplexity discovers
    the sign-in flow itself (OAuth) — you don’t need a client ID or secret.
 3. Save, then connect: the portal’s approval page opens — sign in and press **Approve**.
 
