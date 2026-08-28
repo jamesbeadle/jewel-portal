@@ -37,6 +37,13 @@ public interface IDrawingStore
     /// back to the Drawings tab shows fresh data (stale-while-revalidate).</summary>
     void Refresh(string projectId);
 
+    /// <summary>Refetches the register, its folders and (when given) one drawing's revisions,
+    /// completing only once the reloads have LANDED — so a caller that has just written can keep
+    /// its busy state up until the result is actually on screen, instead of closing against stale
+    /// data. A failed reload is swallowed (the query pipeline has already reported it) and the
+    /// caches catch up through the background refreshes instead.</summary>
+    Task RefreshNowAsync(string projectId, string? drawingId, CancellationToken cancellationToken);
+
     /// <summary>Creates a new named drawing (the "thing") and returns it, optionally filed
     /// straight into a folder (null = ungrouped).</summary>
     Task<Drawing> RegisterDrawingAsync(string projectId, string drawingCode, string title, string? drawingFolderId, CancellationToken cancellationToken);

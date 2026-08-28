@@ -1,10 +1,15 @@
 @inject IDrawingStore DrawingStore
+@implements IDisposable
 
 @* Picks the register folder for a new drawing: any existing folder (shown by its full path),
    no folder, or "+ New folder…" — which asks for a name and, optionally, the folder to create
    it inside, so a sub-folder can be made right where the drawing is being filed. The host form
    calls ResolveFolderAsync on submit: it creates the folder if asked and returns the id to file
-   under (null = ungrouped). Shared by the upload form and Document Triage. *@
+   under (null = ungrouped). Shared by the upload form and Document Triage.
+
+   The picker subscribes to the drawing store itself: its parameters are all primitives, so a
+   parent re-render skips it — without the subscription it could sit on "Loading folders…" (or a
+   stale option list) after the folders had actually landed. *@
 <div>
     <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Folder</label>
     <select @bind="selectedFolderId" disabled="@(!IsEnabled)" class="field">
@@ -37,6 +42,11 @@
 
 @code {
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    /// <summary>Folder to preselect — e.g. the folder whose upload button opened the host form.
+    /// Applied whenever the VALUE changes, so a choice the user then makes by hand is never
+    /// clobbered by a routine parent re-render.</summary>
+    [Parameter] public string? InitialFolderId { get; set; }
 
     private const string NewFolderOption = "__new__";
 
@@ -75,11 +85,24 @@
 
     // A different project means a different folder list — the old choice cannot carry over.
     private string projectSeen = "";
+    private string? initialSeen;
 
     protected override void OnParametersSet()
     {
-        if (ProjectId == projectSeen) return;
-        projectSeen = ProjectId;
-        Reset();
+        if (ProjectId != projectSeen)
+        {
+            projectSeen = ProjectId;
+            initialSeen = null;
+            Reset();
+        }
+        if (InitialFolderId != initialSeen)
+        {
+            initialSeen = InitialFolderId;
+            if (!string.IsNullOrEmpty(InitialFolderId)) selectedFolderId = InitialFolderId;
+        }
     }
+
+    protected override void OnInitialized() => DrawingStore.OnChange += StateHasChanged;
+
+    public void Dispose() => DrawingStore.OnChange -= StateHasChanged;
 }

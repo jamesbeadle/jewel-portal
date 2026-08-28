@@ -54,9 +54,11 @@ else
                             class="rounded-lg border border-line-strong text-sm px-3 py-2 text-content-muted hover:bg-surface-raised transition">
                         + New folder
                     </button>
-                    <button type="button" @onclick="() => isUploading = !isUploading"
+                    @* "Add drawings" OPENS the panel; the button that actually uploads lives inside
+                       it and says "…to the register" — two different acts, two different labels. *@
+                    <button type="button" @onclick="ToggleUploadPanel"
                             class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
-                        @(isUploading ? "Cancel" : "+ Upload drawing")
+                        @(isUploading ? "Close" : "+ Add drawings")
                     </button>
                 }
             </div>
@@ -65,7 +67,9 @@ else
         @if (isUploading)
         {
             <div class="mb-5">
-                <DrawingUploadForm ProjectId="@ProjectId" OnUploaded="() => isUploading = false" />
+                <DrawingUploadForm ProjectId="@ProjectId"
+                                   InitialFolderId="@uploadIntoFolder?.DrawingFolderId"
+                                   OnUploaded="CloseUploadPanel" />
             </div>
         }
 
@@ -81,6 +85,7 @@ else
                            Folders="Folders"
                            CanManage="CanManage"
                            OnCreateSubFolder="OpenNewSubFolder"
+                           OnUploadToFolder="OpenUploadTo"
                            OnRenameFolder="OpenRenameFolder"
                            OnDeleteFolder="OpenDeleteFolder" />
         }
@@ -127,6 +132,9 @@ else
     private bool isLoaded;
     private bool isUploading;
     private bool approvedOnly;
+
+    // Set by a folder row's upload button: the upload panel opens with this folder preselected.
+    private DrawingFolder? uploadIntoFolder;
 
     // Folder dialogs: one name dialog for create/rename, one confirm for delete.
     private bool folderDialogOpen;
@@ -229,6 +237,25 @@ else
     private static string PipelineText(Drawing drawing) =>
         $"{(drawing.LatestMetadataExtractedAt is not null ? "Metadata ✓" : "Not extracted")} · "
         + $"{(drawing.LatestAnalysedAt is not null ? "Analysed ✓" : "Not analysed")}";
+
+    private void ToggleUploadPanel()
+    {
+        isUploading = !isUploading;
+        if (!isUploading) uploadIntoFolder = null;
+    }
+
+    private void CloseUploadPanel()
+    {
+        isUploading = false;
+        uploadIntoFolder = null;
+    }
+
+    // A folder row's upload button: open (or re-aim) the panel with that folder already chosen.
+    private void OpenUploadTo(DrawingFolder folder)
+    {
+        uploadIntoFolder = folder;
+        isUploading = true;
+    }
 
     private void OpenNewFolder() => OpenNewFolderIn(parent: null);
 

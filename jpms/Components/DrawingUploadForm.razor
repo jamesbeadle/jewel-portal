@@ -9,10 +9,24 @@
    the dialog. One file keeps the full form; several switch it to bulk mode: each file becomes
    its own drawing (blank code and title, revision label extracted from the file name where it
    is obvious) filed into the chosen folder, so a register can be populated quickly and the
-   details attached later through each drawing's page. *@
+   details attached later through each drawing's page.
+
+   The folder picker sits ABOVE the drop zone and is ONE instance whatever the mode — rendered
+   always and only hidden by CSS in revision mode. When it lived inside the single/bulk branches
+   a mode switch (dropping a second file after choosing the folder) disposed the picker and
+   silently reset the choice to "No folder", which is exactly how drawings ended up ungrouped
+   despite a folder having been selected. *@
 
 <EditForm Model="this" OnValidSubmit="HandleUpload"
       class="rounded-2xl border border-line bg-surface p-5 space-y-3">
+
+    <div>
+        <h3 class="text-sm font-semibold text-content">Add drawings to the register</h3>
+        <p class="text-xs text-content-subtle mt-0.5">
+            Choose where they go, drop the files in, then press the upload button below — nothing
+            is saved to the register until it is pressed.
+        </p>
+    </div>
 
     <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
         <button type="button" @onclick="() => SetMode(isRevision: false)"
@@ -26,14 +40,40 @@
         </button>
     </div>
 
+    @* One instance across every mode — hidden, not removed, in revision mode (a revision lands
+       in its drawing's folder), so the chosen folder survives single/bulk/revision switches. *@
+    <div class="@(isRevision ? "hidden" : null)">
+        <DrawingFolderPicker @ref="folderPicker" ProjectId="@ProjectId" InitialFolderId="@InitialFolderId" />
+    </div>
+
+    @if (isRevision)
+    {
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing drawing *</label>
+            <select @bind="selectedDrawingId"
+                    class="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+                <option value="">Select a drawing…</option>
+                @foreach (var drawing in ExistingDrawings)
+                {
+                    <option value="@drawing.DrawingId">@DrawingNaming.Label(drawing)</option>
+                }
+            </select>
+        </div>
+    }
+
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
             @(isRevision ? "Drawing file *" : "Drawing files *")
         </label>
-        <div class="relative rounded-xl border-2 border-dashed px-4 py-6 text-center transition @(isDragOver ? "border-accent bg-surface-raised" : "border-line-strong")"
-             @ondragenter="() => isDragOver = true"
-             @ondragleave="() => isDragOver = false"
-             @ondrop="() => isDragOver = false">
+        @* Drag highlight is a DEPTH COUNTER, not a boolean: dragging across the zone's children
+           fires dragenter on the child BEFORE dragleave on the zone, so a boolean flips to false
+           while the pointer is still inside — the "sometimes doesn't highlight" flicker. The
+           count only reaches zero when the drag has actually left (or dropped). *@
+        <div class="relative rounded-xl border-2 border-dashed px-4 py-6 text-center transition @(IsDragOver ? "border-accent bg-surface-raised" : "border-line-strong")"
+             @ondragenter="() => dragDepth++"
+             @ondragleave="() => dragDepth = Math.Max(0, dragDepth - 1)"
+             @ondrop="() => dragDepth = 0"
+             @ondragend="() => dragDepth = 0">
             <InputFile OnChange="OnFilesSelected" multiple="@(!isRevision)" disabled="@busy"
                        class="absolute inset-0 h-full w-full opacity-0 cursor-pointer" />
             <p class="text-sm text-content-muted pointer-events-none">
@@ -78,21 +118,7 @@
         }
     </div>
 
-    @if (isRevision)
-    {
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing drawing *</label>
-            <select @bind="selectedDrawingId"
-                    class="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
-                <option value="">Select a drawing…</option>
-                @foreach (var drawing in ExistingDrawings)
-                {
-                    <option value="@drawing.DrawingId">@DrawingNaming.Label(drawing)</option>
-                }
-            </select>
-        </div>
-    }
-    else if (!IsBulk)
+    @if (!isRevision && !IsBulk)
     {
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing code</label>
@@ -106,12 +132,6 @@
                    class="field" />
             <p class="text-xs text-content-subtle mt-1">Leave blank and the register shows the original file name instead.</p>
         </div>
-
-        <DrawingFolderPicker @ref="folderPicker" ProjectId="@ProjectId" />
-    }
-    else
-    {
-        <DrawingFolderPicker @ref="folderPicker" ProjectId="@ProjectId" />
     }
 
     @if (!IsBulk)
@@ -170,13 +190,17 @@
     [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
     [Parameter] public EventCallback OnUploaded { get; set; }
 
+    /// <summary>Folder to preselect in the picker — set when the form was opened from a folder's
+    /// own upload button, so the files land in that folder without another choice to make.</summary>
+    [Parameter] public string? InitialFolderId { get; set; }
+
     // Well beyond any real drawing issue; the browser needs SOME ceiling for GetMultipleFiles.
     private const int MaxBulkFiles = 200;
 
     private DrawingFolderPicker? folderPicker;
     private List<IBrowserFile> selectedFiles = new();
     private bool isRevision;
-    private bool isDragOver;
+    private int dragDepth;
     private string selectedDrawingId = "";
     private string drawingCode = "";
     private string title = "";
@@ -194,14 +218,17 @@
     private readonly Dictionary<IBrowserFile, string> registeredIds = new();
 
     private bool IsBulk => selectedFiles.Count > 1;
+    private bool IsDragOver => dragDepth > 0;
 
     private IReadOnlyList<Drawing> ExistingDrawings => DrawingStore.DrawingsFor(ProjectId);
 
+    // The idle labels say WHERE the upload goes — "to the register" — so this button reads as the
+    // save-to-the-portal step, distinct from the page button that merely opens this panel.
     private string SubmitLabel =>
         busy
             ? IsBulk ? $"Uploading {bulkDone} of {bulkTotal}…" : "Uploading…"
-            : IsBulk ? $"Upload {selectedFiles.Count} drawings"
-            : isRevision ? "Upload revision" : "Upload drawing";
+            : IsBulk ? $"Upload {selectedFiles.Count} drawings to the register"
+            : isRevision ? "Upload revision to the register" : "Upload drawing to the register";
 
     private void SetMode(bool isRevision)
     {
@@ -305,6 +332,10 @@
             await DrawingStore.UploadRevisionAsync(
                 ProjectId, drawingId, revisionLabel.Trim().ToUpperInvariant(), issuedBy.Trim(), selectedFile, CancellationToken.None);
 
+            // Wait for the register reload to LAND before closing, so the new drawing is on
+            // screen the moment the form goes — not after a page refresh.
+            await DrawingStore.RefreshNowAsync(ProjectId, isRevision ? drawingId : null, CancellationToken.None);
+
             registeredIds.Remove(selectedFile);
             ResetForm();
             await OnUploaded.InvokeAsync();
@@ -363,6 +394,10 @@
                     stillFailing.Add(file);
                 }
             }
+
+            // Whatever failed, the successes are on the register — wait for the reload to land
+            // so they are visible immediately, with no page refresh.
+            await DrawingStore.RefreshNowAsync(ProjectId, null, CancellationToken.None);
 
             selectedFiles = stillFailing;
             if (stillFailing.Count == 0)

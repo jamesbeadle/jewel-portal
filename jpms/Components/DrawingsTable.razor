@@ -53,6 +53,11 @@
                                 @if (CanManage && section.Folder is { } folder)
                                 {
                                     <span class="ml-auto flex items-center gap-1">
+                                        <button type="button" title="Upload drawings into this folder" aria-label="Upload drawings into this folder"
+                                                @onclick="() => OnUploadToFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
+                                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
+                                            <ActionIcon Name="upload" Class="w-3.5 h-3.5" />
+                                        </button>
                                         <button type="button" title="New sub-folder" aria-label="New sub-folder"
                                                 @onclick="() => OnCreateSubFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
                                                 class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
@@ -103,6 +108,10 @@
 
     [Parameter] public bool CanManage { get; set; }
     [Parameter] public EventCallback<DrawingFolder> OnCreateSubFolder { get; set; }
+
+    /// <summary>The folder row's upload button: open the upload panel with this folder already
+    /// chosen, so "upload INTO the folder" is one click rather than upload-then-pick.</summary>
+    [Parameter] public EventCallback<DrawingFolder> OnUploadToFolder { get; set; }
     [Parameter] public EventCallback<DrawingFolder> OnRenameFolder { get; set; }
     [Parameter] public EventCallback<DrawingFolder> OnDeleteFolder { get; set; }
 
@@ -129,8 +138,12 @@
     {
         get
         {
+            // A drawing whose folder id is not in Folders (the folder list lagging a beat behind
+            // the register, or a folder deleted elsewhere) falls into Ungrouped rather than into
+            // a section that never renders — a drawing must NEVER be invisible on its own register.
+            var knownFolderIds = Tree.Nodes.Select(node => node.Folder.DrawingFolderId).ToHashSet();
             var byFolder = Drawings
-                .GroupBy(drawing => drawing.DrawingFolderId ?? UngroupedKey)
+                .GroupBy(drawing => drawing.DrawingFolderId is { } folderId && knownFolderIds.Contains(folderId) ? folderId : UngroupedKey)
                 .ToDictionary(group => group.Key, group => (IReadOnlyList<Drawing>)group.ToList());
 
             foreach (var node in Tree.Nodes)

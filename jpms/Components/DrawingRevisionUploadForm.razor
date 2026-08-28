@@ -76,6 +76,10 @@
             await DrawingStore.UploadRevisionAsync(
                 ProjectId, DrawingId, revisionLabel.Trim().ToUpperInvariant(), issuedBy.Trim(), selectedFile, CancellationToken.None);
 
+            // Wait for the revision list to reload before clearing the form, so the new version
+            // is on screen the moment "Uploading…" ends — not after a page refresh.
+            await DrawingStore.RefreshNowAsync(ProjectId, DrawingId, CancellationToken.None);
+
             selectedFile = null; revisionLabel = ""; issuedBy = "";
             await OnUploaded.InvokeAsync();
         }

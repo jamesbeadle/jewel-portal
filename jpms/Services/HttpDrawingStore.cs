@@ -56,6 +56,21 @@ public sealed class HttpDrawingStore : IDrawingStore
         _ = RunFolderRefreshAsync(projectId);
     }
 
+    public async Task RefreshNowAsync(string projectId, string? drawingId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (drawingId is not null) await readModel.RefreshRevisionsAsync(drawingId, cancellationToken);
+            await readModel.RefreshFoldersAsync(projectId, cancellationToken);
+            await readModel.RefreshDrawingsAsync(projectId, cancellationToken);
+        }
+        catch
+        {
+            // The write behind this call has already committed; a failed reload is the query
+            // pipeline's to report (it has), and the background refreshes catch the caches up.
+        }
+    }
+
     private async Task RunFolderRefreshAsync(string projectId)
     {
         try { await readModel.RefreshFoldersAsync(projectId, CancellationToken.None); }
