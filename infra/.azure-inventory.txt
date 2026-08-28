@@ -59,3 +59,188 @@ swa-jpms-prod  Standard  Standard  brave-sea-01dae5403.7.azurestaticapps.net
 == SQL servers + databases (tier / size)
 ==================================================================
 --- server: sql-jpms-prod-54cf9e
+Name    Sku        Tier            Capacity    MaxSizeBytes    Status
+------  ---------  --------------  ----------  --------------  --------
+jpms    GP_S_Gen5  GeneralPurpose  4           34359738368     Online
+master  GP_SYSTEM  System          4           107374182400    Online
+
+==================================================================
+== Storage accounts
+==================================================================
+Name              Sku           Kind       AccessTier
+----------------  ------------  ---------  ------------
+stjpmsprod54cf9e  Standard_LRS  StorageV2  Hot
+rgjpmsprod9179    Standard_LRS  StorageV2  Hot
+
+==================================================================
+== SQL metrics - last 7 days
+==================================================================
+--- sql-jpms-prod-54cf9e/jpms  (DTU model)
+--- sql-jpms-prod-54cf9e/jpms  (vCore model)
+Timestamp             Name            Average                Maximum
+--------------------  --------------  ---------------------  ---------
+2026-08-21T08:47:00Z  CPU percentage  0.0                    0.0
+2026-08-21T14:47:00Z  CPU percentage  0.0                    0.0
+2026-08-21T20:47:00Z  CPU percentage  0.0                    0.0
+2026-08-22T02:47:00Z  CPU percentage  0.0013908205841446453  2.0
+2026-08-22T08:47:00Z  CPU percentage  0.0                    0.0
+2026-08-22T14:47:00Z  CPU percentage  0.0                    0.0
+2026-08-22T20:47:00Z  CPU percentage  0.0                    0.0
+2026-08-23T02:47:00Z  CPU percentage  0.0006958942240779402  1.0
+2026-08-23T08:47:00Z  CPU percentage  0.0                    0.0
+2026-08-23T14:47:00Z  CPU percentage  0.0                    0.0
+2026-08-23T20:47:00Z  CPU percentage  0.0                    0.0
+2026-08-24T02:47:00Z  CPU percentage  0.0006954102920723226  1.0
+2026-08-24T08:47:00Z  CPU percentage  0.0006954102920723226  1.0
+2026-08-24T14:47:00Z  CPU percentage  0.0                    0.0
+2026-08-24T20:47:00Z  CPU percentage  0.0                    0.0
+2026-08-25T02:47:00Z  CPU percentage  0.0006954102920723226  1.0
+2026-08-25T08:47:00Z  CPU percentage  0.0013908205841446453  1.0
+2026-08-25T14:47:00Z  CPU percentage  0.0                    0.0
+2026-08-25T20:47:00Z  CPU percentage  0.0                    0.0
+2026-08-26T02:47:00Z  CPU percentage  0.004172461752433936   5.0
+2026-08-26T08:47:00Z  CPU percentage  0.0                    0.0
+2026-08-26T14:47:00Z  CPU percentage  0.0                    0.0
+2026-08-26T20:47:00Z  CPU percentage  0.0                    0.0
+2026-08-27T02:47:00Z  CPU percentage  0.0006958942240779402  1.0
+2026-08-27T08:47:00Z  CPU percentage  0.0006954102920723226  1.0
+2026-08-27T14:47:00Z  CPU percentage  0.0013908205841446453  2.0
+2026-08-27T20:47:00Z  CPU percentage  0.0                    0.0
+2026-08-28T02:47:00Z  CPU percentage  0.0013917884481558804  1.0
+--- sql-jpms-prod-54cf9e/jpms  storage
+Timestamp             Name                     Maximum
+--------------------  -----------------------  ---------
+2026-08-21T08:47:00Z  Data space used percent  0.0
+2026-08-21T20:47:00Z  Data space used percent  0.0
+2026-08-22T08:47:00Z  Data space used percent  0.0
+2026-08-22T20:47:00Z  Data space used percent  0.0
+2026-08-23T08:47:00Z  Data space used percent  0.0
+2026-08-23T20:47:00Z  Data space used percent  0.0
+2026-08-24T08:47:00Z  Data space used percent  0.0
+2026-08-24T20:47:00Z  Data space used percent  0.0
+2026-08-25T08:47:00Z  Data space used percent  0.0
+2026-08-25T20:47:00Z  Data space used percent  0.0
+2026-08-26T08:47:00Z  Data space used percent  0.0
+2026-08-26T20:47:00Z  Data space used percent  0.0
+2026-08-27T08:47:00Z  Data space used percent  0.0
+2026-08-27T20:47:00Z  Data space used percent  0.0
+
+==================================================================
+== Function app metrics - last 3 days
+==================================================================
+--- func-jpms-worker-prod response time
+Timestamp             Name           Average             Maximum
+--------------------  -------------  ------------------  ---------
+2026-08-25T08:47:00Z  Response Time  1.1176470588235294  7.797
+2026-08-25T14:47:00Z  Response Time  1.195               3.578
+2026-08-25T20:47:00Z  Response Time                      0.0
+2026-08-26T02:47:00Z  Response Time  1.5241714285714285  12.075
+2026-08-26T08:47:00Z  Response Time  1.3315531914893617  10.801
+2026-08-26T14:47:00Z  Response Time                      0.0
+2026-08-26T20:47:00Z  Response Time  1.558               4.667
+2026-08-27T02:47:00Z  Response Time  6.553               11.134
+2026-08-27T08:47:00Z  Response Time  1.2158285714285715  8.271
+2026-08-27T14:47:00Z  Response Time                      0.0
+2026-08-27T20:47:00Z  Response Time                      0.0
+2026-08-28T02:47:00Z  Response Time  1.6337000000000002  9.794
+--- func-jpms-worker-prod requests / errors
+Timestamp             Name                Total
+--------------------  ------------------  -------
+2026-08-25T08:47:00Z  Requests            68.0
+2026-08-25T14:47:00Z  Requests            3.0
+2026-08-25T20:47:00Z  Requests            0.0
+2026-08-26T02:47:00Z  Requests            35.0
+2026-08-26T08:47:00Z  Requests            47.0
+2026-08-26T14:47:00Z  Requests            0.0
+2026-08-26T20:47:00Z  Requests            3.0
+2026-08-27T02:47:00Z  Requests            2.0
+2026-08-27T08:47:00Z  Requests            35.0
+2026-08-27T14:47:00Z  Requests            0.0
+2026-08-27T20:47:00Z  Requests            0.0
+2026-08-28T02:47:00Z  Requests            30.0
+2026-08-25T08:47:00Z  Http Server Errors  0.0
+2026-08-25T14:47:00Z  Http Server Errors  0.0
+2026-08-25T20:47:00Z  Http Server Errors  0.0
+2026-08-26T02:47:00Z  Http Server Errors  0.0
+2026-08-26T08:47:00Z  Http Server Errors  0.0
+2026-08-26T14:47:00Z  Http Server Errors  0.0
+2026-08-26T20:47:00Z  Http Server Errors  0.0
+2026-08-27T02:47:00Z  Http Server Errors  0.0
+2026-08-27T08:47:00Z  Http Server Errors  0.0
+2026-08-27T14:47:00Z  Http Server Errors  0.0
+2026-08-27T20:47:00Z  Http Server Errors  0.0
+2026-08-28T02:47:00Z  Http Server Errors  0.0
+--- func-jpms-worker-prod memory
+Timestamp             Name                Average             Maximum
+--------------------  ------------------  ------------------  -----------
+2026-08-25T08:47:00Z  Memory working set  365317035.8753541   502276096.0
+2026-08-25T14:47:00Z  Memory working set  387117289.1056911   500166656.0
+2026-08-25T20:47:00Z  Memory working set  0.0                 0.0
+2026-08-26T02:47:00Z  Memory working set  271410115.7647059   487661568.0
+2026-08-26T08:47:00Z  Memory working set  329256551.3287982   466829312.0
+2026-08-26T14:47:00Z  Memory working set  0.0                 0.0
+2026-08-26T20:47:00Z  Memory working set  375793735.8596491   453705728.0
+2026-08-27T02:47:00Z  Memory working set  210041907.56834534  215760896.0
+2026-08-27T08:47:00Z  Memory working set  358601322.2641509   496721920.0
+2026-08-27T14:47:00Z  Memory working set  371456000.0         401321984.0
+2026-08-27T20:47:00Z  Memory working set  0.0                 0.0
+2026-08-28T02:47:00Z  Memory working set  441631166.2122905   548773888.0
+--- func-jpms-mcp-prod response time
+Timestamp             Name           Maximum    Average
+--------------------  -------------  ---------  -----------------
+2026-08-25T08:47:00Z  Response Time  0.0
+2026-08-25T14:47:00Z  Response Time  0.0
+2026-08-25T20:47:00Z  Response Time  0.0
+2026-08-26T02:47:00Z  Response Time  0.0
+2026-08-26T08:47:00Z  Response Time  0.0
+2026-08-26T14:47:00Z  Response Time  0.0
+2026-08-26T20:47:00Z  Response Time  0.0
+2026-08-27T02:47:00Z  Response Time  0.0
+2026-08-27T08:47:00Z  Response Time  0.0
+2026-08-27T14:47:00Z  Response Time  0.0
+2026-08-27T20:47:00Z  Response Time  0.0
+2026-08-28T02:47:00Z  Response Time  86.857     1.826662962962963
+--- func-jpms-mcp-prod requests / errors
+Timestamp             Name                Total
+--------------------  ------------------  -------
+2026-08-25T08:47:00Z  Requests            0.0
+2026-08-25T14:47:00Z  Requests            0.0
+2026-08-25T20:47:00Z  Requests            0.0
+2026-08-26T02:47:00Z  Requests            0.0
+2026-08-26T08:47:00Z  Requests            0.0
+2026-08-26T14:47:00Z  Requests            0.0
+2026-08-26T20:47:00Z  Requests            0.0
+2026-08-27T02:47:00Z  Requests            0.0
+2026-08-27T08:47:00Z  Requests            0.0
+2026-08-27T14:47:00Z  Requests            0.0
+2026-08-27T20:47:00Z  Requests            0.0
+2026-08-28T02:47:00Z  Requests            270.0
+2026-08-25T08:47:00Z  Http Server Errors  0.0
+2026-08-25T14:47:00Z  Http Server Errors  0.0
+2026-08-25T20:47:00Z  Http Server Errors  0.0
+2026-08-26T02:47:00Z  Http Server Errors  0.0
+2026-08-26T08:47:00Z  Http Server Errors  0.0
+2026-08-26T14:47:00Z  Http Server Errors  0.0
+2026-08-26T20:47:00Z  Http Server Errors  0.0
+2026-08-27T02:47:00Z  Http Server Errors  0.0
+2026-08-27T08:47:00Z  Http Server Errors  0.0
+2026-08-27T14:47:00Z  Http Server Errors  0.0
+2026-08-27T20:47:00Z  Http Server Errors  0.0
+2026-08-28T02:47:00Z  Http Server Errors  0.0
+--- func-jpms-mcp-prod memory
+Timestamp             Name                Average             Maximum
+--------------------  ------------------  ------------------  ------------
+2026-08-25T08:47:00Z  Memory working set  0.0                 0.0
+2026-08-25T14:47:00Z  Memory working set  0.0                 0.0
+2026-08-25T20:47:00Z  Memory working set  0.0                 0.0
+2026-08-26T02:47:00Z  Memory working set  0.0                 0.0
+2026-08-26T08:47:00Z  Memory working set  0.0                 0.0
+2026-08-26T14:47:00Z  Memory working set  0.0                 0.0
+2026-08-26T20:47:00Z  Memory working set  0.0                 0.0
+2026-08-27T02:47:00Z  Memory working set  0.0                 0.0
+2026-08-27T08:47:00Z  Memory working set  0.0                 0.0
+2026-08-27T14:47:00Z  Memory working set  0.0                 0.0
+2026-08-27T20:47:00Z  Memory working set  0.0                 0.0
+2026-08-28T02:47:00Z  Memory working set  358169698.54304636  1349795840.0
+
+DONE - hand infra/.azure-inventory.txt back for the review.
