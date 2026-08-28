@@ -5385,6 +5385,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<string>("SecretHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
                     b.HasKey("ClientId");
 
                     b.ToTable("OAuthClients");

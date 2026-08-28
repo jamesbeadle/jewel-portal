@@ -79,6 +79,23 @@ where the header passes through untouched. The split of responsibilities:
 The Function App necessarily exposes the rest of the api's endpoints on its host too; they are
 all session-cookie gated and simply answer 401 there — only `/api/mcp` accepts bearers.
 
+Two Perplexity-shaped accommodations (2026-08-28, found when the first Perplexity connect
+failed with "server does not support automatic registration"):
+
+- **Discovery on the MCP host's own origin.** Claude bootstraps from the 401's
+  `resource_metadata` pointer; Perplexity instead probes
+  `/.well-known/oauth-authorization-server` directly on the MCP URL's origin. The MCP deploy
+  workflow therefore blanks the Functions route prefix on that host only, and
+  `WellKnownEndpoints` carries literal `.well-known/…` routes (inert under the portal's `api`
+  prefix) plus an `api/mcp` alias in `McpEndpoint` so the published URL is unchanged. The
+  root-served AS metadata names the MCP host as `issuer` (RFC 8414 origin check) with the
+  endpoints still on the portal.
+- **A client secret at registration.** Perplexity hard-errors when DCR returns no
+  `client_secret`, even registering as a public client. Registration now issues one (hash at
+  rest, `OAuthClients.SecretHash`, migration `20260828100000_AddOAuthClientSecret`); the token
+  endpoint verifies it only when presented (form or Basic). PKCE remains mandatory and
+  Claude's secretless clients are untouched.
+
 ## 3. Audit
 
 Every `tools/call` writes one `AgentActivity` row (`AgentTrigger.Mcp`, actor = the token's user,

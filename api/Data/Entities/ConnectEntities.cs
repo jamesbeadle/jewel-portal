@@ -5,13 +5,21 @@ namespace Jewel.JPMS.Api.Data.Entities;
 /// <summary>
 /// An OAuth client registered to connect an AI tool (Claude, Perplexity, Claude Code…) to the
 /// portal's MCP endpoint. Rows arrive through dynamic client registration (RFC 7591) — the client
-/// software registers itself before the first user signs in. Public clients only: there is no
-/// client secret anywhere, and the token flow is protected by PKCE instead.
+/// software registers itself before the first user signs in. The flow's real protection is PKCE
+/// plus the user's own portal sign-in; a client secret is issued as well, purely because some
+/// connectors (Perplexity) refuse a registration response without one.
 /// </summary>
 public sealed class OAuthClientEntity
 {
     /// <summary>Random URL-safe id handed back to the client at registration.</summary>
     [Key, MaxLength(64)] public string ClientId { get; set; } = "";
+
+    /// <summary>SHA-256 (hex) of the client secret issued at registration — the raw secret leaves
+    /// once, same rule as every other credential here. Not security-load-bearing (PKCE is): it
+    /// exists because Perplexity's connector errors when registration returns no client_secret,
+    /// and it is verified only when the client presents it. Null on clients registered before the
+    /// column existed.</summary>
+    [MaxLength(128)] public string? SecretHash { get; set; }
 
     /// <summary>The name the client software gave for itself ("Claude", "Perplexity"). Shown on
     /// the consent page, so it is clamped and treated as untrusted display text.</summary>

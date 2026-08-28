@@ -65,6 +65,15 @@ public sealed class McpEndpoint
         this.configuration = configuration;
     }
 
+    /// <summary>On the standalone MCP host the deploy workflow blanks the "api" route prefix so
+    /// the OAuth discovery documents can claim the literal /.well-known/… root paths. This alias
+    /// keeps the published URL (…/api/mcp) answering there; on the portal host it is a harmless
+    /// duplicate at /api/api/mcp.</summary>
+    [Function("McpServerApiAlias")]
+    public Task<IActionResult> RunAtApiAlias(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", "get", "delete", Route = "api/mcp")] HttpRequest request)
+        => Run(request);
+
     [Function("McpServer")]
     public async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", "get", "delete", Route = "mcp")] HttpRequest request)

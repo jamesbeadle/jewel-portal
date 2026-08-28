@@ -32,6 +32,31 @@ public sealed class WellKnownEndpoints
     [Function("OAuthProtectedResourceMetadata")]
     public IActionResult ProtectedResource(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "well-known/oauth-protected-resource/{*rest}")] HttpRequest request)
+        => ProtectedResourceDocument(request);
+
+    [Function("OAuthAuthorizationServerMetadata")]
+    public IActionResult AuthorizationServer(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "well-known/oauth-authorization-server/{*rest}")] HttpRequest request)
+        => AuthorizationServerDocument(request);
+
+    /// <summary>The same two documents at the LITERAL /.well-known/… paths. Inert on the portal
+    /// host (the "api" route prefix buries them at /api/.well-known/…, and the SWA rewrites serve
+    /// the un-dotted routes above instead), but on the standalone MCP host the deploy workflow
+    /// blanks the route prefix, so these surface at the true root. Perplexity needs that: unlike
+    /// Claude, it does not follow the 401's resource_metadata pointer — it probes
+    /// /.well-known/oauth-authorization-server on the MCP URL's own origin and reports "server
+    /// does not support automatic registration" when nothing answers.</summary>
+    [Function("OAuthProtectedResourceMetadataRoot")]
+    public IActionResult ProtectedResourceRoot(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = ".well-known/oauth-protected-resource/{*rest}")] HttpRequest request)
+        => ProtectedResourceDocument(request);
+
+    [Function("OAuthAuthorizationServerMetadataRoot")]
+    public IActionResult AuthorizationServerRoot(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = ".well-known/oauth-authorization-server/{*rest}")] HttpRequest request)
+        => AuthorizationServerDocument(request, issuerFromRequestOrigin: true);
+
+    private IActionResult ProtectedResourceDocument(HttpRequest request)
     {
         var site = SiteBaseUrl.Resolve(configuration, request);
         return Json(new Dictionary<string, object>
@@ -43,21 +68,22 @@ public sealed class WellKnownEndpoints
         });
     }
 
-    [Function("OAuthAuthorizationServerMetadata")]
-    public IActionResult AuthorizationServer(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "well-known/oauth-authorization-server/{*rest}")] HttpRequest request)
+    /// <param name="issuerFromRequestOrigin">RFC 8414 clients may validate that the issuer matches
+    /// the origin the metadata came from. The portal-domain document says the portal; the copy on
+    /// the MCP host's root says that host — the endpoints stay on the portal either way.</param>
+    private IActionResult AuthorizationServerDocument(HttpRequest request, bool issuerFromRequestOrigin = false)
     {
         var site = SiteBaseUrl.Resolve(configuration, request);
         return Json(new Dictionary<string, object>
         {
-            ["issuer"] = site,
+            ["issuer"] = issuerFromRequestOrigin ? $"{request.Scheme}://{request.Host.Value}" : site,
             ["authorization_endpoint"] = $"{site}/api/oauth/authorize",
             ["token_endpoint"] = $"{site}/api/oauth/token",
             ["registration_endpoint"] = $"{site}/api/oauth/register",
             ["response_types_supported"] = new[] { "code" },
             ["grant_types_supported"] = new[] { "authorization_code", "refresh_token" },
             ["code_challenge_methods_supported"] = new[] { "S256" },
-            ["token_endpoint_auth_methods_supported"] = new[] { "none" },
+            ["token_endpoint_auth_methods_supported"] = new[] { "none", "client_secret_post", "client_secret_basic" },
             ["scopes_supported"] = new[] { OAuthDefaults.Scope }
         });
     }

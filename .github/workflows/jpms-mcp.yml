@@ -37,6 +37,18 @@ jobs:
       - name: Publish api
         run: dotnet publish api/JpmsApi.csproj -c Release -o ./mcp-publish
 
+      # On THIS host only, serve routes from the site root instead of under /api: Perplexity
+      # probes /.well-known/oauth-authorization-server on the MCP URL's own origin (it does not
+      # follow the 401's resource_metadata pointer like Claude), and Functions cannot serve a
+      # root-level path while the global "api" prefix is set. The endpoints carry both spellings
+      # (mcp + api/mcp, well-known + .well-known), so the published /api/mcp URL is unchanged.
+      # The portal's managed functions keep the standard prefix — this edit is deploy-local.
+      - name: Blank the route prefix so /.well-known/* serves at the root
+        run: |
+          jq '.extensions.http.routePrefix = ""' ./mcp-publish/host.json > /tmp/host.json
+          mv /tmp/host.json ./mcp-publish/host.json
+          cat ./mcp-publish/host.json
+
       - name: Deploy to Azure Functions
         uses: Azure/functions-action@v1
         with:

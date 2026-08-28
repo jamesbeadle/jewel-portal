@@ -11,9 +11,11 @@ namespace Jewel.JPMS.Api.Features.Connect;
 
 /// <summary>
 /// POST /api/oauth/token — exchanges an authorisation code (with its PKCE verifier) or a refresh
-/// token for a fresh access + refresh pair. Form-encoded per RFC 6749; public clients, so there
-/// is no client authentication — the PKCE verifier is what proves the caller is the same software
-/// that started the flow.
+/// token for a fresh access + refresh pair. Form-encoded per RFC 6749. The PKCE verifier is what
+/// proves the caller is the same software that started the flow; the client secret issued at
+/// registration (for connectors like Perplexity that insist on one) is verified only when the
+/// client chooses to present it — by form field (client_secret_post) or Basic header — and never
+/// demanded, so public clients like Claude are untouched.
 /// </summary>
 public sealed class TokenEndpoint
 {
@@ -38,13 +40,13 @@ public sealed class TokenEndpoint
 
         return form["grant_type"].ToString() switch
         {
-            "authorization_code" => await ExchangeCodeAsync(form, cancellationToken),
+            "authorization_code" => await ExchangeCodeAsync(request, form, cancellationToken),
             "refresh_token" => await RefreshAsync(form, cancellationToken),
             _ => Error("unsupported_grant_type", "Use authorization_code or refresh_token.")
         };
     }
 
-    private async Task<IActionResult> ExchangeCodeAsync(IFormCollection form, CancellationToken cancellationToken)
+    private async Task<IActionResult> ExchangeCodeAsync(HttpRequest request, IFormCollection form, CancellationToken cancellationToken)
     {
         var code = form["code"].ToString();
         var verifier = form["code_verifier"].ToString();
@@ -76,6 +78,13 @@ public sealed class TokenEndpoint
         var client = await context.OAuthClients.AsNoTracking()
             .FirstOrDefaultAsync(candidate => candidate.ClientId == row.ClientId, cancellationToken);
 
+        var presentedSecret = PresentedClientSecret(request, form);
+        if (!string.IsNullOrEmpty(presentedSecret) && client?.SecretHash is not null
+            && !CryptographicOperations.FixedTimeEquals(
+                Encoding.ASCII.GetBytes(AuthTokens.Hash(presentedSecret)),
+                Encoding.ASCII.GetBytes(client.SecretHash)))
+            return Error("invalid_client", "The client_secret does not match.");
+
         var minted = await tokens.MintAsync(
             row.UserEmail, row.ClientId, client?.ClientName ?? "AI tool", row.Scope, cancellationToken);
         return TokenResponse(minted, row.Scope);
@@ -91,6 +100,25 @@ public sealed class TokenEndpoint
         if (minted is null)
             return Error("invalid_grant", "The refresh token is unknown, revoked, or expired.");
         return TokenResponse(minted, OAuthDefaults.Scope);
+    }
+
+    /// <summary>The client secret, when the client chose to send one: the client_secret form
+    /// field (client_secret_post) or the password half of a Basic Authorization header
+    /// (client_secret_basic). Empty when the client authenticates as a public client.</summary>
+    private static string PresentedClientSecret(HttpRequest request, IFormCollection form)
+    {
+        var fromForm = form["client_secret"].ToString();
+        if (!string.IsNullOrEmpty(fromForm)) return fromForm;
+
+        var header = request.Headers.Authorization.ToString();
+        if (!header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase)) return "";
+        try
+        {
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(header["Basic ".Length..].Trim()));
+            var split = decoded.IndexOf(':');
+            return split < 0 ? "" : Uri.UnescapeDataString(decoded[(split + 1)..]);
+        }
+        catch (FormatException) { return ""; }
     }
 
     /// <summary>S256: challenge == BASE64URL(SHA256(verifier)) — RFC 7636 §4.6.</summary>
