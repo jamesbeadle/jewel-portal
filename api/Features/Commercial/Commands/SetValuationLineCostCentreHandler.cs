@@ -95,9 +95,15 @@ public sealed class SetValuationLineCostCentreHandler : ICommandHandler<SetValua
         // The reconciliation record, after the save so the trail never records a move that didn't
         // commit. Codes are labelled with the master's names where known (the OLD code may since
         // have been retired — it still reads back as its bare code rather than blocking the trail).
-        var centreNames = await context.CostCenters.AsNoTracking()
-            .Where(centre => centre.Code == oldCode || centre.Code == newCode)
-            .ToDictionaryAsync(centre => centre.Code, centre => centre.Name, cancellationToken);
+        var centreNames = (await context.CostCenters.AsNoTracking()
+                .Where(centre => centre.Code == oldCode || centre.Code == newCode)
+                .Select(centre => new { centre.Code, centre.Name, centre.IsActive })
+                .ToListAsync(cancellationToken))
+            .GroupBy(centre => centre.Code, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => group.OrderByDescending(centre => centre.IsActive).First().Name,
+                StringComparer.OrdinalIgnoreCase);
         string Centre(string code) =>
             centreNames.TryGetValue(code, out var name) && !string.IsNullOrWhiteSpace(name)
                 ? $"{code} {name}" : code;

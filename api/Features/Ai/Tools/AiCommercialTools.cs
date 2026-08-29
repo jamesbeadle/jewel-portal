@@ -464,10 +464,17 @@ internal static class AiCommercialTools
                             .ToListAsync(ct))
                         .ToDictionary(row => row.CostCode, row => row.Amount, StringComparer.OrdinalIgnoreCase);
 
+                    // Grouped rather than keyed one-to-one: retired seed generations left the
+                    // master with rows sharing a code, and a duplicated code must never turn
+                    // the budget read into a 500. The active row's name wins.
                     var names = (await context.Db.CostCenters.AsNoTracking()
-                            .Select(row => new { row.Code, row.Name })
+                            .Select(row => new { row.Code, row.Name, row.IsActive })
                             .ToListAsync(ct))
-                        .ToDictionary(row => row.Code, row => row.Name, StringComparer.OrdinalIgnoreCase);
+                        .GroupBy(row => row.Code, StringComparer.OrdinalIgnoreCase)
+                        .ToDictionary(
+                            group => group.Key,
+                            group => group.OrderByDescending(row => row.IsActive).First().Name,
+                            StringComparer.OrdinalIgnoreCase);
 
                     var rows = budgets
                         .Where(row => codeFilter is null || string.Equals(row.CostCode, codeFilter, StringComparison.OrdinalIgnoreCase))
