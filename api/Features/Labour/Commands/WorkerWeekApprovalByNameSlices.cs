@@ -169,9 +169,13 @@ public sealed class CodeWorkerWeekByNameHandler : ICommandHandler<CodeWorkerWeek
 
 public sealed class ApproveWorkerWeekByNameAuthorisation
 {
-    // Same gate as ApproveTimesheetsEndpoint's inline check.
+    // Same gates as ApproveTimesheetsEndpoint's inline checks: the approval roles for the plain
+    // path, and — when the command asks to approve PAST the budget hard-block — the narrower
+    // MD/FD/Admin override set on top, so the connector cannot hand the override to anyone the
+    // Labour tab would refuse.
     public bool Allows(SignedInUser user, ApproveWorkerWeekByName command) =>
-        LabourRoleSets.ApproveTimesheets.IncludesAny(user.Roles);
+        LabourRoleSets.ApproveTimesheets.IncludesAny(user.Roles)
+        && (!command.AllowOverBudget || LabourRoleSets.OverrideBudgetBlock.IncludesAny(user.Roles));
 }
 
 public sealed class ApproveWorkerWeekByNameValidation
@@ -183,6 +187,8 @@ public sealed class ApproveWorkerWeekByNameValidation
             errors.Add("projectId is required — it comes from list_projects.");
         if (string.IsNullOrWhiteSpace(command.WorkerName))
             errors.Add("Worker name is required.");
+        if (command.AllowOverBudget && string.IsNullOrWhiteSpace(command.OverBudgetReason))
+            errors.Add("An over-budget approval needs a reason — it is written to the audit trail.");
         WorkerWeekTimesheets.CheckDatesInWeek(errors, command.WeekStart, command.Dates);
         return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
     }
@@ -217,7 +223,8 @@ public sealed class ApproveWorkerWeekByNameHandler : ICommandHandler<ApproveWork
         // The grid's own batch approval: rate resolution, cost snapshot, uncoded refusal and the
         // per-cost-code budget hard-block all live in the ONE handler both surfaces share.
         var result = await approver.HandleAsync(
-            new ApproveTimesheets(command.ProjectId, submitted.Select(timesheet => timesheet.TimesheetId).ToList()),
+            new ApproveTimesheets(command.ProjectId, submitted.Select(timesheet => timesheet.TimesheetId).ToList(),
+                command.AllowOverBudget, command.OverBudgetReason),
             command.ApprovedByEmail, cancellationToken);
 
         var byId = submitted.ToDictionary(timesheet => timesheet.TimesheetId);

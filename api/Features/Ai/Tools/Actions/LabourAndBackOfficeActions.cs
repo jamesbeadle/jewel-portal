@@ -171,7 +171,11 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
                 + "as actual labour cost at the worker's rate, and an approved timesheet is "
                 + "immutable — its cost code and hours can never be changed afterwards (the "
                 + "correction path is reject-and-resubmit). Uncoded days are refused until coded "
-                + "(code_worker_week); the per-cost-code budget hard-block applies. Partial "
+                + "(code_worker_week); the per-cost-code budget hard-block applies, and a "
+                + "budget refusal reports the code's current allocated/spent/committed figures. "
+                + "MD/FD/Admin may deliberately approve PAST the block with allowOverBudget: true "
+                + "plus a typed overBudgetReason — audited per day, like the Labour tab's own "
+                + "override. Partial "
                 + "success: per-day outcomes report what approved and what was refused, and why.",
             CommandType: typeof(ApproveWorkerWeekByName),
             ResultType: typeof(WorkerWeekApprovalResult),
@@ -185,7 +189,10 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
                 + "yes first — approval is final. workerName as the user says it; projectId from "
                 + "list_projects; weekStart is the Monday. dates narrows approval to specific "
                 + "days; leave it out to approve every Submitted day of the worker's week on "
-                + "that project."),
+                + "that project. allowOverBudget is never a default: offer it only after a budget "
+                + "refusal, only for the MD/FD/Admin, and put the block you are overriding and "
+                + "the user's own reason in front of them in the confirm turn — the alternatives "
+                + "(re-code, or re-allocate via set_cost_code_budget) may be the better answer."),
 
         new AiAction(
             Name: "reject_worker_day",

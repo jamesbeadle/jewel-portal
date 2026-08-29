@@ -221,7 +221,8 @@ else
         (AuditEventType.DocumentDiscarded,      "Document discarded"),
         (AuditEventType.WorkOrderSaleWarningOverridden, "WO sale warning overridden"),
         (AuditEventType.LabourBudgetOverridden,  "Labour budget overridden"),
-        (AuditEventType.MailboxDraftDeleted,     "Draft deleted")
+        (AuditEventType.MailboxDraftDeleted,     "Draft deleted"),
+        (AuditEventType.CostCodeBudgetSet,       "Cost code budget set")
     };
 
     // Mirrors the API's TriageRoles.AllowedToTriage — the audit trail is a triage-side tool.
@@ -362,6 +363,7 @@ else
         AuditEventType.WorkOrderSaleWarningOverridden => "WO sale warning overridden",
         AuditEventType.LabourBudgetOverridden => "Labour budget overridden",
         AuditEventType.MailboxDraftDeleted    => "Draft deleted",
+        AuditEventType.CostCodeBudgetSet      => "Cost code budget set",
         _                                     => type.ToString()
     };
 

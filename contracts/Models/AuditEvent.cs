@@ -84,7 +84,13 @@ public enum AuditEventType
     // (recoverable from Outlook's Deleted Items for a while), so this row is the surviving record
     // of what was staged and withdrawn, mirroring DraftWorkOrderDeleted. Not pathway-specific:
     // Pathway is "".
-    MailboxDraftDeleted = 30         // an unsent mailbox draft was deleted before sending
+    MailboxDraftDeleted = 30,        // an unsent mailbox draft was deleted before sending
+    // Cost code budget writes (written since 2026-08-29): the Financials tab's allocated/spent
+    // figures for a cost code moved — from the portal's Financials tab or the connector's
+    // set_cost_code_budget (confirm-first). The row records before → after, so a raised
+    // allocation that quietly papers over an overspend is a matter of record, mirroring
+    // LabourBudgetOverridden. Not a client-facing event: Pathway is "", like CostCentreRecoded.
+    CostCodeBudgetSet = 31           // a cost code's budget row was created or changed
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

@@ -44,12 +44,18 @@ public sealed record WorkerWeekCodingResult(
 /// unchanged, and partial success reports per day. Dates narrows to specific days; null means
 /// every Submitted day. ApprovedByEmail is stamped server-side from the connector caller.
 /// </summary>
+// AllowOverBudget/OverBudgetReason (2026-08-29): connector parity with the Labour tab's deliberate
+// over-budget approval — MD/FD/Admin only (gated in the Authorisation), a reason is mandatory, and
+// every overridden day writes a LabourBudgetOverridden audit row via the shared ApproveTimesheets
+// handler. For everyone else the per-cost-code hard-block stays absolute.
 public sealed record ApproveWorkerWeekByName(
     string ProjectId,
     string WorkerName,
     DateTimeOffset WeekStart,
     IReadOnlyList<DateTimeOffset>? Dates = null,
-    string ApprovedByEmail = "") : ICommand<WorkerWeekApprovalResult>;
+    string ApprovedByEmail = "",
+    bool AllowOverBudget = false,
+    string OverBudgetReason = "") : ICommand<WorkerWeekApprovalResult>;
 
 /// <summary>What happened to one day: Approved = cost has posted (Hours at the worker's rate on
 /// CostCode); otherwise Detail carries the handler's own refusal — uncoded, budget hard-block,

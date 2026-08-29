@@ -11,17 +11,20 @@ namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 public sealed class SetCostCodeBudgetEndpoint
 {
     private readonly SignedInUserResolver users;
+    private readonly Audit.AuditActor auditActor;
     private readonly SetCostCodeBudgetAuthorisation authorisation;
     private readonly SetCostCodeBudgetValidation validation;
     private readonly ICommandHandler<SetCostCodeBudget, CostCodeBudget> handler;
 
     public SetCostCodeBudgetEndpoint(
         SignedInUserResolver users,
+        Audit.AuditActor auditActor,
         SetCostCodeBudgetAuthorisation authorisation,
         SetCostCodeBudgetValidation validation,
         ICommandHandler<SetCostCodeBudget, CostCodeBudget> handler)
     {
         this.users = users;
+        this.auditActor = auditActor;
         this.authorisation = authorisation;
         this.validation = validation;
         this.handler = handler;
@@ -34,6 +37,7 @@ public sealed class SetCostCodeBudgetEndpoint
     {
         var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
         if (signedInUser is null) return new UnauthorizedResult();
+        auditActor.Email = signedInUser.Email; // the trail records who moved the budget
 
         var command = await request.ReadFromJsonAsync<SetCostCodeBudget>();
         if (command is null) return new BadRequestResult();

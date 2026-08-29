@@ -385,7 +385,11 @@ internal sealed class CommercialActions : IAiActionSource
             Name: "set_cost_code_budget",
             Area: "Commercial",
             Description: "Sets a cost code's budget on a project — the allocated amount and spent "
-                + "amount that the Financials tab reads. Upserts the budget row for that code.",
+                + "amount that the Financials tab reads. Upserts the budget row for that code. "
+                + "The figures sent are ABSOLUTE, not deltas: read the current row with "
+                + "get_cost_code_budgets first and compute the new figure from it. Omit "
+                + "spentAmount to leave the recorded spend untouched. Every change writes a "
+                + "before → after row to the audit trail.",
             CommandType: typeof(SetCostCodeBudget),
             ResultType: typeof(CostCodeBudget),
             AuthorisationType: typeof(SetCostCodeBudgetAuthorisation),
@@ -393,7 +397,13 @@ internal sealed class CommercialActions : IAiActionSource
             VisibleTo: ValuationDrafters,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "projectId comes from list_projects; costCode from list_cost_codes."),
+            RequiresConfirmation: true,
+            Notes: "projectId comes from list_projects; costCode from list_cost_codes. In the "
+                + "confirm turn show the current figures (get_cost_code_budgets) next to the "
+                + "proposed ones so the user sees exactly what moves — and when the change is "
+                + "raising an allocation an overspend already burst, say so plainly; re-coding "
+                + "the cost, a work order, or an MD/FD over-budget approval may be the honest "
+                + "route instead."),
 
         new AiAction(
             Name: "set_cost_centre_cost_completion",

@@ -63,7 +63,13 @@ public static class LabourRules
             return $"No budget is set for cost code {costCode} — raise a work order or allocate budget first.";
         var remaining = budget.Value.Allocated - budget.Value.Spent - budget.Value.Committed - alreadyApprovedLabour;
         if (newCost > remaining)
-            return $"Approving £{newCost:N2} against {costCode} exceeds its remaining budget of £{remaining:N2} — raise a work order or re-allocate budget.";
+            // The refusal carries the full current position (2026-08-29): whoever unblocks this —
+            // re-allocating budget or re-coding — needs the standing figures, and this message is
+            // the one place both surfaces (Labour tab and connector) are guaranteed to see them.
+            return $"Approving £{newCost:N2} against {costCode} exceeds its remaining budget of £{remaining:N2} "
+                + $"(allocated £{budget.Value.Allocated:N2} − spent £{budget.Value.Spent:N2} − committed "
+                + $"£{budget.Value.Committed:N2} − already-approved labour £{alreadyApprovedLabour:N2}) — "
+                + "raise a work order or re-allocate budget.";
         return null;
     }
 }
