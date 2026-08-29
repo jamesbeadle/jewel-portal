@@ -1086,8 +1086,8 @@
 
             @* The email-global decisions, stacked and compact — the full wording lives in the
                hover titles. Each is a Yes/No pair that starts BLANK: neither side is pre-picked,
-               and Apply stands down until both are answered, so every apply carries a conscious
-               choice rather than an inherited default. The thread row says how many emails a Yes
+               and Apply stands down until every pair on show is answered, so every apply carries a
+               conscious choice rather than an inherited default. The thread row says how many emails a Yes
                would sweep, once the thread has been read (staging tags themselves lives on the
                System Tags window). *@
             <div class="flex flex-col gap-1.5">
@@ -1111,6 +1111,23 @@
                                 @onclick="() => triageEntireThread = false">No</button>
                     </div>
                 </div>
+                @* Only when the thread already carries record tags (the queue row's "Thread:"
+                   chips): Yes files this email under those same records with Apply — nothing
+                   new to pick — so a reply to an already-linked thread is one answer, not a
+                   re-pick. Blank-until-answered like the two pairs above. *@
+                @if (SelectedThreadTags is { Count: > 0 } inheritable)
+                {
+                    <div class="flex items-center justify-between gap-3"
+                         title="@($"Yes files this email under the tags its thread already carries — {string.Join(", ", inheritable.Select(TagLabel))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes")">
+                        <span class="text-sm text-content">Use existing tags <span class="text-content-subtle">· @string.Join(", ", inheritable.Take(3).Select(TagLabel))@(inheritable.Count > 3 ? $" +{inheritable.Count - 3}" : "")</span></span>
+                        <div class="flex items-center shrink-0">
+                            <button type="button" class="@YesNoClass(useThreadTags, answer: true, first: true)"
+                                    @onclick="() => useThreadTags = true">Yes</button>
+                            <button type="button" class="@YesNoClass(useThreadTags, answer: false, first: false)"
+                                    @onclick="() => useThreadTags = false">No</button>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
 
@@ -1977,6 +1994,14 @@ else
     // answered, required before Apply. Never persisted, cleared back to blank with the rest of
     // the staging on every selection/view change and after every apply.
     private bool? triageEntireThread;
+    // The "Use existing tags" decision, offered only when the open email's thread ALREADY carries
+    // record tags (the queue row's outline "Thread:" chips). Yes means Apply files this email
+    // under those same records — the stems resolve back to records (ResolveRecordTags, the same
+    // resolver behind the search chips) and each links exactly like a picked record — so a reply
+    // to an already-linked thread is triaged in one answer, with nothing new to pick. No means
+    // the triager picks this email's records themselves. Nullable like the two decisions above —
+    // blank until answered, required before Apply whenever the row is on show.
+    private bool? useThreadTags;
 
     // What the Subcontractor Communications browser tags against: the open QUEUE email (the
     // Tagged view manages its tags from the email pane instead), and the triage bar's project —
@@ -2195,6 +2220,7 @@ else
         stagedCreate = null;
         relevantEventStaged = null;
         triageEntireThread = null;
+        useThreadTags = null;
         pickedRecords.Clear();
         actionError = null;
         composeOutcome = null;
@@ -2228,6 +2254,7 @@ else
         stagedCreate = null;
         relevantEventStaged = null;
         triageEntireThread = null;
+        useThreadTags = null;
         pickedRecords.Clear();
         actionError = null;
         composeOutcome = null;
@@ -2643,6 +2670,7 @@ else
         // comes back still demanding an answer.
         public bool? RelevantEventStaged { get; init; }
         public bool? TriageEntireThread { get; init; }
+        public bool? UseThreadTags { get; init; }
         // Attachment ids ticked "Send to document triage" — drafted against ONE email's
         // attachments, so they must travel with that email like every other draft (the same
         // rule that kept the old save-to-drawings form from leaking under the next email).
@@ -2663,6 +2691,7 @@ else
         // pair being non-null is worth keeping across a selection change.
         || relevantEventStaged is not null
         || triageEntireThread is not null
+        || useThreadTags is not null
         || stagedDocControlIds.Count > 0
         // The project counts only when the triager chose it themselves. An auto-matched project
         // (TryPrefillProjectFromEmailAsync's guess from the email text) is the page's doing, not
@@ -2697,6 +2726,7 @@ else
             TodoRows = createTodoRows,
             RelevantEventStaged = relevantEventStaged,
             TriageEntireThread = triageEntireThread,
+            UseThreadTags = useThreadTags,
             DocControlIds = stagedDocControlIds.ToList()
         };
     }
@@ -2727,6 +2757,7 @@ else
         createTodoRows = parked.TodoRows;
         relevantEventStaged = parked.RelevantEventStaged;
         triageEntireThread = parked.TriageEntireThread;
+        useThreadTags = parked.UseThreadTags;
         stagedDocControlIds.AddRange(parked.DocControlIds);
         return true;
     }
@@ -2774,6 +2805,7 @@ else
         createdNowRecords.Clear();
         relevantEventStaged = null;
         triageEntireThread = null;
+        useThreadTags = null;
         // The document-triage ticks are drafted against ONE email's attachments — leaving them
         // across a selection change would send another email's attachment ids against this
         // message. Parked above, reset here, restored below like every other per-email draft.
@@ -3135,6 +3167,10 @@ else
                 parts.Add(pickedRecords.Count == 1
                     ? $"link this email to {pickedRecords[0].Reference}"
                     : $"link this email to {string.Join(", ", pickedRecords.Take(3).Select(r => r.Reference))}{(pickedRecords.Count > 3 ? $" +{pickedRecords.Count - 3} more" : "")}");
+            if (useThreadTags == true && SelectedThreadTags is { Count: > 0 } inheritStems)
+                parts.Add(inheritStems.Count == 1
+                    ? $"file it under the thread's existing tag ({TagLabel(inheritStems[0])})"
+                    : $"file it under the thread's existing tags ({string.Join(", ", inheritStems.Take(3).Select(TagLabel))}{(inheritStems.Count > 3 ? $" +{inheritStems.Count - 3} more" : "")})");
             if (stagedDocControlIds.Count > 0)
                 parts.Add(stagedDocControlIds.Count == 1
                     ? "send 1 attachment to Document Triage"
@@ -3242,7 +3278,31 @@ else
     // NEITHER side picked, so tagging the programme and sweeping the thread are always decisions
     // someone actually made, never a default that slipped through.
     private bool TriageDecisionsMissing =>
-        selected is not null && (relevantEventStaged is null || triageEntireThread is null);
+        selected is not null && MissingDecisionNames().Count > 0;
+
+    // The blank pairs still awaiting an answer, by their on-screen names — one list feeds both
+    // the amber hint next to Apply and the belt-and-braces error inside DoApplyAll, so the two
+    // can never drift. "Use existing tags" counts only while its row is on show (the thread
+    // actually carries tags to inherit).
+    private List<string> MissingDecisionNames()
+    {
+        var missing = new List<string>();
+        if (relevantEventStaged is null) missing.Add("Relevant Event for Programme");
+        if (triageEntireThread is null) missing.Add("Entire thread");
+        if (SelectedThreadTags.Count > 0 && useThreadTags is null) missing.Add("Use existing tags");
+        return missing;
+    }
+
+    private static string AndJoin(IReadOnlyList<string> parts) =>
+        parts.Count <= 1
+            ? parts.FirstOrDefault() ?? ""
+            : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[^1];
+
+    // The record tags the open email's thread already carries — the queue row's outline "Thread:"
+    // chips, populated only on queue listings (a new reply to an already-linked thread). Empty
+    // everywhere else, so the "Use existing tags" row and its gate simply don't exist there.
+    private IReadOnlyList<string> SelectedThreadTags =>
+        selected?.ThreadTags is { Count: > 0 } tags ? tags : Array.Empty<string>();
 
     // True while attachments are ticked for Document Triage but the email has no project.
     // The project is REQUIRED for a Document Triage send (decision 2026-08-28): a file landing
@@ -3256,11 +3316,7 @@ else
         "Set the Project first — attachments can't go to Document Triage without one";
 
     private string DecisionsMissingHint =>
-        relevantEventStaged is null && triageEntireThread is null
-            ? "Answer Relevant Event for Programme and Entire thread — Yes or No — first"
-            : relevantEventStaged is null
-                ? "Answer Relevant Event for Programme — Yes or No — first"
-                : "Answer Entire thread — Yes or No — first";
+        $"Answer {AndJoin(MissingDecisionNames())} — Yes or No — first";
 
     // The bar's Yes/No pair: two joined pill halves, neither lit until the triager picks a side
     // (null = blank). Picked reads like a picked record row (accent border on raised surface);
@@ -3279,6 +3335,7 @@ else
         {
             var filing = CurrentTodoDrafts().Count > 0
                 || pickedRecords.Count > 0
+                || (useThreadTags == true && SelectedThreadTags.Count > 0)
                 || relevantEventStaged == true
                 || stagedSystemActions.Count > 0
                 || stagedDocControlIds.Count > 0
@@ -3375,6 +3432,12 @@ else
             && (!string.IsNullOrWhiteSpace(triageProjectId) || StagedCreatesOwnProject);
         var relevantEvent = relevantEventStaged == true && anchorEmail is not null;
         var discarding = discardArmed && anchorEmail is not null;
+        // "Use existing tags" answered Yes: the thread's tag stems, captured now so the apply
+        // works from what the triager saw. Resolved to records inside the try — before anything
+        // else lands — and linked exactly like picks.
+        var inheritStems = useThreadTags == true && anchorEmail is not null
+            ? SelectedThreadTags.ToList()
+            : new List<string>();
         // One scope for the whole apply: a thread-wide Yes opts every staged action into the thread.
         var scope = triageEntireThread == true ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly;
         // A create-now-only triage: the record is already raised and the email tagged to it
@@ -3385,18 +3448,14 @@ else
         var createdNowOnly = anchorEmail is not null && createdNowRecords.Count > 0;
         if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !relevantEvent && !discarding
             && stagedSystemActions.Count == 0 && queuedReplies.Count == 0 && stagedDocControlIds.Count == 0
-            && !createdNowOnly) return;
+            && inheritStems.Count == 0 && !createdNowOnly) return;
 
-        // The bar's two Yes/No pairs start blank on purpose — an apply with either unanswered is
-        // a decision not yet made. Belt-and-braces behind the disabled button, so no other route
+        // The bar's Yes/No pairs start blank on purpose — an apply with any unanswered is a
+        // decision not yet made. Belt-and-braces behind the disabled button, so no other route
         // into the apply can land with a blank answer.
-        if (anchorEmail is not null && (relevantEventStaged is null || triageEntireThread is null))
+        if (anchorEmail is not null && MissingDecisionNames() is { Count: > 0 } missingDecisions)
         {
-            actionError = relevantEventStaged is null && triageEntireThread is null
-                ? "Answer Relevant Event for Programme and Entire thread — Yes or No — then Apply."
-                : relevantEventStaged is null
-                    ? "Answer Relevant Event for Programme — Yes or No — then Apply."
-                    : "Answer Entire thread — Yes or No — then Apply.";
+            actionError = $"Answer {AndJoin(missingDecisions)} — Yes or No — then Apply.";
             return;
         }
 
@@ -3418,6 +3477,11 @@ else
         if (discarding && picks.Count > 0)
         {
             actionError = "Discard and record links don't mix — unpick the records first.";
+            return;
+        }
+        if (discarding && inheritStems.Count > 0)
+        {
+            actionError = "Discard and the thread's existing tags don't mix — answer No to Use existing tags, or disarm the discard.";
             return;
         }
         if (discarding && relevantEvent)
@@ -3505,6 +3569,24 @@ else
         {
             var filed = false;
 
+            // ---- "Use existing tags" answered Yes: resolve the thread's tag stems back to
+            //      records FIRST (the same ResolveRecordTags behind the search chips), so a stem
+            //      that no longer names anything stops the apply before anything else lands —
+            //      the same every-tag-verified-before-anything-saves rule as the rest of the
+            //      filing. The links themselves land with the picks below. ----
+            IReadOnlyList<LinkableRecord> inheritedRecords = Array.Empty<LinkableRecord>();
+            if (anchor is not null && inheritStems.Count > 0)
+            {
+                busyLabel = "Matching the thread's tags";
+                inheritedRecords = await Queries.AskAsync(
+                    new ResolveRecordTags(inheritStems.Select(TagLabel).ToList()), CancellationToken.None);
+                if (inheritedRecords.Count == 0)
+                {
+                    actionError = "The thread's existing tags couldn't be matched to records — pick this email's records by hand instead.";
+                    return;
+                }
+            }
+
             // ---- Document Triage: ticked attachments copy out FIRST, so the files are safely
             //      in the queue before anything else (a discard included) moves the email on.
             //      Never consumes the email — only the files are copied out; `filed` is
@@ -3549,6 +3631,27 @@ else
                 {
                     // AllowCrossPathway: true — the pane choice IS the cross-filing decision
                     // (confirm retired 2026-08-28; true also keeps an older api from prompting).
+                    await Intake.LinkMessageToRecordAsync(
+                        anchor.Id, anchor.InternetMessageId, record.Type, record.RecordId,
+                        pathway: CostCentrePathwayFor(record),
+                        allowCrossPathway: true,
+                        scope: scope);
+                    filed = true;
+                }
+            }
+            // ---- The thread's existing tags, answered Yes above: each resolved record links
+            //      exactly like a picked one. Records the triager ALSO picked by hand are
+            //      skipped — one link per record per apply. allowCrossPathway is true outright:
+            //      these tags are already on the thread, so re-filing this reply under them is
+            //      never a new cross-pathway decision. ----
+            if (anchor is not null && inheritedRecords.Count > 0)
+            {
+                busyLabel = "Linking to the thread's tags";
+                foreach (var record in inheritedRecords)
+                {
+                    if (picks.Any(pick => pick.Type == record.Type
+                        && string.Equals(pick.RecordId, record.RecordId, StringComparison.Ordinal)))
+                        continue;
                     await Intake.LinkMessageToRecordAsync(
                         anchor.Id, anchor.InternetMessageId, record.Type, record.RecordId,
                         pathway: CostCentrePathwayFor(record),
@@ -3694,6 +3797,7 @@ else
             createdNowRecords.Clear();
             relevantEventStaged = null;
             triageEntireThread = null;
+            useThreadTags = null;
             pickedRecords.Clear();
             stagedSystemActions.Clear();
             ReturnWorkspaceToQueue();
@@ -4260,6 +4364,7 @@ else
             stagedCreate = null;
             relevantEventStaged = null;
             triageEntireThread = null;
+            useThreadTags = null;
             pickedRecords.Clear();
             ReturnWorkspaceToQueue();
         }
