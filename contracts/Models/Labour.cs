@@ -61,7 +61,10 @@ public sealed record TimesheetDetail(
     DateTimeOffset? ApprovedAt,
     string RejectionReason);
 
-public sealed record LabourApprovalFailure(string TimesheetId, string Reason);
+/// <summary>BudgetBlocked marks the failures the budget hard-block produced (as opposed to
+/// uncoded rows, missing workers, already-decided rows). The Labour tab uses it to offer the
+/// MD/FD-only "Approve over budget" follow-up on exactly those rows and no others.</summary>
+public sealed record LabourApprovalFailure(string TimesheetId, string Reason, bool BudgetBlocked = false);
 
 /// <summary>
 /// Outcome of a batch approval. Failures carry the budget hard-block or validation reason per

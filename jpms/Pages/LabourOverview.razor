@@ -183,6 +183,7 @@ else
                     </div>
                     <p class="px-5 py-3 text-[11px] text-content-subtle border-t border-line">
                         Chips are coloured by site; hatched = recorded absence, hollow = elapsed day with nothing recorded yet.
+                        Weekdays always show; round chips are weekend days, drawn only when something was recorded on them.
                         Select a row for the day-by-day detail, absence recording and contract settings.
                     </p>
                 }
@@ -476,9 +477,16 @@ else
                     }
                 </select>
             </label>
-            <label class="block text-sm text-content-muted">Date
-                <input class="field mt-1" type="date" @bind="absenceDate" />
-            </label>
+            <div class="grid grid-cols-2 gap-3">
+                <label class="block text-sm text-content-muted">From
+                    <input class="field mt-1" type="date" @bind="absenceDate" />
+                </label>
+                <label class="block text-sm text-content-muted">To
+                    <input class="field mt-1" type="date" @bind="absenceEndDate" />
+                </label>
+            </div>
+            <p class="text-xs text-content-subtle">Leave To as the same day for a single day off. A longer
+                range records each weekday in it — "off all week" is one entry, Monday to Friday.</p>
             <label class="block text-sm text-content-muted">Kind
                 <select class="field mt-1" @bind="absenceKind">
                     <option value="@AbsenceKind.Holiday">Holiday</option>
@@ -655,6 +663,7 @@ else
     private string absenceWorkerId = "";
     private string absenceWorkerName = "";
     private DateTime absenceDate = DateTime.Today;
+    private DateTime absenceEndDate = DateTime.Today;
     private AbsenceKind absenceKind = AbsenceKind.Holiday;
     private string absenceNote = "";
 
@@ -750,7 +759,8 @@ else
     private void OpenAbsence(string workerId, string workerName, DateTimeOffset date)
     {
         absenceWorkerId = workerId; absenceWorkerName = workerName;
-        absenceDate = date.UtcDateTime.Date; absenceKind = AbsenceKind.Holiday; absenceNote = "";
+        absenceDate = date.UtcDateTime.Date; absenceEndDate = absenceDate;
+        absenceKind = AbsenceKind.Holiday; absenceNote = "";
         absenceOpen = true;
     }
 
@@ -759,9 +769,18 @@ else
         absenceSaving = true; actionError = null;
         try
         {
-            await Labour.RecordAbsenceAsync(year, month, absenceWorkerId,
-                new DateTimeOffset(absenceDate, TimeSpan.Zero), absenceKind, absenceNote);
-            absenceOpen = false;
+            // One day or a range — the store records each weekday and refreshes once. Partial
+            // failure keeps the modal open with the dates that did not land, so a retry only
+            // re-attempts what is actually missing.
+            var failedDates = await Labour.RecordAbsenceRangeAsync(year, month, absenceWorkerId,
+                absenceDate, absenceEndDate, absenceKind, absenceNote);
+            if (failedDates.Count == 0) { absenceOpen = false; }
+            else
+            {
+                actionError = "Could not record "
+                    + string.Join(", ", failedDates.Select(date => date.ToString("ddd dd MMM")))
+                    + " — those days may already have an absence. The rest were recorded.";
+            }
         }
         catch (Exception) { actionError = "Could not record the absence — try again."; }
         finally { absenceSaving = false; }
@@ -826,32 +845,40 @@ else
     {
         var byDate = worker.Days.ToLookup(day => day.Date.UtcDateTime.Date);
         var today = DateTime.Today;
+        // Weekdays always; weekend days only when this worker has something recorded on them
+        // (Jack's ask 2026-08-29: 16 worked days but 14 chips — his two Saturdays were invisible).
+        // Worked weekends render as ROUND chips so the Mon–Fri rhythm still reads at a glance.
+        var workedWeekends = byDate.Select(group => group.Key)
+            .Where(date => date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday);
+        var stripDates = MonthWeekdays().Concat(workedWeekends).Distinct().OrderBy(date => date);
         <div class="flex gap-[3px]">
-            @foreach (var date in MonthWeekdays())
+            @foreach (var date in stripDates)
             {
+                var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                var shape = isWeekend ? "rounded-full" : "rounded-[3px]";
                 var entries = byDate[date].ToList();
                 var absence = entries.FirstOrDefault(entry => entry.Absence is not null);
                 var sheet = entries.FirstOrDefault(entry => entry.Status is not null);
                 @if (absence is not null)
                 {
-                    <span class="inline-block w-3 h-3 rounded-[3px]"
+                    <span class="inline-block w-3 h-3 @shape"
                           title="@($"{date:ddd dd MMM} — {AbsenceLabel(absence.Absence!.Value)}")"
                           style="background: repeating-linear-gradient(45deg, #34373B 0 2px, transparent 2px 4px); border: 1px solid #34373B;"></span>
                 }
                 else if (sheet is not null)
                 {
-                    <span class="inline-block w-3 h-3 rounded-[3px] @(sheet.Status == TimesheetStatus.Rejected ? "ring-1 ring-negative" : "")"
+                    <span class="inline-block w-3 h-3 @shape @(sheet.Status == TimesheetStatus.Rejected ? "ring-1 ring-negative" : "")"
                           title="@($"{date:ddd dd MMM} — {sheet.ProjectName}, {sheet.Hours:0.#} h ({StatusLabel(sheet.Status!.Value)})")"
                           style="background:@ColourOf(sheet.ProjectId)"></span>
                 }
                 else if (date <= today)
                 {
-                    <span class="inline-block w-3 h-3 rounded-[3px] border border-line-strong"
+                    <span class="inline-block w-3 h-3 @shape border border-line-strong"
                           title="@($"{date:ddd dd MMM} — nothing recorded")"></span>
                 }
                 else
                 {
-                    <span class="inline-block w-3 h-3 rounded-[3px] bg-surface-field/60"
+                    <span class="inline-block w-3 h-3 @shape bg-surface-field/60"
                           title="@date.ToString("ddd dd MMM")"></span>
                 }
             }

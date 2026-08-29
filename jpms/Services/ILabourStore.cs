@@ -51,7 +51,10 @@ public interface ILabourStore
     /// Refreshes the overview for every month the days touch (a week can straddle two).</summary>
     Task<WorkerWeekResult> SubmitWorkerWeekAsync(string workerId, DateTimeOffset weekStart, IReadOnlyList<WorkerWeekDayEntry> days);
     Task<TimesheetDetail> AdjustTimesheetAsync(string projectId, string timesheetId, decimal hours, string costCode);
-    Task<LabourApprovalResult> ApproveTimesheetsAsync(string projectId, IReadOnlyList<string> timesheetIds);
+    /// <summary>allowOverBudget is the MD/FD-only deliberate override of the budget hard-block
+    /// (server-gated; the reason is mandatory and lands on the audit trail per row).</summary>
+    Task<LabourApprovalResult> ApproveTimesheetsAsync(string projectId, IReadOnlyList<string> timesheetIds,
+        bool allowOverBudget = false, string overBudgetReason = "");
     Task<TimesheetDetail> RejectTimesheetAsync(string projectId, string timesheetId, string reason);
 
     // Labour overview: the company-wide month view (forecast, placement grid, chase, sign-off).
@@ -62,6 +65,13 @@ public interface ILabourStore
     Task SetWorkerContractAsync(int year, int month, string workerId, decimal contractedDaysPerMonth);
     Task SetWorkerCisStatusAsync(int year, int month, string workerId, decimal cisRatePercent, string verifiedRef);
     Task RecordAbsenceAsync(int year, int month, string workerId, DateTimeOffset date, AbsenceKind kind, string note);
+    /// <summary>Records the same absence for every day from <paramref name="from"/> to
+    /// <paramref name="to"/> inclusive — Mon–Fri only when the range spans more than one day
+    /// (a single-day "range" records whatever day was picked, weekends included). One command
+    /// per day over the existing endpoint, one overview refresh at the end. Returns the dates
+    /// that could not be recorded (already recorded, server refusal) — empty means all landed.</summary>
+    Task<IReadOnlyList<DateTime>> RecordAbsenceRangeAsync(int year, int month, string workerId,
+        DateTime from, DateTime to, AbsenceKind kind, string note);
     Task RemoveAbsenceAsync(int year, int month, string workerAbsenceId);
     Task SignOffWeekAsync(int year, int month, string workerId, DateTimeOffset weekStart);
     Task RemoveWeekSignOffAsync(int year, int month, string workerId, DateTimeOffset weekStart);

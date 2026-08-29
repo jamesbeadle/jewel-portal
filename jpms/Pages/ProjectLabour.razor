@@ -42,11 +42,21 @@ else
         }
         @if (approvalFailures.Count > 0)
         {
+            var budgetBlocked = approvalFailures.Where(failure => failure.BudgetBlocked).ToList();
             <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
                 <p class="font-medium mb-1">Some timesheets could not be approved:</p>
                 @foreach (var failure in approvalFailures)
                 {
                     <p>· @failure.Reason</p>
+                }
+                @if (budgetBlocked.Count > 0 && CanOverrideBudget)
+                {
+                    @* The MD/FD follow-up on exactly the budget-blocked rows (server re-checks the
+                       role and requires the reason) — a deliberate, audited overspend, never a quiet one. *@
+                    <button type="button" class="btn-secondary mt-2"
+                            @onclick="() => OpenOverBudget(budgetBlocked)">
+                        Approve over budget (@budgetBlocked.Count)…
+                    </button>
                 }
             </div>
         }
@@ -443,6 +453,33 @@ else
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@rejectError</p>
         }
     </Modal>
+
+    @* ---- Over-budget approval: the MD/FD's deliberate, audited exception to the hard-block. ---- *@
+    <Modal IsOpen="@overBudgetOpen" Title="Approve over budget"
+           ConfirmLabel="Approve over budget"
+           ConfirmDisabled="@(isOverriding || string.IsNullOrWhiteSpace(overBudgetReason))"
+           OnCancel="CloseOverBudget" OnConfirm="ConfirmOverBudgetAsync"
+           DismissOnOverlayClick="false">
+        <p class="text-sm text-content mb-2">
+            These timesheets exceed their cost code's remaining budget. Approving them posts the cost
+            anyway — the overspend stays red on the project's Financials, and each row is written to
+            the audit trail with your name and the reason below.
+        </p>
+        <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+            @foreach (var failure in overBudgetFailures)
+            {
+                <p>· @failure.Reason</p>
+            }
+        </div>
+        <label class="block text-sm text-content-muted mb-2">Reason (required — this is what the audit trail records)
+            <input class="field mt-1 w-full" @bind="overBudgetReason" @bind:event="oninput"
+                   placeholder="e.g. Agreed with Nigel — VO covering these hours is being raised" />
+        </label>
+        @if (overBudgetError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@overBudgetError</p>
+        }
+    </Modal>
 }
 
 @code {
@@ -468,6 +505,17 @@ else
 
     private readonly HashSet<string> selectedIds = new();
     private IReadOnlyList<LabourApprovalFailure> approvalFailures = Array.Empty<LabourApprovalFailure>();
+
+    // -- Over-budget override (2026-08-29, the accountant's ask) -----------------------------
+    // Mirrors the API's LabourRoleSets.OverrideBudgetBlock (MD/FD/Admin) the way the audit trail
+    // page mirrors its gate — the server re-checks; this only decides whether to offer the button.
+    private bool CanOverrideBudget => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector);
+    private bool overBudgetOpen;
+    private bool isOverriding;
+    private string overBudgetReason = "";
+    private string? overBudgetError;
+    private IReadOnlyList<LabourApprovalFailure> overBudgetFailures = Array.Empty<LabourApprovalFailure>();
     private bool isApproving;
 
     private string? editingId;
@@ -681,6 +729,41 @@ else
             ReportFailure(failure, "Approval failed — check your connection and try again.");
         }
         finally { isApproving = false; }
+    }
+
+    private void OpenOverBudget(IReadOnlyList<LabourApprovalFailure> budgetBlocked)
+    {
+        overBudgetFailures = budgetBlocked;
+        overBudgetReason = ""; overBudgetError = null;
+        overBudgetOpen = true;
+    }
+
+    private void CloseOverBudget()
+    {
+        overBudgetOpen = false;
+        overBudgetFailures = Array.Empty<LabourApprovalFailure>();
+    }
+
+    private async Task ConfirmOverBudgetAsync()
+    {
+        if (string.IsNullOrWhiteSpace(overBudgetReason)) return;
+        isOverriding = true; overBudgetError = null;
+        try
+        {
+            // Re-send ONLY the budget-blocked ids with the override flag — anything else that
+            // failed keeps its failure, and anything already approved never rides along.
+            var result = await Labour.ApproveTimesheetsAsync(ProjectId,
+                overBudgetFailures.Select(failure => failure.TimesheetId).ToList(),
+                allowOverBudget: true, overBudgetReason: overBudgetReason.Trim());
+            approvalFailures = result.Failures;
+            CloseOverBudget();
+        }
+        catch (Exception failure)
+        {
+            overBudgetError = DescribeFailure(failure,
+                "Could not approve over budget — check your connection and try again.");
+        }
+        finally { isOverriding = false; }
     }
 
     private void StartEdit(TimesheetDetail timesheet)

@@ -65,7 +65,12 @@ public enum AuditEventType
     // MCP, under their portal identity. Not pathway-specific: Pathway is "".
     NotePosted = 23,                 // a message was posted on a request's conversation
     TodoCreated = 24,                // a to-do item was added
-    TodoCompleted = 25               // a to-do item was completed or reopened
+    TodoCompleted = 25,              // a to-do item was completed or reopened
+    // Labour budget override (written since 2026-08-29): approving a timesheet past the cost
+    // code's budget hard-block is allowed only for the MD/FD/Admin, with a typed reason — this
+    // row records each overridden timesheet (who, the block it overrode, the reason given).
+    // Not a client-facing event: Pathway is "", like CostCentreRecoded.
+    LabourBudgetOverridden = 26      // a timesheet was approved past the budget hard-block
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

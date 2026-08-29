@@ -31,6 +31,14 @@ public sealed class ApproveTimesheetsEndpoint
         var body = await request.ReadFromJsonAsync<ApproveTimesheets>();
         if (body is null || body.TimesheetIds is null || body.TimesheetIds.Count == 0)
             return new BadRequestObjectResult(new[] { "At least one timesheet is required." });
+        if (body.AllowOverBudget)
+        {
+            // The deliberate exception to the hard-block: MD/FD/Admin only, and never silently —
+            // a reason is part of the command, because the audit row is the point of the feature.
+            if (!LabourRoleSets.OverrideBudgetBlock.IncludesAny(signedInUser.Roles)) return new StatusCodeResult(403);
+            if (string.IsNullOrWhiteSpace(body.OverBudgetReason))
+                return new BadRequestObjectResult(new[] { "An over-budget approval needs a reason." });
+        }
         var command = body with { ProjectId = projectId };
         return new OkObjectResult(await handler.HandleAsync(command, signedInUser.Email, request.HttpContext.RequestAborted));
     }
@@ -39,7 +47,9 @@ public sealed class ApproveTimesheetsEndpoint
 public sealed class ApproveTimesheetsHandler : ICommandHandler<ApproveTimesheets, LabourApprovalResult>
 {
     private readonly JpmsContext context;
-    public ApproveTimesheetsHandler(JpmsContext context) { this.context = context; }
+    private readonly Audit.AuditTrail audit;
+    public ApproveTimesheetsHandler(JpmsContext context, Audit.AuditTrail audit)
+    { this.context = context; this.audit = audit; }
 
     public Task<LabourApprovalResult> HandleAsync(ApproveTimesheets command, CancellationToken cancellationToken) =>
         HandleAsync(command, approvedByEmail: "", cancellationToken);
@@ -78,6 +88,7 @@ public sealed class ApproveTimesheetsHandler : ICommandHandler<ApproveTimesheets
             row => row.CostCode, row => row.Amount, StringComparer.OrdinalIgnoreCase);
 
         var approved = new List<Data.Entities.TimesheetEntity>();
+        var overridden = new List<(Data.Entities.TimesheetEntity Timesheet, string BlockReason)>();
         var failures = new List<LabourApprovalFailure>();
         var requestedIds = command.TimesheetIds.ToHashSet();
         foreach (var missingId in requestedIds.Where(id => timesheets.All(timesheet => timesheet.TimesheetId != id)))
@@ -110,7 +121,15 @@ public sealed class ApproveTimesheetsHandler : ICommandHandler<ApproveTimesheets
             var alreadyApproved = labourByCode.TryGetValue(timesheet.CostCode, out var sum) ? sum : 0m;
             var blockReason = LabourRules.BudgetBlockReason(timesheet.CostCode, cost, budget, alreadyApproved);
             if (blockReason is not null)
-            { failures.Add(new LabourApprovalFailure(timesheet.TimesheetId, blockReason)); continue; }
+            {
+                // The hard-block stands unless this command is a deliberate, endpoint-gated
+                // override (MD/FD/Admin with a reason) — then the row approves anyway and the
+                // override is written to the audit trail after the save. BudgetBlocked marks the
+                // failure so the Labour tab can offer that follow-up on exactly these rows.
+                if (!command.AllowOverBudget)
+                { failures.Add(new LabourApprovalFailure(timesheet.TimesheetId, blockReason, BudgetBlocked: true)); continue; }
+                overridden.Add((timesheet, blockReason));
+            }
 
             timesheet.RateApplied = rate;
             timesheet.CostAmount = cost;
@@ -124,6 +143,19 @@ public sealed class ApproveTimesheetsHandler : ICommandHandler<ApproveTimesheets
         }
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Each override on the audit trail — after the save, best-effort, per the AuditTrail
+        // convention. One row per timesheet: the trail is the only place the fact that an
+        // approval was over budget survives once the status just reads Approved.
+        foreach (var (timesheet, blockReason) in overridden)
+            await audit.WriteAsync(
+                AuditEventType.LabourBudgetOverridden,
+                $"{workers[timesheet.WorkerId].Name} {timesheet.WorkedOn:ddd dd MMM} "
+                + $"(£{timesheet.CostAmount:N2} against {timesheet.CostCode}) approved over budget — {blockReason} "
+                + $"Reason given: {command.OverBudgetReason}",
+                projectId: command.ProjectId,
+                actorEmail: approvedByEmail,
+                cancellationToken: cancellationToken);
 
         var approvedModels = approved.Select(timesheet =>
             timesheet.ToDetail(workers[timesheet.WorkerId].Name)).ToList();

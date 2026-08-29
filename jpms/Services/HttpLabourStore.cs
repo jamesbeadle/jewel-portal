@@ -193,9 +193,11 @@ public sealed class HttpLabourStore : ILabourStore
         return adjusted;
     }
 
-    public async Task<LabourApprovalResult> ApproveTimesheetsAsync(string projectId, IReadOnlyList<string> timesheetIds)
+    public async Task<LabourApprovalResult> ApproveTimesheetsAsync(string projectId, IReadOnlyList<string> timesheetIds,
+        bool allowOverBudget = false, string overBudgetReason = "")
     {
-        var result = await commands.SendAsync(new ApproveTimesheets(projectId, timesheetIds), CancellationToken.None);
+        var result = await commands.SendAsync(
+            new ApproveTimesheets(projectId, timesheetIds, allowOverBudget, overBudgetReason), CancellationToken.None);
         await timesheetsReadModel.RefreshAsync(projectId, CancellationToken.None);
         return result;
     }
@@ -234,6 +236,31 @@ public sealed class HttpLabourStore : ILabourStore
     {
         await commands.SendAsync(new RecordWorkerAbsence(workerId, date, kind, note), CancellationToken.None);
         await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
+    }
+
+    public async Task<IReadOnlyList<DateTime>> RecordAbsenceRangeAsync(int year, int month, string workerId,
+        DateTime from, DateTime to, AbsenceKind kind, string note)
+    {
+        var start = from.Date;
+        var end = to.Date < start ? start : to.Date;
+        var failedDates = new List<DateTime>();
+        var recordedAny = false;
+        for (var date = start; date <= end; date = date.AddDays(1))
+        {
+            // A multi-day range means "the working week off" — weekends are not workdays here
+            // (forecast, sign-off and chase are all Mon–Fri), so they are skipped rather than
+            // filled with absences that would deduct days the forecast never counted.
+            if (end > start && date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) continue;
+            try
+            {
+                await commands.SendAsync(new RecordWorkerAbsence(workerId,
+                    new DateTimeOffset(date, TimeSpan.Zero), kind, note), CancellationToken.None);
+                recordedAny = true;
+            }
+            catch (Exception) { failedDates.Add(date); }
+        }
+        if (recordedAny) await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
+        return failedDates;
     }
 
     public async Task RemoveAbsenceAsync(int year, int month, string workerAbsenceId)

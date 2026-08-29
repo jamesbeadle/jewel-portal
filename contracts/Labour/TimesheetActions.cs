@@ -22,8 +22,15 @@ public sealed record AdjustTimesheet(string TimesheetId, decimal Hours, string C
 /// snapshots rate and cost, and enforces the budget hard-block (workflow 07-D) — approval is
 /// rejected for a cost code whose remaining budget the new cost would exceed. Partial success:
 /// approvable timesheets approve, failures return with reasons.
+///
+/// AllowOverBudget (2026-08-29, the accountant's ask) is the deliberate exception to the
+/// hard-block: the MD/FD/Admin only (endpoint-gated), with a mandatory reason, approves the
+/// blocked rows anyway — the cost still posts, the overspend stays red on Financials, and each
+/// overridden row is written to the audit trail with who, why, and the block it overrode. It
+/// never bypasses the other refusals (uncoded, no worker, already decided).
 /// </summary>
-public sealed record ApproveTimesheets(string ProjectId, IReadOnlyList<string> TimesheetIds)
+public sealed record ApproveTimesheets(string ProjectId, IReadOnlyList<string> TimesheetIds,
+    bool AllowOverBudget = false, string OverBudgetReason = "")
     : ICommand<LabourApprovalResult>;
 
 /// <summary>Rejection re-opens the day for the worker on the capture page; no deadline is

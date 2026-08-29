@@ -29,6 +29,15 @@ internal static class LabourRoleSets
     public static readonly RoleSet ApproveTimesheets =
         RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
 
+    /// <summary>
+    /// May approve timesheets PAST the budget hard-block (with a mandatory reason, audited).
+    /// Decision 2026-08-29, from the accountant's ask: the MD and FD can knowingly sign an
+    /// overspend — the block stays absolute for everyone else, PMs included, because approval
+    /// posts real cost and the override exists to make an overspend deliberate, not easy.
+    /// </summary>
+    public static readonly RoleSet OverrideBudgetBlock =
+        RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector);
+
     /// <summary>May manage the settlement reconciliation (covers, variances).</summary>
     public static readonly RoleSet ManageSettlement =
         RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector,
