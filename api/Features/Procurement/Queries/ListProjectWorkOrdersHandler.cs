@@ -71,8 +71,10 @@ public sealed class ListProjectWorkOrdersHandler
     /// re-code uses, so the lines always sum back to the order's paid position exactly. Where the
     /// lines carry no value between them there is nothing to weight by, and the whole amount sits
     /// on the first line rather than vanishing out of the tab's totals.
+    /// Internal because WorkOrderPoDocumentBuilder restates the same figures for the emailed
+    /// purchase-order PDF — one implementation, so the PDF's Paid column always agrees with the tab.
     /// </summary>
-    private static List<WorkOrderLine> SpreadPaidAcrossLines(List<WorkOrderLine> lines, decimal paid)
+    internal static List<WorkOrderLine> SpreadPaidAcrossLines(List<WorkOrderLine> lines, decimal paid)
     {
         if (lines.Count == 0) return lines;
 

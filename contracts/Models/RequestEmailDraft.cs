@@ -6,6 +6,9 @@ namespace Jewel.JPMS.Models;
 /// Graph returns one (it usually does); null otherwise — the draft is still in the Drafts folder.
 /// Cc/Bcc list the copied recipients the draft carries; showing Bcc here is correct because the
 /// person reviewing the draft is internal (Bcc stays off every client-facing surface).
+/// <see cref="DraftMessageId"/> is the staged draft's mailbox message id — the handle for
+/// withdrawing the draft (DeleteMailboxDraft) if it was staged in error; null only on legacy
+/// payloads.
 /// </summary>
 public sealed record RequestEmailDraft(
     string RequestId,
@@ -13,4 +16,5 @@ public sealed record RequestEmailDraft(
     IReadOnlyList<string> Recipients,
     string? WebLink,
     IReadOnlyList<string>? Cc = null,
-    IReadOnlyList<string>? Bcc = null);
+    IReadOnlyList<string>? Bcc = null,
+    string? DraftMessageId = null);

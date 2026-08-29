@@ -181,7 +181,8 @@ public sealed class PrepareRequestEmailDraftHandler : ICommandHandler<PrepareReq
             recipients.To.Select(r => r.Email).ToList(),
             created.WebLink,
             Cc: cc,
-            Bcc: recipients.Bcc.Select(r => r.Email).ToList());
+            Bcc: recipients.Bcc.Select(r => r.Email).ToList(),
+            DraftMessageId: created.Id);
     }
 
     /// <summary>

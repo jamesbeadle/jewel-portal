@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Models;
 
@@ -15,8 +16,13 @@ public sealed class RejectWorkOrderHandler
     : ICommandHandler<RejectWorkOrder, WorkOrder>
 {
     private readonly JpmsContext context;
+    private readonly AuditTrail audit;
 
-    public RejectWorkOrderHandler(JpmsContext context) { this.context = context; }
+    public RejectWorkOrderHandler(JpmsContext context, AuditTrail audit)
+    {
+        this.context = context;
+        this.audit = audit;
+    }
 
     public async Task<WorkOrder> HandleAsync(RejectWorkOrder command, CancellationToken cancellationToken)
     {
@@ -29,6 +35,18 @@ public sealed class RejectWorkOrderHandler
         entity.Status = (int)WorkOrderStatus.Rejected;
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // The entity stamps nothing at rejection (no date, no decider), so this best-effort row
+        // is the only dated record of the decision on the order's timeline.
+        await audit.WriteAsync(
+            AuditEventType.WorkOrderRejected,
+            "Draft rejected — never issued; it counts nowhere.",
+            projectId: entity.ProjectId,
+            recordType: RecordType.WorkOrder,
+            recordId: entity.WorkOrderId,
+            recordReference: entity.Reference,
+            cancellationToken: cancellationToken);
+
         return entity.ToModel();
     }
 }

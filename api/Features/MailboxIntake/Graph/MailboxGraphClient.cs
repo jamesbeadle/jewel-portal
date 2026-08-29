@@ -10,8 +10,9 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 /// <summary>
 /// Live mailbox access for triage, category-based: read folder pages filtered by category, and tag
 /// messages. Every tag operation is <b>verified</b> — it writes the categories and then reads them
-/// back, only reporting success if the change actually stuck. Nothing is ever moved or deleted, so
-/// duplication and lost mail are impossible by construction.
+/// back, only reporting success if the change actually stuck. Nothing is ever moved, and the one
+/// delete (<see cref="DeleteDraftAsync"/>) refuses anything Graph does not itself report as an
+/// unsent draft — so duplication and lost mail remain impossible by construction.
 ///
 /// All calls request immutable ids (<c>Prefer: IdType="ImmutableId"</c>) so a message id stays valid.
 /// </summary>
@@ -172,7 +173,29 @@ public interface IMailboxGraphClient
     /// <summary>Read one message's webLink (e.g. re-reading a just-sent message so the audit row
     /// can link to the sent copy), or null if unavailable.</summary>
     Task<string?> GetWebLinkAsync(string messageId, CancellationToken ct);
+
+    /// <summary>
+    /// DELETE one unsent draft (<c>DELETE …/messages/{id}</c>) — the undo for the draft-staging
+    /// calls above when a staged draft was superseded or raised in error. The one guarded
+    /// exception to this client's no-delete rule: the message is read back first and the delete is
+    /// REFUSED (<see cref="MailboxDraftDeleteOutcome.NotADraft"/>) unless Graph itself reports
+    /// <c>isDraft: true</c>, so delivered or sent mail can never be removed through this client
+    /// whatever id it is handed. Graph moves the deleted draft to Deleted Items rather than wiping
+    /// it, so a mistaken delete is recoverable from Outlook for a while.
+    /// </summary>
+    Task<MailboxDraftDeletion> DeleteDraftAsync(string draftMessageId, CancellationToken ct);
 }
+
+/// <summary>How a draft delete ended — precise, so callers can answer honestly. NotADraft means
+/// the id resolved to a message that is NOT an unsent draft (sent/received mail; nothing was
+/// touched); NotFound means no message with that id (already deleted, or never existed); Failed
+/// means the mailbox is unconfigured or Graph refused.</summary>
+public enum MailboxDraftDeleteOutcome { Deleted, NotADraft, NotFound, Failed }
+
+/// <summary>The result of <see cref="IMailboxGraphClient.DeleteDraftAsync"/>: the outcome, plus
+/// the message's subject when the read-back resolved one (so callers can name what was — or was
+/// not — deleted).</summary>
+public sealed record MailboxDraftDeletion(MailboxDraftDeleteOutcome Outcome, string? Subject = null);
 
 /// <summary>A new message for the mailbox, placed in Drafts via CreateDraftAsync. Cc, Bcc and
 /// Categories are optional so existing draft-only callers are unchanged (Cc sits last purely to
@@ -276,6 +299,8 @@ public sealed class NullMailboxGraphClient : IMailboxGraphClient
         Task.FromResult(false);
     public Task<bool> SendDraftAsync(string draftMessageId, CancellationToken ct) => Task.FromResult(false);
     public Task<string?> GetWebLinkAsync(string messageId, CancellationToken ct) => Task.FromResult<string?>(null);
+    public Task<MailboxDraftDeletion> DeleteDraftAsync(string draftMessageId, CancellationToken ct) =>
+        Task.FromResult(new MailboxDraftDeletion(MailboxDraftDeleteOutcome.Failed));
 }
 
 /// <summary>Graph REST implementation (HttpClient + app-only token).</summary>
@@ -1379,6 +1404,46 @@ public sealed class MailboxGraphClient : IMailboxGraphClient
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
         return doc.RootElement.TryGetProperty("webLink", out var wl) ? wl.GetString() : null;
+    }
+
+    public async Task<MailboxDraftDeletion> DeleteDraftAsync(string draftMessageId, CancellationToken ct)
+    {
+        // Read-back first: the delete only ever fires on a message Graph itself says is an unsent
+        // draft. Handing this method a delivered or sent message's id must be a refusal, not a
+        // deletion — the mailbox is a system of record and the client's no-delete rule covers
+        // everything except unsent drafts. (A draft sent between the read-back and the DELETE is a
+        // theoretical race Graph gives no conditional delete for; the window is milliseconds.)
+        var checkUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draftMessageId)}?$select=id,isDraft,subject";
+        string? subject;
+        using (var check = await SendAsync(HttpMethod.Get, checkUrl, content: null, ct, allowNotFound: true))
+        {
+            if (check.StatusCode == HttpStatusCode.NotFound)
+                return new MailboxDraftDeletion(MailboxDraftDeleteOutcome.NotFound);
+            if (!check.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Draft delete read-back failed for {MessageId}: {Status}. {Detail}",
+                    draftMessageId, (int)check.StatusCode, await SafeBodyAsync(check, ct));
+                return new MailboxDraftDeletion(MailboxDraftDeleteOutcome.Failed);
+            }
+            await using var stream = await check.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            var root = doc.RootElement;
+            subject = root.TryGetProperty("subject", out var s) ? s.GetString() : null;
+            if (!(root.TryGetProperty("isDraft", out var d) && d.ValueKind == JsonValueKind.True))
+                return new MailboxDraftDeletion(MailboxDraftDeleteOutcome.NotADraft, subject);
+        }
+
+        var deleteUrl = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(draftMessageId)}";
+        using var response = await SendAsync(HttpMethod.Delete, deleteUrl, content: null, ct, allowNotFound: true);
+        if (response.StatusCode == HttpStatusCode.NotFound)
+            return new MailboxDraftDeletion(MailboxDraftDeleteOutcome.NotFound, subject);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Draft delete failed for {MessageId}: {Status}. {Detail}",
+                draftMessageId, (int)response.StatusCode, await SafeBodyAsync(response, ct));
+            return new MailboxDraftDeletion(MailboxDraftDeleteOutcome.Failed, subject);
+        }
+        return new MailboxDraftDeletion(MailboxDraftDeleteOutcome.Deleted, subject);
     }
 
     private async Task<HttpResponseMessage> SendAsync(

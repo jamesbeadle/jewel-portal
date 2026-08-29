@@ -376,7 +376,8 @@ internal sealed class CommercialActions : IAiActionSource
             Notes: "This is client-facing money correspondence — confirm the subject and cover-note "
                 + "wording with the user before calling. Recipients are fixed to the project's Client "
                 + "and Architect contacts (projects@ is cc'd automatically). valuationReportSnapshotId "
-                + "comes from the project's snapshots list."),
+                + "comes from the project's snapshots list. The result's draftMessageId is the handle "
+                + "for delete_mailbox_draft if the draft has to be withdrawn."),
 
         // ── Commercial: Financials tab — budgets, cost centres, groups, packages ─────────
 

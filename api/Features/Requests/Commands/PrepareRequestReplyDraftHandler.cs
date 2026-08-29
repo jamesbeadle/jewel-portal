@@ -94,6 +94,7 @@ public sealed class PrepareRequestReplyDraftHandler : ICommandHandler<PrepareReq
             created.Subject,
             created.To,
             created.WebLink,
-            Cc: created.Cc);
+            Cc: created.Cc,
+            DraftMessageId: created.Id);
     }
 }

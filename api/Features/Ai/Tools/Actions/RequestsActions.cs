@@ -210,7 +210,8 @@ internal sealed class RequestsActions : IAiActionSource
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             Notes: "The request must be an emailable kind (RFI/NOD/EOT) — promote it first if it is "
-                + "still General. requestId via find_by_reference."),
+                + "still General. requestId via find_by_reference. The result's draftMessageId is "
+                + "the handle for delete_mailbox_draft if the draft has to be withdrawn."),
 
         new AiAction(
             Name: "prepare_request_email_drafts",
@@ -245,7 +246,8 @@ internal sealed class RequestsActions : IAiActionSource
             NameStamps: Array.Empty<string>(),
             Notes: "mailboxMessageId is the Graph id of the conversation email to reply to — "
                 + "list_request_correspondence / read_record_emails surface it. requestId via "
-                + "find_by_reference."),
+                + "find_by_reference. The result's draftMessageId is the handle for "
+                + "delete_mailbox_draft if the draft has to be withdrawn."),
 
         new AiAction(
             Name: "resend_request_document",
@@ -388,6 +390,30 @@ internal sealed class RequestsActions : IAiActionSource
                 + "(Client/Subcontractor/Supplier/Internal) matters only for pathway-neutral "
                 + "record types like CostCentre. For catching a record up on its own threads, "
                 + "prefer file_unfiled_replies."),
+
+        new AiAction(
+            Name: "delete_mailbox_draft",
+            Area: "Correspondence",
+            Description: "Deletes ONE unsent draft from the shared projects mailbox's Drafts folder "
+                + "— the undo for the prepare_*_draft actions when a staged draft was superseded or "
+                + "raised in error. The mailbox verifies the message really is an unsent draft "
+                + "before deleting, so sent or received mail can never be removed this way. Graph "
+                + "moves the deleted draft to the mailbox's Deleted Items, where a person can still "
+                + "recover it for a while.",
+            CommandType: typeof(DeleteMailboxDraft),
+            ResultType: typeof(Acknowledgement),
+            AuthorisationType: typeof(DeleteMailboxDraftAuthorisation),
+            ValidationType: typeof(DeleteMailboxDraftValidation),
+            VisibleTo: RoleSet.Of(
+                JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.Architect),
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
+            Notes: "messageId is the draft's mailbox message id — the prepare_*_draft results "
+                + "return it as draftMessageId, and the audit trail's Draft created rows carry it. "
+                + "Confirm with the user WHICH draft, by subject, before calling — someone may have "
+                + "edited the draft in Outlook since it was staged, and deleting throws their edits "
+                + "away too. Only drafts can be deleted; a draft already sent is refused."),
     };
 
     // Skipped: PostRequestMessage — already dispatched by AiWriteTools.post_request_message; do not duplicate.

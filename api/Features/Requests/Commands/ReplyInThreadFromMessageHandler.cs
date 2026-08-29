@@ -126,7 +126,8 @@ public sealed class ReplyInThreadFromMessageHandler : ICommandHandler<ReplyInThr
 
         return new ReplyInThreadOutcome(
             request,
-            new RequestEmailDraft(request.RequestId, created.Subject, created.To, created.WebLink, Cc: created.Cc));
+            new RequestEmailDraft(request.RequestId, created.Subject, created.To, created.WebLink, Cc: created.Cc,
+                DraftMessageId: created.Id));
     }
 
     // Portal textarea (plain text) -> draft HTML: encode each line, join with <br>, and leave a

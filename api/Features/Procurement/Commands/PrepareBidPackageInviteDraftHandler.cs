@@ -63,6 +63,7 @@ public sealed class PrepareBidPackageInviteDraftHandler : ICommandHandler<Prepar
             command.Subject,
             recipients.Select(r => r.Email).ToList(),
             draft.WebLink,
-            LinkedFiles: plan.LinkedFiles);
+            LinkedFiles: plan.LinkedFiles,
+            DraftMessageId: draft.Id);
     }
 }

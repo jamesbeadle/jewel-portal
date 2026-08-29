@@ -10,4 +10,7 @@ public sealed record WorkOrderEmailDraft(
     WorkOrder Order,
     string Subject,
     string RecipientEmail,
-    string? WebLink);
+    string? WebLink,
+    // The staged draft's mailbox message id — the handle for withdrawing the draft
+    // (DeleteMailboxDraft) if it was staged in error; null only on legacy payloads.
+    string? DraftMessageId = null);

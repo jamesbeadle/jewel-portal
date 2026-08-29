@@ -70,7 +70,21 @@ public enum AuditEventType
     // code's budget hard-block is allowed only for the MD/FD/Admin, with a typed reason — this
     // row records each overridden timesheet (who, the block it overrode, the reason given).
     // Not a client-facing event: Pathway is "", like CostCentreRecoded.
-    LabourBudgetOverridden = 26      // a timesheet was approved past the budget hard-block
+    LabourBudgetOverridden = 26,     // a timesheet was approved past the budget hard-block
+    // Work-order lifecycle (written since 2026-08-29): the decisions that move an order between
+    // states, so a WO's timeline reads complete from its record-scoped history. Approval also
+    // stamps AwardedAt/AwardedByEmail on the order itself; reject and cancel stamp nothing on the
+    // entity, so these rows are the only dated record of those decisions. Not client-facing:
+    // Pathway is "", like CostCentreRecoded.
+    WorkOrderApproved = 27,          // a draft work order was approved — number minted, order released
+    WorkOrderRejected = 28,          // a draft work order was rejected — terminal, never issued
+    WorkOrderCancelled = 29,         // a released work order was cancelled — voided, keeps its number
+    // Mailbox draft withdrawal (written since 2026-08-29): an unsent draft staged in the shared
+    // mailbox was deleted before sending — the inverse of DraftCreated. The draft itself is gone
+    // (recoverable from Outlook's Deleted Items for a while), so this row is the surviving record
+    // of what was staged and withdrawn, mirroring DraftWorkOrderDeleted. Not pathway-specific:
+    // Pathway is "".
+    MailboxDraftDeleted = 30         // an unsent mailbox draft was deleted before sending
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

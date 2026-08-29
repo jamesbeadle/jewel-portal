@@ -204,4 +204,7 @@ public sealed record ValuationReportSnapshotEmailDraft(
     string Label,
     string Subject,
     IReadOnlyList<string> RecipientEmails,
-    string? WebLink);
+    string? WebLink,
+    // The staged draft's mailbox message id — the handle for withdrawing the draft
+    // (DeleteMailboxDraft) if it was staged in error; null only on legacy payloads.
+    string? DraftMessageId = null);

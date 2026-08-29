@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -17,8 +18,13 @@ public sealed class ApproveWorkOrderHandler
     : ICommandHandler<ApproveWorkOrder, WorkOrder>
 {
     private readonly JpmsContext context;
+    private readonly AuditTrail audit;
 
-    public ApproveWorkOrderHandler(JpmsContext context) { this.context = context; }
+    public ApproveWorkOrderHandler(JpmsContext context, AuditTrail audit)
+    {
+        this.context = context;
+        this.audit = audit;
+    }
 
     public async Task<WorkOrder> HandleAsync(ApproveWorkOrder command, CancellationToken cancellationToken)
     {
@@ -46,6 +52,20 @@ public sealed class ApproveWorkOrderHandler
         entity.AwardedByEmail = command.ApprovedByEmail;
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // After the save, like every AuditTrail caller — best-effort, never fails the approval.
+        // The entity stamps (AwardedAt/AwardedByEmail) are the primary record; this row puts the
+        // decision on the order's timeline alongside its sends and filed correspondence.
+        await audit.WriteAsync(
+            AuditEventType.WorkOrderApproved,
+            $"Approved — issued as {entity.Reference}.",
+            projectId: entity.ProjectId,
+            recordType: RecordType.WorkOrder,
+            recordId: entity.WorkOrderId,
+            recordReference: entity.Reference,
+            actorEmail: command.ApprovedByEmail,
+            cancellationToken: cancellationToken);
+
         return entity.ToModel();
     }
 }

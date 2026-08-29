@@ -328,7 +328,8 @@ internal sealed class ProcurementActions : IAiActionSource
             Notes: "The command drafts exactly the subject and htmlBody it is given — confirm the "
                 + "wording with the user first. Invite the subcontractors "
                 + "(invite_subcontractors_to_bid_package) before drafting; a package with no "
-                + "recipients fails with a readable message."),
+                + "recipients fails with a readable message. The result's draftMessageId is the "
+                + "handle for delete_mailbox_draft if the draft has to be withdrawn."),
 
         // ---- Tenders and quotes -------------------------------------------------------------
 
@@ -608,7 +609,33 @@ internal sealed class ProcurementActions : IAiActionSource
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             Notes: "The command drafts exactly the subject and htmlBody it is given — confirm the "
-                + "wording with the user first. workOrderId comes from list_work_orders."),
+                + "wording with the user first. workOrderId comes from list_work_orders. To land "
+                + "the purchase order inside an EXISTING email conversation instead, use "
+                + "prepare_work_order_reply_draft. The result's draftMessageId is the handle for "
+                + "delete_mailbox_draft if the draft has to be withdrawn."),
+
+        new AiAction(
+            Name: "prepare_work_order_reply_draft",
+            Area: "Procurement",
+            Description: "Stages an Outlook draft REPLY, in the original email conversation thread, "
+                + "to an email linked to the work order — carrying the rendered purchase-order PDF "
+                + "as an attachment. Recipients come from the conversation (reply-all), the draft is "
+                + "tagged so the sent copy files under the order, and NOTHING IS SENT — a person "
+                + "reviews and sends it from Outlook. Never moves the order's status. A draft, "
+                + "rejected or cancelled order is refused outright.",
+            CommandType: typeof(PrepareWorkOrderReplyDraft),
+            ResultType: typeof(WorkOrderReplyDraft),
+            AuthorisationType: typeof(PrepareWorkOrderReplyDraftAuthorisation),
+            ValidationType: typeof(PrepareWorkOrderReplyDraftValidation),
+            VisibleTo: PackageAdministrators, // mirrors PrepareWorkOrderReplyDraftAuthorisation (same set as the fresh draft)
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "mailboxMessageId is the Graph id of the conversation email to reply to — "
+                + "read_record_emails on the work order surfaces it; if the thread isn't linked to "
+                + "the order yet, file it first (file_email_to_record) so the reply and the "
+                + "conversation live under the order. htmlCoverNote is placed ABOVE the quoted "
+                + "history — confirm the wording with the user first; the PO PDF is rendered and "
+                + "attached server-side. workOrderId comes from list_work_orders."),
 
         new AiAction(
             Name: "award_bid_package",

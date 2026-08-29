@@ -14,4 +14,7 @@ public sealed record BidPackageInviteDraft(
     string Subject,
     IReadOnlyList<string> Bcc,
     string? WebLink,
-    IReadOnlyList<string>? LinkedFiles = null);
+    IReadOnlyList<string>? LinkedFiles = null,
+    // The staged draft's mailbox message id — the handle for withdrawing the draft
+    // (DeleteMailboxDraft) if it was staged in error; null only on legacy payloads.
+    string? DraftMessageId = null);

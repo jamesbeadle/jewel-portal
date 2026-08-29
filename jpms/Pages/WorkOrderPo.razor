@@ -134,6 +134,70 @@ else
             <WorkOrderAttachmentsPanel WorkOrderId="@WorkOrderId" CanEdit="true" />
         </div>
 
+        @* The order's audit (accountant request, 2026-08-29): a lifecycle strip read straight off
+           the record's own stamps — raised, approved & issued, accepted — then the record-scoped
+           audit history underneath (PO emails sent, correspondence filed, approve/reject/cancel
+           decisions from now on). Screen-only like the attachments: office record-keeping, never
+           part of the printed purchase order. No gate — the strip reads from the same Detail this
+           whole page already waits for, and the history panel manages its own loading. *@
+        <div class="po-timeline max-w-[820px] mx-auto mt-6 space-y-6">
+            <Panel Title="Timeline">
+                <ol class="space-y-3">
+                    <li class="flex gap-3">
+                        <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-hidden="true"></span>
+                        <div class="min-w-0">
+                            <p class="text-sm text-content">Raised@(Detail.Order.IsDraft ? " — still a draft" : Detail.Order.IsRejected ? " — draft, later rejected" : "")</p>
+                            <p class="text-xs text-content-subtle mt-0.5">@Detail.Order.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
+                        </div>
+                    </li>
+                    @if (Detail.Order.Status is WorkOrderStatus.Released or WorkOrderStatus.Complete or WorkOrderStatus.Cancelled)
+                    {
+                        <li class="flex gap-3">
+                            <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-hidden="true"></span>
+                            <div class="min-w-0">
+                                <p class="text-sm text-content">Approved &amp; issued as @Detail.Order.Reference</p>
+                                <p class="text-xs text-content-subtle mt-0.5">
+                                    @Detail.Order.AwardedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                                    @if (!string.IsNullOrWhiteSpace(ApproverDisplay))
+                                    {
+                                        <span class="mx-1.5" aria-hidden="true">·</span>
+                                        <span>@ApproverDisplay</span>
+                                    }
+                                </p>
+                            </div>
+                        </li>
+                    }
+                    @if (Detail.Order.IsAccepted)
+                    {
+                        <li class="flex gap-3">
+                            <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-hidden="true"></span>
+                            <div class="min-w-0">
+                                <p class="text-sm text-content">Accepted by the supplier</p>
+                                <p class="text-xs text-content-subtle mt-0.5">
+                                    @Detail.Order.AcceptedAt!.Value.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                                    @if (!string.IsNullOrWhiteSpace(Detail.Order.AcceptedByName))
+                                    {
+                                        <span class="mx-1.5" aria-hidden="true">·</span>
+                                        <span>@Detail.Order.AcceptedByName</span>
+                                    }
+                                </p>
+                            </div>
+                        </li>
+                    }
+                </ol>
+                @if (Detail.Order.IsCancelled || Detail.Order.IsRejected)
+                {
+                    <p class="text-xs text-content-subtle mt-3">
+                        @(Detail.Order.IsCancelled
+                            ? "This order was cancelled after issue. Cancellations are dated in the history below from 29 Aug 2026; earlier ones have no recorded time."
+                            : "This draft was rejected. Rejections are dated in the history below from 29 Aug 2026; earlier ones have no recorded time.")
+                    </p>
+                }
+            </Panel>
+            <RecordAuditHistory RecordId="@Detail.Order.WorkOrderId" RecordType="RecordType.WorkOrder"
+                                Title="History" />
+        </div>
+
         <Modal IsOpen="showEmailModal" Title="@($"Email work order {Title2} to {Detail.SubcontractorName}")" ShowFooter="true"
                ConfirmLabel="@(emailBusy ? "Drafting…" : "Create draft in mailbox")" ConfirmDisabled="@emailBusy" CancelLabel="Cancel"
                OnCancel="CloseEmailModal" OnConfirm="ConfirmEmailDraftAsync" Class="max-w-3xl w-full">
@@ -156,6 +220,7 @@ else
     @@media print {
         .po-toolbar { display: none; }
         .po-attachments { display: none; }
+        .po-timeline { display: none; }
     }
 </style>
 
@@ -189,6 +254,11 @@ else
     // inside the sheet when the directory has no entry).
     private string ApprovedByName =>
         Detail is null ? "" : Users.Find(Detail.Order.AwardedByEmail)?.DisplayName ?? "";
+
+    // Timeline strip: the approver by display name, falling back to the raw email (seeded
+    // Buildertrend orders may carry neither — the strip then shows the date alone).
+    private string ApproverDisplay =>
+        Detail is null ? "" : !string.IsNullOrWhiteSpace(ApprovedByName) ? ApprovedByName : Detail.Order.AwardedByEmail;
 
     private string Title => Detail is null ? "Purchase order" : $"{Detail.Order.Reference} purchase order";
 

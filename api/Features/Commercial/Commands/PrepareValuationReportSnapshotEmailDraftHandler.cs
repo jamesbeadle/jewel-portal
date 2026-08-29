@@ -70,6 +70,7 @@ public sealed class PrepareValuationReportSnapshotEmailDraftHandler
             pdf.Snapshot.Label,
             command.Subject,
             recipients.Select(recipient => recipient.Email).ToList(),
-            draft.WebLink);
+            draft.WebLink,
+            DraftMessageId: draft.Id);
     }
 }

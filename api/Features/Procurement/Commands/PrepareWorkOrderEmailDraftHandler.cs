@@ -62,6 +62,8 @@ public sealed class PrepareWorkOrderEmailDraftHandler : ICommandHandler<PrepareW
             throw new InvalidOperationException(
                 "The draft couldn't be created in the shared mailbox. Check the mailbox connection and try again.");
 
-        return new WorkOrderEmailDraft(order.ToModel(), command.Subject, supplier.ContactEmail!, draft.WebLink);
+        return new WorkOrderEmailDraft(
+            order.ToModel(), command.Subject, supplier.ContactEmail!, draft.WebLink,
+            DraftMessageId: draft.Id);
     }
 }

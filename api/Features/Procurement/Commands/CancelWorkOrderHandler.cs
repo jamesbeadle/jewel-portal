@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
+using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
@@ -19,8 +20,13 @@ public sealed class CancelWorkOrderHandler
     : ICommandHandler<CancelWorkOrder, WorkOrder>
 {
     private readonly JpmsContext context;
+    private readonly AuditTrail audit;
 
-    public CancelWorkOrderHandler(JpmsContext context) { this.context = context; }
+    public CancelWorkOrderHandler(JpmsContext context, AuditTrail audit)
+    {
+        this.context = context;
+        this.audit = audit;
+    }
 
     public async Task<WorkOrder> HandleAsync(CancelWorkOrder command, CancellationToken cancellationToken)
     {
@@ -51,6 +57,18 @@ public sealed class CancelWorkOrderHandler
         entity.Status = (int)WorkOrderStatus.Cancelled;
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // The entity stamps nothing at cancellation (the status flips, no date, no decider), so
+        // this best-effort row is the only dated record of the voiding on the order's timeline.
+        await audit.WriteAsync(
+            AuditEventType.WorkOrderCancelled,
+            $"Cancelled — {entity.Reference} is voided and its value no longer counts anywhere.",
+            projectId: entity.ProjectId,
+            recordType: RecordType.WorkOrder,
+            recordId: entity.WorkOrderId,
+            recordReference: entity.Reference,
+            cancellationToken: cancellationToken);
+
         return entity.ToModel();
     }
 }

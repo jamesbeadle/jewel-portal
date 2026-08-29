@@ -127,6 +127,12 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ResendRequestDocumentAuthorisation>();
         services.AddScoped<ResendRequestDocumentValidation>();
 
+        // Draft withdrawal: delete ONE unsent draft from the shared mailbox's Drafts folder (the
+        // Graph client verifies it really is an unsent draft before the DELETE fires).
+        services.AddScoped<ICommandHandler<DeleteMailboxDraft, Acknowledgement>, DeleteMailboxDraftHandler>();
+        services.AddScoped<DeleteMailboxDraftAuthorisation>();
+        services.AddScoped<DeleteMailboxDraftValidation>();
+
         return services;
     }
 

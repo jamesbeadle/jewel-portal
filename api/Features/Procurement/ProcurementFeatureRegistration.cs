@@ -126,6 +126,14 @@ public static class ProcurementFeatureRegistration
         services.AddScoped<PrepareWorkOrderEmailDraftAuthorisation>();
         services.AddScoped<PrepareWorkOrderEmailDraftValidation>();
 
+        // The threaded variant (2026-08-29): a REPLY draft inside an existing conversation linked
+        // to the order, carrying the rendered purchase-order PDF — so the formal PO lands in the
+        // email chain the works were agreed in. Same review-then-send-from-Outlook convention;
+        // never a status side effect.
+        services.AddScoped<ICommandHandler<PrepareWorkOrderReplyDraft, WorkOrderReplyDraft>, PrepareWorkOrderReplyDraftHandler>();
+        services.AddScoped<PrepareWorkOrderReplyDraftAuthorisation>();
+        services.AddScoped<PrepareWorkOrderReplyDraftValidation>();
+
         // The automatic counterpart: SENDS the purchase-order email the moment an order is
         // released (created un-drafted, or a draft approved) — the UI warns before firing it.
         services.AddScoped<ICommandHandler<SendWorkOrderPoEmail, WorkOrderPoEmailOutcome>, SendWorkOrderPoEmailHandler>();
