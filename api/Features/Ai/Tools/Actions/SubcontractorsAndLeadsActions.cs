@@ -65,8 +65,8 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             RequiresConfirmation: true,
-            Notes: "tradeIds come from list_trades (add_trade can mint a missing one). Check the directory "
-                + "for an existing record first — duplicates are merged later with "
+            Notes: "tradeIds come from list_trades (add_trade can mint a missing one). Check "
+                + "search_directory for an existing record first — duplicates are merged later with "
                 + "consolidate_directory_records, so avoid creating them."),
 
         new AiAction(
@@ -82,8 +82,9 @@ internal sealed class SubcontractorsAndLeadsActions : IAiActionSource
             VisibleTo: DirectoryRecordEditors,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "subcontractorId comes from the directory listing. Send the full trade list — removing "
-                + "the last trade is refused."),
+            Notes: "subcontractorId comes from search_directory, which also returns the record's current "
+                + "trades — send the full trade list back, removing the last trade is refused. Never "
+                + "guess or derive the id (a Xero contact id is NOT a directory id)."),
 
         new AiAction(
             Name: "promote_subcontractor_to_directory",

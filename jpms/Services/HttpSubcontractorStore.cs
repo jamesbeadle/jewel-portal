@@ -1,17 +1,23 @@
+using System.Net.Http.Headers;
 using Jewel.JPMS.Contracts.Subcontractors;
 using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Subcontractors;
 using Jewel.JPMS.Models;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace Jewel.JPMS.Services;
 
 public sealed class HttpSubcontractorStore : ISubcontractorStore
 {
+    // Matches the server-side cap in UploadComplianceDocumentFileEndpoint.
+    private const long MaxUploadBytes = 100L * 1024 * 1024;
+
     private readonly SubcontractorsReadModel readModel;
     private readonly TradesReadModel tradesReadModel;
     private readonly IQueryClient queries;
     private readonly ICommandSender commands;
+    private readonly HttpClient httpClient;
 
     // Compliance documents per subcontractor, cached so render-time reads never block on async
     // (which deadlocks on WebAssembly). Saving a document invalidates its subcontractor.
@@ -21,12 +27,13 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
     // a contact invalidates its record.
     private readonly AsyncQueryCache<string, IReadOnlyList<CompanyContact>> contacts;
 
-    public HttpSubcontractorStore(SubcontractorsReadModel readModel, TradesReadModel tradesReadModel, IQueryClient queries, ICommandSender commands)
+    public HttpSubcontractorStore(SubcontractorsReadModel readModel, TradesReadModel tradesReadModel, IQueryClient queries, ICommandSender commands, HttpClient httpClient)
     {
         this.readModel = readModel;
         this.tradesReadModel = tradesReadModel;
         this.queries = queries;
         this.commands = commands;
+        this.httpClient = httpClient;
         readModel.OnChanged += () => OnChange?.Invoke();
         tradesReadModel.OnChanged += () => OnChange?.Invoke();
         compliance = new((id, ct) => queries.AskAsync(new ListComplianceDocumentsForSubcontractor(id), ct), () => OnChange?.Invoke());
@@ -108,6 +115,33 @@ public sealed class HttpSubcontractorStore : ISubcontractorStore
             new UploadComplianceDocument(document.SubcontractorId, document.Kind, document.FileName, document.ExpiresAt),
             CancellationToken.None);
         compliance.Invalidate(document.SubcontractorId);
+    }
+
+    public async Task UploadComplianceFileAsync(
+        string subcontractorId, string kind, DateTimeOffset? expiresAt, IBrowserFile file,
+        CancellationToken cancellationToken)
+    {
+        using var content = new MultipartFormDataContent();
+
+        var fileContent = new StreamContent(file.OpenReadStream(MaxUploadBytes, cancellationToken));
+        fileContent.Headers.ContentType = new MediaTypeHeaderValue(
+            string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType);
+        content.Add(fileContent, "file", file.Name);
+        content.Add(new StringContent(kind), "kind");
+        if (expiresAt is not null) content.Add(new StringContent(expiresAt.Value.ToString("O")), "expiresAt");
+
+        var response = await httpClient.PostAsync(
+            $"api/subcontractors/{subcontractorId}/compliance/file", content, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            // Surface the server's message (e.g. a storage error) rather than a bare status code.
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(body) ? $"Server returned {(int)response.StatusCode}." : body.Trim('"'));
+        }
+
+        // Committed — invalidate so the compliance list refetches and re-renders with the new version.
+        compliance.Invalidate(subcontractorId);
     }
 
     private async Task AddAsync(Subcontractor sub)

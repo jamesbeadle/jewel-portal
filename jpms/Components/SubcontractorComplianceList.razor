@@ -1,9 +1,13 @@
 @inject ISubcontractorStore SubcontractorStore
+@implements IDisposable
 
 <section class="rounded-xl border border-line bg-surface overflow-hidden">
-    <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
+    <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between gap-3">
         <h2 class="text-sm font-medium text-content-muted">Compliance documents</h2>
-        <span class="text-xs text-content-subtle">@CurrentDocuments.Count documents</span>
+        <div class="flex items-center gap-3">
+            <span class="text-xs text-content-subtle">@CurrentDocuments.Count documents</span>
+            <button type="button" class="btn-secondary" @onclick="OpenAdd">Add document…</button>
+        </div>
     </header>
     @if (CurrentDocuments.Count == 0)
     {
@@ -71,8 +75,60 @@
     }
 </section>
 
+@* Add: same shape as the subcontractor's own portal upload — kind + optional expiry + file.
+   Re-uploading an existing kind supersedes the old version (kept as history), and the kind
+   suggestions reuse the portal upload's spellings so a filing here lands in the SAME version
+   history as one the subcontractor uploads themselves. *@
+<Modal IsOpen="addOpen" Title="Add compliance document" ShowFooter="true"
+       ConfirmLabel="@(addBusy ? "Uploading…" : "Add document")" CancelLabel="Cancel"
+       ConfirmDisabled="@(addBusy || addFile is null || string.IsNullOrWhiteSpace(addKind))"
+       OnCancel="CloseAdd" OnConfirm="ConfirmAdd" Class="max-w-lg w-full">
+    @if (addError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@addError</p>
+    }
+    <div class="space-y-3">
+        <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+                <label class="eyebrow block mb-1">Document type *</label>
+                <input class="field w-full" list="compliance-add-kinds" placeholder="e.g. Public liability insurance"
+                       @bind="addKind" @bind:event="oninput" />
+                <datalist id="compliance-add-kinds">
+                    @foreach (var kind in SuggestedKinds)
+                    {
+                        <option value="@kind" />
+                    }
+                </datalist>
+            </div>
+            <div>
+                <label class="eyebrow block mb-1">Expiry date</label>
+                <input type="date" class="field w-full" @bind="addExpiry" />
+            </div>
+        </div>
+        <div>
+            <label class="eyebrow block mb-1">File *</label>
+            <InputFile OnChange="OnAddFileSelected" class="w-full text-sm text-content-muted" />
+            @if (addFile is not null)
+            {
+                <p class="text-xs text-content-subtle mt-1">@addFile.Name · @FormatSize(addFile.Size)</p>
+            }
+        </div>
+        <p class="text-xs text-content-subtle">
+            Adding an existing type again supersedes the current version — the old file stays
+            downloadable under Previous versions.
+        </p>
+    </div>
+</Modal>
+
 @code {
     [Parameter, EditorRequired] public string SubcontractorId { get; set; } = "";
+
+    // Subscribe directly: the parent page's re-render on store change can skip this component
+    // (its only parameter is an unchanged string), so the background compliance fetch — and an
+    // upload's refetch — must trigger a render from inside.
+    protected override void OnInitialized() => SubcontractorStore.OnChange += HandleStoreChange;
+    private void HandleStoreChange() => InvokeAsync(StateHasChanged);
+    public void Dispose() => SubcontractorStore.OnChange -= HandleStoreChange;
 
     private IReadOnlyList<ComplianceDocument> Documents =>
         SubcontractorStore.ComplianceFor(SubcontractorId);
@@ -85,4 +141,73 @@
         Documents.Where(document => !document.IsCurrentVersion)
             .OrderBy(document => document.Kind, StringComparer.OrdinalIgnoreCase)
             .ThenByDescending(document => document.Version).ToList();
+
+    // ---- Add document ----
+
+    // The portal self-upload's suggestions, same spellings, so histories merge (kind matching is
+    // case-insensitive server-side; a different spelling starts a separate version history).
+    private static readonly string[] SuggestedKinds =
+    {
+        "Public liability insurance", "Employers liability insurance", "CIS certificate",
+        "RAMS", "Method statement", "Training certificate", "Waste carrier licence"
+    };
+
+    private bool addOpen;
+    private bool addBusy;
+    private string? addError;
+    private string addKind = "";
+    private DateTime? addExpiry;
+    private IBrowserFile? addFile;
+
+    private void OpenAdd()
+    {
+        addKind = "";
+        addExpiry = null;
+        addFile = null;
+        addError = null;
+        addOpen = true;
+    }
+
+    private void CloseAdd()
+    {
+        if (addBusy) return;
+        addOpen = false;
+    }
+
+    private void OnAddFileSelected(InputFileChangeEventArgs e)
+    {
+        addFile = e.File;
+        addError = null;
+    }
+
+    private async Task ConfirmAdd()
+    {
+        if (addBusy || addFile is null || string.IsNullOrWhiteSpace(addKind)) return;
+        addError = null;
+        try
+        {
+            addBusy = true;
+            DateTimeOffset? expiresAt = addExpiry is null
+                ? null
+                : new DateTimeOffset(DateTime.SpecifyKind(addExpiry.Value.Date, DateTimeKind.Utc));
+            await SubcontractorStore.UploadComplianceFileAsync(
+                SubcontractorId, addKind.Trim(), expiresAt, addFile, CancellationToken.None);
+            addOpen = false;
+        }
+        catch (Exception ex)
+        {
+            addError = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            addBusy = false;
+        }
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes >= 1024 * 1024) return $"{bytes / (1024.0 * 1024.0):0.#} MB";
+        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes} B";
+    }
 }

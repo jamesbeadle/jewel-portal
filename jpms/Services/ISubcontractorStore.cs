@@ -1,6 +1,7 @@
 using Jewel.JPMS.Contracts.Subcontractors;
 using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Models;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace Jewel.JPMS.Services;
 
@@ -37,6 +38,13 @@ public interface ISubcontractorStore
         string addressLine, string town, string county, string postcode);
     IReadOnlyList<ComplianceDocument> ComplianceFor(string subcontractorId);
     void SaveCompliance(ComplianceDocument document);
+
+    /// <summary>Uploads a compliance document WITH its file bytes onto any subcontractor's record
+    /// (the office-side "Add document" on the Subcontractor page). Re-uploading a kind supersedes
+    /// the previous version, exactly like the portal self-upload and a Document Triage filing.
+    /// Throws with the server's message on failure so the caller can show it.</summary>
+    Task UploadComplianceFileAsync(string subcontractorId, string kind, DateTimeOffset? expiresAt,
+        IBrowserFile file, CancellationToken cancellationToken);
 
     /// <summary>The suppliers held in Xero, for the directory's "Import from Xero" modal. Not
     /// cached client-side — the API already caches the Xero read; force bypasses that cache for

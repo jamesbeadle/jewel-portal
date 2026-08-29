@@ -52,6 +52,7 @@ public static class SubcontractorsFeatureRegistration
         services.AddScoped<ICommandHandler<UploadComplianceDocument, ComplianceDocument>, UploadComplianceDocumentHandler>();
         services.AddScoped<UploadComplianceDocumentAuthorisation>();
         services.AddScoped<UploadComplianceDocumentValidation>();
+        services.AddScoped<UploadComplianceDocumentFileAuthorisation>();
 
         services.AddScoped<ICommandHandler<AddComplianceDocumentVersion, ComplianceDocument>, AddComplianceDocumentVersionHandler>();
 
