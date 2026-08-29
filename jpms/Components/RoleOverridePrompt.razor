@@ -1,0 +1,116 @@
+@inject SessionService Session
+@inject NavigationManager Nav
+@implements IDisposable
+
+@*
+    The two-hour "Viewing as" clock, for users opted in on Admin → Users (DirectoryUser.
+    RevertToOwnRole — built for the Finance Director, whose Administrator view kept sticking
+    across days). When SessionService's window runs out this banner asks rather than yanks:
+    keep the temporary role for another two hours, or go back to their own role now. Ignoring
+    it is also an answer — after a minute it reverts quietly, which is the behaviour the user
+    chose over a blocking modal.
+
+    A top banner in the UpdateToast mould, not a Modal: nothing is wrong and nothing needs
+    deciding before work continues. Sits UNDER both toasts (z-40 vs 50/60) — something broken,
+    or a newer build, outranks a role that is merely about to change.
+*@
+
+@if (visible && Session.IsTemporaryRole && Session.ActiveRole is { } current && Session.HomeRole is { } home)
+{
+    <div class="fixed top-0 left-0 right-0 z-40 bg-surface-raised border-b border-line-strong shadow-lg shadow-black/40"
+         role="status" aria-live="polite">
+        <div class="px-4 py-2.5 flex items-center gap-3 flex-wrap">
+
+            <svg class="w-5 h-5 shrink-0 text-info" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+            </svg>
+
+            <p class="text-sm text-content leading-snug flex-1 min-w-0">
+                Still viewing as @current.DisplayName().
+                <span class="text-content-subtle">
+                    Switching back to @home.DisplayName() in @secondsLeft seconds.
+                </span>
+            </p>
+
+            <button type="button" @onclick="Keep"
+                    class="shrink-0 rounded-lg border border-line bg-surface text-content-muted font-medium text-xs px-3 py-1.5 hover:border-line-strong transition">
+                Keep @current.DisplayName() for 2 more hours
+            </button>
+            <button type="button" @onclick="Revert"
+                    class="shrink-0 rounded-lg bg-accent hover:bg-accent-hover text-accent-ink px-3.5 py-1.5 text-xs font-semibold transition">
+                Back to @home.DisplayName()
+            </button>
+
+        </div>
+    </div>
+}
+
+@code {
+    /// <summary>How long the banner waits for an answer before reverting on its own.</summary>
+    private const int CountdownSeconds = 60;
+
+    private bool visible;
+    private int secondsLeft;
+    private Timer? countdown;
+
+    protected override void OnInitialized()
+    {
+        Session.OnRevertDue += OnRevertDue;
+        Session.OnChange += OnSessionChanged;
+    }
+
+    private void OnRevertDue() => _ = InvokeAsync(() =>
+    {
+        if (visible) return;
+        visible = true;
+        secondsLeft = CountdownSeconds;
+        countdown = new Timer(_ => Tick(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        StateHasChanged();
+    });
+
+    private void Tick() => _ = InvokeAsync(() =>
+    {
+        if (!visible) return;
+        // The question can answer itself while the banner is up — the user switched roles from
+        // the dropdown, or signed out. Nothing left to ask.
+        if (!Session.IsTemporaryRole) { Close(); return; }
+        secondsLeft -= 1;
+        if (secondsLeft <= 0) { Revert(); return; }
+        StateHasChanged();
+    });
+
+    private void Keep()
+    {
+        Close();
+        Session.ExtendTemporaryRole();
+    }
+
+    private void Revert()
+    {
+        Close();
+        var home = Session.HomeRole;
+        Session.RevertToHomeRole();
+        // Land somewhere their own role can actually see — the page they were on may belong to
+        // the role they just left.
+        if (home is { } role) Nav.NavigateTo(NavigationCatalog.HomeRouteFor(role));
+    }
+
+    private void Close()
+    {
+        visible = false;
+        countdown?.Dispose();
+        countdown = null;
+        StateHasChanged();
+    }
+
+    private void OnSessionChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        countdown?.Dispose();
+        Session.OnRevertDue -= OnRevertDue;
+        Session.OnChange -= OnSessionChanged;
+    }
+}

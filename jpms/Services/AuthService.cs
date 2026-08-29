@@ -34,6 +34,16 @@ public sealed class AuthService
     /// <summary>Set only for portal-scoped subcontractor contacts (resolved server-side).</summary>
     public string? CurrentSubcontractorId { get; private set; }
 
+    /// <summary>The user's own role — their first directory-assigned role that isn't
+    /// Administrator (resolved server-side by HomeRoleSelection; CurrentRoles can't answer this
+    /// because a directory Admin role arrives expanded to every role). Null until signed in, or
+    /// on an API build that predates it.</summary>
+    public Role? CurrentHomeRole { get; private set; }
+
+    /// <summary>Per-user opt-in (Admin → Users): "Viewing as" switches default back to
+    /// CurrentHomeRole after two hours. See SessionService.</summary>
+    public bool CurrentRevertToOwnRole { get; private set; }
+
     public bool IsSignedIn => CurrentUser is not null;
 
     public event Action? OnChange;
@@ -189,10 +199,14 @@ public sealed class AuthService
             CurrentUser = null;
             CurrentRoles = Array.Empty<Role>();
             CurrentSubcontractorId = null;
+            CurrentHomeRole = null;
+            CurrentRevertToOwnRole = false;
             return;
         }
         CurrentUser = new AuthenticatedUser(response.Email, response.DisplayName);
         CurrentRoles = response.Roles;
         CurrentSubcontractorId = response.SubcontractorId;
+        CurrentHomeRole = response.HomeRole;
+        CurrentRevertToOwnRole = response.RevertToOwnRole;
     }
 }

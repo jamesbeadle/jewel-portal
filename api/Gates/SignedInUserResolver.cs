@@ -59,26 +59,13 @@ public sealed class SignedInUserResolver
         // moment), a revoked directory row must still read as "not signed in".
         if (directoryUser?.RevokedAt is not null) return null;
         var displayName = string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
-        var roles = await ResolveRolesAsync(email, cancellationToken);
+        // Raw directory roles first (they are what "the user's own role" means), then the
+        // effective expansion gates run on — both through UserRoles, so the login/set-password
+        // path and this one can never drift apart.
+        var directoryRoles = await UserRoles.DirectoryRolesAsync(context, email, cancellationToken);
+        var roles = UserRoles.Expand(directoryRoles);
 
-        return new SignedInUser(email, displayName, roles, directoryUser?.SubcontractorId);
-    }
-
-    private async Task<IReadOnlyList<Role>> ResolveRolesAsync(string email, CancellationToken cancellationToken)
-    {
-        var roles = await context.DirectoryUserRoles
-            .AsNoTracking()
-            .Where(row => row.DirectoryUserEmail == email)
-            .Select(row => (Role)row.Role)
-            .ToListAsync(cancellationToken);
-        // A directory Admin role expands to EVERY role — administrators are administered in the
-        // directory like anyone else (the old hard-coded JpmsAdministrators list is gone), but
-        // Admin keeps its carries-every-role meaning that gates across the app rely on.
-        if (roles.Contains(Role.Admin)) return Enum.GetValues<Role>();
-        // Finance Directors keep their own identity: their role list stays exactly what the
-        // directory assigns. Admin-equivalent permissions are granted where they matter via
-        // AdminGate, not by rewriting the role list (which made the client treat FDs as
-        // admins and land them on the admin dashboard). Keep in sync with the other resolver.
-        return roles;
+        return new SignedInUser(email, displayName, roles, directoryUser?.SubcontractorId,
+            HomeRoleSelection.From(directoryRoles), directoryUser?.RevertToOwnRole ?? false);
     }
 }

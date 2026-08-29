@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Auth;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Auth;
+using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -68,11 +69,13 @@ public sealed class LoginEndpoint
         var secret = await sessions.CreateAsync(email, cancellationToken);
         SessionCookie.Set(request.HttpContext.Response, secret);
 
-        var roles = await UserRoles.ForAsync(context, email, cancellationToken);
+        var directoryRoles = await UserRoles.DirectoryRolesAsync(context, email, cancellationToken);
+        var roles = UserRoles.Expand(directoryRoles);
         var directoryUser = await context.DirectoryUsers
             .FirstOrDefaultAsync(row => row.Email == email, cancellationToken);
         var displayName = string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
-        return new OkObjectResult(new AuthenticatedUserResponse(email, displayName, roles, directoryUser?.SubcontractorId));
+        return new OkObjectResult(new AuthenticatedUserResponse(email, displayName, roles, directoryUser?.SubcontractorId,
+            HomeRoleSelection.From(directoryRoles), directoryUser?.RevertToOwnRole ?? false));
     }
 
     private static UnauthorizedObjectResult Unauthorized() =>

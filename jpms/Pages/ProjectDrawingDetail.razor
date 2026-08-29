@@ -21,11 +21,23 @@ else if (!Session.IsApproved)
 else
 {
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="drawings">
-        @* Register fetch still in flight — don't flash "not found" before it lands. *@
-        <LoadGate IsLoading="@(!DrawingStore.DrawingsLoadedFor(ProjectId))" Prominent="true" Label="Loading drawing">
+        @* Register fetch still in flight — don't flash "not found" before it lands. A FAILED
+           fetch opens the gate too (loading-states rule): without that the page pulsed forever. *@
+        <LoadGate IsLoading="@(!DrawingStore.DrawingsLoadedFor(ProjectId) && !DrawingStore.DrawingsFailedFor(ProjectId))" Prominent="true" Label="Loading drawing">
         @if (drawing is null)
         {
-            <p class="text-sm text-content-subtle italic">Drawing not found.</p>
+            @if (DrawingStore.DrawingsFailedFor(ProjectId))
+            {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex flex-wrap items-center justify-between gap-3">
+                    <span>The drawing register couldn't be loaded just then.</span>
+                    <button type="button" class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 transition"
+                            @onclick="() => DrawingStore.RetryDrawings(ProjectId)">Try again</button>
+                </div>
+            }
+            else
+            {
+                <p class="text-sm text-content-subtle italic">Drawing not found.</p>
+            }
         }
         else
         {
@@ -156,8 +168,20 @@ else
             }
 
             @* Preview and revision list both read the revision set — one gate, so neither can
-               announce "no file to preview yet" while the fetch is still running. *@
-            <LoadGate IsLoading="@(!RevisionsReady)" Prominent="true" Label="Loading revisions">
+               announce "no file to preview yet" while the fetch is still running. A FAILED fetch
+               opens the gate with the retry below — "Loading revisions" pulsing forever with no
+               way out is exactly what the loading-states rules forbid (reported 2026-08-28). *@
+            <LoadGate IsLoading="@(!RevisionsReady && !RevisionsFailed)" Prominent="true" Label="Loading revisions">
+            @if (!RevisionsReady && RevisionsFailed)
+            {
+                <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex flex-wrap items-center justify-between gap-3">
+                    <span>The revisions couldn't be loaded just then.</span>
+                    <button type="button" class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 transition"
+                            @onclick="() => DrawingStore.RetryRevisions(DrawingId)">Try again</button>
+                </div>
+            }
+            else
+            {
             <div class="grid gap-6 lg:grid-cols-5">
                 <div class="lg:col-span-3">
                     @if (PreviewRevision is null)
@@ -202,6 +226,7 @@ else
                                          ProjectId="@ProjectId" DrawingId="@drawing.DrawingId" />
                 </div>
             </div>
+            }
             </LoadGate>
         }
         </LoadGate>
@@ -230,6 +255,8 @@ else
 
     // The register landing says nothing about this drawing's revisions — they are a separate fetch.
     private bool RevisionsReady => DrawingStore.RevisionsLoadedFor(DrawingId);
+
+    private bool RevisionsFailed => DrawingStore.RevisionsFailedFor(DrawingId);
 
     private bool FoldersReady => DrawingStore.FoldersLoadedFor(ProjectId);
     private IReadOnlyList<DrawingFolder> Folders => DrawingStore.FoldersFor(ProjectId);

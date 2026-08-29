@@ -8,6 +8,20 @@
 // dialog rather than the page behind it.
 window.jpmsModalAutofocus = function (panel) {
     if (!panel || !panel.isConnected) return;
+    // Never steal the keyboard mid-word (2026-08-28): a dialog that opens LATE — mounted only
+    // after a slow load lands — must not yank focus from a typing surface the user has since
+    // clicked into. A button/link/body as the active element means the user just clicked the
+    // thing that opened this dialog, so the grab is what they expect; an active text control
+    // outside the panel means they are typing somewhere else, and the courtesy backs off.
+    const active = document.activeElement;
+    if (active && !panel.contains(active)) {
+        const typingSurface =
+            active.matches?.("textarea, [contenteditable='true'], select")
+            || (active.matches?.("input")
+                && !/^(button|submit|reset|checkbox|radio|file|range|color|image)$/i
+                    .test(active.type || "text"));
+        if (typingSurface) return;
+    }
     const selector =
         "input:not([type='hidden']):not([disabled]):not([readonly]), " +
         "select:not([disabled]), textarea:not([disabled]):not([readonly]), " +

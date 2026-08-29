@@ -20,7 +20,8 @@
     <SearchSelect Options="@CandidateOptions"
                   WidthClass="w-full" InputClass="field"
                   Disabled="@(candidates.Count == 0)"
-                  Placeholder="@(loading ? "Loading bid packages…"
+                  Placeholder="@(ProjectId == "" ? "Pick the email's project in the bar above first…"
+                                 : loading ? "Loading bid packages…"
                                  : candidates.Count == 0 ? "No open bid packages on this project"
                                  : "Select the bid package they tendered for…")"
                   @bind-Value="bidPackageId" />

@@ -1,5 +1,6 @@
 @namespace Jewel.JPMS.Features.Triage
 @using Jewel.JPMS.Contracts.MailboxCompose
+@using Jewel.JPMS.Features.Drawings
 @implements IDisposable
 @inject IDrawingStore Drawings
 @inject IProgressStore Progress
@@ -70,7 +71,7 @@
                 {
                     <p class="text-xs text-content-subtle">Choose a project to list its drawing register.</p>
                 }
-                else if (!Drawings.DrawingsLoadedFor(panelProjectId))
+                else if (!Drawings.DrawingsLoadedFor(panelProjectId) || !Drawings.FoldersLoadedFor(panelProjectId))
                 {
                     <p class="text-xs text-content-subtle">Loading drawings…</p>
                 }
@@ -80,42 +81,74 @@
                 }
                 else
                 {
-                    <div class="max-h-56 overflow-y-auto divide-y divide-line">
-                        @foreach (var drawing in Drawings.DrawingsFor(panelProjectId))
+                    <input class="field w-full" type="text" placeholder="Search drawings — code, title, file name or folder…"
+                           value="@drawingSearch" @oninput="e => drawingSearch = e.Value?.ToString() ?? string.Empty" />
+
+                    <div class="max-h-64 overflow-y-auto divide-y divide-line">
+                        @if (HasDrawingSearch)
                         {
-                            <div @key="drawing.DrawingId" class="py-1.5">
-                                <button type="button" class="w-full text-left text-xs text-content hover:text-accent flex items-center gap-2"
-                                        @onclick="() => ToggleDrawing(drawing.DrawingId)">
-                                    <span class="font-mono">@DrawingNaming.Code(drawing)</span>
-                                    <span class="truncate flex-1">@DrawingNaming.Name(drawing)</span>
-                                    <span class="text-content-faint">@(expandedDrawingId == drawing.DrawingId ? "▾" : "▸")</span>
-                                </button>
-                                @if (expandedDrawingId == drawing.DrawingId)
+                            @if (DrawingSearchResults.Count == 0)
+                            {
+                                <p class="text-xs text-content-subtle py-1.5">No drawings match — try a code, title, file name or folder name.</p>
+                            }
+                            else
+                            {
+                                @foreach (var drawing in DrawingSearchResults)
                                 {
-                                    @if (!Drawings.RevisionsLoadedFor(drawing.DrawingId))
+                                    <div @key="drawing.DrawingId">@DrawingRow(drawing, 0, true)</div>
+                                }
+                            }
+                        }
+                        else
+                        {
+                            @foreach (var folderGroup in VisibleDrawingSections)
+                            {
+                                <div @key="@("folder-" + folderGroup.Key)">
+                                    @if (folderGroup.Folder is not null || HasDrawingFolders)
                                     {
-                                        <p class="text-[11px] text-content-subtle pl-4 pt-1">Loading revisions…</p>
-                                    }
-                                    else
-                                    {
-                                        <div class="pl-4 pt-1 space-y-1">
-                                            @foreach (var revision in Drawings.RevisionsFor(drawing.DrawingId))
-                                            {
-                                                <button type="button" @key="revision.DrawingRevisionId"
-                                                        class="w-full text-left text-[11px] text-content-muted hover:text-accent flex items-center gap-2"
-                                                        @onclick="() => AddDrawingAsync(revision)">
-                                                    <span class="font-medium">@DrawingNaming.RevisionText(revision.RevisionLabel)</span>
-                                                    <span class="truncate flex-1">@revision.FileName</span>
-                                                    <span>@(revision.ApprovalStatus == DrawingApprovalStatus.Approved ? "Approved" : revision.ApprovalStatus == DrawingApprovalStatus.Archived ? "Archived" : "Unapproved")</span>
-                                                    <span class="text-content-faint">@SizeLabel(revision.FileSizeBytes ?? 0)</span>
-                                                </button>
-                                            }
+                                        <div class="flex items-center gap-2 py-1.5" style="@IndentStyle(folderGroup.Depth)">
+                                            <input type="checkbox" checked="@FolderFullySelected(folderGroup)"
+                                                   title="Tick every drawing in this folder, sub-folders included"
+                                                   @onchange="() => ToggleFolderSelection(folderGroup)" />
+                                            <button type="button" class="flex-1 min-w-0 text-left text-xs text-content font-semibold hover:text-accent flex items-center gap-1.5"
+                                                    @onclick="() => ToggleFolderCollapse(folderGroup.Key)">
+                                                <span class="text-content-faint">@(IsFolderCollapsed(folderGroup.Key) ? "▸" : "▾")</span>
+                                                <span class="truncate">@(folderGroup.Folder?.Name ?? "Ungrouped")</span>
+                                                <span class="text-content-faint font-normal tabular-nums" title="Drawings in this folder, sub-folders included">@FolderSubtreeCount(folderGroup)</span>
+                                            </button>
                                         </div>
                                     }
-                                }
-                            </div>
+                                    @if (!IsFolderCollapsed(folderGroup.Key))
+                                    {
+                                        @foreach (var drawing in folderGroup.Drawings)
+                                        {
+                                            <div @key="drawing.DrawingId">@DrawingRow(drawing, folderGroup.Folder is null && !HasDrawingFolders ? 0 : folderGroup.Depth + 1, false)</div>
+                                        }
+                                    }
+                                </div>
+                            }
                         }
                     </div>
+
+                    <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                        <button type="button"
+                                class="inline-flex items-center gap-1 rounded-lg border border-accent text-accent bg-accent/5 hover:bg-accent/10 px-2.5 py-1.5 disabled:opacity-60"
+                                disabled="@(SelectedDrawingCount == 0 || attachingSelected)" @onclick="AttachSelectedDrawingsAsync">
+                            @(attachingSelected ? "Attaching…" : $"Attach {SelectedDrawingCount} selected")
+                        </button>
+                        @if (SelectedDrawingCount > 0 && !attachingSelected)
+                        {
+                            <button type="button" class="text-content-subtle hover:text-content" @onclick="ClearDrawingSelection">Clear selection</button>
+                        }
+                        @if (attachNote is not null)
+                        {
+                            <span class="text-content-subtle">@attachNote</span>
+                        }
+                    </div>
+                    <p class="text-[11px] text-content-faint">
+                        Tick drawings (or a whole folder) and press Attach — each drawing's approved file is used, or its latest upload when nothing is approved.
+                        Expand a drawing to tick a specific revision instead.
+                    </p>
                 }
             }
             else if (openPanel == Panel.Photos)
@@ -258,6 +291,23 @@
     private string? expandedDrawingId;
     private string? oversizeNote;
 
+    // Drawings panel state: the register rendered as its folder tree (reusing DrawingFolderTree,
+    // the same nesting the register table draws), a search box that flattens matches, and a
+    // multi-select basket. Ticking a drawing means "its best file" (approved, else latest upload),
+    // resolved when Attach is pressed; expanding a drawing lets a specific revision be ticked.
+    private string drawingSearch = "";
+    private readonly HashSet<string> collapsedFolderIds = new();
+    private readonly HashSet<string> selectedDrawingIds = new();
+    private readonly Dictionary<string, DrawingRevision> selectedRevisionsById = new();
+    private bool attachingSelected;
+    private string? attachNote;
+    private DrawingFolderTree drawingTree = new(Array.Empty<DrawingFolder>());
+    private const int DrawingResultCap = 100;
+    private const string UngroupedFolderKey = "";
+    private const double DrawingIndentRem = 1.25;
+
+    private sealed record DrawingGroup(string Key, DrawingFolder? Folder, int Depth, IReadOnlyList<Drawing> Drawings);
+
     // System-documents panel state. Records are fetched once per project for the composer's life
     // (a picker list, not a live view); absence from the dictionary is the honest "not fetched
     // yet", so the panel shows Loading rather than an empty answer it hasn't got.
@@ -295,12 +345,18 @@
             panelProjectId = ProjectId!;
     }
 
-    private void StoreChanged() => InvokeAsync(StateHasChanged);
+    private void StoreChanged() => InvokeAsync(() =>
+    {
+        // Folders may have just landed (or changed elsewhere) — rebuild the nesting they define.
+        RebuildDrawingTree();
+        StateHasChanged();
+    });
 
     private async Task TogglePanel(Panel panel)
     {
         openPanel = openPanel == panel ? Panel.None : panel;
         oversizeNote = null;
+        if (panel is Panel.Drawings) ResetDrawingPanelState(); // opening starts clean; closing drops a stale basket
         if (openPanel is Panel.Records) recordsFailedFor = null; // reopening retries a failed load
         if (string.IsNullOrEmpty(panelProjectId)) return;
         if (openPanel is Panel.Drawings) Drawings.Refresh(panelProjectId);
@@ -311,7 +367,7 @@
     private async Task OnPanelProjectChanged(ChangeEventArgs e)
     {
         panelProjectId = e.Value?.ToString() ?? "";
-        expandedDrawingId = null;
+        ResetDrawingPanelState(); // a basket of one project's drawings must not survive into another
         if (string.IsNullOrEmpty(panelProjectId)) return;
         if (openPanel == Panel.Drawings) Drawings.Refresh(panelProjectId);
         if (openPanel == Panel.Photos) Progress.Refresh(panelProjectId);
@@ -340,8 +396,261 @@
         }
     }
 
-    private void ToggleDrawing(string drawingId) =>
+    private void ToggleDrawing(string drawingId)
+    {
         expandedDrawingId = expandedDrawingId == drawingId ? null : drawingId;
+        // Expanding is the ask: the "Loading revisions…" row never reads RevisionsFor (only the
+        // loaded branch does), so without this kick the fetch never started and the row said
+        // "Loading revisions…" forever (reported 2026-08-28). The read fires the one-time
+        // background load; the store's OnChange re-renders when it lands.
+        if (expandedDrawingId is not null) _ = Drawings.RevisionsFor(expandedDrawingId);
+    }
+
+    // ---- Drawings panel: tree, search and the multi-select basket ----
+
+    private void ResetDrawingPanelState()
+    {
+        drawingSearch = "";
+        collapsedFolderIds.Clear();
+        expandedDrawingId = null;
+        ClearDrawingSelection();
+        RebuildDrawingTree();
+    }
+
+    private void RebuildDrawingTree() =>
+        drawingTree = new DrawingFolderTree(
+            string.IsNullOrEmpty(panelProjectId) ? Array.Empty<DrawingFolder>() : Drawings.FoldersFor(panelProjectId));
+
+    private bool HasDrawingFolders => drawingTree.Nodes.Count > 0;
+
+    // Mirrors the register table's grouping: folders in tree order, each drawing under its folder,
+    // unknown-folder drawings safely in Ungrouped (last). Folders with nothing anywhere beneath
+    // them are noise in a picker and are skipped — unlike the register, nothing is managed here.
+    private IEnumerable<DrawingGroup> DrawingGroups
+    {
+        get
+        {
+            var knownFolderIds = drawingTree.Nodes.Select(node => node.Folder.DrawingFolderId).ToHashSet();
+            var byFolder = Drawings.DrawingsFor(panelProjectId)
+                .GroupBy(drawing => drawing.DrawingFolderId is { } folderId && knownFolderIds.Contains(folderId) ? folderId : UngroupedFolderKey)
+                .ToDictionary(group => group.Key, group => (IReadOnlyList<Drawing>)group.ToList());
+
+            foreach (var node in drawingTree.Nodes)
+            {
+                if (!drawingTree.SubtreeIds(node.Folder.DrawingFolderId).Any(byFolder.ContainsKey)) continue;
+                byFolder.TryGetValue(node.Folder.DrawingFolderId, out var drawings);
+                yield return new DrawingGroup(node.Folder.DrawingFolderId, node.Folder, node.Depth, drawings ?? Array.Empty<Drawing>());
+            }
+
+            if (byFolder.TryGetValue(UngroupedFolderKey, out var ungrouped) && ungrouped.Count > 0)
+                yield return new DrawingGroup(UngroupedFolderKey, null, 0, ungrouped);
+        }
+    }
+
+    // A collapsed folder hides its whole sub-tree, not just its own drawings.
+    private IEnumerable<DrawingGroup> VisibleDrawingSections =>
+        DrawingGroups.Where(group => !drawingTree.HasAncestor(group.Folder?.DrawingFolderId, collapsedFolderIds));
+
+    private bool HasDrawingSearch => drawingSearch.Trim().Length > 0;
+
+    private IReadOnlyList<Drawing> DrawingSearchResults
+    {
+        get
+        {
+            var needle = drawingSearch.Trim();
+            return Drawings.DrawingsFor(panelProjectId)
+                .Where(drawing => MatchesDrawingSearch(drawing, needle))
+                .Take(DrawingResultCap)
+                .ToList();
+        }
+    }
+
+    // Folder path counts as a match, so searching "electrical" finds everything filed under an
+    // Electrical folder even when the file names don't say so.
+    private bool MatchesDrawingSearch(Drawing drawing, string needle) =>
+        DrawingNaming.Code(drawing).Contains(needle, StringComparison.OrdinalIgnoreCase)
+        || DrawingNaming.Name(drawing).Contains(needle, StringComparison.OrdinalIgnoreCase)
+        || (drawing.LatestFileName?.Contains(needle, StringComparison.OrdinalIgnoreCase) ?? false)
+        || FolderPathFor(drawing).Contains(needle, StringComparison.OrdinalIgnoreCase);
+
+    private string FolderPathFor(Drawing drawing) => drawingTree.PathOf(drawing.DrawingFolderId);
+
+    private IReadOnlyList<Drawing> SubtreeDrawingsOf(DrawingGroup group)
+    {
+        if (group.Folder is null) return group.Drawings;
+        var ids = drawingTree.SubtreeIds(group.Folder.DrawingFolderId).ToHashSet();
+        return Drawings.DrawingsFor(panelProjectId)
+            .Where(drawing => drawing.DrawingFolderId is { } folderId && ids.Contains(folderId))
+            .ToList();
+    }
+
+    private int FolderSubtreeCount(DrawingGroup group) => SubtreeDrawingsOf(group).Count;
+
+    private bool FolderFullySelected(DrawingGroup group)
+    {
+        var subtree = SubtreeDrawingsOf(group);
+        return subtree.Count > 0 && subtree.All(drawing => selectedDrawingIds.Contains(drawing.DrawingId));
+    }
+
+    private void ToggleFolderSelection(DrawingGroup group)
+    {
+        var subtree = SubtreeDrawingsOf(group);
+        if (subtree.Count == 0) return;
+        if (subtree.All(drawing => selectedDrawingIds.Contains(drawing.DrawingId)))
+            foreach (var drawing in subtree) selectedDrawingIds.Remove(drawing.DrawingId);
+        else
+            foreach (var drawing in subtree) selectedDrawingIds.Add(drawing.DrawingId);
+    }
+
+    private bool IsFolderCollapsed(string key) => collapsedFolderIds.Contains(key);
+
+    private void ToggleFolderCollapse(string key)
+    {
+        if (!collapsedFolderIds.Add(key)) collapsedFolderIds.Remove(key);
+    }
+
+    private static string IndentStyle(int depth) =>
+        depth <= 0 ? "" : $"padding-left: {depth * DrawingIndentRem}rem";
+
+    private void ToggleDrawingSelection(string drawingId)
+    {
+        if (!selectedDrawingIds.Add(drawingId)) selectedDrawingIds.Remove(drawingId);
+        attachNote = null;
+    }
+
+    private void ToggleRevisionSelection(DrawingRevision revision)
+    {
+        if (!selectedRevisionsById.Remove(revision.DrawingRevisionId))
+            selectedRevisionsById[revision.DrawingRevisionId] = revision;
+        attachNote = null;
+    }
+
+    private int SelectedDrawingCount => selectedDrawingIds.Count + selectedRevisionsById.Count;
+
+    private void ClearDrawingSelection()
+    {
+        selectedDrawingIds.Clear();
+        selectedRevisionsById.Clear();
+        attachNote = null;
+    }
+
+    private async Task AttachSelectedDrawingsAsync()
+    {
+        if (attachingSelected || SelectedDrawingCount == 0) return;
+        attachingSelected = true;
+        attachNote = null;
+        try
+        {
+            // One file per revision however it was ticked — via its drawing, its folder, or the
+            // revision itself — and never one already on the email.
+            var seenRevisionIds = Attachments
+                .Where(a => a.Source == ComposeAttachmentSource.Drawing)
+                .Select(a => a.Id)
+                .ToHashSet();
+            var additions = new List<ComposeDraftAttachment>();
+            var withoutFile = 0;
+            var failedLoads = new HashSet<string>();
+
+            foreach (var drawingId in selectedDrawingIds.ToList())
+            {
+                await Drawings.EnsureRevisionsNowAsync(drawingId, CancellationToken.None);
+                if (!Drawings.RevisionsLoadedFor(drawingId)) { failedLoads.Add(drawingId); continue; }
+                var best = BestRevision(Drawings.RevisionsFor(drawingId));
+                if (best is null) { withoutFile++; continue; }
+                if (seenRevisionIds.Add(best.DrawingRevisionId))
+                    additions.Add(ComposeDraftAttachment.FromDrawing(best.DrawingRevisionId, best.FileName, best.FileSizeBytes ?? 0));
+            }
+
+            foreach (var revision in selectedRevisionsById.Values)
+            {
+                if (seenRevisionIds.Add(revision.DrawingRevisionId))
+                    additions.Add(ComposeDraftAttachment.FromDrawing(revision.DrawingRevisionId, revision.FileName, revision.FileSizeBytes ?? 0));
+            }
+
+            if (additions.Count > 0)
+                await AttachmentsChanged.InvokeAsync(Attachments.Concat(additions).ToList());
+
+            // Attached and file-less drawings leave the basket; failed loads STAY ticked so
+            // "press Attach again" retries exactly them.
+            selectedDrawingIds.Clear();
+            foreach (var drawingId in failedLoads) selectedDrawingIds.Add(drawingId);
+            selectedRevisionsById.Clear();
+
+            attachNote = (withoutFile, failedLoads.Count) switch
+            {
+                (0, 0) => null,
+                (_, 0) => $"{withoutFile} ticked {(withoutFile == 1 ? "drawing has" : "drawings have")} no uploaded file yet — nothing to attach there.",
+                (0, _) => $"{failedLoads.Count} {(failedLoads.Count == 1 ? "drawing" : "drawings")} couldn't be checked for files — still ticked, press Attach again.",
+                _ => $"{withoutFile + failedLoads.Count} ticked drawings couldn't be attached — no file yet, or the file list couldn't be loaded (those stay ticked)."
+            };
+        }
+        finally
+        {
+            attachingSelected = false;
+        }
+    }
+
+    /// <summary>The file a ticked drawing means: its approved revision, else its latest
+    /// non-archived upload, else its latest upload of any kind; null when nothing is uploaded.</summary>
+    private static DrawingRevision? BestRevision(IReadOnlyList<DrawingRevision> revisions) =>
+        revisions.Where(r => r.ApprovalStatus == DrawingApprovalStatus.Approved).OrderByDescending(r => r.ReceivedAt).FirstOrDefault()
+        ?? revisions.Where(r => r.ApprovalStatus != DrawingApprovalStatus.Archived).OrderByDescending(r => r.ReceivedAt).FirstOrDefault()
+        ?? revisions.OrderByDescending(r => r.ReceivedAt).FirstOrDefault();
+
+    // One drawing row — a tick box, the drawing's identity (with its folder path when the flat
+    // search list needs it), what "its file" currently means, and the revisions expander.
+    private RenderFragment DrawingRow(Drawing drawing, int depth, bool showPath) => @<text>
+        <div class="flex items-center gap-2 py-1.5" style="@IndentStyle(depth)">
+            <input type="checkbox" checked="@selectedDrawingIds.Contains(drawing.DrawingId)"
+                   title="Tick to attach this drawing's file"
+                   @onchange="() => ToggleDrawingSelection(drawing.DrawingId)" />
+            <button type="button" class="flex-1 min-w-0 text-left text-xs text-content hover:text-accent flex items-center gap-2"
+                    title="Show this drawing's revisions" @onclick="() => ToggleDrawing(drawing.DrawingId)">
+                <span class="font-mono">@DrawingNaming.Code(drawing)</span>
+                <span class="truncate flex-1">@DrawingNaming.Name(drawing)</span>
+                @if (showPath && FolderPathFor(drawing) is { Length: > 0 } path)
+                {
+                    <span class="text-content-faint truncate max-w-[10rem]" title="@path">@path</span>
+                }
+                @if (DrawingNaming.ApprovedRevisionText(drawing) is { } approved)
+                {
+                    <span class="text-content-faint whitespace-nowrap">@approved</span>
+                }
+                <span class="text-content-faint">@(expandedDrawingId == drawing.DrawingId ? "▾" : "▸")</span>
+            </button>
+        </div>
+        @if (expandedDrawingId == drawing.DrawingId)
+        {
+            @if (Drawings.RevisionsFailedFor(drawing.DrawingId))
+            {
+                <button type="button" class="text-[11px] text-negative hover:underline pb-1 text-left"
+                        style="@IndentStyle(depth + 1)" @onclick="() => Drawings.RetryRevisions(drawing.DrawingId)">
+                    The revisions couldn't be loaded — press to try again.
+                </button>
+            }
+            else if (!Drawings.RevisionsLoadedFor(drawing.DrawingId))
+            {
+                <p class="text-[11px] text-content-subtle pb-1" style="@IndentStyle(depth + 1)">Loading revisions…</p>
+            }
+            else
+            {
+                <div class="pb-1.5 space-y-1" style="@IndentStyle(depth + 1)">
+                    @foreach (var revision in Drawings.RevisionsFor(drawing.DrawingId))
+                    {
+                        <label @key="revision.DrawingRevisionId"
+                               class="flex items-center gap-2 text-[11px] text-content-muted cursor-pointer hover:text-content">
+                            <input type="checkbox" checked="@selectedRevisionsById.ContainsKey(revision.DrawingRevisionId)"
+                                   @onchange="() => ToggleRevisionSelection(revision)" />
+                            <span class="font-medium">@DrawingNaming.RevisionText(revision.RevisionLabel)</span>
+                            <span class="truncate flex-1">@revision.FileName</span>
+                            <span>@(revision.ApprovalStatus == DrawingApprovalStatus.Approved ? "Approved" : revision.ApprovalStatus == DrawingApprovalStatus.Archived ? "Archived" : "Unapproved")</span>
+                            <span class="text-content-faint">@SizeLabel(revision.FileSizeBytes ?? 0)</span>
+                        </label>
+                    }
+                </div>
+            }
+        }
+    </text>;
 
     private async Task OnFilesPicked(InputFileChangeEventArgs e)
     {
@@ -358,9 +667,6 @@
         }
         await AttachmentsChanged.InvokeAsync(added);
     }
-
-    private Task AddDrawingAsync(DrawingRevision revision) =>
-        AddAsync(ComposeDraftAttachment.FromDrawing(revision.DrawingRevisionId, revision.FileName, revision.FileSizeBytes ?? 0));
 
     private Task AddPhotoAsync(ProgressPhoto photo) =>
         AddAsync(ComposeDraftAttachment.FromProgressPhoto(photo.ProgressPhotoId, photo.FileName, photo.FileSizeBytes));

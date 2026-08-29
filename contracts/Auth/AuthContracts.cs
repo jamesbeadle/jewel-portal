@@ -22,9 +22,15 @@ public sealed record SendPasswordResetRequest(string Email);
 public sealed record PasswordResetAcknowledgement(string Message);
 
 /// <summary>The signed-in user, returned by /api/auth/me, /api/auth/login and set-password.
-/// SubcontractorId is set only for portal-scoped subcontractor contacts.</summary>
+/// SubcontractorId is set only for portal-scoped subcontractor contacts.
+/// Roles is the EFFECTIVE list (a directory Admin role expands to every role), so it cannot say
+/// who the user really is — HomeRole is that answer: their first directory-assigned role that
+/// isn't Administrator (HomeRoleSelection.From). RevertToOwnRole is the per-user opt-in
+/// (administered on Admin → Users) for the "Viewing as" switch defaulting back to HomeRole
+/// after two hours.</summary>
 public sealed record AuthenticatedUserResponse(
-    string Email, string DisplayName, IReadOnlyList<Role> Roles, string? SubcontractorId = null);
+    string Email, string DisplayName, IReadOnlyList<Role> Roles, string? SubcontractorId = null,
+    Role? HomeRole = null, bool RevertToOwnRole = false);
 
 /// <summary>Result of creating an invite or a reset — includes the copyable link for the admin to send.</summary>
 public sealed record InviteResult(string Email, string DisplayName, string InviteLink, DateTimeOffset ExpiresAt);

@@ -111,6 +111,11 @@ public static class SidebarFolders
                 // subcontractor email in the Control Centre; each reads its mail back live by tag.
                 new SidebarRow(new NavigationItem("Defects", "/projects/{project}/defects"),
                     DesktopNavigation.DirectorRoles),
+                // The inventory register (INV-#### references) — goods held for the job, product
+                // + location details. Items are added here or from a supplier email in the
+                // Control Centre; each reads its mail back live by tag.
+                new SidebarRow(new NavigationItem("Inventory", "/projects/{project}/inventory"),
+                    DesktopNavigation.DirectorRoles),
                 // The statutory sign-off trail — the case with the building control body and its
                 // BCI-#### inspection stages (plus each inspection's own detail page).
                 new SidebarRow(new NavigationItem("Building Control", "/projects/{project}/building-control"),

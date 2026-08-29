@@ -21,7 +21,9 @@
     <SearchSelect Options="@CandidateOptions"
                   WidthClass="w-full" InputClass="field"
                   Disabled="@(Candidates.Count == 0)"
-                  Placeholder="@(Candidates.Count == 0 ? $"No {CandidateNoun} on this project" : $"Select a {CandidateNoun}…")"
+                  Placeholder="@(ProjectId == "" ? "Pick the email's project in the bar above first…"
+                                 : Candidates.Count == 0 ? $"No {CandidateNoun} on this project"
+                                 : $"Select a {CandidateNoun}…")"
                   @bind-Value="requestId" />
 
     @if (Kind == SystemActionKind.CloseRfi)

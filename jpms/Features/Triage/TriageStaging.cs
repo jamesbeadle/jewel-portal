@@ -71,6 +71,12 @@ public sealed class StagedRecordCreate
     // Who the remediation is chased with — pre-filled from the email's sender, freely editable.
     public string DefectAssignedTo { get; set; } = "";
 
+    // ---- Inventory fields (Kind == Inventory) — mirroring AddInventoryItem's surface. Title is
+    // the product name and Description its details (shared with the request form's fields, like
+    // the defect); the location pair is inventory's own. ----
+    public string InventoryLocation { get; set; } = "";
+    public string InventoryLocationDetails { get; set; } = "";
+
     // ---- Tender enquiry (Kind == TenderEnquiry) — the enquiry's details plus the Lead project it
     //      creates; kept as its own draft so this class stays readable. ----
     public StagedTenderEnquiryDraft TenderEnquiry { get; } = new();
@@ -88,6 +94,7 @@ public sealed class StagedRecordCreate
         StagedRecordKind.BidPackage => "new bid package",
         StagedRecordKind.WorkOrder => "new work order",
         StagedRecordKind.Defect => "new defect",
+        StagedRecordKind.Inventory => "new inventory item",
         StagedRecordKind.TenderEnquiry => "new tender enquiry",
         StagedRecordKind.CalendarEvent => "new calendar event",
         StagedRecordKind.BuildingControlInspection => "new building control inspection",
@@ -157,6 +164,7 @@ public sealed class StagedRecordCreate
         get
         {
             if (Kind == StagedRecordKind.Defect) return DefectProblem;
+            if (Kind == StagedRecordKind.Inventory) return InventoryProblem;
             // The footer can't see the triage bar; the page's own gate re-checks the project.
             if (Kind == StagedRecordKind.TenderEnquiry) return TenderEnquiry.Problem(isProjectSet: true);
             if (Kind == StagedRecordKind.CalendarEvent) return CalendarEvent.Problem;
@@ -171,6 +179,7 @@ public sealed class StagedRecordCreate
     {
         StagedRecordKind.BidPackage => "create the bid package and tag this email to it",
         StagedRecordKind.Defect => "raise the defect and tag this email to it",
+        StagedRecordKind.Inventory => "add the inventory item and tag this email to it",
         StagedRecordKind.TenderEnquiry => TenderEnquiry.Outcome,
         StagedRecordKind.CalendarEvent => CalendarEvent.Outcome,
         StagedRecordKind.BuildingControlInspection => BuildingControlInspection.Outcome,
@@ -197,6 +206,22 @@ public sealed class StagedRecordCreate
         }
     }
 
+    /// <summary>
+    /// What still stops the staged inventory item being added — null when it is complete. Shared
+    /// by the form (inline hint) and the page's Apply (hard gate), so the wording is decided
+    /// once. Mirrors the server's own rule (AddInventoryItemValidation: a product name is
+    /// required).
+    /// </summary>
+    public string? InventoryProblem
+    {
+        get
+        {
+            if (Kind != StagedRecordKind.Inventory) return null;
+            if (string.IsNullOrWhiteSpace(Title)) return "Name the product.";
+            return null;
+        }
+    }
+
     public static decimal? ParseDecimal(string text) =>
         decimal.TryParse(text, System.Globalization.NumberStyles.Any,
             System.Globalization.CultureInfo.InvariantCulture, out var value)
@@ -217,7 +242,7 @@ public sealed class StagedWorkOrderLine
     public decimal? Amount => StagedRecordCreate.ParseDecimal(AmountText);
 }
 
-public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect, TenderEnquiry, CalendarEvent, BuildingControlInspection }
+public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect, TenderEnquiry, CalendarEvent, BuildingControlInspection, Inventory }
 
 /// <summary>
 /// A record ALREADY raised from the selected email — by System Actions' "Create now", or by the

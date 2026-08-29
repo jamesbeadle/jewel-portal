@@ -789,11 +789,6 @@
             else
             {
                 <div class="panel p-5 space-y-4 relative">
-                    @if (busy)
-                    {
-                        <JewelSpinner Overlay="true" Label="@busyLabel" />
-                    }
-
                     @MessageHeader
 
                     @* The filing this email already carries — only ever present on a queue email
@@ -902,10 +897,6 @@
             else
             {
                             <div class="panel p-5 space-y-4 relative">
-                                @if (busy)
-                                {
-                                    <JewelSpinner Overlay="true" Label="@busyLabel" />
-                                }
                                 @if (actionError is not null)
                                 {
                                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
@@ -937,10 +928,6 @@
             else
             {
                             <div class="panel p-5 space-y-4 relative">
-                                @if (busy)
-                                {
-                                    <JewelSpinner Overlay="true" Label="@busyLabel" />
-                                }
                                 @if (actionError is not null)
                                 {
                                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
@@ -986,8 +973,9 @@
                                         <div class="space-y-3">
                                             @* Each type shows the pathway it files under. Every type is offered
                                                whatever the thread's pathway (the hard client wall was removed
-                                               2026-08-21) — a link that would add a second pathway gets a heads-up
-                                               below and the server's cross-filing confirm on submit. *@
+                                               2026-08-21) — a link that would add a second pathway simply files
+                                               the thread under both (the heads-up below says so; the confirm
+                                               step was retired 2026-08-28). *@
                                             <select class="field" value="@((int)linkRecordType)" @onchange="OnLinkRecordTypeChanged">
                                                 @foreach (var recordType in TaggedLinkTypeOptions)
                                                 {
@@ -1022,24 +1010,17 @@
                                             }
 
                                             @* The cross-filing heads-up: a type whose pathway differs from the thread's
-                                               would file it under both, which the server asks to confirm. Applies to any
-                                               crossing — Client↔Subcontractor/Internal included, now the wall is gone. *@
+                                               files it under both — allowed without a confirm (2026-08-28), so this is
+                                               purely informational. Applies to any crossing — Client↔Subcontractor/
+                                               Internal included, now the wall is gone. *@
                                             @if (FixedPathway is { } fixedPw && ImpliedPathway(linkRecordType) is { } linkPw && linkPw != fixedPw)
                                             {
-                                                <p class="text-xs text-amber-600">This would file the thread under @PathwayLabel(linkPw) as well as @PathwayLabel(fixedPw) — you'll be asked to confirm.</p>
+                                                <p class="text-xs text-content-subtle">This files the thread under @PathwayLabel(linkPw) as well as @PathwayLabel(fixedPw).</p>
                                             }
 
                                             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRecordId))" @onclick="DoAddTagLink">
                                                 Link to selected record
                                             </button>
-
-                                            @if (crossFileMessage is not null)
-                                            {
-                                                <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 space-y-2">
-                                                    <p class="text-sm text-content">@crossFileMessage</p>
-                                                    <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="DoAddTagLinkConfirmCross">File under both anyway</button>
-                                                </div>
-                                            }
                                         </div>
                                     </div>
                                 </div>
@@ -1087,11 +1068,6 @@
         email swaps the bar's subject; the windows carry on where they were.
     *@
     RenderFragment TriageBarContent =@<div class="panel px-4 py-3 mb-3 relative space-y-3">
-        @if (busy)
-        {
-            <JewelSpinner Overlay="true" Label="@busyLabel" />
-        }
-
         <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div class="min-w-0 max-w-full xl:max-w-sm">
                 <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Dealing with</p>
@@ -1152,20 +1128,6 @@
                 Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Applied by the Apply button.
             </p>
         }
-        @if (crossFileMessage is not null)
-        {
-            <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 space-y-2">
-                <p class="text-sm text-content">@crossFileMessage</p>
-                @* Re-runs whichever act hit the confirm — the Apply, or System Actions' Create
-                   now — with consent. The server pre-flights the check before anything persists,
-                   so the re-run creates exactly one record either way. *@
-                <button type="button" class="btn-secondary text-xs" disabled="@busy"
-                        @onclick="() => crossFileRetryIsCreateNow ? DoCreateStagedNow(allowCrossPathway: true) : DoApplyAll(pendingSaveDraft, allowCrossPathway: true)">
-                    File under both anyway
-                </button>
-            </div>
-        }
-
         @* ---- The one action bar: whatever is set up here and in the windows below — a reply,
                to-dos, a record filing — is applied together, in one click. ---- *@
         <div class="pt-2 border-t border-line flex flex-wrap items-center gap-3">
@@ -1181,18 +1143,18 @@
                 @* The disable reason stands NEXT TO the button it disables (2026-08-27: "I
                    shouldn't have to go around checking whether I've done things — the UX should
                    guide me"). A tooltip on a disabled button is invisible; this isn't. *@
-                @if (!busy && PendingSummary is not null && TriageDecisionsMissing)
+                @if (!busy && PendingSummary is not null && (TriageDecisionsMissing || DocTriageProjectMissing))
                 {
-                    <p class="text-xs text-amber-600 max-w-xs text-right">@DecisionsMissingHint</p>
+                    <p class="text-xs text-amber-600 max-w-xs text-right">@(TriageDecisionsMissing ? DecisionsMissingHint : DocTriageProjectMissingHint)</p>
                 }
                 <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
-                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null || TriageDecisionsMissing)"
+                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null || TriageDecisionsMissing || DocTriageProjectMissing)"
                         @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
                     @ApplyButtonLabel
                 </button>
                 @if (OutboxSendCount > 0)
                 {
-                    <button type="button" class="btn-secondary" disabled="@(busy || TriageDecisionsMissing)" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
+                    <button type="button" class="btn-secondary" disabled="@(busy || TriageDecisionsMissing || DocTriageProjectMissing)" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
                             title="Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it">
                         @(OutboxSendCount == 1 ? "Save reply as draft" : "Save replies as drafts")
                     </button>
@@ -1205,10 +1167,6 @@
        queue can be applied on its own (decision 2026-08-12) — the one Apply, minus the per-email
        decisions that need a selection. *@
     RenderFragment OutboxOnlyBarContent =@<div class="panel px-4 py-3 mb-3 relative space-y-3">
-        @if (busy)
-        {
-            <JewelSpinner Overlay="true" Label="@busyLabel" />
-        }
         @if (actionError is not null)
         {
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
@@ -1342,7 +1300,20 @@ else
         remembers where it was — data is gathered by jumping around windows, side by side, instead
         of through modals. On mobile there is one window; the icons still carry the full context.
     *@
-    <section class="px-3 md:px-4 pt-3 pb-4 h-[calc(100dvh-5.25rem)] min-h-[34rem] flex flex-col">
+    <section class="px-3 md:px-4 pt-3 pb-4 h-[calc(100dvh-5.25rem)] min-h-[34rem] flex flex-col relative">
+        @* One busy overlay for the WHOLE workspace — bar and both windows. It used to sit on the
+           triage bar and the email detail panel only, so pressing "Create now" from a pathway
+           pane left the pane you'd just clicked (and everything else below the bar) uncovered —
+           only "the top bit" dimmed. Any in-flight action (Apply, Create now, discard, restore,
+           tag changes) covers everything the action might touch. *@
+        @if (busy)
+        {
+            @* z-30 wrapper: the inbox pane's sticky tab bar is z-10 (later in the DOM, so it
+               would paint over a bare z-10 spinner) and the tag-filter dropdown is z-20. *@
+            <div class="absolute inset-0 z-30">
+                <JewelSpinner Overlay="true" Label="@busyLabel" />
+            </div>
+        }
         @* The selected email is global to both windows, so its bar sits above the split. *@
         @if (view == QueueView.Active && selected is not null)
         {
@@ -1510,7 +1481,7 @@ else
     // Variation — one record, one number, per the 2026-07-23 unification.
     private static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase, RecordType.Inventory
     };
 
     // What each pathway's "Link to existing" offers (the pathway filters the actions — the plan's
@@ -1533,18 +1504,20 @@ else
         RecordType.BidPackageInvite, RecordType.WorkOrder
     };
     private static readonly RecordType[] InternalLinkTypes = { RecordType.Todo, RecordType.CalendarEvent };
+    // Inventory (2026-08-28) is the Supplier pathway's first linkable record type — goods for the
+    // job, raised from a supplier email or on the project's Inventory tab.
+    private static readonly RecordType[] SupplierLinkTypes = { RecordType.Inventory };
 
     // The Tagged tab's "link to another record" pool: since the hard client wall was removed
     // (2026-08-21) every type is offered whatever the thread's pathway. Each option's label shows
     // the pathway it files under, and a link that would file the thread under a second pathway
-    // goes through the server's cross-filing confirm ("File under both anyway").
+    // simply files it under both (the confirm step was retired 2026-08-28).
 
     private IReadOnlyList<RecordType> QueueLinkTypeOptions => pathway switch
     {
         TriagePathway.Client        => ClientLinkTypes,
         TriagePathway.Subcontractor => SubcontractorLinkTypes,
-        // Suppliers have no linkable record types yet — their side is the SupComms registers.
-        TriagePathway.Supplier      => Array.Empty<RecordType>(),
+        TriagePathway.Supplier      => SupplierLinkTypes,
         TriagePathway.Internal      => InternalLinkTypes,
         _                           => Array.Empty<RecordType>()
     };
@@ -1560,7 +1533,7 @@ else
             or RecordType.Scheduling or RecordType.Lad or RecordType.TenderEnquiry => TriagePathway.Client,
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
-        RecordType.SupplierComms => TriagePathway.Supplier,
+        RecordType.SupplierComms or RecordType.Inventory => TriagePathway.Supplier,
         RecordType.InternalComms => TriagePathway.Internal,
         _ => null
     };
@@ -1575,6 +1548,7 @@ else
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => "Subcontractor",
         RecordType.SupplierComms    => "Supplier",
+        RecordType.Inventory        => "Supplier",
         RecordType.InternalComms    => "Internal",
         RecordType.CostCentre       => "Client or Subcontractor",
         RecordType.Todo             => "Neutral",
@@ -1607,6 +1581,7 @@ else
         RecordType.SubcontractorComms => "Subcontractor communication",
         RecordType.SupplierComms    => "Supplier communication",
         RecordType.InternalComms    => "Internal communication",
+        RecordType.Inventory        => "Inventory item",
         _                           => type.ToString()
     };
 
@@ -1702,24 +1677,17 @@ else
     // a union rather than the intersection a user would expect — picking one clears the other.
     private string? pathwayBucketFilter;
 
-    // Cross-filing confirm (plan §2.3): when the server answers a link with its "Confirm the
-    // cross-filing" rejection, the message is shown with a "File under both anyway" button that
-    // retries the same link(s) with AllowCrossPathway. Since the hard client wall was removed
-    // (2026-08-21) EVERY pathway crossing — Client↔Subcontractor/Internal included — takes this
-    // confirm route; no crossing is a dead end any more.
-    private string? crossFileMessage;
-
-    // Which act the amber banner's "File under both anyway" re-runs: false = the Apply (with
-    // pendingSaveDraft), true = System Actions' Create now. Reset with the message itself.
-    private bool crossFileRetryIsCreateNow;
+    // Cross-filing (plan §2.3): a pathway crossing — Client↔Subcontractor/Internal included —
+    // files the thread under both sides, no confirm asked (retired 2026-08-28: the pathway panes
+    // make the second filing an explicit, visible choice, so the old "Confirm the cross-filing" /
+    // "File under both anyway" round-trip was a second ask for a decision already made on
+    // screen). Every link command is sent with AllowCrossPathway: true, which also keeps an
+    // older api from prompting.
 
     // Records ALREADY raised from the selected email this session — System Actions' Create now
     // (and Apply's create) add a chip here so the pane says what exists, with its reference,
     // rather than the staged "will raise" wording. Parked/restored per email like the staging.
     private readonly List<CreatedNowRecord> createdNowRecords = new();
-
-    private static bool IsCrossFilePrompt(string message) =>
-        message.Contains("Confirm the cross-filing", StringComparison.OrdinalIgnoreCase);
 
     // Sort order for all three lists: oldest-first (the default — clear the backlog from page one)
     // or newest-first. The last choice is remembered per user, like the work-order grouping toggle.
@@ -1793,6 +1761,7 @@ else
             RecordType.Scheduling or RecordType.Lad => $"/projects/{projectId}/programme",
             RecordType.CostCentre => $"/projects/{projectId}/financials",
             RecordType.Todo       => $"/projects/{projectId}/todos",
+            RecordType.Inventory  => $"/projects/{projectId}/inventory",
             _ => null
         };
     }
@@ -1876,8 +1845,9 @@ else
     // subject, original attachments carried automatically by Graph, and the send never counts as
     // a triage decision (the email stays queued unless something else files it).
     private bool replyIsForward;
-    // Set once per selection when the detail lands, so a user's edits are never overwritten by a
-    // slow fetch arriving after they started typing.
+    // Envelope ownership, once per selection: set when the detail's reply-all prefill lands OR
+    // the moment the user edits any envelope field (2026-08-28) — whichever comes first wins, so
+    // an address typed before the slow fetch arrives is never overwritten by it.
     private bool replyEnvelopePrefilled;
     private IReadOnlyList<ComposeDraftAttachment> replyAttachments = Array.Empty<ComposeDraftAttachment>();
     private ComposeOutcome? composeOutcome;
@@ -2081,6 +2051,7 @@ else
         StagedRecordKind.Request or StagedRecordKind.TenderEnquiry
             or StagedRecordKind.BuildingControlInspection => "Client",
         StagedRecordKind.BidPackage or StagedRecordKind.WorkOrder or StagedRecordKind.Defect => "Subcontractor",
+        StagedRecordKind.Inventory => "Supplier",
         StagedRecordKind.CalendarEvent => "Internal", // raised from the Internal pane, beside the Calendar
         _ => null
     };
@@ -2227,7 +2198,6 @@ else
         pickedRecords.Clear();
         actionError = null;
         composeOutcome = null;
-        crossFileMessage = null;
         if (next == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
         else if (next == QueueView.Tagged)
         {
@@ -2261,7 +2231,6 @@ else
         pickedRecords.Clear();
         actionError = null;
         composeOutcome = null;
-        crossFileMessage = null;
         if (view == QueueView.Discarded) { ResetDiscardedPaging(); await LoadDiscardedAsync(); }
         else if (view == QueueView.Tagged) { ResetTaggedPaging(); await LoadTaggedAsync(); }
         else { ResetQueuePaging(); await LoadAsync(); }
@@ -2782,8 +2751,6 @@ else
         // a fixed badge); otherwise the triager chooses before any action beyond Discard is offered.
         pathway = PathwayFromBucket(item.Bucket);
         actionError = null;
-        crossFileMessage = null;
-        crossFileRetryIsCreateNow = false;
         ResetLinkState();
         composeOutcome = null;
         linkNote = null;
@@ -3004,14 +2971,14 @@ else
 
     // Choose the pathway for a not-yet-filed thread (staging from a pathway pane). Staged picks
     // deliberately SURVIVE the switch — the modal shows its running total across every tab, and a
-    // genuine cross-pathway combination is caught by the cross-filing confirm at apply. A thread
-    // that already carries a pathway ignores this — its routing was decided at first filing.
+    // genuine cross-pathway combination simply files the thread under both at apply (the confirm
+    // was retired 2026-08-28). A thread that already carries a pathway ignores this — its routing
+    // was decided at first filing.
     private void SetPathway(TriagePathway next)
     {
         if (FixedPathway is not null || pathway == next) return;
         pathway = next;
         actionError = null;
-        crossFileMessage = null;
     }
 
     private async Task OnLinkRecordTypeChanged(ChangeEventArgs e)
@@ -3181,6 +3148,7 @@ else
                         : "log the tender enquiry from this email",
                     StagedRecordKind.WorkOrder => StagedWorkOrderSummary(stagedCreate),
                     StagedRecordKind.Defect => "raise the defect from this email",
+                    StagedRecordKind.Inventory => "add the inventory item from this email",
                     StagedRecordKind.CalendarEvent => "raise the calendar event from this email",
                     StagedRecordKind.BuildingControlInspection => "raise the building control inspection from this email",
                     _ => stagedCreate.RequestKind == RequestType.Rfi
@@ -3195,6 +3163,14 @@ else
                 parts.Add("tag it a Relevant Event for the Programme");
             if (discardArmed)
                 parts.Add("discard this email and its thread");
+            // Create now already raised the record and tagged the email — with nothing else
+            // staged, the apply's one remaining job is clearing the dealt-with email from the
+            // queue. Without this clause Apply sat disabled after a create-now-only triage
+            // ("it expects a staged tag") and the email was stuck open (reported 2026-08-28).
+            if (parts.Count == 0 && selected is not null && createdNowRecords.Count > 0)
+                return createdNowRecords.Count == 1
+                    ? $"clear this email from the queue — {createdNowRecords[0].Reference} is already raised and the email tagged to it"
+                    : $"clear this email from the queue — {string.Join(", ", createdNowRecords.Select(r => r.Reference))} are already raised and the email tagged to them";
             if (parts.Count == 0) return null;
             var summary = parts.Count == 1 ? parts[0] : string.Join(", ", parts.Take(parts.Count - 1)) + " and " + parts[^1];
             // A thread-wide Yes changes what an apply MEANS, so the sentence says so — but only when
@@ -3240,6 +3216,20 @@ else
         if (!emailVisible) workspace.Show(PanelKind.Email, paneSide);
     }
 
+    // An action just closed the open email (applied, discarded, restored, re-tagged), so the
+    // email window and its reading copy have nothing left to show. Bring the queue list back on
+    // show wherever the panes were left — without this, an apply run while the mirror covered
+    // the inbox landed on two empty windows with the list nowhere in sight (reported
+    // 2026-08-28: "loaded without the mailbox selected"). The mirror closes outright (a reading
+    // copy of nothing has no reason to wait in the history); the inbox then either resurfaces
+    // from that pane's own history or is shown on the left, its home side.
+    private void ReturnWorkspaceToQueue()
+    {
+        workspace.Close(PanelKind.EmailMirror);
+        if (workspace.SideShowing(PanelKind.Inbox) is null)
+            workspace.Show(PanelKind.Inbox, PanelSide.Left);
+    }
+
     // NOTE (2026-08-27): the old "Apply stands down while a tags window is open" rule is GONE.
     // It fit the one modal System Tags pane; with four standing pathway panes (which also host
     // browsable registers) it left Apply disabled almost permanently, with the reason buried in
@@ -3253,6 +3243,17 @@ else
     // someone actually made, never a default that slipped through.
     private bool TriageDecisionsMissing =>
         selected is not null && (relevantEventStaged is null || triageEntireThread is null);
+
+    // True while attachments are ticked for Document Triage but the email has no project.
+    // The project is REQUIRED for a Document Triage send (decision 2026-08-28): a file landing
+    // in the queue with no project is as good as discarded, and the triage bar — where the
+    // email says which job it is — is the cheapest place to set it. Same standing-hint
+    // treatment as the Yes/No pairs (2026-08-27: the disable reason stands next to the button).
+    private bool DocTriageProjectMissing =>
+        selected is not null && stagedDocControlIds.Count > 0 && string.IsNullOrWhiteSpace(triageProjectId);
+
+    private const string DocTriageProjectMissingHint =
+        "Set the Project first — attachments can't go to Document Triage without one";
 
     private string DecisionsMissingHint =>
         relevantEventStaged is null && triageEntireThread is null
@@ -3291,10 +3292,6 @@ else
             return discardArmed && !filing ? "Discard email" : "Apply";
         }
     }
-
-    // The save-as-draft flag the cross-filing confirm re-runs with, so "File under both anyway"
-    // finishes exactly what was originally asked.
-    private bool pendingSaveDraft;
 
     // Open the composer under the open email as a reply or a forward. The two kinds prime the
     // envelope differently — reply-all prefill vs a blank envelope with a "FW:" subject — so
@@ -3364,8 +3361,7 @@ else
     // order. Filing runs first (every tag verified before anything saves); the send comes last so
     // a filing failure stops everything with the email still queued, and a send failure leaves the
     // thread filed with the reply safe in Drafts (the outcome banner says exactly which).
-    // allowCrossPathway re-runs after the Subcontractor↔Internal cross-filing confirm.
-    private async Task DoApplyAll(bool saveAsDraftOnly, bool allowCrossPathway = false)
+    private async Task DoApplyAll(bool saveAsDraftOnly)
     {
         if (busy) return;
         // Lined-up Outbox replies apply on their own — no selection needed (decision 2026-08-12).
@@ -3381,12 +3377,19 @@ else
         var discarding = discardArmed && anchorEmail is not null;
         // One scope for the whole apply: a thread-wide Yes opts every staged action into the thread.
         var scope = triageEntireThread == true ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly;
+        // A create-now-only triage: the record is already raised and the email tagged to it
+        // (Create now did both), so there is nothing left to RUN — but the apply still owns the
+        // close-out below (queue reload, selection cleared). Letting it through is what
+        // un-sticks the Apply button after Create now; every step in the body no-ops on its
+        // own zero-count guard.
+        var createdNowOnly = anchorEmail is not null && createdNowRecords.Count > 0;
         if (!replying && drafts.Count == 0 && picks.Count == 0 && !createReady && !relevantEvent && !discarding
-            && stagedSystemActions.Count == 0 && queuedReplies.Count == 0 && stagedDocControlIds.Count == 0) return;
+            && stagedSystemActions.Count == 0 && queuedReplies.Count == 0 && stagedDocControlIds.Count == 0
+            && !createdNowOnly) return;
 
         // The bar's two Yes/No pairs start blank on purpose — an apply with either unanswered is
         // a decision not yet made. Belt-and-braces behind the disabled button, so no other route
-        // into the apply (the cross-filing re-run included) can land with a blank answer.
+        // into the apply can land with a blank answer.
         if (anchorEmail is not null && (relevantEventStaged is null || triageEntireThread is null))
         {
             actionError = relevantEventStaged is null && triageEntireThread is null
@@ -3430,6 +3433,15 @@ else
             return;
         }
 
+        // Attachments bound for Document Triage without a project are the same "decision not
+        // yet made" (decision 2026-08-28): an unassigned file in the queue is as good as
+        // discarded. Belt-and-braces behind the disabled button, like the Yes/No gate above.
+        if (anchorEmail is not null && stagedDocControlIds.Count > 0 && string.IsNullOrWhiteSpace(triageProjectId))
+        {
+            actionError = "To send attachments to Document Triage, set the email's Project first — or untick them.";
+            return;
+        }
+
         // A staged new record without a project is a decision not yet made — finish it or clear
         // it, rather than have Apply quietly skip it.
         if (StagedCreateReady && !createReady)
@@ -3451,6 +3463,13 @@ else
             && stagedDefect.DefectProblem is { } defectProblem)
         {
             actionError = $"The staged defect isn't ready — {defectProblem} Finish it in the pathway pane's Actions, or remove it.";
+            return;
+        }
+        // And for a staged inventory item with no product name yet.
+        if (createReady && stagedCreate is { Kind: StagedRecordKind.Inventory } stagedInventory
+            && stagedInventory.InventoryProblem is { } inventoryProblem)
+        {
+            actionError = $"The staged inventory item isn't ready — {inventoryProblem} Finish it in the pathway pane's Actions, or remove it.";
             return;
         }
         if (createReady && StagedTenderEnquiryProblem is { } enquiryProblem)
@@ -3481,7 +3500,6 @@ else
         var anchor = selected;
         var uploadParts = UploadPartsOf(replyAttachments);
         actionError = null;
-        if (allowCrossPathway) crossFileMessage = null;
         busy = true;
         try
         {
@@ -3499,8 +3517,8 @@ else
                         anchor.Id, anchor.InternetMessageId,
                         stagedDocControlIds.ToList(), NullIfBlank(triageProjectId)),
                     CancellationToken.None);
-                // One send per apply: clear the ticks so a cross-filing re-run can't re-send
-                // (the server skips already-sent ids regardless).
+                // One send per apply: clear the ticks (the server skips already-sent ids
+                // regardless).
                 stagedDocControlIds.Clear();
             }
 
@@ -3518,7 +3536,7 @@ else
                     InternetMessageId: anchor.InternetMessageId,
                     Pathway: pathway is { } chosenForTodos ? PathwayLabel(chosenForTodos) : null,
                     Scope: scope));
-                // One batch per apply: clear the rows so a cross-filing re-run can't double-raise.
+                // One batch per apply: clear the rows so nothing can double-raise.
                 createTodoRows = new List<TodoDraftRow> { new() };
                 filed = true;
             }
@@ -3529,71 +3547,34 @@ else
                 busyLabel = "Linking";
                 foreach (var record in picks)
                 {
-                    try
-                    {
-                        await Intake.LinkMessageToRecordAsync(
-                            anchor.Id, anchor.InternetMessageId, record.Type, record.RecordId,
-                            pathway: CostCentrePathwayFor(record),
-                            allowCrossPathway: allowCrossPathway,
-                            scope: scope);
-                    }
-                    catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
-                    {
-                        // The lane confirm: keep the selection and everything still pending, show
-                        // the amber confirm in section 3 — "File under both anyway" re-runs this
-                        // apply with consent (to-dos already raised won't double: rows are cleared).
-                        crossFileMessage = ex.Message;
-                        crossFileRetryIsCreateNow = false;
-                        pendingSaveDraft = saveAsDraftOnly;
-                        return;
-                    }
+                    // AllowCrossPathway: true — the pane choice IS the cross-filing decision
+                    // (confirm retired 2026-08-28; true also keeps an older api from prompting).
+                    await Intake.LinkMessageToRecordAsync(
+                        anchor.Id, anchor.InternetMessageId, record.Type, record.RecordId,
+                        pathway: CostCentrePathwayFor(record),
+                        allowCrossPathway: true,
+                        scope: scope);
                     filed = true;
                 }
             }
             // A Relevant Event answered Yes: link the thread to the project's programme bucket — the
-            // record id IS the project id (one bucket per project, SchedulingLinkProvider). Same
-            // cross-filing confirm as the picks above: Scheduling is a Client-side record, so on
-            // a non-client thread the server asks first.
+            // record id IS the project id (one bucket per project, SchedulingLinkProvider).
+            // Scheduling is a Client-side record, so on a non-client thread this cross-files the
+            // thread — allowed without a confirm, like the picks above.
             if (relevantEvent)
             {
                 busyLabel = "Tagging relevant event";
-                try
-                {
-                    await Intake.LinkMessageToRecordAsync(
-                        anchor.Id, anchor.InternetMessageId, RecordType.Scheduling, triageProjectId,
-                        pathway: null,
-                        allowCrossPathway: allowCrossPathway,
-                        scope: scope);
-                }
-                catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
-                {
-                    crossFileMessage = ex.Message;
-                    crossFileRetryIsCreateNow = false;
-                    pendingSaveDraft = saveAsDraftOnly;
-                    return;
-                }
+                await Intake.LinkMessageToRecordAsync(
+                    anchor.Id, anchor.InternetMessageId, RecordType.Scheduling, triageProjectId,
+                    pathway: null,
+                    allowCrossPathway: true,
+                    scope: scope);
                 filed = true;
             }
             if (createReady && stagedCreate is { } staged)
             {
-                StagedCreateOutcome created;
-                try
-                {
-                    created = await RaiseStagedRecordAsync(staged, anchor!, scope, allowCrossPathway);
-                }
-                catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
-                {
-                    // The lane confirm, now BEFORE the record exists: the server pre-flights the
-                    // cross-pathway check (CrossPathwayGuard), so this rejection created NOTHING
-                    // — "File under both anyway" re-runs the apply with consent and the create
-                    // then runs exactly once. (Rejecting AFTER the create is what produced the
-                    // duplicate draft orders and the red no-confirm banner, 2026-08-22.)
-                    crossFileMessage = ex.Message;
-                    crossFileRetryIsCreateNow = false;
-                    pendingSaveDraft = saveAsDraftOnly;
-                    return;
-                }
-                // One create per apply: clear it so a cross-filing re-run can't double-create.
+                var created = await RaiseStagedRecordAsync(staged, anchor!, scope);
+                // One create per apply: clear it so nothing can double-create.
                 stagedCreate = null;
                 createdNowRecords.Add(created.Record);
                 filed = true;
@@ -3639,24 +3620,11 @@ else
                 foreach (var record in picks)
                 {
                     busyLabel = "Tagging lined-up replies";
-                    try
-                    {
-                        await Intake.LinkMessageToRecordAsync(
-                            lined.MessageId, lined.InternetMessageId, record.Type, record.RecordId,
-                            pathway: CostCentrePathwayFor(record),
-                            allowCrossPathway: allowCrossPathway,
-                            scope: LinkThreadScope.MessageOnly);
-                    }
-                    catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
-                    {
-                        // Same lane confirm as the picks above: everything still pending stays
-                        // put and "File under both anyway" re-runs with consent (finished
-                        // lined-up replies were removed as they sent, so nothing re-sends).
-                        crossFileMessage = ex.Message;
-                        crossFileRetryIsCreateNow = false;
-                        pendingSaveDraft = saveAsDraftOnly;
-                        return;
-                    }
+                    await Intake.LinkMessageToRecordAsync(
+                        lined.MessageId, lined.InternetMessageId, record.Type, record.RecordId,
+                        pathway: CostCentrePathwayFor(record),
+                        allowCrossPathway: true,
+                        scope: LinkThreadScope.MessageOnly);
                 }
                 busyLabel = saveAsDraftOnly ? "Saving lined-up drafts" : "Sending lined-up emails";
                 // MarkThreadHandled off: the anchor is an already-triaged email — its record tags
@@ -3728,6 +3696,7 @@ else
             triageEntireThread = null;
             pickedRecords.Clear();
             stagedSystemActions.Clear();
+            ReturnWorkspaceToQueue();
         }
         catch (CommandFailedException ex)
         {
@@ -3748,13 +3717,12 @@ else
 
     /// <summary>
     /// Raises the staged record and tags the email to it — the create-on-apply body, shared
-    /// verbatim by Apply and by System Actions' "Create now". The server pre-flights the
-    /// cross-pathway confirm before anything persists (CrossPathwayGuard), so an
-    /// IsCrossFilePrompt failure out of here has created NOTHING — the caller shows the amber
-    /// confirm and re-runs with consent.
+    /// verbatim by Apply and by System Actions' "Create now". Every command goes out with
+    /// AllowCrossPathway: true — the pane choice IS the cross-filing decision (the confirm was
+    /// retired 2026-08-28), and true keeps an older api from prompting.
     /// </summary>
     private async Task<StagedCreateOutcome> RaiseStagedRecordAsync(
-        StagedRecordCreate staged, MailboxMessage anchor, LinkThreadScope scope, bool allowCrossPathway)
+        StagedRecordCreate staged, MailboxMessage anchor, LinkThreadScope scope)
     {
         if (staged.Kind == StagedRecordKind.BidPackage)
         {
@@ -3763,7 +3731,7 @@ else
                 anchor.Id, triageProjectId, staged.Title.Trim(), staged.Trade?.Trim() ?? "",
                 InternetMessageId: anchor.InternetMessageId,
                 Scope: scope,
-                AllowCrossPathway: allowCrossPathway));
+                AllowCrossPathway: true));
             return new StagedCreateOutcome(
                 new CreatedNowRecord(package.Reference, "bid package", staged.Title.Trim()), null);
         }
@@ -3796,7 +3764,7 @@ else
                 // Ticked email attachments — copied onto the order server-side (record
                 // keeping only; never sent to the supplier).
                 AttachmentIds: staged.EmailAttachmentIds.Count > 0 ? staged.EmailAttachmentIds.ToList() : null,
-                AllowCrossPathway: allowCrossPathway));
+                AllowCrossPathway: true));
 
             // The email the modal's warning promised: a released (non-draft) order sends
             // its purchase order to the supplier there and then. Non-fatal by design —
@@ -3846,9 +3814,28 @@ else
                 staged.DefectAssignedTo.Trim(),
                 InternetMessageId: anchor.InternetMessageId,
                 Scope: scope,
-                AllowCrossPathway: allowCrossPathway));
+                AllowCrossPathway: true));
             return new StagedCreateOutcome(
                 new CreatedNowRecord(defect.Reference, "defect", staged.DisplayTitle), null);
+        }
+
+        if (staged.Kind == StagedRecordKind.Inventory)
+        {
+            // The inventory item staged in the Supplier pane's Actions, added through the same
+            // rules as one added on the project's Inventory tab (INV numbering) with the
+            // supplier's email tagged to it.
+            busyLabel = "Adding inventory item";
+            var item = await Intake.CreateInventoryItemFromMessageAsync(new Jewel.JPMS.Contracts.Inventory.CreateInventoryItemFromMessage(
+                anchor.Id, triageProjectId,
+                staged.Title.Trim(),
+                staged.Description.Trim(),
+                staged.InventoryLocation.Trim(),
+                staged.InventoryLocationDetails.Trim(),
+                InternetMessageId: anchor.InternetMessageId,
+                Scope: scope,
+                AllowCrossPathway: true));
+            return new StagedCreateOutcome(
+                new CreatedNowRecord(item.Reference, "inventory item", staged.Title.Trim()), null);
         }
 
         if (staged.Kind == StagedRecordKind.CalendarEvent)
@@ -3858,7 +3845,7 @@ else
             // to it.
             busyLabel = "Raising calendar event";
             var calendarEvent = await Intake.CreateCalendarEventFromMessageAsync(
-                staged.CalendarEvent.ToCommand(anchor.Id, anchor.InternetMessageId, triageProjectId, scope, allowCrossPathway));
+                staged.CalendarEvent.ToCommand(anchor.Id, anchor.InternetMessageId, triageProjectId, scope, allowCrossPathway: true));
             return new StagedCreateOutcome(
                 new CreatedNowRecord(calendarEvent.Reference, "calendar event", calendarEvent.Title), null);
         }
@@ -3871,13 +3858,13 @@ else
             // server's refusal lands in the red bar with its own wording.
             busyLabel = "Raising building control inspection";
             var inspection = await Intake.CreateBuildingControlInspectionFromMessageAsync(
-                staged.BuildingControlInspection.ToCommand(anchor.Id, anchor.InternetMessageId, triageProjectId, scope, allowCrossPathway));
+                staged.BuildingControlInspection.ToCommand(anchor.Id, anchor.InternetMessageId, triageProjectId, scope, allowCrossPathway: true));
             return new StagedCreateOutcome(
                 new CreatedNowRecord(inspection.Reference, "building control inspection", inspection.StageName), null);
         }
 
         if (staged.Kind == StagedRecordKind.TenderEnquiry)
-            return await LogStagedTenderEnquiryAsync(staged, anchor, scope, allowCrossPathway);
+            return await LogStagedTenderEnquiryAsync(staged, anchor, scope);
 
         busyLabel = staged.RequestKind == RequestType.Rfi ? "Raising RFI" : "Creating request";
         var request = await Intake.CreateRequestFromMessageAsync(new CreateRequestFromMessage(
@@ -3888,7 +3875,7 @@ else
             InternetMessageId: anchor.InternetMessageId,
             AddToProgramme: staged.AddToProgramme,
             Scope: scope,
-            AllowCrossPathway: allowCrossPathway));
+            AllowCrossPathway: true));
         return new StagedCreateOutcome(
             new CreatedNowRecord(
                 request.Reference,
@@ -3905,11 +3892,11 @@ else
     /// the email tagged to the enquiry.
     /// </summary>
     private async Task<StagedCreateOutcome> LogStagedTenderEnquiryAsync(
-        StagedRecordCreate staged, MailboxMessage anchor, LinkThreadScope scope, bool allowCrossPathway)
+        StagedRecordCreate staged, MailboxMessage anchor, LinkThreadScope scope)
     {
         busyLabel = "Logging tender enquiry";
         var enquiry = await Intake.LogTenderEnquiryFromMessageAsync(
-            staged.TenderEnquiry.ToCommand(anchor.Id, anchor.InternetMessageId, triageProjectId, scope, allowCrossPathway));
+            staged.TenderEnquiry.ToCommand(anchor.Id, anchor.InternetMessageId, triageProjectId, scope, allowCrossPathway: true));
         if (staged.TenderEnquiry.CreatesNewProject)
         {
             await LoadProjectsAsync();
@@ -3927,15 +3914,18 @@ else
     /// "will raise" to the raised reference; Apply then lands whatever else is staged, with
     /// nothing left to double-create.
     /// </summary>
-    private async Task DoCreateStagedNow(bool allowCrossPathway = false)
+    private async Task DoCreateStagedNow()
     {
         if (busy) return;
         if (selected is not { } anchor || stagedCreate is not { } staged) return;
         if (!StagedCreateReady)
         {
-            actionError = staged.Kind == StagedRecordKind.Defect
-                ? "Describe the defect first — then Create now."
-                : "Give the staged record a title first — then Create now.";
+            actionError = staged.Kind switch
+            {
+                StagedRecordKind.Defect => "Describe the defect first — then Create now.",
+                StagedRecordKind.Inventory => "Name the product first — then Create now.",
+                _ => "Give the staged record a title first — then Create now."
+            };
             return;
         }
         if (string.IsNullOrWhiteSpace(triageProjectId) && !StagedCreatesOwnProject)
@@ -3971,6 +3961,12 @@ else
             actionError = $"The staged defect isn't ready — {defectProblem}";
             return;
         }
+        if (staged is { Kind: StagedRecordKind.Inventory } stagedInventory
+            && stagedInventory.InventoryProblem is { } inventoryProblem)
+        {
+            actionError = $"The staged inventory item isn't ready — {inventoryProblem}";
+            return;
+        }
         // Creating now tags the email to the new record, so the thread-spread decision must be
         // made — the Relevant Event answer can wait for Apply, which is what consumes it.
         if (triageEntireThread is null)
@@ -3981,23 +3977,10 @@ else
 
         var scope = triageEntireThread == true ? LinkThreadScope.EntireThread : LinkThreadScope.MessageOnly;
         actionError = null;
-        if (allowCrossPathway) crossFileMessage = null;
         busy = true;
         try
         {
-            StagedCreateOutcome created;
-            try
-            {
-                created = await RaiseStagedRecordAsync(staged, anchor, scope, allowCrossPathway);
-            }
-            catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
-            {
-                // The amber confirm, aimed back at THIS act: nothing was created (the server
-                // pre-flights the check), and "File under both anyway" re-runs Create now.
-                crossFileMessage = ex.Message;
-                crossFileRetryIsCreateNow = true;
-                return;
-            }
+            var created = await RaiseStagedRecordAsync(staged, anchor, scope);
             stagedCreate = null;
             createdNowRecords.Add(created.Record);
             if (created.UploadError is not null)
@@ -4061,10 +4044,13 @@ else
         }
     }
 
-    private void OnReplyToInput(ChangeEventArgs e) => replyToField = e.Value?.ToString() ?? "";
-    private void OnReplyCcInput(ChangeEventArgs e) => replyCcField = e.Value?.ToString() ?? "";
-    private void OnReplyBccInput(ChangeEventArgs e) => replyBccField = e.Value?.ToString() ?? "";
-    private void OnReplySubjectInput(ChangeEventArgs e) => replySubject = e.Value?.ToString() ?? "";
+    // Each edit also marks the envelope as the user's (2026-08-28): the reply-all prefill rides
+    // in on the detail fetch, and an address or subject typed BEFORE that slow fetch lands must
+    // never be overwritten by it — first touch takes ownership, the late prefill backs off.
+    private void OnReplyToInput(ChangeEventArgs e) { replyToField = e.Value?.ToString() ?? ""; replyEnvelopePrefilled = true; }
+    private void OnReplyCcInput(ChangeEventArgs e) { replyCcField = e.Value?.ToString() ?? ""; replyEnvelopePrefilled = true; }
+    private void OnReplyBccInput(ChangeEventArgs e) { replyBccField = e.Value?.ToString() ?? ""; replyEnvelopePrefilled = true; }
+    private void OnReplySubjectInput(ChangeEventArgs e) { replySubject = e.Value?.ToString() ?? ""; replyEnvelopePrefilled = true; }
 
     // ---- New email (fresh outbound thread from the projects mailbox) ----
 
@@ -4190,6 +4176,7 @@ else
             selected = null;
             detail = null;
             detailLoading = false;
+            ReturnWorkspaceToQueue();
             await ReloadDiscardedInPlaceAsync();
         }
         catch
@@ -4232,8 +4219,10 @@ else
     // Ticked per attachment on the open email and staged like every other triage draft — the
     // email's Apply copies the files mailbox → Document Triage server-side. Like the
     // save-to-drawings form this replaced (2026-08-12), it does NOT consume the email: the
-    // message keeps its place in triage — only the files are copied out. Routing the files to
-    // their destinations happens in Document Triage itself.
+    // message keeps its place in triage — only the files are copied out. Choosing each file's
+    // DESTINATION happens in Document Triage itself, but the PROJECT is decided here, where
+    // the email says which job it is: Apply requires one while attachments are ticked
+    // (decision 2026-08-28 — a projectless file in the queue is as good as discarded).
 
     private readonly List<string> stagedDocControlIds = new();
 
@@ -4272,6 +4261,7 @@ else
             relevantEventStaged = null;
             triageEntireThread = null;
             pickedRecords.Clear();
+            ReturnWorkspaceToQueue();
         }
         catch (CommandFailedException ex)
         {
@@ -4300,6 +4290,7 @@ else
             detail = null;
             detailLoading = false;
             ResetLinkState();
+            ReturnWorkspaceToQueue();
         }
         catch
         {
@@ -4310,14 +4301,11 @@ else
 
     // Add another workflow tag by linking this already-tagged email to a second record (so it feeds
     // more than one record). Reuses the same generic link command as the queue's "Link to existing",
-    // but NOT RunTaggedAction — the pathway guard needs its own error handling: the server's
-    // cross-filing prompt becomes an inline confirm (retry with consent). Any crossing — the former
-    // client wall included (removed 2026-08-21) — takes this confirm route.
-    private async Task DoAddTagLink() => await DoAddTagLinkCore(allowCrossPathway: false);
-
-    private async Task DoAddTagLinkConfirmCross() => await DoAddTagLinkCore(allowCrossPathway: true);
-
-    private async Task DoAddTagLinkCore(bool allowCrossPathway)
+    // but NOT RunTaggedAction — a link failure belongs next to the picker, not in the toast. Any
+    // crossing — the former client wall included (removed 2026-08-21) — simply files the thread
+    // under both: AllowCrossPathway: true, since the picker's own heads-up already says where the
+    // link files the thread (the confirm was retired 2026-08-28).
+    private async Task DoAddTagLink()
     {
         if (selected is null || busy || string.IsNullOrWhiteSpace(linkRecordId)) return;
         // The type to link as is the picked RECORD's own type, not the dropdown's (the Scheduling
@@ -4332,26 +4320,20 @@ else
             await Intake.LinkMessageToRecordAsync(
                 selected.Id, selected.InternetMessageId, recordType, linkRecordId,
                 pathway: record is null ? null : CostCentrePathwayFor(record),
-                allowCrossPathway: allowCrossPathway);
-            crossFileMessage = null;
+                allowCrossPathway: true);
             await ReloadTaggedInPlaceAsync();
             selected = null;
             detail = null;
             detailLoading = false;
             ResetLinkState();
-        }
-        catch (CommandFailedException ex) when (!allowCrossPathway && IsCrossFilePrompt(ex.Message))
-        {
-            crossFileMessage = ex.Message;
+            ReturnWorkspaceToQueue();
         }
         catch (CommandFailedException ex)
         {
-            crossFileMessage = null;
             actionError = ex.Message;
         }
         catch
         {
-            crossFileMessage = null;
             actionError = "That action didn't complete. Please try again.";
         }
         finally { busy = false; }

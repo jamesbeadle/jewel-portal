@@ -36,7 +36,11 @@ public enum SystemActionKind
     // The building control inspector's email (2026-08-27) — a booking confirmation, a visit
     // arrangement: raises the stage on the project's Building Control tab with the email tagged
     // to it (JPMS/BCI-####).
-    RaiseBuildingControlInspection
+    RaiseBuildingControlInspection,
+    // A supplier's email about goods for the job (2026-08-28) — a delivery note, an order
+    // confirmation: adds the item (product + location details) to the project's Inventory tab
+    // with the email tagged to it (JPMS/INV-####).
+    AddInventoryItem
 }
 
 public static class SystemActionKinds
@@ -57,6 +61,7 @@ public static class SystemActionKinds
         SystemActionKind.CreateBidPackageInvite,
         SystemActionKind.FileBidPackageTender,
         SystemActionKind.RaiseDefect,
+        SystemActionKind.AddInventoryItem,
         SystemActionKind.RaiseCalendarEvent,
         SystemActionKind.RaiseBuildingControlInspection,
         SystemActionKind.CreateTodos,
@@ -78,6 +83,7 @@ public static class SystemActionKinds
         SystemActionKind.CreateBidPackageInvite => "Create Bid Package Invite",
         SystemActionKind.FileBidPackageTender => "File Bid Package Tender",
         SystemActionKind.RaiseDefect => "Raise Defect",
+        SystemActionKind.AddInventoryItem => "Add Inventory Item",
         SystemActionKind.RaiseCalendarEvent => "Raise Calendar Event",
         SystemActionKind.RaiseBuildingControlInspection => "Raise Building Control Inspection",
         SystemActionKind.CreateTodos => "Create To-do Items",

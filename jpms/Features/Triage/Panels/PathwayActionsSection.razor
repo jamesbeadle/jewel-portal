@@ -99,85 +99,92 @@
 
     @if (NeedsProject(kind) && ProjectId == "")
     {
-        @* Every project-bound action raises on the email's project — one pick, in one place. *@
+        @* Every project-bound action raises on the email's project — one pick, in one place. The
+           note sits ABOVE the editor rather than replacing it (2026-08-28): the project usually
+           arrives seconds later by auto-match, and a form that materialises under a click already
+           aimed — its Assigned-to prefilled with the sender's address — puts the keyboard in a
+           field the triager never chose. The form renders from the start, the layout holds still,
+           and raising without a project is still refused at stage/apply time. *@
         <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-sm text-content">
-            Pick the email's project in the bar above first — system actions are raised on it.
+            Pick the email's project in the bar above — system actions are raised on it.
         </p>
     }
-    else
+    @switch (kind)
     {
-        @switch (kind)
-        {
-            case SystemActionKind.RaiseRfi:
-                <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Request" RequestKind="RequestType.Rfi"
-                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
-                break;
-            case SystemActionKind.PromoteRequestToRfi:
-            case SystemActionKind.CloseRfi:
-            case SystemActionKind.ReopenRfi:
-                <StageRequestTransitionAction @key="kind" Kind="kind" ProjectId="@ProjectId" OnStaged="StagedAsync" />
-                break;
-            case SystemActionKind.RaiseVariationOrder:
-                <StageVariationAction Projects="@Projects" ProjectId="@ProjectId" OnStaged="StagedAsync" />
-                break;
-            case SystemActionKind.ApproveVariationOrder:
-            case SystemActionKind.RejectVariationOrder:
-                <StageVariationDecisionAction @key="kind" Kind="kind" ProjectId="@ProjectId" OnStaged="StagedAsync" />
-                break;
-            case SystemActionKind.RaiseWorkOrder:
-                <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.WorkOrder"
-                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
-                break;
-            case SystemActionKind.CreateBidPackageInvite:
-                <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.BidPackage"
-                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
-                break;
-            case SystemActionKind.FileBidPackageTender:
-                <StageTenderResponseAction @key="kind" ProjectId="@ProjectId" SenderEmail="@SenderEmail"
-                                           OnStaged="StagedAsync" />
-                break;
-            case SystemActionKind.RaiseDefect:
-                <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Defect"
-                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
-                break;
-            case SystemActionKind.LogTenderEnquiry:
-                <StageTenderEnquiryEditor @key="kind" ProjectId="@ProjectId" Projects="@Projects"
-                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                          EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
-                                          EmailSubject="@EmailSubject" />
-                break;
-            case SystemActionKind.RaiseCalendarEvent:
-                <StageCalendarEventAction @key="kind"
-                                          StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                          EmailSubject="@EmailSubject" />
-                break;
-            case SystemActionKind.RaiseBuildingControlInspection:
-                <StageBuildingControlInspectionAction @key="kind"
-                                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                                      EmailSubject="@EmailSubject" />
-                break;
-            case SystemActionKind.CreateTodos:
-                <StageTodosAction TodoRows="TodoRows" TodoAssigneeOptions="@TodoAssigneeOptions"
-                                  TodoProjectNote="@TodoProjectNote" OnStagingChanged="OnStagingChanged" />
-                break;
-            case SystemActionKind.CompleteTodo:
-                <StageTodoCompleteAction ProjectId="@ProjectId" OnStaged="StagedAsync" />
-                break;
-            case SystemActionKind.AddDirectoryContact:
-                <StageDirectoryContactAction OnStaged="StagedAsync" />
-                break;
-            case SystemActionKind.ForwardToQs:
-                <StageForwardToQsAction QsRecipients="@QsRecipients" OnForward="OnForwardToQs" />
-                break;
-        }
-        @if (IsRecordCreate(kind))
-        {
-            <StagedCreateFooter Staged="@StagedCreate" Busy="@Busy" OnCreateNow="OnCreateNow" OnClose="OnClose" />
-        }
+        case SystemActionKind.RaiseRfi:
+            <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Request" RequestKind="RequestType.Rfi"
+                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+            break;
+        case SystemActionKind.PromoteRequestToRfi:
+        case SystemActionKind.CloseRfi:
+        case SystemActionKind.ReopenRfi:
+            <StageRequestTransitionAction @key="kind" Kind="kind" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.RaiseVariationOrder:
+            <StageVariationAction Projects="@Projects" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.ApproveVariationOrder:
+        case SystemActionKind.RejectVariationOrder:
+            <StageVariationDecisionAction @key="kind" Kind="kind" ProjectId="@ProjectId" OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.RaiseWorkOrder:
+            <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.WorkOrder"
+                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+            break;
+        case SystemActionKind.CreateBidPackageInvite:
+            <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.BidPackage"
+                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+            break;
+        case SystemActionKind.FileBidPackageTender:
+            <StageTenderResponseAction @key="kind" ProjectId="@ProjectId" SenderEmail="@SenderEmail"
+                                       OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.RaiseDefect:
+            <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Defect"
+                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+            break;
+        case SystemActionKind.AddInventoryItem:
+            <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.Inventory"
+                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+            break;
+        case SystemActionKind.LogTenderEnquiry:
+            <StageTenderEnquiryEditor @key="kind" ProjectId="@ProjectId" Projects="@Projects"
+                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
+                                      EmailSubject="@EmailSubject" />
+            break;
+        case SystemActionKind.RaiseCalendarEvent:
+            <StageCalendarEventAction @key="kind"
+                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                      EmailSubject="@EmailSubject" />
+            break;
+        case SystemActionKind.RaiseBuildingControlInspection:
+            <StageBuildingControlInspectionAction @key="kind"
+                                                  StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                                  EmailSubject="@EmailSubject" />
+            break;
+        case SystemActionKind.CreateTodos:
+            <StageTodosAction TodoRows="TodoRows" TodoAssigneeOptions="@TodoAssigneeOptions"
+                              TodoProjectNote="@TodoProjectNote" OnStagingChanged="OnStagingChanged" />
+            break;
+        case SystemActionKind.CompleteTodo:
+            <StageTodoCompleteAction ProjectId="@ProjectId" OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.AddDirectoryContact:
+            <StageDirectoryContactAction OnStaged="StagedAsync" />
+            break;
+        case SystemActionKind.ForwardToQs:
+            <StageForwardToQsAction QsRecipients="@QsRecipients" OnForward="OnForwardToQs" />
+            break;
+    }
+    @if (IsRecordCreate(kind))
+    {
+        <StagedCreateFooter Staged="@StagedCreate" Busy="@Busy" OnCreateNow="OnCreateNow" OnClose="OnClose" />
     }
 
     <p class="text-xs text-content-subtle pt-2 border-t border-line">
@@ -235,6 +242,7 @@
             or SystemActionKind.RaiseWorkOrder
             or SystemActionKind.CreateBidPackageInvite
             or SystemActionKind.RaiseDefect
+            or SystemActionKind.AddInventoryItem
             or SystemActionKind.LogTenderEnquiry
             or SystemActionKind.RaiseCalendarEvent
             or SystemActionKind.RaiseBuildingControlInspection;

@@ -117,5 +117,6 @@ public static class AiRegistryDriftCheck
             [RecordType.CalendarEvent] = RecordReach.None("GAP: calendar shipped 2026-08-27, connector tool pending"),
             [RecordType.BuildingControlCase] = RecordReach.None("GAP: building control shipped 2026-08-27, connector tool pending"),
             [RecordType.BuildingControlInspection] = RecordReach.None("GAP: building control shipped 2026-08-27, connector tool pending"),
+            [RecordType.Inventory] = RecordReach.None("GAP: inventory shipped 2026-08-28, connector tool pending"),
         };
 }

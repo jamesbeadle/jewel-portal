@@ -21,6 +21,7 @@ public sealed class MeEndpoint
         if (signedInUser is null) return new UnauthorizedResult();
 
         return new OkObjectResult(new AuthenticatedUserResponse(
-            signedInUser.Email, signedInUser.DisplayName, signedInUser.Roles, signedInUser.SubcontractorId));
+            signedInUser.Email, signedInUser.DisplayName, signedInUser.Roles, signedInUser.SubcontractorId,
+            signedInUser.HomeRole, signedInUser.RevertToOwnRole));
     }
 }

@@ -8,7 +8,8 @@ internal static class DirectoryEntityMapping
     public static DirectoryUser ToModel(this DirectoryUserEntity entity, IReadOnlyList<Role> roles) => new(
         Email: entity.Email,
         DisplayName: entity.DisplayName,
-        Roles: roles);
+        Roles: roles,
+        RevertToOwnRole: entity.RevertToOwnRole);
 
     /// <summary>Only meaningful for rows with RevokedAt set — the revoked-users read filters on
     /// that before mapping, so the bang never fires on an active row.</summary>

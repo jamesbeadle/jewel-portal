@@ -31,6 +31,10 @@ public sealed class HttpDrawingStore : IDrawingStore
 
     public bool DrawingsLoadedFor(string projectId) => readModel.DrawingsLoaded(projectId);
 
+    public bool DrawingsFailedFor(string projectId) => readModel.DrawingsLoadFailed(projectId);
+
+    public void RetryDrawings(string projectId) => readModel.RetryDrawings(projectId, CancellationToken.None);
+
     public IReadOnlyList<Drawing> DrawingsFor(string projectId)
     {
         readModel.EnsureDrawings(projectId, CancellationToken.None);
@@ -39,10 +43,21 @@ public sealed class HttpDrawingStore : IDrawingStore
 
     public bool RevisionsLoadedFor(string drawingId) => readModel.RevisionsLoaded(drawingId);
 
+    public bool RevisionsFailedFor(string drawingId) => readModel.RevisionsLoadFailed(drawingId);
+
+    public void RetryRevisions(string drawingId) => readModel.RetryRevisions(drawingId, CancellationToken.None);
+
     public IReadOnlyList<DrawingRevision> RevisionsFor(string drawingId)
     {
         readModel.EnsureRevisions(drawingId, CancellationToken.None);
         return readModel.RevisionsCurrent(drawingId);
+    }
+
+    public async Task EnsureRevisionsNowAsync(string drawingId, CancellationToken cancellationToken)
+    {
+        if (readModel.RevisionsLoaded(drawingId)) return;
+        try { await readModel.RefreshRevisionsAsync(drawingId, cancellationToken); }
+        catch { /* the query pipeline has reported it; RevisionsLoadedFor stays false for the caller */ }
     }
 
     // Forces a background reload of the drawing register even when cached, and marks revisions

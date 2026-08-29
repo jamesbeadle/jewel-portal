@@ -89,6 +89,20 @@
         }
     </div>
 
+    @if (roles.Count > 1 && OwnRoleName is { } ownRole)
+    {
+        @* The two-hour default-back opt-in. Only meaningful with more than one role, and unlike
+           role edits it IS allowed on your own row — the worst a misclick can do is put you back
+           in your own role, which is no lock-out. Their "own role" is the first assigned role
+           that isn't Administrator (HomeRoleSelection — the same rule the API applies). *@
+        <label class="mt-2 inline-flex items-start gap-2 text-[11px] text-content-subtle cursor-pointer select-none"
+               title="@($"When ticked, switching Viewing as to another role lasts 2 hours; after that {User.DisplayName} is asked and defaults back to {ownRole}. When unticked, a switch sticks until changed by hand.")">
+            <input type="checkbox" class="cursor-pointer mt-0.5" checked="@revertToOwnRole"
+                   @onchange="ToggleRevert" disabled="@busy" />
+            <span>Viewing as another role defaults back to <span class="text-content-muted font-medium">@ownRole</span> after 2 hours</span>
+        </label>
+    }
+
     @if (error is not null)
     {
         <p class="mt-2 text-xs text-negative">@error</p>
@@ -127,6 +141,7 @@
     /// as soon as the parent re-renders from the refreshed directory.</summary>
     private List<Role> roles = new();
     private string rolesSourceEmail = "";
+    private bool revertToOwnRole;
 
     private bool busy;
     private bool sendingReset;
@@ -146,7 +161,13 @@
             roles = incoming;
             rolesSourceEmail = User.Email;
         }
+        revertToOwnRole = User.RevertToOwnRole;
     }
+
+    /// <summary>Display name of the role the two-hour opt-in reverts to — the same
+    /// HomeRoleSelection rule the API resolves for auth, fed the row's current (raw) role
+    /// list so an in-flight role edit is reflected immediately.</summary>
+    private string? OwnRoleName => HomeRoleSelection.From(roles)?.DisplayName();
 
     private bool CanEdit => !IsCurrentUser;
 
@@ -191,6 +212,36 @@
         {
             roles = previous;
             error = "Couldn't save that role change. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    private async Task ToggleRevert(ChangeEventArgs args)
+    {
+        if (busy) return;
+        var enabled = args.Value is bool ticked && ticked;
+        var previous = revertToOwnRole;
+        busy = true;
+        error = null;
+        // Same optimistic contract as role chips: paint immediately, roll back if the server
+        // disagrees. Roles ride along unchanged (the upsert replaces the whole record).
+        revertToOwnRole = enabled;
+        try
+        {
+            await UserDirectory.SaveAsync(User with { Roles = roles, RevertToOwnRole = enabled }, CancellationToken.None);
+        }
+        catch (CommandFailedException failure)
+        {
+            revertToOwnRole = previous;
+            error = failure.Message;
+        }
+        catch
+        {
+            revertToOwnRole = previous;
+            error = "Couldn't save that change. Please try again.";
         }
         finally
         {

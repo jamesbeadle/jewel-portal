@@ -53,6 +53,18 @@ public static class LabourFeatureRegistration
         services.AddScoped<ICommandHandler<ApproveTimesheets, LabourApprovalResult>>(
             provider => provider.GetRequiredService<ApproveTimesheetsHandler>());
         services.AddScoped<ICommandHandler<RejectTimesheet, TimesheetDetail>, RejectTimesheetHandler>();
+        // Connector coding/approval (code_worker_week / approve_worker_week / reject_worker_day
+        // actions): by-name wrappers over the grid's own handlers above — same gates, same
+        // hard-blocks, so the two surfaces cannot drift.
+        services.AddScoped<ICommandHandler<CodeWorkerWeekByName, WorkerWeekCodingResult>, CodeWorkerWeekByNameHandler>();
+        services.AddScoped<CodeWorkerWeekByNameAuthorisation>();
+        services.AddScoped<CodeWorkerWeekByNameValidation>();
+        services.AddScoped<ICommandHandler<ApproveWorkerWeekByName, WorkerWeekApprovalResult>, ApproveWorkerWeekByNameHandler>();
+        services.AddScoped<ApproveWorkerWeekByNameAuthorisation>();
+        services.AddScoped<ApproveWorkerWeekByNameValidation>();
+        services.AddScoped<ICommandHandler<RejectWorkerDayByName, TimesheetDetail>, RejectWorkerDayByNameHandler>();
+        services.AddScoped<RejectWorkerDayByNameAuthorisation>();
+        services.AddScoped<RejectWorkerDayByNameValidation>();
 
         // Labour overview: forecast, placement grid, chase list (scope §4–§5).
         services.AddScoped<IQueryHandler<GetLabourOverview, LabourOverviewSnapshot>, GetLabourOverviewHandler>();

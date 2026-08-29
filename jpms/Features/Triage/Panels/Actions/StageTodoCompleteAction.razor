@@ -13,8 +13,14 @@
     {
         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
     }
-    <select class="field" disabled="@(items is null)" @bind="todoItemId">
-        @if (items is null)
+    <select class="field" disabled="@(ProjectId == "" || items is null)" @bind="todoItemId">
+        @if (ProjectId == "")
+        {
+            @* No project yet (the editor renders before the auto-match lands) — say what's
+               needed rather than showing a "Loading…" for a fetch that isn't running. *@
+            <option value="">Pick the email's project in the bar above first…</option>
+        }
+        else if (items is null)
         {
             <option value="">Loading…</option>
         }

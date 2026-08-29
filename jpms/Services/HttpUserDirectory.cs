@@ -59,7 +59,7 @@ public sealed class HttpUserDirectory : IUserDirectory
     public async Task<DirectoryUser> SaveAsync(DirectoryUser user, CancellationToken cancellationToken)
     {
         var saved = await commands.SendAsync(
-            new UpsertDirectoryUser(user.Email, user.DisplayName, user.Roles), cancellationToken);
+            new UpsertDirectoryUser(user.Email, user.DisplayName, user.Roles, user.RevertToOwnRole), cancellationToken);
         await readModel.RefreshAsync(cancellationToken);
         return saved;
     }

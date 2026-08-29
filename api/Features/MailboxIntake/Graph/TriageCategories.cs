@@ -82,6 +82,7 @@ public static class TriageCategories
         RecordType.Defect           => Subcontractor, // the remediation is chased with the subcontractor
         RecordType.SubcontractorComms => Subcontractor, // general subcontractor correspondence — the tag IS the filing
         RecordType.SupplierComms    => Supplier,     // general supplier correspondence — the tag IS the filing
+        RecordType.Inventory        => Supplier,     // the goods come from a materials/goods supplier
         RecordType.InternalComms    => Internal,     // general staff-to-staff correspondence — the tag IS the filing
         RecordType.CostCentre       => null,     // triager picks the side, per email
         RecordType.CalendarEvent    => null,     // neutral: a site visit, a delivery or a meeting belongs to whichever side arranged it

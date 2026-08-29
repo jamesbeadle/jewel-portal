@@ -12,12 +12,15 @@ namespace Jewel.JPMS.Api.Features.RecordLinks.Commands;
 // same tag. This is the single code path for linking an email to any record type; the legacy
 // AssignMessageToRequest handler is a thin Request-typed adapter over this.
 //
-// This is also where the thread's communication PATHWAY is decided and guarded (the pathway split —
+// This is also where the thread's communication PATHWAY is decided (the pathway split —
 // docs/Pathway-Split-Platform-Flow-Plan.md §2.3). The record type implies a pathway (BucketFor);
 // pathway-neutral types (CostCentre) take the triager's explicit choice from command.Pathway.
-// One tier of protection (soft): ANY dual filing — Client↔Subcontractor/Internal included, since
-// the hard "client wall" was removed 2026-08-21 — is rejected by default but allowed with an
-// explicit AllowCrossPathway (the UI shows the message with a "File under both anyway" confirm).
+// Dual filing — Client↔Subcontractor/Internal included — is simply ALLOWED (2026-08-28): the
+// pathway panes make a second filing an explicit, visible choice, so the old "Confirm the
+// cross-filing" reject (and its "File under both anyway" retry with AllowCrossPathway) was a
+// second ask for a decision already made on screen. The new bucket is stamped alongside the
+// existing one, as the confirmed path always did. AllowCrossPathway survives on the contract for
+// compatibility but is no longer read.
 public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRecord, Acknowledgement>
 {
     private readonly RecordProviderRegistry providers;
@@ -62,17 +65,9 @@ public sealed class LinkMessageToRecordHandler : ICommandHandler<LinkMessageToRe
             .ToList();
         var hadBucket = existingBuckets.Count > 0;
 
-        // Any dual filing — including Client↔Subcontractor/Internal, since the hard client wall was
-        // removed (2026-08-21) — asks for one explicit confirmation, then proceeds. The UI catches
-        // this "Confirm the cross-filing" message and retries with AllowCrossPathway.
-        if (bucket is not null)
-            foreach (var existing in existingBuckets.Where(e => !e.Equals(bucket, StringComparison.OrdinalIgnoreCase)))
-            {
-                if (!command.AllowCrossPathway)
-                    throw new InvalidOperationException(
-                        $"This thread is filed under {AuditTrail.PathwayLabel(existing)}; {record.Reference} would also file it under {AuditTrail.PathwayLabel(bucket)}. "
-                        + "Confirm the cross-filing to proceed, or link the email to a record on the same pathway.");
-            }
+        // Dual filing — including Client↔Subcontractor/Internal — proceeds without a confirm
+        // (2026-08-28; see the header note). The new bucket is stamped alongside the existing one
+        // below, so the thread reads on both pathways.
 
         // The tag is the only link. How far it spreads is the command's Scope (2026-08-07): the
         // default sweeps the anchor plus the thread behind it so the record sees the full context;

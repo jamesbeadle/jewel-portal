@@ -20,6 +20,11 @@ public sealed class DirectoryUserEntity
     /// <summary>The administrator who revoked them — stamped by RemoveDirectoryUserEndpoint from
     /// the signed-in caller. Null while active.</summary>
     [MaxLength(256)] public string? RevokedBy { get; set; }
+
+    /// <summary>Per-user opt-in (Admin → Users): a "Viewing as" role switch is temporary and the
+    /// client defaults back to the user's own role (HomeRoleSelection) after two hours. Off by
+    /// default — the revert prompt would annoy people who live in one role all day.</summary>
+    public bool RevertToOwnRole { get; set; }
 }
 
 public sealed class DirectoryUserRoleEntity

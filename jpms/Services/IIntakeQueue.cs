@@ -99,6 +99,12 @@ public interface IIntakeQueue
     // alongside the bid package and work order above.
     Task<Defect> CreateDefectFromMessageAsync(CreateDefectFromMessage command, CancellationToken cancellationToken = default);
 
+    // Add an inventory item from a supplier's email (the item added exactly as a manual one, plus
+    // the email linked to it). The Supplier pathway's first "create a new record from this email"
+    // — the email is tagged "JPMS/INV-####", so the item reads its mail back live by tag.
+    Task<Jewel.JPMS.Models.InventoryItem> CreateInventoryItemFromMessageAsync(
+        Jewel.JPMS.Contracts.Inventory.CreateInventoryItemFromMessage command, CancellationToken cancellationToken = default);
+
     // Raise a building control inspection stage from the inspector's email (a booking
     // confirmation, a visit arrangement). The email is tagged "JPMS/BCI-####", so the stage reads
     // its thread back live by tag — requires the project's building control case to exist.

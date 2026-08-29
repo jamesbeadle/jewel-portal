@@ -30,6 +30,7 @@ public sealed class UpsertDirectoryUserHandler
             context.DirectoryUsers.Add(entity);
         }
         entity.DisplayName = command.DisplayName;
+        entity.RevertToOwnRole = command.RevertToOwnRole;
 
         await ReplaceRolesAsync(command, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);

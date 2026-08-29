@@ -1,38 +1,34 @@
-using Jewel.JPMS.Api.Features.Audit;
-using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
-
 namespace Jewel.JPMS.Api.Features.RecordLinks;
 
 /// <summary>
-/// The cross-filing confirm, checked BEFORE a record is created from an email.
+/// The cross-filing pre-flight, checked BEFORE a record is created from an email.
 ///
-/// <para>The create-from-message commands (work order, bid package, defect, request) persist the
-/// record first and link the email after — so when the link path's cross-pathway rejection fired,
-/// the record already existed: the Control Centre showed a red error with no confirm button, and a
-/// retry created a DUPLICATE record (the 2026-08-22 "WO-CA63BC67" glitch). This guard runs the
-/// SAME check against the email's current categories before anything persists, throwing the same
-/// "Confirm the cross-filing" wording the UI already recognises (IsCrossFilePrompt → the amber
-/// "File under both anyway" retry, which re-runs the command with AllowCrossPathway). A rejection
-/// here costs nothing — no record, no tag, nothing to duplicate.</para>
+/// <para>RETIRED 2026-08-28 — cross-filing no longer needs a confirm. The pathway panes make the
+/// second filing an explicit, visible choice (each pane names the pathway it files under, and the
+/// pane hint says the thread is already filed elsewhere), so the "Confirm the cross-filing" reject
+/// this guard used to throw was a second ask for a decision the triager had already made on
+/// screen. Dual filing is simply allowed: the link path stamps the new bucket alongside the
+/// existing one, exactly as the confirmed path always did.</para>
+///
+/// <para>The method and its call sites are kept (as a no-op) rather than deleted: they mark the
+/// exact spot the pre-flight ran — BEFORE anything persists — which is where a check would have to
+/// go again if a pathway rule ever returns. (The original guard existed because the
+/// create-from-message commands persist the record first and link the email after; a rejection on
+/// the link path left the record created, and a retry raised a duplicate — the 2026-08-22
+/// "WO-CA63BC67" glitch.)</para>
 /// </summary>
 public static class CrossPathwayGuard
 {
     /// <summary>
-    /// Throws the standard cross-filing confirm when filing <paramref name="bucket"/> would put the
-    /// thread under a second pathway and <paramref name="allowCrossPathway"/> has not been given.
-    /// <paramref name="newRecordLabel"/> names what is being created ("the new work order") — there
-    /// is no reference to show yet, which is exactly the point of pre-flighting.
+    /// Formerly threw the "Confirm the cross-filing" reject when filing <paramref name="bucket"/>
+    /// would put the thread under a second pathway without <paramref name="allowCrossPathway"/>.
+    /// Now a no-op — cross-filing is allowed without a confirm (retired 2026-08-28, see the class
+    /// note). The parameters are kept so call sites (and the AllowCrossPathway contract param)
+    /// stay source-compatible.
     /// </summary>
     public static void EnsureConfirmed(
         IEnumerable<string>? categories, string? bucket, bool allowCrossPathway, string newRecordLabel)
     {
-        if (bucket is null || allowCrossPathway) return;
-        var existing = (categories ?? Array.Empty<string>())
-            .Where(TriageCategories.IsBucketTag)
-            .FirstOrDefault(existingBucket => !existingBucket.Equals(bucket, StringComparison.OrdinalIgnoreCase));
-        if (existing is null) return;
-        throw new InvalidOperationException(
-            $"This thread is filed under {AuditTrail.PathwayLabel(existing)}; {newRecordLabel} would also file it under {AuditTrail.PathwayLabel(bucket)}. "
-            + "Confirm the cross-filing to proceed, or link the email to a record on the same pathway.");
+        // Intentionally nothing.
     }
 }

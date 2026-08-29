@@ -32,7 +32,9 @@
     }
     else
     {
-        <button type="button" class="btn-primary" @onclick="SubmitAsync">Stage action</button>
+        <button type="button" class="btn-primary" disabled="@(ProjectId == "")"
+                title="@(ProjectId == "" ? "Pick the email's project in the bar above first — the variation is raised on it" : null)"
+                @onclick="SubmitAsync">Stage action</button>
     }
 </div>
 
@@ -80,6 +82,9 @@
 
     private async Task StageAsync(ManualVariationForm.Draft draft)
     {
+        // The editor renders before the project auto-match lands (2026-08-28) — a variation must
+        // never stage against a blank project, whatever route the submit took.
+        if (ProjectId == "") return;
         var variations = Variations;
         var stagedProjectId = ProjectId;
         var project = Projects.FirstOrDefault(p => p.ProjectId == stagedProjectId);

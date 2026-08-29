@@ -186,6 +186,9 @@ public sealed class JpmsContext : DbContext
 
     public DbSet<DefectEntity> Defects => Set<DefectEntity>();
 
+    // Project inventory — products held for the job and where they're kept (INV-#### tag stems).
+    public DbSet<InventoryItemEntity> InventoryItems => Set<InventoryItemEntity>();
+
     // Building control — the statutory sign-off trail: the case with the body, its inspection
     // stages, and the files (photos, site reports, notices, the completion certificate).
     public DbSet<BuildingControlCaseEntity> BuildingControlCases => Set<BuildingControlCaseEntity>();
@@ -437,6 +440,14 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<DefectEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_Defects_ProjectId");
+        // Read per project (the Inventory tab's one view); Number resolves INV-#### tags back to
+        // their items.
+        modelBuilder.Entity<InventoryItemEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_InventoryItems_ProjectId");
+        modelBuilder.Entity<InventoryItemEntity>()
+            .HasIndex(row => row.Number)
+            .HasDatabaseName("IX_InventoryItems_Number");
 
         // ---- Building control ---------------------------------------------------------------------
         // Read per project (the tab's one view); numbers resolve BC-####/BCI-#### tags back to

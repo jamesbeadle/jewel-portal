@@ -9,6 +9,14 @@ public interface IDrawingStore
     /// Lets views distinguish "still loading" from "genuinely not found".</summary>
     bool DrawingsLoadedFor(string projectId);
 
+    /// <summary>True when the register's last fetch FAILED. Pair with
+    /// <see cref="DrawingsLoadedFor"/> when gating: a failure must open the gate with a message
+    /// and a retry, never leave it pulsing (the loading-states rules in CLAUDE.md).</summary>
+    bool DrawingsFailedFor(string projectId);
+
+    /// <summary>Clears the register's failed state and fetches it again.</summary>
+    void RetryDrawings(string projectId);
+
     IReadOnlyList<Drawing> DrawingsFor(string projectId);
 
     /// <summary>False until this drawing's revisions have been fetched at least once. Distinct
@@ -16,7 +24,21 @@ public interface IDrawingStore
     /// and "no file to preview" is only true once they have landed.</summary>
     bool RevisionsLoadedFor(string drawingId);
 
+    /// <summary>True when this drawing's last revisions fetch FAILED — same pairing rule as
+    /// <see cref="DrawingsFailedFor"/>.</summary>
+    bool RevisionsFailedFor(string drawingId);
+
+    /// <summary>Clears the drawing's failed state and fetches its revisions again.</summary>
+    void RetryRevisions(string drawingId);
+
     IReadOnlyList<DrawingRevision> RevisionsFor(string drawingId);
+
+    /// <summary>Fetches a drawing's revisions if they have never loaded, completing once they
+    /// have landed — for callers about to act on the list rather than render it (the composer
+    /// attaching a ticked drawing's file). Already-loaded revisions return immediately; a failed
+    /// fetch is swallowed (the query pipeline has reported it) and
+    /// <see cref="RevisionsLoadedFor"/> stays false so the caller can tell.</summary>
+    Task EnsureRevisionsNowAsync(string drawingId, CancellationToken cancellationToken);
 
     IReadOnlyList<DrawingRevision> AmbiguousFor(string projectId);
 

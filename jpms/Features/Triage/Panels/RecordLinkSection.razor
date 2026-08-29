@@ -94,14 +94,22 @@
     private RenderFragment RecordRow(LinkableRecord record, bool candidate) => __builder =>
     {
         <button type="button" @key="record.RecordId" @onclick="() => TogglePick(record)" class="@RowClass(record, candidate)">
-            @if (ShowReference(record))
+            <span class="flex items-center gap-2 min-w-0">
+                @if (ShowReference(record))
+                {
+                    <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
+                }
+                <span class="text-sm text-content truncate flex-1" title="@RowHint(record)">@record.Title</span>
+                @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
+                {
+                    <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
+                }
+            </span>
+            @* The record's detail (LinkableRecord.Summary — already clipped server-side) sits under
+               the title, one small line, CSS-ellipsised to the card's width. *@
+            @if (!string.IsNullOrWhiteSpace(record.Summary))
             {
-                <span class="font-mono text-xs text-content-muted shrink-0">@record.Reference</span>
-            }
-            <span class="text-sm text-content truncate flex-1" title="@RowHint(record)">@record.Title</span>
-            @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
-            {
-                <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
+                <span class="block text-xs text-content-subtle truncate mt-0.5" title="@record.Summary">@record.Summary</span>
             }
         </button>
     };
@@ -120,7 +128,7 @@
 
     private string RowClass(LinkableRecord record, bool candidate)
     {
-        var baseClass = "w-full text-left rounded-lg border px-3 py-1.5 flex items-center gap-2 transition";
+        var baseClass = "w-full text-left rounded-lg border px-3 py-1.5 block min-w-0 transition";
         if (Picked.Any(r => r.RecordId == record.RecordId)) return $"{baseClass} border-accent bg-surface-raised";
         return candidate
             ? $"{baseClass} border-amber-500/40 hover:border-amber-500"

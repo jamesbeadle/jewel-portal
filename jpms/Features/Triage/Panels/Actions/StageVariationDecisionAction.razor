@@ -13,7 +13,15 @@
     {
         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
     }
-    @if (orders is null)
+    @if (ProjectId == "")
+    {
+        @* No project yet (the editor renders before the auto-match lands) — a disabled control
+           that says what it needs, never a "Loading…" for a fetch that isn't running. *@
+        <select class="field" disabled>
+            <option value="">Pick the email's project in the bar above first…</option>
+        </select>
+    }
+    else if (orders is null)
     {
         <p class="text-sm text-content-subtle italic">Loading the project's variations…</p>
     }

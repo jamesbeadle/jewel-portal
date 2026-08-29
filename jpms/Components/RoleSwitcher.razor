@@ -30,6 +30,14 @@
                         </li>
                     }
                 </ul>
+                @if (Session.IsTemporaryRole && Session.HomeRole is { } home && Session.RevertDueAt is { } due)
+                {
+                    @* Only opted-in users (Admin → Users → "Defaults back to own role") see this;
+                       for everyone else a switch sticks indefinitely, as it always has. *@
+                    <p class="px-3 py-2 text-[10px] leading-snug text-content-faint border-t border-line">
+                        Temporary — defaults back to @home.DisplayName() around @due.ToLocalTime().ToString("HH:mm").
+                    </p>
+                }
             </div>
         }
     </div>

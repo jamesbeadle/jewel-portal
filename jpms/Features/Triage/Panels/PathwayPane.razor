@@ -38,7 +38,7 @@
 
         @if (HasOpenEmail && LockedPathway is { } filedPathway && filedPathway != Config.Pathway)
         {
-            <p class="text-xs text-content-subtle">This thread is filed under <span class="font-medium text-content">@filedPathway</span> — tags from this pane also file it under @Config.Pathway (you'll be asked to confirm).</p>
+            <p class="text-xs text-content-subtle">This thread is filed under <span class="font-medium text-content">@filedPathway</span> — tags from this pane also file it under @Config.Pathway.</p>
         }
 
         @* What's staged so far, across every pane — the running total. *@

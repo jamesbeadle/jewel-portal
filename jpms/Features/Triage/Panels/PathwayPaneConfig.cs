@@ -74,15 +74,18 @@ public sealed record PathwayPaneConfig(
     public static PathwayPaneConfig Supplier { get; } = new(
         "Supplier",
         "A materials or goods supplier, as distinct from a subcontractor",
-        Array.Empty<RecordType>(),
+        // Inventory (2026-08-28) is the pane's first linkable record type: goods for the job —
+        // what the product is, where it's kept. Purchase orders split from work orders remain a
+        // later phase.
+        new[] { RecordType.Inventory },
         CommunicationFamily.Supplier,
-        // Supplier record types (purchase orders split from work orders) are a later phase, but
-        // the pane still carries the supplier-side acts an email prompts today — a delivery or
-        // rep visit to put on the calendar, a new supplier to keep on file — so the Actions tab
-        // exists on every pane and the UX reads the same all four ways (Nigel, 2026-08-27).
         new (string, IReadOnlyList<SystemActionKind>)[]
         {
-            (SystemActionGuide.RaiseGroup, new[] { SystemActionKind.RaiseCalendarEvent }),
+            (SystemActionGuide.RaiseGroup, new[]
+            {
+                SystemActionKind.AddInventoryItem,
+                SystemActionKind.RaiseCalendarEvent,
+            }),
             (SystemActionGuide.PeopleGroup, new[] { SystemActionKind.AddDirectoryContact }),
         });
 
@@ -121,6 +124,7 @@ public sealed record PathwayPaneConfig(
         RecordType.BidPackageInvite => "Bid Package Invite",
         RecordType.WorkOrder => "Work Order",
         RecordType.Defect => "Defect",
+        RecordType.Inventory => "Inventory item",
         RecordType.Todo => "To-do item",
         RecordType.CalendarEvent => "Calendar event",
         RecordType.BuildingControlInspection => "Building Control Inspection",

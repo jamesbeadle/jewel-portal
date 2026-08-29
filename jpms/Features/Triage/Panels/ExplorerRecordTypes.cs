@@ -12,7 +12,7 @@ public static class ExplorerRecordTypes
     public static readonly RecordType[] All =
     {
         RecordType.Request, RecordType.Variation, RecordType.TenderEnquiry, RecordType.WorkOrder,
-        RecordType.BidPackageInvite, RecordType.Defect, RecordType.Lad, RecordType.Todo,
+        RecordType.BidPackageInvite, RecordType.Defect, RecordType.Inventory, RecordType.Lad, RecordType.Todo,
         RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase
     };
 
@@ -24,6 +24,7 @@ public static class ExplorerRecordTypes
         RecordType.WorkOrder => "Work Orders",
         RecordType.BidPackageInvite => "Bid Package Invites",
         RecordType.Defect => "Defects",
+        RecordType.Inventory => "Inventory",
         RecordType.Lad => "LADs claims",
         RecordType.Todo => "To-do items",
         RecordType.CalendarEvent => "Calendar events",
@@ -41,6 +42,7 @@ public static class ExplorerRecordTypes
         RecordType.TenderEnquiry => $"/tender-enquiries/{record.RecordId}",
         RecordType.WorkOrder => $"/projects/{record.ProjectId}/work-orders",
         RecordType.Defect => $"/projects/{record.ProjectId}/defects",
+        RecordType.Inventory => $"/projects/{record.ProjectId}/inventory",
         RecordType.Scheduling or RecordType.Lad => $"/projects/{record.ProjectId}/programme",
         RecordType.Todo => string.IsNullOrEmpty(record.ProjectId) ? "/todos" : $"/projects/{record.ProjectId}/todos",
         RecordType.CalendarEvent => $"/projects/{record.ProjectId}/calendar?event={record.RecordId}",

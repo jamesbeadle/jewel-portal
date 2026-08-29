@@ -1729,6 +1729,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<bool>("RevertToOwnRole")
+                        .HasColumnType("bit");
+
                     b.Property<DateTimeOffset?>("RevokedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -2260,6 +2263,54 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("InfoChaseItemId");
 
                     b.ToTable("InfoChaseItems");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.InventoryItemEntity", b =>
+                {
+                    b.Property<string>("InventoryItemId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("LocationDetails")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProductDetails")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<string>("ProductName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("InventoryItemId");
+
+                    b.HasIndex("Number")
+                        .HasDatabaseName("IX_InventoryItems_Number");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_InventoryItems_ProjectId");
+
+                    b.ToTable("InventoryItems");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LabourSettlementVarianceEntity", b =>

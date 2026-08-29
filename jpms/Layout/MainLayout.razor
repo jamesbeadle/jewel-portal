@@ -15,6 +15,11 @@
        being newer. *@
     <UpdateToast />
 
+    @* The two-hour "Viewing as" clock for opted-in users (Admin → Users → "Defaults back to own
+       role"): asks whether to keep the temporary role, reverts quietly if ignored. Under both
+       toasts in the stack — broken or newer both outrank a role about to change back. *@
+    <RoleOverridePrompt />
+
 
     @if (CanSeeNavigation)
     {

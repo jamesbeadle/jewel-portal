@@ -140,6 +140,71 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
                 + "split across two sites is two entries with the same date, one per site, with "
                 + "the hours split."),
 
+        new AiAction(
+            Name: "code_worker_week",
+            Area: "Labour",
+            Description: "Applies ONE cost code to a worker's Submitted timesheets in a week on "
+                + "one project — the Labour tab's bulk coding, by name. Coding is the step before "
+                + "approval: an uncoded day cannot be approved. Runs the grid's own Adjust per "
+                + "row (hours unchanged); rows already approved are immutable and report so "
+                + "rather than change. Per-day outcomes say exactly what was coded and what "
+                + "was not.",
+            CommandType: typeof(CodeWorkerWeekByName),
+            ResultType: typeof(WorkerWeekCodingResult),
+            AuthorisationType: typeof(CodeWorkerWeekByNameAuthorisation),
+            ValidationType: typeof(CodeWorkerWeekByNameValidation),
+            VisibleTo: LabourRoleSets.ApproveTimesheets,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "workerName as the user says it, matched against the worker register — NEVER "
+                + "ask for worker emails or ids. projectId from list_projects; weekStart is the "
+                + "Monday. costCode must be a Code from list_cost_codes, spelled exactly. dates "
+                + "narrows the act to specific days (ISO dates within the week); leave it out to "
+                + "code the worker's whole week on that project. View the week first with "
+                + "view_labour_week so the user is coding what they think they are."),
+
+        new AiAction(
+            Name: "approve_worker_week",
+            Area: "Labour",
+            Description: "Approves a worker's Submitted timesheets in a week on one project — the "
+                + "Labour tab's Approve selected, by name. Approval POSTS the hours to Financials "
+                + "as actual labour cost at the worker's rate, and an approved timesheet is "
+                + "immutable — its cost code and hours can never be changed afterwards (the "
+                + "correction path is reject-and-resubmit). Uncoded days are refused until coded "
+                + "(code_worker_week); the per-cost-code budget hard-block applies. Partial "
+                + "success: per-day outcomes report what approved and what was refused, and why.",
+            CommandType: typeof(ApproveWorkerWeekByName),
+            ResultType: typeof(WorkerWeekApprovalResult),
+            AuthorisationType: typeof(ApproveWorkerWeekByNameAuthorisation),
+            ValidationType: typeof(ApproveWorkerWeekByNameValidation),
+            VisibleTo: LabourRoleSets.ApproveTimesheets,
+            EmailStamps: new[] { "ApprovedByEmail" },
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
+            Notes: "Show the user the days about to be approved (view_labour_week) and get their "
+                + "yes first — approval is final. workerName as the user says it; projectId from "
+                + "list_projects; weekStart is the Monday. dates narrows approval to specific "
+                + "days; leave it out to approve every Submitted day of the worker's week on "
+                + "that project."),
+
+        new AiAction(
+            Name: "reject_worker_day",
+            Area: "Labour",
+            Description: "Rejects a worker's Submitted timesheet on one date back to them with a "
+                + "reason — the Labour tab's Reject, by name. The worker reads the reason on "
+                + "their My day page and can resubmit; nothing is deleted. Approved timesheets "
+                + "are immutable and refuse.",
+            CommandType: typeof(RejectWorkerDayByName),
+            ResultType: typeof(TimesheetDetail),
+            AuthorisationType: typeof(RejectWorkerDayByNameAuthorisation),
+            ValidationType: typeof(RejectWorkerDayByNameValidation),
+            VisibleTo: LabourRoleSets.ApproveTimesheets,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "workerName as the user says it; projectId from list_projects; date is the "
+                + "single day being rejected. reason is mandatory and the worker sees it — write "
+                + "it to them (\"Hours look double-entered — please re-check Tuesday\")."),
+
         // ---- Cost centres -------------------------------------------------------------------
 
         new AiAction(
@@ -367,9 +432,9 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
     // Skipped: UpdateWorker — gate classes exist (2026-08-28, endpoint composes them), but the command is keyed by an opaque WorkerId the connector cannot resolve; expose via a by-name wrapper (the SubmitWorkerWeekByName pattern) if a need appears.
     // Skipped: DeleteWorker — no Authorisation class (inline LabourRoleSets.ManageWorkers check only).
     // Skipped: AddWorkerTimesheet — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only).
-    // Skipped: AdjustTimesheet — gate classes exist (2026-08-28, endpoint composes them), but the command is keyed by an opaque TimesheetId the connector cannot resolve, and adjustment/coding is the approver's portal activity (the queue carries the context).
-    // Skipped: ApproveTimesheets — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only). (Distinct from the legacy Commercial ApproveTimesheet, whose slices were deleted 2026-08-28.)
-    // Skipped: RejectTimesheet — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only).
+    // (AdjustTimesheet is no longer connector-unreachable — the connector codes through CodeWorkerWeekByName (code_worker_week above), which resolves worker name + dates to the week's timesheets and runs AdjustTimesheetHandler per row. The id-keyed AdjustTimesheet itself stays unmirrored: opaque TimesheetId.)
+    // (ApproveTimesheets likewise — the connector approves through ApproveWorkerWeekByName (approve_worker_week above, confirm-first), which delegates the resolved ids to ApproveTimesheetsHandler's approvedByEmail overload via the EmailStamps parameter. The id-keyed command stays unmirrored: no Authorisation class, opaque ids. Distinct from the legacy Commercial ApproveTimesheet, whose slices were deleted 2026-08-28.)
+    // (RejectTimesheet likewise — reject_worker_day above resolves name + date and runs RejectTimesheetHandler. The id-keyed command stays unmirrored: no Authorisation class, opaque TimesheetId.)
     // Skipped: SubmitWorkerWeek — no Authorisation class (inline LabourRoleSets.ApproveTimesheets check only); the connector enters weeks through SubmitWorkerWeekByName (submit_worker_week above), which delegates to the same handler. (Distinct from the legacy Commercial SubmitTimesheet — action removed from CommercialActions and slices deleted, both 2026-08-28.)
     // Skipped: MySiteSignIn — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).
     // Skipped: MySiteSignOut — no Authorisation class (inline LabourRoleSets.LogOwnTime check only).

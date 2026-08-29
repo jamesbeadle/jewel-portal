@@ -72,17 +72,38 @@ else
         @* ---- The week's timesheets: one panel, statuses as pills, approval at its foot. ---- *@
         <Panel Title="Timesheets" Class="mb-6" BodyClass="p-0"
                IsLoading="@(!TimesheetsReady && !dataFailed)" LoadingLabel="Loading timesheets">
-            @{ var week = WeekTimesheets(); }
+            @{ var weekAll = WeekTimesheets(); var week = FilteredWeek(weekAll); }
             @if (dataFailed)
             {
                 <p class="p-5 text-sm text-negative">Couldn't load the timesheets. The details are in the red bar at the top — reload to try again.</p>
             }
-            else if (week.Count == 0)
+            else if (weekAll.Count == 0)
             {
                 <p class="p-5 text-sm text-content-subtle italic">No timesheets this week. Workers log time from their My day page; their submitted hours appear here for approval.</p>
             }
             else
             {
+                @* Person-by-person approval: filter to one worker, select all, code, approve. *@
+                <div class="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-line/60">
+                    <label class="text-xs uppercase tracking-wide text-content-subtle" for="labour-worker-filter">Worker</label>
+                    <select id="labour-worker-filter" class="field" value="@workerFilter" @onchange="@(args => SetWorkerFilter((string?)args.Value))">
+                        <option value="">All workers</option>
+                        @foreach (var name in WeekWorkerNames(weekAll))
+                        {
+                            <option value="@name">@name</option>
+                        }
+                    </select>
+                    @if (workerFilter != "")
+                    {
+                        <span class="text-xs text-content-subtle">Showing only @(workerFilter)'s days — select-all selects just these.</span>
+                    }
+                </div>
+                @if (week.Count == 0)
+                {
+                    <p class="p-5 text-sm text-content-subtle italic">No timesheets for @workerFilter this week.</p>
+                }
+                else
+                {
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
@@ -114,13 +135,8 @@ else
                                     <td class="px-2 py-2.5">
                                         @if (isEditing)
                                         {
-                                            <select class="field" @bind="editCostCode">
-                                                <option value="">Cost code…</option>
-                                                @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
-                                                {
-                                                    <option value="@centre.Code">@centre.Code — @centre.Name</option>
-                                                }
-                                            </select>
+                                            <SearchSelect Options="@CostCodeOptions" WidthClass="w-56" Placeholder="Cost code…"
+                                                          @bind-Value="editCostCode" />
                                         }
                                         else if (timesheet.CostCode == "")
                                         {
@@ -170,12 +186,22 @@ else
                         </tbody>
                     </table>
                 </div>
-                <div class="flex items-center gap-3 px-5 py-3 border-t border-line">
-                    <button type="button" class="btn-primary" disabled="@(selectedIds.Count == 0 || isApproving)" @onclick="ApproveSelectedAsync">
+                <div class="flex flex-wrap items-center gap-3 px-5 py-3 border-t border-line">
+                    @* Coding is the step before approval — uncoded rows hard-block. Code the whole
+                       selection in one go, then approve; the selection survives the coding pass. *@
+                    <div class="flex items-center gap-2">
+                        <SearchSelect Options="@CostCodeOptions" WidthClass="w-56" Placeholder="Cost code…"
+                                      @bind-Value="bulkCostCode" />
+                        <button type="button" class="btn-secondary" disabled="@(selectedIds.Count == 0 || isBulkCoding || isApproving)" @onclick="CodeSelectedAsync">
+                            @(isBulkCoding ? "Coding…" : $"Code {(selectedIds.Count > 0 ? $"{selectedIds.Count} " : "")}selected")
+                        </button>
+                    </div>
+                    <button type="button" class="btn-primary" disabled="@(selectedIds.Count == 0 || isApproving || isBulkCoding)" @onclick="ApproveSelectedAsync">
                         Approve @(selectedIds.Count > 0 ? $"{selectedIds.Count} " : "")selected
                     </button>
-                    <span class="text-xs text-content-subtle">Only approved time posts to Financials as cost. Budget hard-block applies per cost code.</span>
+                    <span class="text-xs text-content-subtle">Uncoded rows? Pick a cost code and Code selected first, then approve. Only approved time posts to Financials as cost. Budget hard-block applies per cost code.</span>
                 </div>
+                }
             }
         </Panel>
 
@@ -393,13 +419,8 @@ else
                 <input class="field mt-1" type="date" @bind="manualDate" />
             </label>
             <label class="block text-sm text-content-muted">Cost code
-                <select class="field mt-1" @bind="manualCostCode">
-                    <option value="">Cost code…</option>
-                    @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
-                    {
-                        <option value="@centre.Code">@centre.Code — @centre.Name</option>
-                    }
-                </select>
+                <SearchSelect Options="@CostCodeOptions" WidthClass="w-full mt-1" Placeholder="Cost code…"
+                              @bind-Value="manualCostCode" />
             </label>
             <label class="block text-sm text-content-muted">Hours
                 <input class="field mt-1 w-24" type="number" step="0.5" min="0.5" @bind="manualHours" />
@@ -452,6 +473,30 @@ else
     private string? editingId;
     private decimal editHours;
     private string editCostCode = "";
+
+    // Cost codes as SearchSelect options — the same type-to-find picker as the allocation
+    // table, so a fifty-line list is found, not scrolled. The label carries code + name so
+    // typing matches either ("kit" finds CARP-KIT Carpentry kitchens; "ELE" finds every
+    // electrical centre). Rebuilt only when the read model republishes (Alphabetical is
+    // memoised per fetch), so renders don't churn allocations.
+    private IReadOnlyList<SearchSelect.Option>? costCodeOptionsCache;
+    private object? costCodeOptionsCacheKey;
+    private IReadOnlyList<SearchSelect.Option> CostCodeOptions
+    {
+        get
+        {
+            var centres = CostCenters.Alphabetical;
+            if (costCodeOptionsCache is null || !ReferenceEquals(costCodeOptionsCacheKey, centres))
+            {
+                costCodeOptionsCache = centres
+                    .Where(centre => centre.IsActive)
+                    .Select(centre => new SearchSelect.Option(centre.Code, $"{centre.Code} {centre.Name}"))
+                    .ToList();
+                costCodeOptionsCacheKey = centres;
+            }
+            return costCodeOptionsCache;
+        }
+    }
 
     private string? rejectingId;
     private string rejectReason = "";
@@ -529,7 +574,70 @@ else
         return new DateTimeOffset(moment.Date.AddDays(-daysSinceMonday), TimeSpan.Zero);
     }
 
-    private void MoveWeek(int days) => weekStart = weekStart.AddDays(days);
+    private void MoveWeek(int days)
+    {
+        weekStart = weekStart.AddDays(days);
+        // A new week is a new view — never let last week's ticked rows ride invisibly into
+        // this week's Approve selected.
+        selectedIds.Clear();
+    }
+
+    // ---- Person-by-person approval (2026-08-28, Jeremy's ask): filter the grid to one
+    //      worker, select all, bulk-code, approve. The filter narrows what the header
+    //      checkbox and the footer buttons act on; changing it clears the selection so a
+    //      hidden row can never be coded or approved unseen. ----
+
+    private string workerFilter = "";
+    private string bulkCostCode = "";
+    private bool isBulkCoding;
+
+    private void SetWorkerFilter(string? value)
+    {
+        workerFilter = value ?? "";
+        selectedIds.Clear();
+    }
+
+    private List<TimesheetDetail> FilteredWeek(List<TimesheetDetail> week) =>
+        workerFilter == "" ? week : week.Where(timesheet => timesheet.WorkerName == workerFilter).ToList();
+
+    private static List<string> WeekWorkerNames(List<TimesheetDetail> week) =>
+        week.Select(timesheet => timesheet.WorkerName).Distinct().OrderBy(name => name).ToList();
+
+    /// <summary>
+    /// Apply one cost code to every selected submitted row — the bulk twin of Adjust, sharing
+    /// its endpoint (and so its rules: submitted rows only; approved rows are immutable).
+    /// Hours are passed through unchanged. The selection is kept so Approve selected follows on.
+    /// </summary>
+    private async Task CodeSelectedAsync()
+    {
+        if (bulkCostCode == "") { actionError = "Pick the cost code to apply to the selected rows first."; return; }
+        actionError = null;
+        approvalFailures = Array.Empty<LabourApprovalFailure>();
+        isBulkCoding = true;
+        var problems = new List<string>();
+        try
+        {
+            var targets = Labour.TimesheetsFor(ProjectId)
+                .Where(timesheet => selectedIds.Contains(timesheet.TimesheetId)
+                                    && timesheet.Status == TimesheetStatus.Submitted)
+                .OrderBy(timesheet => timesheet.WorkedOn)
+                .ToList();
+            foreach (var timesheet in targets)
+            {
+                try
+                {
+                    await Labour.AdjustTimesheetAsync(ProjectId, timesheet.TimesheetId, timesheet.Hours, bulkCostCode);
+                }
+                catch (Exception failure)
+                {
+                    problems.Add($"{timesheet.WorkerName} {timesheet.WorkedOn:ddd dd MMM}: {DescribeFailure(failure, "could not be coded")}");
+                }
+            }
+        }
+        finally { isBulkCoding = false; }
+        if (problems.Count > 0)
+            actionError = "Some rows could not be coded — " + string.Join("; ", problems);
+    }
 
     private List<TimesheetDetail> WeekTimesheets() =>
         Labour.TimesheetsFor(ProjectId)

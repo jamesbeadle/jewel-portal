@@ -262,6 +262,34 @@ else if (Kind == StagedRecordKind.WorkOrder)
         }
     </div>
 }
+else if (Kind == StagedRecordKind.Inventory)
+{
+    <div class="space-y-3">
+        <p class="text-xs text-content-subtle">The item is added to inventory (numbered INV-####) and this email is tagged to it on apply — it appears on the project's Inventory tab, where its emails read back live.</p>
+
+        <FormField Label="Product name" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Product details</label>
+            <textarea class="field" rows="3" maxlength="2048" placeholder="What the product is — make, spec, sizes, quantities as described in the email"
+                      value="@Create.Description" @oninput="e => { Create.Description = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }"></textarea>
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Location</label>
+            <input type="text" class="field" maxlength="256" placeholder="Where it's kept — site, container, store room"
+                   value="@Create.InventoryLocation" @oninput="e => { Create.InventoryLocation = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }" />
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Location details</label>
+            <textarea class="field" rows="2" maxlength="2048" placeholder="Anything that helps find it — shelf, bay, who holds the key (optional)"
+                      value="@Create.InventoryLocationDetails" @oninput="e => { Create.InventoryLocationDetails = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }"></textarea>
+        </div>
+
+        @if (StagedCreate is not null && Create.InventoryProblem is { } inventoryProblem)
+        {
+            <p class="text-xs text-amber-600">@inventoryProblem</p>
+        }
+    </div>
+}
 else
 {
     <div class="space-y-3">
