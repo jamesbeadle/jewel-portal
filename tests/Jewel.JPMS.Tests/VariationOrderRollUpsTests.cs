@@ -56,14 +56,20 @@ public sealed class VariationOrderRollUpsTests
             SnapshotLine("c", "V4", "0034", amount: 40m, claimed: 40m, period: 40m, clientReference: "SoW-7"),
         };
 
-        var rows = ValuationReportBillRows.For(lines, ValuationElementType.Variation, _ => null);
+        // GroupsFor replaced For with the 2026-08-26 layout rework: variations come back as ONE
+        // group with no area heading (the one-row-per-order consolidation IS the grouping), and
+        // printed codes are padded (V3 → V03) to match the register.
+        var groups = ValuationReportBillRows.GroupsFor(lines, ValuationElementType.Variation, _ => null);
 
+        var billGroup = Assert.Single(groups);
+        Assert.Equal("", billGroup.AreaTitle);
+        var rows = billGroup.Rows;
         Assert.Equal(2, rows.Count);
         var order = rows[0];
-        Assert.Equal("V3", order.Code);
+        Assert.Equal("V03", order.Code);
         Assert.Equal("V3 title", order.Title);
         Assert.Equal("2 items", order.Comments);
-        Assert.Equal("", order.ClientReference);
+        Assert.Equal("", order.ClientReference); // SoW-7 vs SoW-9 disagree, so no reference poses as the order's
         Assert.Equal(1m, order.Quantity);
         Assert.Equal(400m, order.Rate);
         Assert.Equal(400m, order.Amount);
@@ -71,6 +77,7 @@ public sealed class VariationOrderRollUpsTests
         Assert.Equal(20m, order.PeriodIncrement);
         Assert.Equal(180m, order.PreviousClaimed);
         Assert.Equal(50m, order.PercentComplete);
+        Assert.Equal("V04", rows[1].Code);
         Assert.Equal("SoW-7", rows[1].ClientReference);
     }
 
