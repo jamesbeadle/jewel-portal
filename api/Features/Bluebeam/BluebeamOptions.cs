@@ -29,8 +29,11 @@ public sealed class BluebeamOptions
     // endpoint, {ApiBaseUrl}/oauth2/token, returns HTTP 500 to every request — proved 2026-08-31
     // with deliberately invalid probes, so it is Bluebeam's outage, not a request-shape problem.
     // The sign-in server answers the same exchange correctly for server-to-server calls.
+    // The id has an 'iI' pair that reads as 'il' in most fonts — it was captured programmatically
+    // from the authorize redirect and confirmed against the server's own well-known metadata,
+    // never transcribed by eye.
     public string TokenUrl { get; set; } =
-        "https://signin.bluebeamstudio.co.uk/oauth2/aus6n0lsfjY8ilbBj417/v1/token";
+        "https://signin.bluebeamstudio.co.uk/oauth2/aus6n0lsfjY8iIbBj417/v1/token";
 
     // The WORKER Function App hosts the callback, not the portal: the Static Web Apps edge
     // intercepts any URL carrying ?code= as one of its own auth callbacks and 500s it, so an
