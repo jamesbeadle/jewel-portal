@@ -107,6 +107,7 @@ var host = new HostBuilder()
             services.AddSingleton<IBluebeamClient, NullBluebeamClient>();
         }
         services.AddScoped<BluebeamTokenService>();
+        services.AddScoped<BluebeamConnectionWriter>();
         services.AddScoped<DrawingExtractionRunner>();
         services.AddScoped<DrawingExtractionResultWriter>();
 

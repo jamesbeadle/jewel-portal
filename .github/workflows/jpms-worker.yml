@@ -24,6 +24,8 @@ on:
       - 'api/Features/MailboxIntake/**'
       - 'api/Features/Requests/**'
       - 'api/Features/Xero/**'
+      - 'api/Features/Bluebeam/**'
+      - 'api/Features/Drawings/Storage/**'
       - 'api/Cqrs/**'
       - '.github/workflows/jpms-worker.yml'
   workflow_dispatch:

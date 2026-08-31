@@ -14,6 +14,9 @@
     <PackageReference Include="Azure.Identity" Version="1.12.1" />
     <PackageReference Include="Azure.Storage.Queues" Version="12.19.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.22.0" />
+    <!-- HTTP trigger for the Bluebeam OAuth callback — it must live on this app because the SWA
+         edge intercepts any request carrying a ?code= query parameter (see worker/Bluebeam). -->
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.2.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Storage.Queues" Version="5.5.0" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.3.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.17.4" />
@@ -93,6 +96,8 @@
     <Compile Include="..\api\Features\Bluebeam\BluebeamClient.Sessions.cs" Link="Shared\Bluebeam\BluebeamClient.Sessions.cs" />
     <Compile Include="..\api\Features\Bluebeam\NullBluebeamClient.cs" Link="Shared\Bluebeam\NullBluebeamClient.cs" />
     <Compile Include="..\api\Features\Bluebeam\BluebeamTokenService.cs" Link="Shared\Bluebeam\BluebeamTokenService.cs" />
+    <Compile Include="..\api\Features\Bluebeam\BluebeamConnectionState.cs" Link="Shared\Bluebeam\BluebeamConnectionState.cs" />
+    <Compile Include="..\api\Features\Bluebeam\BluebeamConnectionWriter.cs" Link="Shared\Bluebeam\BluebeamConnectionWriter.cs" />
     <Compile Include="..\api\Features\Bluebeam\Queue\BluebeamQueues.cs" Link="Shared\Bluebeam\BluebeamQueues.cs" />
     <Compile Include="..\api\Features\Bluebeam\Extraction\PdfTextLayerExtractor.cs" Link="Shared\Bluebeam\PdfTextLayerExtractor.cs" />
     <Compile Include="..\api\Features\Bluebeam\Extraction\BluebeamMarkupParser.cs" Link="Shared\Bluebeam\BluebeamMarkupParser.cs" />

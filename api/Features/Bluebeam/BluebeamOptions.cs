@@ -24,7 +24,10 @@ public sealed class BluebeamOptions
     public string AuthorizeUrl { get; set; } = "https://api.bluebeamstudio.co.uk/oauth2/authorize";
     public string ApiBaseUrl { get; set; } = "https://api.bluebeamstudio.co.uk";
 
-    public string RedirectUri { get; set; } = "https://portal.jewelbb.co.uk/api/bluebeam/callback";
+    // The WORKER Function App hosts the callback, not the portal: the Static Web Apps edge
+    // intercepts any URL carrying ?code= as one of its own auth callbacks and 500s it, so an
+    // OAuth redirect can never safely land on the SWA. Must be registered on the Bluebeam app.
+    public string RedirectUri { get; set; } = "https://func-jpms-worker-prod.azurewebsites.net/api/bluebeam/callback";
 
     // offline_access is what earns the refresh token; full_user covers the connected account's
     // sessions; jobs covers automated processing.

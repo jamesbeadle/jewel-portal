@@ -27,8 +27,9 @@ public static class BluebeamFeatureRegistration
             services.AddSingleton<IBluebeamClient, NullBluebeamClient>();
         }
 
-        // Scoped — it writes tokens through the request's JpmsContext.
+        // Scoped — they write through the request's JpmsContext.
         services.AddScoped<BluebeamTokenService>();
+        services.AddScoped<BluebeamConnectionWriter>();
 
         RegisterQueue(services, configuration);
 
