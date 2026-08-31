@@ -1,0 +1,100 @@
+@using Jewel.JPMS.Features.Subcontractors
+@inject ComplianceOverviewReadModel Compliance
+@inject SubcontractorsReadModel Subcontractors
+@implements IDisposable
+
+@*
+    Dashboard panel: every subcontractor compliance document expired or expiring within 30 days
+    (the window ComplianceDocumentExtensions.Status defines), soonest first — lapsing insurance is
+    seen before it lapses. Rows link to the company's directory record, where the renewal is
+    uploaded; RoleHome.ShowExpiringDocuments decides who sees the panel. Current versions only.
+*@
+
+<section class="rounded-xl border border-line bg-surface overflow-hidden">
+    <header class="flex items-center justify-between gap-3 px-5 py-3 border-b border-line bg-surface-raised">
+        <h2 class="text-sm font-medium text-content-muted">Expiring documents</h2>
+        @if (ExpiredCount > 0)
+        {
+            <span class="text-xs text-negative font-medium">@ExpiredCount expired</span>
+        }
+    </header>
+
+    @if (dataFailed)
+    {
+        <p class="px-5 py-4 text-sm text-negative">Couldn't load the documents — refresh to try again.</p>
+    }
+    else if (LoadState.UntilAllPresent(Compliance.Current, Subcontractors.Current))
+    {
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading documents" />
+    }
+    else if (Rows.Count == 0)
+    {
+        <p class="px-5 py-4 text-sm text-content-subtle">Nothing has expired or is due within 30 days.</p>
+    }
+    else
+    {
+        <table class="w-full text-sm border-collapse">
+            <thead>
+                <tr class="text-left border-b border-line">
+                    <th class="px-5 py-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Company</th>
+                    <th class="px-5 py-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Document</th>
+                    <th class="px-5 py-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold text-right">Expires</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var document in Rows)
+                {
+                    <tr class="border-b border-line last:border-b-0 hover:bg-surface-raised/60 transition">
+                        <td class="px-5 py-2.5">
+                            <a href="@($"/directory/{document.SubcontractorId}")" class="hover:underline underline-offset-4">
+                                <span class="text-content font-medium">@CompanyNameFor(document.SubcontractorId)</span>
+                            </a>
+                        </td>
+                        <td class="px-5 py-2.5 text-content-muted">@document.Kind</td>
+                        <td class="px-5 py-2.5 text-right whitespace-nowrap">
+                            <span class="mr-2 text-content-muted">@document.ExpiresAt?.LocalDateTime.ToString("d MMM yyyy")</span>
+                            <ComplianceStatusPill Status="@document.Status()" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</section>
+
+@code {
+    private IReadOnlyList<ComplianceDocument> Rows =>
+        (Compliance.Current ?? Array.Empty<ComplianceDocument>())
+            .Where(document => document.Status() is ComplianceStatus.ExpiringSoon or ComplianceStatus.Expired)
+            .OrderBy(document => document.ExpiresAt)
+            .ToList();
+
+    private int ExpiredCount => Rows.Count(document => document.Status() is ComplianceStatus.Expired);
+    private bool dataFailed;
+
+    private string CompanyNameFor(string subcontractorId) =>
+        (Subcontractors.Current ?? Array.Empty<Subcontractor>())
+            .FirstOrDefault(sub => string.Equals(sub.SubcontractorId, subcontractorId, StringComparison.OrdinalIgnoreCase))
+            ?.CompanyName ?? "Unknown company";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Compliance.OnChanged += StateHasChanged;
+        Subcontractors.OnChanged += StateHasChanged;
+        // Refresh once from OnInitializedAsync, concurrently — the panel owns the compliance read
+        // on the dashboard. A failure opens the gate honestly; the toast carries the detail.
+        await Task.WhenAll(RefreshAsync(Compliance.RefreshAsync), RefreshAsync(Subcontractors.RefreshAsync));
+    }
+
+    private async Task RefreshAsync(Func<CancellationToken, Task> refresh)
+    {
+        try { await refresh(CancellationToken.None); }
+        catch { dataFailed = true; }
+    }
+
+    public void Dispose()
+    {
+        Compliance.OnChanged -= StateHasChanged;
+        Subcontractors.OnChanged -= StateHasChanged;
+    }
+}

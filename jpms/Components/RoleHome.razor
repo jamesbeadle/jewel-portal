@@ -1,7 +1,9 @@
 @using Jewel.JPMS.Contracts.Todos
 @using Jewel.JPMS.Features.Projects
 @using Jewel.JPMS.Features.Requests
+@using Jewel.JPMS.Features.Subcontractors
 @using Jewel.JPMS.Features.Xero
+@inject ComplianceOverviewReadModel Compliance
 @inject ProjectListReadModel Projects
 @inject CurrentProjectService CurrentProject
 @inject RfiRegisterReadModel Rfis
@@ -80,6 +82,14 @@
             <NextValuationsPanel />
         }
 
+        @if (ShowExpiringDocuments)
+        {
+            @* Subcontractor compliance documents expired or inside 30 days, across the whole
+               directory — insurance above all. The panel owns the fetch; the count tile above
+               reads the same snapshot, so the two can never disagree. *@
+            <ExpiringDocumentsPanel />
+        }
+
         @if (ShowStaleRates)
         {
             <div class="panel p-5">
@@ -156,6 +166,13 @@
 
     private bool ShowStaleRates => Role is Role.QuantitySurveyor;
 
+    // The FD's exposure (paying an uninsured subcontractor) and the MD's watch. Deliberately no
+    // wider: every row links into /directory, which only Admin, MD, FD and PM may browse — a
+    // panel whose links all land on "Not available" is worse than no panel. Widening the
+    // audience means widening the directory pages' CanAccess first.
+    private bool ShowExpiringDocuments =>
+        Role is Role.ManagingDirector or Role.FinanceDirector;
+
     // Mirrors the API's XeroLedgerRoles.AllowedToAllocate (and the sidebar's FinanceRoles): the
     // finance-facing audience that works — or, for the MD, watches — the allocation queue.
     private bool ShowAllocation =>
@@ -213,6 +230,16 @@
                 tiles.Add(new("Open to-dos", todos.Count.ToString(), "/todos"));
                 tiles.Add(new("Overdue to-dos", overdueTodos.ToString(), "/todos",
                     Note: overdueTodos > 0 ? "past their due date" : "none late", IsBad: overdueTodos > 0));
+            }
+
+            // Fed by ExpiringDocumentsPanel's one fetch — the tile appears only once that read
+            // has landed (null = no fetch yet), so it never shows a zero that becomes real later.
+            if (ShowExpiringDocuments && Compliance.Current is not null)
+            {
+                var lapsing = Compliance.Current.Count(document =>
+                    document.Status() is ComplianceStatus.ExpiringSoon or ComplianceStatus.Expired);
+                tiles.Add(new("Documents expiring", lapsing.ToString(), "/directory",
+                    Note: lapsing > 0 ? "expired or due in 30 days" : "all current", IsBad: lapsing > 0));
             }
 
             if (ShowStaleRates)
@@ -318,6 +345,7 @@
         CurrentProject.OnChange += StateHasChanged;
         Rfis.OnChanged += StateHasChanged;
         XeroLedger.OnChanged += StateHasChanged;
+        Compliance.OnChanged += StateHasChanged;
         _ = CurrentProject.EnsureLoadedAsync();
 
         // Refresh on entry, never from render (the front-end data-loading convention). The RFI
@@ -363,6 +391,7 @@
         CurrentProject.OnChange -= StateHasChanged;
         Rfis.OnChanged -= StateHasChanged;
         XeroLedger.OnChanged -= StateHasChanged;
+        Compliance.OnChanged -= StateHasChanged;
     }
 
     private static string? FirstWordOf(string fullName)

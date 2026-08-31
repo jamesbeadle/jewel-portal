@@ -13,6 +13,7 @@ public static class SubcontractorsRouteRegistration
     {
         services.AddScoped<SubcontractorsReadModel>();
         services.AddScoped<TradesReadModel>();
+        services.AddScoped<ComplianceOverviewReadModel>();
         return services;
     }
 
@@ -31,6 +32,9 @@ public static class SubcontractorsRouteRegistration
         commands.Register<DeleteTrade, Acknowledgement>(
             new CommandRoute("DELETE", "/api/trades/{tradeId}",
                 command => $"/api/trades/{((DeleteTrade)command).TradeId}"));
+
+        queries.Register<ListCurrentComplianceDocuments, IReadOnlyList<ComplianceDocument>>(
+            QueryRoute.Static("/api/compliance-documents"));
 
         queries.Register<ListComplianceDocumentsForSubcontractor, IReadOnlyList<ComplianceDocument>>(
             new QueryRoute("/api/subcontractors/{subcontractorId}/compliance",

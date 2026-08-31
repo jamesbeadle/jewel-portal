@@ -4,6 +4,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject ISubcontractorStore SubcontractorStore
+@inject Jewel.JPMS.Features.Subcontractors.ComplianceOverviewReadModel Compliance
 @inject IClientStore ClientStore
 @inject IArchitectStore ArchitectStore
 @inject Jewel.JPMS.Features.Directory.DirectoryReadModel Staff
@@ -266,6 +267,7 @@ else
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Primary contact</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Location</th>
+                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Compliance</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-line">
@@ -309,6 +311,14 @@ else
                                     }
                                 </td>
                                 <td class="px-4 py-3 text-content-subtle hidden lg:table-cell">@Location(sub)</td>
+                                <td class="px-4 py-3">
+                                    @* The pill renders only once the whole-company read has landed — a blank
+                                       cell is the honest "not fetched yet"; no gate on a single cell. *@
+                                    @if (Compliance.Current is not null)
+                                    {
+                                        <ComplianceStatusPill Status="@Compliance.WorstStatusFor(sub.SubcontractorId)" />
+                                    }
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -678,12 +688,26 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         SubcontractorStore.OnChange += OnStoreChanged;
+        Compliance.OnChanged += OnStoreChanged;
         _ = SubcontractorStore.All(); // kick off the directory load (async; raises OnChange)
         _ = SubcontractorStore.Trades(); // and the curated trade list for the add-company form
+        _ = RefreshComplianceAsync(); // and the compliance column's whole-company read
         isLoaded = true;
     }
 
-    public void Dispose() => SubcontractorStore.OnChange -= OnStoreChanged;
+    // Store convention: refresh once from OnInitializedAsync. The failure is swallowed — the
+    // column's pills simply never appear, and the query client has already raised the error toast.
+    private async Task RefreshComplianceAsync()
+    {
+        try { await Compliance.RefreshAsync(CancellationToken.None); }
+        catch { }
+    }
+
+    public void Dispose()
+    {
+        SubcontractorStore.OnChange -= OnStoreChanged;
+        Compliance.OnChanged -= OnStoreChanged;
+    }
 
     private void OnStoreChanged() => InvokeAsync(StateHasChanged);
 

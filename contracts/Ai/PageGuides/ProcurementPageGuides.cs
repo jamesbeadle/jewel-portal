@@ -72,7 +72,9 @@ public static class ProcurementPageGuides
         new("/directory", "Directory",
             "The unified directory — group chips for Clients, Architects, Subcontractors (the "
             + "default, the company directory) and Internal staff. Manually, on the Subcontractors "
-            + "group: search and Type filter, click a row to open its record, \"+ Add company\" "
+            + "group: search and Type filter, click a row to open its record — each row carries a "
+            + "Compliance pill (the company's worst current-document status: Missing, Current, "
+            + "Expiring soon inside 30 days, or Expired) — \"+ Add company\" "
             + "(Admin/MD/FD), \"Import from Xero\", and Consolidate — tick two or more records, pick "
             + "the master and the winning value per field; references re-point, losing contact "
             + "details become contacts on the master. Clients and Architects render read-only here "

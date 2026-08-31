@@ -1,4 +1,4 @@
-namespace Jewel.JPMS.Api.Features.Subcontractors.Storage;
+﻿namespace Jewel.JPMS.Api.Features.Subcontractors.Storage;
 
 /// <summary>
 /// Fallback used when no storage connection string is configured. Any attempt to store or read a
@@ -7,7 +7,7 @@ namespace Jewel.JPMS.Api.Features.Subcontractors.Storage;
 public sealed class NullComplianceBlobStore : IComplianceBlobStore
 {
     private const string Message =
-        "Compliance document storage is not configured. Set 'ComplianceStorage:ConnectionString' (or 'AzureWebJobsStorage').";
+        "Compliance document storage is not configured. Set 'ComplianceStorage:ConnectionString' (or 'DrawingsStorage:ConnectionString' / 'AzureWebJobsStorage').";
 
     public Task<string> UploadAsync(
         string subcontractorId, string complianceDocumentId,

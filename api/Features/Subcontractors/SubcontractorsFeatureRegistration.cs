@@ -1,4 +1,4 @@
-using Jewel.JPMS.Api.Cqrs;
+﻿using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Subcontractors.Commands;
 using Jewel.JPMS.Api.Features.Subcontractors.Queries;
 using Jewel.JPMS.Api.Features.Subcontractors.Storage;
@@ -19,6 +19,7 @@ public static class SubcontractorsFeatureRegistration
         services.AddScoped<IQueryHandler<ListSubcontractors, IReadOnlyList<Subcontractor>>, ListSubcontractorsHandler>();
         services.AddScoped<IQueryHandler<ListTrades, IReadOnlyList<Trade>>, ListTradesHandler>();
         services.AddScoped<IQueryHandler<ListComplianceDocumentsForSubcontractor, IReadOnlyList<ComplianceDocument>>, ListComplianceDocumentsForSubcontractorHandler>();
+        services.AddScoped<IQueryHandler<ListCurrentComplianceDocuments, IReadOnlyList<ComplianceDocument>>, ListCurrentComplianceDocumentsHandler>();
         services.AddScoped<IQueryHandler<GetSubcontractorStatement, SubcontractorStatement>, GetSubcontractorStatementHandler>();
 
         services.AddScoped<ICommandHandler<PrepareSubcontractorStatementEmailDraft, SubcontractorStatementEmailDraft>, PrepareSubcontractorStatementEmailDraftHandler>();
@@ -78,9 +79,14 @@ public static class SubcontractorsFeatureRegistration
     }
 
     // Mirrors the drawings feature: private container, loud NullStore when unconfigured.
+    // The DrawingsStorage fallback matches every other blob feature (Document Control, Building
+    // Control, work-order attachments…): prod's SWA configures only DrawingsStorage:ConnectionString,
+    // and on SWA managed functions AzureWebJobsStorage is the platform's own account — not ours —
+    // which is what 500'd every compliance download through the portal (2026-08-31).
     private static void RegisterBlobStore(IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration["ComplianceStorage:ConnectionString"]
+            ?? configuration["DrawingsStorage:ConnectionString"]
             ?? configuration["AzureWebJobsStorage"];
 
         if (string.IsNullOrWhiteSpace(connectionString))
