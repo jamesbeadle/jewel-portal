@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Bluebeam;
 
@@ -26,13 +27,14 @@ public sealed class BluebeamConnectEndpoints
     private readonly IBluebeamClient client;
     private readonly JpmsContext context;
     private readonly AuditTrail auditTrail;
+    private readonly ILogger<BluebeamConnectEndpoints> logger;
 
     public BluebeamConnectEndpoints(
         SignedInUserResolver users, BluebeamOptions options, IBluebeamClient client,
-        JpmsContext context, AuditTrail auditTrail)
+        JpmsContext context, AuditTrail auditTrail, ILogger<BluebeamConnectEndpoints> logger)
     {
         this.users = users; this.options = options; this.client = client;
-        this.context = context; this.auditTrail = auditTrail;
+        this.context = context; this.auditTrail = auditTrail; this.logger = logger;
     }
 
     [Function("StartBluebeamConnect")]
@@ -76,6 +78,13 @@ public sealed class BluebeamConnectEndpoints
         catch (BluebeamCallFailedException)
         {
             return Failed("exchange-failed");
+        }
+        catch (Exception failure) when (failure is not OperationCanceledException)
+        {
+            // A browser redirect must never end on a bare 500 — the person can't see logs. The
+            // usual culprit here is the store write (e.g. the migration not applied yet).
+            logger.LogError(failure, "Bluebeam connect callback failed after code exchange.");
+            return Failed("server-error");
         }
 
         await auditTrail.WriteAsync(
