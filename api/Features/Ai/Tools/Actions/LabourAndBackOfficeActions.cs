@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Features.AccessRequests.Commands;
+using Jewel.JPMS.Api.Features.Ai.Skills;
 using Jewel.JPMS.Api.Features.CostCenters.Commands;
 using Jewel.JPMS.Api.Features.Hs.Commands;
 using Jewel.JPMS.Api.Features.Labour;
@@ -9,6 +10,7 @@ using Jewel.JPMS.Api.Features.UsefulInformation;
 using Jewel.JPMS.Api.Features.UsefulInformation.Commands;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.AccessRequests;
+using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Contracts.CostCenters;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Hs;
@@ -396,6 +398,25 @@ internal sealed class LabourAndBackOfficeActions : IAiActionSource
             NameStamps: Array.Empty<string>(),
             Notes: "Affects every user's open session at once and cannot be undone — confirm with "
                 + "the user before calling."),
+
+        new AiAction(
+            Name: "attach_action_skills",
+            Area: "Platform",
+            Description: "Replaces the set of skills attached to one connector action or to a whole "
+                + "action area — the wiring the AI Actions admin page edits. An attached skill's "
+                + "doctrine is served by describe_action with that action's contract from the very "
+                + "next call. An empty skill list detaches everything from the target.",
+            CommandType: typeof(SaveAiActionSkills),
+            ResultType: typeof(Acknowledgement),
+            AuthorisationType: typeof(SaveAiActionSkillsAuthorisation),
+            ValidationType: typeof(SaveAiActionSkillsValidation),
+            VisibleTo: SkillRoles.ManageSkills,
+            EmailStamps: new[] { "SavedByEmail" },
+            NameStamps: Array.Empty<string>(),
+            Notes: "targetKind is \"action\" or \"area\"; targetKey is the action name or the area "
+                + "exactly as list_actions shows it; skillKeys come from list_skills. The save "
+                + "REPLACES the target's whole set, so include every skill that should remain "
+                + "attached, not just the one being added."),
 
         // ---- Access requests ----------------------------------------------------------------
 
