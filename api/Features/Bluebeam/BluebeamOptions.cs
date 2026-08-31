@@ -20,9 +20,17 @@ public sealed class BluebeamOptions
     // EVERY endpoint is regional — authorize included. The support-site auth guide implies one
     // shared consent host (api.bluebeam.com), but that is the US region's: a UK client id sent
     // there lands on the US sign-in server and 400s (learned the hard way, 2026-08-31). The
-    // developer portal's own config confirms per-region authorize hosts. Both overridable.
+    // developer portal's own config confirms per-region authorize hosts. All overridable.
     public string AuthorizeUrl { get; set; } = "https://api.bluebeamstudio.co.uk/oauth2/authorize";
     public string ApiBaseUrl { get; set; } = "https://api.bluebeamstudio.co.uk";
+
+    // Token exchange goes DIRECTLY to the UK sign-in server (the Okta auth server that issues the
+    // codes — its id is visible in the authorize redirect). The gateway's documented token
+    // endpoint, {ApiBaseUrl}/oauth2/token, returns HTTP 500 to every request — proved 2026-08-31
+    // with deliberately invalid probes, so it is Bluebeam's outage, not a request-shape problem.
+    // The sign-in server answers the same exchange correctly for server-to-server calls.
+    public string TokenUrl { get; set; } =
+        "https://signin.bluebeamstudio.co.uk/oauth2/aus6n0lsfjY8ilbBj417/v1/token";
 
     // The WORKER Function App hosts the callback, not the portal: the Static Web Apps edge
     // intercepts any URL carrying ?code= as one of its own auth callbacks and 500s it, so an

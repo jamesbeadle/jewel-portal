@@ -78,7 +78,7 @@ public sealed partial class BluebeamClient : IBluebeamClient
         Dictionary<string, string> form, bool useBasicHeader, CancellationToken cancellationToken)
     {
         var fields = new Dictionary<string, string>(form);
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{options.ApiBaseUrl}/oauth2/token");
+        using var request = new HttpRequestMessage(HttpMethod.Post, options.TokenUrl);
         if (useBasicHeader)
         {
             var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{options.ClientId}:{options.ClientSecret}"));
