@@ -77,7 +77,6 @@ public sealed class CalendarEventTests
         Assert.Empty(CalendarEventDetailsRules.Problems(Details(endDate: Day(2026, 9, 3))));
 
     [Theory]
-    [InlineData("9:30")]
     [InlineData("24:00")]
     [InlineData("09:60")]
     [InlineData("half nine")]
@@ -86,9 +85,13 @@ public sealed class CalendarEventTests
             CalendarEventDetailsRules.Problems(Details(startTime: startTime)),
             error => error.Contains("Start time"));
 
+    // "9:30" is deliberately ACCEPTED: CalendarStartTime.TryNormalise is the tolerant shared
+    // reader ("8:00", "0800", "8.30am" all normalise to HH:mm) — only unreadable or impossible
+    // times are refused.
     [Theory]
     [InlineData("00:00")]
     [InlineData("09:30")]
+    [InlineData("9:30")]
     [InlineData("23:59")]
     public void Problems_acceptsWellFormedStartTimes(string startTime) =>
         Assert.Empty(CalendarEventDetailsRules.Problems(Details(startTime: startTime)));

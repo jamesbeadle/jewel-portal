@@ -56,10 +56,14 @@ public sealed class AiConnectorTests
     [Fact]
     public void WriteTools_exist_andAreMarkedAsWrites()
     {
-        var admin = AiToolCatalogue.ForConnector(UserWith(Role.Admin));
+        // Probed as the MD, not Admin: Role.Admin is deliberately NOT a member of
+        // JpmsRoleSets.AllInternal / InternalAndArchitect (it is the system role, not a delivery
+        // role), so the request/todo write tools are not offered to a bare Admin — the Director
+        // sits in every one of these gates.
+        var director = AiToolCatalogue.ForConnector(UserWith(Role.ManagingDirector));
         foreach (var name in new[] { "post_request_message", "add_todo", "complete_todo", "log_todo_progress", "save_skill" })
         {
-            var tool = admin.SingleOrDefault(candidate => candidate.Name == name);
+            var tool = director.SingleOrDefault(candidate => candidate.Name == name);
             Assert.NotNull(tool);
             Assert.Equal(AiToolKind.Write, tool!.Kind);
         }
