@@ -18,19 +18,31 @@
 window.jpmsUpdate = {
     _handlers: new Map(),
 
+    // A DotNetObjectReference does NOT arrive as the same JS object on every interop call — each
+    // call materialises a fresh proxy around the same underlying id. Keying the handler map by the
+    // proxy object therefore made unwatchVisibility a no-op (different proxy, no Map hit), which
+    // left the visibilitychange listener alive after UpdateToast was disposed and produced
+    // "There is no tracked object with id 'N'" the next time the tab became visible. Key by the
+    // reference's id instead, and swallow the invoke if the .NET side has already gone.
+    _keyOf: function (dotnetRef) {
+        return dotnetRef && dotnetRef._id !== undefined ? dotnetRef._id : dotnetRef;
+    },
+
     watchVisibility: function (dotnetRef) {
         const handler = () => {
-            if (document.visibilityState === 'visible') dotnetRef.invokeMethodAsync('OnTabVisible');
+            if (document.visibilityState === 'visible')
+                dotnetRef.invokeMethodAsync('OnTabVisible').catch(() => { });
         };
         document.addEventListener('visibilitychange', handler);
-        window.jpmsUpdate._handlers.set(dotnetRef, handler);
+        window.jpmsUpdate._handlers.set(window.jpmsUpdate._keyOf(dotnetRef), handler);
     },
 
     unwatchVisibility: function (dotnetRef) {
-        const handler = window.jpmsUpdate._handlers.get(dotnetRef);
+        const key = window.jpmsUpdate._keyOf(dotnetRef);
+        const handler = window.jpmsUpdate._handlers.get(key);
         if (!handler) return;
         document.removeEventListener('visibilitychange', handler);
-        window.jpmsUpdate._handlers.delete(dotnetRef);
+        window.jpmsUpdate._handlers.delete(key);
     },
 
     refresh: async function () {

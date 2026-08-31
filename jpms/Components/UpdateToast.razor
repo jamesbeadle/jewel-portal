@@ -1,7 +1,7 @@
 @inject AppVersionService Versions
 @inject HttpClient Http
 @inject IJSRuntime Js
-@implements IDisposable
+@implements IAsyncDisposable
 
 @*
     The informative sibling of ErrorToast: full width along the top, but a calm raised surface
@@ -92,14 +92,18 @@
         await Js.InvokeVoidAsync("jpmsUpdate.refresh");
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         Versions.OnChange -= OnVersionChange;
         if (selfRef is not null)
         {
-            // Fire-and-forget: the listener must go, but disposal can't await it.
-            _ = Js.InvokeVoidAsync("jpmsUpdate.unwatchVisibility", selfRef);
+            // Take the JS listener down BEFORE the reference is disposed — the old fire-and-forget
+            // version raced its own selfRef.Dispose(), so the visibilitychange handler could still
+            // call back into a dead object ("There is no tracked object with id 'N'").
+            try { await Js.InvokeVoidAsync("jpmsUpdate.unwatchVisibility", selfRef); }
+            catch { /* Tearing down during navigation/unload — the listener dies with the page. */ }
             selfRef.Dispose();
+            selfRef = null;
         }
     }
 }
