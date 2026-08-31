@@ -59,6 +59,11 @@ public static class RequestsFeatureRegistration
         services.AddScoped<ICommandHandler<RemoveTagFromMessage, Acknowledgement>, RemoveTagFromMessageHandler>();
         services.AddScoped<ICommandHandler<AssignMessageToRequest, Acknowledgement>, AssignMessageToRequestHandler>();
         services.AddScoped<ICommandHandler<CreateRequestFromMessage, Request>, CreateRequestFromMessageHandler>();
+        // The gate classes the connector's action gateway composes (2026-08-31).
+        services.AddScoped<DiscardMessageAuthorisation>();
+        services.AddScoped<RestoreMessageAuthorisation>();
+        services.AddScoped<RemoveTagFromMessageAuthorisation>();
+        services.AddScoped<CreateRequestFromMessageAuthorisation>();
         // Triage "Reply in thread": reply draft in the projects mailbox + a background General
         // request from the same email, in one action.
         services.AddScoped<ICommandHandler<ReplyInThreadFromMessage, ReplyInThreadOutcome>, ReplyInThreadFromMessageHandler>();

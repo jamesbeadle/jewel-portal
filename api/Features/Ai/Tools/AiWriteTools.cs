@@ -286,6 +286,44 @@ internal static class AiWriteTools
                     return Serialise(new { ok = true, command.SkillKey,
                         note = "Saved. The skill is live for the whole team from the next conversation." });
                 }),
+
+            new(
+                "save_skill_reference",
+                "WRITE: create or update one REFERENCE DOCUMENT under a stored skill — the larger "
+                + "source material (clause maps, methodologies, precedent libraries) a skill names "
+                + "but does not inline. Saving replaces the reference whole. Load the current one "
+                + "first (load_skill_reference) and carry forward what should not change. Same "
+                + "audience as save_skill.",
+                AiToolSchema.Object(
+                    ("skillKey", "string", "The owning skill's key — it must already exist.", true),
+                    ("refKey", "string", "The reference's key — an existing one updates it, a new lowercase-hyphen key creates it.", true),
+                    ("displayName", "string", "The name shown on the Skills page.", true),
+                    ("description", "string", "One or two clauses on when this reference is worth loading.", true),
+                    ("body", "string", "The reference's full text, markdown.", true)),
+                AiToolKind.Write,
+                Skills.SkillRoles.ManageSkills,
+                async (context, input, ct) =>
+                {
+                    var command = new SaveAiSkillReference(
+                        AiToolSchema.Text(input, "skillKey") ?? "",
+                        AiToolSchema.Text(input, "refKey") ?? "",
+                        AiToolSchema.Text(input, "displayName") ?? "",
+                        AiToolSchema.Text(input, "description") ?? "",
+                        AiToolSchema.Text(input, "body") ?? "",
+                        SavedByEmail: context.User.Email);
+
+                    var authorisation = context.Services.GetRequiredService<Skills.SaveAiSkillReferenceAuthorisation>();
+                    if (!authorisation.Allows(context.User, command)) return Refused();
+                    var validation = context.Services.GetRequiredService<Skills.SaveAiSkillReferenceValidation>().Check(command);
+                    if (validation.HasFailed) return Invalid(validation);
+
+                    await context.Services
+                        .GetRequiredService<ICommandHandler<SaveAiSkillReference, Acknowledgement>>()
+                        .HandleAsync(command, ct);
+
+                    return Serialise(new { ok = true, command.SkillKey, command.RefKey,
+                        note = "Saved. load_skill lists it; load_skill_reference returns it." });
+                }),
         };
     }
 

@@ -381,7 +381,7 @@ internal sealed class RequestsActions : IAiActionSource
             VisibleTo: TriageRoles.AllowedToTriage,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "messageId is the mailbox message id as read_record_emails / read_selected_email "
+            Notes: "messageId is the mailbox message id as read_record_emails / get_mailbox_message "
                 + "return it (internetMessageId is an optional stable fallback). type + recordId "
                 + "name the record (recordId via find_by_reference). scope is ThreadBehindAnchor "
                 + "(default), MessageOnly or EntireThread. If the answer says the thread is "
@@ -414,14 +414,73 @@ internal sealed class RequestsActions : IAiActionSource
                 + "Confirm with the user WHICH draft, by subject, before calling — someone may have "
                 + "edited the draft in Outlook since it was staged, and deleting throws their edits "
                 + "away too. Only drafts can be deleted; a draft already sent is refused."),
+
+        // ---- Correspondence: triage decisions -----------------------------------------------
+        // Unlocked 2026-08-31 (docs/ai/11 §4): gate classes added in MailboxTriageCommandGates.cs,
+        // same TriageRoles.AllowedToTriage set the endpoints' shared Gate() checks.
+
+        new AiAction(
+            Name: "create_request_from_message",
+            Area: "Correspondence",
+            Description: "Raises a request (RFI, RFA, NOD, EOT, General…) FROM a mailbox email — "
+                + "the Control Centre's create-from-email: the new record is tagged onto the email "
+                + "so its thread reads back under the request.",
+            CommandType: typeof(CreateRequestFromMessage),
+            ResultType: typeof(Request),
+            AuthorisationType: typeof(CreateRequestFromMessageAuthorisation),
+            ValidationType: null,
+            VisibleTo: TriageRoles.AllowedToTriage,
+            EmailStamps: new[] { "RaisedByEmail" },
+            NameStamps: Array.Empty<string>(),
+            Notes: "messageId from list_triage_queue / get_mailbox_message. scope says how far the "
+                + "tag spreads (MessageOnly, ThreadBehindAnchor, EntireThread). If the answer says "
+                + "the thread is already filed under another pathway, ASK THE USER before re-calling "
+                + "with allowCrossPathway true — the cross-filing is a decision, not a default."),
+
+        new AiAction(
+            Name: "discard_mailbox_message",
+            Area: "Correspondence",
+            Description: "Discards an untriaged mailbox email — sets it aside out of the triage "
+                + "queue. Restorable with restore_mailbox_message; nothing is deleted.",
+            CommandType: typeof(DiscardMessage),
+            ResultType: typeof(Acknowledgement),
+            AuthorisationType: typeof(DiscardMessageAuthorisation),
+            ValidationType: null,
+            VisibleTo: TriageRoles.AllowedToTriage,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>()),
+
+        new AiAction(
+            Name: "restore_mailbox_message",
+            Area: "Correspondence",
+            Description: "Restores a discarded mailbox email to the triage queue.",
+            CommandType: typeof(RestoreMessage),
+            ResultType: typeof(Acknowledgement),
+            AuthorisationType: typeof(RestoreMessageAuthorisation),
+            ValidationType: null,
+            VisibleTo: TriageRoles.AllowedToTriage,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>()),
+
+        new AiAction(
+            Name: "remove_mailbox_message_tag",
+            Area: "Correspondence",
+            Description: "Removes one JPMS tag from a mailbox email — un-filing it from that "
+                + "record or category. The email itself is untouched.",
+            CommandType: typeof(RemoveTagFromMessage),
+            ResultType: typeof(Acknowledgement),
+            AuthorisationType: typeof(RemoveTagFromMessageAuthorisation),
+            ValidationType: null,
+            VisibleTo: TriageRoles.AllowedToTriage,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "tag is the exact string as message listings return it (e.g. JPMS/REQ-0012)."),
     };
 
     // Skipped: PostRequestMessage — already dispatched by AiWriteTools.post_request_message; do not duplicate.
-    // Skipped: DiscardMessage (MailboxTriageEndpoints) — no Authorisation class: the endpoint gates inline on TriageRoles, and AiAction requires a DI-resolvable authorisation class with Allows.
-    // Skipped: RestoreMessage (MailboxTriageEndpoints) — same reason: inline TriageRoles gate, no authorisation class to declare.
-    // Skipped: RemoveTagFromMessage (MailboxTriageEndpoints) — same reason: inline TriageRoles gate, no authorisation class to declare.
-    // Skipped: AssignMessageToRequest (MailboxTriageEndpoints) — same reason: inline TriageRoles gate, no authorisation class to declare.
-    // Skipped: CreateRequestFromMessage (MailboxTriageEndpoints) — same reason: inline TriageRoles gate, no authorisation class (stamps RaisedByEmail inline).
+    // (DiscardMessage / RestoreMessage / RemoveTagFromMessage / CreateRequestFromMessage are no
+    //  longer skipped — gate classes added 2026-08-31, declared in the Correspondence area above.)
+    // Skipped: AssignMessageToRequest (MailboxTriageEndpoints) — file_email_to_record covers the link path; the bare assign stays inline TriageRoles gate, no authorisation class to declare.
     // Skipped: ReplyInThreadFromMessage (MailboxTriageEndpoints) — same reason: inline TriageRoles gate, no authorisation class (stamps RaisedByEmail inline).
     // Skipped: RetagRequestWorkflowTags — one-off admin sweep with an inline TriageRoles gate; no authorisation or validation classes exist.
     // Skipped: SendMailboxEmail (MailboxIntake/Compose) — multipart/form-data upload shape dispatched to a concrete handler (not an ICommandHandler registration), inline role gate, no authorisation class.

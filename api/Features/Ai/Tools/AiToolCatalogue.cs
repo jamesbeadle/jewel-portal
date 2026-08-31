@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Ganss.Xss;
 using Jewel.JPMS.Api.Features.Labour; // SiteClock (view_labour_week's week arithmetic)
-using Jewel.JPMS.Api.Features.MailboxIntake.Graph; // IIntakeMessageReader (read_selected_email)
+using Jewel.JPMS.Api.Features.MailboxIntake.Graph; // IIntakeMessageReader (record email reads)
 using Jewel.JPMS.Api.Features.Requests; // TriageRoles (internal, same assembly)
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Ai;
@@ -52,6 +52,11 @@ public static class AiToolCatalogue
             .Concat(AiRecordTools.Build())
             .Concat(AiSourceTools.Build())
             .Concat(AiCommercialTools.Build())
+            .Concat(AiValuationInvoiceTools.Build())
+            .Concat(AiMailboxTools.Build())
+            .Concat(AiFinanceTools.Build())
+            .Concat(AiRegisterTools.Build())
+            .Concat(AiDeliveryTools.Build())
             .Concat(AiTenderEnquiryTools.Build())
             .Concat(AiSkillTools.Build())
             .Concat(AiWriteTools.Build())

@@ -23,7 +23,7 @@ public sealed class LinkMessageToRecordValidation
     public ValidationOutcome Check(LinkMessageToRecord command)
     {
         var errors = new List<string>();
-        if (string.IsNullOrWhiteSpace(command.MessageId)) errors.Add("messageId is required — read_record_emails and read_selected_email return it.");
+        if (string.IsNullOrWhiteSpace(command.MessageId)) errors.Add("messageId is required — read_record_emails and get_mailbox_message return it.");
         if (string.IsNullOrWhiteSpace(command.RecordId)) errors.Add("recordId is required — find_by_reference resolves a reference to it.");
         return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
     }

@@ -33,6 +33,13 @@ public static class ArchitectInstructionsFeatureRegistration
         services.AddScoped<ICommandHandler<DeleteArchitectInstruction, Acknowledgement>,
             DeleteArchitectInstructionHandler>();
 
+        // The gate classes the connector's action gateway composes (2026-08-31).
+        services.AddScoped<ImportArchitectInstructionFromMessageAuthorisation>();
+        services.AddScoped<UpdateArchitectInstructionAuthorisation>();
+        services.AddScoped<LinkArchitectInstructionToVariationAuthorisation>();
+        services.AddScoped<UnlinkArchitectInstructionFromVariationAuthorisation>();
+        services.AddScoped<DeleteArchitectInstructionAuthorisation>();
+
         return services;
     }
 

@@ -120,4 +120,77 @@ public sealed class AiConnectorTests
             Assert.Contains("perform_action", names);
         }
     }
+
+    [Fact]
+    public void ParityAuditReadTools_exist_andStayInternal()
+    {
+        // The 2026-08-31 read surface (docs/ai/11 §5): the register a mirrored write acts on must
+        // be readable by the roles that write it, and none of it may leak to a subcontractor.
+        var director = AiToolCatalogue.ForConnector(UserWith(Role.ManagingDirector)).Select(t => t.Name).ToList();
+        var subcontractor = AiToolCatalogue.ForConnector(UserWith(Role.Subcontractor)).Select(t => t.Name).ToList();
+
+        var readTools = new[]
+        {
+            "list_valuation_invoices", "list_valuation_snapshots", "get_valuation_snapshot",
+            "list_triage_queue", "get_mailbox_message", "list_mailbox_conversation",
+            "search_mailbox", "list_document_triage", "list_project_communications",
+            "get_weekly_cashflow_plan", "get_aged_payables", "get_aged_receivables",
+            "list_payment_certificates", "list_xero_ledger_lines",
+            "list_leads", "list_rates", "list_tender_enquiries", "list_clients",
+            "list_architects", "list_workers", "list_company_registers", "list_portal_users",
+            "list_rfis_across_projects", "list_useful_information",
+            "list_calendar_events", "get_building_control", "get_programme",
+            "list_architect_instructions", "list_progress",
+            "get_package_reconciliation"
+        };
+        foreach (var name in readTools)
+        {
+            Assert.Contains(name, director);
+            Assert.DoesNotContain(name, subcontractor);
+        }
+
+        // list_drawings deliberately mirrors JpmsRoleSets.DrawingReaders, which ADMITS
+        // subcontractors — they read revisions for their assigned work, exactly as over HTTP.
+        Assert.Contains("list_drawings", director);
+        Assert.Contains("list_drawings", subcontractor);
+    }
+
+    [Fact]
+    public void ParityAuditActions_areDeclared()
+    {
+        // The write gaps recorded in docs/ai/11 §2 and the §4 unlocks, now declared.
+        var names = AiActionRegistry.All.Select(a => a.Name).ToList();
+        foreach (var name in new[]
+        {
+            "create_weekly_cashflow_item", "update_weekly_cashflow_item",
+            "archive_weekly_cashflow_item", "place_weekly_cashflow_entry",
+            "set_weekly_cashflow_exclusion", "save_weekly_cashflow_supplier_group",
+            "remove_weekly_cashflow_supplier_group",
+            "add_inventory_item", "update_inventory_item", "create_inventory_item_from_message",
+            "import_architect_instruction_from_message", "update_architect_instruction",
+            "link_architect_instruction_to_variation", "unlink_architect_instruction_from_variation",
+            "delete_architect_instruction",
+            "create_request_from_message", "discard_mailbox_message",
+            "restore_mailbox_message", "remove_mailbox_message_tag",
+            "attach_action_skills"
+        })
+        {
+            Assert.Contains(name, names);
+        }
+
+        // Deleting an instruction says "permanently" — the registry's own boot assert requires
+        // the confirm-first flag, pinned here too so a rewording never drops the gate.
+        Assert.True(AiActionRegistry.All.Single(a => a.Name == "delete_architect_instruction").RequiresConfirmation);
+    }
+
+    [Fact]
+    public void SaveSkillReference_isAWriteToolBehindTheSkillGate()
+    {
+        var admin = AiToolCatalogue.ForConnector(UserWith(Role.Admin));
+        var tool = admin.SingleOrDefault(candidate => candidate.Name == "save_skill_reference");
+        Assert.NotNull(tool);
+        Assert.Equal(AiToolKind.Write, tool!.Kind);
+        Assert.DoesNotContain("save_skill_reference",
+            AiToolCatalogue.ForConnector(UserWith(Role.QuantitySurveyor)).Select(t => t.Name));
+    }
 }

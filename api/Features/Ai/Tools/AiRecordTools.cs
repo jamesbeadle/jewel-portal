@@ -275,7 +275,7 @@ internal static class AiRecordTools
             new(
                 "read_email_attachment",
                 "One attachment from an email you have read, by the messageId and attachment id "
-                + "read_record_emails or read_selected_email returned — the same as read_source with "
+                + "read_record_emails or get_mailbox_message returned — the same as read_source with "
                 + "source_id mail:<messageId>|<attachmentId>, reading from the start. Prefer "
                 + "read_source: it reads a NAMED sheet or page and pages through a long file, and "
                 + "find_in_source finds where a reference appears first. Every standard format opens "
@@ -284,7 +284,7 @@ internal static class AiRecordTools
                 + "with the reason — relay it and ask the user rather than guessing.",
                 AiToolSchema.Object(
                     ("messageId", "string",
-                        "The email's messageId from read_record_emails or read_selected_email.", true),
+                        "The email's messageId from read_record_emails or get_mailbox_message.", true),
                     ("attachmentId", "string", "The attachment's id from the same tool result.", true),
                     ("maxChars", "number",
                         "How much extracted text to return. Default 20000, minimum 2000, maximum "

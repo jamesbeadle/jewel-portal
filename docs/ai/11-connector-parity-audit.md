@@ -1,0 +1,215 @@
+# 11 — Connector parity audit: the whole site against the MCP surface
+
+*Written 2026-08-31, the day the owner starts using the portal through Claude. Every page route in
+jpms/Pages (99 routes, 63 distinct pages) was traced — its reads, every command its buttons and
+modals can send, and the workflow logic its layout enforces — and joined against the action
+registry (245 declared actions), the 81 recorded `// Skipped:` entries, the write tools, and the
+read-tool catalogue. Method per page: razor → injected stores → command contract types → `typeof`
+in `Features/Ai/Tools/Actions/*.cs`. This document is the parity ledger; §5 is the fix order.*
+
+## 1. The headline
+
+**Write parity is in good shape.** Every command a page can send is mirrored, recorded as a
+deliberate skip, or covered by a first-class write tool — with the exceptions in §2, which are
+bookkeeping gaps, not design decisions. The house pattern holds everywhere it was checked: email
+SENDING is never mirrored (draft-then-human-sends), and the subcontractor portal's own commands
+are all skipped on purpose (the connector is internal-facing).
+
+**Read parity is the real finding.** The gateway grew to ~245 write actions while the read
+surface stayed at the chat-era tool set, so many pages are now *write-enabled but read-dark*: the
+model can change data it cannot see. The worst of these are listed in §3 as blind-write pairs —
+they are the priority, because a model acting on data it cannot read is how figures go wrong.
+
+## 2. Write gaps — fit the pattern, not declared, not recorded
+
+These have Authorisation classes DI-registered, so the standing skip rationale ("no gate class")
+does not apply. Each needs either an `AiAction` declaration or a written skip note; silence is the
+one state the registry convention does not allow.
+
+| Commands | Page | Note |
+|---|---|---|
+| CreateWeeklyCashflowItem, UpdateWeeklyCashflowItem, ArchiveWeeklyCashflowItem, PlaceWeeklyCashflowEntry, SetWeeklyCashflowExclusion, SaveWeeklyCashflowSupplierGroup, DeleteWeeklyCashflowSupplierGroup | Weekly Cashflow | The accountant's 13-week plan, entirely absent. Declaring the writes without the plan read (§3) would be worse than useless — do them together. |
+| AddInventoryItem, UpdateInventoryItem, CreateInventoryItemFromMessage | Project Inventory / Control Centre | CreateInventoryItemFromMessage is the most MCP-natural (starts from an email) and is the one clean gap on the Control Centre pathway panes. |
+| AdjustTimesheet | Project Labour | The by-name labour analogs cover approve/reject/submit but not per-timesheet hour adjustment. |
+| ApproveTimesheets, RejectTimesheet | Project Labour | Deliberately superseded by ApproveWorkerWeekByName / RejectWorkerDayByName — but the supersession is unrecorded at the file bottom; add skip notes. |
+| SaveAiSkillReference | AI Skills | save_skill covers the skill body; a skill's REFERENCE documents cannot be written over MCP. |
+| auth invite / send-reset | Admin Users | Plain auth endpoints outside the command pattern; record as skips. |
+
+Registry drift found in passing: tool descriptions and RequestsActions notes still reference
+`read_selected_email`, which is no longer registered anywhere. Scrub the references.
+
+## 3. Read gaps — what the connector cannot see
+
+Grouped by how much they matter. **Blind-write pairs** (a mirrored write acting on unreadable
+data) are marked ⚠ — these make the model guess at current state before writing.
+
+**Mailbox and triage (the largest single hole).** Nothing over MCP lists or searches mail that is
+not already linked to a record: the Control Centre queue (untriaged / discarded / tagged), the
+Document Triage queue, the three Communications registers (project roll-up, SubComms /
+SupplierComms / InternalComms family tags), and any mailbox search. The Control Centre's write
+actions are almost all mirrored ⚠ — a model could triage an email it has no way to list or read.
+An email-intake read family (list_triage_queue, get_message, list_document_triage,
+list_communications) is the precondition for the email-triage skill being usable end-to-end.
+
+**Finance.** No read tool for: the cash forecast/statement family (valuation-invoice payment
+status, live retention schedule, unpaid-bill remainders, drawdowns — per project or company); the
+weekly cashflow plan ⚠-to-be; aged payables/receivables (and the drafts-included convention that
+makes Xero's own report wrong); the Xero allocation ledger, transactions feed and site P&L;
+payment certificates; package reconciliation rows ⚠ (SaveReconciliationPackage / lock are
+mirrored); Xero line→work-order link slices ⚠ (SetXeroLineWorkOrderLinks is mirrored, and links
+are sent as a complete slice list — writing blind silently drops allocations); the reconciliation
+audit trail (the model can cause CostCentreRecoded events it cannot read back).
+
+**Commercial records.** The valuation-invoice register ⚠ (all nine invoice lifecycle writes are
+mirrored; the register, statuses and certified-to-date are unreadable); valuation snapshots
+(frozen statements — the client-safe artefact — unreadable); the lead list (capture/won/lost are
+mirrored writes ⚠, and Estimating Queue / Sales Analytics / Nurture are all lead reads); the rate
+library ⚠ (add_rate/revise_rate mirrored, current rates unreadable, staleness invisible); tender
+enquiry LISTING (context tool needs an id; find_by_reference does not resolve TEQ numbers);
+architect instructions (whole feature dark, see §4); the client and architect registers (their
+create/update writes are mirrored ⚠; search_directory reads the subcontractor table); internal
+staff list; compliance standing per subcontractor; portal-raised variation requests (the
+accept/reject queue on Project Variations).
+
+**Delivery and back office.** Programme detail, baselines and LAD/EOT claims ⚠ (nine programme
+writes mirrored); the progress report/update register ⚠; building control case + inspection
+ladder ⚠; project calendar ⚠ (writes mirrored, no event listing); drawings folder tree and
+revision history (list_sources shows current revisions only, max 60, no approval trail); the
+labour monthly overview, worker roster ⚠ (add_worker mirrored) and Xero mappings; company
+registers (insurances/subscriptions/vans — "what lapses this month" is exactly an assistant
+question); policies and their sign-off ledger; useful-information notes (internal wall — any
+future read tool must keep the internal-only gate); to-do activity trails and linked-todo graph;
+the admin user/role directory; the audit trail (possibly deliberate — decide and record).
+
+## 4. Skips worth revisiting (and skips that should stand)
+
+Unlockable by adding gate classes (the AddWorker 2026-08-28 pattern): the plain-JSON architect
+instruction commands (Update, ImportFromMessage — the multipart ones stay skipped), the triage
+queue's Discard/Restore/RemoveTag and CreateRequestFromMessage (inline TriageRoles),
+SetXeroAllocation and friends (inline XeroLedgerRoles — only worth it once the ledger is
+readable), the labour/registers/policies clusters (inline role sets throughout), and
+UpdateManualWorkOrder (server-derived flag). Standing on purpose: every SendMailboxEmail path
+(drafts only, the human presses send), every multipart upload, and the whole subcontractor portal.
+
+## 5. Recommended fix order
+
+1. **Record the §2 gaps** — declare or skip-note every one; cheap, and restores the "silence is
+   not allowed" invariant. Include the read_selected_email reference scrub.
+2. **Valuation invoices + snapshots read tool** — the deepest blind-write pair, on the flagship
+   money path, and Nigel's first use case.
+3. **Email-intake read family** — unlocks the Control Centre and Document Triage skills
+   end-to-end; without it the triage doctrine has nothing to act on.
+4. **Finance reads** (forecast/statement, weekly cashflow plan + its writes together, aged
+   payables/receivables with the drafts convention baked into the description).
+5. **Small-register reads batch** — leads, rates, tender-enquiry list, calendar, building
+   control, programme, architect instructions, registers, worker roster: one modest list/get tool
+   each, most of them read-only pages today.
+6. **Unlock skips** per §4 as the reads land.
+
+## 6. The skills the pages imply
+
+The audit confirmed the working theory: a page's server calls are actions; the procedure its
+layout enforces is a skill. The doctrine below was extracted from the pages themselves and is
+ready to be written into the skill store and attached (area level) on the AI Actions page.
+
+- **jpms-email-triage** (→ Requests & RFIs, Correspondence): the Control Centre's apply order —
+  verify inherited tag stems first, then doc-triage copies → to-dos → record links → staged
+  creates → system actions → discards → outbox replies → the anchor reply LAST so a send failure
+  loses nothing; one create per pass; attachments before body; cross-pathway filing is allowed —
+  the pane choice IS the decision; replies stamp the thread handled only when nothing else filed
+  it.
+- **jpms-document-filing** (→ Document control, Drawings): revision inherits code/title from the
+  target drawing; a new drawing resolves its folder first; certificate dates are date-only UTC;
+  discard is restorable, never delete; current revision = approved else newest.
+- **jpms-valuation-cycle** (→ Valuation invoices, Commercial): the claim stepper — value & lock →
+  raise & send (freezes the snapshot) → approval → issue (moves certified-to-date) → payment →
+  confirm & roll over; payment never gates the next claim; new claims seed cumulative % from the
+  latest; retention stamped server-side; the client sees the FROZEN snapshot, never the working
+  copy.
+- **jpms-variation-lifecycle** (→ Variations): one document, one number, status says where it is;
+  stage the build-up (total becomes the estimate, approve modal pre-seeds) and let the USER press
+  approve; approval mints the V-ref and mirrors lines onto the valuation; work-order issue from a
+  variation is UI-only — fall back to create_manual_work_order.
+- **jpms-tender-award** (→ Procurement, Tender enquiries): scope + lines + drawings → invite
+  (send is human) → extract quotes from email, never hand-type figures → award mints the WO →
+  PO email as the distinct second step; tender-only prospects stay out of the directory until
+  award; bid packages are not a variation stage.
+- **jpms-xero-allocation** (→ Cost centres, and the ledger tools when they exist): bucket beats
+  project+centre when both set; "Set" is the half-step that writes the Xero site without
+  allocating; dropdown picks alone move nothing; labour-registry suppliers' bills are settlement,
+  not costs; drafts are deliberate — Xero's own aged reports undercount.
+- **jpms-cash-forecast** (→ Cashflow): amounts authoritative, months indicative; no honest date →
+  Undated, untouched balance; the FD's two knobs change timing never amounts; phased months must
+  tie to the statement to the penny; weekly grid moves change WHEN not HOW MUCH.
+- **jpms-labour-rules** (→ Labour): view week → code → approve, in that order (approved rows
+  snapshot their rate); only approved time becomes cost; sign-off freezes the week before
+  settlement; rates never reach site surfaces; mappings close-and-replace, never edit.
+- **Full-record write rule** (belongs in jbb-second-brain): UpdateSubcontractor,
+  UpdateRequestDetails and their kin round-trip the ENTIRE record — read first, resend every
+  field, or data is erased. The same brain gains: draft WOs have no number (list by status, not
+  reference); set_cost_code_budget and Xero WO links take absolute/complete values.
+
+Attachment mechanics are docs/ai/10 §2d; the seeded area mapping is scripts/seed-ai-action-skills.sql.
+
+## 7. Resolution — 2026-08-31, same day
+
+The fix order was worked the same day the audit was written. Shipped:
+
+- **§2 write gaps — all recorded.** WeeklyCashflowAndInventoryActions.cs declares the weekly
+  cashflow suite (7) and inventory suite (3); AdjustTimesheet and the timesheet-supersession
+  notes are written skips there; save_skill_reference joins the write tools; the AdminUsers auth
+  endpoints are recorded as skips (SubcontractorsAndLeadsActions); every stale
+  read_selected_email reference now names get_mailbox_message.
+- **§3 read gaps — the surface shipped as five tool files**: AiValuationInvoiceTools (invoices,
+  snapshots, frozen snapshot lines), AiMailboxTools (triage queue, message, conversation, search,
+  document triage, project communications), AiFinanceTools (weekly cashflow plan, aged
+  payables/receivables with the drafts doctrine, payment certificates, allocation ledger + counts),
+  AiRegisterTools (leads, rates, tender enquiries, clients, architects, workers, company
+  registers, portal users, cross-project RFIs, useful information), AiDeliveryTools (calendar,
+  building control, programme + LAD claims, architect instructions, progress, drawings + revision
+  history, package reconciliation). Every tool wraps the query handler its endpoint composes and
+  mirrors that endpoint's role gate.
+- **§4 unlocks**: gate classes + declarations for the five plain-JSON architect-instruction
+  commands (delete is confirm-first) and the triage quartet (create_request_from_message,
+  discard/restore/remove-tag). Endpoints keep their inline checks deliberately — both sides read
+  the same RoleSet constant, so there is one source of truth (rationale in the gates files).
+- **§6 skills**: nine written to docs/ai/skills/jpms/ (the eight extracted plus
+  jpms-connector-mechanics carrying the full-record-write rule) and seeded with 26 area
+  attachments by scripts/seed-jpms-workflow-skills.sql — idempotent, and it never overwrites a
+  skill the team has since edited.
+
+**Still open, with reasons**: the cash forecast/statement COMPUTATION (the phasing runs
+client-side over several stores; the inputs are now all readable — a server-side statement tool
+is a real build, not a wrapper); profit summary / Xero site P&L and Xero transactions reads;
+SetXeroAllocation and the labour/registers/policies write clusters (inline gates — unlock on
+demand as reads prove out); UpdateManualWorkOrder (server-derived flag); the audit-trail read
+(left unmirrored on purpose for now — decide deliberately, it is the client-pathway wall);
+drawings' ambiguous-revision queue; to-do activity trails; Dashboard aggregates.
+
+## 8. Per-page ledger (condensed)
+
+| Page | Writes | Reads | Skill |
+|---|---|---|---|
+| Control Centre | mirrored except sends/discards (skips) + inventory GAP | ⚠ queue unreadable | email-triage |
+| Document Triage | filing mirrored; discard/restore skipped | ⚠ queue unreadable | document-filing |
+| Requests / Request detail | full parity (attachments skipped) | covered | chain doctrine (page guides) |
+| Communications ×4 | send-only (skipped by design) | registers unreadable | — |
+| Estimating / RFI dash / Sales / Nurture | read-only pages | leads + cross-project RFI listing missing | — |
+| Valuation (+snapshots) | full parity (9 invoice writes) | ⚠ invoices + snapshots unreadable | valuation-cycle |
+| Variations (+detail) | full parity; request accept/reject + WO-issue skipped | request queue + instruction links unreadable | variation-lifecycle |
+| Work orders (+PO, allocation) | full parity; manual-order edit skipped | ⚠ ledger link slices unreadable; audit history unreadable | tender-award (PO step) |
+| Bid packages (+detail) | full parity; invite SEND skipped | covered | tender-award |
+| Tender enquiries (+detail) | full parity | listing missing | — |
+| Cost codes / Rates | mirrored | ⚠ rate library unreadable; Xero comparison minor | — |
+| Directory (+detail) / Clients / Architects | mirrored; portal invite skipped | ⚠ clients/architects/staff/compliance unreadable | full-record rule |
+| Finance: forecast/aged/allocation/certificates/profit/weekly/Xero | forecast knobs mirrored; allocation + weekly-cashflow dark (skips + GAPs) | the whole finance read surface missing | xero-allocation, cash-forecast |
+| Project financials (+recon audit) | full parity | ⚠ recon packages + audit trail unreadable | — |
+| Inventory | GAP ×3 | register unreadable | — |
+| Programme / Progress / Drawings / Building control / Defects / Calendar | mirrored (multipart uploads skipped) | ⚠ all but defects unreadable | document-filing, conventions |
+| Labour ×4 | by-name actions mirrored; rest skipped; AdjustTimesheet GAP | ⚠ overview/roster/mappings unreadable | labour-rules |
+| To-dos (+detail) / My Day | write tools + mirrored move/delete | activity trail thin | — |
+| Settings / Setup | full parity (doc uploads skipped) | covered | — |
+| Useful info / Policies / Registers | notes mirrored; policies/registers skipped | all unreadable | — |
+| Admin (users/trades/system/AI pages) | mirrored; invite/reset GAP-adjacent | user directory unreadable | — |
+| Portal (subcontractor) | skipped by design | out of audience | — |
+| Audit / Agent activity | read-only | unreadable (decide if deliberate) | — |
