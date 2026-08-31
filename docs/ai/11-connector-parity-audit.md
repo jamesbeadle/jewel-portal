@@ -178,10 +178,21 @@ The fix order was worked the same day the audit was written. Shipped:
   attachments by scripts/seed-jpms-workflow-skills.sql — idempotent, and it never overwrites a
   skill the team has since edited.
 
+**Resolved 2026-08-31 evening (the accountant's month-end ask)**: the LABOUR half of the
+write clusters is no longer open. Sign-off (sign_off_labour_week / remove_labour_week_sign_off,
+by-name wrappers over the sign-off handlers), the §6a coding run (run_xero_coding, by-name,
+per-worker outcomes like approval's), reconciliation (set_xero_line_timesheet_cover,
+add_labour_settlement_variance — both with CreatedByEmail stamps) and the effective-dated
+mappings (set_site_xero_mapping / set_cost_code_xero_mapping, gate classes in
+SettlementCommandGates.cs) are all declared, confirm-first where they write to Xero or post
+money. Reads to match: view_settlement_month, view_worker_month (cross-project),
+get_xero_mappings (AiLabourMonthEndTools.cs). find_by_reference now resolves project
+references (JBB-2026-002 → kind "project").
+
 **Still open, with reasons**: the cash forecast/statement COMPUTATION (the phasing runs
 client-side over several stores; the inputs are now all readable — a server-side statement tool
 is a real build, not a wrapper); profit summary / Xero site P&L and Xero transactions reads;
-SetXeroAllocation and the labour/registers/policies write clusters (inline gates — unlock on
+SetXeroAllocation and the registers/policies write clusters (inline gates — unlock on
 demand as reads prove out); UpdateManualWorkOrder (server-derived flag); the audit-trail read
 (left unmirrored on purpose for now — decide deliberately, it is the client-pathway wall);
 drawings' ambiguous-revision queue; to-do activity trails; Dashboard aggregates.

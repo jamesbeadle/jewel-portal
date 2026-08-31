@@ -41,8 +41,10 @@ public sealed class AddLabourSettlementVarianceHandler : ICommandHandler<AddLabo
     private readonly JpmsContext context;
     public AddLabourSettlementVarianceHandler(JpmsContext context) { this.context = context; }
 
+    // The interface path carries the command's own stamp (the action gateway fills it
+    // server-side); the HTTP endpoint keeps passing the signed-in email explicitly below.
     public Task<LabourSettlementVariance> HandleAsync(AddLabourSettlementVariance command, CancellationToken cancellationToken) =>
-        HandleAsync(command, createdByEmail: "", cancellationToken);
+        HandleAsync(command, command.CreatedByEmail, cancellationToken);
 
     public async Task<LabourSettlementVariance> HandleAsync(AddLabourSettlementVariance command, string createdByEmail, CancellationToken cancellationToken)
     {

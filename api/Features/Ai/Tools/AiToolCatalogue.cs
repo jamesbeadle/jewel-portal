@@ -55,6 +55,7 @@ public static class AiToolCatalogue
             .Concat(AiValuationInvoiceTools.Build())
             .Concat(AiMailboxTools.Build())
             .Concat(AiFinanceTools.Build())
+            .Concat(AiLabourMonthEndTools.Build())
             .Concat(AiRegisterTools.Build())
             .Concat(AiDeliveryTools.Build())
             .Concat(AiTenderEnquiryTools.Build())
@@ -697,8 +698,9 @@ public static class AiToolCatalogue
             new(
                 "find_by_reference",
                 "Look up a single record by the reference a person would say out loud — V72, RFI-049, REQ-0122, "
-                + "NOD-003, TODO-0074, WO-0045, BPI-0003, DEF-0012. Searches variations, requests, to-dos, work "
-                + "orders, bid packages and defects across every project. Tolerant of how people type: "
+                + "NOD-003, TODO-0074, WO-0045, BPI-0003, DEF-0012, or a project reference like JBB-2026-002. "
+                + "Searches variations, requests, to-dos, work "
+                + "orders, bid packages, defects and projects across every project. Tolerant of how people type: "
                 + "rfi001, RFI-001, vo80, VOQ-0080, V80 and todo 74 all find their record, and a project-prefixed "
                 + "reference (JBB-2026-001-REQ-0113) matches too. Use this before saying you cannot find "
                 + "something — ONE call, not one per spelling. The one thing it cannot see: a DRAFT work "
@@ -901,6 +903,35 @@ public static class AiToolCatalogue
                         }
 
                         return NotFound($"Nothing found with reference {reference}. Say so — do not guess at a similar record.");
+                    }
+
+                    // JBB-2026-002 — a PROJECT reference (2026-08-31: it came back "not found" and
+                    // the model had to fall back to list_projects). Checked before the request scan
+                    // because every request reference is project-PREFIXED, so a bare project
+                    // reference can never collide with a request's suffix match below.
+                    var projectMatches = await context.Db.Projects
+                        .AsNoTracking()
+                        .Where(row => row.Reference.Replace("-", "").Replace(" ", "").ToLower() == cleaned)
+                        .Select(row => new { row.ProjectId, row.Reference, row.Name, row.ClientName, row.Stage })
+                        .ToListAsync(ct);
+                    if (projectMatches.Count > 0)
+                    {
+                        return Serialise(new
+                        {
+                            ok = true,
+                            kind = "project",
+                            matches = projectMatches.Select(row => new
+                            {
+                                row.Reference,
+                                projectId = row.ProjectId,
+                                row.Name,
+                                client = string.IsNullOrWhiteSpace(row.ClientName) ? null : row.ClientName,
+                                stage = ((ProjectStage)row.Stage).ToString(),
+                                route = $"/projects/{row.ProjectId}"
+                            }),
+                            note = "The projectId is what every project-scoped tool and route takes; "
+                                + "list_projects carries the full live list."
+                        });
                     }
 
                     // Normalised equality first, then suffix — so "REQ-0113" also finds a stored

@@ -27,14 +27,21 @@ public sealed record ListXeroMappings : IQuery<XeroMappingsSnapshot>;
 /// Points a project at a Xero site tracking option from now on. The previous row (if any) is
 /// closed with EffectiveTo = now, never edited — historic reads keep translating through it.
 /// </summary>
-public sealed record SetSiteXeroMapping(string ProjectId, string XeroTrackingOptionId, string XeroTrackingOptionName)
+// XeroTrackingOptionId is nullable (2026-08-31) so the connector's schema marks it optional —
+// the coding run matches by NAME; the id is a convenience when the caller holds it. The handler
+// has always coalesced null to "".
+public sealed record SetSiteXeroMapping(string ProjectId, string? XeroTrackingOptionId, string XeroTrackingOptionName)
     : ICommand<Acknowledgement>;
 
 /// <summary>Same effective-dated contract for a cost code: its tracking option and the account
 /// code per line nature (blank = the run's configured default for that nature).</summary>
+// Everything but CostCode is nullable (2026-08-31) so the connector's schema marks them
+// optional — a blank tracking option codes under the cost code's own name, and a blank account
+// code is legal to STORE (the coding run then skips lines of that nature and says so). The
+// handler has always coalesced nulls to "".
 public sealed record SetCostCodeXeroMapping(
-    string CostCode, string XeroTrackingOptionId, string XeroTrackingOptionName,
-    string LabourAccountCode, string MaterialsAccountCode, string TravelAccountCode)
+    string CostCode, string? XeroTrackingOptionId, string? XeroTrackingOptionName,
+    string? LabourAccountCode, string? MaterialsAccountCode, string? TravelAccountCode)
     : ICommand<Acknowledgement>;
 
 /// <summary>

@@ -83,6 +83,14 @@ public static class LabourFeatureRegistration
         services.AddScoped<ICommandHandler<SignOffLabourWeek, LabourWeekSignOff>>(
             provider => provider.GetRequiredService<SignOffLabourWeekHandler>());
         services.AddScoped<ICommandHandler<RemoveLabourWeekSignOff, Acknowledgement>, RemoveLabourWeekSignOffHandler>();
+        // Connector sign-off (sign_off_labour_week / remove_labour_week_sign_off actions):
+        // by-name wrappers over the handlers above — same signable rule, same gates.
+        services.AddScoped<ICommandHandler<SignOffWorkerWeekByName, LabourWeekSignOff>, SignOffWorkerWeekByNameHandler>();
+        services.AddScoped<SignOffWorkerWeekByNameAuthorisation>();
+        services.AddScoped<SignOffWorkerWeekByNameValidation>();
+        services.AddScoped<ICommandHandler<RemoveWorkerWeekSignOffByName, Acknowledgement>, RemoveWorkerWeekSignOffByNameHandler>();
+        services.AddScoped<RemoveWorkerWeekSignOffByNameAuthorisation>();
+        services.AddScoped<RemoveWorkerWeekSignOffByNameValidation>();
 
         // Settlement schedules, Xero mappings and the §6a coding run.
         services.AddScoped<SettlementScheduleBuilder>();
@@ -97,6 +105,17 @@ public static class LabourFeatureRegistration
         services.AddScoped<RunXeroCodingHandler>();
         services.AddScoped<ICommandHandler<RunXeroCoding, IReadOnlyList<XeroCodingRunResult>>>(
             provider => provider.GetRequiredService<RunXeroCodingHandler>());
+        // Connector coding run (run_xero_coding action): by-name wrapper over the runner above.
+        services.AddScoped<ICommandHandler<RunXeroCodingByName, XeroCodingRunReport>, RunXeroCodingByNameHandler>();
+        services.AddScoped<RunXeroCodingByNameAuthorisation>();
+        services.AddScoped<RunXeroCodingByNameValidation>();
+        // Gate classes for the settlement/Xero write cluster (2026-08-31): the endpoints keep
+        // their inline checks; these exist so the connector's action gateway composes the same
+        // RoleSet constants and argument rules (SettlementCommandGates.cs).
+        services.AddScoped<SetSiteXeroMappingAuthorisation>();
+        services.AddScoped<SetSiteXeroMappingValidation>();
+        services.AddScoped<SetCostCodeXeroMappingAuthorisation>();
+        services.AddScoped<SetCostCodeXeroMappingValidation>();
 
         // Settlement reconciliation.
         services.AddScoped<IQueryHandler<ListLabourSettlementForProject, IReadOnlyList<LabourSettlementRow>>, ListLabourSettlementForProjectHandler>();
@@ -106,6 +125,10 @@ public static class LabourFeatureRegistration
         services.AddScoped<AddLabourSettlementVarianceHandler>();
         services.AddScoped<ICommandHandler<AddLabourSettlementVariance, LabourSettlementVariance>>(
             provider => provider.GetRequiredService<AddLabourSettlementVarianceHandler>());
+        services.AddScoped<SetXeroLineTimesheetCoverAuthorisation>();
+        services.AddScoped<SetXeroLineTimesheetCoverValidation>();
+        services.AddScoped<AddLabourSettlementVarianceAuthorisation>();
+        services.AddScoped<AddLabourSettlementVarianceValidation>();
 
         return services;
     }

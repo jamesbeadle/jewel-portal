@@ -46,8 +46,10 @@ public sealed class SetXeroLineTimesheetCoverHandler : ICommandHandler<SetXeroLi
     private readonly JpmsContext context;
     public SetXeroLineTimesheetCoverHandler(JpmsContext context) { this.context = context; }
 
+    // The interface path carries the command's own stamp (the action gateway fills it
+    // server-side); the HTTP endpoint keeps passing the signed-in email explicitly below.
     public Task<Acknowledgement> HandleAsync(SetXeroLineTimesheetCover command, CancellationToken cancellationToken) =>
-        HandleAsync(command, createdByEmail: "", cancellationToken);
+        HandleAsync(command, command.CreatedByEmail, cancellationToken);
 
     public async Task<Acknowledgement> HandleAsync(SetXeroLineTimesheetCover command, string createdByEmail, CancellationToken cancellationToken)
     {

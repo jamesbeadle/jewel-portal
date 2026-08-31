@@ -28,3 +28,22 @@ description: "Labour and timesheet doctrine — how hours become cost and what i
   sites and codes by name — the fix is the mapping, not a guess.
 - Xero mappings are effective-dated bridges: setting one CLOSES the old row and starts a new one
   (never edits), so historic reads still translate.
+
+## The month-end chain (2026-08-31 — runs whole from the connector)
+
+1. **view_worker_month / view_labour_week** — find what stands in the way: Submitted days,
+   uncoded days, weeks not signed off.
+2. **code_worker_week → approve_worker_week** per project (the money rules above apply).
+3. **sign_off_labour_week** per worker-week (confirm-first). The server re-checks the signable
+   rule: every elapsed day approved, rejected or a recorded absence. A refusal names the days —
+   fix them, never work around them.
+4. **view_settlement_month** — who will code, who will skip and why (FullySignedOff, verdict,
+   lastCodingOutcome).
+5. **run_xero_coding** (confirm-first) — recodes the covered Dext draft bill or stages a draft;
+   everything lands DRAFT in Xero, approving the bill there stays human. Skips report their fix:
+   a mapping gap → get_xero_mappings, then set_site_xero_mapping / set_cost_code_xero_mapping;
+   not signed off → step 3. Already-coded months skip by design (run-once) — relay that.
+6. After the user approves the bill in Xero and it syncs back: **set_xero_line_timesheet_cover**
+   marks the line as settlement of the approved timesheets; when the totals will not tie and the
+   difference is accepted, **add_labour_settlement_variance** (confirm-first) posts it visibly —
+   never absorb a difference silently.

@@ -188,6 +188,53 @@ public sealed class AiConnectorTests
     }
 
     [Fact]
+    public void MonthEndActions_areDeclared_andGateOnConfirmation()
+    {
+        // The 2026-08-31 month-end chain (the accountant's ask): sign-off, the Xero coding run,
+        // reconciliation and the mappings, all reachable from the connector.
+        var names = AiActionRegistry.All.Select(a => a.Name).ToList();
+        foreach (var name in new[]
+        {
+            "sign_off_labour_week", "remove_labour_week_sign_off", "run_xero_coding",
+            "set_xero_line_timesheet_cover", "add_labour_settlement_variance",
+            "set_site_xero_mapping", "set_cost_code_xero_mapping"
+        })
+        {
+            Assert.Contains(name, names);
+        }
+
+        // Confirm-first is the contract on everything that writes to Xero, freezes a week for
+        // settlement, posts a variance, or redirects where money codes — pinned so a rewording
+        // never drops the gate.
+        foreach (var name in new[]
+        {
+            "sign_off_labour_week", "run_xero_coding", "add_labour_settlement_variance",
+            "set_site_xero_mapping", "set_cost_code_xero_mapping"
+        })
+        {
+            Assert.True(AiActionRegistry.All.Single(a => a.Name == name).RequiresConfirmation,
+                $"{name} must be confirm-first.");
+        }
+
+        // The settlement cluster gates on ManageSettlement — a site role never sees it.
+        var foreman = UserWith(Role.Foreman);
+        Assert.DoesNotContain(AiActionRegistry.All,
+            a => a.Name == "run_xero_coding" && a.VisibleTo.IncludesAny(foreman.Roles));
+    }
+
+    [Fact]
+    public void MonthEndReadTools_exist_andStayInternal()
+    {
+        var director = AiToolCatalogue.ForConnector(UserWith(Role.ManagingDirector)).Select(t => t.Name).ToList();
+        var subcontractor = AiToolCatalogue.ForConnector(UserWith(Role.Subcontractor)).Select(t => t.Name).ToList();
+        foreach (var name in new[] { "view_settlement_month", "view_worker_month", "get_xero_mappings" })
+        {
+            Assert.Contains(name, director);
+            Assert.DoesNotContain(name, subcontractor);
+        }
+    }
+
+    [Fact]
     public void SaveSkillReference_isAWriteToolBehindTheSkillGate()
     {
         var admin = AiToolCatalogue.ForConnector(UserWith(Role.Admin));
