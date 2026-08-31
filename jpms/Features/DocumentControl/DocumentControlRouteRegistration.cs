@@ -39,5 +39,9 @@ public static class DocumentControlRouteRegistration
         commands.Register<RestoreDocumentControlItem, DocumentControlItem>(
             new CommandRoute("POST", "/api/document-control/items/{itemId}/restore",
                 command => $"/api/document-control/items/{((RestoreDocumentControlItem)command).DocumentControlItemId}/restore"));
+
+        commands.Register<ExtractDocumentControlArchive, IReadOnlyList<DocumentControlItem>>(
+            new CommandRoute("POST", "/api/document-control/items/{itemId}/extract-archive",
+                command => $"/api/document-control/items/{((ExtractDocumentControlArchive)command).DocumentControlItemId}/extract-archive"));
     }
 }

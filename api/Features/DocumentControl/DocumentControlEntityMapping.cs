@@ -25,7 +25,8 @@ public static class DocumentControlEntityMapping
         entity.ResolvedAt,
         entity.FiledAsKind is { } kind ? (DocumentFiledAs)kind : null,
         entity.FiledRecordId,
-        entity.FiledLabel);
+        entity.FiledLabel,
+        entity.SourceDocumentControlItemId);
 
     public static PaymentCertificate ToModel(this PaymentCertificateEntity entity) => new(
         entity.PaymentCertificateId,

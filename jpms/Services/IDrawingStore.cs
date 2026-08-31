@@ -100,5 +100,19 @@ public interface IDrawingStore
     /// Managing Director and Project Manager only; cannot be undone.</summary>
     Task DeleteRevisionAsync(string projectId, string drawingId, string revisionId, CancellationToken cancellationToken);
 
+    /// <summary>Queues a revision for data extraction (Bluebeam markups + PDF text layer); the
+    /// worker runs it and the extraction query below reports where it's up to.</summary>
+    Task<DrawingExtraction> QueueExtractionAsync(
+        string projectId, string drawingId, string revisionId, CancellationToken cancellationToken);
+
+    /// <summary>Queues every unprocessed drawing on the project (latest live PDF revision each);
+    /// returns how many were queued.</summary>
+    Task<int> QueueAllExtractionsAsync(string projectId, CancellationToken cancellationToken);
+
+    /// <summary>A revision's data view — status, markups, per-page text. Null when the revision
+    /// has never been queued. Deliberately uncached: it IS the status poll behind the panel's
+    /// Refresh button.</summary>
+    Task<DrawingExtractionView?> GetExtractionAsync(string revisionId, CancellationToken cancellationToken);
+
     event Action? OnChange;
 }

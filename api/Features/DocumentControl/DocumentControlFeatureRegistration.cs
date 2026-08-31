@@ -37,6 +37,10 @@ public static class DocumentControlFeatureRegistration
         services.AddScoped<ICommandHandler<DiscardDocumentControlItem, DocumentControlItem>, DiscardDocumentControlItemHandler>();
         services.AddScoped<ICommandHandler<RestoreDocumentControlItem, DocumentControlItem>, RestoreDocumentControlItemHandler>();
 
+        services.AddScoped<ICommandHandler<ExtractDocumentControlArchive, IReadOnlyList<DocumentControlItem>>, ExtractDocumentControlArchiveHandler>();
+        services.AddScoped<ExtractDocumentControlArchiveAuthorisation>();
+        services.AddScoped<ExtractDocumentControlArchiveValidation>();
+
         return services;
     }
 

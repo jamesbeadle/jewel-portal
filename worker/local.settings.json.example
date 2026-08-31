@@ -21,6 +21,10 @@
     "MailboxIntake:Folders:NeedsAttention": "",
 
     "Xero:ClientId": "<custom connection client id; same value as the SWA API's Xero__ClientId>",
-    "Xero:ClientSecret": "<dev-only secret here; NEVER commit a real one>"
+    "Xero:ClientSecret": "<dev-only secret here; NEVER commit a real one>",
+
+    "DrawingsStorage:ConnectionString": "UseDevelopmentStorage=true",
+    "Bluebeam:ClientId": "<same value as the SWA API's Bluebeam__ClientId>",
+    "Bluebeam:ClientSecret": "<dev-only secret here; NEVER commit a real one>"
   }
 }

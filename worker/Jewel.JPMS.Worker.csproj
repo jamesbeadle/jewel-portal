@@ -20,6 +20,12 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="1.2.0" />
     <!-- PDFsharp/MigraDoc (MIT): the worker renders the same branded request document before emailing it. -->
     <PackageReference Include="PDFsharp-MigraDoc" Version="6.1.1" />
+    <!-- PdfPig (Apache-2.0): the drawing-extraction worker reads each revision PDF's text layer —
+         same package + version as the api, where the shared extractor source lives. -->
+    <PackageReference Include="PdfPig" Version="0.1.9" />
+    <!-- Azure.Storage.Blobs: the extraction reads revision PDFs from, and writes payload blobs to,
+         the drawings container via the api's own AzureBlobDrawingStore (linked below). -->
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.22.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
   </ItemGroup>
 
@@ -77,6 +83,25 @@
     <Compile Include="..\api\Features\Xero\Ledger\XeroAllocationSuggester.cs" Link="Shared\Xero\XeroAllocationSuggester.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\XeroWriteBackService.cs" Link="Shared\Xero\XeroWriteBackService.cs" />
     <Compile Include="..\api\Features\Xero\SitePnl\SyncXeroSitePnlHandler.cs" Link="Shared\Xero\SyncXeroSitePnlHandler.cs" />
+    <!-- Shared Bluebeam source: the extraction consumer and the nightly token keep-alive run the
+         SAME client, token service and runner the api compiles, so the two apps can never drift on
+         paths, token handling, or what a stored extraction looks like. Endpoint classes are
+         deliberately NOT linked — linking an [HttpTrigger] class would register it here too. -->
+    <Compile Include="..\api\Features\Bluebeam\BluebeamOptions.cs" Link="Shared\Bluebeam\BluebeamOptions.cs" />
+    <Compile Include="..\api\Features\Bluebeam\IBluebeamClient.cs" Link="Shared\Bluebeam\IBluebeamClient.cs" />
+    <Compile Include="..\api\Features\Bluebeam\BluebeamClient.cs" Link="Shared\Bluebeam\BluebeamClient.cs" />
+    <Compile Include="..\api\Features\Bluebeam\BluebeamClient.Sessions.cs" Link="Shared\Bluebeam\BluebeamClient.Sessions.cs" />
+    <Compile Include="..\api\Features\Bluebeam\NullBluebeamClient.cs" Link="Shared\Bluebeam\NullBluebeamClient.cs" />
+    <Compile Include="..\api\Features\Bluebeam\BluebeamTokenService.cs" Link="Shared\Bluebeam\BluebeamTokenService.cs" />
+    <Compile Include="..\api\Features\Bluebeam\Queue\BluebeamQueues.cs" Link="Shared\Bluebeam\BluebeamQueues.cs" />
+    <Compile Include="..\api\Features\Bluebeam\Extraction\PdfTextLayerExtractor.cs" Link="Shared\Bluebeam\PdfTextLayerExtractor.cs" />
+    <Compile Include="..\api\Features\Bluebeam\Extraction\BluebeamMarkupParser.cs" Link="Shared\Bluebeam\BluebeamMarkupParser.cs" />
+    <Compile Include="..\api\Features\Bluebeam\Extraction\DrawingExtractionRunner.cs" Link="Shared\Bluebeam\DrawingExtractionRunner.cs" />
+    <Compile Include="..\api\Features\Bluebeam\Extraction\DrawingExtractionResultWriter.cs" Link="Shared\Bluebeam\DrawingExtractionResultWriter.cs" />
+    <!-- The drawings blob store the runner reads PDFs from and writes payload blobs to. -->
+    <Compile Include="..\api\Features\Drawings\Storage\IDrawingBlobStore.cs" Link="Shared\Bluebeam\IDrawingBlobStore.cs" />
+    <Compile Include="..\api\Features\Drawings\Storage\AzureBlobDrawingStore.cs" Link="Shared\Bluebeam\AzureBlobDrawingStore.cs" />
+    <Compile Include="..\api\Features\Drawings\Storage\NullDrawingBlobStore.cs" Link="Shared\Bluebeam\NullDrawingBlobStore.cs" />
   </ItemGroup>
 
   <ItemGroup>

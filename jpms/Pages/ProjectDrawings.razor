@@ -2,6 +2,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IDrawingStore DrawingStore
+@inject BluebeamStatusStore Bluebeam
 @inject NavigationManager Nav
 @implements IDisposable
 @using Jewel.JPMS.Features.Drawings
@@ -58,6 +59,15 @@ else
                 </button>
                 @if (CanManage)
                 {
+                    @if (Bluebeam.IsConnected)
+                    {
+                        @* Queues every drawing whose latest live PDF revision has never been
+                           extracted — the Bluebeam markups + text-layer backlog in one click. *@
+                        <button type="button" @onclick="() => confirmingExtractAll = true"
+                                class="rounded-lg border border-line-strong text-sm px-3 py-2 text-content-muted hover:bg-surface-raised transition">
+                            Extract all
+                        </button>
+                    }
                     <button type="button" @onclick="OpenNewFolder"
                             class="rounded-lg border border-line-strong text-sm px-3 py-2 text-content-muted hover:bg-surface-raised transition">
                         + New folder
@@ -131,6 +141,28 @@ else
                 <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@folderError</p>
             }
         </Modal>
+
+        <Modal IsOpen="confirmingExtractAll"
+               Title="Extract all unprocessed drawings?"
+               ConfirmLabel="@(extractAllBusy ? "Queueing…" : "Extract all")"
+               ConfirmDisabled="@extractAllBusy"
+               OnCancel="() => confirmingExtractAll = false"
+               OnConfirm="ExtractAllAsync">
+            <p class="text-sm text-content-muted">
+                Every drawing whose latest live PDF revision hasn't had its data extracted is queued
+                through Bluebeam (markups) and the text-layer reader. The runs happen in the
+                background — each drawing's page shows its own progress and results.
+            </p>
+            @if (extractAllError is not null)
+            {
+                <p class="mt-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">@extractAllError</p>
+            }
+        </Modal>
+
+        @if (extractAllNote is not null)
+        {
+            <p class="mt-4 rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content">@extractAllNote</p>
+        }
     </ProjectPageShell>
 }
 
@@ -139,6 +171,10 @@ else
 
     private bool isLoaded;
     private bool isUploading;
+    private bool confirmingExtractAll;
+    private bool extractAllBusy;
+    private string? extractAllError;
+    private string? extractAllNote;
     private bool approvedOnly;
 
     // Set by a folder row's upload button: the upload panel opens with this folder preselected.
@@ -355,11 +391,36 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         DrawingStore.OnChange += StateHasChanged;
+        Bluebeam.OnChange += StateHasChanged;
         // Refresh on entry: cached drawings render immediately, then update when the
         // background reload lands — so navigating back to this tab never shows stale data.
         DrawingStore.Refresh(ProjectId);
         isLoaded = true;
+        // Fetched once per session; the Extract all button only appears once it reports connected.
+        _ = Bluebeam.EnsureLoadedAsync();
     }
 
-    public void Dispose() => DrawingStore.OnChange -= StateHasChanged;
+    private async Task ExtractAllAsync()
+    {
+        if (extractAllBusy) return;
+        extractAllError = null;
+        try
+        {
+            extractAllBusy = true;
+            var queued = await DrawingStore.QueueAllExtractionsAsync(ProjectId, CancellationToken.None);
+            confirmingExtractAll = false;
+            extractAllNote = queued == 0
+                ? "Nothing to queue — every drawing's latest PDF revision is already extracted (or already in the queue)."
+                : $"Queued {queued} drawing(s) for extraction. Each drawing's page shows its progress.";
+        }
+        catch (Jewel.JPMS.Cqrs.CommandFailedException ex) { extractAllError = ex.Message; }
+        catch { extractAllError = "Queueing didn't complete. Please try again."; }
+        finally { extractAllBusy = false; }
+    }
+
+    public void Dispose()
+    {
+        DrawingStore.OnChange -= StateHasChanged;
+        Bluebeam.OnChange -= StateHasChanged;
+    }
 }

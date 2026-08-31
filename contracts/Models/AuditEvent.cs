@@ -98,7 +98,21 @@ public enum AuditEventType
     // worker-day needs no timesheet, and the reason given is the point. Not client-facing:
     // Pathway is "", like CostCentreRecoded.
     WorkerLinkedToDirectory = 32,    // a worker was linked to (or unlinked from) a directory company / flagged sole trader
-    LabourChaseDayDismissed = 33     // a chase-list day was dismissed with a reason
+    LabourChaseDayDismissed = 33,    // a chase-list day was dismissed with a reason
+    // Drawing data extraction (written since 2026-08-31): a drawing revision's structured data —
+    // Bluebeam Studio markups plus the PDF's own text layer — was extracted into the portal's data
+    // view. Written by the worker after the pipeline succeeds; the register's Metadata badge is the
+    // per-revision status, this row is the when/who record. Not client-facing: Pathway is "".
+    DrawingDataExtracted = 34,       // a drawing revision's markups + text layer were extracted
+    // Archive extraction in Document Triage (written since 2026-08-31): a zip queue item was split
+    // into one queue item per contained file so each can be filed individually. The original
+    // resolves as ArchiveExtracted; this row records who split it and how many files came out.
+    // Not client-facing: Pathway is "".
+    DocumentArchiveExtracted = 35,   // a Document Triage zip was split into per-file queue items
+    // Bluebeam connection (written since 2026-08-31): an admin connected (or reconnected) the
+    // portal's shared Bluebeam Studio account from Admin → Integrations. One connection serves the
+    // whole portal, so the record of who signed it in matters. Not client-facing: Pathway is "".
+    BluebeamConnected = 36           // the shared Bluebeam Studio account was connected
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

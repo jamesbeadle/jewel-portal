@@ -224,7 +224,10 @@ else
         (AuditEventType.MailboxDraftDeleted,     "Draft deleted"),
         (AuditEventType.CostCodeBudgetSet,       "Cost code budget set"),
         (AuditEventType.WorkerLinkedToDirectory,  "Worker linked to directory"),
-        (AuditEventType.LabourChaseDayDismissed,  "Chase day dismissed")
+        (AuditEventType.LabourChaseDayDismissed,  "Chase day dismissed"),
+        (AuditEventType.DrawingDataExtracted,    "Drawing data extracted"),
+        (AuditEventType.DocumentArchiveExtracted, "Archive extracted"),
+        (AuditEventType.BluebeamConnected,       "Bluebeam connected")
     };
 
     // Mirrors the API's TriageRoles.AllowedToTriage — the audit trail is a triage-side tool.
@@ -368,6 +371,9 @@ else
         AuditEventType.CostCodeBudgetSet      => "Cost code budget set",
         AuditEventType.WorkerLinkedToDirectory => "Worker linked to directory",
         AuditEventType.LabourChaseDayDismissed => "Chase day dismissed",
+        AuditEventType.DrawingDataExtracted   => "Drawing data extracted",
+        AuditEventType.DocumentArchiveExtracted => "Archive extracted",
+        AuditEventType.BluebeamConnected      => "Bluebeam connected",
         _                                     => type.ToString()
     };
 

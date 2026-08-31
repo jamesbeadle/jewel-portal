@@ -199,6 +199,18 @@ else
                                      class="max-h-[50vh] w-auto mx-auto" />
                             </div>
                         }
+                        else if (IsZip(item) && item.Status == DocumentControlStatus.Pending)
+                        {
+                            <div class="rounded-xl border border-line bg-surface-raised p-4 space-y-2">
+                                <p class="text-sm text-content">
+                                    This is a zip archive. Extract it to split its contents into separate
+                                    queue items — each file can then be previewed and filed on its own.
+                                </p>
+                                <button type="button" class="btn-primary" disabled="@busy" @onclick="DoExtractArchive">
+                                    @(busy ? "Extracting…" : "Extract archive")
+                                </button>
+                            </div>
+                        }
                         else
                         {
                             <p class="text-xs text-content-subtle italic">
@@ -781,6 +793,29 @@ else
         return RunFiling("Restoring", () => Store.RestoreAsync(item.DocumentControlItemId));
     }
 
+    // Extraction creates several items and resolves the original, so the short in-place update
+    // RunFiling does isn't enough — the whole (uncached) list is re-read instead.
+    private async Task DoExtractArchive()
+    {
+        var item = Selected;
+        if (item is null || busy) return;
+        actionError = null;
+        fileNote = null;
+        try
+        {
+            busyLabel = "Extracting archive";
+            busy = true;
+            var extracted = await Store.ExtractArchiveAsync(item.DocumentControlItemId);
+            items = await Store.ListAsync();
+            fileNote = extracted.Count == 1
+                ? "Extracted 1 file into the queue."
+                : $"Extracted {extracted.Count} files into the queue.";
+        }
+        catch (Jewel.JPMS.Cqrs.CommandFailedException ex) { actionError = ex.Message; }
+        catch { actionError = "That didn't complete. Please try again."; }
+        finally { busy = false; }
+    }
+
     private async Task RunFiling(string label, Func<Task<DocumentControlItem>> action)
     {
         actionError = null;
@@ -836,6 +871,10 @@ else
 
     private static bool IsImage(DocumentControlItem item) =>
         (item.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsZip(DocumentControlItem item) =>
+        item.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+        || (item.ContentType ?? "").Contains("zip", StringComparison.OrdinalIgnoreCase);
 
     private string ViewTabClass(DocView tab) =>
         "px-3 py-2 text-sm border-b-2 -mb-px transition "

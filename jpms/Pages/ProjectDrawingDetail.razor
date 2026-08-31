@@ -2,6 +2,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IDrawingStore DrawingStore
+@inject BluebeamStatusStore Bluebeam
 @inject NavigationManager Nav
 @implements IDisposable
 @using Jewel.JPMS.Features.Drawings
@@ -123,13 +124,23 @@ else
                 @if (CanManage)
                 {
                     <div class="flex items-center gap-2">
-                        @* Manual pipeline trigger — analysis is deliberately NOT automatic yet.
-                           Disabled until the Bluebeam extraction + change-analysis pipeline is
-                           connected; the revision list below shows each stage's status. *@
-                        <button type="button" disabled title="The drawing analysis pipeline (Bluebeam metadata extraction + change analysis) is not connected yet"
-                                class="rounded-lg border border-line-strong text-content-subtle font-medium text-sm px-3 py-2 cursor-not-allowed opacity-60">
-                            Analyse drawing
-                        </button>
+                        @* Manual pipeline trigger — extraction is deliberately NOT automatic on
+                           upload. Queues the previewed revision through Bluebeam (markups) +
+                           PdfPig (text layer); the Extracted data panel below shows the run. *@
+                        @if (CanExtract)
+                        {
+                            <button type="button" disabled="@extractBusy" @onclick="DoExtractData"
+                                    class="rounded-lg border border-line-strong text-content font-medium text-sm px-3 py-2 hover:bg-surface-raised transition disabled:opacity-60">
+                                @(extractBusy ? "Queueing…" : "Extract data")
+                            </button>
+                        }
+                        else
+                        {
+                            <button type="button" disabled title="@ExtractDisabledReason"
+                                    class="rounded-lg border border-line-strong text-content-subtle font-medium text-sm px-3 py-2 cursor-not-allowed opacity-60">
+                                Extract data
+                            </button>
+                        }
                         <button type="button" @onclick="() => isUploading = !isUploading"
                                 class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
                             @(isUploading ? "Cancel" : "+ Upload new version")
@@ -145,6 +156,11 @@ else
             @if (deleteError is not null)
             {
                 <p class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">@deleteError</p>
+            }
+
+            @if (extractError is not null)
+            {
+                <p class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">@extractError</p>
             }
 
             <Modal IsOpen="confirmingDelete"
@@ -226,6 +242,10 @@ else
                                          ProjectId="@ProjectId" DrawingId="@drawing.DrawingId" />
                 </div>
             </div>
+
+            <DrawingExtractionPanel @ref="extractionPanel"
+                                    ProjectId="@ProjectId" DrawingId="@drawing.DrawingId"
+                                    RevisionId="@PreviewRevision?.DrawingRevisionId" CanManage="CanManage" />
             }
             </LoadGate>
         }
@@ -244,6 +264,9 @@ else
     private bool confirmingDelete;
     private bool deleteBusy;
     private string? deleteError;
+    private bool extractBusy;
+    private string? extractError;
+    private DrawingExtractionPanel? extractionPanel;
     private bool moveBusy;
     private string? moveError;
     private string? moveConfirmation;
@@ -317,8 +340,11 @@ else
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         DrawingStore.OnChange += HandleChange;
+        Bluebeam.OnChange += HandleChange;
         Reload();
         sessionReady = true;
+        // Fetched once per session; until it lands the Extract button sits disabled with its tooltip.
+        _ = Bluebeam.EnsureLoadedAsync();
     }
 
     protected override void OnParametersSet() => Reload();
@@ -366,6 +392,33 @@ else
     private static bool IsPdf(DrawingRevision revision) =>
         (revision.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase);
 
+    // Extraction needs a previewable PDF revision and the shared Bluebeam connection.
+    private bool CanExtract =>
+        CanManage && Bluebeam.IsConnected && PreviewRevision is { } revision && IsPdf(revision);
+
+    private string ExtractDisabledReason =>
+        !Bluebeam.IsConnected
+            ? "Extraction needs the Bluebeam connection — connect it under Admin → Integrations"
+            : PreviewRevision is null
+                ? "No stored revision to extract from"
+                : "Only PDF revisions can be extracted";
+
+    private async Task DoExtractData()
+    {
+        if (extractBusy || PreviewRevision is not { } revision) return;
+        extractError = null;
+        try
+        {
+            extractBusy = true;
+            await DrawingStore.QueueExtractionAsync(
+                ProjectId, DrawingId, revision.DrawingRevisionId, CancellationToken.None);
+            if (extractionPanel is { } panel) await panel.RefreshAsync();
+        }
+        catch (Jewel.JPMS.Cqrs.CommandFailedException ex) { extractError = ex.Message; }
+        catch { extractError = "Queueing the extraction didn't complete. Please try again."; }
+        finally { extractBusy = false; }
+    }
+
     private static bool IsImage(DrawingRevision revision) =>
         (revision.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase);
 
@@ -398,5 +451,9 @@ else
 
     private void HandleChange() { Reload(); StateHasChanged(); }
 
-    public void Dispose() => DrawingStore.OnChange -= HandleChange;
+    public void Dispose()
+    {
+        DrawingStore.OnChange -= HandleChange;
+        Bluebeam.OnChange -= HandleChange;
+    }
 }

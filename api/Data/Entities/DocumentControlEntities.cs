@@ -43,11 +43,14 @@ public sealed class DocumentControlItemEntity
     // Stamped when the item is filed or discarded.
     [MaxLength(256)]     public string? ResolvedBy { get; set; }
     public DateTimeOffset? ResolvedAt { get; set; }
-    // DocumentFiledAs: 0 Drawing, 1 PaymentCertificate, 2 SubcontractorDocument. Null until Filed.
+    // DocumentFiledAs: 0 Drawing, 1 PaymentCertificate, 2 SubcontractorDocument,
+    // 3 ArchiveExtracted. Null until Filed.
     public int? FiledAsKind { get; set; }
     [MaxLength(64)]      public string? FiledRecordId { get; set; }
     // The Filed view's human sentence, e.g. "Drawing PRO-064-(WD)-P-800 Rev I on Ashtead House".
     [MaxLength(512)]     public string FiledLabel { get; set; } = "";
+    // Provenance: the queue item this one was extracted from, when it arrived inside an archive.
+    [MaxLength(64)]      public string? SourceDocumentControlItemId { get; set; }
 }
 
 /// <summary>

@@ -86,5 +86,23 @@ public static class DrawingsRouteRegistration
                     var delete = (DeleteDrawingRevision)command;
                     return $"/api/drawings/{delete.DrawingId}/revisions/{delete.DrawingRevisionId}";
                 }));
+
+        // ---- Drawing data extraction (Bluebeam markups + PDF text layer) ----
+
+        queries.Register<GetDrawingExtraction, DrawingExtractionView?>(
+            new QueryRoute("/api/drawings/revisions/{revisionId}/extraction",
+                query => $"/api/drawings/revisions/{((GetDrawingExtraction)query).DrawingRevisionId}/extraction"));
+
+        commands.Register<QueueDrawingExtraction, DrawingExtraction>(
+            new CommandRoute("POST", "/api/drawings/{drawingId}/revisions/{revisionId}/extract",
+                command =>
+                {
+                    var extract = (QueueDrawingExtraction)command;
+                    return $"/api/drawings/{extract.DrawingId}/revisions/{extract.DrawingRevisionId}/extract";
+                }));
+
+        commands.Register<QueueProjectDrawingExtractions, int>(
+            new CommandRoute("POST", "/api/projects/{projectId}/drawings/extract-all",
+                command => $"/api/projects/{((QueueProjectDrawingExtractions)command).ProjectId}/drawings/extract-all"));
     }
 }

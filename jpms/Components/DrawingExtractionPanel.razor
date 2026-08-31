@@ -1,0 +1,210 @@
+@inject IDrawingStore DrawingStore
+@inject BluebeamStatusStore Bluebeam
+
+@*
+    The data view for one drawing revision: what the Bluebeam extraction pulled out (markups) and
+    the PDF's own text layer. Status is re-read by hand — the Refresh button, not a polling loop
+    (the codebase has none, deliberately); a queued run typically lands within a couple of minutes.
+    The fetch is uncached because this panel IS the status check.
+*@
+
+@if (RevisionId is not null)
+{
+    <div class="panel p-5 mt-6">
+        <div class="flex items-center justify-between gap-3 mb-3">
+            <h2 class="text-sm font-semibold text-content uppercase tracking-wider">Extracted data</h2>
+            @if (view is not null && !isLoading)
+            {
+                <button type="button" class="text-xs text-accent hover:underline" disabled="@isLoading" @onclick="RefreshAsync">Refresh</button>
+            }
+        </div>
+
+        @if (loadFailed)
+        {
+            <p class="text-sm text-negative">The extraction status couldn't be loaded — try Refresh.</p>
+        }
+        else if (isLoading && view is null)
+        {
+            <LoadGate IsLoading="true" Label="Checking extraction" />
+        }
+        else if (view is null)
+        {
+            <p class="text-sm text-content-muted">
+                No data has been extracted from this revision yet.
+                @if (!Bluebeam.IsConnected)
+                {
+                    <span> Extraction needs the Bluebeam connection — an administrator can connect it under Admin → Integrations.</span>
+                }
+                else if (CanManage)
+                {
+                    <span> Use "Extract data" above to read its markups and text layer into the portal.</span>
+                }
+            </p>
+        }
+        else
+        {
+            var extraction = view.Extraction;
+            @if (extraction.Status is DrawingExtractionStatus.Queued or DrawingExtractionStatus.Running)
+            {
+                <p class="text-sm text-content">
+                    @(extraction.Status == DrawingExtractionStatus.Queued ? "Queued for extraction" : "Extracting now")
+                    — queued by @extraction.QueuedBy, @extraction.QueuedAt.ToLocalTime().ToString("HH:mm").
+                    Refresh to see where it's up to.
+                </p>
+            }
+            else if (extraction.Status == DrawingExtractionStatus.Failed)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">
+                    The extraction failed@(extraction.ErrorMessage is { Length: > 0 } error ? $": {error}" : ".")
+                </p>
+                @if (CanManage)
+                {
+                    <div class="mt-3">
+                        <button type="button" class="btn-neutral" disabled="@requeueBusy" @onclick="TryAgainAsync">
+                            @(requeueBusy ? "Queueing…" : "Try again")
+                        </button>
+                    </div>
+                }
+                @if (requeueError is not null)
+                {
+                    <p class="mt-2 text-sm text-negative">@requeueError</p>
+                }
+            }
+            else
+            {
+                <p class="text-xs text-content-subtle mb-3">
+                    Extracted @(extraction.CompletedAt?.ToLocalTime().ToString("d MMM yyyy, HH:mm") ?? "")
+                    · @(extraction.PageCount ?? 0) page(s) · @(extraction.MarkupCount ?? 0) markup(s)
+                </p>
+
+                @if (view.Markups.Count == 0)
+                {
+                    <p class="text-sm text-content-muted">
+                        No markups on this revision — the drawing carries no annotations Bluebeam could read.
+                        The text layer below still holds the drawing's embedded text.
+                    </p>
+                }
+                else
+                {
+                    <div class="overflow-x-auto rounded-lg border border-line">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-surface-raised text-left text-xs uppercase tracking-wider text-content-subtle">
+                                    <th class="px-3 py-2 font-medium">Page</th>
+                                    <th class="px-3 py-2 font-medium">Type</th>
+                                    <th class="px-3 py-2 font-medium">Subject</th>
+                                    <th class="px-3 py-2 font-medium">Author</th>
+                                    <th class="px-3 py-2 font-medium">Comment</th>
+                                    <th class="px-3 py-2 font-medium">Measurement</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var markup in view.Markups)
+                                {
+                                    <tr class="border-t border-line align-top">
+                                        <td class="px-3 py-2 text-content-muted">@markup.PageNumber</td>
+                                        <td class="px-3 py-2 text-content">@markup.MarkupType</td>
+                                        <td class="px-3 py-2 text-content">@markup.Subject</td>
+                                        <td class="px-3 py-2 text-content-muted">@markup.Author</td>
+                                        <td class="px-3 py-2 text-content whitespace-pre-wrap max-w-md">@markup.Comment</td>
+                                        <td class="px-3 py-2 text-content-muted">
+                                            @(markup.MeasurementValue is { } value ? $"{value:0.####} {markup.MeasurementUnit}" : "")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                <div class="mt-4 border-t border-line pt-3">
+                    <button type="button" class="text-xs text-accent hover:underline"
+                            @onclick="() => textOpen = !textOpen">
+                        @(textOpen ? "Hide text layer" : $"Show text layer ({view.TextPages.Count} page(s))")
+                    </button>
+                    @if (textOpen)
+                    {
+                        @foreach (var page in view.TextPages)
+                        {
+                            <div class="mt-3">
+                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Page @page.Page</p>
+                                @if (string.IsNullOrWhiteSpace(page.Text))
+                                {
+                                    <p class="text-xs text-content-subtle italic">
+                                        No embedded text on this page — likely a scanned or purely graphical sheet.
+                                    </p>
+                                }
+                                else
+                                {
+                                    <pre class="text-xs text-content whitespace-pre-wrap bg-surface-raised rounded-lg border border-line p-3 max-h-72 overflow-y-auto">@page.Text</pre>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string DrawingId { get; set; } = "";
+    [Parameter] public string? RevisionId { get; set; }
+    [Parameter] public bool CanManage { get; set; }
+
+    private DrawingExtractionView? view;
+    private bool isLoading;
+    private bool loadFailed;
+    private bool requeueBusy;
+    private string? requeueError;
+    private bool textOpen;
+    private string? loadedRevisionId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RevisionId is null || RevisionId == loadedRevisionId) return;
+        loadedRevisionId = RevisionId;
+        view = null;
+        textOpen = false;
+        await Bluebeam.EnsureLoadedAsync();
+        await RefreshAsync();
+    }
+
+    public async Task RefreshAsync()
+    {
+        if (RevisionId is null) return;
+        var requestedRevisionId = RevisionId;
+        loadFailed = false;
+        isLoading = true;
+        try
+        {
+            var fetched = await DrawingStore.GetExtractionAsync(requestedRevisionId, CancellationToken.None);
+            // The previewed revision can change while the fetch is in flight — a stale response
+            // must not land under the new revision's heading.
+            if (RevisionId != requestedRevisionId) return;
+            view = fetched;
+        }
+        catch
+        {
+            if (RevisionId == requestedRevisionId) loadFailed = true;
+        }
+        finally { isLoading = false; }
+        StateHasChanged();
+    }
+
+    private async Task TryAgainAsync()
+    {
+        if (RevisionId is null || requeueBusy) return;
+        requeueError = null;
+        try
+        {
+            requeueBusy = true;
+            await DrawingStore.QueueExtractionAsync(ProjectId, DrawingId, RevisionId, CancellationToken.None);
+            await RefreshAsync();
+        }
+        catch (Jewel.JPMS.Cqrs.CommandFailedException ex) { requeueError = ex.Message; }
+        catch { requeueError = "Queueing didn't complete. Please try again."; }
+        finally { requeueBusy = false; }
+    }
+}

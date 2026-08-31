@@ -358,6 +358,10 @@ public static class SidebarFolders
                 // (UpdateToast) on every signed-in tab.
                 new SidebarRow(new NavigationItem("System", "/admin/system"),
                     DesktopNavigation.AdministratorOnly),
+                // The portal's shared external connections — Bluebeam Studio first: one account,
+                // connected once, that every drawing extraction runs through.
+                new SidebarRow(new NavigationItem("Integrations", "/admin/integrations"),
+                    DesktopNavigation.AdministratorOnly),
                 // The curated trade list every directory record and bid package picks from —
                 // add, rename, delete (delete blocked while any record carries the trade).
                 new SidebarRow(new NavigationItem("Trades", "/admin/trades"),

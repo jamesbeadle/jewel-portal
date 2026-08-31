@@ -107,6 +107,7 @@ builder.Services.AddScoped<ILeadStore, HttpLeadStore>();
 builder.Services.AddScoped<IRateLibrary, HttpRateLibrary>();
 builder.Services.AddScoped<IBoqStore, HttpBoqStore>();
 builder.Services.AddScoped<IDrawingStore, HttpDrawingStore>();
+builder.Services.AddScoped<BluebeamStatusStore>();
 builder.Services.AddScoped<IDocumentControlStore, HttpDocumentControlStore>();
 builder.Services.AddScoped<IPaymentCertificateStore, HttpPaymentCertificateStore>();
 builder.Services.AddScoped<IProjectContractStore, HttpProjectContractStore>();
@@ -186,6 +187,7 @@ using (var routeScope = app.Services.CreateScope())
     BoqRouteRegistration.RegisterBoqRoutes(queryRoutes, commandRoutes);
     RatesRouteRegistration.RegisterRatesRoutes(queryRoutes, commandRoutes);
     DrawingsRouteRegistration.RegisterDrawingsRoutes(queryRoutes, commandRoutes);
+    Jewel.JPMS.Features.Bluebeam.BluebeamRouteRegistration.RegisterBluebeamRoutes(queryRoutes, commandRoutes);
     DocumentControlRouteRegistration.RegisterDocumentControlRoutes(queryRoutes, commandRoutes);
     ProgressRouteRegistration.RegisterProgressRoutes(queryRoutes, commandRoutes);
     ProcurementRouteRegistration.RegisterProcurementRoutes(queryRoutes, commandRoutes);

@@ -9,6 +9,7 @@ using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Auth;
 using Jewel.JPMS.Api.Features.Connect;
 using Jewel.JPMS.Api.Features.Mcp;
+using Jewel.JPMS.Api.Features.Bluebeam;
 using Jewel.JPMS.Api.Features.Boq;
 using Jewel.JPMS.Api.Features.Calendar;
 using Jewel.JPMS.Api.Features.BuildingControl;
@@ -137,6 +138,7 @@ var host = new HostBuilder()
         services.AddConnectFeature();
         services.AddMcpFeature();
         services.AddXeroFeature(context.Configuration);
+        services.AddBluebeamFeature(context.Configuration);
         services.AddPlatformFeature();
     })
     .Build();

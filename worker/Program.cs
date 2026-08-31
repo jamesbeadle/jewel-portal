@@ -4,6 +4,9 @@ using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.MailboxIntake.Queue;
 using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Features.Bluebeam;
+using Jewel.JPMS.Api.Features.Bluebeam.Extraction;
+using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Api.Features.Xero;
 using Jewel.JPMS.Api.Features.Xero.Ledger;
 using Jewel.JPMS.Contracts.Xero;
@@ -87,6 +90,38 @@ var host = new HostBuilder()
         // explicit sync endpoint, run nightly after the ledger sync.
         services.AddScoped<ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult>,
             Jewel.JPMS.Api.Features.Xero.SitePnl.SyncXeroSitePnlHandler>();
+
+        // Bluebeam: the drawing-extraction queue consumer + the nightly refresh-token keep-alive.
+        // Same options/client fork as the SWA API (app settings Bluebeam__ClientId /
+        // Bluebeam__ClientSecret, identical names); the runner and its result writer are scoped
+        // because they write through JpmsContext.
+        var bluebeamOptions = BluebeamOptions.FromConfiguration(context.Configuration);
+        services.AddSingleton(bluebeamOptions);
+        if (bluebeamOptions.IsConfigured)
+        {
+            services.AddSingleton<IBluebeamClient>(sp =>
+                new BluebeamClient(new HttpClient(), bluebeamOptions, sp.GetRequiredService<ILogger<BluebeamClient>>()));
+        }
+        else
+        {
+            services.AddSingleton<IBluebeamClient, NullBluebeamClient>();
+        }
+        services.AddScoped<BluebeamTokenService>();
+        services.AddScoped<DrawingExtractionRunner>();
+        services.AddScoped<DrawingExtractionResultWriter>();
+
+        // The drawings blob store — the extraction reads revision PDFs and writes the payload
+        // blobs beside them. Same connection resolution as DrawingsFeatureRegistration in the api.
+        var drawingsStorage = context.Configuration["DrawingsStorage:ConnectionString"]
+            ?? context.Configuration["AzureWebJobsStorage"];
+        if (string.IsNullOrWhiteSpace(drawingsStorage))
+        {
+            services.AddSingleton<IDrawingBlobStore, NullDrawingBlobStore>();
+        }
+        else
+        {
+            services.AddSingleton<IDrawingBlobStore>(_ => new AzureBlobDrawingStore(drawingsStorage!));
+        }
     })
     .Build();
 

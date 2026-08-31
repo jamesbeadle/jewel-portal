@@ -1,0 +1,256 @@
+@page "/admin/integrations"
+@inject AuthService Auth
+@inject SessionService Session
+@inject BluebeamStatusStore Bluebeam
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>Integrations · JPMS</PageTitle>
+
+@*
+    Admin → Integrations: the portal's shared external connections. Bluebeam Studio is the first —
+    one Studio account, signed in once here, that every drawing extraction runs through. The
+    connect flow leaves the portal (Bluebeam's consent page) and lands back on this page with
+    ?bluebeam=connected|failed, which the banner below reads.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (Session.ActiveRole != Role.Admin)
+{
+    <section class="px-6 md:px-8 py-12 max-w-2xl">
+        <div class="panel p-6">
+            <p class="text-sm text-content-muted">
+                This area is for administrators. If you hold the Administrator role, switch to it to manage integrations.
+            </p>
+        </div>
+    </section>
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <WorkspaceSectionNav />
+        <header class="mb-6 md:mb-8">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Integrations</h1>
+            <p class="text-sm text-content-muted mt-1">
+                The portal's shared connections to outside services. One connection serves everyone —
+                connecting or disconnecting here changes what the whole portal can do.
+            </p>
+        </header>
+
+        <div class="max-w-2xl">
+            @if (callbackNote is not null)
+            {
+                <p class="mb-4 rounded-lg px-3 py-2 text-sm @(callbackFailed ? "bg-negative/10 border border-negative/30 text-negative" : "bg-positive/10 border border-positive/30 text-positive")">
+                    @callbackNote
+                </p>
+            }
+
+            <Panel Title="Bluebeam Studio" IsLoading="@(!Bluebeam.IsLoaded && !statusFailed)" LoadingLabel="Checking the connection">
+                @if (statusFailed && !Bluebeam.IsLoaded)
+                {
+                    <p class="text-sm text-negative">
+                        The connection status couldn't be loaded — the error banner above has the detail.
+                    </p>
+                }
+                else if (Bluebeam.Current is { } status)
+                {
+                    @if (!status.IsConfigured)
+                    {
+                        <p class="text-sm text-content-muted">
+                            Bluebeam isn't configured on the API. Add the
+                            <span class="font-mono text-xs">Bluebeam__ClientId</span> and
+                            <span class="font-mono text-xs">Bluebeam__ClientSecret</span> app settings
+                            (the developer portal app's credentials), then reload this page.
+                        </p>
+                    }
+                    else if (!status.Connected)
+                    {
+                        <p class="text-sm text-content">
+                            Not connected. Connecting signs a shared Bluebeam Studio account in — drawing
+                            data extraction runs through it for every project.
+                        </p>
+                        <div class="mt-4">
+                            <button type="button" class="btn-primary" disabled="@busy" @onclick="ConnectAsync">
+                                @(busy ? "Redirecting…" : "Connect Bluebeam")
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-sm text-content">
+                            Connected@(status.ConnectedEmail is { Length: > 0 } email ? $" as {email}" : "")@(
+                                status.ConnectedAt is { } at ? $" since {at.ToLocalTime():d MMM yyyy}" : "").
+                        </p>
+                        @if (status.LastRefreshSucceededAt is { } refreshed)
+                        {
+                            <p class="text-xs text-content-subtle mt-1">
+                                Connection last verified @refreshed.ToLocalTime().ToString("d MMM yyyy, HH:mm") —
+                                the nightly keep-alive exercises it so it never lapses.
+                            </p>
+                        }
+                        @if (status.LastRefreshError is { Length: > 0 } refreshError)
+                        {
+                            <p class="mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">
+                                The connection is failing: @refreshError
+                            </p>
+                            <div class="mt-3">
+                                <button type="button" class="btn-primary" disabled="@busy" @onclick="ConnectAsync">
+                                    @(busy ? "Redirecting…" : "Reconnect Bluebeam")
+                                </button>
+                            </div>
+                        }
+                        <div class="border-t border-line mt-5 pt-4">
+                            @if (!confirmingDisconnect)
+                            {
+                                <button type="button" class="text-sm text-content-muted hover:text-negative" disabled="@busy"
+                                        @onclick="() => confirmingDisconnect = true">Disconnect</button>
+                            }
+                            else
+                            {
+                                <p class="text-sm text-content mb-3">
+                                    Disconnect Bluebeam? Drawing data extraction stops working until someone connects again.
+                                    Nothing already extracted is affected.
+                                </p>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" disabled="@busy" @onclick="DisconnectAsync"
+                                            class="rounded-lg border border-red-300 text-red-700 font-medium text-sm px-3 py-2 hover:bg-red-50 transition disabled:opacity-60">
+                                        @(busy ? "Disconnecting…" : "Disconnect")
+                                    </button>
+                                    <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => confirmingDisconnect = false">
+                                        Cancel
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                    }
+                    @if (actionError is not null)
+                    {
+                        <p class="mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
+                    }
+                }
+            </Panel>
+        </div>
+    </section>
+}
+
+@code {
+    private bool sessionReady;
+    private bool statusFailed;
+    private bool busy;
+    private bool confirmingDisconnect;
+    private string? actionError;
+    private string? callbackNote;
+    private bool callbackFailed;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+        Session.OnChange += OnSessionChanged;
+        Bluebeam.OnChange += StateHasChanged;
+        sessionReady = true;
+        ReadCallbackOutcome();
+
+        if (Session.ActiveRole == Role.Admin)
+        {
+            try { await Bluebeam.RefreshAsync(); }
+            catch { statusFailed = true; }
+        }
+    }
+
+    // The consent flow lands back here with ?bluebeam=connected|failed — one banner, then the
+    // query string is cleaned off the address bar so a refresh doesn't repeat it. Parsed by hand,
+    // the ConnectAuthorize way — System.Web's helper isn't worth trusting to WASM trimming.
+    private void ReadCallbackOutcome()
+    {
+        var query = ParseQuery(new Uri(Nav.Uri).Query);
+        if (!query.TryGetValue("bluebeam", out var outcome)) return;
+        callbackFailed = outcome != "connected";
+        callbackNote = callbackFailed
+            ? $"Connecting Bluebeam didn't complete ({query.GetValueOrDefault("reason", "unknown reason")}) — try again."
+            : "Bluebeam is connected.";
+        Nav.NavigateTo("/admin/integrations", replace: true);
+    }
+
+    private static Dictionary<string, string> ParseQuery(string query)
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var pair in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var separator = pair.IndexOf('=');
+            if (separator <= 0) continue;
+            values[Uri.UnescapeDataString(pair[..separator])] =
+                Uri.UnescapeDataString(pair[(separator + 1)..].Replace('+', ' '));
+        }
+        return values;
+    }
+
+    private async Task ConnectAsync()
+    {
+        if (busy) return;
+        actionError = null;
+        try
+        {
+            busy = true;
+            var start = await Bluebeam.StartConnectAsync();
+            Nav.NavigateTo(start.AuthorizeUrl, forceLoad: true);
+        }
+        catch (Jewel.JPMS.Cqrs.CommandFailedException ex)
+        {
+            actionError = ex.Message;
+            busy = false;
+        }
+        catch
+        {
+            actionError = "The connect flow couldn't be started. Please try again.";
+            busy = false;
+        }
+    }
+
+    private async Task DisconnectAsync()
+    {
+        if (busy) return;
+        actionError = null;
+        try
+        {
+            busy = true;
+            await Bluebeam.DisconnectAsync();
+            confirmingDisconnect = false;
+        }
+        catch (Jewel.JPMS.Cqrs.CommandFailedException ex) { actionError = ex.Message; }
+        catch { actionError = "Disconnecting didn't complete. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // Switching into the Admin role while already on the page must still open the panel's gate —
+    // the initial fetch only runs when the page loads as Admin.
+    private void OnSessionChanged() => _ = InvokeAsync(async () =>
+    {
+        if (Session.ActiveRole == Role.Admin && !Bluebeam.IsLoaded && !statusFailed)
+        {
+            try { await Bluebeam.RefreshAsync(); }
+            catch { statusFailed = true; }
+        }
+        StateHasChanged();
+    });
+
+    public void Dispose()
+    {
+        Session.OnChange -= OnSessionChanged;
+        Bluebeam.OnChange -= StateHasChanged;
+    }
+}

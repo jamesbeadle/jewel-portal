@@ -43,6 +43,9 @@ public sealed class JpmsContext : DbContext
     public DbSet<DrawingRevisionEntity> DrawingRevisions => Set<DrawingRevisionEntity>();
     public DbSet<DrawingIssueRecordEntity> DrawingIssueRecords => Set<DrawingIssueRecordEntity>();
     public DbSet<DrawingFolderEntity> DrawingFolders => Set<DrawingFolderEntity>();
+    public DbSet<BluebeamConnectionEntity> BluebeamConnections => Set<BluebeamConnectionEntity>();
+    public DbSet<DrawingExtractionEntity> DrawingExtractions => Set<DrawingExtractionEntity>();
+    public DbSet<DrawingMarkupEntity> DrawingMarkups => Set<DrawingMarkupEntity>();
 
     public DbSet<DocumentControlItemEntity> DocumentControlItems => Set<DocumentControlItemEntity>();
     public DbSet<PaymentCertificateEntity> PaymentCertificates => Set<PaymentCertificateEntity>();
@@ -561,5 +564,25 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<PaymentCertificateEntity>()
             .HasIndex(row => row.ProjectId)
             .HasDatabaseName("IX_PaymentCertificates_ProjectId");
+        modelBuilder.Entity<DocumentControlItemEntity>()
+            .HasIndex(row => row.SourceDocumentControlItemId)
+            .HasDatabaseName("IX_DocumentControlItems_SourceDocumentControlItemId");
+
+        // ---- Bluebeam extraction -------------------------------------------------------------------
+        // One extraction row per revision (re-extraction overwrites in place); the register's bulk
+        // "extract all unprocessed" read scans by project and status.
+        modelBuilder.Entity<DrawingExtractionEntity>()
+            .HasIndex(row => row.DrawingRevisionId)
+            .IsUnique()
+            .HasDatabaseName("IX_DrawingExtractions_DrawingRevisionId");
+        modelBuilder.Entity<DrawingExtractionEntity>()
+            .HasIndex(row => new { row.ProjectId, row.Status })
+            .HasDatabaseName("IX_DrawingExtractions_ProjectId_Status");
+        modelBuilder.Entity<DrawingMarkupEntity>()
+            .HasIndex(row => row.DrawingRevisionId)
+            .HasDatabaseName("IX_DrawingMarkups_DrawingRevisionId");
+        modelBuilder.Entity<DrawingMarkupEntity>()
+            .HasIndex(row => row.DrawingExtractionId)
+            .HasDatabaseName("IX_DrawingMarkups_DrawingExtractionId");
     }
 }

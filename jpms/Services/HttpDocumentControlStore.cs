@@ -47,4 +47,8 @@ public sealed class HttpDocumentControlStore : IDocumentControlStore
 
     public Task<DocumentControlItem> RestoreAsync(string documentControlItemId, CancellationToken cancellationToken = default) =>
         commands.SendAsync(new RestoreDocumentControlItem(documentControlItemId), cancellationToken);
+
+    public Task<IReadOnlyList<DocumentControlItem>> ExtractArchiveAsync(
+        string documentControlItemId, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(new ExtractDocumentControlArchive(documentControlItemId), cancellationToken);
 }

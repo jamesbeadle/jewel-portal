@@ -39,6 +39,11 @@ public interface IDocumentControlStore
 
     Task<DocumentControlItem> RestoreAsync(string documentControlItemId, CancellationToken cancellationToken = default);
 
+    /// <summary>Splits a pending zip item into one queue item per contained file — each is then
+    /// previewed and filed individually. Returns the newly created items.</summary>
+    Task<IReadOnlyList<DocumentControlItem>> ExtractArchiveAsync(
+        string documentControlItemId, CancellationToken cancellationToken = default);
+
     /// <summary>The API URL that streams an item's stored file (proxied — the container is private).</summary>
     string FileUrl(string documentControlItemId, bool inline = false) =>
         $"api/document-control/items/{documentControlItemId}/file" + (inline ? "?inline=1" : "");

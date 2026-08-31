@@ -204,6 +204,16 @@ public sealed class HttpDrawingStore : IDrawingStore
         RefreshInBackground(projectId, drawingId);
     }
 
+    public Task<DrawingExtraction> QueueExtractionAsync(
+        string projectId, string drawingId, string revisionId, CancellationToken cancellationToken) =>
+        commands.SendAsync(new QueueDrawingExtraction(projectId, drawingId, revisionId), cancellationToken);
+
+    public Task<int> QueueAllExtractionsAsync(string projectId, CancellationToken cancellationToken) =>
+        commands.SendAsync(new QueueProjectDrawingExtractions(projectId), cancellationToken);
+
+    public Task<DrawingExtractionView?> GetExtractionAsync(string revisionId, CancellationToken cancellationToken) =>
+        queries.AskAsync(new GetDrawingExtraction(revisionId), cancellationToken);
+
     // Refreshes revisions (optional) then drawings without blocking the caller. Views update
     // via readModel.OnChanged when the refresh lands. Refreshing revisions first marks the
     // drawing as loaded before any OnChanged re-render, so it cannot spawn a duplicate fetch.

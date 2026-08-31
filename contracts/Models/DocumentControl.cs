@@ -14,7 +14,10 @@ public enum DocumentFiledAs
 {
     Drawing = 0,
     PaymentCertificate = 1,
-    SubcontractorDocument = 2
+    SubcontractorDocument = 2,
+    // The item was a zip archive whose contents were extracted into their own queue items
+    // (2026-08-31). The extraction resolves the original; its children carry the filing on.
+    ArchiveExtracted = 3
 }
 
 /// <summary>
@@ -49,7 +52,9 @@ public sealed record DocumentControlItem(
     DocumentFiledAs? FiledAs,
     string? FiledRecordId,
     // The Filed view's human sentence, e.g. "Drawing PRO-064-(WD)-P-800 Rev I on Ashtead House".
-    string FiledLabel = "");
+    string FiledLabel = "",
+    // Provenance: the queue item this one was extracted from, when it arrived inside an archive.
+    string? SourceDocumentControlItemId = null);
 
 /// <summary>
 /// A payment certificate — the client's (or their agent's) certificate saying what is being paid
