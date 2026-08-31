@@ -17,9 +17,11 @@ public sealed class BluebeamOptions
     public string? ClientId { get; set; }
     public string? ClientSecret { get; set; }
 
-    // Bluebeam's consent page lives on the US host for every region; tokens and API calls go to
-    // the regional host. Both overridable for the day that changes.
-    public string AuthorizeUrl { get; set; } = "https://api.bluebeam.com/oauth2/authorize";
+    // EVERY endpoint is regional — authorize included. The support-site auth guide implies one
+    // shared consent host (api.bluebeam.com), but that is the US region's: a UK client id sent
+    // there lands on the US sign-in server and 400s (learned the hard way, 2026-08-31). The
+    // developer portal's own config confirms per-region authorize hosts. Both overridable.
+    public string AuthorizeUrl { get; set; } = "https://api.bluebeamstudio.co.uk/oauth2/authorize";
     public string ApiBaseUrl { get; set; } = "https://api.bluebeamstudio.co.uk";
 
     public string RedirectUri { get; set; } = "https://portal.jewelbb.co.uk/api/bluebeam/callback";
