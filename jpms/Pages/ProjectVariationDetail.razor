@@ -370,6 +370,11 @@ else
                     </div>
                 }
 
+                @* ---- Conversation: the typed record — internal notes plus the shared thread the
+                       client portal reads and writes (threaded replies). Distinct from the email
+                       Communications below on purpose: clients never see email. *@
+                <VariationConversation VariationOrderId="@VariationOrderId" />
+
                 @* ---- Communications: the mail behind this record, read live by tag ----
                        Emails tagged to the record's quoting reference or (once approved) its V-ref
                        in mailbox triage appear here, so the correspondence behind the variation is

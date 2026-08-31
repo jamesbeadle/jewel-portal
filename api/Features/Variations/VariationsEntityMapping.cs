@@ -5,6 +5,16 @@ namespace Jewel.JPMS.Api.Features.Variations;
 
 internal static class VariationsEntityMapping
 {
+    public static VariationOrderMessage ToModel(this VariationOrderMessageEntity entity) => new(
+        MessageId: entity.MessageId,
+        VariationOrderId: entity.VariationOrderId,
+        AuthorEmail: entity.AuthorEmail,
+        AuthorName: entity.AuthorName,
+        Body: entity.Body,
+        Visibility: (MessageVisibility)entity.Visibility,
+        PostedAt: entity.PostedAt,
+        ParentMessageId: entity.ParentMessageId);
+
     public static VariationOrder ToModel(this VariationOrderEntity entity) => new(
         VariationOrderId: entity.VariationOrderId,
         ProjectId: entity.ProjectId,

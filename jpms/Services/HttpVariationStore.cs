@@ -144,6 +144,12 @@ public sealed class HttpVariationStore : IVariationStore
         return order;
     }
 
+    public Task<IReadOnlyList<VariationOrderMessage>> ListMessagesAsync(string variationOrderId, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListVariationOrderMessages(variationOrderId), cancellationToken);
+
+    public Task<VariationOrderMessage> PostMessageAsync(PostVariationOrderMessage command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
     public Task<IReadOnlyList<SubcontractorVariationRequest>> ListVariationRequestsForProjectAsync(string projectId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListVariationRequestsForProject(projectId), cancellationToken);
 

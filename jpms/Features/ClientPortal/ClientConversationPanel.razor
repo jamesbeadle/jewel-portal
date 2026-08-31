@@ -1,0 +1,73 @@
+@namespace Jewel.JPMS.Features.ClientPortal
+
+@*
+    The shared conversation as the client sees it — one panel for both record kinds, fed by the
+    hosting page's load/post delegates. Everything here is shared by construction (the API never
+    returns internal notes or email to a client session), so no visibility chrome appears.
+*@
+
+<Panel Title="Conversation" BodyClass="p-5">
+    <ChildContent>
+    @if (!loaded)
+    {
+        <JewelSpinner Class="py-6" Label="Loading" />
+    }
+    else
+    {
+        @if (entries.Count == 0)
+        {
+            <p class="rounded-lg border border-dashed border-line px-4 py-6 text-center text-sm text-content-subtle italic mb-5">
+                No messages yet. Start the discussion below — the project team sees it straight away.
+            </p>
+        }
+        else
+        {
+            <div class="space-y-3 mb-5">
+                @foreach (var entry in ConversationEntry.Tree(entries))
+                {
+                    <ConversationMessageCard Entry="entry" ShowVisibility="false" CanReply="true" OnReply="StartReply" />
+                }
+            </div>
+        }
+
+        <ConversationComposer OnPost="PostAsync"
+                              ShowInternalToggle="false"
+                              ReplyingToAuthor="@ReplyingToAuthor"
+                              OnCancelReply="() => replyTo = null"
+                              Placeholder="Write a message to the project team…" />
+    }
+    </ChildContent>
+</Panel>
+
+@code {
+    /// <summary>Fetches the shared thread, already scoped and filtered server-side.</summary>
+    [Parameter, EditorRequired] public Func<Task<IReadOnlyList<ConversationEntry>>> Load { get; set; } = default!;
+
+    /// <summary>Posts a message (body, parent id or null). Return true when it landed.</summary>
+    [Parameter, EditorRequired] public Func<string, string?, Task<bool>> Post { get; set; } = default!;
+
+    private bool loaded;
+    private IReadOnlyList<ConversationEntry> entries = Array.Empty<ConversationEntry>();
+    private ConversationEntry? replyTo;
+
+    private string? ReplyingToAuthor => replyTo is null ? null
+        : string.IsNullOrWhiteSpace(replyTo.AuthorName) ? replyTo.AuthorEmail : replyTo.AuthorName;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loaded) return;
+        entries = await Load();
+        loaded = true;
+    }
+
+    private void StartReply(ConversationEntry entry) => replyTo = entry;
+
+    private async Task<bool> PostAsync(string body, bool _)
+    {
+        var posted = await Post(body, replyTo?.MessageId);
+        if (!posted) return false;
+        replyTo = null;
+        entries = await Load();
+        return true;
+    }
+}

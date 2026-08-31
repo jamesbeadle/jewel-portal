@@ -30,7 +30,7 @@ public sealed record PasswordResetAcknowledgement(string Message);
 /// after two hours.</summary>
 public sealed record AuthenticatedUserResponse(
     string Email, string DisplayName, IReadOnlyList<Role> Roles, string? SubcontractorId = null,
-    Role? HomeRole = null, bool RevertToOwnRole = false);
+    Role? HomeRole = null, bool RevertToOwnRole = false, string? ClientId = null);
 
 /// <summary>Result of creating an invite or a reset — includes the copyable link for the admin to send.</summary>
 public sealed record InviteResult(string Email, string DisplayName, string InviteLink, DateTimeOffset ExpiresAt);

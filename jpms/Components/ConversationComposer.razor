@@ -1,0 +1,81 @@
+@*
+    The composer under a threaded conversation. One composer serves both top-level messages and
+    replies: when the host sets ReplyingToAuthor, a chip names who is being answered and the post
+    goes in as a reply. Mirrors RequestConversation's composer, including the warm tint the
+    moment "Internal only" is ticked.
+*@
+
+<div class="rounded-lg border px-4 py-3 transition-colors @(internalOnly ? "border-amber-500/40 bg-amber-500/[0.04]" : "border-line bg-surface-raised")">
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+    @if (ReplyingToAuthor is not null)
+    {
+        <p class="mb-2 text-xs text-content-muted">
+            Replying to <span class="font-medium text-content">@ReplyingToAuthor</span> ·
+            <button type="button" class="text-accent hover:underline" @onclick="() => OnCancelReply.InvokeAsync()">cancel</button>
+        </p>
+    }
+    <textarea class="field mb-3" rows="3" value="@draft" @oninput="OnDraftInput"
+              placeholder="@Placeholder"></textarea>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        @if (ShowInternalToggle)
+        {
+            <label class="inline-flex items-center gap-2 text-sm text-content-muted cursor-pointer">
+                <input type="checkbox" checked="@internalOnly" @onchange="OnVisibilityChanged" class="rounded border-line-strong" />
+                Internal only (hide from client &amp; external parties)
+            </label>
+        }
+        else
+        {
+            <span></span>
+        }
+        <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(draft))" @onclick="PostAsync">
+            @(busy ? "Posting…" : ReplyingToAuthor is not null ? "Post reply" : internalOnly ? "Post internal note" : "Post message")
+        </button>
+    </div>
+</div>
+
+@code {
+    /// <summary>Posts the drafted text. Arguments: body, internal-only. Return true to clear the
+    /// composer (posted), false to keep the draft so nothing typed is lost on a failure.</summary>
+    [Parameter, EditorRequired] public Func<string, bool, Task<bool>> OnPost { get; set; } = default!;
+
+    /// <summary>Who the drafted message replies to — null when composing a top-level message.</summary>
+    [Parameter] public string? ReplyingToAuthor { get; set; }
+    [Parameter] public EventCallback OnCancelReply { get; set; }
+
+    [Parameter] public bool ShowInternalToggle { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Add to the conversation…";
+
+    private string draft = "";
+    private bool internalOnly;
+    private bool busy;
+    private string? error;
+
+    private void OnDraftInput(ChangeEventArgs e) => draft = e.Value?.ToString() ?? "";
+    private void OnVisibilityChanged(ChangeEventArgs e) => internalOnly = e.Value is true;
+
+    private async Task PostAsync()
+    {
+        if (busy || string.IsNullOrWhiteSpace(draft)) return;
+        error = null;
+        try
+        {
+            busy = true;
+            var posted = await OnPost(draft.Trim(), internalOnly);
+            if (!posted) { error = "Couldn't post your message. Please try again."; return; }
+            draft = "";
+            internalOnly = false;
+        }
+        catch
+        {
+            error = "Couldn't post your message. Please try again.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+}

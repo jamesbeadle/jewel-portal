@@ -66,6 +66,7 @@ public sealed class SignedInUserResolver
         var roles = UserRoles.Expand(directoryRoles);
 
         return new SignedInUser(email, displayName, roles, directoryUser?.SubcontractorId,
-            HomeRoleSelection.From(directoryRoles), directoryUser?.RevertToOwnRole ?? false);
+            HomeRoleSelection.From(directoryRoles), directoryUser?.RevertToOwnRole ?? false,
+            directoryUser?.ClientId);
     }
 }

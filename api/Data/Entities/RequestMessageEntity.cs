@@ -12,6 +12,11 @@ public sealed class RequestMessageEntity
     public int Visibility { get; set; }
     public DateTimeOffset PostedAt { get; set; }
 
+    // The in-app message this one replies to. Null for a top-level message (and for every email
+    // leg — replies thread between typed messages only; the mailbox keeps its own threading in
+    // InReplyTo/ConversationId below). Replies may themselves be replied to, nesting freely.
+    [MaxLength(64)] public string? ParentMessageId { get; set; }
+
     // Mailbox automation metadata. Direction/SentStatus default to 0 (System/NotApplicable)
     // for in-app messages; the threading identifiers are populated only for emailed legs.
     public int Direction { get; set; }

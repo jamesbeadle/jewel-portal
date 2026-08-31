@@ -22,6 +22,9 @@ public static class ClientsFeatureRegistration
         services.AddScoped<UpdateClientContactAuthorisation>();
         services.AddScoped<UpdateClientContactValidation>();
 
+        services.AddScoped<InviteClientPortalUserAuthorisation>();
+        services.AddScoped<ClientPortalInviter>();
+
         return services;
     }
 }

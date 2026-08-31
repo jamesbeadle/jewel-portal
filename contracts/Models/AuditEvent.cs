@@ -112,7 +112,11 @@ public enum AuditEventType
     // Bluebeam connection (written since 2026-08-31): an admin connected (or reconnected) the
     // portal's shared Bluebeam Studio account from Admin → Integrations. One connection serves the
     // whole portal, so the record of who signed it in matters. Not client-facing: Pathway is "".
-    BluebeamConnected = 36           // the shared Bluebeam Studio account was connected
+    BluebeamConnected = 36,          // the shared Bluebeam Studio account was connected
+    // Variation conversation (written since 2026-08-31): a message was posted on a variation
+    // order's in-app conversation — the VO twin of NotePosted above. Posts from the client
+    // portal carry Pathway "Client"; internal posts leave Pathway "".
+    VariationNotePosted = 37         // a message was posted on a variation order's conversation
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

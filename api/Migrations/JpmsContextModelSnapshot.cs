@@ -1811,6 +1811,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
 
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("DisplayName")
                         .IsRequired()
                         .HasMaxLength(256)
@@ -4571,6 +4575,10 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(998)
                         .HasColumnType("nvarchar(998)");
 
+                    b.Property<string>("ParentMessageId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<DateTimeOffset>("PostedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -6436,6 +6444,50 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasDatabaseName("IX_VariationOrderQuotes_RequestId");
 
                     b.ToTable("VariationOrderQuotes");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.VariationOrderMessageEntity", b =>
+                {
+                    b.Property<string>("MessageId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("AuthorEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("ParentMessageId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("PostedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("VariationOrderId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Visibility")
+                        .HasColumnType("int");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("VariationOrderId")
+                        .HasDatabaseName("IX_VariationOrderMessages_VariationOrderId");
+
+                    b.ToTable("VariationOrderMessages");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.VatAnalysisEntity", b =>

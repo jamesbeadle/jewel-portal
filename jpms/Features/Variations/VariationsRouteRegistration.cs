@@ -43,6 +43,16 @@ public static class VariationsRouteRegistration
             new QueryRoute("/api/projects/{projectId}/variation-orders",
                 query => $"/api/projects/{((ListVariationOrdersForProject)query).ProjectId}/variation-orders"));
 
+        // The order's in-app conversation (internal notes + the shared thread the client portal
+        // reads). Email correspondence stays in the live tagged mailbox, separate from this.
+        queries.Register<ListVariationOrderMessages, IReadOnlyList<VariationOrderMessage>>(
+            new QueryRoute("/api/variation-orders/{voId}/messages",
+                query => $"/api/variation-orders/{((ListVariationOrderMessages)query).VariationOrderId}/messages"));
+
+        commands.Register<PostVariationOrderMessage, VariationOrderMessage>(
+            new CommandRoute("POST", "/api/variation-orders/{voId}/messages",
+                command => $"/api/variation-orders/{((PostVariationOrderMessage)command).VariationOrderId}/messages"));
+
         // Subcontractor variation requests (portal-raised; internal review queue).
         queries.Register<ListVariationRequestsForProject, IReadOnlyList<SubcontractorVariationRequest>>(
             new QueryRoute("/api/projects/{projectId}/variation-requests",

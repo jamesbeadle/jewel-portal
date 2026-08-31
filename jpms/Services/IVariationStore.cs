@@ -89,4 +89,11 @@ public interface IVariationStore
         string variationOrderId, IReadOnlyList<VariationLineInput> lines,
         string? commercialBasis, string? programmeImpact, string? exclusions,
         CancellationToken cancellationToken = default);
+
+    /// <summary>The order's in-app conversation, oldest first — internal notes plus the shared
+    /// thread the client portal reads. Email correspondence lives in the tagged mailbox instead.</summary>
+    Task<IReadOnlyList<VariationOrderMessage>> ListMessagesAsync(string variationOrderId, CancellationToken cancellationToken = default);
+
+    /// <summary>Adds a message to the order's conversation. The author is stamped server-side.</summary>
+    Task<VariationOrderMessage> PostMessageAsync(PostVariationOrderMessage command, CancellationToken cancellationToken = default);
 }

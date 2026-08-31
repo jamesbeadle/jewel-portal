@@ -16,6 +16,11 @@ public static class VariationsFeatureRegistration
         services.AddScoped<IQueryHandler<GetVariationOrderById, VariationOrder?>, GetVariationOrderByIdHandler>();
         services.AddScoped<IQueryHandler<ListVariationOrdersForProject, IReadOnlyList<VariationOrder>>, ListVariationOrdersForProjectHandler>();
         services.AddScoped<IQueryHandler<GetVariationOrderDocument, VariationDocumentFile?>, GetVariationOrderDocumentHandler>();
+        services.AddScoped<IQueryHandler<ListVariationOrderMessages, IReadOnlyList<VariationOrderMessage>>, ListVariationOrderMessagesHandler>();
+
+        services.AddScoped<ICommandHandler<PostVariationOrderMessage, VariationOrderMessage>, PostVariationOrderMessageHandler>();
+        services.AddScoped<PostVariationOrderMessageAuthorisation>();
+        services.AddScoped<PostVariationOrderMessageValidation>();
 
         services.AddScoped<ICommandHandler<CreateVoqFromRfq, VariationOrder>, CreateVoqFromRfqHandler>();
         services.AddScoped<CreateVoqFromRfqAuthorisation>();

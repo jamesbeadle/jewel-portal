@@ -77,6 +77,6 @@ public sealed class SetPasswordEndpoint
             .FirstOrDefaultAsync(row => row.Email == email, cancellationToken);
         var displayName = string.IsNullOrWhiteSpace(directoryUser?.DisplayName) ? email : directoryUser!.DisplayName;
         return new OkObjectResult(new AuthenticatedUserResponse(email, displayName, roles, directoryUser?.SubcontractorId,
-            HomeRoleSelection.From(directoryRoles), directoryUser?.RevertToOwnRole ?? false));
+            HomeRoleSelection.From(directoryRoles), directoryUser?.RevertToOwnRole ?? false, directoryUser?.ClientId));
     }
 }

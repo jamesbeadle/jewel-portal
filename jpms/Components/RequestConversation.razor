@@ -15,10 +15,10 @@
 <Panel Title="Conversation" BodyClass="p-5">
     <HeaderActions>
         <div class="flex items-center gap-3">
-            @if (loaded && messages.Count > 0)
+            @if (loaded && allMessages.Count > 0)
             {
                 <span class="text-xs text-content-subtle">
-                    @messages.Count message@(messages.Count == 1 ? "" : "s")@(InternalCount > 0 ? $" · {InternalCount} internal" : "")
+                    @allMessages.Count message@(allMessages.Count == 1 ? "" : "s")@(InternalCount > 0 ? $" · {InternalCount} internal" : "")
                 </span>
             }
             @if (!string.IsNullOrWhiteSpace(RequestReference))
@@ -155,6 +155,27 @@
                         {
                             <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@message.Body</p>
                         }
+                        @* Typed messages thread: Reply answers this message, and the replies nest
+                           beneath it. Email legs keep their own reply flow (the official-PDF
+                           Outlook draft below) — the two are different acts on purpose. *@
+                        @if (string.IsNullOrEmpty(message.MailboxId))
+                        {
+                            <div class="mt-2">
+                                <button type="button" class="text-xs font-medium text-accent hover:underline"
+                                        @onclick="() => StartReply(message)">Reply</button>
+                            </div>
+                        }
+                        @{ var replies = RepliesFor(message.MessageId); }
+                        @if (replies.Count > 0)
+                        {
+                            <div class="mt-3 space-y-3 border-l-2 border-line pl-3">
+                                @foreach (var reply in replies)
+                                {
+                                    <ConversationMessageCard Entry="reply" ShowVisibility="true"
+                                                             CanReply="true" OnReply="StartReplyEntry" />
+                                }
+                            </div>
+                        }
                         @if (!string.IsNullOrEmpty(message.MailboxId))
                         {
                             <div class="mt-3 pt-2 border-t border-line/70 flex flex-wrap items-center gap-4">
@@ -210,6 +231,13 @@
             {
                 <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
             }
+            @if (replyToId is not null)
+            {
+                <p class="mb-2 text-xs text-content-muted">
+                    Replying to <span class="font-medium text-content">@replyToAuthor</span> ·
+                    <button type="button" class="text-accent hover:underline" @onclick="CancelReply">cancel</button>
+                </p>
+            }
             <textarea class="field mb-3" rows="3" value="@draft" @oninput="OnDraftInput"
                       placeholder="@(internalOnly ? "Add an internal note — the client and external parties never see this…" : "Add to the conversation…")"></textarea>
             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -218,7 +246,7 @@
                     Internal only (hide from client &amp; external parties)
                 </label>
                 <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(draft))" @onclick="Post">
-                    @(busy ? "Posting…" : internalOnly ? "Post internal note" : "Post message")
+                    @(busy ? "Posting…" : replyToId is not null ? "Post reply" : internalOnly ? "Post internal note" : "Post message")
                 </button>
             </div>
         </div>
@@ -242,7 +270,14 @@
     private string? error;
     private string draft = "";
     private bool internalOnly;
+    // Every message on the request (for the header count) and the top-level slice the list
+    // renders — replies hang off their parents via repliesByParent instead.
+    private IReadOnlyList<RequestMessage> allMessages = Array.Empty<RequestMessage>();
     private IReadOnlyList<RequestMessage> messages = Array.Empty<RequestMessage>();
+    private ILookup<string, RequestMessage> repliesByParent =
+        Array.Empty<RequestMessage>().ToLookup(m => m.MessageId);
+    private string? replyToId;
+    private string? replyToAuthor;
 
     // Inbound emails render their short preview by default; expanding fetches the FULL body (with the
     // quoted thread + attachment names) live from the mailbox, cached per message for the page's life.
@@ -253,11 +288,48 @@
 
     private async Task LoadAsync()
     {
-        // Newest first — the latest exchange is what people come to check.
-        messages = (await RequestRegister.ListMessagesAsync(RequestId))
+        allMessages = await RequestRegister.ListMessagesAsync(RequestId);
+        var knownIds = allMessages.Select(m => m.MessageId).ToHashSet();
+        repliesByParent = allMessages
+            .Where(m => m.ParentMessageId is not null && knownIds.Contains(m.ParentMessageId))
+            .ToLookup(m => m.ParentMessageId!);
+        // Top level, newest first — the latest exchange is what people come to check. A reply
+        // whose parent isn't in the list surfaces here rather than disappearing.
+        messages = allMessages
+            .Where(m => m.ParentMessageId is null || !knownIds.Contains(m.ParentMessageId))
             .OrderByDescending(m => m.PostedAt)
             .ToList();
         loaded = true;
+    }
+
+    // The reply subtree under one typed message, oldest first — a thread reads downwards.
+    private IReadOnlyList<ConversationEntry> RepliesFor(string messageId) =>
+        repliesByParent[messageId]
+            .OrderBy(m => m.PostedAt)
+            .Select(ToEntry)
+            .ToList();
+
+    private ConversationEntry ToEntry(RequestMessage message) => new(
+        message.MessageId, message.ParentMessageId, message.AuthorEmail, message.AuthorName,
+        message.Body, message.Visibility == MessageVisibility.Internal, message.PostedAt)
+    { Replies = RepliesFor(message.MessageId) };
+
+    private void StartReply(RequestMessage message)
+    {
+        replyToId = message.MessageId;
+        replyToAuthor = AuthorLabel(message);
+    }
+
+    private void StartReplyEntry(ConversationEntry entry)
+    {
+        replyToId = entry.MessageId;
+        replyToAuthor = string.IsNullOrWhiteSpace(entry.AuthorName) ? entry.AuthorEmail : entry.AuthorName;
+    }
+
+    private void CancelReply()
+    {
+        replyToId = null;
+        replyToAuthor = null;
     }
 
     private void OnDraftInput(ChangeEventArgs e) => draft = e.Value?.ToString() ?? "";
@@ -278,7 +350,8 @@
             draft.Trim(),
             internalOnly ? MessageVisibility.Internal : MessageVisibility.Shared,
             user.Email,
-            user.DisplayName);
+            user.DisplayName,
+            replyToId);
 
         try
         {
@@ -286,6 +359,7 @@
             await RequestRegister.PostMessageAsync(command);
             draft = "";
             internalOnly = false;
+            CancelReply();
             await LoadAsync();
         }
         catch
@@ -356,7 +430,7 @@
     private static string AuthorLabel(RequestMessage message) =>
         string.IsNullOrWhiteSpace(message.AuthorName) ? message.AuthorEmail : message.AuthorName;
 
-    private int InternalCount => messages.Count(m => m.Visibility == MessageVisibility.Internal);
+    private int InternalCount => allMessages.Count(m => m.Visibility == MessageVisibility.Internal);
 
     // Same formatting as the shared correspondence list's attachment block.
     private static string FormatSize(long bytes)

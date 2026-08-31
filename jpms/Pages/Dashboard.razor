@@ -42,6 +42,15 @@ else if (Session.ActiveRole is not null)
         }
         Session.OnChange += StateHasChanged;
 
+        // Client logins live on their own portal home — bounce before painting an internal
+        // dashboard that holds nothing for them (mirrors HomeRouteFor, which sends the sidebar's
+        // Home there too).
+        if (Session.ActiveRole == Role.Client)
+        {
+            Nav.NavigateTo("/client", replace: true);
+            return;
+        }
+
         // The admin home reads the user directory and pending access requests.
         // Load them before we drop the spinner so the panels are populated on the
         // first paint instead of rendering empty until the user navigates away

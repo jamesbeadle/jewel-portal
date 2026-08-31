@@ -22,6 +22,6 @@ public sealed class MeEndpoint
 
         return new OkObjectResult(new AuthenticatedUserResponse(
             signedInUser.Email, signedInUser.DisplayName, signedInUser.Roles, signedInUser.SubcontractorId,
-            signedInUser.HomeRole, signedInUser.RevertToOwnRole));
+            signedInUser.HomeRole, signedInUser.RevertToOwnRole, signedInUser.ClientId));
     }
 }

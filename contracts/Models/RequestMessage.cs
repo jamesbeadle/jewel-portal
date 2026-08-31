@@ -54,4 +54,7 @@ public sealed record RequestMessage(
     string? MailboxId = null,
     // The email's subject line (live email legs only; null for in-app messages). Lets pickers
     // present a tagged email chain by the name its correspondents know it by.
-    string? Subject = null);
+    string? Subject = null,
+    // The in-app message this one replies to; null for a top-level message and for every email
+    // leg. Replies nest freely (a reply may itself be replied to).
+    string? ParentMessageId = null);

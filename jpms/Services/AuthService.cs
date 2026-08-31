@@ -34,6 +34,9 @@ public sealed class AuthService
     /// <summary>Set only for portal-scoped subcontractor contacts (resolved server-side).</summary>
     public string? CurrentSubcontractorId { get; private set; }
 
+    /// <summary>Set only for client-portal-scoped client contacts (resolved server-side).</summary>
+    public string? CurrentClientId { get; private set; }
+
     /// <summary>The user's own role — their first directory-assigned role that isn't
     /// Administrator (resolved server-side by HomeRoleSelection; CurrentRoles can't answer this
     /// because a directory Admin role arrives expanded to every role). Null until signed in, or
@@ -199,6 +202,7 @@ public sealed class AuthService
             CurrentUser = null;
             CurrentRoles = Array.Empty<Role>();
             CurrentSubcontractorId = null;
+            CurrentClientId = null;
             CurrentHomeRole = null;
             CurrentRevertToOwnRole = false;
             return;
@@ -206,6 +210,7 @@ public sealed class AuthService
         CurrentUser = new AuthenticatedUser(response.Email, response.DisplayName);
         CurrentRoles = response.Roles;
         CurrentSubcontractorId = response.SubcontractorId;
+        CurrentClientId = response.ClientId;
         CurrentHomeRole = response.HomeRole;
         CurrentRevertToOwnRole = response.RevertToOwnRole;
     }

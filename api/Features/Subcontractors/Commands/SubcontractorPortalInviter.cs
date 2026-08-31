@@ -48,6 +48,11 @@ public sealed class SubcontractorPortalInviter
             && !string.Equals(linked, subcontractorId, StringComparison.OrdinalIgnoreCase))
             return new Outcome(null, "That email is already linked to a different subcontractor.", StatusCodes.Status409Conflict);
 
+        // One login, one portal: an email already scoped to the client portal must not quietly
+        // become a hybrid account scoped to both (mirrors ClientPortalInviter).
+        if (existing?.ClientId is { Length: > 0 })
+            return new Outcome(null, "That email belongs to a client portal login. Use a different address for the subcontractor contact.", StatusCodes.Status409Conflict);
+
         // A revoked user's roles survive for the admin-only Restore. This path is NOT admin-gated,
         // and UserInviter would clear the revocation and re-apply every surviving role — a portal
         // invite must never quietly resurrect a revoked internal account.

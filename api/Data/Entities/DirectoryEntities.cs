@@ -12,6 +12,11 @@ public sealed class DirectoryUserEntity
     /// Null for all internal users.</summary>
     [MaxLength(64)] public string? SubcontractorId { get; set; }
 
+    /// <summary>Set when this login belongs to an external client contact. Client portal endpoints
+    /// scope every read/write to this id (Gates/ClientScope) — a Role.Client session with no link
+    /// sees nothing. Null for all internal users.</summary>
+    [MaxLength(64)] public string? ClientId { get; set; }
+
     /// <summary>Set when the user's access is revoked. The row and its role rows survive — so a
     /// restore puts the user back exactly as they were — but a revoked user cannot sign in and is
     /// filtered out of every active-user read. Null = active.</summary>

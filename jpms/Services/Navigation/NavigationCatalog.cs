@@ -12,8 +12,9 @@ public static class NavigationCatalog
 
     public static string HomeRouteFor(Role role)
     {
-        // Subcontractors land on their portal home, not the internal dashboard.
+        // External accounts land on their own home, not the internal dashboard.
         if (role == Role.Subcontractor) return "/portal";
+        if (role == Role.Client) return "/client";
         var items = ItemsFor(role);
         // Home (visible to every role) is always first; ResolveHref(null) keeps a template from
         // ever leaking as a literal href if the catalog changes.

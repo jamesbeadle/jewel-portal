@@ -1,0 +1,98 @@
+@using Jewel.JPMS.Contracts.Variations
+@inject IVariationStore Variations
+
+@*
+    The variation order's in-app conversation: internal notes and the shared thread the client
+    portal reads and writes, threaded, newest exchange first. Email correspondence stays in the
+    page's Communications section — this panel is the typed record, the VO twin of RequestConversation.
+*@
+
+<Panel Title="Conversation" BodyClass="p-5">
+    <HeaderActions>
+        @if (loaded && entries.Count > 0)
+        {
+            <span class="text-xs text-content-subtle">
+                @entries.Count message@(entries.Count == 1 ? "" : "s")@(InternalCount > 0 ? $" · {InternalCount} internal" : "")
+            </span>
+        }
+    </HeaderActions>
+    <ChildContent>
+    @if (!loaded)
+    {
+        <JewelSpinner Class="py-6" Label="Loading" />
+    }
+    else
+    {
+        @if (entries.Count == 0)
+        {
+            <p class="rounded-lg border border-dashed border-line px-4 py-6 text-center text-sm text-content-subtle italic mb-5">
+                No messages yet. Start the discussion below — shared messages reach the client's portal view.
+            </p>
+        }
+        else
+        {
+            <div class="space-y-3 mb-5">
+                @foreach (var entry in ConversationEntry.Tree(entries))
+                {
+                    <ConversationMessageCard Entry="entry" ShowVisibility="true" CanReply="true" OnReply="StartReply" />
+                }
+            </div>
+        }
+
+        <ConversationComposer OnPost="PostAsync"
+                              ShowInternalToggle="true"
+                              ReplyingToAuthor="@ReplyingToAuthor"
+                              OnCancelReply="() => replyTo = null"
+                              Placeholder="Add to the conversation — tick Internal only to keep it from the client…" />
+    }
+    </ChildContent>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public string VariationOrderId { get; set; } = "";
+
+    private bool loaded;
+    private string? loadedForOrderId;
+    private IReadOnlyList<ConversationEntry> entries = Array.Empty<ConversationEntry>();
+    private ConversationEntry? replyTo;
+
+    private int InternalCount => entries.Count(entry => entry.IsInternal);
+    private string? ReplyingToAuthor => replyTo is null ? null
+        : string.IsNullOrWhiteSpace(replyTo.AuthorName) ? replyTo.AuthorEmail : replyTo.AuthorName;
+
+    // Refetch only when the order changes — the hosting page re-renders often (posting reloads explicitly).
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedForOrderId == VariationOrderId) return;
+        loadedForOrderId = VariationOrderId;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        var messages = await Variations.ListMessagesAsync(VariationOrderId);
+        entries = messages
+            .Select(message => new ConversationEntry(
+                message.MessageId, message.ParentMessageId, message.AuthorEmail, message.AuthorName,
+                message.Body, message.Visibility == MessageVisibility.Internal, message.PostedAt))
+            .ToList();
+        loaded = true;
+    }
+
+    private void StartReply(ConversationEntry entry) => replyTo = entry;
+
+    private async Task<bool> PostAsync(string body, bool internalOnly)
+    {
+        // The author fields are placeholders — the API stamps the signed-in user.
+        var command = new PostVariationOrderMessage(
+            VariationOrderId, body,
+            internalOnly ? MessageVisibility.Internal : MessageVisibility.Shared,
+            AuthorEmail: string.Empty, AuthorName: string.Empty,
+            ParentMessageId: replyTo?.MessageId);
+        try { await Variations.PostMessageAsync(command); }
+        catch { return false; }
+        replyTo = null;
+        await LoadAsync();
+        return true;
+    }
+}

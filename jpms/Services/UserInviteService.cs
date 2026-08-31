@@ -97,6 +97,32 @@ public sealed class UserInviteService
         }
     }
 
+    /// <summary>Invites a client account's contact to the client portal: mints the set-password
+    /// link and links the login to the account so their session is scoped to their own projects.</summary>
+    public async Task<InviteOutcome> InviteClientAsync(string clientId, string? email = null, string? displayName = null)
+    {
+        try
+        {
+            var request = new Contracts.Clients.InviteClientPortalUserRequest(email, displayName);
+            var response = await httpClient.PostAsJsonAsync(
+                $"/api/clients/{Uri.EscapeDataString(clientId)}/portal-invite", request);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<InviteResult>();
+                return result is null
+                    ? new InviteOutcome(false, null, "The server returned an unexpected response.")
+                    : new InviteOutcome(true, result, null);
+            }
+
+            var error = await TryReadErrorAsync(response);
+            return new InviteOutcome(false, null, error ?? "Couldn't create the portal invite. Please try again.");
+        }
+        catch
+        {
+            return new InviteOutcome(false, null, "Couldn't reach the server. Check your connection and try again.");
+        }
+    }
+
     private static async Task<string?> TryReadErrorAsync(HttpResponseMessage response)
     {
         try

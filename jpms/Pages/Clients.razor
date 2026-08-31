@@ -3,6 +3,7 @@
 @inject AuthService Auth
 @inject SessionService Session
 @inject IClientStore ClientStore
+@inject UserInviteService Invites
 @inject NavigationManager Nav
 
 <PageTitle>Clients · JPMS</PageTitle>
@@ -81,7 +82,8 @@ else
                                 <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactEmail)</td>
                                 <td class="px-4 py-3 text-right whitespace-nowrap">
                                     <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenContacts(client)">Contacts</button>
-                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenEdit(client)">Edit</button>
+                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenEdit(client)">Edit</button>
+                                    <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenInvite(client)">Invite to portal</button>
                                 </td>
                             </tr>
                         }
@@ -111,6 +113,33 @@ else
                 <FormField Label="Primary contact email" Value="@formPrimaryEmail" OnChange="v => formPrimaryEmail = v" />
             </div>
             <p class="text-xs text-content-subtle">Working through an architect on this client's behalf? Add the practice on the <a class="underline hover:text-content" href="/architects">Architects</a> page and select it as the party on the project or request.</p>
+        </div>
+    </Modal>
+
+    <Modal IsOpen="inviting"
+           Title="Invite to the client portal"
+           ConfirmLabel="@(inviteBusy ? "Inviting…" : inviteResult is null ? "Send invite" : "Re-send invite")"
+           OnCancel="CloseInvite"
+           OnConfirm="SendInviteAsync"
+           Class="max-w-2xl">
+        <div class="space-y-4">
+            <p class="text-sm text-content-muted">
+                Invites <span class="font-medium text-content">@(inviteTarget?.PrimaryContactName ?? inviteTarget?.Name)</span>
+                (@(inviteTarget?.PrimaryContactEmail ?? "no contact email")) to the client portal, where they can follow
+                their projects' RFIs and variation orders and join the shared conversation on each. The login is linked
+                to this account, so they only ever see their own projects — and never internal notes or email.
+            </p>
+            @if (inviteError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@inviteError</p>
+            }
+            @if (inviteResult is not null)
+            {
+                <div class="rounded-lg bg-positive/10 border border-positive/30 px-3 py-2 text-sm text-positive">
+                    <p class="mb-1">Invite sent to <span class="font-medium">@inviteResult.Email</span>. If the email doesn't arrive, share this link (valid until @inviteResult.ExpiresAt.LocalDateTime.ToString("d MMM yyyy")):</p>
+                    <code class="block break-all text-xs bg-white/60 rounded px-2 py-1">@inviteResult.InviteLink</code>
+                </div>
+            }
         </div>
     </Modal>
 
@@ -182,6 +211,38 @@ else
         formError = null;
         formName = formPrimaryName = formPrimaryEmail = "";
         creating = true;
+    }
+
+    // ---- Portal access ----
+
+    private bool inviting;
+    private bool inviteBusy;
+    private Client? inviteTarget;
+    private string? inviteError;
+    private Contracts.Auth.InviteResult? inviteResult;
+
+    private void OpenInvite(Client client)
+    {
+        inviteTarget = client;
+        inviteError = null;
+        inviteResult = null;
+        inviting = true;
+    }
+
+    private void CloseInvite() => inviting = false;
+
+    private async Task SendInviteAsync()
+    {
+        if (inviteBusy || inviteTarget is null) return;
+        inviteError = null;
+        try
+        {
+            inviteBusy = true;
+            var outcome = await Invites.InviteClientAsync(inviteTarget.ClientId);
+            if (outcome.Success) inviteResult = outcome.Result;
+            else inviteError = outcome.Error;
+        }
+        finally { inviteBusy = false; }
     }
 
     private async Task OpenContacts(Client client)

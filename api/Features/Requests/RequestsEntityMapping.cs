@@ -68,7 +68,8 @@ internal static class RequestsEntityMapping
         EmailMessageId: entity.EmailMessageId,
         InReplyTo: entity.InReplyTo,
         ConversationId: entity.ConversationId,
-        SentStatus: (MessageSentStatus)entity.SentStatus);
+        SentStatus: (MessageSentStatus)entity.SentStatus,
+        ParentMessageId: entity.ParentMessageId);
 
     // A mailbox email read live by tag, presented as one Shared leg of a request's conversation:
     // inbound when a correspondent sent it, outbound when the project mailbox itself did (sent

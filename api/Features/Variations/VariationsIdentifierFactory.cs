@@ -10,6 +10,7 @@ internal static class VariationsIdentifierFactory
     public const string VoqPrefix = "VOQ-";
 
     public static string NextVariationOrderId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextVariationOrderMessageId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextVariationRequestId() => Guid.NewGuid().ToString(CompactGuidFormat);
 
     // Ids for the cross-feature rows an approval writes (valuation line, QS accrual, budget).

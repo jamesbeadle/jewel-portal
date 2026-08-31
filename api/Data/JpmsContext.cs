@@ -75,6 +75,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<WorkOrderLineEntity> WorkOrderLines => Set<WorkOrderLineEntity>();
     public DbSet<WorkOrderAttachmentEntity> WorkOrderAttachments => Set<WorkOrderAttachmentEntity>();
     public DbSet<VariationOrderEntity> VariationOrders => Set<VariationOrderEntity>();
+    public DbSet<VariationOrderMessageEntity> VariationOrderMessages => Set<VariationOrderMessageEntity>();
     public DbSet<SubcontractorVariationRequestEntity> SubcontractorVariationRequests => Set<SubcontractorVariationRequestEntity>();
     public DbSet<RequestEntity> Requests => Set<RequestEntity>();
     public DbSet<RequestItemEntity> RequestItems => Set<RequestItemEntity>();
@@ -339,6 +340,9 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<VariationOrderEntity>()
             .HasIndex(row => row.RequestId)
             .HasDatabaseName("IX_VariationOrderQuotes_RequestId");
+        modelBuilder.Entity<VariationOrderMessageEntity>()
+            .HasIndex(row => row.VariationOrderId)
+            .HasDatabaseName("IX_VariationOrderMessages_VariationOrderId");
 
         // ---- Procurement -----------------------------------------------------------------------
         modelBuilder.Entity<WorkOrderEntity>()

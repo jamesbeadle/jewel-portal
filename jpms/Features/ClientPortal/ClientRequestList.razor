@@ -1,0 +1,47 @@
+@*
+    The client's RFIs, one row per request across their projects. Rows open the request's own
+    client page, where the shared conversation lives.
+*@
+
+@if (Requests.Count == 0)
+{
+    <div class="panel p-8 text-center text-sm text-content-subtle">
+        No requests for information yet. When the project team raises one on your project, it appears here.
+    </div>
+}
+else
+{
+    <div class="panel overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-content-subtle border-b border-line">
+                    <th class="px-4 py-3 font-medium">Reference</th>
+                    <th class="px-4 py-3 font-medium">Title</th>
+                    <th class="px-4 py-3 font-medium">Project</th>
+                    <th class="px-4 py-3 font-medium">Status</th>
+                    <th class="px-4 py-3 font-medium">Raised</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var request in Requests)
+                {
+                    <tr class="border-b border-line last:border-0 hover:bg-surface-raised cursor-pointer"
+                        @onclick="() => Open(request.RequestId)">
+                        <td class="px-4 py-3 font-medium text-content whitespace-nowrap">@request.Reference</td>
+                        <td class="px-4 py-3 text-content">@request.Title</td>
+                        <td class="px-4 py-3 text-content-muted">@request.ProjectName</td>
+                        <td class="px-4 py-3 text-content-muted whitespace-nowrap">@request.Status.DisplayName()</td>
+                        <td class="px-4 py-3 text-content-muted whitespace-nowrap">@request.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Jewel.JPMS.Contracts.ClientPortal.ClientPortalRequest> Requests { get; set; } = default!;
+    [Inject] private NavigationManager Nav { get; set; } = default!;
+
+    private void Open(string requestId) => Nav.NavigateTo($"/client/requests/{requestId}");
+}
