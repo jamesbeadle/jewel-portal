@@ -68,7 +68,11 @@
     <Compile Include="..\api\Features\Xero\Ledger\SyncXeroLedgerHandler.cs" Link="Shared\Xero\SyncXeroLedgerHandler.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\AllocateSuggestedXeroLinesHandler.cs" Link="Shared\Xero\AllocateSuggestedXeroLinesHandler.cs" />
     <!-- Labour-supplier recognition: the allocate-suggested sweep above skips labour settlement
-         lines through it, so the nightly run and the page's button apply the same §6 rule. -->
+         lines through it, so the nightly run and the page's button apply the same §6 rule. Since
+         2026-08-31 it leans on the shared name-matching rule and the settlement-counterparty rule
+         (WorkerDirectoryMatcher.cs), so that file rides along — the worker's recognition and the
+         API's can never drift on what counts as a match. -->
+    <Compile Include="..\api\Features\Labour\WorkerDirectoryMatcher.cs" Link="Shared\Labour\WorkerDirectoryMatcher.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\LabourSupplierRecognition.cs" Link="Shared\Xero\LabourSupplierRecognition.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\XeroAllocationSuggester.cs" Link="Shared\Xero\XeroAllocationSuggester.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\XeroWriteBackService.cs" Link="Shared\Xero\XeroWriteBackService.cs" />
