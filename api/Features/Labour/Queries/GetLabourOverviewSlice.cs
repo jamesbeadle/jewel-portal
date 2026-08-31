@@ -67,6 +67,28 @@ public sealed class GetLabourOverviewHandler : IQueryHandler<GetLabourOverview, 
         var contracts = await context.WorkerContracts
             .Where(row => row.EffectiveFrom < monthEnd).OrderBy(row => row.EffectiveFrom)
             .ToListAsync(cancellationToken);
+        // The chase expectation inputs (2026-08-31, the accountant's month-end doc, item C/D/G):
+        // project assignments, this month's dismissals, and the month's coding runs — so the
+        // generator only chases days someone was actually expected, and stops chasing what a
+        // human has signed off, settled or dismissed.
+        var assignedWorkerIds = (await context.ProjectWorkerAssignments
+                .Where(row => row.IsActive)
+                .Select(row => row.WorkerId)
+                .Distinct()
+                .ToListAsync(cancellationToken))
+            .ToHashSet();
+        var dismissals = await context.LabourChaseDismissals
+            .Where(row => row.Date >= monthStart && row.Date < monthEnd)
+            .ToListAsync(cancellationToken);
+        var dismissalsByWorker = dismissals.ToLookup(row => row.WorkerId);
+        var settledWorkerIds = (await context.XeroCodingRuns
+                .Where(run => run.Month == monthStart
+                              && (run.Outcome == (int)XeroCodingOutcome.BillRecoded
+                                  || run.Outcome == (int)XeroCodingOutcome.DraftStaged))
+                .Select(run => run.WorkerId)
+                .Distinct()
+                .ToListAsync(cancellationToken))
+            .ToHashSet();
         var cisStatuses = await context.WorkerCisStatuses
             .Where(row => row.EffectiveFrom < monthEnd).OrderBy(row => row.EffectiveFrom)
             .ToListAsync(cancellationToken);
@@ -88,6 +110,7 @@ public sealed class GetLabourOverviewHandler : IQueryHandler<GetLabourOverview, 
 
         var workerRows = new List<LabourOverviewWorker>();
         var chase = new List<LabourChaseItem>();
+        var appliedDismissals = 0;
         var weekBuckets = new Dictionary<DateTime, (int Elapsed, int Confirmed, decimal Unconfirmed)>();
         decimal projectedSpend = 0m, timeOffCost = 0m, amountDueTotal = 0m, unconfirmedCost = 0m;
         int elapsedWorkerDays = 0, confirmedWorkerDays = 0;
@@ -121,14 +144,42 @@ public sealed class GetLabourOverviewHandler : IQueryHandler<GetLabourOverview, 
             var sheetDates = workerSheets.Select(sheet => sheet.WorkedOn.UtcDateTime.Date).ToHashSet();
             var absenceDates = workerAbsences.Select(absence => absence.Date.UtcDateTime.Date).ToHashSet();
             var openDates = openByWorker[worker.WorkerId].Select(row => row.WorkDate.UtcDateTime.Date).ToHashSet();
+            var dismissedDates = dismissalsByWorker[worker.WorkerId].Select(row => row.Date.UtcDateTime.Date).ToHashSet();
+            var signedWeekStarts = signOffsByWorker[worker.WorkerId].Select(row => row.WeekStart.UtcDateTime.Date).ToHashSet();
+            var monthSettled = settledWorkerIds.Contains(worker.WorkerId);
+            var engagedFrom = worker.EngagedFrom?.UtcDateTime.Date;
+            var engagedTo = worker.EngagedTo?.UtcDateTime.Date;
+            var isAssigned = assignedWorkerIds.Contains(worker.WorkerId);
 
-            // Elapsed weekdays this month: confirmed = timesheet or absence recorded. Unconfirmed
-            // days stay in the projection at the full day rate — the confidence bar carries that.
+            // Elapsed weekdays this month, rebuilt 2026-08-31 (the accountant's month-end doc):
+            // the old walk chased every weekday × every active worker, so six zero-contract
+            // workers raised an item for every weekday in August and each one dragged a full day
+            // rate into unconfirmedCost — the figures were wrong, not just noisy. A day now
+            // counts only when it was RECORDED (timesheet or absence — evidence beats
+            // expectation) or EXPECTED: inside the engagement window AND the worker is
+            // contracted, assigned to a project, or holds an open sign-in that day. An expected,
+            // unconfirmed day in a signed-off week, in a worker-month the coding run has already
+            // settled, or dismissed with a reason, is a day a human has already answered for —
+            // it leaves the chase list and the accrual together, so the confidence figures always
+            // agree with the list below them.
             var first = monthStart.UtcDateTime.Date;
             var lastElapsed = today < monthEnd.UtcDateTime.Date.AddDays(-1) ? today : monthEnd.UtcDateTime.Date.AddDays(-1);
             for (var date = first; date <= lastElapsed; date = date.AddDays(1))
             {
                 if (date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) continue;
+                var confirmed = sheetDates.Contains(date) || absenceDates.Contains(date);
+                if (!confirmed)
+                {
+                    var inEngagement = (engagedFrom is null || date >= engagedFrom)
+                                       && (engagedTo is null || date <= engagedTo);
+                    var expected = inEngagement
+                                   && (contractedDays > 0m || isAssigned || openDates.Contains(date));
+                    if (!expected) continue;
+                    var weekSignedOff = signedWeekStarts.Contains(ForecastRules.WeekStartOf(date));
+                    if (dismissedDates.Contains(date)) { appliedDismissals++; continue; }
+                    if (monthSettled || weekSignedOff) continue;
+                }
+
                 var weekStart = ForecastRules.WeekStartOf(date);
                 // Explicitly typed: the ternary's untyped (0, 0, 0m) fallback would strip the
                 // tuple's element names and .Elapsed/.Confirmed/.Unconfirmed with them.
@@ -136,7 +187,6 @@ public sealed class GetLabourOverviewHandler : IQueryHandler<GetLabourOverview, 
                     weekBuckets.TryGetValue(weekStart, out var existing) ? existing : default;
                 bucket.Elapsed++;
                 elapsedWorkerDays++;
-                var confirmed = sheetDates.Contains(date) || absenceDates.Contains(date);
                 if (confirmed) { bucket.Confirmed++; confirmedWorkerDays++; }
                 else
                 {
@@ -203,6 +253,10 @@ public sealed class GetLabourOverviewHandler : IQueryHandler<GetLabourOverview, 
             elapsedWorkerDays, confirmedWorkerDays, unconfirmedCost, weeks);
 
         return new LabourOverviewSnapshot(query.Year, query.Month, totals, workerRows, sites, costCodes,
-            chase.OrderBy(item => item.Date).ThenBy(item => item.WorkerName).ToList());
+            chase.OrderBy(item => item.Date).ThenBy(item => item.WorkerName).ToList(),
+            // Only dismissals that actually suppressed an expected day — a row later superseded
+            // by a timesheet/absence, or made moot by sign-off, is not counted as a decision in
+            // force this month.
+            DismissedThisMonth: appliedDismissals);
     }
 }

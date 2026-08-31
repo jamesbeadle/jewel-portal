@@ -18,8 +18,18 @@ public interface ILabourStore
     /// lists in the meantime, which no view can tell apart from a real empty result.</summary>
     bool WorkersLoaded { get; }
     Task RefreshWorkersAsync();
-    Task<Worker> AddWorkerAsync(string name, decimal hourlyRate, string? subcontractorId, string contactEmail, string contactPhone);
+    Task<Worker> AddWorkerAsync(string name, decimal hourlyRate, string? subcontractorId, string contactEmail, string contactPhone,
+        bool isSoleTrader = false, DateTimeOffset? engagedFrom = null, DateTimeOffset? engagedTo = null);
     Task<Worker> UpdateWorkerAsync(Worker worker);
+    /// <summary>Sets a worker's settlement identity — directory link (null clears) + sole-trader
+    /// flag — in one act; the company link wins where both are set (2026-08-31).</summary>
+    Task<Worker> SetWorkerSettlementIdentityAsync(string workerId, string? subcontractorId, bool isSoleTrader);
+    /// <summary>The worker↔directory matching sweep: apply=false reports, apply=true links the
+    /// unambiguous matches (audited) and reports the rest.</summary>
+    Task<WorkerDirectoryLinkReport> ReconcileWorkerLinksAsync(bool apply);
+    /// <summary>Dismisses one chase-list day with a reason (audited); it leaves the list and the
+    /// unconfirmed accrual together.</summary>
+    Task DismissChaseDayAsync(string workerId, DateTimeOffset date, string reason);
     Task DeleteWorkerAsync(string workerId);
 
     // Project assignment.

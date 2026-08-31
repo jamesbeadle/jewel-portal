@@ -18,4 +18,5 @@ internal static class LabourIdentifierFactory
     public static string NextSiteXeroMappingId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextCostCodeXeroMappingId() => Guid.NewGuid().ToString(CompactGuidFormat);
     public static string NextXeroCodingRunId() => Guid.NewGuid().ToString(CompactGuidFormat);
+    public static string NextLabourChaseDismissalId() => Guid.NewGuid().ToString(CompactGuidFormat);
 }

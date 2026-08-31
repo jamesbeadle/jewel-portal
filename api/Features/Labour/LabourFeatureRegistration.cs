@@ -23,6 +23,35 @@ public static class LabourFeatureRegistration
         services.AddScoped<UpdateWorkerValidation>();
         services.AddScoped<ICommandHandler<DeleteWorker, Acknowledgement>, DeleteWorkerHandler>();
         services.AddScoped<ICommandHandler<SetProjectWorkerAssignment, ProjectWorkerAssignment>, SetProjectWorkerAssignmentHandler>();
+        // Worker ↔ directory linking (2026-08-31): the settlement-identity command the portal UI
+        // posts, its by-name connector wrappers, and the reconcile/backfill sweep.
+        services.AddScoped<ICommandHandler<SetWorkerSettlementIdentity, Worker>, SetWorkerSettlementIdentityHandler>();
+        services.AddScoped<SetWorkerSettlementIdentityAuthorisation>();
+        services.AddScoped<SetWorkerSettlementIdentityValidation>();
+        services.AddScoped<ICommandHandler<LinkWorkerToCompanyByName, Worker>, LinkWorkerToCompanyByNameHandler>();
+        services.AddScoped<LinkWorkerToCompanyByNameAuthorisation>();
+        services.AddScoped<LinkWorkerToCompanyByNameValidation>();
+        services.AddScoped<ICommandHandler<SetWorkerSoleTraderByName, Worker>, SetWorkerSoleTraderByNameHandler>();
+        services.AddScoped<SetWorkerSoleTraderByNameAuthorisation>();
+        services.AddScoped<SetWorkerSoleTraderByNameValidation>();
+        services.AddScoped<ReconcileWorkerDirectoryLinksHandler>();
+        services.AddScoped<ICommandHandler<ReconcileWorkerDirectoryLinks, WorkerDirectoryLinkReport>>(
+            provider => provider.GetRequiredService<ReconcileWorkerDirectoryLinksHandler>());
+        services.AddScoped<ReconcileWorkerDirectoryLinksAuthorisation>();
+        services.AddScoped<ReconcileWorkerDirectoryLinksValidation>();
+        // Chase-list dismissals (2026-08-31): the overview's dismiss command and its by-name
+        // connector wrappers.
+        services.AddScoped<DismissLabourChaseDayHandler>();
+        services.AddScoped<ICommandHandler<DismissLabourChaseDay, Acknowledgement>>(
+            provider => provider.GetRequiredService<DismissLabourChaseDayHandler>());
+        services.AddScoped<DismissLabourChaseDayAuthorisation>();
+        services.AddScoped<DismissLabourChaseDayValidation>();
+        services.AddScoped<ICommandHandler<DismissLabourChaseDayByName, Acknowledgement>, DismissLabourChaseDayByNameHandler>();
+        services.AddScoped<DismissLabourChaseDayByNameAuthorisation>();
+        services.AddScoped<DismissLabourChaseDayByNameValidation>();
+        services.AddScoped<ICommandHandler<RestoreLabourChaseDayByName, Acknowledgement>, RestoreLabourChaseDayByNameHandler>();
+        services.AddScoped<RestoreLabourChaseDayByNameAuthorisation>();
+        services.AddScoped<RestoreLabourChaseDayByNameValidation>();
 
         // Site register.
         services.AddScoped<IQueryHandler<ListSiteAttendanceForProject, IReadOnlyList<SiteAttendance>>, ListSiteAttendanceForProjectHandler>();

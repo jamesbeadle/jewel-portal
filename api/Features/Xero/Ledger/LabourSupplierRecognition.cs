@@ -1,5 +1,6 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
+using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Contracts.Xero;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +15,9 @@ namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 ///
 /// Matching is by name only — the worker's own name (sole traders bill under it: the Dext
 /// supplier IS "Pranas Jancauskas") or the linked subcontractor company's name, the same link the
-/// settlement schedule reconciles by. Normalised equality first, then containment either way when
+/// settlement schedule reconciles by. MatchedSubcontractorId carries the settlement COUNTERPARTY
+/// (2026-08-31): the linked company, or the worker themself when flagged a sole trader — so a
+/// sole trader's bill can be marked as settlement without inventing a directory company. Normalised equality first, then containment either way when
 /// the shorter name still has at least two words ("Pranas Jancauskas Ltd" ⊃ "Pranas Jancauskas";
 /// a single word is never enough to claim a supplier). Account codes are deliberately not part of
 /// the rule: 321 says CIS labour, not WHOSE labour, and a mis-coded bill must not hide from the
@@ -58,7 +61,7 @@ public sealed class LabourSupplierRecognition
 
         var workers = await context.Workers.AsNoTracking()
             .Where(worker => worker.IsActive)
-            .Select(worker => new { worker.WorkerId, worker.Name, worker.SubcontractorId })
+            .Select(worker => new { worker.WorkerId, worker.Name, worker.SubcontractorId, worker.IsSoleTrader })
             .ToListAsync(cancellationToken);
 
         var subcontractorIds = workers
@@ -75,9 +78,13 @@ public sealed class LabourSupplierRecognition
         var names = new List<WorkerName>();
         foreach (var worker in workers)
         {
-            AddName(names, worker.Name, worker.WorkerId, worker.Name, worker.SubcontractorId);
+            // The name row carries the settlement counterparty, not the raw link — a flagged
+            // sole trader is their own counterparty, so their matched line can be covered.
+            var counterparty = WorkerSettlementIdentity.CounterpartyId(
+                worker.SubcontractorId, worker.IsSoleTrader, worker.WorkerId);
+            AddName(names, worker.Name, worker.WorkerId, worker.Name, counterparty);
             if (worker.SubcontractorId is not null && subNames.TryGetValue(worker.SubcontractorId, out var company))
-                AddName(names, company, worker.WorkerId, worker.Name, worker.SubcontractorId);
+                AddName(names, company, worker.WorkerId, worker.Name, counterparty);
         }
 
         // The covers table is one row per covered line — small — and the covered flag has to
@@ -133,38 +140,10 @@ public sealed class LabourSupplierRecognition
         return result;
     }
 
-    // Containment either way, but only when the shorter (contained) name still carries at least
-    // two words — "Pranas Jancauskas" claims "Pranas Jancauskas Ltd" and vice versa; a lone
-    // "Pranas" claims nothing.
-    private static bool ContainsEitherWay(string supplier, string worker)
-    {
-        if (supplier.Length == worker.Length) return false; // equality already tested
-        var (longer, shorter) = supplier.Length > worker.Length ? (supplier, worker) : (worker, supplier);
-        if (!shorter.Contains(' ')) return false;
-        return longer.Contains(shorter, StringComparison.Ordinal);
-    }
+    // The matching rule itself lives in WorkerDirectoryMatcher (2026-08-31), shared with the
+    // Xero import's auto-link and the reconcile sweep so the three cannot drift.
+    private static bool ContainsEitherWay(string supplier, string worker) =>
+        WorkerDirectoryMatcher.ContainsEitherWay(supplier, worker);
 
-    // Lowercase, letters and digits only, single spaces — the same idea as the suggester's
-    // normalisation: punctuation and casing differences between Dext, Xero and the registry
-    // must not defeat a match that a human would make instantly.
-    private static string Normalise(string value)
-    {
-        Span<char> buffer = stackalloc char[value.Length];
-        var length = 0;
-        var lastWasSpace = true;
-        foreach (var ch in value)
-        {
-            if (char.IsLetterOrDigit(ch))
-            {
-                buffer[length++] = char.ToLowerInvariant(ch);
-                lastWasSpace = false;
-            }
-            else if (!lastWasSpace)
-            {
-                buffer[length++] = ' ';
-                lastWasSpace = true;
-            }
-        }
-        return new string(buffer[..length]).TrimEnd();
-    }
+    private static string Normalise(string value) => WorkerDirectoryMatcher.Normalise(value);
 }

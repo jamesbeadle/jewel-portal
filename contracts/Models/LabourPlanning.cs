@@ -119,4 +119,7 @@ public sealed record LabourOverviewSnapshot(
     IReadOnlyList<LabourOverviewWorker> Workers,
     IReadOnlyList<LabourOverviewSite> Sites,
     IReadOnlyList<LabourOverviewCostCode> CostCodes,
-    IReadOnlyList<LabourChaseItem> Chase);
+    IReadOnlyList<LabourChaseItem> Chase,
+    // Dismissed chase-days that would otherwise appear this month (2026-08-31) — kept visible as
+    // a count so a clean list is legible as "reviewed", never "unchecked".
+    int DismissedThisMonth = 0);

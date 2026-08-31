@@ -16,7 +16,10 @@ public sealed record AddWorker(
     decimal HourlyRate,
     string? SubcontractorId,
     string? ContactEmail = null,
-    string? ContactPhone = null) : ICommand<Worker>;
+    string? ContactPhone = null,
+    bool IsSoleTrader = false,
+    DateTimeOffset? EngagedFrom = null,
+    DateTimeOffset? EngagedTo = null) : ICommand<Worker>;
 
 /// <summary>A rate change appends to the worker's rate history (effective now); approved
 /// historic timesheets keep their snapshotted rate.</summary>
@@ -27,7 +30,10 @@ public sealed record UpdateWorker(
     bool IsActive,
     string? SubcontractorId,
     string ContactEmail,
-    string ContactPhone) : ICommand<Worker>;
+    string ContactPhone,
+    bool IsSoleTrader = false,
+    DateTimeOffset? EngagedFrom = null,
+    DateTimeOffset? EngagedTo = null) : ICommand<Worker>;
 
 public sealed record ListWorkerAssignmentsForProject(string ProjectId)
     : IQuery<IReadOnlyList<ProjectWorkerAssignment>>;

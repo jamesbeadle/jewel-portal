@@ -129,3 +129,21 @@ public sealed class XeroCodingRunEntity
     [MaxLength(256)]     public string RunByEmail { get; set; } = "";
     public DateTimeOffset RunAt { get; set; }
 }
+
+/// <summary>
+/// A dismissed chase-list day (2026-08-31): the FD or PM has looked at "no timesheet and no
+/// recorded absence" for this worker-day and decided it needs no chasing — with a reason, so the
+/// decision is auditable. The chase generator excludes dismissed days from the list AND from the
+/// unconfirmed-cost accrual; a timesheet or absence recorded later simply supersedes the row
+/// (the day is then confirmed and the dismissal is moot). One row per worker per day.
+/// </summary>
+public sealed class LabourChaseDismissalEntity
+{
+    [Key, MaxLength(64)] public string LabourChaseDismissalId { get; set; } = "";
+    [MaxLength(64)]      public string WorkerId { get; set; } = "";
+    // The date (midnight UTC), same convention as WorkerAbsenceEntity.Date.
+    public DateTimeOffset Date { get; set; }
+    [MaxLength(512)]     public string Reason { get; set; } = "";
+    [MaxLength(256)]     public string DismissedByEmail { get; set; } = "";
+    public DateTimeOffset DismissedAt { get; set; }
+}

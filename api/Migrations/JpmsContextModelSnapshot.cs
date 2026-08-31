@@ -2351,6 +2351,42 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("InventoryItems");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LabourChaseDismissalEntity", b =>
+                {
+                    b.Property<string>("LabourChaseDismissalId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("Date")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("DismissedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("DismissedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("WorkerId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("LabourChaseDismissalId");
+
+                    b.HasIndex("WorkerId", "Date")
+                        .IsUnique()
+                        .HasDatabaseName("IX_LabourChaseDismissals_WorkerId_Date");
+
+                    b.ToTable("LabourChaseDismissals");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LabourSettlementVarianceEntity", b =>
                 {
                     b.Property<string>("LabourSettlementVarianceId")
@@ -6705,11 +6741,20 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<DateTimeOffset?>("EngagedFrom")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("EngagedTo")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<decimal>("HourlyRate")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSoleTrader")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")

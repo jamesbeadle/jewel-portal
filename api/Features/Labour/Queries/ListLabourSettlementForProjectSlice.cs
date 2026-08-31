@@ -39,13 +39,19 @@ public sealed class ListLabourSettlementForProjectHandler : IQueryHandler<ListLa
 
     public async Task<IReadOnlyList<LabourSettlementRow>> HandleAsync(ListLabourSettlementForProject query, CancellationToken cancellationToken)
     {
-        // Approved labour £ per subcontractor (via the worker's company).
+        // Approved labour £ per settlement COUNTERPARTY (2026-08-31): the worker's company, or
+        // the worker themself when flagged a sole trader — the same key covers are stored under,
+        // so both sides of the reconciliation land in the same row.
         var approvedRows = await context.Timesheets
             .Where(timesheet => timesheet.ProjectId == query.ProjectId
                                 && timesheet.Status == (int)TimesheetStatus.Approved
                                 && timesheet.WorkerId != "")
             .Join(context.Workers, timesheet => timesheet.WorkerId, worker => worker.WorkerId,
-                (timesheet, worker) => new { SubcontractorId = worker.SubcontractorId ?? "", timesheet.CostAmount })
+                (timesheet, worker) => new
+                {
+                    SubcontractorId = worker.SubcontractorId ?? (worker.IsSoleTrader ? worker.WorkerId : ""),
+                    timesheet.CostAmount
+                })
             .GroupBy(row => row.SubcontractorId)
             .Select(group => new { SubcontractorId = group.Key, Amount = group.Sum(row => row.CostAmount) })
             .ToListAsync(cancellationToken);
@@ -74,6 +80,14 @@ public sealed class ListLabourSettlementForProjectHandler : IQueryHandler<ListLa
             .Where(subcontractor => subcontractorIds.Contains(subcontractor.SubcontractorId))
             .ToDictionaryAsync(subcontractor => subcontractor.SubcontractorId,
                 subcontractor => subcontractor.CompanyName, cancellationToken);
+        // A counterparty id the directory does not know is a sole trader's own worker id — show
+        // their name, marked, rather than a raw id.
+        var soleTraderNames = await context.Workers
+            .Where(worker => subcontractorIds.Contains(worker.WorkerId))
+            .ToDictionaryAsync(worker => worker.WorkerId,
+                worker => worker.Name + " (sole trader)", cancellationToken);
+        foreach (var pair in soleTraderNames)
+            names.TryAdd(pair.Key, pair.Value);
 
         var approvedBySub = approvedRows.ToDictionary(row => row.SubcontractorId, row => row.Amount);
         var coveredBySub = coveredRows.ToDictionary(row => row.SubcontractorId, row => row.Amount);

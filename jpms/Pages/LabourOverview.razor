@@ -444,20 +444,56 @@ else
                                         ? $"Signed in at {item.ProjectName} — never signed out"
                                         : "No timesheet and no recorded absence")
                                 </td>
-                                <td class="px-5 py-2 text-right">
-                                    <button type="button" class="text-xs text-content-subtle hover:text-content underline"
-                                            @onclick="() => OpenAbsence(item.WorkerId, item.WorkerName, item.Date)">Record absence</button>
+                                <td class="px-5 py-2 text-right whitespace-nowrap">
+                                    @if (dismissingKey == ChaseKey(item))
+                                    {
+                                        @* Reason inline, where the decision is being made — a dismissal
+                                           is a recorded judgement (audited), not a swipe-away. *@
+                                        <input class="field w-56 mr-1 text-xs" placeholder="Why does this day need nothing?"
+                                               @bind="dismissReason" @bind:event="oninput" />
+                                        <button type="button" class="btn-secondary mr-1" disabled="@(chaseBusy || string.IsNullOrWhiteSpace(dismissReason))"
+                                                @onclick="() => ConfirmDismissAsync(item)">Dismiss</button>
+                                        <button type="button" class="btn-ghost" @onclick="() => dismissingKey = null">Cancel</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="text-xs text-content-subtle hover:text-content underline mr-3"
+                                                @onclick="() => OpenAbsence(item.WorkerId, item.WorkerName, item.Date)">Record absence</button>
+                                        <button type="button" class="text-xs text-content-subtle hover:text-content underline"
+                                                title="The day was reviewed and needs no timesheet and no absence — dismissed with a reason, audited; it leaves the list and the unconfirmed figures together"
+                                                @onclick="() => StartDismiss(item)">Dismiss</button>
+                                    }
                                 </td>
                             </tr>
                         }
                     </tbody>
                 </table>
+                @if (chaseError is not null)
+                {
+                    <p class="px-5 py-2 text-sm text-negative">@chaseError</p>
+                }
                 @if (snapshot.Chase.Count > 8 && !chaseShowAll)
                 {
                     <button type="button" class="px-5 py-3 text-xs text-content-subtle hover:text-content underline"
                             @onclick="() => chaseShowAll = true">Show all @snapshot.Chase.Count</button>
                 }
+                @if (snapshot.DismissedThisMonth > 0)
+                {
+                    <p class="px-5 py-2 text-xs text-content-subtle border-t border-line/60">
+                        @snapshot.DismissedThisMonth day@(snapshot.DismissedThisMonth == 1 ? "" : "s") dismissed this month —
+                        the audit trail holds who and why.
+                    </p>
+                }
             </Panel>
+        }
+        @* A month whose chase list is empty but carries dismissals still says so — a clean list
+           should read as "reviewed", never "unchecked". *@
+        @if (snapshot is not null && snapshot.Chase.Count == 0 && snapshot.DismissedThisMonth > 0)
+        {
+            <p class="text-xs text-content-subtle mb-6">
+                Chase list clear — @snapshot.DismissedThisMonth day@(snapshot.DismissedThisMonth == 1 ? "" : "s")
+                dismissed this month (audited).
+            </p>
         }
     </section>
 
@@ -656,6 +692,37 @@ else
     private string? expandedWorkerId;
     private string? siteDetailProjectId;
     private bool chaseShowAll;
+
+    // ---- Chase dismissal (2026-08-31): inline reason, audited server-side. ---------------------
+    private string? dismissingKey;
+    private string dismissReason = "";
+    private bool chaseBusy;
+    private string? chaseError;
+
+    private static string ChaseKey(LabourChaseItem item) => $"{item.WorkerId}|{item.Date:yyyy-MM-dd}";
+
+    private void StartDismiss(LabourChaseItem item)
+    {
+        dismissingKey = ChaseKey(item);
+        dismissReason = "";
+        chaseError = null;
+    }
+
+    private async Task ConfirmDismissAsync(LabourChaseItem item)
+    {
+        if (chaseBusy || string.IsNullOrWhiteSpace(dismissReason)) return;
+        chaseBusy = true; chaseError = null;
+        try
+        {
+            await Labour.DismissChaseDayAsync(item.WorkerId, item.Date, dismissReason.Trim());
+            dismissingKey = null;
+            dismissReason = "";
+            await RefreshAsync();
+        }
+        catch (CommandFailedException failure) { chaseError = failure.Message; }
+        catch (Exception) { chaseError = "Could not dismiss the day — try again."; }
+        finally { chaseBusy = false; }
+    }
 
     // Absence modal state.
     private bool absenceOpen;

@@ -150,6 +150,7 @@ public sealed class JpmsContext : DbContext
     public DbSet<SiteXeroMappingEntity> SiteXeroMappings => Set<SiteXeroMappingEntity>();
     public DbSet<CostCodeXeroMappingEntity> CostCodeXeroMappings => Set<CostCodeXeroMappingEntity>();
     public DbSet<XeroCodingRunEntity> XeroCodingRuns => Set<XeroCodingRunEntity>();
+    public DbSet<LabourChaseDismissalEntity> LabourChaseDismissals => Set<LabourChaseDismissalEntity>();
     public DbSet<CompanyRegisterItemEntity> CompanyRegisterItems => Set<CompanyRegisterItemEntity>();
     public DbSet<PolicyDocumentEntity> PolicyDocuments => Set<PolicyDocumentEntity>();
     public DbSet<PolicySignOffEntity> PolicySignOffs => Set<PolicySignOffEntity>();
@@ -377,6 +378,10 @@ public sealed class JpmsContext : DbContext
             .HasIndex(row => new { row.WorkerId, row.WeekStart })
             .IsUnique()
             .HasDatabaseName("IX_LabourWeekSignOffs_WorkerId_WeekStart");
+        modelBuilder.Entity<LabourChaseDismissalEntity>()
+            .HasIndex(row => new { row.WorkerId, row.Date })
+            .IsUnique()
+            .HasDatabaseName("IX_LabourChaseDismissals_WorkerId_Date");
         modelBuilder.Entity<WorkerContractEntity>()
             .HasIndex(row => row.WorkerId)
             .HasDatabaseName("IX_WorkerContracts_WorkerId");

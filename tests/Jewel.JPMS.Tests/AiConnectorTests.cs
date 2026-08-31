@@ -227,11 +227,31 @@ public sealed class AiConnectorTests
     {
         var director = AiToolCatalogue.ForConnector(UserWith(Role.ManagingDirector)).Select(t => t.Name).ToList();
         var subcontractor = AiToolCatalogue.ForConnector(UserWith(Role.Subcontractor)).Select(t => t.Name).ToList();
-        foreach (var name in new[] { "view_settlement_month", "view_worker_month", "get_xero_mappings" })
+        foreach (var name in new[] { "view_settlement_month", "view_worker_month", "get_xero_mappings", "view_labour_chase" })
         {
             Assert.Contains(name, director);
             Assert.DoesNotContain(name, subcontractor);
         }
+    }
+
+    [Fact]
+    public void WorkerLinkAndChaseActions_areDeclared()
+    {
+        // The month-end doc's items A–H (2026-08-31): settlement identity fixable where the gap
+        // is found, the backfill sweep, and reasoned chase dismissals with their undo.
+        var names = AiActionRegistry.All.Select(a => a.Name).ToList();
+        foreach (var name in new[]
+        {
+            "link_worker_to_company", "set_worker_sole_trader",
+            "reconcile_worker_directory_links",
+            "dismiss_labour_chase_day", "restore_labour_chase_day"
+        })
+        {
+            Assert.Contains(name, names);
+        }
+
+        // The bulk sweep writes links for many workers at once — confirm-first, pinned.
+        Assert.True(AiActionRegistry.All.Single(a => a.Name == "reconcile_worker_directory_links").RequiresConfirmation);
     }
 
     [Fact]

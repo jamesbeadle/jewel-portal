@@ -1,4 +1,5 @@
 @page "/labour/workers"
+@using Jewel.JPMS.Contracts.Labour
 @inject AuthService Auth
 @inject SessionService Session
 @inject ILabourStore Labour
@@ -85,7 +86,14 @@ else
                         <tr>
                             <td class="text-content font-medium">@worker.Name</td>
                             <td class="text-content-subtle truncate max-w-[16rem]" title="@worker.ContactEmail">@(worker.ContactEmail == "" ? "— not linked —" : worker.ContactEmail)</td>
-                            <td>@SubcontractorName(worker.SubcontractorId)</td>
+                            <td>
+                                @if (worker.SubcontractorId is null && worker.IsSoleTrader)
+                                {
+                                    <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface border border-line text-content-muted"
+                                          title="Bills under their own name — their own settlement counterparty">Sole trader</span>
+                                }
+                                else { @SubcontractorName(worker.SubcontractorId) }
+                            </td>
                             <td class="text-right tabular-nums">@worker.HourlyRate.ToString("N2")</td>
                             <td class="text-right tabular-nums">@((worker.HourlyRate * 8m).ToString("N2"))</td>
                             <td>
@@ -110,6 +118,81 @@ else
             </table>
         }
         </LoadGate>
+
+        @* Directory matching (2026-08-31, the month-end doc): settlement is gated on the
+           worker→directory link, and this card is the bulk answer — the same name matching the
+           Xero import and the allocation page's recognition use, run server-side, with the
+           ambiguous and unmatched remainder left for a human. Only rendered while someone
+           actually lacks a settlement identity, so a clean registry keeps a clean page. *@
+        @if (RegistryReady && UnlinkedWorkers.Count > 0)
+        {
+            <div class="mt-8 rounded-xl border border-line bg-surface p-4 max-w-4xl">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-semibold text-content">Workers without a settlement identity (@UnlinkedWorkers.Count)</h3>
+                        <p class="text-xs text-content-subtle mt-0.5 max-w-2xl">
+                            These workers' bills cannot be marked as settlement until each is linked to a
+                            directory company or flagged a sole trader. Find matches compares names against
+                            the directory; applying a match is audited.
+                        </p>
+                    </div>
+                    <button type="button" class="btn-secondary" disabled="@isMatching" @onclick="FindMatchesAsync">
+                        @(linkReport is null ? "Find matches" : "Re-check matches")
+                    </button>
+                </div>
+                @if (matchError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-3">@matchError</p>
+                }
+                @if (linkReport is not null)
+                {
+                    <table class="data-table mt-3">
+                        <thead><tr><th>Worker</th><th>Directory match</th><th class="w-[260px]"></th></tr></thead>
+                        <tbody>
+                            @foreach (var outcome in linkReport.Workers)
+                            {
+                                <tr>
+                                    <td class="text-content font-medium">@outcome.WorkerName</td>
+                                    <td class="text-sm">
+                                        @if (outcome.Linked is { } match)
+                                        {
+                                            <span class="text-content">@match.CompanyName</span>
+                                        }
+                                        else if (outcome.Outcome == "ambiguous")
+                                        {
+                                            <span class="text-content-subtle">Matches @outcome.Candidates.Count records — pick in Edit:
+                                                @string.Join(", ", outcome.Candidates.Select(c => c.CompanyName))</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-content-subtle italic">No directory match — likely a sole trader, or the company is still to import from Xero</span>
+                                        }
+                                    </td>
+                                    <td class="text-right whitespace-nowrap">
+                                        @if (outcome.Linked is { } linkable)
+                                        {
+                                            <button type="button" class="btn-secondary mr-1" disabled="@isMatching"
+                                                    @onclick="() => ApplyLinkAsync(outcome.WorkerId, linkable.SubcontractorId)">Link</button>
+                                        }
+                                        <button type="button" class="btn-ghost" disabled="@isMatching"
+                                                title="Bills under their own name — becomes their own settlement counterparty"
+                                                @onclick="() => MarkSoleTraderAsync(outcome.WorkerId)">Sole trader</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (linkReport.Workers.Any(outcome => outcome.Outcome == "would link"))
+                    {
+                        <div class="mt-3 text-right">
+                            <button type="button" class="btn-primary" disabled="@isMatching" @onclick="ApplyAllMatchesAsync">
+                                Link all matched (@linkReport.Workers.Count(outcome => outcome.Outcome == "would link"))
+                            </button>
+                        </div>
+                    }
+                }
+            </div>
+        }
     </section>
 
     @* One modal serves both Add and Edit — they are the same six fields, and the only thing that
@@ -143,18 +226,37 @@ else
             </label>
             @* Disabled while the directory loads: offering only "— none —" invites a worker to
                be saved unlinked. A field that greys out reads as "not yet", and the form keeps
-               its shape — a spinner in a form row does neither. *@
-            <label class="text-xs text-content-subtle sm:col-span-2">Subcontractor
-                <select class="field mt-1" @bind="formSubcontractorId" disabled="@(!Subcontractors.IsLoaded)">
-                    <option value="">@(Subcontractors.IsLoaded ? "— none —" : "Loading…")</option>
-                    @* Directory companies only — tender-only prospects (IsProspect) aren't offered
-                       as an employer until they're promoted into the Directory. *@
-                    @foreach (var subcontractor in Subcontractors.All().Where(s => !s.IsProspect))
-                    {
-                        <option value="@subcontractor.SubcontractorId">@subcontractor.CompanyName</option>
-                    }
-                </select>
+               its shape — a spinner in a form row does neither. Searchable since 2026-08-31 —
+               picking one company out of a whole directory through a plain select was the
+               month-end doc's exact complaint. Directory companies only: tender-only prospects
+               (IsProspect) aren't offered as an employer until promoted into the Directory. *@
+            <div class="text-xs text-content-subtle sm:col-span-2">Subcontractor
+                <div class="mt-1">
+                    <SearchSelect Options="@DirectoryOptions" WidthClass="w-full"
+                                  Placeholder="@(Subcontractors.IsLoaded ? "— none —" : "Loading…")"
+                                  Disabled="@(!Subcontractors.IsLoaded || formIsSoleTrader)"
+                                  Value="@formSubcontractorId"
+                                  ValueChanged="value => formSubcontractorId = value" />
+                </div>
+            </div>
+            @* The sole-trader alternative (2026-08-31): Midgley, Downey and friends bill under
+               their own names — the flag makes the worker their own settlement counterparty, so
+               nobody invents a directory company that then haunts compliance and tendering. A
+               company link always wins, so the two controls exclude each other. *@
+            <label class="text-xs text-content-subtle flex items-center gap-2 sm:col-span-2">
+                <input type="checkbox" @bind="formIsSoleTrader" disabled="@(formSubcontractorId != "")" />
+                Sole trader — bills under their own name (no directory company; settles as themselves)
             </label>
+            <label class="text-xs text-content-subtle">Engaged from (optional)
+                <input class="field mt-1" type="date" @bind="formEngagedFrom" />
+            </label>
+            <label class="text-xs text-content-subtle">Engaged to (optional)
+                <input class="field mt-1" type="date" @bind="formEngagedTo" />
+            </label>
+            <p class="text-[11px] text-content-subtle sm:col-span-2 -mt-1">
+                Engagement dates bound what the chase list expects of this worker — recorded time
+                outside them still counts. Leave blank for open-ended.
+            </p>
             @if (editingWorkerId is not null)
             {
                 <label class="text-xs text-content-subtle flex items-center gap-2 sm:col-span-2">
@@ -192,6 +294,15 @@ else
     private string formPhone = "";
     private bool formIsActive = true;
     private string formEmail = "";
+    private bool formIsSoleTrader;
+    private DateTime? formEngagedFrom;
+    private DateTime? formEngagedTo;
+
+    private IReadOnlyList<SearchSelect.Option> DirectoryOptions =>
+        Subcontractors.All().Where(s => !s.IsProspect)
+            .OrderBy(s => s.CompanyName)
+            .Select(s => new SearchSelect.Option(s.SubcontractorId, s.CompanyName))
+            .ToList();
 
     // The form lives in a modal now. Its own failures stay inside it (formError) — a message shown
     // on the page behind a dialog is a message nobody reads. Failures from the table's own actions
@@ -320,6 +431,9 @@ else
         formPhone = worker.ContactPhone;
         formEmail = worker.ContactEmail;
         formIsActive = worker.IsActive;
+        formIsSoleTrader = worker.IsSoleTrader;
+        formEngagedFrom = worker.EngagedFrom?.UtcDateTime.Date;
+        formEngagedTo = worker.EngagedTo?.UtcDateTime.Date;
         // A half-finished delete confirmation on another row is stale the moment a dialog covers it.
         deletingWorkerId = null;
         isFormOpen = true;
@@ -358,7 +472,73 @@ else
         formPhone = "";
         formEmail = "";
         formIsActive = true;
+        formIsSoleTrader = false;
+        formEngagedFrom = null;
+        formEngagedTo = null;
         formError = null;
+    }
+
+    // Date inputs bind DateTime (Kind Unspecified); the contract carries DateTimeOffset. Year/
+    // month/day only — never the DateTime itself with a Local kind (the BST lesson).
+    private static DateTimeOffset? AsOffset(DateTime? date) =>
+        date is { } value ? new DateTimeOffset(value.Date, TimeSpan.Zero) : null;
+
+    // ---- Directory matching card (2026-08-31) --------------------------------------------------
+
+    private WorkerDirectoryLinkReport? linkReport;
+    private bool isMatching;
+    private string? matchError;
+
+    private IReadOnlyList<Worker> UnlinkedWorkers =>
+        Labour.Workers().Where(worker => worker.IsActive && worker.SubcontractorId is null && !worker.IsSoleTrader).ToList();
+
+    private async Task FindMatchesAsync()
+    {
+        isMatching = true; matchError = null;
+        try { linkReport = await Labour.ReconcileWorkerLinksAsync(apply: false); }
+        catch (CommandFailedException failure) { matchError = failure.Message; }
+        catch (Exception) { matchError = "Could not run the matching — try again."; }
+        finally { isMatching = false; }
+    }
+
+    private async Task ApplyAllMatchesAsync()
+    {
+        isMatching = true; matchError = null;
+        try
+        {
+            await Labour.ReconcileWorkerLinksAsync(apply: true);
+            // Re-run the dry run so the card shows exactly what remains for a human decision.
+            linkReport = await Labour.ReconcileWorkerLinksAsync(apply: false);
+        }
+        catch (CommandFailedException failure) { matchError = failure.Message; }
+        catch (Exception) { matchError = "Could not apply the matches — try again."; }
+        finally { isMatching = false; }
+    }
+
+    private async Task ApplyLinkAsync(string workerId, string subcontractorId)
+    {
+        isMatching = true; matchError = null;
+        try
+        {
+            await Labour.SetWorkerSettlementIdentityAsync(workerId, subcontractorId, isSoleTrader: false);
+            linkReport = await Labour.ReconcileWorkerLinksAsync(apply: false);
+        }
+        catch (CommandFailedException failure) { matchError = failure.Message; }
+        catch (Exception) { matchError = "Could not link the worker — try again."; }
+        finally { isMatching = false; }
+    }
+
+    private async Task MarkSoleTraderAsync(string workerId)
+    {
+        isMatching = true; matchError = null;
+        try
+        {
+            await Labour.SetWorkerSettlementIdentityAsync(workerId, subcontractorId: null, isSoleTrader: true);
+            linkReport = await Labour.ReconcileWorkerLinksAsync(apply: false);
+        }
+        catch (CommandFailedException failure) { matchError = failure.Message; }
+        catch (Exception) { matchError = "Could not flag the worker — try again."; }
+        finally { isMatching = false; }
     }
 
     private async Task SaveAsync()
@@ -368,13 +548,20 @@ else
         if (formDayRate <= 0m) { formError = "A day rate above zero is required."; return; }
 
         var subcontractorId = formSubcontractorId == "" ? null : formSubcontractorId;
+        if (formEngagedFrom is { } from && formEngagedTo is { } to && to < from)
+        { formError = "Engaged to cannot be before engaged from."; return; }
+        // The company link always wins — a linked worker saved with the flag would carry a
+        // dormant flag the settlement layer ignores; keep the record honest instead.
+        var isSoleTrader = subcontractorId is null && formIsSoleTrader;
         isSaving = true;
         try
         {
             if (editingWorkerId is null)
-                await Labour.AddWorkerAsync(formName, HourlyRate(), subcontractorId, formEmail, formPhone);
+                await Labour.AddWorkerAsync(formName, HourlyRate(), subcontractorId, formEmail, formPhone,
+                    isSoleTrader, AsOffset(formEngagedFrom), AsOffset(formEngagedTo));
             else
-                await Labour.UpdateWorkerAsync(new Worker(editingWorkerId, formName, subcontractorId, HourlyRate(), formIsActive, formEmail, formPhone));
+                await Labour.UpdateWorkerAsync(new Worker(editingWorkerId, formName, subcontractorId, HourlyRate(),
+                    formIsActive, formEmail, formPhone, isSoleTrader, AsOffset(formEngagedFrom), AsOffset(formEngagedTo)));
             DismissForm();
         }
         catch (CommandFailedException rejection)

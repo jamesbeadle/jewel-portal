@@ -90,10 +90,13 @@ public sealed class SettlementScheduleBuilder
                 .OrderBy(row => row.EffectiveFrom).LastOrDefault()?.CisRatePercent ?? 20m;
             var cisDeduction = decimal.Round(grossLabour * cisRate / 100m, 2);
 
-            // Covered bills for this worker's subcontractor in the period. Workers without a
-            // subcontractor link cannot be reconciled against Xero — verdict says chase the link.
-            var coveredTotal = worker.SubcontractorId is null ? 0m
-                : coversBySub[worker.SubcontractorId]
+            // Covered bills for this worker's settlement counterparty in the period — the linked
+            // company, or the worker themself when flagged a sole trader (2026-08-31). A worker
+            // with neither cannot be reconciled against Xero — verdict says chase the link.
+            var counterparty = WorkerSettlementIdentity.CounterpartyId(
+                worker.SubcontractorId, worker.IsSoleTrader, worker.WorkerId);
+            var coveredTotal = counterparty is null ? 0m
+                : coversBySub[counterparty]
                     .Sum(cover => coveredNetByLine.TryGetValue(cover.XeroLedgerLineId, out var net) ? net : 0m);
 
             var grossTotal = grossLabour + grossOther;
@@ -115,9 +118,13 @@ public sealed class SettlementScheduleBuilder
 
             var lastRun = runsByWorker[worker.WorkerId].LastOrDefault();
 
+            // SubcontractorId on the row is the COUNTERPARTY id (company id, or the worker's own
+            // id for a sole trader) — it is what covers key on and what the coding run looks up;
+            // the name follows suit so a sole trader's draft bill is contacted under their name.
             rows.Add(new WorkerSettlementSchedule(
-                worker.WorkerId, worker.Name, worker.SubcontractorId,
-                worker.SubcontractorId is not null && subcontractors.TryGetValue(worker.SubcontractorId, out var sub) ? sub : "",
+                worker.WorkerId, worker.Name, counterparty,
+                worker.SubcontractorId is not null && subcontractors.TryGetValue(worker.SubcontractorId, out var sub) ? sub
+                    : worker.IsSoleTrader ? worker.Name : "",
                 lines, grossLabour, grossOther, grossTotal, cisRate, cisDeduction,
                 decimal.Round(grossTotal - cisDeduction, 2),
                 coveredTotal, difference, verdict, fullySignedOff,

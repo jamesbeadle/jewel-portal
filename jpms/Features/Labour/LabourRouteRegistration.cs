@@ -115,5 +115,14 @@ public static class LabourRouteRegistration
         commands.Register<SetSiteXeroMapping, Acknowledgement>(CommandRoute.Post("/api/labour/xero-mappings/site"));
         commands.Register<SetCostCodeXeroMapping, Acknowledgement>(CommandRoute.Post("/api/labour/xero-mappings/cost-code"));
         commands.Register<RunXeroCoding, IReadOnlyList<XeroCodingRunResult>>(CommandRoute.Post("/api/labour/xero-coding/run"));
+
+        // Worker ↔ directory linking and chase dismissals (2026-08-31, the month-end doc).
+        commands.Register<SetWorkerSettlementIdentity, Worker>(
+            new CommandRoute("POST", "/api/labour/workers/{workerId}/settlement-identity",
+                command => $"/api/labour/workers/{((SetWorkerSettlementIdentity)command).WorkerId}/settlement-identity"));
+        commands.Register<ReconcileWorkerDirectoryLinks, WorkerDirectoryLinkReport>(
+            CommandRoute.Post("/api/labour/workers/reconcile-links"));
+        commands.Register<DismissLabourChaseDay, Acknowledgement>(
+            CommandRoute.Post("/api/labour/chase/dismiss"));
     }
 }

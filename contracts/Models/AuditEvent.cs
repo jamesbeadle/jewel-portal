@@ -90,7 +90,15 @@ public enum AuditEventType
     // set_cost_code_budget (confirm-first). The row records before → after, so a raised
     // allocation that quietly papers over an overspend is a matter of record, mirroring
     // LabourBudgetOverridden. Not a client-facing event: Pathway is "", like CostCentreRecoded.
-    CostCodeBudgetSet = 31           // a cost code's budget row was created or changed
+    CostCodeBudgetSet = 31,          // a cost code's budget row was created or changed
+    // Worker ↔ directory linking and chase dismissals (written since 2026-08-31): settlement is
+    // gated on the worker's counterparty, so a link being created — by the Xero import's
+    // auto-match, the reconcile sweep, the allocation page's inline fix, or the connector — is a
+    // money-routing decision worth a dated row; a chase dismissal is the FD/PM deciding a
+    // worker-day needs no timesheet, and the reason given is the point. Not client-facing:
+    // Pathway is "", like CostCentreRecoded.
+    WorkerLinkedToDirectory = 32,    // a worker was linked to (or unlinked from) a directory company / flagged sole trader
+    LabourChaseDayDismissed = 33     // a chase-list day was dismissed with a reason
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

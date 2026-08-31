@@ -87,6 +87,9 @@ public sealed class UpdateWorkerHandler : ICommandHandler<UpdateWorker, Worker>
         worker.SubcontractorId = string.IsNullOrWhiteSpace(command.SubcontractorId) ? null : command.SubcontractorId;
         worker.ContactEmail = command.ContactEmail ?? "";
         worker.ContactPhone = command.ContactPhone ?? "";
+        worker.IsSoleTrader = command.IsSoleTrader;
+        worker.EngagedFrom = command.EngagedFrom;
+        worker.EngagedTo = command.EngagedTo;
         await context.SaveChangesAsync(cancellationToken);
         return worker.ToModel();
     }

@@ -7,6 +7,7 @@
 @inject IQueryClient Queries
 @inject ICostCenterStore CostCenters
 @inject ILabourStore Labour
+@inject ISubcontractorStore Subcontractors
 @inject ProjectListReadModel ProjectsReadModel
 @inject AllocationTabStorage TabStorage
 @inject NavigationManager Nav
@@ -394,10 +395,31 @@ else
                                             <span class="text-content font-medium whitespace-nowrap">@line.MatchedWorkerName</span>
                                             @if (line.MatchedSubcontractorId is null)
                                             {
+                                                @* The month-end doc's exact dead end (2026-08-31): the gap
+                                                   used to be reported here and fixable only on the Workers
+                                                   page, one modal at a time. The fix now lives where the
+                                                   error is: link a directory company inline, or flag the
+                                                   worker a sole trader — both audited, both re-checked
+                                                   against the ledger immediately. *@
                                                 <span class="block text-xs text-negative mt-0.5"
-                                                      title="Covering reconciles by subcontractor company. Link one to this worker on the Workers page, then Re-check matches here.">
-                                                    ⚠ No linked subcontractor company
+                                                      title="Covering reconciles by settlement counterparty: a linked subcontractor company, or the worker themself when flagged a sole trader.">
+                                                    ⚠ No settlement identity
                                                 </span>
+                                                <div class="flex items-center gap-1.5 mt-1.5">
+                                                    <SearchSelect Options="@DirectoryOptions" WidthClass="w-44"
+                                                                  Placeholder="Link company…"
+                                                                  Disabled="@(isBusy || !Subcontractors.IsLoaded)"
+                                                                  Value="@InlineLinkPickFor(line)"
+                                                                  ValueChanged="value => inlineLinkPicks[line.XeroLedgerLineId] = value" />
+                                                    <button class="text-xs font-medium rounded-lg px-2 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                                                            disabled="@(isBusy || InlineLinkPickFor(line) == "")"
+                                                            title="Link the worker to the picked directory company — audited; settlement then reconciles through it"
+                                                            @onclick="() => LinkWorkerInlineAsync(line)">Link</button>
+                                                    <button class="text-xs font-medium rounded-lg px-2 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                                                            disabled="@isBusy"
+                                                            title="They bill under their own name — becomes their own settlement counterparty; no directory company is created"
+                                                            @onclick="() => MarkSoleTraderInlineAsync(line)">Sole trader</button>
+                                                </div>
                                             }
                                         }
                                         else
@@ -1384,6 +1406,10 @@ else
         // pulled in by the first render that read it; behind a gate nothing reads it until it has
         // landed, so the load has to be started here.
         _ = CostCenters.ListAllAsync();
+        // The directory feeds the Labour tab's inline link picker (2026-08-31); lazily loaded,
+        // so the fetch has to be started here or the picker offers nothing forever.
+        Subcontractors.OnChange += StateHasChanged;
+        Subcontractors.All();
         // Load the tab being opened (RestoreLastTabAsync may have restored a different one) plus,
         // when that isn't the unallocated queue, the queue itself — the tab bar's project tabs and
         // the "allocate all matched" banner are built from it.
@@ -1923,9 +1949,54 @@ else
     private static bool CanMarkCover(XeroLedgerLine line) =>
         line.MatchedSubcontractorId is not null && line.Date is not null;
 
+    // ---- Inline settlement-identity fix on the Labour tab (2026-08-31) -------------------------
+
+    private readonly Dictionary<string, string> inlineLinkPicks = new();
+
+    private IReadOnlyList<SearchSelect.Option> DirectoryOptions =>
+        Subcontractors.All().Where(s => !s.IsProspect)
+            .OrderBy(s => s.CompanyName)
+            .Select(s => new SearchSelect.Option(s.SubcontractorId, s.CompanyName))
+            .ToList();
+
+    private string InlineLinkPickFor(XeroLedgerLine line) =>
+        inlineLinkPicks.TryGetValue(line.XeroLedgerLineId, out var pick) ? pick : "";
+
+    private async Task LinkWorkerInlineAsync(XeroLedgerLine line)
+    {
+        if (isBusy || line.MatchedWorkerId is null) return;
+        var pick = InlineLinkPickFor(line);
+        if (pick == "") return;
+        isApplying = true; errorMessage = null;
+        try
+        {
+            await Labour.SetWorkerSettlementIdentityAsync(line.MatchedWorkerId, pick, isSoleTrader: false);
+            inlineLinkPicks.Remove(line.XeroLedgerLineId);
+            // Recognition re-runs on the reload, so the row's Mark-as-settlement arms at once.
+            await Ledger.RefreshAsync(XeroAllocationStatus.Unallocated);
+            syncMessage = $"{line.MatchedWorkerName} linked — settlement now reconciles through the directory company.";
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    private async Task MarkSoleTraderInlineAsync(XeroLedgerLine line)
+    {
+        if (isBusy || line.MatchedWorkerId is null) return;
+        isApplying = true; errorMessage = null;
+        try
+        {
+            await Labour.SetWorkerSettlementIdentityAsync(line.MatchedWorkerId, subcontractorId: null, isSoleTrader: true);
+            await Ledger.RefreshAsync(XeroAllocationStatus.Unallocated);
+            syncMessage = $"{line.MatchedWorkerName} flagged sole trader — they settle under their own name.";
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
+
     private string MarkCoverHint(XeroLedgerLine line) =>
         line.MatchedSubcontractorId is null
-            ? "Covering reconciles by subcontractor company — link one to this worker on the Workers page first"
+            ? "Covering reconciles by settlement counterparty — link a company or flag the worker a sole trader (inline, left) first"
             : line.Date is null
                 ? "The line has no bill date, so there is no month to settle against"
                 : $"Mark this line as settlement of {line.MatchedWorkerName}'s {SettlementMonthOf(line):MMMM yyyy} timesheets — covered value is excluded from cost-of-sales aggregations; the worker-month verdict lives on the Labour overview's Settlement view";
@@ -2683,5 +2754,6 @@ else
         Ledger.OnChange -= StateHasChanged;
         CostCenters.OnChange -= StateHasChanged;
         ProjectsReadModel.OnChanged -= StateHasChanged;
+        Subcontractors.OnChange -= StateHasChanged;
     }
 }

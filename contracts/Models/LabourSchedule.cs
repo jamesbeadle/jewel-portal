@@ -28,6 +28,10 @@ public sealed record ScheduleLine(
 /// owed, split the way the covering bill should be coded in Dext/Xero, with the CIS deduction
 /// and the reconciliation verdict against what Xero actually holds.
 /// </summary>
+// SubcontractorId is the settlement COUNTERPARTY id (2026-08-31): the linked company's id, or
+// the worker's own id when they are a flagged sole trader billing under their own name. Covers
+// are stored against it and the coding run reconciles by it; SubcontractorName follows suit
+// (the worker's name for a sole trader), so staged draft bills carry the right Xero contact.
 public sealed record WorkerSettlementSchedule(
     string WorkerId,
     string WorkerName,

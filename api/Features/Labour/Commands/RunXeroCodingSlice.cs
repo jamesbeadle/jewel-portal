@@ -179,7 +179,9 @@ public sealed class RunXeroCodingHandler : ICommandHandler<RunXeroCoding, IReadO
 
         // No bill yet → stage a draft matching the schedule.
         if (string.IsNullOrWhiteSpace(schedule.SubcontractorName))
-            return Skip("The worker has no linked subcontractor company — link one on the Workers page so the draft bill has a contact.");
+            return Skip("The worker has no settlement identity — link a subcontractor company or flag "
+                + "them a sole trader (Workers page, or the allocation page's inline fix) so the draft "
+                + "bill has a contact.");
 
         var monthEndDate = monthStart.AddMonths(1).AddDays(-1).UtcDateTime.Date;
         var create = await xero.CreateDraftBillAsync(new XeroDraftBillRequest(

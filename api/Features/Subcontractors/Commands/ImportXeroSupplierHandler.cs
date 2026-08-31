@@ -2,6 +2,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Audit;
+using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Api.Features.Xero;
 using Jewel.JPMS.Contracts.Subcontractors;
 using Jewel.JPMS.Contracts.Xero;
@@ -22,12 +23,14 @@ public sealed class ImportXeroSupplierHandler : ICommandHandler<ImportXeroSuppli
     private readonly JpmsContext context;
     private readonly IXeroClient xero;
     private readonly AuditActor actor;
+    private readonly AuditTrail audit;
 
-    public ImportXeroSupplierHandler(JpmsContext context, IXeroClient xero, AuditActor actor)
+    public ImportXeroSupplierHandler(JpmsContext context, IXeroClient xero, AuditActor actor, AuditTrail audit)
     {
         this.context = context;
         this.xero = xero;
         this.actor = actor;
+        this.audit = audit;
     }
 
     public async Task<Subcontractor> HandleAsync(ImportXeroSupplier command, CancellationToken cancellationToken)
@@ -85,7 +88,40 @@ public sealed class ImportXeroSupplierHandler : ICommandHandler<ImportXeroSuppli
             });
         }
 
+        // Auto-link matching workers (2026-08-31, the accountant's month-end doc, item A):
+        // settlement is gated on the worker→directory link, and importing the supplier used to
+        // create everything EXCEPT it — the one row the labour machinery actually keys on. Same
+        // name rule as the allocation page's recognition (WorkerDirectoryMatcher), unambiguous
+        // matches only, and never over a link or sole-trader flag a human has already set.
+        var unlinkedWorkers = await context.Workers
+            .Where(worker => worker.IsActive && worker.SubcontractorId == null && !worker.IsSoleTrader)
+            .ToListAsync(cancellationToken);
+        var existingCompanies = unlinkedWorkers.Count == 0
+            ? new List<string>()
+            : await context.Subcontractors.AsNoTracking()
+                .Where(sub => !sub.IsProspect && sub.SubcontractorId != entity.SubcontractorId)
+                .Select(sub => sub.CompanyName)
+                .ToListAsync(cancellationToken);
+        var autoLinked = new List<string>();
+        foreach (var worker in unlinkedWorkers)
+        {
+            if (!WorkerDirectoryMatcher.Matches(worker.Name, supplier.Name)) continue;
+            // Unambiguous only — the same standard the reconcile sweep holds itself to: a worker
+            // whose name also matches another directory company is a human's call, not an import
+            // side effect.
+            if (existingCompanies.Any(company => WorkerDirectoryMatcher.Matches(worker.Name, company))) continue;
+            worker.SubcontractorId = entity.SubcontractorId;
+            autoLinked.Add(worker.Name);
+        }
+
         await context.SaveChangesAsync(cancellationToken);
+
+        foreach (var name in autoLinked)
+            await audit.WriteAsync(
+                AuditEventType.WorkerLinkedToDirectory,
+                $"Xero import: worker {name} auto-linked to {supplier.Name}.",
+                cancellationToken: cancellationToken);
+
         return entity.ToModel(Array.Empty<Trade>(), xeroLinked: true);
     }
 

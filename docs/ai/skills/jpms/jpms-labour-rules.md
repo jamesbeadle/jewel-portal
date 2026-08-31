@@ -47,3 +47,25 @@ description: "Labour and timesheet doctrine — how hours become cost and what i
    marks the line as settlement of the approved timesheets; when the totals will not tie and the
    difference is accepted, **add_labour_settlement_variance** (confirm-first) posts it visibly —
    never absorb a difference silently.
+
+## Settlement identity (2026-08-31)
+
+- Every worker settles through a COUNTERPARTY: their linked directory company, or themselves when
+  flagged a sole trader (they bill Dext/Xero under their own name). The company link always wins.
+- A "no settlement identity" refusal is fixed with **link_worker_to_company** or
+  **set_worker_sole_trader** — NEVER by inventing a directory company for a sole trader; fake
+  companies pollute compliance and tendering.
+- **import_xero_supplier** auto-links workers whose names match the imported supplier;
+  **reconcile_worker_directory_links** (confirm-first; run apply:false first) backfills the rest
+  and reports the ambiguous/unmatched remainder for a human decision.
+
+## The chase list (2026-08-31)
+
+- A day is chased only when it was EXPECTED: inside the worker's engagement window AND the worker
+  is contracted, assigned to a project, or holds an open sign-in. Signed-off weeks, settled
+  worker-months and dismissed days never chase, and the unconfirmed-cost figures always agree
+  with the list.
+- **view_labour_chase** reads the list; a wrong item is answered with a timesheet
+  (submit_worker_week), an absence (record_worker_absence), or **dismiss_labour_chase_day** with
+  a REAL reason (audited; restore_labour_chase_day undoes). A worker chased every day needs the
+  real fix — contracted days, an assignment, or engagement dates — not day-by-day dismissals.

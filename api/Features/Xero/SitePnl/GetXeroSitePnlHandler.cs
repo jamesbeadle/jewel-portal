@@ -67,11 +67,18 @@ public sealed class GetXeroSitePnlHandler : IQueryHandler<GetXeroSitePnl, XeroSi
             .ToListAsync(cancellationToken);
         if (approved.Count == 0) return Array.Empty<XeroSiteMonthlyLabourAccrual>();
 
+        // Keyed by settlement COUNTERPARTY (2026-08-31): the linked company, or the worker
+        // themself when flagged a sole trader — covers are stored against that id, so a sole
+        // trader's approved time leaves the accrual when their own-name bill is approved,
+        // exactly like a company-linked worker's.
         var subcontractorByWorker = (await context.Workers.AsNoTracking()
-                .Where(worker => worker.SubcontractorId != null)
-                .Select(worker => new { worker.WorkerId, worker.SubcontractorId })
+                .Where(worker => worker.SubcontractorId != null || worker.IsSoleTrader)
+                .Select(worker => new { worker.WorkerId, worker.SubcontractorId, worker.IsSoleTrader })
                 .ToListAsync(cancellationToken))
-            .ToDictionary(worker => worker.WorkerId, worker => worker.SubcontractorId!, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(
+                worker => worker.WorkerId,
+                worker => worker.SubcontractorId ?? worker.WorkerId,
+                StringComparer.OrdinalIgnoreCase);
 
         var settledSpans = (await context.XeroLineTimesheetCovers.AsNoTracking()
                 .Join(context.XeroLedgerLines.AsNoTracking(),

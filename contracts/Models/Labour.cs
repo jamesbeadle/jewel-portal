@@ -16,6 +16,10 @@ public enum TimesheetStatus
 /// A site operative (day-rate subcontractor labour). HourlyRate is the agreed day rate ÷ 8;
 /// it is only ever returned to commercial roles and never to the site capture page.
 /// </summary>
+// IsSoleTrader / engagement window (2026-08-31): a sole trader bills under their own name and
+// is their own settlement counterparty (ignored when SubcontractorId is set — a company link
+// wins); EngagedFrom/To bound what the chase list EXPECTS, never what counts. Trailing optionals
+// so jpms's positional constructions stay valid.
 public sealed record Worker(
     string WorkerId,
     string Name,
@@ -23,7 +27,10 @@ public sealed record Worker(
     decimal HourlyRate,
     bool IsActive,
     string ContactEmail,
-    string ContactPhone);
+    string ContactPhone,
+    bool IsSoleTrader = false,
+    DateTimeOffset? EngagedFrom = null,
+    DateTimeOffset? EngagedTo = null);
 
 public sealed record ProjectWorkerAssignment(
     string ProjectWorkerAssignmentId,

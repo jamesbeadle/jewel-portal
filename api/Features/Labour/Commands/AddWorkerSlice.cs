@@ -72,6 +72,9 @@ public sealed class AddWorkerHandler : ICommandHandler<AddWorker, Worker>
             IsActive = true,
             ContactEmail = command.ContactEmail ?? "",
             ContactPhone = command.ContactPhone ?? "",
+            IsSoleTrader = command.IsSoleTrader,
+            EngagedFrom = command.EngagedFrom,
+            EngagedTo = command.EngagedTo,
         };
         context.Workers.Add(worker);
         context.WorkerRateHistories.Add(new WorkerRateHistoryEntity

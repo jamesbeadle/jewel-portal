@@ -287,6 +287,58 @@ internal static class AiLabourMonthEndTools
                             + "skip that worker until it is set."
                     });
                 }),
+
+            new(
+                "view_labour_chase",
+                "The Labour overview's chase list for one month: every worker-day still awaiting a "
+                + "timesheet or an absence — AFTER the expectation test (only days the worker was "
+                + "contracted, assigned to a project, or held an open sign-in, inside their engagement "
+                + "window) and after suppressing signed-off weeks, settled worker-months and dismissed "
+                + "days. Also the month's dismissed count. This is what to read before dismissing "
+                + "(dismiss_labour_chase_day) or recording absences to close a month out.",
+                AiToolSchema.Object(
+                    ("year", "number", "The year, e.g. 2026. Left out, the current month's year.", false),
+                    ("month", "number", "The month 1-12. Left out, the current month.", false)),
+                AiToolKind.Read,
+                // Mirrors GetLabourOverviewEndpoint's gate (rates and £ ride on the overview; the
+                // chase items themselves carry no money, but the read stays with the managing roles).
+                LabourRoleSets.ManageWorkers,
+                async (context, input, ct) =>
+                {
+                    var today = SiteClock.Today();
+                    var year = (int)(AiToolSchema.Number(input, "year") ?? today.Year);
+                    var month = (int)(AiToolSchema.Number(input, "month") ?? today.Month);
+                    if (year < 2020 || year > 2100 || month < 1 || month > 12)
+                        return Fail("year must be 2020-2100 and month 1-12.");
+
+                    var snapshot = await context.Services
+                        .GetRequiredService<IQueryHandler<GetLabourOverview, LabourOverviewSnapshot>>()
+                        .HandleAsync(new GetLabourOverview(year, month), ct);
+
+                    return Serialise(new
+                    {
+                        ok = true,
+                        snapshot.Year,
+                        snapshot.Month,
+                        count = snapshot.Chase.Count,
+                        dismissedThisMonth = snapshot.DismissedThisMonth,
+                        chase = snapshot.Chase.Select(item => new
+                        {
+                            item.WorkerName,
+                            date = item.Date.ToString("yyyy-MM-dd"),
+                            reason = item.Reason.ToString(),
+                            project = string.IsNullOrWhiteSpace(item.ProjectName) ? null : item.ProjectName
+                        }),
+                        note = snapshot.Chase.Count == 0
+                            ? "Nothing to chase — every expected day is answered for."
+                            : "NoTimesheet days need a timesheet (submit_worker_week), an absence "
+                              + "(record_worker_absence), or a reasoned dismissal "
+                              + "(dismiss_labour_chase_day). OpenAttendance days have a sign-in with no "
+                              + "sign-out — the site closes those. A worker chased every day usually "
+                              + "needs the real fix: contracted days, a project assignment, or "
+                              + "engagement dates."
+                    });
+                }),
         };
     }
 }

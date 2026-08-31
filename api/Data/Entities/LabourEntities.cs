@@ -17,6 +17,15 @@ public sealed class WorkerEntity
     public bool IsActive { get; set; } = true;
     [MaxLength(256)]     public string ContactEmail { get; set; } = "";
     [MaxLength(64)]      public string ContactPhone { get; set; } = "";
+    // Sole trader (2026-08-31, the accountant's month-end ask): the worker bills Dext/Xero under
+    // their OWN name and is their own settlement counterparty — no directory company is invented
+    // for them. Ignored whenever SubcontractorId is set: a real company link wins.
+    public bool IsSoleTrader { get; set; }
+    // Engagement window (2026-08-31): the chase list and confidence figures only EXPECT time
+    // inside it. Null = open-ended on that side. Recorded time outside the window still counts —
+    // the window bounds expectation, never data.
+    public DateTimeOffset? EngagedFrom { get; set; }
+    public DateTimeOffset? EngagedTo { get; set; }
 }
 
 /// <summary>

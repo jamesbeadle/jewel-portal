@@ -78,9 +78,11 @@ public sealed class HttpLabourStore : ILabourStore
 
     public Task RefreshWorkersAsync() => workersReadModel.RefreshAsync(CancellationToken.None);
 
-    public async Task<Worker> AddWorkerAsync(string name, decimal hourlyRate, string? subcontractorId, string contactEmail, string contactPhone)
+    public async Task<Worker> AddWorkerAsync(string name, decimal hourlyRate, string? subcontractorId, string contactEmail, string contactPhone,
+        bool isSoleTrader = false, DateTimeOffset? engagedFrom = null, DateTimeOffset? engagedTo = null)
     {
-        var worker = await commands.SendAsync(new AddWorker(name, hourlyRate, subcontractorId, contactEmail, contactPhone), CancellationToken.None);
+        var worker = await commands.SendAsync(new AddWorker(name, hourlyRate, subcontractorId, contactEmail, contactPhone,
+            isSoleTrader, engagedFrom, engagedTo), CancellationToken.None);
         await workersReadModel.RefreshAsync(CancellationToken.None);
         return worker;
     }
@@ -88,10 +90,29 @@ public sealed class HttpLabourStore : ILabourStore
     public async Task<Worker> UpdateWorkerAsync(Worker worker)
     {
         var updated = await commands.SendAsync(new UpdateWorker(worker.WorkerId, worker.Name, worker.HourlyRate,
-            worker.IsActive, worker.SubcontractorId, worker.ContactEmail, worker.ContactPhone), CancellationToken.None);
+            worker.IsActive, worker.SubcontractorId, worker.ContactEmail, worker.ContactPhone,
+            worker.IsSoleTrader, worker.EngagedFrom, worker.EngagedTo), CancellationToken.None);
         await workersReadModel.RefreshAsync(CancellationToken.None);
         return updated;
     }
+
+    public async Task<Worker> SetWorkerSettlementIdentityAsync(string workerId, string? subcontractorId, bool isSoleTrader)
+    {
+        var updated = await commands.SendAsync(
+            new SetWorkerSettlementIdentity(workerId, subcontractorId, isSoleTrader), CancellationToken.None);
+        await workersReadModel.RefreshAsync(CancellationToken.None);
+        return updated;
+    }
+
+    public async Task<WorkerDirectoryLinkReport> ReconcileWorkerLinksAsync(bool apply)
+    {
+        var report = await commands.SendAsync(new ReconcileWorkerDirectoryLinks(apply), CancellationToken.None);
+        if (apply) await workersReadModel.RefreshAsync(CancellationToken.None);
+        return report;
+    }
+
+    public Task DismissChaseDayAsync(string workerId, DateTimeOffset date, string reason) =>
+        commands.SendAsync(new DismissLabourChaseDay(workerId, date, reason), CancellationToken.None);
 
     public async Task DeleteWorkerAsync(string workerId)
     {
