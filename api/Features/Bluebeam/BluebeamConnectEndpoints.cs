@@ -49,9 +49,14 @@ public sealed class BluebeamConnectEndpoints
             return new BadRequestObjectResult(
                 "Bluebeam isn't configured — add the Bluebeam__ClientId and Bluebeam__ClientSecret app settings first.");
 
+        // response_mode=form_post makes Bluebeam's sign-in POST the code back instead of putting
+        // it in the query string — the Static Web Apps edge intercepts ANY request carrying a
+        // ?code= parameter as one of its own auth callbacks and 500s it before our function runs
+        // (found the hard way, 2026-08-31). A POST body sails through untouched.
         var state = BluebeamConnectionState.Mint(options.ClientSecret!, signedInUser.Email);
         var authorizeUrl = options.AuthorizeUrl
-            + $"?response_type=code&client_id={Uri.EscapeDataString(options.ClientId!)}"
+            + $"?response_type=code&response_mode=form_post"
+            + $"&client_id={Uri.EscapeDataString(options.ClientId!)}"
             + $"&redirect_uri={Uri.EscapeDataString(options.RedirectUri)}"
             + $"&scope={Uri.EscapeDataString(options.Scopes)}"
             + $"&state={Uri.EscapeDataString(state)}";
@@ -60,13 +65,16 @@ public sealed class BluebeamConnectEndpoints
 
     [Function("BluebeamConnectCallback")]
     public async Task<IActionResult> Callback(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "bluebeam/callback")] HttpRequest request)
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "bluebeam/callback")] HttpRequest request)
     {
         var cancellationToken = request.HttpContext.RequestAborted;
         if (!options.IsConfigured) return Failed("not-configured");
-        var adminEmail = BluebeamConnectionState.VerifiedAdminEmail(request.Query["state"], options.ClientSecret!);
+        // form_post delivers code + state in the POST body; the query fallback keeps a plain GET
+        // callback working should the response mode ever be ignored.
+        var state = await ReadParameterAsync(request, "state");
+        var adminEmail = BluebeamConnectionState.VerifiedAdminEmail(state, options.ClientSecret!);
         if (adminEmail is null) return Failed("bad-state");
-        var code = request.Query["code"].ToString();
+        var code = await ReadParameterAsync(request, "code");
         if (string.IsNullOrWhiteSpace(code)) return Failed("no-code");
 
         try
@@ -127,6 +135,15 @@ public sealed class BluebeamConnectEndpoints
         connection.LastRefreshFailedAt = null;
         connection.LastRefreshError = null;
         await context.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task<string> ReadParameterAsync(HttpRequest request, string name)
+    {
+        var fromQuery = request.Query[name].ToString();
+        if (fromQuery.Length > 0) return fromQuery;
+        if (!request.HasFormContentType) return "";
+        var form = await request.ReadFormAsync(request.HttpContext.RequestAborted);
+        return form[name].ToString();
     }
 
     private static RedirectResult Failed(string reason) =>
