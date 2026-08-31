@@ -180,8 +180,12 @@ else
         var query = ParseQuery(new Uri(Nav.Uri).Query);
         if (!query.TryGetValue("bluebeam", out var outcome)) return;
         callbackFailed = outcome != "connected";
+        // The callback forwards Bluebeam's own rejection text in ?detail= — showing it verbatim
+        // beats making an admin dig through telemetry for the same sentence.
+        var detail = query.GetValueOrDefault("detail", "");
         callbackNote = callbackFailed
-            ? $"Connecting Bluebeam didn't complete ({query.GetValueOrDefault("reason", "unknown reason")}) — try again."
+            ? $"Connecting Bluebeam didn't complete ({query.GetValueOrDefault("reason", "unknown reason")})"
+              + (detail.Length > 0 ? $": {detail}" : " — try again.")
             : "Bluebeam is connected.";
         Nav.NavigateTo("/admin/integrations", replace: true);
     }

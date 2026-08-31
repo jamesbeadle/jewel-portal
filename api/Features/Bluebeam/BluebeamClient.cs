@@ -42,20 +42,25 @@ public sealed partial class BluebeamClient : IBluebeamClient
     private async Task<BluebeamTokens> RequestTokensAsync(
         Dictionary<string, string> form, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{options.ApiBaseUrl}/oauth2/token")
+        // Basic header first (the documented scheme); a 400/401 gets one retry with the
+        // credentials in the body instead — Okta apps are configured for one or the other and
+        // the developer portal doesn't say which this app got.
+        var (response, body) = await PostTokenFormAsync(form, useBasicHeader: true, cancellationToken);
+        if (!response.IsSuccessStatusCode
+            && response.StatusCode is System.Net.HttpStatusCode.BadRequest or System.Net.HttpStatusCode.Unauthorized)
         {
-            Content = new FormUrlEncodedContent(form)
-        };
-        var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{options.ClientId}:{options.ClientSecret}"));
-        request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
-
-        using var response = await http.SendAsync(request, cancellationToken);
-        var body = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
+            logger.LogWarning(
+                "Bluebeam token call with Basic auth failed ({Status}) — retrying with body credentials.",
+                (int)response.StatusCode);
+            response.Dispose();
+            (response, body) = await PostTokenFormAsync(form, useBasicHeader: false, cancellationToken);
+        }
+        using var finalResponse = response;
+        if (!finalResponse.IsSuccessStatusCode)
         {
-            logger.LogWarning("Bluebeam token call failed: {Status} {Body}.", (int)response.StatusCode, Trimmed(body));
+            logger.LogWarning("Bluebeam token call failed: {Status} {Body}.", (int)finalResponse.StatusCode, Trimmed(body));
             throw new BluebeamCallFailedException(
-                $"Bluebeam rejected the token request with HTTP {(int)response.StatusCode}. {Trimmed(body)}");
+                $"Bluebeam rejected the token request with HTTP {(int)finalResponse.StatusCode}. {Trimmed(body)}");
         }
 
         using var document = JsonDocument.Parse(body);
@@ -67,6 +72,27 @@ public sealed partial class BluebeamClient : IBluebeamClient
             ? seconds
             : 3600;
         return new BluebeamTokens(accessToken, refreshToken, expiresInSeconds);
+    }
+
+    private async Task<(HttpResponseMessage Response, string Body)> PostTokenFormAsync(
+        Dictionary<string, string> form, bool useBasicHeader, CancellationToken cancellationToken)
+    {
+        var fields = new Dictionary<string, string>(form);
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{options.ApiBaseUrl}/oauth2/token");
+        if (useBasicHeader)
+        {
+            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{options.ClientId}:{options.ClientSecret}"));
+            request.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
+        }
+        else
+        {
+            fields["client_id"] = options.ClientId ?? "";
+            fields["client_secret"] = options.ClientSecret ?? "";
+        }
+        request.Content = new FormUrlEncodedContent(fields);
+        var response = await http.SendAsync(request, cancellationToken);
+        var body = await response.Content.ReadAsStringAsync(cancellationToken);
+        return (response, body);
     }
 
     // Bluebeam's JSON casing is not something to bet the parser on — match property names

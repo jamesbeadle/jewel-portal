@@ -54,14 +54,16 @@ public sealed class BluebeamConnectCallback
         }
         catch (BluebeamCallFailedException failure)
         {
+            // Bluebeam's own rejection text rides back to the Integrations page — the fastest
+            // diagnostic loop is the person reading the real reason on screen, not log-diving.
             logger.LogWarning("Bluebeam code exchange failed: {Message}", failure.Message);
-            return Failed(request, "exchange-failed");
+            return Failed(request, "exchange-failed", failure.Message);
         }
         catch (Exception failure) when (failure is not OperationCanceledException)
         {
             // A browser redirect must never end on a bare error page — the person can't see logs.
             logger.LogError(failure, "Bluebeam connect callback failed after code exchange.");
-            return Failed(request, "server-error");
+            return Failed(request, "server-error", $"{failure.GetType().Name}: {failure.Message}");
         }
 
         return Redirect(request, $"{AdminPageUrl}?bluebeam=connected");
@@ -98,8 +100,16 @@ public sealed class BluebeamConnectCallback
         return values;
     }
 
-    private static HttpResponseData Failed(HttpRequestData request, string reason) =>
-        Redirect(request, $"{AdminPageUrl}?bluebeam=failed&reason={reason}");
+    private static HttpResponseData Failed(HttpRequestData request, string reason, string? detail = null)
+    {
+        var url = $"{AdminPageUrl}?bluebeam=failed&reason={reason}";
+        if (!string.IsNullOrWhiteSpace(detail))
+            url += $"&detail={Uri.EscapeDataString(Clamp(detail, 400))}";
+        return Redirect(request, url);
+    }
+
+    private static string Clamp(string value, int maximumLength) =>
+        value.Length <= maximumLength ? value : value[..maximumLength];
 
     private static HttpResponseData Redirect(HttpRequestData request, string url)
     {

@@ -27,6 +27,12 @@ var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
     .ConfigureServices((context, services) =>
     {
+        // Application Insights for the ISOLATED process. Without these two lines every ILogger
+        // call inside function code goes nowhere — only host-level telemetry ever reached the
+        // portal, which made worker failures undiagnosable (learned 2026-08-31, Bluebeam connect).
+        services.AddApplicationInsightsTelemetryWorkerService();
+        services.ConfigureFunctionsApplicationInsights();
+
         var connectionString = context.Configuration["SqlConnectionString"]
             ?? throw new InvalidOperationException("SqlConnectionString application setting missing.");
 
