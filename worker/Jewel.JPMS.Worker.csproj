@@ -21,6 +21,9 @@
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.3.1" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.17.4" />
     <PackageReference Include="Microsoft.Azure.Functions.Worker.ApplicationInsights" Version="1.2.0" />
+    <!-- Brings AddApplicationInsightsTelemetryWorkerService, which the isolated-process telemetry
+         wiring in Program.cs needs alongside the Functions ApplicationInsights package above. -->
+    <PackageReference Include="Microsoft.ApplicationInsights.WorkerService" Version="2.22.0" />
     <!-- PDFsharp/MigraDoc (MIT): the worker renders the same branded request document before emailing it. -->
     <PackageReference Include="PDFsharp-MigraDoc" Version="6.1.1" />
     <!-- PdfPig (Apache-2.0): the drawing-extraction worker reads each revision PDF's text layer —
