@@ -25,6 +25,13 @@ public static class AiRouteRegistration
 
         commands.Register<SaveAiSkillReference, Acknowledgement>(
             CommandRoute.Post("/api/ai/skills/references"));
+
+        // Skills wired to connector actions — the AI Actions admin page (/admin/ai-actions).
+        queries.Register<GetAiActionCatalogue, AiActionCatalogue>(
+            new QueryRoute("/api/ai/action-skills", _ => "/api/ai/action-skills"));
+
+        commands.Register<SaveAiActionSkills, Acknowledgement>(
+            CommandRoute.Post("/api/ai/action-skills"));
     }
 
     private static string BuildAgentActivityPath(object query)

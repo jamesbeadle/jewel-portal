@@ -60,7 +60,7 @@ internal static class AiActionGatewayTools
                     ("search", "string", "Case-insensitive term matched against action names and descriptions.", false)),
                 AiToolKind.Read,
                 AllSignedIn,
-                (context, input, _) =>
+                async (context, input, cancellationToken) =>
                 {
                     var area = AiToolSchema.Text(input, "area");
                     var search = AiToolSchema.Text(input, "search");
@@ -72,6 +72,10 @@ internal static class AiActionGatewayTools
                             action.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
                             || action.Description.Contains(search, StringComparison.OrdinalIgnoreCase));
 
+                    // Actions the team has attached doctrine to are marked in their one-liner, so
+                    // the model knows describe_action carries guidance it must read, not just a schema.
+                    var guided = await AiActionSkillGuidance.TargetsWithGuidanceAsync(context.Db, cancellationToken);
+
                     var grouped = actions
                         .GroupBy(action => action.Area)
                         .OrderBy(group => group.Key)
@@ -81,38 +85,48 @@ internal static class AiActionGatewayTools
                             {
                                 name = action.Name,
                                 summary = FirstSentence(action.Description)
+                                    + (guided.Contains(action.Name) || guided.Contains(action.Area)
+                                        ? " [team guidance attached — describe_action includes it]"
+                                        : "")
                             }).ToList());
 
-                    return Task.FromResult(Serialise(new
+                    return Serialise(new
                     {
                         actions = grouped,
                         note = "Every action runs immediately under the user's own account with their portal "
                                + "permissions and is logged. Read describe_action before performing one, and "
                                + "confirm wording/amounts with the user for anything external-facing or financial."
-                    }));
+                    });
                 }),
 
             new(
                 "describe_action",
                 "The full contract for one action from list_actions: what it changes, its side "
-                + "effects, prerequisites, and the exact JSON schema perform_action expects. Always "
-                + "call this before the first perform_action of an action in a conversation.",
+                + "effects, prerequisites, the exact JSON schema perform_action expects, and any "
+                + "guidance skills the team has attached to it — doctrine you must follow when "
+                + "performing it. Always call this before the first perform_action of an action "
+                + "in a conversation.",
                 AiToolSchema.Object(
                     ("name", "string", "The action name exactly as list_actions returned it.", true)),
                 AiToolKind.Read,
                 AllSignedIn,
-                (context, input, _) =>
+                async (context, input, cancellationToken) =>
                 {
                     var name = AiToolSchema.Text(input, "name") ?? "";
                     var action = AiActionRegistry.Find(name);
                     if (action is null || !action.VisibleTo.IncludesAny(context.User.Roles))
-                        return Task.FromResult(Serialise(new
+                        return Serialise(new
                         {
                             ok = false,
                             error = $"No action named '{name}' is available to this user. Call list_actions."
-                        }));
+                        });
 
-                    return Task.FromResult(Serialise(new
+                    // The team's attached doctrine rides in WITH the schema — the one road the
+                    // model must travel before performing — so following it never depends on the
+                    // model deciding to go looking (docs/ai/10-mcp-connector.md; AI Actions page).
+                    var guidance = await AiActionSkillGuidance.LoadForAsync(context.Db, action, cancellationToken);
+
+                    return Serialise(new
                     {
                         name = action.Name,
                         area = action.Area,
@@ -120,8 +134,14 @@ internal static class AiActionGatewayTools
                         notes = action.Notes,
                         requiresConfirmation = action.RequiresConfirmation,
                         confirmation = action.RequiresConfirmation ? ConfirmationProtocol : null,
+                        guidance = guidance.Count == 0 ? null : guidance,
+                        guidanceNote = guidance.Count == 0
+                            ? null
+                            : "The team attached these skills to this action — read them and follow "
+                              + "what they say when performing it. Their reference documents load on "
+                              + "demand with load_skill_reference(skill_key, ref_key).",
                         argumentsSchema = AiActionSchema.InputSchema(action)
-                    }));
+                    });
                 }),
 
             new(

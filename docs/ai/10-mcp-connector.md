@@ -137,6 +137,25 @@ recorded as `// Skipped:` comments at the bottom of each area file: the written 
 the gateway does NOT cover and why. A skipped endpoint that later grows a proper Authorisation
 class can then be declared.
 
+### 2d. Attached doctrine — skills wired to actions (2026-08-31)
+
+The skill store invites reading (`list_skills` in the initialize instructions); this wires it to
+the gateway so doctrine arrives without the model deciding to go looking. **`AiActionSkills`** (an
+additive table, migration `20260831090000_AddAiActionSkills` / `add-ai-action-skills.sql`) attaches
+a skill to one action or to a whole area; **`describe_action` resolves a target's attachments live
+on every call and inlines the active skills' bodies** (plus their reference keys, loadable with
+`load_skill_reference`) next to the argument schema, and `list_actions` marks guided actions in
+their one-liner. Since `describe_action` is the unavoidable hop before `perform_action`, attached
+doctrine rides in on the road the model must travel — client-agnostic, no prompt to keep in step,
+and a skill edit is in force on the very next call. Curated on the **AI Actions** admin page
+(`/admin/ai-actions`, same `SkillRoles.ManageSkills` gate as the skill store) through
+`GET/POST /api/ai/action-skills` — area-level attachments carry discipline doctrine wholesale
+(~34 areas vs ~236 actions); action-level ones handle the exceptions. Attachments name targets
+loosely: a code rename orphans the row, the page surfaces orphans for detaching (an empty save is
+exempt from the target-must-exist validation for exactly that cleanup). This is guidance, not
+enforcement — the server cannot make a model follow prose; rules that must bind belong in the
+command's Validation, exactly as over HTTP.
+
 ## 3. Audit
 
 Every `tools/call` writes one `AgentActivity` row (`AgentTrigger.Mcp`, actor = the token's user,

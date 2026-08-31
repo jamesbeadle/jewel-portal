@@ -126,6 +126,44 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("AgentActivity");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.AiActionSkillEntity", b =>
+                {
+                    b.Property<string>("ActionSkillId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("AttachedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("AttachedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("SkillKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("TargetKey")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("TargetKind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.HasKey("ActionSkillId");
+
+                    b.HasIndex("TargetKind", "TargetKey", "SkillKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_AiActionSkills_Target_Skill");
+
+                    b.ToTable("AiActionSkills");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.AppVersionEntity", b =>
                 {
                     b.Property<string>("AppVersionId")

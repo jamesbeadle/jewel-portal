@@ -1,0 +1,395 @@
+@page "/admin/ai-actions"
+@using Jewel.JPMS.Contracts.Ai
+@using Jewel.JPMS.Contracts.Cqrs
+@inject AuthService Auth
+@inject SessionService Session
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+
+<PageTitle>AI actions · JPMS</PageTitle>
+
+@*
+    Skills wired to connector actions (2026-08-31). The actions themselves are code — the
+    registry the MCP connector's list_actions/describe_action/perform_action run on — and a
+    developer changes them. WHICH doctrine applies to which action is data, curated here: attach a
+    skill to one action, or to a whole area, and describe_action inlines its body next to the
+    argument schema from the very next call. The model cannot reach perform_action for an
+    unfamiliar action without describe_action, so attached doctrine rides in on the road it must
+    travel — whatever AI tool is connecting.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (!CanSee)
+{
+    <section class="px-6 md:px-8 py-12">
+        <p class="text-sm text-content-muted">You do not have access to the assistant's actions.</p>
+    </section>
+}
+else
+{
+    <section class="px-6 py-6 md:px-8">
+        <p class="eyebrow mb-1">Assistant</p>
+        <h1 class="text-2xl font-semibold text-content mb-1">AI actions</h1>
+        <p class="text-sm text-content-muted mb-6 max-w-3xl">
+            Every action a connected AI tool can perform, and the
+            <a class="underline" href="/admin/skills">skills</a> attached to each. An attached
+            skill's doctrine is served with the action's contract, so the model reads it in the
+            same breath as the schema — before it performs anything. Attach to a whole
+            <span class="text-content">area</span> for discipline-wide doctrine, or to a single
+            action for the exceptions. Changes are in force immediately.
+        </p>
+
+        @if (dataFailed)
+        {
+            <div class="panel p-5">
+                <p class="text-sm text-content-muted">
+                    The action catalogue could not be loaded. The error toast carries the reference.
+                </p>
+            </div>
+        }
+        else if (catalogue is null || skills is null)
+        {
+            <LoadGate IsLoading="true" Prominent="true" Label="Loading actions" />
+        }
+        else
+        {
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <span class="text-xs text-content-subtle">
+                    @catalogue.Actions.Count actions · @attachments.Count attachments
+                </span>
+                <input class="field w-72" placeholder="Search actions…"
+                       value="@search" @oninput="OnSearchInput" />
+            </div>
+
+            @if (OrphanedAttachments.Count > 0)
+            {
+                <div class="rounded-lg border border-negative/40 bg-negative/5 px-4 py-3 mb-4">
+                    <p class="text-xs font-medium text-content mb-1">
+                        Attachments pointing at nothing — the action or area was renamed or removed
+                        in code. Detach them, or re-attach the skill under the current name.
+                    </p>
+                    @foreach (var orphan in OrphanedAttachments)
+                    {
+                        <div class="flex items-center gap-2 py-0.5">
+                            <span class="text-xs text-content-muted">
+                                @orphan.SkillKey → @orphan.TargetKind "@orphan.TargetKey"
+                            </span>
+                            <button type="button" class="text-xs underline text-content-muted"
+                                    @onclick="() => DetachOrphanAsync(orphan)" disabled="@saving">
+                                Detach
+                            </button>
+                        </div>
+                    }
+                    @if (editingKind is null)
+                    {
+                        @foreach (var saveError in saveErrors)
+                        {
+                            <p class="text-xs leading-snug text-content-muted">@saveError</p>
+                        }
+                    }
+                </div>
+            }
+
+            @foreach (var areaGroup in FilteredAreas)
+            {
+                var area = areaGroup.Key;
+                <div class="panel overflow-hidden mb-3">
+                    <div class="flex flex-wrap items-center gap-3 px-4 py-3 bg-surface-raised border-b border-line">
+                        <button type="button" class="flex items-center gap-2 text-left"
+                                @onclick="() => ToggleArea(area)">
+                            <span class="text-content-subtle text-xs w-3">@(IsExpanded(area) ? "▾" : "▸")</span>
+                            <span class="text-sm font-semibold text-content">@area</span>
+                            <span class="text-xs text-content-subtle">@areaGroup.Count() actions</span>
+                        </button>
+                        <div class="flex flex-wrap items-center gap-1.5 ml-auto">
+                            @foreach (var skillKey in AttachedTo(AiActionSkillTargets.Area, area))
+                            {
+                                @SkillChip(skillKey, false)
+                            }
+                            <button type="button" class="btn-neutral text-xs px-2 py-1"
+                                    @onclick="() => StartEditing(AiActionSkillTargets.Area, area)">
+                                Area skills
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (IsEditing(AiActionSkillTargets.Area, area))
+                    {
+                        @SkillPicker($"every action in {area}")
+                    }
+
+                    @if (IsExpanded(area))
+                    {
+                        <div class="divide-y divide-line">
+                            @foreach (var action in areaGroup)
+                            {
+                                <div class="px-4 py-2.5">
+                                    <div class="flex flex-wrap items-start gap-3">
+                                        <div class="min-w-0 flex-1">
+                                            <span class="block font-mono text-xs text-content">
+                                                @action.Name
+                                                @if (action.RequiresConfirmation)
+                                                {
+                                                    <span class="text-content-subtle" title="Confirm-first: the first call is refused until the user says yes.">· confirm-first</span>
+                                                }
+                                            </span>
+                                            <span class="block text-xs text-content-subtle max-w-3xl">@action.Summary</span>
+                                        </div>
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            @foreach (var skillKey in AttachedTo(AiActionSkillTargets.Action, action.Name))
+                                            {
+                                                @SkillChip(skillKey, false)
+                                            }
+                                            @foreach (var skillKey in AttachedTo(AiActionSkillTargets.Area, action.Area))
+                                            {
+                                                @SkillChip(skillKey, true)
+                                            }
+                                            <button type="button" class="text-xs underline text-content-muted"
+                                                    @onclick="() => StartEditing(AiActionSkillTargets.Action, action.Name)">
+                                                Skills
+                                            </button>
+                                        </div>
+                                    </div>
+                                    @if (IsEditing(AiActionSkillTargets.Action, action.Name))
+                                    {
+                                        @SkillPicker(action.Name)
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </section>
+}
+
+@code {
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool saving;
+    private string search = "";
+
+    // Null means no fetch has landed — the panel reveals in one piece, gated on both
+    // (CLAUDE.md loading states).
+    private AiActionCatalogue? catalogue;
+    private IReadOnlyList<SkillSummary>? skills;
+    private List<AiActionSkillAttachment> attachments = new();
+
+    private string? editingKind;
+    private string? editingKey;
+    private HashSet<string> working = new();
+    private List<string> saveErrors = new();
+    private readonly HashSet<string> expandedAreas = new(StringComparer.OrdinalIgnoreCase);
+
+    // Mirrors the API's SkillRoles.ManageSkills — the board plus administrators. Nav visibility is
+    // not permission; the endpoint gates for real.
+    private bool CanSee =>
+        Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        sessionReady = true;
+        if (!CanSee) return;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        dataFailed = false;
+        catalogue = null;
+        skills = null;
+        try
+        {
+            catalogue = await Queries.AskAsync(new GetAiActionCatalogue(), CancellationToken.None);
+            skills = await Queries.AskAsync(new ListAiSkills(), CancellationToken.None);
+            attachments = catalogue.Attachments.ToList();
+        }
+        catch
+        {
+            dataFailed = true;
+        }
+    }
+
+    private IEnumerable<IGrouping<string, AiActionSummary>> FilteredAreas =>
+        catalogue!.Actions
+            .Where(MatchesSearch)
+            .GroupBy(action => action.Area)
+            .OrderBy(group => group.Key);
+
+    private bool MatchesSearch(AiActionSummary action) =>
+        string.IsNullOrWhiteSpace(search)
+        || action.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+        || action.Summary.Contains(search, StringComparison.OrdinalIgnoreCase)
+        || action.Area.Contains(search, StringComparison.OrdinalIgnoreCase);
+
+    // A live search opens every matching area — collapsed results would read as "not found".
+    private bool IsExpanded(string area) =>
+        !string.IsNullOrWhiteSpace(search) || expandedAreas.Contains(area);
+
+    private void ToggleArea(string area)
+    {
+        if (!expandedAreas.Remove(area)) expandedAreas.Add(area);
+    }
+
+    private void OnSearchInput(ChangeEventArgs args) => search = args.Value?.ToString() ?? "";
+
+    private IReadOnlyList<string> AttachedTo(string kind, string key) =>
+        attachments
+            .Where(row => row.TargetKind == kind && string.Equals(row.TargetKey, key, StringComparison.OrdinalIgnoreCase))
+            .Select(row => row.SkillKey)
+            .OrderBy(skillKey => skillKey)
+            .ToList();
+
+    private IReadOnlyList<AiActionSkillAttachment> OrphanedAttachments =>
+        attachments
+            .Where(row =>
+                (row.TargetKind == AiActionSkillTargets.Action
+                    && !catalogue!.Actions.Any(action => string.Equals(action.Name, row.TargetKey, StringComparison.OrdinalIgnoreCase)))
+                || (row.TargetKind == AiActionSkillTargets.Area
+                    && !catalogue!.Actions.Any(action => string.Equals(action.Area, row.TargetKey, StringComparison.OrdinalIgnoreCase))))
+            .ToList();
+
+    private SkillSummary? SkillFor(string skillKey) =>
+        skills!.FirstOrDefault(skill => skill.SkillKey == skillKey);
+
+    private bool IsEditing(string kind, string key) =>
+        editingKind == kind && string.Equals(editingKey, key, StringComparison.OrdinalIgnoreCase);
+
+    private void StartEditing(string kind, string key)
+    {
+        editingKind = kind;
+        editingKey = key;
+        working = AttachedTo(kind, key).ToHashSet();
+        saveErrors.Clear();
+    }
+
+    private void CancelEditing()
+    {
+        editingKind = null;
+        editingKey = null;
+        saveErrors.Clear();
+    }
+
+    private void ToggleSkill(string skillKey)
+    {
+        if (!working.Remove(skillKey)) working.Add(skillKey);
+    }
+
+    private async Task SaveEditingAsync()
+    {
+        if (editingKind is null || editingKey is null || saving) return;
+        await SaveTargetAsync(editingKind, editingKey, working.OrderBy(skillKey => skillKey).ToList());
+        if (saveErrors.Count == 0) CancelEditing();
+    }
+
+    private async Task DetachOrphanAsync(AiActionSkillAttachment orphan)
+    {
+        var remaining = AttachedTo(orphan.TargetKind, orphan.TargetKey)
+            .Where(skillKey => skillKey != orphan.SkillKey)
+            .ToList();
+        await SaveTargetAsync(orphan.TargetKind, orphan.TargetKey, remaining);
+    }
+
+    private async Task SaveTargetAsync(string kind, string key, IReadOnlyList<string> skillKeys)
+    {
+        saving = true;
+        saveErrors.Clear();
+        try
+        {
+            await Commands.SendAsync(
+                new SaveAiActionSkills(kind, key, skillKeys, string.Empty),
+                CancellationToken.None);
+
+            // Mirror the save locally — same rows the next describe_action will resolve.
+            attachments.RemoveAll(row =>
+                row.TargetKind == kind && string.Equals(row.TargetKey, key, StringComparison.OrdinalIgnoreCase));
+            attachments.AddRange(skillKeys.Select(skillKey => new AiActionSkillAttachment(
+                kind, key, skillKey, Auth.CurrentUser?.Email ?? "", DateTimeOffset.UtcNow)));
+        }
+        catch (CommandFailedException failure)
+        {
+            saveErrors = new List<string> { failure.Message };
+        }
+        catch
+        {
+            saveErrors = new List<string> { "The attachments could not be saved. The error toast carries the reference." };
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private RenderFragment SkillChip(string skillKey, bool viaArea) => __builder =>
+    {
+        var skill = SkillFor(skillKey);
+        var label = skill?.DisplayName ?? skillKey;
+        var isOff = skill is { IsActive: false };
+        <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised px-2 py-0.5 text-[11px] @(viaArea || isOff ? "text-content-subtle" : "text-content")"
+              title="@(viaArea ? "Attached to the whole area — edit with the Area skills button." : skill?.Description ?? skillKey)">
+            @label
+            @if (viaArea)
+            {
+                <span class="italic">via area</span>
+            }
+            @if (isOff)
+            {
+                <span title="This skill is switched off — it is not served until it is active again.">(off)</span>
+            }
+        </span>
+    };
+
+    private RenderFragment SkillPicker(string targetLabel) => __builder =>
+    {
+        <div class="border-t border-line bg-surface px-4 py-3">
+            <p class="text-xs font-medium text-content mb-2">
+                Skills for <span class="font-mono">@targetLabel</span> — served with the action's
+                contract on every call.
+            </p>
+            @if (saveErrors.Count > 0)
+            {
+                <div class="rounded-lg border border-negative/40 bg-negative/5 px-3 py-2 mb-2">
+                    @foreach (var saveError in saveErrors)
+                    {
+                        <p class="text-xs leading-snug text-content-muted">@saveError</p>
+                    }
+                </div>
+            }
+            <div class="grid gap-1 md:grid-cols-2 mb-3">
+                @foreach (var skill in skills!.OrderBy(candidate => candidate.DisplayName))
+                {
+                    <label class="inline-flex items-start gap-2 text-sm text-content">
+                        <input type="checkbox" class="mt-0.5"
+                               checked="@working.Contains(skill.SkillKey)"
+                               @onchange="() => ToggleSkill(skill.SkillKey)" />
+                        <span>
+                            @skill.DisplayName
+                            <span class="text-xs text-content-subtle">
+                                — @skill.SkillKey@(skill.IsActive ? "" : " (off)")
+                            </span>
+                        </span>
+                    </label>
+                }
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" class="btn-primary" @onclick="SaveEditingAsync" disabled="@saving">
+                    @(saving ? "Saving…" : "Save")
+                </button>
+                <button type="button" class="btn-neutral" @onclick="CancelEditing" disabled="@saving">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    };
+}

@@ -371,6 +371,10 @@ public static class SidebarFolders
                 // administrator-only, deliberately: the MD maintaining his own doctrine is the
                 // entire point of the store. Mirrors the API's SkillRoles.ManageSkills.
                 new SidebarRow(new NavigationItem("AI Skills", "/admin/skills"),
+                    DesktopNavigation.DirectorRoles),
+                // Skills wired to connector actions — which doctrine describe_action serves with
+                // which action (2026-08-31). Same audience as the skill store it draws from.
+                new SidebarRow(new NavigationItem("AI Actions", "/admin/ai-actions"),
                     DesktopNavigation.DirectorRoles)
             })
     };

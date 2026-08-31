@@ -184,6 +184,10 @@ public sealed class JpmsContext : DbContext
     public DbSet<SkillReferenceEntity> SkillReferences => Set<SkillReferenceEntity>();
     public DbSet<SkillRevisionEntity> SkillRevisions => Set<SkillRevisionEntity>();
 
+    // Skills wired to connector actions — the edge describe_action resolves so attached doctrine
+    // rides into the model's context with the action's schema (2026-08-31).
+    public DbSet<AiActionSkillEntity> AiActionSkills => Set<AiActionSkillEntity>();
+
     public DbSet<DefectEntity> Defects => Set<DefectEntity>();
 
     // Project inventory — products held for the job and where they're kept (INV-#### tag stems).
@@ -290,6 +294,13 @@ public sealed class JpmsContext : DbContext
         modelBuilder.Entity<SkillRevisionEntity>()
             .HasIndex(row => new { row.SkillKey, row.Version })
             .HasDatabaseName("IX_SkillRevisions_SkillKey_Version");
+
+        // Unique: a skill is attached to a target once — the admin page's picker saves a target's
+        // whole set, so a duplicate edge could only be a bug.
+        modelBuilder.Entity<AiActionSkillEntity>()
+            .HasIndex(row => new { row.TargetKind, row.TargetKey, row.SkillKey })
+            .IsUnique()
+            .HasDatabaseName("IX_AiActionSkills_Target_Skill");
 
         // ---- Company directory (Xero links + contacts) -----------------------------------------
         // Unique: one Xero supplier can only ever be imported once — consolidation re-points the
