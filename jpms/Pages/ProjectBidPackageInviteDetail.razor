@@ -967,71 +967,16 @@ else
         </ChildContent>
     </Modal>
 
-    @* ---- Edit package details (modal): summary + line schedule together, one Save.
-         DismissOnOverlayClick off: a stray click must not throw away a half-keyed schedule. ---- *@
-    <Modal IsOpen="showDetailsModal" Title="Edit package details" DismissOnOverlayClick="false"
-           OnCancel="CancelDetails" Class="max-w-4xl w-full">
-        <FooterContent>
-            <button type="button" class="btn-secondary" disabled="@busy" @onclick="AddLine">Add line</button>
-            <button type="button" class="btn-neutral" disabled="@busy" @onclick="CancelDetails">Cancel</button>
-            <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveDetails">@(busy ? "Saving…" : "Save details")</button>
-        </FooterContent>
-        <ChildContent>
-            @if (error is not null)
-            {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
-            }
-
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Specification summary</label>
-            <p class="text-xs text-content-subtle mb-2">
-                One point per line — it prints at the top of the pricing schedule each tenderer receives,
-                so say what the package covers and to what standard.
-            </p>
-            <textarea class="field w-full min-h-28 mb-4" rows="6"
-                      placeholder="One point per line — e.g. All flat roofing to BS 6229:2018."
-                      @bind="specDraft"></textarea>
-
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Line items</label>
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="px-3 py-2">Trade</th>
-                            <th class="px-3 py-2">Description</th>
-                            <th class="px-3 py-2 hidden sm:table-cell">Unit</th>
-                            <th class="px-3 py-2">Qty</th>
-                            <th class="px-3 py-2">Cost code</th>
-                            <th class="px-3 py-2"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @for (var i = 0; i < lineDrafts.Count; i++)
-                        {
-                            var draft = lineDrafts[i];
-                            <tr>
-                                <td class="px-3 py-2"><input class="field" @bind="draft.Trade" placeholder="e.g. Electrical" /></td>
-                                <td class="px-3 py-2"><input class="field" @bind="draft.Description" placeholder="Description" /></td>
-                                <td class="px-3 py-2 hidden sm:table-cell"><input class="field" @bind="draft.Unit" placeholder="e.g. m²" /></td>
-                                <td class="px-3 py-2"><input class="field" type="number" step="any" @bind="draft.Quantity" /></td>
-                                <td class="px-3 py-2">
-                                    <select class="field min-w-[14rem]" @bind="draft.CostCode">
-                                        <option value="">Cost centre…</option>
-                                        @foreach (var centre in CostCenters.Alphabetical)
-                                        {
-                                            <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
-                                        }
-                                    </select>
-                                </td>
-                                <td class="px-3 py-2 text-right">
-                                    <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40" @onclick="() => RemoveLine(draft)">Remove</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </ChildContent>
-    </Modal>
+    @* ---- Edit package details: summary + line schedule together, one Save. The dialog owns
+         the drafts and the every-line-needs-a-cost-code rule; the trimmed schedule comes back
+         here for the two save commands. ---- *@
+    <PackageDetailsEditorModal IsOpen="showDetailsModal"
+                               SpecificationSummary="@(package?.SpecificationSummary ?? "")"
+                               LineItems="lineItems"
+                               Busy="busy"
+                               Error="@error"
+                               OnCancel="CancelDetails"
+                               OnSave="SaveDetails" />
 
     @* ---- Select line items from the valuation report: the fast path onto the package.
          The picker owns its own read of the live report; confirmed rows come back as
