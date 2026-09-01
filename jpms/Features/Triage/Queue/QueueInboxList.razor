@@ -1,0 +1,106 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Features.Triage
+
+@* The Queue tab's inbox list: unassigned requests first (when there are any), then the
+   un-triaged emails in Outlook-style date groups with the sort preference and pager. A pure
+   view — the page owns the paging, sort persistence and selection. *@
+
+@* No gate: this panel only exists when there ARE unassigned requests, so on most loads it
+   is absent before the register answers and absent after it — announcing that wait would
+   promise something that never arrives. It appears if and when there is something to say. *@
+@if (UnassignedArrived && Unassigned.Count > 0)
+{
+    <UnassignedRequestsPanel Requests="Unassigned" Error="@UnassignedError" Busy="Busy"
+                             OnReturn="OnReturnUnassigned" />
+}
+<LoadGate IsLoading="@(!Arrived)" Prominent="true" Label="Loading the inbox">
+    @if (LoadError is not null && Items.Count == 0)
+    {
+        @* A failed page has no queue to report; "nothing in the queue" would read as one. *@
+        <p class="text-sm text-negative">Couldn't load the inbox. The reason is in the red bar above — reload to try again.</p>
+    }
+    else if (Total == 0)
+    {
+        <div class="panel p-8 text-center">
+            <p class="text-sm text-content">Nothing in the queue.</p>
+            <p class="text-xs text-content-subtle mt-1">Every email in the requests mailbox has been dealt with.</p>
+        </div>
+    }
+    else
+    {
+        <div class="relative space-y-2">
+            @* Sort is a light, rarely-used view preference — small muted text under the
+               header, not an action button. The choice is remembered per user. *@
+            <div class="flex items-center gap-3 text-xs px-1">
+                <button type="button" disabled="@ListLoading" @onclick="() => OnSetSort.InvokeAsync(false)" class="@SortLinkClass(false)">Oldest first</button>
+                <button type="button" disabled="@ListLoading" @onclick="() => OnSetSort.InvokeAsync(true)" class="@SortLinkClass(true)">Newest first</button>
+            </div>
+            @if (ListLoading)
+            {
+                <JewelSpinner Overlay="true" Label="Loading" />
+            }
+            @{ string? lastQueueGroup = null; }
+            @foreach (var item in Items)
+            {
+                @* Outlook-style date group headers — Today / Yesterday / day names / dates. *@
+                var queueGroup = TriageEmailDisplay.DateGroupLabel(item.ReceivedAt);
+                @if (queueGroup != lastQueueGroup)
+                {
+                    lastQueueGroup = queueGroup;
+                    <p class="text-xs font-semibold text-content-muted uppercase tracking-wider pt-2 pb-0.5 px-1">@queueGroup</p>
+                }
+                <TriageEmailRow Item="item"
+                                IsSelected="@(SelectedId == item.Id)"
+                                HasParkedDraft="@ParkedEmailIds.Contains(item.Id)"
+                                InlineDraftMarker="true"
+                                ShowThreadTags="true"
+                                ShowFilingChips="true"
+                                OnSelect="item => OnSelect.InvokeAsync(item)" />
+            }
+
+            <EmailListPager PageIndex="PageIndex"
+                            PageCount="PageCount"
+                            Total="Total"
+                            HasNext="HasNext"
+                            OnPrevious="OnPrevious"
+                            OnNext="OnNext" />
+        </div>
+    }
+</LoadGate>
+
+@code {
+    /// <summary>Requests whose email link went missing — shown above the queue when any exist.</summary>
+    [Parameter] public IReadOnlyList<Request> Unassigned { get; set; } = Array.Empty<Request>();
+    [Parameter] public bool UnassignedArrived { get; set; }
+    [Parameter] public string? UnassignedError { get; set; }
+    [Parameter] public EventCallback<Request> OnReturnUnassigned { get; set; }
+
+    /// <summary>True once the queue's first page has answered — the gate lifts then.</summary>
+    [Parameter] public bool Arrived { get; set; }
+    [Parameter] public string? LoadError { get; set; }
+    [Parameter] public IReadOnlyList<MailboxMessage> Items { get; set; } = Array.Empty<MailboxMessage>();
+    [Parameter] public int Total { get; set; }
+    [Parameter] public bool ListLoading { get; set; }
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>The remembered sort preference; the toggle fires OnSetSort with the new choice.</summary>
+    [Parameter] public bool NewestFirst { get; set; }
+    [Parameter] public EventCallback<bool> OnSetSort { get; set; }
+
+    [Parameter] public string? SelectedId { get; set; }
+    /// <summary>Email ids with a parked triage draft — their rows carry the draft marker.</summary>
+    [Parameter] public IReadOnlyCollection<string> ParkedEmailIds { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback<MailboxMessage> OnSelect { get; set; }
+
+    [Parameter] public int PageIndex { get; set; }
+    [Parameter] public int PageCount { get; set; }
+    [Parameter] public bool HasNext { get; set; }
+    [Parameter] public EventCallback OnPrevious { get; set; }
+    [Parameter] public EventCallback OnNext { get; set; }
+
+    // Subtle text-link styling for the list-sort preference (deliberately not a button pair).
+    private string SortLinkClass(bool newest) =>
+        NewestFirst == newest
+            ? "text-content font-medium underline underline-offset-4 decoration-line-strong"
+            : "text-content-subtle hover:text-content";
+}

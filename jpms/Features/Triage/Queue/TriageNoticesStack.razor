@@ -1,0 +1,62 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Contracts.MailboxCompose
+
+@* The email window's notices when nothing is selected: the outcome of a just-sent compose,
+   a partial link, a purchase-order email and the outbox — each dismissable, each standing in
+   the cleared selection's place so the answer to "did that work?" is where the eye already is. *@
+@if (ComposeOutcome is { } outcome)
+{
+    <NoticePanel Title="@(outcome.Sent ? "Email sent" : "Saved as draft")"
+                 Tone="@(outcome.Sent ? NoticePanel.NoticeTone.Positive : NoticePanel.NoticeTone.Warning)"
+                 OnDismiss="() => OnDismissComposeOutcome.InvokeAsync()">
+        <p class="text-sm text-content">
+            <span class="font-medium">@outcome.Subject</span>
+            — @(outcome.Sent ? "sent to" : "addressed to") @(string.Join("; ", outcome.To))@(outcome.Cc.Count > 0 ? $" (cc {string.Join("; ", outcome.Cc)})" : "").
+            @if (outcome.RaisedRequest is { } raised)
+            {
+                <span> <span class="font-mono text-xs text-content-muted">@raised.Reference</span> was raised from the email.</span>
+            }
+        </p>
+        @if (!string.IsNullOrWhiteSpace(outcome.FailureNote))
+        {
+            <p class="text-sm text-amber-600">@outcome.FailureNote</p>
+        }
+        @if (!string.IsNullOrWhiteSpace(outcome.WebLink))
+        {
+            <a class="text-accent underline text-sm" href="@outcome.WebLink" target="_blank" rel="noopener">Open in Outlook</a>
+        }
+    </NoticePanel>
+}
+@if (LinkNote is not null)
+{
+    <NoticePanel Title="Partially linked" Tone="NoticePanel.NoticeTone.Warning" OnDismiss="() => OnDismissLinkNote.InvokeAsync()">
+        <p class="text-sm text-content">@LinkNote</p>
+    </NoticePanel>
+}
+@if (PoEmailNote is not null)
+{
+    <NoticePanel Title="Purchase-order email"
+                 Tone="@(PoEmailNoteIsSuccess ? NoticePanel.NoticeTone.Positive : NoticePanel.NoticeTone.Warning)"
+                 OnDismiss="() => OnDismissPoEmailNote.InvokeAsync()">
+        <p class="text-sm text-content">@PoEmailNote</p>
+    </NoticePanel>
+}
+@if (OutboxNote is not null)
+{
+    <NoticePanel Title="Outbox" OnDismiss="() => OnDismissOutboxNote.InvokeAsync()">
+        <p class="text-sm text-content">@OutboxNote</p>
+    </NoticePanel>
+}
+
+@code {
+    /// <summary>The outcome of the compose pane's last send — subject, recipients, any raised request.</summary>
+    [Parameter] public ComposeOutcome? ComposeOutcome { get; set; }
+    [Parameter] public EventCallback OnDismissComposeOutcome { get; set; }
+    [Parameter] public string? LinkNote { get; set; }
+    [Parameter] public EventCallback OnDismissLinkNote { get; set; }
+    [Parameter] public string? PoEmailNote { get; set; }
+    [Parameter] public bool PoEmailNoteIsSuccess { get; set; }
+    [Parameter] public EventCallback OnDismissPoEmailNote { get; set; }
+    [Parameter] public string? OutboxNote { get; set; }
+    [Parameter] public EventCallback OnDismissOutboxNote { get; set; }
+}

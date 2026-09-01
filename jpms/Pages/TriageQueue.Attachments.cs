@@ -185,12 +185,6 @@ public partial class TriageQueue
                     && string.Equals(project.ProjectId, selectedProjectId, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-    // Subtle text-link styling for the list-sort preference (deliberately not a button pair).
-    private string SortLinkClass(bool newest) =>
-        newestFirst == newest
-            ? "text-content font-medium underline underline-offset-4 decoration-line-strong"
-            : "text-content-subtle hover:text-content";
-
     // The loaded records for the chosen type + project (empty until both are chosen and the load runs).
     private IReadOnlyList<LinkableRecord> ProjectRecords() => linkRecords;
 
@@ -240,14 +234,6 @@ public partial class TriageQueue
 
 
 
-
-    // Sits beside Apply in the triage bar's action row — armed it reads negative, so the state
-    // is visible right where the button that would act on it lives.
-    private string DiscardTabClass =>
-        "rounded-lg px-3 py-1.5 text-sm border transition "
-        + (discardArmed
-            ? "border-negative text-negative bg-negative/10 font-medium"
-            : "border-line text-content-subtle hover:text-negative hover:border-negative/50");
 
     private string ProjectLabelFor(string projectId) =>
         AllProjects.FirstOrDefault(project => project.ProjectId == projectId)?.Name ?? "the chosen project";

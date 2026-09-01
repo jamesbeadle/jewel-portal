@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="..\api\Data\Entities\**\*.cs" Link="Shared\Data\Entities\%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="..\api\Data\JpmsContext.cs" Link="Shared\Data\JpmsContext.cs" />
+    <Compile Include="..\api\Data\JpmsContext.Model.cs" Link="Shared\Data\JpmsContext.Model.cs" />
     <Compile Include="..\api\Features\Requests\RequestsIdentifierFactory.cs" Link="Shared\RequestsIdentifierFactory.cs" />
     <Compile Include="..\api\Features\MailboxIntake\MailboxIntakeOptions.cs" Link="Shared\MailboxIntakeOptions.cs" />
     <Compile Include="..\api\Features\MailboxIntake\Queue\MailboxQueues.cs" Link="Shared\MailboxQueues.cs" />
@@ -61,6 +62,8 @@
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentModel.cs" Link="Shared\Documents\RequestDocumentModel.cs" />
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentBuilder.cs" Link="Shared\Documents\RequestDocumentBuilder.cs" />
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.cs" Link="Shared\Documents\RequestDocumentRenderer.cs" />
+    <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.Sections.cs" Link="Shared\Documents\RequestDocumentRenderer.Sections.cs" />
+    <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.Helpers.cs" Link="Shared\Documents\RequestDocumentRenderer.Helpers.cs" />
     <Compile Include="..\api\Features\Requests\Documents\DocumentFontResolver.cs" Link="Shared\Documents\DocumentFontResolver.cs" />
     <Compile Include="..\api\Features\Requests\Documents\DocumentBranding.cs" Link="Shared\Documents\DocumentBranding.cs" />
     <Compile Include="..\api\Features\Documents\JewelDocumentStyle.cs" Link="Shared\Documents\JewelDocumentStyle.cs" />

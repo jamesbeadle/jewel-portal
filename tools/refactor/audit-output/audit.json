@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-01T15:45:03+00:00",
+  "generatedAt": "2026-09-01T18:43:31+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 618,
-      "totalFiles": 3262,
-      "worstFileLines": 954
+      "filesOverLimit": 626,
+      "totalFiles": 3278,
+      "worstFileLines": 929
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 700,
+      "functionsOverLimit": 703,
       "elseBlocks": 1182,
       "measurementIsHeuristic": true
     },
@@ -19,18 +19,18 @@
       "maxLength": 40
     },
     "duplication": {
-      "clones": 468,
-      "duplicatedLines": 6040,
-      "totalLines": 214587,
-      "duplicatedPercentage": 2.81
+      "clones": 478,
+      "duplicatedLines": 6094,
+      "totalLines": 215122,
+      "duplicatedPercentage": 2.83
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1348
+      "unprefixedBooleans": 1393
     },
     "comments": {
       "explanatoryCommentLines": 13728,
-      "filesWithComments": 1744,
+      "filesWithComments": 1759,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -41,14 +41,14 @@
     "prose": {
       "longMemberChainLines": 2400,
       "deeplyIndentedLines": 2803,
-      "overlongLines": 1775,
+      "overlongLines": 1770,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 131,
       "orphanComponents": 6,
-      "averagePageLines": 272
+      "averagePageLines": 266
     }
   },
   "details": {
@@ -56,15 +56,11 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 618,
-        "totalFiles": 3262,
-        "worstFileLines": 954
+        "filesOverLimit": 626,
+        "totalFiles": 3278,
+        "worstFileLines": 929
       },
       "offenders": [
-        {
-          "file": "jpms/Pages/TriageQueue.razor",
-          "lines": 954
-        },
         {
           "file": "jpms/Pages/XeroAllocation.razor",
           "lines": 929
@@ -106,16 +102,8 @@
           "lines": 604
         },
         {
-          "file": "api/Data/JpmsContext.cs",
-          "lines": 592
-        },
-        {
           "file": "jpms/Services/Excel/ExcelWorkbookWriter.cs",
           "lines": 589
-        },
-        {
-          "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.cs",
-          "lines": 577
         },
         {
           "file": "api/Features/Ai/Tools/AiCommercialTools.cs",
@@ -124,10 +112,6 @@
         {
           "file": "jpms/Pages/ProjectWorkOrders.razor",
           "lines": 548
-        },
-        {
-          "file": "api/Features/Requests/Documents/RequestDocumentRenderer.cs",
-          "lines": 523
         },
         {
           "file": "jpms/Pages/TriageQueue.Outbox.cs",
@@ -174,6 +158,10 @@
           "lines": 472
         },
         {
+          "file": "jpms/Pages/TriageQueue.razor",
+          "lines": 470
+        },
+        {
           "file": "jpms/Pages/DocumentControl.razor",
           "lines": 455
         },
@@ -218,10 +206,6 @@
           "lines": 422
         },
         {
-          "file": "jpms/Pages/TriageQueue.razor.cs",
-          "lines": 421
-        },
-        {
           "file": "jpms/Services/Navigation/SidebarFolders.cs",
           "lines": 415
         },
@@ -234,6 +218,10 @@
           "lines": 405
         },
         {
+          "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Sections.cs",
+          "lines": 402
+        },
+        {
           "file": "jpms/Services/HttpLabourStore.cs",
           "lines": 395
         },
@@ -244,6 +232,10 @@
         {
           "file": "jpms/Pages/ProjectValuation.razor",
           "lines": 377
+        },
+        {
+          "file": "api/Features/Requests/Documents/RequestDocumentRenderer.Sections.cs",
+          "lines": 375
         },
         {
           "file": "api/Features/Requests/RequestContextAssembler.cs",
@@ -260,6 +252,10 @@
         {
           "file": "api/Features/Xero/XeroClient.Reads.cs",
           "lines": 372
+        },
+        {
+          "file": "api/Data/JpmsContext.Model.cs",
+          "lines": 370
         },
         {
           "file": "api/Features/MailboxIntake/Graph/MailboxGraphClient.Drafts.cs",
@@ -478,6 +474,10 @@
           "lines": 298
         },
         {
+          "file": "jpms/Pages/TriageQueue.razor.cs",
+          "lines": 298
+        },
+        {
           "file": "api/Features/Ai/Tools/AiToolCatalogue.Lookup.cs",
           "lines": 297
         },
@@ -538,10 +538,6 @@
           "lines": 282
         },
         {
-          "file": "jpms/Pages/TriageQueue.Attachments.cs",
-          "lines": 282
-        },
-        {
           "file": "jpms/Pages/LabourXeroMapping.razor",
           "lines": 282
         },
@@ -596,6 +592,10 @@
         {
           "file": "contracts/Ai/AgentCatalogue.cs",
           "lines": 269
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.Attachments.cs",
+          "lines": 268
         },
         {
           "file": "jpms/Components/ProjectTodoList.razor.cs",
@@ -854,6 +854,10 @@
           "lines": 229
         },
         {
+          "file": "api/Data/JpmsContext.cs",
+          "lines": 228
+        },
+        {
           "file": "jpms/Layout/SideNav.razor.cs",
           "lines": 228
         },
@@ -1010,6 +1014,10 @@
           "lines": 213
         },
         {
+          "file": "jpms/Features/Triage/Queue/TaggedInboxBrowser.razor",
+          "lines": 213
+        },
+        {
           "file": "jpms/Components/RequestConversation.razor.cs",
           "lines": 212
         },
@@ -1044,10 +1052,6 @@
         {
           "file": "jpms/Components/UnpaidXeroInvoicesModal.razor",
           "lines": 210
-        },
-        {
-          "file": "jpms/Pages/TriageQueue.TaggedSearch.cs",
-          "lines": 209
         },
         {
           "file": "jpms/Services/HttpSubcontractorStore.cs",
@@ -1128,6 +1132,10 @@
         {
           "file": "jpms/Pages/ProjectCommunications.razor.cs",
           "lines": 200
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.TaggedSearch.cs",
+          "lines": 199
         },
         {
           "file": "api/Features/Ai/ClaudeClient.cs",
@@ -1490,6 +1498,10 @@
           "lines": 161
         },
         {
+          "file": "jpms/Features/Triage/Queue/TriageBar.razor",
+          "lines": 161
+        },
+        {
           "file": "jpms/Pages/SetPassword.razor",
           "lines": 161
         },
@@ -1611,6 +1623,10 @@
         },
         {
           "file": "contracts/Models/Labour.cs",
+          "lines": 151
+        },
+        {
+          "file": "jpms/Features/Triage/Queue/TaggedEmailManagePanel.razor",
           "lines": 151
         },
         {
@@ -1863,6 +1879,10 @@
         },
         {
           "file": "api/Features/Xero/Ledger/XeroLedgerReads.cs",
+          "lines": 132
+        },
+        {
+          "file": "jpms/Features/Triage/RecordLinkVocabulary.cs",
           "lines": 132
         },
         {
@@ -2282,6 +2302,10 @@
           "lines": 110
         },
         {
+          "file": "api/Features/Requests/Documents/RequestDocumentRenderer.Helpers.cs",
+          "lines": 110
+        },
+        {
           "file": "jpms/Pages/ProjectBidPackageInviteDetail.Award.cs",
           "lines": 110
         },
@@ -2386,6 +2410,10 @@
           "lines": 106
         },
         {
+          "file": "jpms/Features/Triage/Queue/QueueInboxList.razor",
+          "lines": 106
+        },
+        {
           "file": "jpms/Features/Triage/Workspace/PanelWorkspace.razor",
           "lines": 106
         },
@@ -2412,6 +2440,10 @@
         {
           "file": "jpms/Pages/AdminUsers.razor",
           "lines": 105
+        },
+        {
+          "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Helpers.cs",
+          "lines": 104
         },
         {
           "file": "api/Features/DocumentControl/Commands/SendAttachmentsToDocumentControlHandler.cs",
@@ -2539,15 +2571,11 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 700,
+        "functionsOverLimit": 703,
         "elseBlocks": 1182,
         "measurementIsHeuristic": true
       },
       "offenders": [
-        {
-          "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.cs",
-          "lines": 559
-        },
         {
           "file": "api/Features/Ai/Tools/AiCommercialTools.cs",
           "lines": 496
@@ -2577,7 +2605,7 @@
           "lines": 365
         },
         {
-          "file": "api/Data/JpmsContext.cs",
+          "file": "api/Data/JpmsContext.Model.cs",
           "lines": 350
         },
         {
@@ -2742,6 +2770,10 @@
         },
         {
           "file": "api/Features/Ai/Tools/Actions/VariationsAndValuationsActions.ValuationInvoices.cs",
+          "lines": 154
+        },
+        {
+          "file": "api/Features/RecordLinks/BackfillBucketsEndpoint.cs",
           "lines": 154
         }
       ]
@@ -2980,7 +3012,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1348
+        "unprefixedBooleans": 1393
       },
       "offenders": {
         "abbreviations": [
@@ -3037,12 +3069,12 @@
             "line": 104
           },
           {
-            "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.cs",
-            "line": 525
+            "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Helpers.cs",
+            "line": 53
           },
           {
-            "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.cs",
-            "line": 573
+            "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Helpers.cs",
+            "line": 101
           },
           {
             "file": "api/Features/MailboxIntake/Graph/IMailboxGraphClient.cs",
@@ -3397,14 +3429,14 @@
             "name": "MovedThisPeriod"
           },
           {
-            "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.cs",
-            "line": 400,
-            "name": "strong"
+            "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Helpers.cs",
+            "line": 41,
+            "name": "bold"
           },
           {
-            "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.cs",
-            "line": 513,
-            "name": "bold"
+            "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Sections.cs",
+            "line": 316,
+            "name": "strong"
           },
           {
             "file": "api/Features/Connect/TokenEndpoint.cs",
@@ -3443,7 +3475,7 @@
       "name": "comments",
       "summary": {
         "explanatoryCommentLines": 13728,
-        "filesWithComments": 1744,
+        "filesWithComments": 1759,
         "taskMarkers": 48
       },
       "offenders": [
@@ -3608,20 +3640,20 @@
           "line": 33
         },
         {
+          "file": "jpms/Features/Triage/RecordLinkVocabulary.cs",
+          "line": 33
+        },
+        {
+          "file": "jpms/Features/Triage/RecordLinkVocabulary.cs",
+          "line": 50
+        },
+        {
           "file": "jpms/Pages/Todos.razor.cs",
           "line": 170
         },
         {
           "file": "jpms/Pages/TriageQueue.ProjectMatch.cs",
           "line": 154
-        },
-        {
-          "file": "jpms/Pages/TriageQueue.razor.cs",
-          "line": 64
-        },
-        {
-          "file": "jpms/Pages/TriageQueue.razor.cs",
-          "line": 92
         },
         {
           "file": "jpms/Services/IIntakeQueue.cs",
@@ -4150,7 +4182,7 @@
       "summary": {
         "longMemberChainLines": 2400,
         "deeplyIndentedLines": 2803,
-        "overlongLines": 1775,
+        "overlongLines": 1770,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4768,19 +4800,10 @@
         "pages": 92,
         "components": 131,
         "orphanComponents": 6,
-        "averagePageLines": 272
+        "averagePageLines": 266
       },
       "offenders": {
         "pages": [
-          {
-            "page": "jpms/Pages/TriageQueue.razor",
-            "lines": 954,
-            "widgets": [
-              "loadGate",
-              "spinner",
-              "panel"
-            ]
-          },
           {
             "page": "jpms/Pages/XeroAllocation.razor",
             "lines": 929,
@@ -4906,6 +4929,15 @@
               "loadGate",
               "panel",
               "export"
+            ]
+          },
+          {
+            "page": "jpms/Pages/TriageQueue.razor",
+            "lines": 470,
+            "widgets": [
+              "loadGate",
+              "spinner",
+              "panel"
             ]
           },
           {
@@ -5551,7 +5583,7 @@
         "componentReuse": [
           {
             "component": "jpms/Components/LoadGate.razor",
-            "reusedBy": 92
+            "reusedBy": 95
           },
           {
             "component": "jpms/Components/Modal.razor",
@@ -5586,6 +5618,10 @@
             "reusedBy": 24
           },
           {
+            "component": "jpms/Components/JewelSpinner.razor",
+            "reusedBy": 19
+          },
+          {
             "component": "jpms/Components/Toolbar.razor",
             "reusedBy": 19
           },
@@ -5596,10 +5632,6 @@
           {
             "component": "jpms/Components/DropdownMenu.razor",
             "reusedBy": 17
-          },
-          {
-            "component": "jpms/Components/JewelSpinner.razor",
-            "reusedBy": 16
           },
           {
             "component": "jpms/Components/Icons/JewelIcon.razor",
@@ -6087,15 +6119,15 @@
     "duplication": {
       "name": "duplication",
       "summary": {
-        "clones": 468,
-        "duplicatedLines": 6040,
-        "totalLines": 214587,
-        "duplicatedPercentage": 2.81
+        "clones": 478,
+        "duplicatedLines": 6094,
+        "totalLines": 215122,
+        "duplicatedPercentage": 2.83
       },
       "offenders": [
         {
           "file": "api/Features/Commercial/Documents/CostCentreReconciliationRenderer.cs",
-          "duplicatedLineInstances": 474
+          "duplicatedLineInstances": 460
         },
         {
           "file": "api/Features/Boq/Commands/AddBoqLineEndpoint.cs",
@@ -6103,22 +6135,18 @@
         },
         {
           "file": "api/Features/Progress/Documents/ProgressReportRenderer.cs",
-          "duplicatedLineInstances": 281
-        },
-        {
-          "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.cs",
-          "duplicatedLineInstances": 256
-        },
-        {
-          "file": "api/Features/Requests/Documents/RequestDocumentRenderer.cs",
-          "duplicatedLineInstances": 202
+          "duplicatedLineInstances": 301
         },
         {
           "file": "api/Features/Subcontractors/Documents/SubcontractorStatementRenderer.cs",
-          "duplicatedLineInstances": 155
+          "duplicatedLineInstances": 156
         },
         {
           "file": "api/Features/Ai/Tools/Actions/ProjectsAndTendersActions.ArchitectInstructions.cs",
+          "duplicatedLineInstances": 140
+        },
+        {
+          "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Helpers.cs",
           "duplicatedLineInstances": 140
         },
         {
@@ -6148,6 +6176,10 @@
         {
           "file": "jpms/Pages/AgedReceivables.razor",
           "duplicatedLineInstances": 101
+        },
+        {
+          "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Sections.cs",
+          "duplicatedLineInstances": 98
         },
         {
           "file": "jpms/Pages/TriageQueue.Attachments.cs",

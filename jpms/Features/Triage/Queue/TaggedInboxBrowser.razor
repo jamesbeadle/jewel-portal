@@ -1,0 +1,213 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Features.Triage.Panels
+
+@* The Tagged tab's inbox browser: the search box, the pathway and tag filters, and the tagged
+   pile itself. A pure view — the search/filter state lives on the page, because the search and
+   filters drive server-side reads (the one Graph filter slot) that reload the page's list. *@
+
+@* Search the tagged pile — one box, two answers. A record reference ("WO-0045",
+   "TODO-0011", "RFI-012") resolves to its tag (ResolveRecordTags) and becomes the
+   server-side tag filter, so the list below IS that record's mail — paging, selection
+   and the tags pane all as normal. Anything else free-text searches the whole mailbox
+   (SearchMailboxMessages — subjects, senders, bodies, attachment names) and shows the
+   tagged matches in the list's place. While a query is live the pathway/tag controls
+   render disabled (never hidden): the search owns the one server-side filter slot. *@
+<div class="relative mb-3 max-w-xl">
+    <input type="search" class="field w-full text-sm pr-8"
+           placeholder="Search tagged emails — subject or sender, or a record reference (WO-0045)"
+           value="@SearchText" @oninput="OnSearchInput" />
+    @if (SearchText.Trim().Length > 0)
+    {
+        <button type="button" title="Clear search"
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-content-faint hover:text-content-muted text-sm leading-none"
+                @onclick="() => OnClearSearch.InvokeAsync()">✕</button>
+    }
+</div>
+
+@* Pathway filter: one chip per pathway, read server-side as an exact bucket-category
+   filter. Kept separate from (and mutually exclusive with) the tag filter below — Graph
+   composes category filters with OR only, so combining them would show a union, not the
+   intersection the combination looks like. *@
+<div class="flex flex-wrap items-center gap-2 mb-3">
+    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Pathway</span>
+    <button type="button" class="@PathwayFilterChipClass(null) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(null)">All</button>
+    <button type="button" class="@PathwayFilterChipClass(TriagePathways.ClientBucket) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(TriagePathways.ClientBucket)">Client</button>
+    <button type="button" class="@PathwayFilterChipClass(TriagePathways.SubcontractorBucket) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(TriagePathways.SubcontractorBucket)">Subcontractor</button>
+    <button type="button" class="@PathwayFilterChipClass(TriagePathways.SupplierBucket) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(TriagePathways.SupplierBucket)">Supplier</button>
+    <button type="button" class="@PathwayFilterChipClass(TriagePathways.InternalBucket) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(TriagePathways.InternalBucket)">Internal</button>
+</div>
+
+@* The tag list accrues from the emails that have loaded, so before the first page lands
+   the dropdown offers only "Discarded" — a short list that looks like the whole list. *@
+@if (Arrived)
+{
+    <div class="flex flex-wrap items-center gap-2 mb-5">
+        <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
+        <div class="relative">
+            <button type="button"
+                    class="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5 disabled:opacity-50"
+                    disabled="@SearchActive" title="@PathwayDisabledTitle"
+                    @onclick="() => OnToggleFilterMenu.InvokeAsync()">
+                @FilterButtonLabel
+                <span class="text-[9px] leading-none">▾</span>
+            </button>
+            @if (FilterOpen)
+            {
+                <div class="absolute z-20 mt-1 w-60 max-h-72 overflow-y-auto rounded-lg border border-line bg-surface-raised shadow-lg p-1">
+                    <button type="button"
+                            class="w-full text-left rounded px-3 py-1.5 text-sm text-content-muted hover:bg-surface hover:text-content"
+                            @onclick="() => OnClearTagFilters.InvokeAsync()">
+                        All tags
+                    </button>
+                    <div class="my-1 border-t border-line"></div>
+                    @foreach (var tag in KnownTags)
+                    {
+                        <label class="flex items-center gap-2 rounded px-3 py-1.5 text-sm text-content hover:bg-surface cursor-pointer">
+                            <input type="checkbox" checked="@SelectedTags.Contains(tag)" @onchange="() => OnToggleTag.InvokeAsync(tag)" />
+                            <span>@TriageEmailDisplay.TagLabel(tag)</span>
+                        </label>
+                    }
+                </div>
+            }
+        </div>
+        @foreach (var tag in SelectedTags)
+        {
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-accent bg-surface-raised px-2.5 py-1 text-xs text-content">
+                @TriageEmailDisplay.TagLabel(tag)
+                <button type="button" class="text-content-subtle hover:text-negative disabled:opacity-50" disabled="@SearchActive" @onclick="() => OnToggleTag.InvokeAsync(tag)" title="Remove filter">✕</button>
+            </span>
+        }
+    </div>
+}
+@* What the search box is currently answering — the resolved record, the in-flight
+   read, or the free-text match count. A line of text, so it renders only once known. *@
+@if (SearchRecord is LinkableRecord searchRecord)
+{
+    <p class="text-xs text-content-subtle mb-3">
+        Showing emails tagged to <span class="font-mono">@searchRecord.Reference</span> — @searchRecord.Title.
+        @if (ExplorerRecordTypes.FullPageHref(searchRecord) is string searchHref)
+        {
+            <a class="underline underline-offset-2 hover:text-content" href="@searchHref">Open @searchRecord.Reference</a>
+        }
+    </p>
+}
+else if (Searching)
+{
+    <p class="text-xs text-content-subtle mb-3">Searching the mailbox…</p>
+}
+else if (SearchResults is not null)
+{
+    <p class="text-xs text-content-subtle mb-3">
+        @SearchResults.Count email@(SearchResults.Count == 1 ? "" : "s") match@(SearchResults.Count == 1 ? "es" : "") "@SearchPending" — best matches first, untagged queue emails included.
+    </p>
+}
+
+<LoadGate IsLoading="@(!Arrived)" Prominent="true" Label="Loading tagged emails">
+    @if (LoadError is not null && Items.Count == 0 && SearchResults is null)
+    {
+        @* A failed page has nothing to report; "no tagged emails" would read as an answer. *@
+        <p class="text-sm text-negative">Couldn't load the tagged emails. The reason is in the red bar above — reload to try again.</p>
+    }
+    else if (SearchResults is { Count: 0 })
+    {
+        <div class="panel p-8 text-center">
+            <p class="text-sm text-content">No emails match "@SearchPending".</p>
+            <p class="text-xs text-content-subtle mt-1">The search covers subjects, senders, bodies and attachment names across the whole mailbox — or type a record reference like WO-0045 to list that record's mail.</p>
+        </div>
+    }
+    else if (Total == 0 && SearchResults is null)
+    {
+        <div class="panel p-8 text-center">
+            <p class="text-sm text-content">@(SearchRecord is not null ? $"No emails are tagged to {SearchRecord.Reference} yet." : SelectedTags.Count == 0 ? "No tagged emails." : "No emails with the selected tags.")</p>
+            <p class="text-xs text-content-subtle mt-1">Emails linked to a request (or discarded) appear here. Open one to add it to another request or remove a tag.</p>
+        </div>
+    }
+    else
+    {
+        var taggedRows = SearchResults ?? Items;
+        <div class="relative space-y-2">
+            @if (ListLoading)
+            {
+                <JewelSpinner Overlay="true" Label="Loading" />
+            }
+            @foreach (var item in taggedRows)
+            {
+                <TriageEmailRow Item="item"
+                                IsSelected="@(SelectedId == item.Id)"
+                                HasParkedDraft="@ParkedEmailIds.Contains(item.Id)"
+                                ShowFilingChips="true"
+                                ShowUntaggedFallback="true"
+                                OnSelect="item => OnSelect.InvokeAsync(item)" />
+            }
+
+            @* Free-text results are one relevance-ordered page, not the cursor-paged
+               pile, so the pager stands down while they're up. *@
+            @if (SearchResults is null)
+            {
+                <EmailListPager PageIndex="PageIndex"
+                                PageCount="PageCount"
+                                Total="Total"
+                                HasNext="HasNext"
+                                OnPrevious="OnPrevious"
+                                OnNext="OnNext" />
+            }
+        </div>
+    }
+</LoadGate>
+
+@code {
+    /// <summary>The live search text; input flows up, the page debounces and reads.</summary>
+    [Parameter] public string SearchText { get; set; } = "";
+    [Parameter] public EventCallback<ChangeEventArgs> OnSearchInput { get; set; }
+    [Parameter] public EventCallback OnClearSearch { get; set; }
+    /// <summary>True while a search owns the one server-side filter slot — the filters disable.</summary>
+    [Parameter] public bool SearchActive { get; set; }
+    [Parameter] public string? PathwayDisabledTitle { get; set; }
+
+    /// <summary>The exact bucket-category filter, or null for all pathways.</summary>
+    [Parameter] public string? PathwayBucketFilter { get; set; }
+    [Parameter] public EventCallback<string?> OnSetPathwayFilter { get; set; }
+
+    /// <summary>True once the tagged list's first page has answered — the gate lifts then.</summary>
+    [Parameter] public bool Arrived { get; set; }
+    [Parameter] public bool FilterOpen { get; set; }
+    [Parameter] public EventCallback OnToggleFilterMenu { get; set; }
+    [Parameter] public EventCallback OnClearTagFilters { get; set; }
+    /// <summary>Every tag seen so far — the dropdown accrues as pages load.</summary>
+    [Parameter] public IReadOnlyCollection<string> KnownTags { get; set; } = Array.Empty<string>();
+    [Parameter] public IReadOnlyCollection<string> SelectedTags { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback<string> OnToggleTag { get; set; }
+
+    /// <summary>The record a reference query resolved to — the list below is its mail.</summary>
+    [Parameter] public LinkableRecord? SearchRecord { get; set; }
+    [Parameter] public bool Searching { get; set; }
+    /// <summary>Free-text matches, shown in the list's place; null when no free-text search is live.</summary>
+    [Parameter] public IReadOnlyList<MailboxMessage>? SearchResults { get; set; }
+    [Parameter] public string SearchPending { get; set; } = "";
+
+    [Parameter] public string? LoadError { get; set; }
+    [Parameter] public IReadOnlyList<MailboxMessage> Items { get; set; } = Array.Empty<MailboxMessage>();
+    [Parameter] public int Total { get; set; }
+    [Parameter] public bool ListLoading { get; set; }
+    [Parameter] public string? SelectedId { get; set; }
+    /// <summary>Email ids with a parked triage draft — their rows carry the draft marker.</summary>
+    [Parameter] public IReadOnlyCollection<string> ParkedEmailIds { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback<MailboxMessage> OnSelect { get; set; }
+
+    [Parameter] public int PageIndex { get; set; }
+    [Parameter] public int PageCount { get; set; }
+    [Parameter] public bool HasNext { get; set; }
+    [Parameter] public EventCallback OnPrevious { get; set; }
+    [Parameter] public EventCallback OnNext { get; set; }
+
+    private string FilterButtonLabel => SelectedTags.Count == 0 ? "All tags" : $"{SelectedTags.Count} selected";
+
+    private string PathwayFilterChipClass(string? bucket)
+    {
+        var baseClass = "rounded-full border px-3 py-1 text-xs font-medium transition";
+        return PathwayBucketFilter == bucket
+            ? $"{baseClass} border-accent bg-surface-raised text-content"
+            : $"{baseClass} border-line text-content-muted hover:text-content hover:border-line-strong";
+    }
+}

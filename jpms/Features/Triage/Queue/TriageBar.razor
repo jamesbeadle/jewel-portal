@@ -1,0 +1,161 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Components
+
+@*
+    The triage bar — rendered ABOVE the two-window split, because the selected email is the
+    one thing global to everything below: whatever the windows are showing, this strip says
+    which email is being dealt with, holds the decisions that belong to the email itself
+    (project, the staged-work doors, the two Yes/No decisions) and fires the one Apply. Selecting another
+    email swaps the bar's subject; the windows carry on where they were.
+
+    A pure view: every decision lives on the page (parking a triage snapshots the page's fields,
+    so the bar owns nothing), bound through here.
+*@
+<div class="panel px-4 py-3 mb-3 relative space-y-3">
+    <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div class="min-w-0 max-w-full xl:max-w-sm">
+            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Dealing with</p>
+            <p class="text-sm font-medium text-content truncate" title="@TriageEmailDisplay.Dash(Selected.Subject)">@TriageEmailDisplay.Dash(Selected.Subject)</p>
+            <p class="text-[11px] text-content-subtle truncate">@TriageEmailDisplay.DisplayFrom(Selected) · @TriageEmailDisplay.Date(Selected.ReceivedAt)</p>
+        </div>
+
+        @* PROJECT — the easiest decision, made first; everything staged below uses it.
+           Auto-matched from the email text when a single live project's name appears. The
+           picker carries the completed-projects toggle inside its own panel (ProjectSelect). *@
+        <div class="flex flex-wrap items-center gap-2">
+            <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
+            <ProjectSelect Projects="@Projects" Value="@ProjectId" ValueChanged="OnProjectPicked"
+                           ToggleTitle="The email's project — everything staged files against it" />
+        </div>
+
+        @* The email-global decisions, stacked and compact — the full wording lives in the
+           hover titles. Each is a Yes/No pair that starts BLANK: neither side is pre-picked,
+           and Apply stands down until every pair on show is answered, so every apply carries a
+           conscious choice rather than an inherited default. The thread row says how many emails a Yes
+           would sweep, once the thread has been read (staging tags themselves lives on the
+           System Tags window). *@
+        <div class="flex flex-col gap-1.5">
+            <TriageDecisionRow Value="RelevantEventStaged" ValueChanged="RelevantEventStagedChanged"
+                               Title="Yes tags the email to the project's programme — it appears in the Programme tab's Relevant Events. No leaves the programme out of it">
+                Relevant Event for Programme
+            </TriageDecisionRow>
+            <TriageDecisionRow Value="TriageEntireThread" ValueChanged="TriageEntireThreadChanged"
+                               Title="Yes means everything you apply also tags every email currently in this conversation, clearing them from the queue together. No deals with just this email">
+                Entire thread@(ThreadCount > 1 ? $" · {ThreadCount} emails" : "")
+            </TriageDecisionRow>
+            @* Only when the thread already carries record tags (the queue row's "Thread:"
+               chips): Yes files this email under those same records with Apply — nothing
+               new to pick — so a reply to an already-linked thread is one answer, not a
+               re-pick. Blank-until-answered like the two pairs above. *@
+            @if (ThreadTags is { Count: > 0 } inheritable)
+            {
+                <TriageDecisionRow Value="UseThreadTags" ValueChanged="UseThreadTagsChanged"
+                                   Title="@($"Yes files this email under the tags its thread already carries — {string.Join(", ", inheritable.Select(TriageEmailDisplay.TagLabel))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes")">
+                    Use existing tags <span class="text-content-subtle">· @string.Join(", ", inheritable.Take(3).Select(TriageEmailDisplay.TagLabel))@(inheritable.Count > 3 ? $" +{inheritable.Count - 3}" : "")</span>
+                </TriageDecisionRow>
+            }
+        </div>
+    </div>
+
+    @if (ProjectAutoMatched && !string.IsNullOrWhiteSpace(ProjectId))
+    {
+        <p class="text-xs text-accent">Project matched from the email — change it if that's wrong.</p>
+    }
+    @if (ActionError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@ActionError</p>
+    }
+    @if (DiscardArmed)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-content">
+            Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Applied by the Apply button.
+        </p>
+    }
+    @* ---- The one action bar: whatever is set up here and in the windows below — a reply,
+           to-dos, a record filing — is applied together, in one click. ---- *@
+    <div class="pt-2 border-t border-line flex flex-wrap items-center gap-3">
+        @if (PendingSummary is { } pending)
+        {
+            <p class="text-sm text-content flex-1">This will @pending.</p>
+        }
+        else
+        {
+            <p class="text-sm text-content-subtle flex-1">Write a reply in the email window, or stage tags, new records and to-dos in the pathway panes — Client, Subcontractor, Supplier, Internal — then apply it all in one go here.</p>
+        }
+        <div class="flex items-center gap-2">
+            @* The disable reason stands NEXT TO the button it disables (2026-08-27: "I
+               shouldn't have to go around checking whether I've done things — the UX should
+               guide me"). A tooltip on a disabled button is invisible; this isn't. *@
+            @if (!Busy && PendingSummary is not null && (DecisionsMissing || DocTriageProjectMissing))
+            {
+                <p class="text-xs text-amber-600 max-w-xs text-right">@(DecisionsMissing ? DecisionsMissingHint : DocTriageProjectMissingHint)</p>
+            }
+            <button type="button" class="@DiscardTabClass" @onclick="() => DiscardArmedChanged.InvokeAsync(!DiscardArmed)">🗑 Discard</button>
+            <button type="button" class="btn-primary" disabled="@(Busy || PendingSummary is null || DecisionsMissing || DocTriageProjectMissing)"
+                    @onclick="() => OnApply.InvokeAsync(false)">
+                @ApplyLabel
+            </button>
+            @if (OutboxSendCount > 0)
+            {
+                <button type="button" class="btn-secondary" disabled="@(Busy || DecisionsMissing || DocTriageProjectMissing)" @onclick="() => OnApply.InvokeAsync(true)"
+                        title="Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it">
+                    @(OutboxSendCount == 1 ? "Save reply as draft" : "Save replies as drafts")
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>The email being dealt with — the bar only renders with one selected.</summary>
+    [Parameter, EditorRequired] public MailboxMessage Selected { get; set; } = default!;
+    /// <summary>Every project the picker can offer (the picker folds completed ones itself).</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+    /// <summary>The picked project — "" until someone (or the auto-match) picks.</summary>
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public EventCallback<string> OnProjectPicked { get; set; }
+
+    /// <summary>The Yes/No pairs — null is BLANK, and Apply stands down until each is answered.</summary>
+    [Parameter] public bool? RelevantEventStaged { get; set; }
+    [Parameter] public EventCallback<bool?> RelevantEventStagedChanged { get; set; }
+    [Parameter] public bool? TriageEntireThread { get; set; }
+    [Parameter] public EventCallback<bool?> TriageEntireThreadChanged { get; set; }
+    [Parameter] public bool? UseThreadTags { get; set; }
+    [Parameter] public EventCallback<bool?> UseThreadTagsChanged { get; set; }
+
+    /// <summary>How many emails the thread holds — the "Entire thread" row says what a Yes sweeps.</summary>
+    [Parameter] public int ThreadCount { get; set; }
+    /// <summary>The record tags the thread already carries; the third pair shows only when there are some.</summary>
+    [Parameter] public IReadOnlyList<string> ThreadTags { get; set; } = Array.Empty<string>();
+
+    /// <summary>True when the project was matched from the email text rather than picked.</summary>
+    [Parameter] public bool ProjectAutoMatched { get; set; }
+    [Parameter] public string? ActionError { get; set; }
+    /// <summary>Armed discard — applied by the same Apply button, disarmed by the 🗑 toggle.</summary>
+    [Parameter] public bool DiscardArmed { get; set; }
+    [Parameter] public EventCallback<bool> DiscardArmedChanged { get; set; }
+
+    /// <summary>The plain-words apply preview ("This will …"), or null when nothing is staged.</summary>
+    [Parameter] public string? PendingSummary { get; set; }
+    /// <summary>True while a Yes/No pair on show is still blank; its hint names the blanks.</summary>
+    [Parameter] public bool DecisionsMissing { get; set; }
+    [Parameter] public string DecisionsMissingHint { get; set; } = "";
+    /// <summary>True when staged document triage needs a project that isn't picked yet.</summary>
+    [Parameter] public bool DocTriageProjectMissing { get; set; }
+    [Parameter] public string DocTriageProjectMissingHint { get; set; } = "";
+
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>What the Apply button says — "Apply", or "Discard email" when discard is all there is.</summary>
+    [Parameter] public string ApplyLabel { get; set; } = "Apply";
+    /// <summary>Replies lined up to send — above zero, the save-as-drafts button appears.</summary>
+    [Parameter] public int OutboxSendCount { get; set; }
+    /// <summary>Fires the one Apply; true means stage the lined-up emails as drafts instead of sending.</summary>
+    [Parameter] public EventCallback<bool> OnApply { get; set; }
+
+    private string DiscardTabClass =>
+        "rounded-lg px-3 py-1.5 text-sm border transition "
+        + (DiscardArmed
+            ? "border-negative text-negative bg-negative/10 font-medium"
+            : "border-line text-content-subtle hover:text-negative hover:border-negative/50");
+}
