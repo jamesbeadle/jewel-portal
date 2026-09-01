@@ -42,7 +42,7 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 /// tagged JPMS/Replied + pathway — unless the compose also filed it to a record (opt-in
 /// AlsoRaiseRequest or LinkRecord), whose tag already says more than "replied".
 /// </summary>
-public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, ComposeOutcome>
+public sealed partial class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, ComposeOutcome>
 {
     /// <summary>Cap on the combined size of a composed email's attachments — the usual Exchange
     /// message-size ceiling. One number for the whole system, owned by the planner; kept here as an
@@ -440,121 +440,6 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
             RaisedRequest: raisedRequest);
     }
 
-    // ---- helpers ---------------------------------------------------------------------------------
-
-    private async Task<List<MailboxDraftAttachment>> ResolveAttachmentsAsync(
-        SendMailboxEmail command, IReadOnlyDictionary<string, SendMailboxEmailHandler.UploadedFile>? uploads, CancellationToken ct)
-    {
-        var resolved = new List<MailboxDraftAttachment>();
-        foreach (var reference in command.Attachments ?? Array.Empty<ComposeAttachmentRef>())
-        {
-            switch (reference.Source)
-            {
-                case ComposeAttachmentSource.Upload:
-                    if (uploads is null || !uploads.TryGetValue(reference.Id, out var file))
-                        throw new InvalidOperationException("An attached file didn't arrive with the request — remove it and attach it again.");
-                    resolved.Add(new MailboxDraftAttachment(file.FileName, file.ContentType, file.Content));
-                    break;
-
-                case ComposeAttachmentSource.Drawing:
-                {
-                    var revision = await context.DrawingRevisions
-                        .FirstOrDefaultAsync(r => r.DrawingRevisionId == reference.Id, ct)
-                        ?? throw new InvalidOperationException("A selected drawing revision no longer exists.");
-                    var blob = await drawingBlobs.OpenAsync(revision.BlobRef, ct)
-                        ?? throw new InvalidOperationException($"The drawing file for {revision.FileName} couldn't be read from storage.");
-                    resolved.Add(new MailboxDraftAttachment(
-                        revision.FileName, blob.ContentType, await ReadAllAsync(blob.Content, ct)));
-                    break;
-                }
-
-                case ComposeAttachmentSource.ProgressPhoto:
-                {
-                    var photo = await context.ProgressPhotos
-                        .FirstOrDefaultAsync(p => p.ProgressPhotoId == reference.Id, ct)
-                        ?? throw new InvalidOperationException("A selected progress photo no longer exists.");
-                    var blob = await photoBlobs.OpenAsync(photo.BlobRef, ct)
-                        ?? throw new InvalidOperationException($"The photo file for {photo.FileName} couldn't be read from storage.");
-                    resolved.Add(new MailboxDraftAttachment(
-                        photo.FileName, blob.ContentType, await ReadAllAsync(blob.Content, ct)));
-                    break;
-                }
-
-                case ComposeAttachmentSource.RecordDocument:
-                {
-                    // The record's official PDF, rendered NOW — same builder + renderer as the
-                    // record page's download, so the attached file is byte-for-byte the document
-                    // as it currently stands. Requests and variation orders carry official
-                    // documents; new types slot in as further cases here once they grow a renderer.
-                    resolved.Add(await RenderRecordDocumentAsync(reference, ct));
-                    break;
-                }
-
-                case ComposeAttachmentSource.OriginalMessage:
-                {
-                    var sourceMessageId = reference.SourceMessageId ?? command.ReplyToMessageId
-                        ?? throw new InvalidOperationException("An original-email attachment needs the message it belongs to.");
-                    var content = await reader.GetAttachmentAsync(sourceMessageId, reference.Id, ct)
-                        ?? throw new InvalidOperationException("An attachment on the original email couldn't be read from the mailbox.");
-                    resolved.Add(new MailboxDraftAttachment(content.Name, content.ContentType, content.Content));
-                    break;
-                }
-
-                default:
-                    throw new InvalidOperationException("Unknown attachment source.");
-            }
-        }
-        return resolved;
-    }
-
-    // A record's official document, rendered at send time. A null RecordType is a request — the
-    // only type the picker offered before variations grew a document (old drafts stay valid).
-    private async Task<MailboxDraftAttachment> RenderRecordDocumentAsync(ComposeAttachmentRef reference, CancellationToken ct)
-    {
-        switch (reference.RecordType)
-        {
-            case null:
-            case RecordType.Request:
-            {
-                var model = await RequestDocumentBuilder.BuildAsync(context, reference.Id, ct)
-                    ?? throw new InvalidOperationException("A selected request record no longer exists — remove its document and try again.");
-                return new MailboxDraftAttachment(model.FileName, "application/pdf", RequestDocumentRenderer.Render(model));
-            }
-
-            // One variation, two historic identities (VO- and VOQ- tags) — both render the same sheet.
-            case RecordType.Variation:
-            case RecordType.VariationQuote:
-            {
-                var model = await VariationDocumentBuilder.BuildAsync(context, reference.Id, ct)
-                    ?? throw new InvalidOperationException("A selected variation order no longer exists — remove its document and try again.");
-                return new MailboxDraftAttachment(model.FileName, "application/pdf", VariationDocumentRenderer.Render(model));
-            }
-
-            // The PQQ response — the architect's questionnaire answered, rendered from the answers
-            // as they stand when the email goes.
-            case RecordType.TenderEnquiry:
-            {
-                var model = await TenderEnquiryDocumentBuilder.BuildAsync(context, reference.Id, ct)
-                    ?? throw new InvalidOperationException("A selected tender enquiry no longer exists — remove its document and try again.");
-                return new MailboxDraftAttachment(model.FileName, "application/pdf", TenderEnquiryDocumentRenderer.Render(model));
-            }
-
-            default:
-                throw new InvalidOperationException(
-                    $"{reference.RecordType} records don't have an official document to attach yet — remove it and try again.");
-        }
-    }
-
-    private static async Task<byte[]> ReadAllAsync(Stream stream, CancellationToken ct)
-    {
-        await using (stream)
-        {
-            using var buffer = new MemoryStream();
-            await stream.CopyToAsync(buffer, ct);
-            return buffer.ToArray();
-        }
-    }
-
     private async Task RollBackRaisedRequestAsync(Request? raised, string? tag, CancellationToken ct)
     {
         if (raised is null) return;
@@ -569,39 +454,4 @@ public sealed class SendMailboxEmailHandler : ICommandHandler<SendMailboxEmail, 
             await context.SaveChangesAsync(ct);
         }
     }
-
-    private static List<ComposeRecipient> CleanRecipients(IReadOnlyList<ComposeRecipient>? recipients) =>
-        (recipients ?? Array.Empty<ComposeRecipient>())
-        .Where(r => !string.IsNullOrWhiteSpace(r.Email) && r.Email.Contains('@'))
-        .Select(r => new ComposeRecipient(r.Email.Trim(), string.IsNullOrWhiteSpace(r.Name) ? null : r.Name!.Trim()))
-        .GroupBy(r => r.Email, StringComparer.OrdinalIgnoreCase)
-        .Select(g => g.First())
-        .ToList();
-
-    private static List<MailboxDraftRecipient> ToDraft(IReadOnlyList<ComposeRecipient> recipients) =>
-        recipients.Select(r => new MailboxDraftRecipient(r.Email, r.Name)).ToList();
-
-    private static string? MapPathway(string? pathway) =>
-        string.Equals(pathway?.Trim(), "Client", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Client
-        : string.Equals(pathway?.Trim(), "Subcontractor", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Subcontractor
-        : string.Equals(pathway?.Trim(), "Supplier", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Supplier
-        : string.Equals(pathway?.Trim(), "Internal", StringComparison.OrdinalIgnoreCase) ? TriageCategories.Internal
-        : null;
-
-    private static string Recipients(IReadOnlyList<string> to, IReadOnlyList<string> cc) =>
-        cc.Count == 0
-            ? $"to {string.Join("; ", to)}"
-            : $"to {string.Join("; ", to)} (cc {string.Join("; ", cc)})";
-
-    // The raised request's description wants readable text; an HTML body is stripped to its text.
-    private static string PlainTextOf(SendMailboxEmail command)
-    {
-        if (!command.BodyIsHtml) return command.Body.Trim();
-        var text = System.Text.RegularExpressions.Regex.Replace(command.Body, "<br\\s*/?>", "\n", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        text = System.Text.RegularExpressions.Regex.Replace(text, "</(p|div|li)>", "\n", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        text = System.Text.RegularExpressions.Regex.Replace(text, "<[^>]+>", "");
-        return System.Net.WebUtility.HtmlDecode(text).Trim();
-    }
-
-    private static string? NullIfEmpty(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 }
