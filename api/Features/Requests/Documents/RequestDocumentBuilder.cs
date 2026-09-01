@@ -1,6 +1,5 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Requests.Recipients;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Requests.Documents;

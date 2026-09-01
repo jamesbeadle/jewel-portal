@@ -5,7 +5,6 @@ using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.Calendar;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Calendar.Commands;

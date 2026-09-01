@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Features.Subcontractors.Queries;
 using Jewel.JPMS.Api.Features.Subcontractors.Storage;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Subcontractors;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

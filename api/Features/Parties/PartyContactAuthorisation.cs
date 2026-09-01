@@ -1,5 +1,4 @@
 using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Parties;
 

@@ -139,33 +139,8 @@ else
                             {
                                 <tr class="border-b border-line last:border-0 bg-surface-raised/50">
                                     <td colspan="6" class="px-4 py-3">
-                                        @if (!emailsByItem.ContainsKey(item.InventoryItemId))
-                                        {
-                                            <p class="text-sm text-content-subtle italic">Loading emails…</p>
-                                        }
-                                        else if (emailsByItem[item.InventoryItemId].Count == 0)
-                                        {
-                                            <p class="text-sm text-content-subtle italic">
-                                                No emails filed to @item.Reference yet — file one from the Control Centre (Supplier pathway → Inventory items).
-                                            </p>
-                                        }
-                                        else
-                                        {
-                                            <div class="space-y-1.5">
-                                                @foreach (var email in emailsByItem[item.InventoryItemId])
-                                                {
-                                                    <div class="flex items-baseline gap-3 text-sm">
-                                                        <span class="text-content-subtle whitespace-nowrap shrink-0">@email.ReceivedAt.ToLocalTime().ToString("d MMM yyyy")</span>
-                                                        <span class="text-content truncate" title="@email.BodyPreview">@email.Subject</span>
-                                                        <span class="text-content-subtle truncate shrink-0">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
-                                                        @if (email.HasAttachments)
-                                                        {
-                                                            <span class="text-content-subtle shrink-0" title="Has attachments">📎</span>
-                                                        }
-                                                    </div>
-                                                }
-                                            </div>
-                                        }
+                                        <FiledEmailList Emails="@(emailsByItem.TryGetValue(item.InventoryItemId, out var filedEmails) ? filedEmails : null)"
+                                            EmptyMessage="@($"No emails filed to {item.Reference} yet — file one from the Control Centre (Supplier pathway → Inventory items).")" />
                                     </td>
                                 </tr>
                             }

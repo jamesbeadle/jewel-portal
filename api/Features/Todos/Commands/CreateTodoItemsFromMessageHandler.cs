@@ -5,7 +5,6 @@ using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Todos;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Todos.Commands;

@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Parties;
 using Jewel.JPMS.Contracts.Architects;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Architects.Commands;
 

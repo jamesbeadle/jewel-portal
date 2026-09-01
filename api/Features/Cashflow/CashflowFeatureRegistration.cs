@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Cashflow.Commands;
 using Jewel.JPMS.Api.Features.Cashflow.Queries;
 using Jewel.JPMS.Contracts.Cashflow;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Cashflow;

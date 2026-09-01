@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.WeeklyCashflow.Commands;
 using Jewel.JPMS.Api.Features.WeeklyCashflow.Queries;
 using Jewel.JPMS.Contracts.WeeklyCashflow;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.WeeklyCashflow;

@@ -1,8 +1,6 @@
-using System.Text.Json;
 using Jewel.JPMS.Api.Features.Ai.Sources;
 using Jewel.JPMS.Api.Features.TenderEnquiries;
 using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;

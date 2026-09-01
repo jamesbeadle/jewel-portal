@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Audit;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Todos;
 

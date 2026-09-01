@@ -1,9 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Jewel.JPMS.Contracts.Xero;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Xero;
 

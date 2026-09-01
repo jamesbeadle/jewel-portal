@@ -1,6 +1,5 @@
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.BuildingControl;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.BuildingControl;
 

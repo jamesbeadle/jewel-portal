@@ -8,7 +8,6 @@ using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.CommercialInputs;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Cvr;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 

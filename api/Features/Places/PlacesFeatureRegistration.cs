@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Features.Ai;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Places;
 

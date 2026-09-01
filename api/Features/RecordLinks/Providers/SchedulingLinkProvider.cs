@@ -1,6 +1,5 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Requests;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Providers;

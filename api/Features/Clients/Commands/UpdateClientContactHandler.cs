@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Parties;
 using Jewel.JPMS.Contracts.Clients;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Clients.Commands;
 

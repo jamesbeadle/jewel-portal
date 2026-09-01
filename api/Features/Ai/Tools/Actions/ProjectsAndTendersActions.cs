@@ -18,7 +18,6 @@ using Jewel.JPMS.Contracts.Mobilisation;
 using Jewel.JPMS.Contracts.ProjectContracts;
 using Jewel.JPMS.Contracts.Projects;
 using Jewel.JPMS.Contracts.TenderEnquiries;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 

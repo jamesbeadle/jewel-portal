@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Features.Drawings.Queries;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Drawings;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

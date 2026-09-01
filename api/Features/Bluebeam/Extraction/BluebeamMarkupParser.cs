@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Jewel.JPMS.Api.Data.Entities;
 
 namespace Jewel.JPMS.Api.Features.Bluebeam.Extraction;

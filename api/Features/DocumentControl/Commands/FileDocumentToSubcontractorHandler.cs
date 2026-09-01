@@ -6,7 +6,6 @@ using Jewel.JPMS.Api.Features.Subcontractors;
 using Jewel.JPMS.Api.Features.Subcontractors.Storage;
 using Jewel.JPMS.Contracts.DocumentControl;
 using Jewel.JPMS.Contracts.Subcontractors;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.DocumentControl.Commands;

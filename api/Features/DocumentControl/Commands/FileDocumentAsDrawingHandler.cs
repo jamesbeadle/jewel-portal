@@ -5,7 +5,6 @@ using Jewel.JPMS.Api.Features.DocumentControl.Storage;
 using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Contracts.DocumentControl;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.DocumentControl.Commands;

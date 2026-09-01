@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Features.WeeklyCashflow;
 using Jewel.JPMS.Api.Features.WeeklyCashflow.Commands;
 using Jewel.JPMS.Contracts.Inventory;
 using Jewel.JPMS.Contracts.WeeklyCashflow;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 

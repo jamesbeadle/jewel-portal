@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Commands;
 

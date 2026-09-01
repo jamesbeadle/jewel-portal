@@ -1,9 +1,7 @@
-using System.Text.Json;
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.ValuationInvoices;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;

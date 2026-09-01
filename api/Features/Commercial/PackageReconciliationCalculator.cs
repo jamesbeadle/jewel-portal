@@ -1,6 +1,5 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.Commercial;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Commercial;

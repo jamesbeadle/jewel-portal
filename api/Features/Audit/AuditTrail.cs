@@ -1,8 +1,6 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
-using Jewel.JPMS.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Audit;
 

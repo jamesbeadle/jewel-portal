@@ -5,7 +5,6 @@ using Jewel.JPMS.Api.Features.ArchitectInstructions.Storage;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.ArchitectInstructions;
 using Jewel.JPMS.Contracts.Cqrs;
-using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;

@@ -1,6 +1,5 @@
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.AccessRequests;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.AccessRequests.Commands;
 

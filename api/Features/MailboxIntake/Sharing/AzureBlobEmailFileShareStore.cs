@@ -1,7 +1,6 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Azure.Storage.Sas;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.MailboxIntake.Sharing;
 

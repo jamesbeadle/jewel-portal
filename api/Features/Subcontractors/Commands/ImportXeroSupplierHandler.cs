@@ -6,7 +6,6 @@ using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Api.Features.Xero;
 using Jewel.JPMS.Contracts.Subcontractors;
 using Jewel.JPMS.Contracts.Xero;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Subcontractors.Commands;

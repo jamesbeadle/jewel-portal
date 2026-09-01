@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks;
 

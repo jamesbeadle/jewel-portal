@@ -1,11 +1,9 @@
 using System.Text;
-using System.Text.Json;
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Contracts.Procurement;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Queries;
 

@@ -2,10 +2,8 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Bluebeam.Extraction;
 using Jewel.JPMS.Api.Features.Bluebeam.Queue;
 using Jewel.JPMS.Contracts.Drawings;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Bluebeam;
 

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Api.Features.Registers;
@@ -16,7 +15,6 @@ using Jewel.JPMS.Contracts.Registers;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Contracts.TenderEnquiries;
 using Jewel.JPMS.Contracts.UsefulInformation;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;

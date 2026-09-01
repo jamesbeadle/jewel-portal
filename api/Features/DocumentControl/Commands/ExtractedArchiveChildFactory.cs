@@ -1,6 +1,5 @@
 using System.IO.Compression;
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.DocumentControl.Commands;
 
