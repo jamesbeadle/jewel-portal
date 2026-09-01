@@ -27,14 +27,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class TriageQueue
 {
-    // The communication pathway — WHO the correspondence is with (docs/Pathway-Split-Platform-Flow-
-    // Plan.md §2). Triage is pathway-FIRST: the pathway is chosen (or already fixed on the thread)
-    // before any action, and it decides which action tabs and record types are offered.
-    private enum TriagePathway { Client, Subcontractor, Supplier, Internal }
-    private static readonly TriagePathway[] PathwayOptions =
-    {
-        TriagePathway.Client, TriagePathway.Subcontractor, TriagePathway.Supplier, TriagePathway.Internal
-    };
 
     // The triager's pathway choice for the SELECTED email. Pre-set from the thread's own bucket when
     // it already carries one (then shown as a fixed badge — the routing decision was made when the
@@ -45,41 +37,14 @@ public partial class TriageQueue
     // The pathway bucket categories exactly as the server stamps them — MailboxMessage.Bucket carries
     // one of these verbatim. Literals here because the WASM app references contracts only; the API's
     // TriageCategories constants aren't visible to it.
-    private const string ClientBucket = "JPMS/Client";
-    private const string SubcontractorBucket = "JPMS/Subcontractor";
-    private const string SupplierBucket = "JPMS/Supplier";
-    private const string InternalBucket = "JPMS/Internal";
 
-    private static TriagePathway? PathwayFromBucket(string? bucket)
-    {
-        if (string.IsNullOrEmpty(bucket)) return null;
-        if (bucket.Equals(ClientBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Client;
-        if (bucket.Equals(SubcontractorBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Subcontractor;
-        if (bucket.Equals(SupplierBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Supplier;
-        if (bucket.Equals(InternalBucket, StringComparison.OrdinalIgnoreCase)) return TriagePathway.Internal;
-        return null;
-    }
 
     // The selected thread's already-decided pathway (null = not filed yet). When set, the selector
     // renders as a fixed "Filed under …" badge and the pathway can't be switched — the triager still
     // acts within it.
-    private TriagePathway? FixedPathway => PathwayFromBucket(selected?.Bucket);
+    private TriagePathway? FixedPathway => TriagePathways.FromBucket(selected?.Bucket);
 
-    // Enum names double as the user-facing labels AND the short pathway strings the server's
-    // commands accept ("Client" / "Subcontractor" / "Internal") — keep them in sync with MapPathway.
-    private static string PathwayLabel(TriagePathway p) => p.ToString();
 
-    // Pathway chip colours: green-ish Client, orange-ish Subcontractor, blue-ish Supplier,
-    // purple-ish Internal — the same rounded-pill shape as the tag chips, but distinct hues so
-    // rows can be scanned by pathway.
-    private static string PathwayChipColour(TriagePathway p) => p switch
-    {
-        TriagePathway.Client        => "bg-emerald-500/10 text-emerald-600",
-        TriagePathway.Subcontractor => "bg-orange-500/10 text-orange-600",
-        TriagePathway.Supplier      => "bg-sky-500/10 text-sky-600",
-        TriagePathway.Internal      => "bg-purple-500/10 text-purple-600",
-        _                           => "bg-accent/10 text-accent"
-    };
 
     // The page shows the live queue (untagged Inbox), the discarded pile, or every tagged email (the
     // management surface for adding/removing workflow tags). The detail pane is shared.

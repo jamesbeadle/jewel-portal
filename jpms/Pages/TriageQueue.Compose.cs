@@ -97,8 +97,8 @@ public partial class TriageQueue
                     : $"link this email to {string.Join(", ", pickedRecords.Take(3).Select(r => r.Reference))}{(pickedRecords.Count > 3 ? $" +{pickedRecords.Count - 3} more" : "")}");
             if (useThreadTags == true && SelectedThreadTags is { Count: > 0 } inheritStems)
                 parts.Add(inheritStems.Count == 1
-                    ? $"file it under the thread's existing tag ({TagLabel(inheritStems[0])})"
-                    : $"file it under the thread's existing tags ({string.Join(", ", inheritStems.Take(3).Select(TagLabel))}{(inheritStems.Count > 3 ? $" +{inheritStems.Count - 3} more" : "")})");
+                    ? $"file it under the thread's existing tag ({TriageEmailDisplay.TagLabel(inheritStems[0])})"
+                    : $"file it under the thread's existing tags ({string.Join(", ", inheritStems.Take(3).Select(TriageEmailDisplay.TagLabel))}{(inheritStems.Count > 3 ? $" +{inheritStems.Count - 3} more" : "")})");
             if (stagedDocControlIds.Count > 0)
                 parts.Add(stagedDocControlIds.Count == 1
                     ? "send 1 attachment to Document Triage"
@@ -507,7 +507,7 @@ public partial class TriageQueue
             {
                 busyLabel = "Matching the thread's tags";
                 inheritedRecords = await Queries.AskAsync(
-                    new ResolveRecordTags(inheritStems.Select(TagLabel).ToList()), CancellationToken.None);
+                    new ResolveRecordTags(inheritStems.Select(TriageEmailDisplay.TagLabel).ToList()), CancellationToken.None);
                 if (inheritedRecords.Count == 0)
                 {
                     actionError = "The thread's existing tags couldn't be matched to records — pick this email's records by hand instead.";
@@ -544,7 +544,7 @@ public partial class TriageQueue
                     drafts,
                     LinkRequestId: null,
                     InternetMessageId: anchor.InternetMessageId,
-                    Pathway: pathway is { } chosenForTodos ? PathwayLabel(chosenForTodos) : null,
+                    Pathway: pathway is { } chosenForTodos ? TriagePathways.Label(chosenForTodos) : null,
                     Scope: scope));
                 // One batch per apply: clear the rows so nothing can double-raise.
                 createTodoRows = new List<TodoDraftRow> { new() };

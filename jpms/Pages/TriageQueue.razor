@@ -13,6 +13,7 @@
 @using Jewel.JPMS.Contracts.Todos
 @using Jewel.JPMS.Features.Todos
 @using Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Triage.Queue
 @using Jewel.JPMS.Features.Triage.Workspace
 @using Jewel.JPMS.Contracts.Ai
 @inject AuthService Auth
@@ -57,20 +58,20 @@
         </svg>;
 
     RenderFragment MessageHeader =@<div>
-        <h2 class="text-lg font-semibold text-content">@Dash(selected!.Subject)</h2>
+        <h2 class="text-lg font-semibold text-content">@TriageEmailDisplay.Dash(selected!.Subject)</h2>
         <div class="flex items-start gap-3 mt-3">
             <div class="h-9 w-9 shrink-0 rounded-full bg-accent/15 text-accent flex items-center justify-center text-sm font-semibold select-none"
                  aria-hidden="true">@SenderInitials(selected)</div>
             <div class="min-w-0 flex-1">
                 <div class="flex items-baseline justify-between gap-3">
                     <p class="text-sm text-content truncate">
-                        <span class="font-semibold">@DisplayFrom(selected)</span>
+                        <span class="font-semibold">@TriageEmailDisplay.DisplayFrom(selected)</span>
                         @if (!string.IsNullOrWhiteSpace(selected.FromName) && !string.IsNullOrWhiteSpace(selected.FromEmail))
                         {
                             <span class="text-content-subtle"> &lt;@selected.FromEmail&gt;</span>
                         }
                     </p>
-                    <span class="text-xs text-content-subtle shrink-0">@Date(selected.ReceivedAt)</span>
+                    <span class="text-xs text-content-subtle shrink-0">@TriageEmailDisplay.Date(selected.ReceivedAt)</span>
                 </div>
                 @if (detail?.To is { Count: > 0 } headerTo)
                 {
@@ -158,7 +159,7 @@
             }
             else
             {
-                <p class="text-sm text-content-subtle italic">@(selected is null ? "" : Dash(selected.BodyPreview))</p>
+                <p class="text-sm text-content-subtle italic">@(selected is null ? "" : TriageEmailDisplay.Dash(selected.BodyPreview))</p>
             }
         </div>
 
@@ -172,8 +173,8 @@
                 {
                     <button type="button" @key="sent.Id" class="w-full text-left text-xs hover:bg-surface-raised rounded px-1.5 py-1"
                             title="Open this reply" @onclick="() => Select(sent)">
-                        <span class="text-content-subtle">@ListDate(sent.ReceivedAt)</span>
-                        <span class="text-content ml-2">@FirstLineOf(sent.BodyPreview)</span>
+                        <span class="text-content-subtle">@TriageEmailDisplay.ListDate(sent.ReceivedAt)</span>
+                        <span class="text-content ml-2">@TriageEmailDisplay.FirstLineOf(sent.BodyPreview)</span>
                     </button>
                 }
             </div>
@@ -214,7 +215,7 @@
                             var isCurrent = member.Id == selected.Id;
                             var isLatest = i == thread.Count - 1;
                             <button type="button" @key="member.Id" disabled="@isCurrent"
-                                    title="@($"{DisplayFrom(member)} — {Date(member.ReceivedAt)}{(member.HasAttachments ? " · has attachments" : "")}")"
+                                    title="@($"{TriageEmailDisplay.DisplayFrom(member)} — {TriageEmailDisplay.Date(member.ReceivedAt)}{(member.HasAttachments ? " · has attachments" : "")}")"
                                     @onclick="() => Select(member)"
                                     class="@ThreadTabClass(isCurrent, isLatest)">
                                 @(i + 1)@(isLatest ? " ·" : "")
@@ -306,9 +307,9 @@
                         <div @key="request.RequestId" class="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2">
                             <div class="min-w-0">
                                 <p class="text-sm text-content truncate">
-                                    <span class="font-mono text-xs text-content-muted mr-2">@Dash(request.Reference)</span>@Dash(request.Title)
+                                    <span class="font-mono text-xs text-content-muted mr-2">@TriageEmailDisplay.Dash(request.Reference)</span>@TriageEmailDisplay.Dash(request.Title)
                                 </p>
-                                <p class="text-[11px] text-content-subtle mt-0.5">Issued @Date(request.IssuedAt ?? request.RaisedAt) · @Dash(request.RaisedByEmail)</p>
+                                <p class="text-[11px] text-content-subtle mt-0.5">Issued @TriageEmailDisplay.Date(request.IssuedAt ?? request.RaisedAt) · @TriageEmailDisplay.Dash(request.RaisedByEmail)</p>
                             </div>
                             <button type="button" class="btn-secondary text-xs whitespace-nowrap"
                                     disabled="@busy" @onclick="() => ReturnUnassigned(request)">
@@ -349,92 +350,27 @@
                     @foreach (var item in items)
                     {
                         @* Outlook-style date group headers — Today / Yesterday / day names / dates. *@
-                        var queueGroup = DateGroupLabel(item.ReceivedAt);
+                        var queueGroup = TriageEmailDisplay.DateGroupLabel(item.ReceivedAt);
                         @if (queueGroup != lastQueueGroup)
                         {
                             lastQueueGroup = queueGroup;
                             <p class="text-xs font-semibold text-content-muted uppercase tracking-wider pt-2 pb-0.5 px-1">@queueGroup</p>
                         }
-                        <button type="button" @key="item.Id" @onclick="() => Select(item)"
-                                class="@RowClass(item)">
-                            <div class="flex items-baseline justify-between gap-2">
-                                <span class="text-sm font-semibold text-content truncate">@DisplayFrom(item)</span>
-                                <span class="text-[11px] text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
-                            </div>
-                            <div class="flex items-center gap-1.5 mt-0.5">
-                                <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
-                                @* Parked work waits on this email — the marker says "open me to carry on". *@
-                                @if (parkedTriageByEmailId.ContainsKey(item.Id))
-                                {
-                                    <span title="Unfinished triage — open the email to carry on where you left off" class="text-[10px] font-semibold text-accent shrink-0">✎ draft</span>
-                                }
-                                @if (item.HasAttachments)
-                                {
-                                    <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
-                                }
-                            </div>
-                            @* The opening line of the email — the Outlook-style preview that lets the
-                               list be scanned without opening anything. *@
-                            @if (!string.IsNullOrWhiteSpace(item.BodyPreview))
-                            {
-                                <p class="text-xs text-content-subtle truncate mt-0.5">@FirstLineOf(item.BodyPreview)</p>
-                            }
-                            @* Thread hint: this email is untriaged, but other messages in its
-                               conversation already carry record tags. Surfacing them here tells the
-                               triager it's a reply to an already-linked thread, so re-linking is one
-                               step — outline chips, so they don't read as this email's own tags. *@
-                            @if (item.ThreadTags is { Count: > 0 } threadTags)
-                            {
-                                <div class="flex flex-wrap items-center gap-1 mt-1">
-                                    <span class="text-[10px] text-content-subtle">Thread:</span>
-                                    @foreach (var tag in threadTags)
-                                    {
-                                        <span class="inline-flex items-center rounded-full border border-accent/40 text-accent/90 text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
-                                    }
-                                </div>
-                            }
-                            @* A queue email tagged while it stayed open (Create now raised a record
-                               from it) carries its filing here, exactly as the Tagged tab's rows do,
-                               until Apply reloads the queue and it leaves. Queue reads never return
-                               a tagged email, so this only ever lights up for that case. *@
-                            @if (item.Bucket is not null || item.Categories.Count > 0)
-                            {
-                                <div class="flex flex-wrap items-center gap-1 mt-1">
-                                    @if (PathwayFromBucket(item.Bucket) is { } queueRowPathway)
-                                    {
-                                        <span class="inline-flex items-center rounded-full @PathwayChipColour(queueRowPathway) text-[10px] font-medium px-2 py-0.5">@PathwayLabel(queueRowPathway)</span>
-                                    }
-                                    @foreach (var tag in item.Categories)
-                                    {
-                                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
-                                    }
-                                </div>
-                            }
-                        </button>
+                        <TriageEmailRow Item="item"
+                                        IsSelected="@(selected?.Id == item.Id)"
+                                        HasParkedDraft="@parkedTriageByEmailId.ContainsKey(item.Id)"
+                                        InlineDraftMarker="true"
+                                        ShowThreadTags="true"
+                                        ShowFilingChips="true"
+                                        OnSelect="item => Select(item)" />
                     }
 
-                    @if (QueuePageCount > 1)
-                    {
-                        <div class="flex items-center justify-between gap-2 pt-2">
-                            @if (queueIndex > 0)
-                            {
-                                <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="PreviousPage">Previous</button>
-                            }
-                            else
-                            {
-                                <span></span>
-                            }
-                            <span class="text-[11px] text-content-subtle">Page @(queueIndex + 1) / @QueuePageCount · @total email@(total == 1 ? "" : "s")</span>
-                            @if (queueNext is not null)
-                            {
-                                <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextPage">Next</button>
-                            }
-                            else
-                            {
-                                <span></span>
-                            }
-                        </div>
-                    }
+                    <EmailListPager PageIndex="queueIndex"
+                                    PageCount="QueuePageCount"
+                                    Total="total"
+                                    HasNext="@(queueNext is not null)"
+                                    OnPrevious="PreviousPage"
+                                    OnNext="NextPage" />
                 </div>
         }
         </LoadGate>
@@ -463,47 +399,17 @@
                         }
                         @foreach (var item in discardedItems)
                         {
-                            <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
-                                <div class="flex items-baseline justify-between gap-2">
-                                    <span class="text-sm font-semibold text-content truncate">@DisplayFrom(item)</span>
-                                    <span class="text-[11px] text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 mt-0.5">
-                                    <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
-                                    @if (item.HasAttachments)
-                                    {
-                                        <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
-                                    }
-                                </div>
-                                @if (!string.IsNullOrWhiteSpace(item.BodyPreview))
-                                {
-                                    <p class="text-xs text-content-subtle truncate mt-0.5">@FirstLineOf(item.BodyPreview)</p>
-                                }
-                            </button>
+                            <TriageEmailRow Item="item"
+                                            IsSelected="@(selected?.Id == item.Id)"
+                                            OnSelect="item => Select(item)" />
                         }
 
-                        @if (DiscardedPageCount > 1)
-                        {
-                            <div class="flex items-center justify-between gap-2 pt-2">
-                                @if (discardedIndex > 0)
-                                {
-                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="PreviousDiscarded">Previous</button>
-                                }
-                                else
-                                {
-                                    <span></span>
-                                }
-                                <span class="text-[11px] text-content-subtle">Page @(discardedIndex + 1) / @DiscardedPageCount · @discardedTotal email@(discardedTotal == 1 ? "" : "s")</span>
-                                @if (discardedNext is not null)
-                                {
-                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextDiscarded">Next</button>
-                                }
-                                else
-                                {
-                                    <span></span>
-                                }
-                            </div>
-                        }
+                        <EmailListPager PageIndex="discardedIndex"
+                                        PageCount="DiscardedPageCount"
+                                        Total="discardedTotal"
+                                        HasNext="@(discardedNext is not null)"
+                                        OnPrevious="PreviousDiscarded"
+                                        OnNext="NextDiscarded" />
                     </div>
             }
             </LoadGate>
@@ -536,10 +442,10 @@
             <div class="flex flex-wrap items-center gap-2 mb-3">
                 <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Pathway</span>
                 <button type="button" class="@PathwayFilterChipClass(null) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(null)">All</button>
-                <button type="button" class="@PathwayFilterChipClass(ClientBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(ClientBucket)">Client</button>
-                <button type="button" class="@PathwayFilterChipClass(SubcontractorBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(SubcontractorBucket)">Subcontractor</button>
-                <button type="button" class="@PathwayFilterChipClass(SupplierBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(SupplierBucket)">Supplier</button>
-                <button type="button" class="@PathwayFilterChipClass(InternalBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(InternalBucket)">Internal</button>
+                <button type="button" class="@PathwayFilterChipClass(TriagePathways.ClientBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(TriagePathways.ClientBucket)">Client</button>
+                <button type="button" class="@PathwayFilterChipClass(TriagePathways.SubcontractorBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(TriagePathways.SubcontractorBucket)">Subcontractor</button>
+                <button type="button" class="@PathwayFilterChipClass(TriagePathways.SupplierBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(TriagePathways.SupplierBucket)">Supplier</button>
+                <button type="button" class="@PathwayFilterChipClass(TriagePathways.InternalBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(TriagePathways.InternalBucket)">Internal</button>
             </div>
 
             @* The tag list accrues from the emails that have loaded, so before the first page lands
@@ -569,7 +475,7 @@
                             {
                                 <label class="flex items-center gap-2 rounded px-3 py-1.5 text-sm text-content hover:bg-surface cursor-pointer">
                                     <input type="checkbox" checked="@selectedTags.Contains(tag)" @onchange="() => ToggleTag(tag)" />
-                                    <span>@TagLabel(tag)</span>
+                                    <span>@TriageEmailDisplay.TagLabel(tag)</span>
                                 </label>
                             }
                         </div>
@@ -578,7 +484,7 @@
                 @foreach (var tag in selectedTags)
                 {
                     <span class="inline-flex items-center gap-1.5 rounded-full border border-accent bg-surface-raised px-2.5 py-1 text-xs text-content">
-                        @TagLabel(tag)
+                        @TriageEmailDisplay.TagLabel(tag)
                         <button type="button" class="text-content-subtle hover:text-negative disabled:opacity-50" disabled="@TaggedSearchActive" @onclick="() => ToggleTag(tag)" title="Remove filter">✕</button>
                     </span>
                 }
@@ -637,76 +543,24 @@
                         }
                         @foreach (var item in taggedRows)
                         {
-                            <button type="button" @key="item.Id" @onclick="() => Select(item)" class="@RowClass(item)">
-                                <div class="flex items-baseline justify-between gap-2">
-                                    <span class="text-sm font-semibold text-content truncate">@DisplayFrom(item)</span>
-                                    <span class="text-[11px] text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
-                                </div>
-                                <div class="flex items-center gap-1.5 mt-0.5">
-                                    <p class="text-sm text-content-muted truncate flex-1">@Dash(item.Subject)</p>
-                                    @if (item.HasAttachments)
-                                    {
-                                        <span title="Has attachments" class="inline-flex items-center text-content-subtle shrink-0">@PaperclipIcon</span>
-                                    }
-                                </div>
-                                @if (!string.IsNullOrWhiteSpace(item.BodyPreview))
-                                {
-                                    <p class="text-xs text-content-subtle truncate mt-0.5">@FirstLineOf(item.BodyPreview)</p>
-                                }
-                                @* Parked work waits on this email — the marker says "open me to carry on". *@
-                                @if (parkedTriageByEmailId.ContainsKey(item.Id))
-                                {
-                                    <p class="text-[10px] font-semibold text-accent mt-0.5">✎ draft in progress</p>
-                                }
-                                @if (item.Bucket is not null || item.Categories.Count > 0)
-                                {
-                                    <div class="flex flex-wrap items-center gap-1 mt-1">
-                                        @* The pathway badge leads the chip row: the thread's filing is the first thing
-                                           to know about a tagged email, before which records it feeds. *@
-                                        @if (PathwayFromBucket(item.Bucket) is { } rowPathway)
-                                        {
-                                            <span class="inline-flex items-center rounded-full @PathwayChipColour(rowPathway) text-[10px] font-medium px-2 py-0.5">@PathwayLabel(rowPathway)</span>
-                                        }
-                                        @foreach (var tag in item.Categories)
-                                        {
-                                            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
-                                        }
-                                    </div>
-                                }
-                                else
-                                {
-                                    @* Only reachable from a free-text search hit — the paged pile is
-                                       tagged by definition. Selecting it opens it for tagging. *@
-                                    <div class="flex flex-wrap items-center gap-1 mt-1">
-                                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line text-content-subtle text-[10px] font-medium px-2 py-0.5">Untagged — still in the queue</span>
-                                    </div>
-                                }
-                            </button>
+                            <TriageEmailRow Item="item"
+                                            IsSelected="@(selected?.Id == item.Id)"
+                                            HasParkedDraft="@parkedTriageByEmailId.ContainsKey(item.Id)"
+                                            ShowFilingChips="true"
+                                            ShowUntaggedFallback="true"
+                                            OnSelect="item => Select(item)" />
                         }
 
                         @* Free-text results are one relevance-ordered page, not the cursor-paged
                            pile, so the pager stands down while they're up. *@
-                        @if (taggedSearchResults is null && TaggedPageCount > 1)
+                        @if (taggedSearchResults is null)
                         {
-                            <div class="flex items-center justify-between gap-2 pt-2">
-                                @if (taggedIndex > 0)
-                                {
-                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="PreviousTagged">Previous</button>
-                                }
-                                else
-                                {
-                                    <span></span>
-                                }
-                                <span class="text-[11px] text-content-subtle">Page @(taggedIndex + 1) / @TaggedPageCount · @taggedTotal email@(taggedTotal == 1 ? "" : "s")</span>
-                                @if (taggedNext is not null)
-                                {
-                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="NextTagged">Next</button>
-                                }
-                                else
-                                {
-                                    <span></span>
-                                }
-                            </div>
+                            <EmailListPager PageIndex="taggedIndex"
+                                            PageCount="TaggedPageCount"
+                                            Total="taggedTotal"
+                                            HasNext="@(taggedNext is not null)"
+                                            OnPrevious="PreviousTagged"
+                                            OnNext="NextTagged" />
                         }
                     </div>
             }
@@ -800,11 +654,11 @@
                             <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tagged</span>
                             @if (FixedPathway is { } openEmailPathway)
                             {
-                                <span class="inline-flex items-center rounded-full @PathwayChipColour(openEmailPathway) text-xs font-medium px-2.5 py-1">@PathwayLabel(openEmailPathway)</span>
+                                <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(openEmailPathway) text-xs font-medium px-2.5 py-1">@TriagePathways.Label(openEmailPathway)</span>
                             }
                             @foreach (var tag in selected.Categories)
                             {
-                                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2.5 py-1">@TagLabel(tag)</span>
+                                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2.5 py-1">@TriageEmailDisplay.TagLabel(tag)</span>
                             }
                         </div>
                     }
@@ -947,7 +801,7 @@
                                         @if (FixedPathway is { } taggedPathway)
                                         {
                                             <div class="mb-2">
-                                                <span class="inline-flex items-center rounded-full @PathwayChipColour(taggedPathway) text-xs font-medium px-2.5 py-1">Filed under @PathwayLabel(taggedPathway)</span>
+                                                <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(taggedPathway) text-xs font-medium px-2.5 py-1">Filed under @TriagePathways.Label(taggedPathway)</span>
                                             </div>
                                         }
                                         @if (selected.Categories.Count == 0)
@@ -960,7 +814,7 @@
                                                 @foreach (var tag in selected.Categories)
                                                 {
                                                     <span class="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-raised px-2.5 py-1 text-xs text-content">
-                                                        @TagLabel(tag)
+                                                        @TriageEmailDisplay.TagLabel(tag)
                                                         <button type="button" class="text-content-subtle hover:text-negative" disabled="@busy" @onclick="() => DoRemoveTag(tag)" title="Remove this tag">✕</button>
                                                     </span>
                                                 }
@@ -1015,7 +869,7 @@
                                                Internal included, now the wall is gone. *@
                                             @if (FixedPathway is { } fixedPw && ImpliedPathway(linkRecordType) is { } linkPw && linkPw != fixedPw)
                                             {
-                                                <p class="text-xs text-content-subtle">This files the thread under @PathwayLabel(linkPw) as well as @PathwayLabel(fixedPw).</p>
+                                                <p class="text-xs text-content-subtle">This files the thread under @TriagePathways.Label(linkPw) as well as @TriagePathways.Label(fixedPw).</p>
                                             }
 
                                             <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(linkRecordId))" @onclick="DoAddTagLink">
@@ -1071,8 +925,8 @@
         <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
             <div class="min-w-0 max-w-full xl:max-w-sm">
                 <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Dealing with</p>
-                <p class="text-sm font-medium text-content truncate" title="@Dash(selected!.Subject)">@Dash(selected.Subject)</p>
-                <p class="text-[11px] text-content-subtle truncate">@DisplayFrom(selected) · @Date(selected.ReceivedAt)</p>
+                <p class="text-sm font-medium text-content truncate" title="@TriageEmailDisplay.Dash(selected!.Subject)">@TriageEmailDisplay.Dash(selected.Subject)</p>
+                <p class="text-[11px] text-content-subtle truncate">@TriageEmailDisplay.DisplayFrom(selected) · @TriageEmailDisplay.Date(selected.ReceivedAt)</p>
             </div>
 
             @* PROJECT — the easiest decision, made first; everything staged below uses it.
@@ -1118,8 +972,8 @@
                 @if (SelectedThreadTags is { Count: > 0 } inheritable)
                 {
                     <div class="flex items-center justify-between gap-3"
-                         title="@($"Yes files this email under the tags its thread already carries — {string.Join(", ", inheritable.Select(TagLabel))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes")">
-                        <span class="text-sm text-content">Use existing tags <span class="text-content-subtle">· @string.Join(", ", inheritable.Take(3).Select(TagLabel))@(inheritable.Count > 3 ? $" +{inheritable.Count - 3}" : "")</span></span>
+                         title="@($"Yes files this email under the tags its thread already carries — {string.Join(", ", inheritable.Select(TriageEmailDisplay.TagLabel))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes")">
+                        <span class="text-sm text-content">Use existing tags <span class="text-content-subtle">· @string.Join(", ", inheritable.Take(3).Select(TriageEmailDisplay.TagLabel))@(inheritable.Count > 3 ? $" +{inheritable.Count - 3}" : "")</span></span>
                         <div class="flex items-center shrink-0">
                             <button type="button" class="@YesNoClass(useThreadTags, answer: true, first: true)"
                                     @onclick="() => useThreadTags = true">Yes</button>
@@ -1409,11 +1263,11 @@ else
                                       title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
                                 @if (RecentHref(entry) is { } href)
                                 {
-                                    <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@Dash(entry.RecordReference)</a>
+                                    <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@TriageEmailDisplay.Dash(entry.RecordReference)</a>
                                 }
                                 else
                                 {
-                                    <span class="font-mono text-xs text-content-muted whitespace-nowrap">@Dash(entry.RecordReference)</span>
+                                    <span class="font-mono text-xs text-content-muted whitespace-nowrap">@TriageEmailDisplay.Dash(entry.RecordReference)</span>
                                 }
                                 <span class="text-xs text-content-muted truncate">@entry.Detail</span>
                                 <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@RecentMeta(entry)</span>
@@ -1442,7 +1296,7 @@ else
                      ProjectId="@triageProjectId"
                      ProjectName="@TriageProjectName"
                      EmailSubject="@OpenQueueEmailSubject"
-                     LockedPathway="@(FixedPathway is { } fp ? PathwayLabel(fp) : null)"
+                     LockedPathway="@(FixedPathway is { } fp ? TriagePathways.Label(fp) : null)"
                      Picked="pickedRecords"
                      OnStagingChanged="StateHasChanged"
                      OnEngaged="OnPathwayEngaged"

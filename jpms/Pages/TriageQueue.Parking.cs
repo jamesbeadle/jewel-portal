@@ -175,7 +175,7 @@ public partial class TriageQueue
         selected = item;
         // Pathway-first: pre-select the thread's own pathway when it already carries one (rendered as
         // a fixed badge); otherwise the triager chooses before any action beyond Discard is offered.
-        pathway = PathwayFromBucket(item.Bucket);
+        pathway = TriagePathways.FromBucket(item.Bucket);
         actionError = null;
         ResetLinkState();
         composeOutcome = null;
@@ -271,7 +271,7 @@ public partial class TriageQueue
 
         var refreshed = selected with { Categories = loaded.Categories, Bucket = loaded.Bucket };
         selected = refreshed;
-        if (refreshed.Bucket is not null) pathway = PathwayFromBucket(refreshed.Bucket);
+        if (refreshed.Bucket is not null) pathway = TriagePathways.FromBucket(refreshed.Bucket);
         items = ReplaceRow(items, refreshed);
         taggedItems = ReplaceRow(taggedItems, refreshed);
         discardedItems = ReplaceRow(discardedItems, refreshed);

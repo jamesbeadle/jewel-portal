@@ -189,9 +189,6 @@ public partial class TriageQueue
 
     private void OnTaggedRecordChanged(ChangeEventArgs e) => linkRecordId = e.Value?.ToString() ?? "";
 
-    // Display label for a workflow tag chip: drop the "JPMS/" prefix (e.g. "JPMS/RFI-001" -> "RFI-001").
-    private static string TagLabel(string tag) =>
-        tag.StartsWith("JPMS/", StringComparison.OrdinalIgnoreCase) ? tag["JPMS/".Length..] : tag;
 
     // Every project the signed-in user can see, completed ones included. Use this for LOOKING A
     // PROJECT UP BY ID (a stored id can point at a completed project whatever the toggle says);
@@ -254,13 +251,6 @@ public partial class TriageQueue
             .Where(w => w.Length > 3)
             .ToHashSet();
 
-    private string RowClass(MailboxMessage item)
-    {
-        var baseClass = "w-full text-left rounded-lg border px-3 py-2 transition";
-        return selected?.Id == item.Id
-            ? $"{baseClass} border-accent bg-surface-raised"
-            : $"{baseClass} border-line hover:border-line-strong hover:bg-surface-raised";
-    }
 
     private string ViewTabClass(QueueView tab)
     {
@@ -270,12 +260,8 @@ public partial class TriageQueue
             : $"{baseClass} border-transparent text-content-muted hover:text-content";
     }
 
-    private static string DisplayFrom(MailboxMessage item) =>
-        string.IsNullOrWhiteSpace(item.FromName) ? item.FromEmail : item.FromName;
 
-    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
-    private static string Date(DateTimeOffset value) => value.LocalDateTime.ToString("d MMM yyyy, HH:mm");
 
     // Outlook-style compact date for list rows: time alone today, "Yesterday 14:21", day name
     // within the week, then the date.
@@ -315,36 +301,8 @@ public partial class TriageQueue
     private string ProjectLabelFor(string projectId) =>
         AllProjects.FirstOrDefault(project => project.ProjectId == projectId)?.Name ?? "the chosen project";
 
-    private static string ListDate(DateTimeOffset value)
-    {
-        var local = value.LocalDateTime;
-        var today = DateTime.Now.Date;
-        if (local.Date == today) return local.ToString("HH:mm");
-        if (local.Date == today.AddDays(-1)) return $"Yesterday {local:HH:mm}";
-        if (local.Date > today.AddDays(-6)) return local.ToString("ddd HH:mm");
-        return local.ToString("d MMM yyyy");
-    }
 
-    // The group header a list row falls under — Today / Yesterday / day names this week / month.
-    private static string DateGroupLabel(DateTimeOffset value)
-    {
-        var local = value.LocalDateTime;
-        var today = DateTime.Now.Date;
-        if (local.Date == today) return "Today";
-        if (local.Date == today.AddDays(-1)) return "Yesterday";
-        if (local.Date > today.AddDays(-6)) return local.ToString("dddd");
-        return local.ToString("MMMM yyyy");
-    }
 
-    // Graph's bodyPreview can open with boilerplate line breaks; the row preview wants the first
-    // line with any content, whitespace collapsed.
-    private static string FirstLineOf(string preview)
-    {
-        var line = preview.Replace("\r\n", "\n").Split('\n')
-            .Select(l => l.Trim())
-            .FirstOrDefault(l => l.Length > 0) ?? "";
-        return System.Text.RegularExpressions.Regex.Replace(line, "\\s+", " ");
-    }
 
     // Avatar initials from the sender's display name ("Lorraine Proud" → "LP"), falling back to
     // the first letter of the address.

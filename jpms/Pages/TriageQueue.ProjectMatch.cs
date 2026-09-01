@@ -180,7 +180,7 @@ public partial class TriageQueue
     {
         if (record.Type != RecordType.CostCentre) return null;
         var side = view == QueueView.Tagged ? FixedPathway : pathway;
-        return side is TriagePathway.Client or TriagePathway.Subcontractor ? PathwayLabel(side.Value) : null;
+        return side is TriagePathway.Client or TriagePathway.Subcontractor ? TriagePathways.Label(side.Value) : null;
     }
 
     // "Reply in thread": the reply written here is staged as an Outlook draft on the email
