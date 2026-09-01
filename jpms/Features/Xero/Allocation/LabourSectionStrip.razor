@@ -1,0 +1,29 @@
+@namespace Jewel.JPMS.Features.Xero
+
+@* The Labour section's own strip: what it is, and the covered fold. Sits where the matched
+   banner sits on the plain queue — the section IS the explanation. *@
+<div class="mb-4 rounded-xl border border-line bg-surface-raised px-4 py-3 text-sm text-content-muted flex items-start justify-between gap-4 flex-wrap">
+    <p class="max-w-3xl">
+        These bills' suppliers are workers on the labour registry, so each is
+        <span class="text-content font-medium">settlement of timesheets</span>, not a cost to
+        allocate — the approved time already carries the cost per project.
+        Mark a bill against its month and the
+        <a class="underline underline-offset-4 hover:text-content" href="/labour/overview">Labour overview's Settlement view</a>
+        reconciles it and codes it into Xero, split by site and cost code.
+    </p>
+    @if (CoveredCount > 0)
+    {
+        <button class="text-xs text-content-subtle underline underline-offset-4 hover:text-content whitespace-nowrap"
+                @onclick="() => ShowCoveredChanged.InvokeAsync(!ShowCovered)">
+            @(ShowCovered ? "Hide covered" : $"Show covered ({CoveredCount})")
+        </button>
+    }
+</div>
+
+@code {
+    /// <summary>Marked lines in the fold — the toggle only shows when there are some.</summary>
+    [Parameter] public int CoveredCount { get; set; }
+    /// <summary>Page-owned: the fold filter reads it when partitioning the list.</summary>
+    [Parameter] public bool ShowCovered { get; set; }
+    [Parameter] public EventCallback<bool> ShowCoveredChanged { get; set; }
+}

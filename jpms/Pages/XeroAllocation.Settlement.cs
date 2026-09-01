@@ -19,7 +19,7 @@ public partial class XeroAllocation
 
     private async Task AllocateMatchedAsync()
     {
-        isApplying = true; errorMessage = null; confirmAllocateMatched = false;
+        isApplying = true; errorMessage = null;
         try
         {
             var allocated = await Ledger.AllocateSuggestedAsync();

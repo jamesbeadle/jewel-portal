@@ -145,17 +145,4 @@ public partial class XeroAllocation
     private int CountOf(XeroAllocationStatus status) =>
         Ledger.Counts()?.For(status) ?? 0;
 
-    // The plain Unallocated tab is active only when neither a project tab nor Labour is open.
-    private string TabClass(XeroAllocationStatus tab) =>
-        TabCss(activeTab == tab && (tab != XeroAllocationStatus.Unallocated || (activeProjectId is null && !labourTab)));
-
-    private string ProjectTabClass(string projectId) =>
-        TabCss(activeTab == XeroAllocationStatus.Unallocated && activeProjectId == projectId);
-
-    private string LabourTabClass() =>
-        TabCss(activeTab == XeroAllocationStatus.Unallocated && labourTab);
-
-    private static string TabCss(bool active) =>
-        (active ? "bg-content text-surface" : "bg-surface text-content-muted hover:text-content")
-        + " text-sm font-medium px-4 py-1.5 transition-colors";
 }

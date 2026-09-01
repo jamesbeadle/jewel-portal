@@ -1,0 +1,76 @@
+@namespace Jewel.JPMS.Features.Xero
+
+@* The incoming queue is split by project: a line whose project is real — saved via Set, or
+   suggested by its Xero tracking — sits in that project's tab, so people working a specific
+   project approve just their own costs. Dropdown picks alone don't move rows; Set/Allocate
+   do. "Unallocated" keeps only the lines nothing points at a project yet. *@
+<div class="inline-flex flex-wrap rounded-lg border border-line overflow-hidden">
+    <button class="@StatusClass(XeroAllocationStatus.Unallocated)" @onclick="() => OnSwitchStatus.InvokeAsync(XeroAllocationStatus.Unallocated)">
+        Unallocated (@UnassignedCount)
+    </button>
+    @foreach (var tab in ProjectTabs)
+    {
+        var projectId = tab.ProjectId;
+        <button class="@ProjectClass(projectId)" @onclick="() => OnSwitchProject.InvokeAsync(projectId)">
+            @tab.Name (@tab.Count)
+        </button>
+    }
+    @* Labour recognition (scope §6): bills whose supplier is a worker on the
+       labour registry are settlement of timesheets, not costs to allocate — they
+       fall in this section instead of the queue. The count is the outstanding
+       (unmarked) lines, the actionable number, like every other tab. *@
+    @if (ShowLabour)
+    {
+        <button class="@LabourClass" @onclick="() => OnSwitchLabour.InvokeAsync()">
+            Labour (@LabourOutstandingCount)
+        </button>
+    }
+    <button class="@StatusClass(XeroAllocationStatus.Allocated)" @onclick="() => OnSwitchStatus.InvokeAsync(XeroAllocationStatus.Allocated)">
+        Allocated (@AllocatedCount)
+    </button>
+    <button class="@StatusClass(XeroAllocationStatus.Bucketed)" @onclick="() => OnSwitchStatus.InvokeAsync(XeroAllocationStatus.Bucketed)">
+        Buckets (@BucketedCount)
+    </button>
+    <button class="@StatusClass(XeroAllocationStatus.Disputed)" @onclick="() => OnSwitchStatus.InvokeAsync(XeroAllocationStatus.Disputed)">
+        Disputed (@DisputedCount)
+    </button>
+    <button class="@StatusClass(XeroAllocationStatus.Ignored)" @onclick="() => OnSwitchStatus.InvokeAsync(XeroAllocationStatus.Ignored)">
+        Ignored (@IgnoredCount)
+    </button>
+</div>
+
+@code {
+    /// <summary>Which status tab is open, and which of Unallocated's sub-tabs (a project, Labour).</summary>
+    [Parameter] public XeroAllocationStatus Active { get; set; }
+    [Parameter] public string? ActiveProjectId { get; set; }
+    [Parameter] public bool LabourTab { get; set; }
+
+    [Parameter] public int UnassignedCount { get; set; }
+    /// <summary>One tab per project with incoming lines pointing at it — built by the page.</summary>
+    [Parameter] public IReadOnlyList<(string ProjectId, string Name, int Count)> ProjectTabs { get; set; }
+        = Array.Empty<(string, string, int)>();
+    [Parameter] public bool ShowLabour { get; set; }
+    [Parameter] public int LabourOutstandingCount { get; set; }
+    [Parameter] public int AllocatedCount { get; set; }
+    [Parameter] public int BucketedCount { get; set; }
+    [Parameter] public int DisputedCount { get; set; }
+    [Parameter] public int IgnoredCount { get; set; }
+
+    [Parameter] public EventCallback<XeroAllocationStatus> OnSwitchStatus { get; set; }
+    [Parameter] public EventCallback<string> OnSwitchProject { get; set; }
+    [Parameter] public EventCallback OnSwitchLabour { get; set; }
+
+    // The plain Unallocated tab is active only when neither a project tab nor Labour is open.
+    private string StatusClass(XeroAllocationStatus tab) =>
+        TabCss(Active == tab && (tab != XeroAllocationStatus.Unallocated || (ActiveProjectId is null && !LabourTab)));
+
+    private string ProjectClass(string projectId) =>
+        TabCss(Active == XeroAllocationStatus.Unallocated && ActiveProjectId == projectId);
+
+    private string LabourClass =>
+        TabCss(Active == XeroAllocationStatus.Unallocated && LabourTab);
+
+    private static string TabCss(bool active) =>
+        (active ? "bg-content text-surface" : "bg-surface text-content-muted hover:text-content")
+        + " text-sm font-medium px-4 py-1.5 transition-colors";
+}
