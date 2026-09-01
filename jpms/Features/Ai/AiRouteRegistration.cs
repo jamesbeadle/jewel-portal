@@ -1,7 +1,5 @@
 using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Contracts.Cqrs;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Features.Ai;
 

@@ -1,10 +1,3 @@
-using System.Net.Http;
-using System.Net.Http.Json;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
-using Jewel.JPMS.Components;
 using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Contracts.Audit;
 using Jewel.JPMS.Contracts.DocumentControl;
@@ -13,15 +6,11 @@ using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Contracts.Todos;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Todos;
 using Jewel.JPMS.Features.Triage;
 using Jewel.JPMS.Features.Triage.Panels;
 using Jewel.JPMS.Features.Triage.Workspace;
-using Jewel.JPMS.Models;
-using Jewel.JPMS.Services;
-using Jewel.JPMS.Services.Navigation;
 
 namespace Jewel.JPMS.Pages;
 

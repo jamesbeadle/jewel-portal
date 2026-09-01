@@ -1,12 +1,3 @@
-using System.Net.Http;
-using System.Net.Http.Json;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
-using Jewel.JPMS.Components;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
-using Jewel.JPMS.Services;
 using Jewel.JPMS.Services.Excel;
 using Jewel.JPMS.Contracts.Labour;
 using Jewel.JPMS.Contracts.Ai;

@@ -1,15 +1,4 @@
-using System.Net.Http;
-using System.Net.Http.Json;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.AspNetCore.Components.Web;
 using System.Text.Json;
-using Microsoft.JSInterop;
-using Jewel.JPMS.Components;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
-using Jewel.JPMS.Services;
-using Jewel.JPMS.Services.Navigation;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.Subcontractors;
 using Jewel.JPMS.Contracts.Boq;

@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.TenderEnquiries;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Features.TenderEnquiries;
 

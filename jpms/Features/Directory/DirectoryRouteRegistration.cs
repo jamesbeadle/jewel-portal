@@ -1,8 +1,6 @@
 using Jewel.JPMS.Contracts.AccessRequests;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Directory;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Directory;

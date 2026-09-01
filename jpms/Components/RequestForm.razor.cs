@@ -1,7 +1,4 @@
 using Jewel.JPMS.Contracts.Requests;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Forms;
 
 namespace Jewel.JPMS.Components;
 

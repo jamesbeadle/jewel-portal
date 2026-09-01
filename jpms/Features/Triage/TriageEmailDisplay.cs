@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.Requests;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Features.Triage;
 

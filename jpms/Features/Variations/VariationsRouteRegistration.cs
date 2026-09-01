@@ -1,7 +1,5 @@
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Variations;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Features.Variations;
 

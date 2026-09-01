@@ -1,6 +1,4 @@
 using Jewel.JPMS.Contracts.Commercial;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components.Web;
 
 namespace Jewel.JPMS.Components;
 

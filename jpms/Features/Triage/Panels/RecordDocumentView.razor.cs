@@ -1,7 +1,5 @@
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Features.Triage.Workspace;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components;
 
 namespace Jewel.JPMS.Features.Triage.Panels;
 
