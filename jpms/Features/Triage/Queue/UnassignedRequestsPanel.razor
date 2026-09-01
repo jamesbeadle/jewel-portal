@@ -1,0 +1,43 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Features.Triage
+
+@* The amber warning panel above the queue: requests not tied to a live project, invisible to
+   every register until someone returns them to the Control Centre and picks the right project.
+   The host renders it only when there is something to say. *@
+<div class="panel p-5 mb-6 border-amber-500/40">
+    <div class="flex items-start gap-2 mb-1">
+        <h2 class="text-sm font-semibold text-amber-700">Unassigned requests</h2>
+        <span class="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600">@Requests.Count</span>
+    </div>
+    <p class="text-xs text-content-subtle mb-3">
+        These requests aren't tied to a live project, so they don't appear in any register. Return one to the Control Centre to process its emails again and pick the right project.
+    </p>
+    @if (Error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@Error</p>
+    }
+    <div class="space-y-2">
+        @foreach (var request in Requests)
+        {
+            <div @key="request.RequestId" class="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2">
+                <div class="min-w-0">
+                    <p class="text-sm text-content truncate">
+                        <span class="font-mono text-xs text-content-muted mr-2">@TriageEmailDisplay.Dash(request.Reference)</span>@TriageEmailDisplay.Dash(request.Title)
+                    </p>
+                    <p class="text-[11px] text-content-subtle mt-0.5">Issued @TriageEmailDisplay.Date(request.IssuedAt ?? request.RaisedAt) · @TriageEmailDisplay.Dash(request.RaisedByEmail)</p>
+                </div>
+                <button type="button" class="btn-secondary text-xs whitespace-nowrap"
+                        disabled="@Busy" @onclick="() => OnReturn.InvokeAsync(request)">
+                    Return to Control Centre
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Request> Requests { get; set; } = default!;
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<Request> OnReturn { get; set; }
+}

@@ -308,52 +308,6 @@ public partial class TriageQueue
         catch { /* reported by the query client; the panel stays absent */ }
     }
 
-    // Where each record family's page lives — the click-through from a recently-triaged row to the
-    // document the email was filed against. Families without a per-record page land on the closest
-    // project tab (work orders, programme, financials, to-dos); anything unresolvable reads as text.
-    private static string? RecentHref(AuditEvent entry)
-    {
-        if (entry.RecordType == RecordType.SubcontractorComms) return "/subcontractors/communications";
-        if (entry.RecordType == RecordType.SupplierComms) return "/suppliers/communications";
-        if (entry.RecordType == RecordType.InternalComms) return "/internal/communications";
-        if (string.IsNullOrEmpty(entry.ProjectId))
-            return entry.RecordType == RecordType.Todo ? "/todos" : null;
-        var projectId = entry.ProjectId;
-        var recordId = entry.RecordId;
-        return entry.RecordType switch
-        {
-            RecordType.Request => string.IsNullOrEmpty(recordId) ? null : $"/projects/{projectId}/requests/view/{recordId}",
-            RecordType.Variation or RecordType.VariationQuote => string.IsNullOrEmpty(recordId) ? null : $"/projects/{projectId}/variations/{recordId}",
-            RecordType.BidPackageInvite => string.IsNullOrEmpty(recordId) ? null : $"/projects/{projectId}/bid-package-invites/{recordId}",
-            RecordType.WorkOrder  => $"/projects/{projectId}/work-orders",
-            RecordType.Scheduling or RecordType.Lad => $"/projects/{projectId}/programme",
-            RecordType.CostCentre => $"/projects/{projectId}/financials",
-            RecordType.Todo       => $"/projects/{projectId}/todos",
-            RecordType.Inventory  => $"/projects/{projectId}/inventory",
-            _ => null
-        };
-    }
-
-    // The right-hand meta on a recently-triaged row: project reference (when the project is known)
-    // and who did it. Reads AllProjects so a completed project's reference still resolves.
-    private string RecentMeta(AuditEvent entry)
-    {
-        var project = AllProjects.FirstOrDefault(p => p.ProjectId == entry.ProjectId);
-        return project is null ? entry.ActorEmail : $"{project.Reference} · {entry.ActorEmail}";
-    }
-
-    // Compact relative stamp for scanning (mirrors the audit trail page); the exact moment sits in
-    // the row's hover title.
-    private static string Ago(DateTimeOffset at)
-    {
-        var span = DateTimeOffset.UtcNow - at;
-        if (span < TimeSpan.FromMinutes(1)) return "just now";
-        if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes}m ago";
-        if (span < TimeSpan.FromHours(24)) return $"{(int)span.TotalHours}h ago";
-        if (span < TimeSpan.FromDays(30)) return $"{(int)span.TotalDays}d ago";
-        return at.LocalDateTime.ToString("d MMM yyyy");
-    }
-
     // Triage is restricted to administrators, project managers, and the finance director.
     // Administrators are granted every role server-side, so they always carry Role.ProjectManager too.
     private bool CanTriage =>
