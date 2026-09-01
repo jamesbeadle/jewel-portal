@@ -892,86 +892,6 @@
         </div>
     </div>;
 
-    RenderFragment ComposePaneContent =@<div class="panel p-5">
-        <h2 class="text-base font-semibold text-content mb-4">New email</h2>
-        <div class="space-y-3">
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-            Sends from the <span class="font-medium text-content">projects mailbox</span>. Optionally file it to a record so the sent copy shows in that record's correspondence — replies will arrive in the queue either way.
-        </p>
-
-        @if (newEmailError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@newEmailError</p>
-        }
-
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
-            <input class="field" type="text" placeholder="name@example.com; other@example.com"
-                   value="@newEmailTo" @oninput="OnNewEmailToInput" />
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
-                <input class="field" type="text" placeholder="Separated by ;"
-                       value="@newEmailCc" @oninput="OnNewEmailCcInput" />
-            </div>
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
-                <input class="field" type="text" placeholder="Separated by ;"
-                       value="@newEmailBcc" @oninput="OnNewEmailBccInput" />
-            </div>
-        </div>
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
-            <input class="field" type="text" value="@newEmailSubject" @oninput="OnNewEmailSubjectInput" />
-        </div>
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Message *</label>
-            <RichTextEditor Value="@newEmailBody" ValueChanged="OnNewEmailBodyChanged" MinHeight="200" Placeholder="Write the email…" />
-        </div>
-
-        <AttachmentPicker Attachments="newEmailAttachments" AttachmentsChanged="OnNewEmailAttachmentsChanged"
-                          Projects="ProjectOptionsFor(newEmailProjectId)" ProjectId="@newEmailProjectId" />
-
-        <div class="rounded-lg border border-line p-3 space-y-2">
-            <label class="flex items-center gap-2 text-sm text-content">
-                <input type="checkbox" checked="@newEmailFile" @onchange="OnNewEmailFileToggled" />
-                File this email to a record (the sent copy shows in its correspondence)
-            </label>
-            @if (newEmailFile)
-            {
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <select class="field" value="@newEmailProjectId" @onchange="OnNewEmailProjectChanged">
-                        <option value="">Select a project…</option>
-                        @foreach (var project in ProjectOptionsFor(newEmailProjectId))
-                        {
-                            <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                        }
-                    </select>
-                    <select class="field" value="@((int)newEmailRecordType)" @onchange="OnNewEmailRecordTypeChanged">
-                        @foreach (var recordType in RecordTypeOptions)
-                        {
-                            <option value="@((int)recordType)">@RecordTypeLabel(recordType)</option>
-                        }
-                    </select>
-                    <select class="field" value="@newEmailRecordId" @onchange="OnNewEmailRecordChanged" disabled="@(string.IsNullOrEmpty(newEmailProjectId))">
-                        <option value="">@(string.IsNullOrEmpty(newEmailProjectId) ? "Select a project first…" : newEmailRecordsLoading ? "Loading…" : "Select a record…")</option>
-                        @foreach (var record in newEmailRecords)
-                        {
-                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
-                        }
-                    </select>
-                </div>
-            }
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-1">
-            <button type="button" class="btn-ghost" disabled="@newEmailBusy" @onclick="CloseNewEmail">Cancel</button>
-            <button type="button" class="btn-secondary" disabled="@(newEmailBusy || !NewEmailIsSendable)" @onclick="() => DoSendNewEmail(saveAsDraftOnly: true)">Save as draft</button>
-            <button type="button" class="btn-primary" disabled="@(newEmailBusy || !NewEmailIsSendable)" @onclick="() => DoSendNewEmail(saveAsDraftOnly: false)">@(newEmailBusy ? "Sending…" : "Send")</button>
-        </div>
-    </div>
-    </div>;
 }
 
 @if (!sessionReady)
@@ -1049,7 +969,13 @@ else
                 <PreviewPane Request="@workspace.Preview" OnClose="() => workspace.ClosePreview()" />
             </PreviewContent>
             <XeroContent><XeroExplorerPane OnPreview="OpenXeroPreview" /></XeroContent>
-            <ComposeContent>@ComposePaneContent</ComposeContent>
+            <ComposeContent>
+                <NewEmailComposerPane ProjectOptionsFor="ProjectOptionsFor"
+                                      LinkableRecordTypes="RecordTypeOptions"
+                                      RecordTypeLabel="RecordTypeLabel"
+                                      OnClosed="() => workspace.Close(PanelKind.Compose)"
+                                      OnSent="outcome => composeOutcome = outcome" />
+            </ComposeContent>
             <OutboxContent>
                 <OutboxPane QueuedReplies="queuedReplies"
                             OnChanged="StateHasChanged"

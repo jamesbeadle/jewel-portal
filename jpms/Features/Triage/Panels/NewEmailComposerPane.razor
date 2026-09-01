@@ -1,0 +1,90 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Triage
+@inject IIntakeQueue Intake
+
+@* The Compose window: a fresh outbound thread from the projects mailbox (was the New email
+   modal). The pane owns its whole form — envelope, body, attachments, the optional file-to-a-
+   record picks and the send itself; the host page only learns two things: the pane wants its
+   window closed (Cancel, or a send that just completed) and a send's outcome for the page
+   banner. The workspace keeps every once-shown pane rendered, so a half-written email survives
+   swapping the window to other panes and back. *@
+<div class="panel p-5">
+    <h2 class="text-base font-semibold text-content mb-4">New email</h2>
+    <div class="space-y-3">
+    <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+        Sends from the <span class="font-medium text-content">projects mailbox</span>. Optionally file it to a record so the sent copy shows in that record's correspondence — replies will arrive in the queue either way.
+    </p>
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+    }
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
+        <input class="field" type="text" placeholder="name@example.com; other@example.com"
+               value="@toField" @oninput="e => toField = e.Value?.ToString() ?? string.Empty" />
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
+            <input class="field" type="text" placeholder="Separated by ;"
+                   value="@ccField" @oninput="e => ccField = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
+            <input class="field" type="text" placeholder="Separated by ;"
+                   value="@bccField" @oninput="e => bccField = e.Value?.ToString() ?? string.Empty" />
+        </div>
+    </div>
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
+        <input class="field" type="text" value="@subject" @oninput="e => subject = e.Value?.ToString() ?? string.Empty" />
+    </div>
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Message *</label>
+        <RichTextEditor @bind-Value="body" MinHeight="200" Placeholder="Write the email…" />
+    </div>
+
+    <AttachmentPicker Attachments="attachments" AttachmentsChanged="picked => attachments = picked"
+                      Projects="ProjectOptionsFor(projectId)" ProjectId="@projectId" />
+
+    <div class="rounded-lg border border-line p-3 space-y-2">
+        <label class="flex items-center gap-2 text-sm text-content">
+            <input type="checkbox" checked="@fileToRecord" @onchange="OnFileToggled" />
+            File this email to a record (the sent copy shows in its correspondence)
+        </label>
+        @if (fileToRecord)
+        {
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <select class="field" value="@projectId" @onchange="OnProjectChanged">
+                    <option value="">Select a project…</option>
+                    @foreach (var project in ProjectOptionsFor(projectId))
+                    {
+                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                    }
+                </select>
+                <select class="field" value="@((int)recordType)" @onchange="OnRecordTypeChanged">
+                    @foreach (var option in LinkableRecordTypes)
+                    {
+                        <option value="@((int)option)">@RecordTypeLabel(option)</option>
+                    }
+                </select>
+                <select class="field" value="@recordId" @onchange="e => recordId = e.Value?.ToString() ?? string.Empty" disabled="@(string.IsNullOrEmpty(projectId))">
+                    <option value="">@(string.IsNullOrEmpty(projectId) ? "Select a project first…" : recordsLoading ? "Loading…" : "Select a record…")</option>
+                    @foreach (var record in records)
+                    {
+                        <option value="@record.RecordId">@record.Reference — @record.Title</option>
+                    }
+                </select>
+            </div>
+        }
+    </div>
+
+    <div class="flex items-center justify-end gap-2 pt-1">
+        <button type="button" class="btn-ghost" disabled="@busy" @onclick="Close">Cancel</button>
+        <button type="button" class="btn-secondary" disabled="@(busy || !IsSendable)" @onclick="() => SendAsync(saveAsDraftOnly: true)">Save as draft</button>
+        <button type="button" class="btn-primary" disabled="@(busy || !IsSendable)" @onclick="() => SendAsync(saveAsDraftOnly: false)">@(busy ? "Sending…" : "Send")</button>
+    </div>
+    </div>
+</div>
