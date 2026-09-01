@@ -50,194 +50,6 @@
 @{
     // Small paperclip glyph flagging an email as carrying attachments — shown on list rows
     // (queue / discarded / tagged) and thread panel rows. Inherits the row's text colour.
-    RenderFragment PaperclipIcon =
-        @<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-              class="w-3 h-3 shrink-0" aria-hidden="true">
-            <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-        </svg>;
-
-    RenderFragment MessageHeader =@<div>
-        <h2 class="text-lg font-semibold text-content">@TriageEmailDisplay.Dash(selected!.Subject)</h2>
-        <div class="flex items-start gap-3 mt-3">
-            <div class="h-9 w-9 shrink-0 rounded-full bg-accent/15 text-accent flex items-center justify-center text-sm font-semibold select-none"
-                 aria-hidden="true">@SenderInitials(selected)</div>
-            <div class="min-w-0 flex-1">
-                <div class="flex items-baseline justify-between gap-3">
-                    <p class="text-sm text-content truncate">
-                        <span class="font-semibold">@TriageEmailDisplay.DisplayFrom(selected)</span>
-                        @if (!string.IsNullOrWhiteSpace(selected.FromName) && !string.IsNullOrWhiteSpace(selected.FromEmail))
-                        {
-                            <span class="text-content-subtle"> &lt;@selected.FromEmail&gt;</span>
-                        }
-                    </p>
-                    <span class="text-xs text-content-subtle shrink-0">@TriageEmailDisplay.Date(selected.ReceivedAt)</span>
-                </div>
-                @if (detail?.To is { Count: > 0 } headerTo)
-                {
-                    <p class="text-xs text-content-subtle truncate mt-0.5">To: @string.Join("; ", headerTo)</p>
-                }
-                @if (detail?.Cc is { Count: > 0 } headerCc)
-                {
-                    <p class="text-xs text-content-subtle truncate mt-0.5">Cc: @string.Join("; ", headerCc)</p>
-                }
-            </div>
-        </div>
-    </div>;
-
-    @*
-        Attachments: names, preview, download and the "Send to document triage" tick for the
-        open email. Rendered at the TOP of the email pane — above the body — so the attachments
-        are dealt with first and can never scroll out of sight (decision 2026-08-12; the routing
-        itself — drawings, payment certificates, subcontractor documents — lives in Document
-        Control, where each file is triaged on its own).
-    *@
-    RenderFragment MessageAttachments =@<text>
-        @if (detail is not null && detail.Attachments.Count > 0)
-        {
-            <div class="rounded-lg bg-surface-raised border border-line p-3">
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
-                    @detail.Attachments.Count attachment@(detail.Attachments.Count == 1 ? "" : "s")
-                </p>
-                <ul class="space-y-1">
-                    @foreach (var att in detail.Attachments)
-                    {
-                        <li class="flex items-center justify-between gap-3 text-sm text-content">
-                            <span class="truncate">@att.Name</span>
-                            <span class="flex items-center gap-3 whitespace-nowrap">
-                                @if (att.Size > 0)
-                                {
-                                    <span class="text-xs text-content-subtle">@FormatSize(att.Size)</span>
-                                }
-                                @if (!string.IsNullOrEmpty(att.Id))
-                                {
-                                    @if (IsPreviewable(att))
-                                    {
-                                        <button type="button" class="text-xs text-accent hover:underline"
-                                                @onclick="() => OpenEmailAttachmentPreview(att)">
-                                            Preview
-                                        </button>
-                                    }
-                                    <a href="@AttachmentUrl(att, inline: false)" target="_blank" rel="noopener"
-                                       class="text-xs text-accent hover:underline">Download</a>
-                                    @if (view == QueueView.Active)
-                                    {
-                                        <label class="flex items-center gap-1.5 text-xs text-content-muted hover:text-content cursor-pointer select-none"
-                                               title="Copy this file into the Document Triage queue when Apply runs — the email itself stays here">
-                                            <input type="checkbox" checked="@stagedDocControlIds.Contains(att.Id)"
-                                                   disabled="@busy"
-                                                   @onchange="e => ToggleDocControl(att.Id, e.Value is true)" />
-                                            <span>Send to document triage</span>
-                                        </label>
-                                    }
-                                }
-                            </span>
-                        </li>
-                    }
-                </ul>
-            </div>
-        }
-        else if (selected is not null && selected.HasAttachments && detail is not null)
-        {
-            <p class="text-xs text-content-subtle italic">This email has attachments, but their names couldn't be retrieved.</p>
-        }
-    </text>;
-
-    RenderFragment MessageBody =@<text>
-        <div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
-            @if (detailLoading)
-            {
-                <p class="text-sm text-content-subtle italic">Loading message…</p>
-            }
-            else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
-            {
-                <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)detail.BodyHtml)</div>
-            }
-            else if (detail is not null && !string.IsNullOrWhiteSpace(detail.BodyHtml))
-            {
-                <p class="text-sm text-content whitespace-pre-wrap">@detail.BodyHtml</p>
-            }
-            else
-            {
-                <p class="text-sm text-content-subtle italic">@(selected is null ? "" : TriageEmailDisplay.Dash(selected.BodyPreview))</p>
-            }
-        </div>
-
-        @* Replies already sent from the projects mailbox on this thread — shown right under the
-           email so "did we answer this?" never needs Outlook, and another reply can follow. *@
-        @if (SentReplies.Count > 0)
-        {
-            <div class="rounded-lg border border-positive/30 bg-positive/5 p-3 space-y-1.5">
-                <p class="text-[11px] uppercase tracking-wider text-positive font-semibold">Replies sent · @SentReplies.Count</p>
-                @foreach (var sent in SentReplies)
-                {
-                    <button type="button" @key="sent.Id" class="w-full text-left text-xs hover:bg-surface-raised rounded px-1.5 py-1"
-                            title="Open this reply" @onclick="() => Select(sent)">
-                        <span class="text-content-subtle">@TriageEmailDisplay.ListDate(sent.ReceivedAt)</span>
-                        <span class="text-content ml-2">@TriageEmailDisplay.FirstLineOf(sent.BodyPreview)</span>
-                    </button>
-                }
-            </div>
-        }
-
-        @*
-            Thread panel: the rest of this email's conversation, read live and regardless of tags.
-            Later replies often say how the older messages should be triaged (e.g. "ignore my last —
-            resolved on site"), so triaging oldest-first still shows the newest context. Click a
-            member to open it. Linking or discarding already applies to the whole thread server-side.
-        *@
-        @if (selected is not null && !string.IsNullOrEmpty(selected.ConversationId))
-        {
-            @if (threadLoading)
-            {
-                <p class="text-xs text-content-subtle italic">Checking the thread for replies…</p>
-            }
-            else if (threadError is { } threadProblem)
-            {
-                <p class="text-xs text-amber-600">
-                    @threadProblem
-                    <button type="button" class="ml-2 underline" @onclick="() => LoadThreadAsync(selected!)">Retry</button>
-                </p>
-            }
-            else if (thread.Count > 1)
-            {
-                @* The thread as TABS, not a stacked list: one numbered chip per email (oldest →
-                   newest), the open one highlighted — click a tab and the content above switches
-                   to that email. A row of chips carries an 11-email thread in one line. *@
-                <div class="rounded-lg bg-surface-raised border border-line px-3 py-2">
-                    <div class="flex flex-wrap items-center gap-1.5">
-                        <span class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mr-1">
-                            Thread · email @(ThreadPositionOfSelected) of @thread.Count
-                        </span>
-                        @for (var i = 0; i < thread.Count; i++)
-                        {
-                            var member = thread[i];
-                            var isCurrent = member.Id == selected.Id;
-                            var isLatest = i == thread.Count - 1;
-                            <button type="button" @key="member.Id" disabled="@isCurrent"
-                                    title="@($"{TriageEmailDisplay.DisplayFrom(member)} — {TriageEmailDisplay.Date(member.ReceivedAt)}{(member.HasAttachments ? " · has attachments" : "")}")"
-                                    @onclick="() => Select(member)"
-                                    class="@ThreadTabClass(isCurrent, isLatest)">
-                                @(i + 1)@(isLatest ? " ·" : "")
-                            </button>
-                        }
-                        @if (thread[^1].Id != selected.Id)
-                        {
-                            <span class="text-[11px] text-content-subtle">· read the latest (@thread.Count) before triaging — actions apply to the whole thread</span>
-                        }
-                        @if (threadMatchedBySubject)
-                        {
-                            <span class="text-[11px] text-amber-600"
-                                  title="Outlook gave this email a different conversation id from the rest of the chain, so its members were found by subject. Apply's whole-thread sweep follows Outlook's id — emails matched here by subject keep their own queue entries and are triaged from those.">
-                                · thread matched by subject — Entire thread = Yes sweeps only the emails sharing this one's Outlook id
-                            </span>
-                        }
-                    </div>
-                </div>
-            }
-        }
-
-    </text>;
 
     @*
         The four page-owned pane contents for the workspace (the other four panes own their own
@@ -643,29 +455,40 @@
             else
             {
                 <div class="panel p-5 space-y-4 relative">
-                    @MessageHeader
-
-                    @* The filing this email already carries — only ever present on a queue email
-                       that was tagged while open (Create now), so the triager sees the record
-                       tag land without leaving the email. Managing tags stays on the Tagged tab. *@
-                    @if (selected.Bucket is not null || selected.Categories.Count > 0)
-                    {
-                        <div class="flex flex-wrap items-center gap-1.5">
-                            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tagged</span>
-                            @if (FixedPathway is { } openEmailPathway)
+                    <TriageMessageDetail Selected="selected"
+                                         Detail="detail"
+                                         DetailLoading="detailLoading"
+                                         Thread="thread"
+                                         ThreadLoading="threadLoading"
+                                         ThreadError="@threadError"
+                                         ThreadMatchedBySubject="threadMatchedBySubject"
+                                         ShowDocumentTriageTick="true"
+                                         StagedDocumentControlIds="stagedDocControlIds"
+                                         Busy="busy"
+                                         OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
+                                         OnSelectMessage="message => Select(message)"
+                                         OnRetryThread="() => LoadThreadAsync(selected!)"
+                                         OnPreviewAttachment="OpenEmailAttachmentPreview">
+                        <AfterHeader>
+                            @* The filing this email already carries — only ever present on a queue email
+                               that was tagged while open (Create now), so the triager sees the record
+                               tag land without leaving the email. Managing tags stays on the Tagged tab. *@
+                            @if (selected!.Bucket is not null || selected.Categories.Count > 0)
                             {
-                                <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(openEmailPathway) text-xs font-medium px-2.5 py-1">@TriagePathways.Label(openEmailPathway)</span>
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tagged</span>
+                                    @if (FixedPathway is { } openEmailPathway)
+                                    {
+                                        <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(openEmailPathway) text-xs font-medium px-2.5 py-1">@TriagePathways.Label(openEmailPathway)</span>
+                                    }
+                                    @foreach (var tag in selected.Categories)
+                                    {
+                                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2.5 py-1">@TriageEmailDisplay.TagLabel(tag)</span>
+                                    }
+                                </div>
                             }
-                            @foreach (var tag in selected.Categories)
-                            {
-                                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2.5 py-1">@TriageEmailDisplay.TagLabel(tag)</span>
-                            }
-                        </div>
-                    }
-
-                    @MessageAttachments
-
-                    @MessageBody
+                        </AfterHeader>
+                    </TriageMessageDetail>
 
                             @* Reply (or forward) where the reading ends — you get to the bottom of
                                an email and answer it or pass it on, so the buttons (and the open
@@ -756,11 +579,20 @@
                                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
                                 }
 
-                                @MessageHeader
-
-                                @MessageAttachments
-
-                                @MessageBody
+                                <TriageMessageDetail Selected="selected"
+                                                     Detail="detail"
+                                                     DetailLoading="detailLoading"
+                                                     Thread="thread"
+                                                     ThreadLoading="threadLoading"
+                                                     ThreadError="@threadError"
+                                                     ThreadMatchedBySubject="threadMatchedBySubject"
+                                                     ShowDocumentTriageTick="false"
+                                                     StagedDocumentControlIds="stagedDocControlIds"
+                                                     Busy="busy"
+                                                     OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
+                                                     OnSelectMessage="message => Select(message)"
+                                                     OnRetryThread="() => LoadThreadAsync(selected!)"
+                                                     OnPreviewAttachment="OpenEmailAttachmentPreview" />
 
                                 <div class="pt-3 border-t border-line">
                                     <p class="text-sm text-content-muted mb-3">
@@ -787,11 +619,20 @@
                                     <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
                                 }
 
-                                @MessageHeader
-
-                                @MessageAttachments
-
-                                @MessageBody
+                                <TriageMessageDetail Selected="selected"
+                                                     Detail="detail"
+                                                     DetailLoading="detailLoading"
+                                                     Thread="thread"
+                                                     ThreadLoading="threadLoading"
+                                                     ThreadError="@threadError"
+                                                     ThreadMatchedBySubject="threadMatchedBySubject"
+                                                     ShowDocumentTriageTick="false"
+                                                     StagedDocumentControlIds="stagedDocControlIds"
+                                                     Busy="busy"
+                                                     OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
+                                                     OnSelectMessage="message => Select(message)"
+                                                     OnRetryThread="() => LoadThreadAsync(selected!)"
+                                                     OnPreviewAttachment="OpenEmailAttachmentPreview" />
 
                                 <div class="pt-3 border-t border-line space-y-4">
                                     <div>
@@ -905,11 +746,20 @@
                     Reading copy — the reply is written in the other window
                 </p>
 
-                @MessageHeader
-
-                @MessageAttachments
-
-                @MessageBody
+                <TriageMessageDetail Selected="selected"
+                                     Detail="detail"
+                                     DetailLoading="detailLoading"
+                                     Thread="thread"
+                                     ThreadLoading="threadLoading"
+                                     ThreadError="@threadError"
+                                     ThreadMatchedBySubject="threadMatchedBySubject"
+                                     ShowDocumentTriageTick="@(view == QueueView.Active)"
+                                     StagedDocumentControlIds="stagedDocControlIds"
+                                     Busy="busy"
+                                     OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
+                                     OnSelectMessage="message => Select(message)"
+                                     OnRetryThread="() => LoadThreadAsync(selected!)"
+                                     OnPreviewAttachment="OpenEmailAttachmentPreview" />
             </div>
         }
     </div>;

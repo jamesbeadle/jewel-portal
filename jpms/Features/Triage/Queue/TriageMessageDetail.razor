@@ -1,0 +1,223 @@
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Contracts.Requests
+@namespace Jewel.JPMS.Features.Triage.Queue
+
+@* The open email, read in full: header with sender avatar and recipients, the attachment list
+   (with preview / download / the document-triage tick), the body, replies already sent on the
+   thread, and the thread's tab strip. Both the email pane and its read-only mirror render this,
+   fed the same live state, so the two stay in step. *@
+
+<div>
+    <h2 class="text-lg font-semibold text-content">@TriageEmailDisplay.Dash(Selected.Subject)</h2>
+    <div class="flex items-start gap-3 mt-3">
+        <div class="h-9 w-9 shrink-0 rounded-full bg-accent/15 text-accent flex items-center justify-center text-sm font-semibold select-none"
+             aria-hidden="true">@TriageEmailDisplay.SenderInitials(Selected)</div>
+        <div class="min-w-0 flex-1">
+            <div class="flex items-baseline justify-between gap-3">
+                <p class="text-sm text-content truncate">
+                    <span class="font-semibold">@TriageEmailDisplay.DisplayFrom(Selected)</span>
+                    @if (!string.IsNullOrWhiteSpace(Selected.FromName) && !string.IsNullOrWhiteSpace(Selected.FromEmail))
+                    {
+                        <span class="text-content-subtle"> &lt;@Selected.FromEmail&gt;</span>
+                    }
+                </p>
+                <span class="text-xs text-content-subtle shrink-0">@TriageEmailDisplay.Date(Selected.ReceivedAt)</span>
+            </div>
+            @if (Detail?.To is { Count: > 0 } headerTo)
+            {
+                <p class="text-xs text-content-subtle truncate mt-0.5">To: @string.Join("; ", headerTo)</p>
+            }
+            @if (Detail?.Cc is { Count: > 0 } headerCc)
+            {
+                <p class="text-xs text-content-subtle truncate mt-0.5">Cc: @string.Join("; ", headerCc)</p>
+            }
+        </div>
+    </div>
+</div>
+
+@AfterHeader
+
+@* Attachments render at the TOP — above the body — so they are dealt with first and can never
+   scroll out of sight (decision 2026-08-12; the routing itself lives in Document Control). *@
+@if (Detail is not null && Detail.Attachments.Count > 0)
+{
+    <div class="rounded-lg bg-surface-raised border border-line p-3">
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+            @Detail.Attachments.Count attachment@(Detail.Attachments.Count == 1 ? "" : "s")
+        </p>
+        <ul class="space-y-1">
+            @foreach (var attachment in Detail.Attachments)
+            {
+                <li class="flex items-center justify-between gap-3 text-sm text-content">
+                    <span class="truncate">@attachment.Name</span>
+                    <span class="flex items-center gap-3 whitespace-nowrap">
+                        @if (attachment.Size > 0)
+                        {
+                            <span class="text-xs text-content-subtle">@TriageEmailDisplay.FormatSize(attachment.Size)</span>
+                        }
+                        @if (!string.IsNullOrEmpty(attachment.Id))
+                        {
+                            @if (TriageEmailDisplay.IsPreviewable(attachment))
+                            {
+                                <button type="button" class="text-xs text-accent hover:underline"
+                                        @onclick="() => OnPreviewAttachment.InvokeAsync(attachment)">
+                                    Preview
+                                </button>
+                            }
+                            <a href="@TriageEmailDisplay.AttachmentUrl(Selected.Id, attachment, inline: false)" target="_blank" rel="noopener"
+                               class="text-xs text-accent hover:underline">Download</a>
+                            @if (ShowDocumentTriageTick)
+                            {
+                                <label class="flex items-center gap-1.5 text-xs text-content-muted hover:text-content cursor-pointer select-none"
+                                       title="Copy this file into the Document Triage queue when Apply runs — the email itself stays here">
+                                    <input type="checkbox" checked="@StagedDocumentControlIds.Contains(attachment.Id)"
+                                           disabled="@Busy"
+                                           @onchange="e => OnToggleDocumentTriage.InvokeAsync((attachment.Id, e.Value is true))" />
+                                    <span>Send to document triage</span>
+                                </label>
+                            }
+                        }
+                    </span>
+                </li>
+            }
+        </ul>
+    </div>
+}
+else if (Selected.HasAttachments && Detail is not null)
+{
+    <p class="text-xs text-content-subtle italic">This email has attachments, but their names couldn't be retrieved.</p>
+}
+
+<div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
+    @if (DetailLoading)
+    {
+        <p class="text-sm text-content-subtle italic">Loading message…</p>
+    }
+    else if (Detail is not null && !string.IsNullOrWhiteSpace(Detail.BodyHtml) && Detail.BodyIsHtml)
+    {
+        <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)Detail.BodyHtml)</div>
+    }
+    else if (Detail is not null && !string.IsNullOrWhiteSpace(Detail.BodyHtml))
+    {
+        <p class="text-sm text-content whitespace-pre-wrap">@Detail.BodyHtml</p>
+    }
+    else
+    {
+        <p class="text-sm text-content-subtle italic">@TriageEmailDisplay.Dash(Selected.BodyPreview)</p>
+    }
+</div>
+
+@* Replies already sent from the projects mailbox on this thread — shown right under the
+   email so "did we answer this?" never needs Outlook, and another reply can follow. *@
+@if (SentReplies.Count > 0)
+{
+    <div class="rounded-lg border border-positive/30 bg-positive/5 p-3 space-y-1.5">
+        <p class="text-[11px] uppercase tracking-wider text-positive font-semibold">Replies sent · @SentReplies.Count</p>
+        @foreach (var sent in SentReplies)
+        {
+            <button type="button" @key="sent.Id" class="w-full text-left text-xs hover:bg-surface-raised rounded px-1.5 py-1"
+                    title="Open this reply" @onclick="() => OnSelectMessage.InvokeAsync(sent)">
+                <span class="text-content-subtle">@TriageEmailDisplay.ListDate(sent.ReceivedAt)</span>
+                <span class="text-content ml-2">@TriageEmailDisplay.FirstLineOf(sent.BodyPreview)</span>
+            </button>
+        }
+    </div>
+}
+
+@* Thread panel: the rest of this email's conversation, read live and regardless of tags. Later
+   replies often say how the older messages should be triaged, so triaging oldest-first still
+   shows the newest context. Click a member to open it. *@
+@if (!string.IsNullOrEmpty(Selected.ConversationId))
+{
+    @if (ThreadLoading)
+    {
+        <p class="text-xs text-content-subtle italic">Checking the thread for replies…</p>
+    }
+    else if (ThreadError is { } threadProblem)
+    {
+        <p class="text-xs text-amber-600">
+            @threadProblem
+            <button type="button" class="ml-2 underline" @onclick="() => OnRetryThread.InvokeAsync()">Retry</button>
+        </p>
+    }
+    else if (Thread.Count > 1)
+    {
+        @* The thread as TABS: one numbered chip per email (oldest → newest), the open one
+           highlighted — click a tab and the content above switches to that email. *@
+        <div class="rounded-lg bg-surface-raised border border-line px-3 py-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mr-1">
+                    Thread · email @ThreadPositionOfSelected of @Thread.Count
+                </span>
+                @for (var position = 0; position < Thread.Count; position++)
+                {
+                    var member = Thread[position];
+                    var isCurrent = member.Id == Selected.Id;
+                    var isLatest = position == Thread.Count - 1;
+                    <button type="button" @key="member.Id" disabled="@isCurrent"
+                            title="@($"{TriageEmailDisplay.DisplayFrom(member)} — {TriageEmailDisplay.Date(member.ReceivedAt)}{(member.HasAttachments ? " · has attachments" : "")}")"
+                            @onclick="() => OnSelectMessage.InvokeAsync(member)"
+                            class="@ThreadTabClass(isCurrent)">
+                        @(position + 1)@(isLatest ? " ·" : "")
+                    </button>
+                }
+                @if (Thread[^1].Id != Selected.Id)
+                {
+                    <span class="text-[11px] text-content-subtle">· read the latest (@Thread.Count) before triaging — actions apply to the whole thread</span>
+                }
+                @if (ThreadMatchedBySubject)
+                {
+                    <span class="text-[11px] text-amber-600"
+                          title="Outlook gave this email a different conversation id from the rest of the chain, so its members were found by subject. Apply's whole-thread sweep follows Outlook's id — emails matched here by subject keep their own queue entries and are triaged from those.">
+                        · thread matched by subject — Entire thread = Yes sweeps only the emails sharing this one's Outlook id
+                    </span>
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public MailboxMessage Selected { get; set; } = default!;
+    [Parameter] public MailboxMessageDetail? Detail { get; set; }
+
+    /// <summary>Extra content between the header and the attachments — e.g. the queue's "Tagged" chip row.</summary>
+    [Parameter] public RenderFragment? AfterHeader { get; set; }
+    [Parameter] public bool DetailLoading { get; set; }
+    [Parameter] public IReadOnlyList<MailboxMessage> Thread { get; set; } = Array.Empty<MailboxMessage>();
+    [Parameter] public bool ThreadLoading { get; set; }
+    [Parameter] public string? ThreadError { get; set; }
+    [Parameter] public bool ThreadMatchedBySubject { get; set; }
+
+    /// <summary>Only the live queue offers "Send to document triage" — discarded, tagged and mirror reads don't.</summary>
+    [Parameter] public bool ShowDocumentTriageTick { get; set; }
+    [Parameter] public IReadOnlyCollection<string> StagedDocumentControlIds { get; set; } = Array.Empty<string>();
+    [Parameter] public bool Busy { get; set; }
+
+    [Parameter] public EventCallback<(string AttachmentId, bool Ticked)> OnToggleDocumentTriage { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnSelectMessage { get; set; }
+    [Parameter] public EventCallback OnRetryThread { get; set; }
+    [Parameter] public EventCallback<IntakeAttachment> OnPreviewAttachment { get; set; }
+
+    /// <summary>The thread's outbound legs — sent from the projects mailbox itself, oldest-first like the thread.</summary>
+    private IReadOnlyList<MailboxMessage> SentReplies =>
+        Detail?.MailboxAddress is { Length: > 0 } mailbox
+            ? Thread.Where(member => member.FromEmail.Equals(mailbox, StringComparison.OrdinalIgnoreCase)).ToList()
+            : Array.Empty<MailboxMessage>();
+
+    private int ThreadPositionOfSelected
+    {
+        get
+        {
+            for (var position = 0; position < Thread.Count; position++)
+                if (Thread[position].Id == Selected.Id) return position + 1;
+            return Thread.Count;
+        }
+    }
+
+    private static string ThreadTabClass(bool isCurrent) =>
+        "rounded-md px-2 py-0.5 text-xs border transition "
+        + (isCurrent
+            ? "bg-accent text-accent-ink border-accent font-semibold"
+            : "border-line text-content-muted hover:text-content hover:border-line-strong");
+}

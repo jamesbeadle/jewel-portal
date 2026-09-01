@@ -1,3 +1,4 @@
+using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Features.Triage;
@@ -52,4 +53,40 @@ public static class TriageEmailDisplay
             .FirstOrDefault(candidate => candidate.Length > 0) ?? "";
         return System.Text.RegularExpressions.Regex.Replace(line, "\\s+", " ");
     }
+
+    /// <summary>
+    /// Avatar initials from the sender's display name ("Lorraine Proud" → "LP"), falling back to
+    /// the first letter of the address.
+    /// </summary>
+    public static string SenderInitials(MailboxMessage item)
+    {
+        var name = string.IsNullOrWhiteSpace(item.FromName) ? item.FromEmail : item.FromName;
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var words = name.Split(new[] { ' ', '|', '.', '_', '-' }, StringSplitOptions.RemoveEmptyEntries)
+            .Where(word => char.IsLetter(word[0]))
+            .Take(2)
+            .Select(word => char.ToUpperInvariant(word[0]))
+            .ToArray();
+        return words.Length == 0 ? char.ToUpperInvariant(name.Trim()[0]).ToString() : new string(words);
+    }
+
+    public static string FormatSize(long bytes)
+    {
+        if (bytes >= 1_048_576) return $"{bytes / 1_048_576.0:0.#} MB";
+        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
+        return $"{bytes} B";
+    }
+
+    /// <summary>Same previewable set as the drawing viewer: PDFs (the in-app viewer) and images.</summary>
+    public static bool IsPreviewable(IntakeAttachment attachment)
+    {
+        var type = attachment.ContentType ?? "";
+        return type.Contains("pdf", StringComparison.OrdinalIgnoreCase)
+            || type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Ids go in the query string, never the path — Graph ids don't survive a URL path segment.</summary>
+    public static string AttachmentUrl(string messageId, IntakeAttachment attachment, bool inline) =>
+        $"/api/mailbox/message/attachment?id={Uri.EscapeDataString(messageId)}"
+        + $"&aid={Uri.EscapeDataString(attachment.Id)}{(inline ? "&inline=1" : "")}";
 }

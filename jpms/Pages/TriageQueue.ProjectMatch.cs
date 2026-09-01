@@ -83,12 +83,6 @@ public partial class TriageQueue
             : $"{baseClass} border-line hover:border-line-strong hover:bg-surface";
     }
 
-    private static string FormatSize(long bytes)
-    {
-        if (bytes >= 1_048_576) return $"{bytes / 1_048_576.0:0.#} MB";
-        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
-        return $"{bytes} B";
-    }
 
     // Choose the pathway for a not-yet-filed thread (staging from a pathway pane). Staged picks
     // deliberately SURVIVE the switch — the modal shows its running total across every tab, and a

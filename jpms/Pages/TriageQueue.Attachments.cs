@@ -35,24 +35,14 @@ public partial class TriageQueue
     // documents, so email and attachment read side by side. The URLs are baked at click time —
     // the preview outlives the selection that opened it.
 
-    private static bool IsPreviewable(IntakeAttachment attachment)
-    {
-        var type = attachment.ContentType ?? "";
-        return type.Contains("pdf", StringComparison.OrdinalIgnoreCase)
-            || type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-    }
 
-    // Ids go in the query string, never the path — Graph ids don't survive a URL path segment.
-    private string AttachmentUrl(IntakeAttachment attachment, bool inline) =>
-        $"/api/mailbox/message/attachment?id={Uri.EscapeDataString(selected?.Id ?? "")}"
-        + $"&aid={Uri.EscapeDataString(attachment.Id)}{(inline ? "&inline=1" : "")}";
 
     private void OpenEmailAttachmentPreview(IntakeAttachment attachment)
     {
         var isPdf = (attachment.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase);
         workspace.OpenPreview(
-            new PreviewRequest(attachment.Name, AttachmentUrl(attachment, inline: true),
-                AttachmentUrl(attachment, inline: false), isPdf),
+            new PreviewRequest(attachment.Name, TriageEmailDisplay.AttachmentUrl(selected?.Id ?? "", attachment, inline: true),
+                TriageEmailDisplay.AttachmentUrl(selected?.Id ?? "", attachment, inline: false), isPdf),
             anchor: PanelKind.Email);
     }
 
@@ -263,32 +253,8 @@ public partial class TriageQueue
 
 
 
-    // Outlook-style compact date for list rows: time alone today, "Yesterday 14:21", day name
-    // within the week, then the date.
-    // The thread's outbound legs — sent from the projects mailbox itself (address learned from the
-    // detail read). Ordered oldest-first like the thread.
-    private IReadOnlyList<MailboxMessage> SentReplies =>
-        detail?.MailboxAddress is { Length: > 0 } mailbox
-            ? thread.Where(m => m.FromEmail.Equals(mailbox, StringComparison.OrdinalIgnoreCase)).ToList()
-            : Array.Empty<MailboxMessage>();
 
-    // 1-based position of the open email within its thread (oldest first), for the tab strip label.
-    private int ThreadPositionOfSelected
-    {
-        get
-        {
-            for (var i = 0; i < thread.Count; i++)
-                if (thread[i].Id == selected?.Id) return i + 1;
-            return thread.Count;
-        }
-    }
 
-    // Thread tab chips: the open email filled, the rest quiet; the newest carries a dot.
-    private static string ThreadTabClass(bool isCurrent, bool isLatest) =>
-        "rounded-md px-2 py-0.5 text-xs border transition "
-        + (isCurrent
-            ? "bg-accent text-accent-ink border-accent font-semibold"
-            : "border-line text-content-muted hover:text-content hover:border-line-strong");
 
     // Sits beside Apply in the triage bar's action row — armed it reads negative, so the state
     // is visible right where the button that would act on it lives.
@@ -304,19 +270,6 @@ public partial class TriageQueue
 
 
 
-    // Avatar initials from the sender's display name ("Lorraine Proud" → "LP"), falling back to
-    // the first letter of the address.
-    private static string SenderInitials(MailboxMessage item)
-    {
-        var name = string.IsNullOrWhiteSpace(item.FromName) ? item.FromEmail : item.FromName;
-        if (string.IsNullOrWhiteSpace(name)) return "?";
-        var words = name.Split(new[] { ' ', '|', '.', '_', '-' }, StringSplitOptions.RemoveEmptyEntries)
-            .Where(w => char.IsLetter(w[0]))
-            .Take(2)
-            .Select(w => char.ToUpperInvariant(w[0]))
-            .ToArray();
-        return words.Length == 0 ? char.ToUpperInvariant(name.Trim()[0]).ToString() : new string(words);
-    }
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
