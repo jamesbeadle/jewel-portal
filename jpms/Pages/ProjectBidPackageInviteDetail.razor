@@ -484,99 +484,13 @@ else
                 }
                 else
                 {
-                    <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                        <table class="w-full text-sm">
-                            <thead class="bg-surface-raised border-b border-line">
-                                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Line item</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 hidden sm:table-cell">Qty</th>
-                                    @foreach (var quote in quotes)
-                                    {
-                                        var sub = Subs.Find(quote.SubcontractorId);
-                                        var won = recipients.Any(r =>
-                                            string.Equals(r.SubcontractorId, quote.SubcontractorId, StringComparison.OrdinalIgnoreCase)
-                                            && r.Status == BidPackageRecipientStatus.Won);
-                                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 text-right">
-                                            @(sub?.CompanyName ?? quote.SubcontractorId)
-                                            @if (won)
-                                            {
-                                                <span class="ml-1.5 inline-flex items-center rounded-full bg-positive/10 border border-positive/30 px-1.5 py-0.5 text-[10px] font-medium text-positive normal-case tracking-normal">Won</span>
-                                            }
-                                            @if (sub is { IsProspect: true } && CanAddToDirectory)
-                                            {
-                                                @* A submitted tender is the moment to judge quality — this is the
-                                                   deliberate act that puts a tender-only prospect in the Directory. *@
-                                                <span class="block mt-1">
-                                                    <button type="button" class="btn-secondary px-2 py-0.5 text-[11px] normal-case tracking-normal font-medium" disabled="@busy"
-                                                            title="This company isn't in the Directory — it was only added to this tender list. Add it if the tender's worth keeping them for."
-                                                            @onclick="() => AddToDirectory(sub!.SubcontractorId)">Add to directory</button>
-                                                </span>
-                                            }
-                                        </th>
-                                    }
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-line">
-                                @foreach (var item in lineItems)
-                                {
-                                    <tr>
-                                        <td class="px-4 py-2 text-content">@item.Description</td>
-                                        <td class="px-4 py-2 text-content-muted hidden sm:table-cell">@item.Quantity @item.Unit</td>
-                                        @foreach (var quote in quotes)
-                                        {
-                                            var line = quoteLines.FirstOrDefault(l => l.QuoteId == quote.QuoteId && l.BidPackageLineItemId == item.LineItemId);
-                                            <td class="px-4 py-2 text-right text-content-muted">
-                                                @(line is null ? "—" : line.Total.ToString("£#,##0.00"))
-                                            </td>
-                                        }
-                                    </tr>
-                                }
-                                @{ var extras = quoteLines.Where(l => l.BidPackageLineItemId is null).ToList(); }
-                                @if (extras.Count > 0)
-                                {
-                                    <tr>
-                                        <td class="px-4 py-2 text-content-subtle italic">Outside package scope</td>
-                                        <td class="px-4 py-2 hidden sm:table-cell"></td>
-                                        @foreach (var quote in quotes)
-                                        {
-                                            var sum = extras.Where(l => l.QuoteId == quote.QuoteId).Sum(l => l.Total);
-                                            <td class="px-4 py-2 text-right text-content-subtle italic">@(sum == 0 ? "—" : sum.ToString("£#,##0.00"))</td>
-                                        }
-                                    </tr>
-                                }
-                            </tbody>
-                            <tfoot class="bg-surface-raised border-t border-line">
-                                <tr class="font-semibold text-content">
-                                    <td class="px-4 py-2">Total</td>
-                                    <td class="px-4 py-2 hidden sm:table-cell"></td>
-                                    @foreach (var quote in quotes)
-                                    {
-                                        <td class="px-4 py-2 text-right">@quote.Value.ToString("£#,##0.00")</td>
-                                    }
-                                </tr>
-                                @if (CanEdit && package.Status != BidPackageStatus.Awarded)
-                                {
-                                    <tr>
-                                        <td class="px-4 py-2"></td>
-                                        <td class="px-4 py-2 hidden sm:table-cell"></td>
-                                        @foreach (var quote in quotes)
-                                        {
-                                            <td class="px-4 py-2 text-right">
-                                                <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
-                                                        @onclick="() => AwardTo(quote)">Award</button>
-                                            </td>
-                                        }
-                                    </tr>
-                                }
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    @foreach (var quote in quotes.Where(q => !string.IsNullOrWhiteSpace(q.Notes)))
-                    {
-                        var sub = Subs.Find(quote.SubcontractorId);
-                        <p class="text-xs text-content-subtle mt-2"><span class="font-medium text-content-muted">@(sub?.CompanyName ?? quote.SubcontractorId):</span> @quote.Notes</p>
-                    }
+                    <TenderQuoteComparisonTable Quotes="quotes" QuoteLines="quoteLines" LineItems="lineItems"
+                                                Recipients="recipients"
+                                                AwardEnabled="@(CanEdit && package.Status != BidPackageStatus.Awarded)"
+                                                CanAddToDirectory="CanAddToDirectory"
+                                                Busy="busy"
+                                                OnAward="AwardTo"
+                                                OnAddToDirectory="AddToDirectory" />
                 }
                 </LoadGate>
             </section>
