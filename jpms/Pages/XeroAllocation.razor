@@ -88,11 +88,6 @@ else
             }
 
             <div class="mb-4 flex items-center justify-between gap-4 flex-wrap">
-                @* The incoming queue is split by project: a line whose project is real —
-                   saved via Set, or suggested by its Xero tracking — sits in that
-                   project's tab, so people working a specific project approve just their
-                   own costs. Dropdown picks alone don't move rows; Set/Allocate do.
-                   "Unallocated" keeps only the lines nothing points at a project yet. *@
                 @* Every count in the bar is counted here, out of the unallocated queue and the
                    project list — a bar drawn before those land offers "Unallocated (0)" and no
                    project tabs at all. *@
@@ -132,8 +127,6 @@ else
                 </div>
             </div>
 
-            @* The Labour section's own strip: what it is, and the covered fold. Sits where the
-               matched banner sits on the plain queue — the section IS the explanation. *@
             @if (activeTab == XeroAllocationStatus.Unallocated && labourTab)
             {
                 <LabourSectionStrip CoveredCount="LabourCoveredCount" @bind-ShowCovered="showCoveredLabour" />

@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-01T18:43:31+00:00",
+  "generatedAt": "2026-09-01T19:36:59+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 626,
-      "totalFiles": 3278,
-      "worstFileLines": 929
+      "filesOverLimit": 629,
+      "totalFiles": 3290,
+      "worstFileLines": 837
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 703,
+      "functionsOverLimit": 702,
       "elseBlocks": 1182,
       "measurementIsHeuristic": true
     },
@@ -19,18 +19,18 @@
       "maxLength": 40
     },
     "duplication": {
-      "clones": 478,
-      "duplicatedLines": 6094,
-      "totalLines": 215122,
-      "duplicatedPercentage": 2.83
+      "clones": 482,
+      "duplicatedLines": 6132,
+      "totalLines": 215515,
+      "duplicatedPercentage": 2.85
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1393
+      "unprefixedBooleans": 1415
     },
     "comments": {
       "explanatoryCommentLines": 13728,
-      "filesWithComments": 1759,
+      "filesWithComments": 1770,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -41,14 +41,14 @@
     "prose": {
       "longMemberChainLines": 2400,
       "deeplyIndentedLines": 2803,
-      "overlongLines": 1770,
+      "overlongLines": 1749,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 131,
       "orphanComponents": 6,
-      "averagePageLines": 266
+      "averagePageLines": 262
     }
   },
   "details": {
@@ -56,15 +56,11 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 626,
-        "totalFiles": 3278,
-        "worstFileLines": 929
+        "filesOverLimit": 629,
+        "totalFiles": 3290,
+        "worstFileLines": 837
       },
       "offenders": [
-        {
-          "file": "jpms/Pages/XeroAllocation.razor",
-          "lines": 929
-        },
         {
           "file": "jpms/Pages/ProjectVariationDetail.razor",
           "lines": 837
@@ -144,6 +140,10 @@
         {
           "file": "api/Features/Ai/Tools/Actions/RequestsActions.cs",
           "lines": 492
+        },
+        {
+          "file": "jpms/Pages/XeroAllocation.razor",
+          "lines": 488
         },
         {
           "file": "jpms/Components/ValuationInvoicesSection.razor.cs",
@@ -714,10 +714,6 @@
           "lines": 249
         },
         {
-          "file": "jpms/Pages/XeroAllocation.RowCoding.cs",
-          "lines": 247
-        },
-        {
           "file": "api/Features/Ai/Tools/Actions/ProcurementActions.WorkOrders.cs",
           "lines": 246
         },
@@ -751,6 +747,10 @@
         },
         {
           "file": "api/Features/Commercial/Commands/SaveReconciliationPackageHandler.cs",
+          "lines": 242
+        },
+        {
+          "file": "jpms/Pages/XeroAllocation.RowCoding.cs",
           "lines": 242
         },
         {
@@ -807,10 +807,6 @@
         },
         {
           "file": "api/Features/RecordLinks/BackfillBucketsEndpoint.cs",
-          "lines": 233
-        },
-        {
-          "file": "jpms/Pages/XeroAllocation.Settlement.cs",
           "lines": 233
         },
         {
@@ -922,10 +918,6 @@
           "lines": 222
         },
         {
-          "file": "jpms/Pages/XeroAllocation.razor.cs",
-          "lines": 222
-        },
-        {
           "file": "jpms/Components/MyDayWorkspace.razor",
           "lines": 222
         },
@@ -939,6 +931,10 @@
         },
         {
           "file": "jpms/Pages/ProjectBuildingControlInspection.razor.cs",
+          "lines": 221
+        },
+        {
+          "file": "jpms/Pages/XeroAllocation.razor.cs",
           "lines": 221
         },
         {
@@ -975,6 +971,10 @@
         },
         {
           "file": "contracts/Ai/PageGuides/OfficePageGuides.cs",
+          "lines": 217
+        },
+        {
+          "file": "jpms/Pages/XeroAllocation.Settlement.cs",
           "lines": 217
         },
         {
@@ -1494,10 +1494,6 @@
           "lines": 161
         },
         {
-          "file": "jpms/Pages/XeroAllocation.Tabs.cs",
-          "lines": 161
-        },
-        {
           "file": "jpms/Features/Triage/Queue/TriageBar.razor",
           "lines": 161
         },
@@ -1622,6 +1618,10 @@
           "lines": 152
         },
         {
+          "file": "jpms/Features/Xero/Allocation/InvoiceViewerActions.razor",
+          "lines": 152
+        },
+        {
           "file": "contracts/Models/Labour.cs",
           "lines": 151
         },
@@ -1663,6 +1663,10 @@
         },
         {
           "file": "jpms/Pages/ProjectRequestDetail.HeaderFactsEdit.cs",
+          "lines": 148
+        },
+        {
+          "file": "jpms/Pages/XeroAllocation.Tabs.cs",
           "lines": 148
         },
         {
@@ -2298,6 +2302,10 @@
           "lines": 111
         },
         {
+          "file": "jpms/Features/Xero/Allocation/AllocatedSummaryRow.razor",
+          "lines": 111
+        },
+        {
           "file": "api/Features/Ai/Tools/AiToolCatalogue.cs",
           "lines": 110
         },
@@ -2518,6 +2526,10 @@
           "lines": 102
         },
         {
+          "file": "jpms/Features/Xero/Allocation/LabourLineRow.razor",
+          "lines": 102
+        },
+        {
           "file": "jpms/Features/Xero/SplitEditorForm.razor",
           "lines": 102
         },
@@ -2571,7 +2583,7 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 703,
+        "functionsOverLimit": 702,
         "elseBlocks": 1182,
         "measurementIsHeuristic": true
       },
@@ -3012,7 +3024,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1393
+        "unprefixedBooleans": 1415
       },
       "offenders": {
         "abbreviations": [
@@ -3475,7 +3487,7 @@
       "name": "comments",
       "summary": {
         "explanatoryCommentLines": 13728,
-        "filesWithComments": 1759,
+        "filesWithComments": 1770,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4064,7 +4076,7 @@
           },
           {
             "literal": "text-xs text-content-subtle",
-            "occurrences": 187
+            "occurrences": 185
           },
           {
             "literal": "number",
@@ -4103,15 +4115,15 @@
             "occurrences": 79
           },
           {
+            "literal": "checkbox",
+            "occurrences": 78
+          },
+          {
             "literal": "text-negative",
             "occurrences": 76
           },
           {
             "literal": "Loading",
-            "occurrences": 76
-          },
-          {
-            "literal": "checkbox",
             "occurrences": 76
           },
           {
@@ -4124,11 +4136,11 @@
           },
           {
             "literal": "text-content font-medium",
-            "occurrences": 71
+            "occurrences": 68
           },
           {
             "literal": "text-sm text-content-muted",
-            "occurrences": 65
+            "occurrences": 64
           },
           {
             "literal": "w-full text-sm",
@@ -4160,7 +4172,7 @@
           },
           {
             "literal": "space-y-4",
-            "occurrences": 47
+            "occurrences": 46
           },
           {
             "literal": "flex items-center gap-2",
@@ -4182,7 +4194,7 @@
       "summary": {
         "longMemberChainLines": 2400,
         "deeplyIndentedLines": 2803,
-        "overlongLines": 1770,
+        "overlongLines": 1749,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4800,21 +4812,10 @@
         "pages": 92,
         "components": 131,
         "orphanComponents": 6,
-        "averagePageLines": 266
+        "averagePageLines": 262
       },
       "offenders": {
         "pages": [
-          {
-            "page": "jpms/Pages/XeroAllocation.razor",
-            "lines": 929,
-            "widgets": [
-              "table",
-              "modal",
-              "loadGate",
-              "dropdown",
-              "export"
-            ]
-          },
           {
             "page": "jpms/Pages/ProjectVariationDetail.razor",
             "lines": 837,
@@ -4913,6 +4914,16 @@
           {
             "page": "jpms/Pages/Subcontractors.razor",
             "lines": 517,
+            "widgets": [
+              "table",
+              "modal",
+              "loadGate",
+              "export"
+            ]
+          },
+          {
+            "page": "jpms/Pages/XeroAllocation.razor",
+            "lines": 488,
             "widgets": [
               "table",
               "modal",
@@ -5587,7 +5598,7 @@
           },
           {
             "component": "jpms/Components/Modal.razor",
-            "reusedBy": 73
+            "reusedBy": 75
           },
           {
             "component": "jpms/Components/RequestAccessView.razor",
@@ -5595,7 +5606,7 @@
           },
           {
             "component": "jpms/Components/SearchSelect.razor",
-            "reusedBy": 42
+            "reusedBy": 47
           },
           {
             "component": "jpms/Components/ExportToExcelButton.razor",
@@ -5626,12 +5637,12 @@
             "reusedBy": 19
           },
           {
-            "component": "jpms/Components/ToolbarButton.razor",
+            "component": "jpms/Components/DropdownMenu.razor",
             "reusedBy": 18
           },
           {
-            "component": "jpms/Components/DropdownMenu.razor",
-            "reusedBy": 17
+            "component": "jpms/Components/ToolbarButton.razor",
+            "reusedBy": 18
           },
           {
             "component": "jpms/Components/Icons/JewelIcon.razor",
@@ -6119,10 +6130,10 @@
     "duplication": {
       "name": "duplication",
       "summary": {
-        "clones": 478,
-        "duplicatedLines": 6094,
-        "totalLines": 215122,
-        "duplicatedPercentage": 2.83
+        "clones": 482,
+        "duplicatedLines": 6132,
+        "totalLines": 215515,
+        "duplicatedPercentage": 2.85
       },
       "offenders": [
         {

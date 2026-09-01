@@ -1,9 +1,6 @@
 @namespace Jewel.JPMS.Features.Xero
 @using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
 
-@* One disputed line — the dispute workbench: the coding both sides are converging on is
-   edited and SAVED here (visible to the other party), the thread is a click away, and either
-   side returns the line to allocation. *@
 <tr>
     <LedgerLineIdentityCell Line="Line" OnOpenInvoice="OnOpenInvoice" ShowDisputeState="true" />
     <td class="px-3 py-2.5 text-right text-content font-medium whitespace-nowrap align-top">@Money(SignedNet(Line))</td>

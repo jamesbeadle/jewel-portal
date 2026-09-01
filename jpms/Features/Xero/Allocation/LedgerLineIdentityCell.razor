@@ -1,10 +1,6 @@
 @namespace Jewel.JPMS.Features.Xero
 @using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
 
-@* The line's identity in ONE cell that flexes to whatever width is left — supplier,
-   credit/draft badges, truncated description, then date · invoice · site · code on a small
-   meta line with the invoice-document paperclip. Shared by every row variant, so the table
-   never disagrees with itself about what a line is. *@
 <td class="px-3 py-2.5 max-w-0">
     @* max-w-0 lets the cell shrink below its content so the truncated
        description wraps the column instead of forcing the table wider. *@

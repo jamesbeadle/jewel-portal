@@ -1,9 +1,6 @@
 @namespace Jewel.JPMS.Features.Xero
 @using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
 
-@* One unallocated line: identity, net, the two coding dropdowns and one primary button plus a
-   menu. A pure view — the picks live on the page (they survive paging and drive which project
-   tab the line sits under), bound through here. *@
 <tr>
     <td class="px-3 py-2.5">
         <input type="checkbox" checked="@Selected" @onchange="() => OnToggleSelected.InvokeAsync()" />
