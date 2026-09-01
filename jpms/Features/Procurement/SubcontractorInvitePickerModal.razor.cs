@@ -96,11 +96,8 @@ public partial class SubcontractorInvitePickerModal
         }
     }
 
-    private void Toggle(string subcontractorId, ChangeEventArgs e)
-    {
-        if (e.Value is true) selection.Add(subcontractorId);
-        else selection.Remove(subcontractorId);
-    }
+    private void Toggle(string subcontractorId, ChangeEventArgs e) =>
+        _ = e.Value is true ? selection.Add(subcontractorId) : selection.Remove(subcontractorId);
 
     private bool QuickAddReady =>
         !string.IsNullOrWhiteSpace(quickAddName)

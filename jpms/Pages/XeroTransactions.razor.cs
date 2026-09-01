@@ -198,9 +198,6 @@ public partial class XeroTransactions
         return distinct.Count == 0 ? "—" : string.Join(", ", distinct);
     }
 
-    private static string DateText(DateTime? date) =>
-        date?.ToString("d MMM yyyy") ?? "—";
-
 
     private static string MoneyOrDash(decimal value) =>
         value == 0m ? "—" : WholeMoney(value);

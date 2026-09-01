@@ -1,0 +1,122 @@
+@using Jewel.JPMS.Contracts.Xero
+@namespace Jewel.JPMS.Features.Xero
+@inject IQueryClient Queries
+
+@* The supplier's document as Xero holds it (published by Dext with the bill): the attachment
+   list is fetched live from Xero when the preview appears, and the bytes are proxied through
+   the API on demand — nothing is stored in JPMS. PDFs and images render in place; everything
+   else gets a Download link. The host's own failure (an allocate that didn't land) takes the
+   error slot over the document, exactly as the inline version behaved. *@
+@if ((Error ?? fetchError) is { } shown)
+{
+    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@shown</p>
+}
+else if (attachments is null)
+{
+    <p class="text-sm text-content-subtle py-6">Fetching the document from Xero…</p>
+}
+else
+{
+    @if (attachments.Count > 1)
+    {
+        <div class="flex flex-wrap gap-2">
+            @foreach (var attachment in attachments)
+            {
+                <button type="button" class="@ChipClass(attachment)"
+                        @onclick="() => selected = attachment">@attachment.FileName</button>
+            }
+        </div>
+    }
+
+    @if (selected is not null)
+    {
+        <div class="rounded-lg border border-line overflow-hidden">
+            <div class="flex items-center justify-between gap-3 px-3 py-2 bg-surface-raised border-b border-line">
+                <span class="text-xs text-content-muted font-medium truncate">@selected.FileName</span>
+                <span class="flex items-center gap-3 whitespace-nowrap">
+                    <a class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-4"
+                       href="@AttachmentUrl(selected, inline: true)" target="_blank" rel="noopener">Open in new tab</a>
+                    <a class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-4"
+                       href="@AttachmentUrl(selected, inline: false)" target="_blank" rel="noopener">Download</a>
+                </span>
+            </div>
+            @if (IsPreviewable(selected))
+            {
+                @* Same pattern as the triage attachment preview: the iframe hits the
+                   download endpoint with ?inline=1 so the browser renders the PDF/image
+                   in place. *@
+                <iframe src="@AttachmentUrl(selected, inline: true)"
+                        class="w-full h-[65vh] bg-white" title="Invoice document preview"></iframe>
+            }
+            else
+            {
+                <p class="px-4 py-8 text-sm text-content-subtle">
+                    This file type can't be previewed here — use Download to open it.
+                </p>
+            }
+        </div>
+    }
+}
+
+@code {
+    /// <summary>The Xero invoice whose documents to show; a change refetches.</summary>
+    [Parameter, EditorRequired] public string InvoiceId { get; set; } = "";
+
+    /// <summary>Credit notes live behind a different Xero endpoint — the flag travels on both
+    /// the list query and each download URL.</summary>
+    [Parameter] public bool IsCreditNote { get; set; }
+
+    /// <summary>The host's own failure (an allocate from the viewer that didn't land) — shown
+    /// in the error slot in place of the document.</summary>
+    [Parameter] public string? Error { get; set; }
+
+    private string? loadedInvoiceId;
+    private IReadOnlyList<XeroInvoiceAttachment>? attachments;
+    private XeroInvoiceAttachment? selected;
+    private string? fetchError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (InvoiceId == loadedInvoiceId) return;
+        var fetching = loadedInvoiceId = InvoiceId;
+        attachments = null;
+        selected = null;
+        fetchError = null;
+        try
+        {
+            var fetched = await Queries.AskAsync(
+                new ListXeroInvoiceAttachments(InvoiceId, IsCreditNote), CancellationToken.None);
+            if (loadedInvoiceId != fetching) return; // Re-pointed at another invoice mid-fetch.
+            attachments = fetched;
+            // PDFs and images preview in place; pre-select the first previewable one.
+            selected = fetched.FirstOrDefault(IsPreviewable) ?? fetched.FirstOrDefault();
+            if (fetched.Count == 0)
+                fetchError = "Xero holds no documents for this invoice — it may have been removed since the last sync.";
+        }
+        catch (Exception)
+        {
+            if (loadedInvoiceId != fetching) return;
+            fetchError = "Couldn't fetch the invoice's documents from Xero. If this keeps happening, check that the "
+                + "Xero custom connection has the accounting.attachments scope ticked in the Xero developer portal.";
+        }
+    }
+
+    // Same previewable set as the triage and drawing viewers: PDFs and images inline.
+    private static bool IsPreviewable(XeroInvoiceAttachment attachment) =>
+        attachment.MimeType.Contains("pdf", StringComparison.OrdinalIgnoreCase)
+        || attachment.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+    // The file name travels in the query string, never the path — supplier file
+    // names carry spaces and characters that don't survive a URL path segment.
+    private string AttachmentUrl(XeroInvoiceAttachment attachment, bool inline) =>
+        $"/api/xero/invoice/attachment?id={Uri.EscapeDataString(InvoiceId)}"
+        + $"&file={Uri.EscapeDataString(attachment.FileName)}"
+        + (IsCreditNote ? "&credit=1" : "")
+        + (inline ? "&inline=1" : "");
+
+    private string ChipClass(XeroInvoiceAttachment attachment) =>
+        (selected == attachment
+            ? "bg-content text-surface border-content"
+            : "bg-surface text-content-muted border-line hover:text-content")
+        + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
+}

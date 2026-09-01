@@ -1,0 +1,102 @@
+@namespace Jewel.JPMS.Features.Xero
+
+@* The split editor's rows, tally and explainer — everything but the header card and the
+   confirm/cancel buttons, which each host supplies. Renders in two places over the SAME draft
+   list (the standalone split modal, and inline in the invoice viewer so the invoice stays
+   readable while the shares are keyed) — the host owns the list precisely so a split started
+   in one place carries on in the other; this form edits it in place. *@
+<div class="space-y-4">
+    @if (Error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+    }
+
+    <div class="space-y-2">
+        <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-content-subtle font-semibold">
+            <span class="w-56">Project</span>
+            <span class="grow">Cost centre</span>
+            <span class="w-32 text-right">Net £</span>
+            <span class="w-7"></span>
+        </div>
+        @foreach (var row in Rows)
+        {
+            <div class="flex items-center gap-2">
+                <SearchSelect Options="@ProjectOptions" WidthClass="w-56"
+                              Value="@row.ProjectId"
+                              ValueChanged="value => row.ProjectId = value ?? string.Empty" />
+                <SearchSelect Options="@CostCenterOptions" WidthClass="grow min-w-0"
+                              Value="@row.Code"
+                              ValueChanged="value => row.Code = value ?? string.Empty" />
+                <input class="w-32 bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm text-right"
+                       type="number" step="0.01" min="0" placeholder="0.00"
+                       value="@(row.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
+                       @onchange="e => SetAmount(row, e.Value?.ToString())" />
+                <button type="button" aria-label="Remove row" disabled="@(Rows.Count <= 2)"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40"
+                        @onclick="() => { if (Rows.Count > 2) Rows.Remove(row); }">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                </button>
+            </div>
+        }
+        @* New rows inherit the previous row's project — retyping the same project for every
+           row of a same-project split would be pure friction. *@
+        <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-4"
+                @onclick="() => Rows.Add(new XeroSplitDraft { ProjectId = Rows.LastOrDefault()?.ProjectId ?? string.Empty })">+ Add row</button>
+    </div>
+
+    <p class="text-sm @(Remaining == 0m ? "text-content-muted" : "text-negative")">
+        @Money(Assigned) of @Money(Net) assigned
+        @(Remaining == 0m ? "— fully assigned." : $"— {Money(Remaining)} remaining.")
+    </p>
+    <p class="text-xs text-content-subtle">
+        Rows can point at different projects. On approval the Xero line is split into one line
+        per row (amounts pro-rated, invoice total unchanged) with each row's project site and
+        cost code stamped on it.
+    </p>
+</div>
+
+@code {
+    /// <summary>The host's draft rows, edited IN PLACE — never replaced, so a split started in
+    /// one of the two render sites carries on in the other.</summary>
+    [Parameter, EditorRequired] public List<XeroSplitDraft> Rows { get; set; } = default!;
+
+    /// <summary>The line's net, which the shares must add up to exactly.</summary>
+    [Parameter] public decimal Net { get; set; }
+
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public IReadOnlyList<SearchSelect.Option> ProjectOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public IReadOnlyList<SearchSelect.Option> CostCenterOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+
+    private decimal Assigned => Rows.Sum(row => row.Amount ?? 0m);
+    private decimal Remaining => Net - Assigned;
+
+    private void SetAmount(XeroSplitDraft row, string? raw)
+    {
+        row.Amount = decimal.TryParse(raw, System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture, out var amount)
+            ? amount
+            : null;
+        AutoBalance(row);
+    }
+
+    // Keying an amount drops the outstanding remainder into another row, so a two-way split
+    // needs only one number typed. The target is the first row BELOW the edited one whose
+    // amount is still empty or zero (wrapping to earlier rows if none below qualifies). A row
+    // already holding a non-zero amount is never overwritten — if the user has keyed every
+    // other row, nothing moves and the tally line reports any mismatch instead, keeping the
+    // allocation right without clobbering deliberate figures.
+    private void AutoBalance(XeroSplitDraft edited)
+    {
+        if (edited.Amount is null) return;
+        var index = Rows.IndexOf(edited);
+        if (index < 0) return;
+
+        var target = Rows.Skip(index + 1).FirstOrDefault(row => (row.Amount ?? 0m) == 0m)
+                     ?? Rows.Take(index).FirstOrDefault(row => (row.Amount ?? 0m) == 0m);
+        if (target is null) return;
+
+        var remaining = Net - Rows.Where(row => row != target).Sum(row => row.Amount ?? 0m);
+        if (remaining > 0m) target.Amount = remaining;
+    }
+}

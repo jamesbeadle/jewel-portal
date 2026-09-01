@@ -19,21 +19,6 @@ public partial class LabourOverview
     private static string BarWidth(decimal value, decimal max) =>
         max <= 0m ? "0%" : $"{(double)(value / max) * 100:0}%";
 
-    private static string StatusLabel(TimesheetStatus status) => status switch
-    {
-        TimesheetStatus.Approved => "approved",
-        TimesheetStatus.Rejected => "sent back",
-        _ => "waiting",
-    };
-
-    private static string AbsenceLabel(AbsenceKind kind) => kind switch
-    {
-        AbsenceKind.Holiday => "Holiday",
-        AbsenceKind.HalfDay => "Half day",
-        AbsenceKind.NotWorked => "Not worked",
-        _ => "Sick",
-    };
-
     // A muted categorical palette for site chips; stable per project within the session.
     private static readonly string[] SiteColours =
     {

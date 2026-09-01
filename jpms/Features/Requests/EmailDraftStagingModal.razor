@@ -1,0 +1,117 @@
+@using Jewel.JPMS.Contracts.Requests
+@namespace Jewel.JPMS.Features.Requests
+
+@* Email this record as a staged Outlook draft — a pure VIEW over the host's staging state.
+   Two paths behind one confirm: a fresh email (To/CC/BCC from the project's correspondence
+   profile) or reply-all into a tagged email chain, the whole conversation quoted beneath; the
+   record's PDF is attached either way. Nothing is sent from here — the result card says what
+   was staged and hands over to Outlook. The host owns the chain fetch and the draft commands. *@
+<Modal IsOpen="IsOpen"
+       Title="@($"Email this {KindLabel}")"
+       ConfirmLabel="@(Preparing ? "Creating draft…" : "Create draft")"
+       ConfirmDisabled="@Preparing"
+       ShowFooter="@(DraftResult is null)"
+       OnCancel="() => OnCancel.InvokeAsync()"
+       OnConfirm="() => OnConfirm.InvokeAsync()"
+       Class="max-w-xl">
+    <div class="space-y-4">
+        @if (DraftResult is null)
+        {
+            <p class="text-sm text-content-subtle">
+                Stages a draft in the projects mailbox with the @KindLabel PDF attached.
+                Review and send it from Outlook — nothing is sent from here.
+            </p>
+
+            <div class="space-y-2">
+                <label class="flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer @(SelectedChainId == "" ? "border-accent bg-accent/5" : "border-line hover:border-line-strong")">
+                    <input type="radio" name="email-target" class="mt-0.5" checked="@(SelectedChainId == "")"
+                           @onchange="() => SelectedChainIdChanged.InvokeAsync(string.Empty)" />
+                    <span>
+                        <span class="block text-sm font-medium text-content">Start a fresh email</span>
+                        <span class="block text-xs text-content-subtle mt-0.5">A new thread — To/CC/BCC pre-filled from the project's correspondence profile.</span>
+                    </span>
+                </label>
+
+                <LoadGate IsLoading="@TaggedEmailsLoading" Label="Loading tagged emails">
+                @if (TaggedEmails.Count == 0)
+                {
+                    <p class="text-xs text-content-subtle px-1">No emails are tagged to this request yet, so there is no chain to append to.</p>
+                }
+                else
+                {
+                    <p class="eyebrow pt-1">Or append to a tagged email chain</p>
+                    @foreach (var email in TaggedEmails)
+                    {
+                        <label class="flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer @(SelectedChainId == email.MailboxId ? "border-accent bg-accent/5" : "border-line hover:border-line-strong")">
+                            <input type="radio" name="email-target" class="mt-0.5" checked="@(SelectedChainId == email.MailboxId)"
+                                   @onchange="() => SelectedChainIdChanged.InvokeAsync(email.MailboxId!)" />
+                            <span class="min-w-0">
+                                <span class="block text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.Subject) ? Truncate(email.Body, 80) : email.Subject)</span>
+                                <span class="block text-xs text-content-subtle mt-0.5">@AuthorLabel(email) · @email.PostedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm") — reply-all in this thread, the whole chain quoted beneath.</span>
+                            </span>
+                        </label>
+                    }
+                }
+                </LoadGate>
+            </div>
+
+            @if (Error is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+            }
+        }
+        else
+        {
+            <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2.5">
+                <p class="text-sm font-medium text-emerald-600">Draft created in the projects mailbox.</p>
+                <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", DraftResult.Recipients)</p>
+                @if (DraftResult.Cc is { Count: > 0 } draftCc)
+                {
+                    <p class="text-xs text-content-subtle">CC: @string.Join(", ", draftCc)</p>
+                }
+                @if (DraftResult.Bcc is { Count: > 0 } draftBcc)
+                {
+                    <p class="text-xs text-content-subtle">BCC: @string.Join(", ", draftBcc)</p>
+                }
+                <p class="text-xs text-content-subtle mt-1">Review the recipients and send it from Outlook — nothing has been sent.</p>
+                @if (!string.IsNullOrWhiteSpace(DraftResult.WebLink))
+                {
+                    <a href="@DraftResult.WebLink" target="_blank" rel="noopener"
+                       class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
+                }
+            </div>
+            <div class="flex justify-end">
+                <button type="button" class="btn-primary" @onclick="() => OnCancel.InvokeAsync()">Done</button>
+            </div>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>"Request" / "RFI" — how the record names itself in the title and blurb.</summary>
+    [Parameter] public string KindLabel { get; set; } = "";
+
+    /// <summary>The record's tagged emails — the chains the draft can append to.</summary>
+    [Parameter] public IReadOnlyList<RequestMessage> TaggedEmails { get; set; } = Array.Empty<RequestMessage>();
+    [Parameter] public bool TaggedEmailsLoading { get; set; }
+
+    /// <summary>"" = fresh email; otherwise the chosen chain's mailbox id.</summary>
+    [Parameter] public string SelectedChainId { get; set; } = "";
+    [Parameter] public EventCallback<string> SelectedChainIdChanged { get; set; }
+
+    /// <summary>Set once the draft is staged — swaps the picker for the result card.</summary>
+    [Parameter] public RequestEmailDraft? DraftResult { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public bool Preparing { get; set; }
+
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private static string AuthorLabel(RequestMessage email) =>
+        string.IsNullOrWhiteSpace(email.AuthorName) ? email.AuthorEmail : email.AuthorName;
+
+    private static string Truncate(string value, int max) =>
+        string.IsNullOrEmpty(value) || value.Length <= max ? value : value[..max].TrimEnd() + "…";
+}

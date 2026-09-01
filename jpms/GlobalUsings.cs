@@ -14,3 +14,4 @@ global using Jewel.JPMS.Services.Navigation;
 global using Jewel.JPMS.Services.Excel;
 global using static Jewel.JPMS.MoneyFormats;
 global using static Jewel.JPMS.FileSizeFormat;
+global using static Jewel.JPMS.DateFormats;

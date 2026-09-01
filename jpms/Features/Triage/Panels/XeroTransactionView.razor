@@ -153,5 +153,4 @@
     private string CurrencySymbol =>
         Transaction.CurrencyCode is null or "GBP" ? "£" : Transaction.CurrencyCode + " ";
 
-    private static string DateText(DateTime? value) => value?.ToString("d MMM yyyy") ?? "—";
 }
