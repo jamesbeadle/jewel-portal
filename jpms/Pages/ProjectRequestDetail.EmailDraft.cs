@@ -64,12 +64,6 @@ public partial class ProjectRequestDetail
         }
     }
 
-    private static string AuthorLabel(RequestMessage email) =>
-        string.IsNullOrWhiteSpace(email.AuthorName) ? email.AuthorEmail : email.AuthorName;
-
-    private static string Truncate(string value, int max) =>
-        string.IsNullOrEmpty(value) || value.Length <= max ? value : value[..max].TrimEnd() + "…";
-
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

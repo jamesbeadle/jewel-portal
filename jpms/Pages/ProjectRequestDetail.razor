@@ -6,6 +6,7 @@
 @using Jewel.JPMS.Contracts.Variations
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.RecordLinks
+@using Jewel.JPMS.Features.Requests
 @implements IDisposable
 @inject AuthService Auth
 @inject ICommandSender Commands
@@ -599,86 +600,16 @@ else
         </div>
     </Modal>
 
-    <Modal IsOpen="emailModalOpen"
-           Title="@($"Email this {record.Kind.DisplayName()}")"
-           ConfirmLabel="@(preparingDraft ? "Creating draft…" : "Create draft")"
-           ConfirmDisabled="@preparingDraft"
-           ShowFooter="@(draftResult is null)"
-           OnCancel="CloseEmailModal"
-           OnConfirm="ConfirmEmailDraft"
-           Class="max-w-xl">
-        <div class="space-y-4">
-            @if (draftResult is null)
-            {
-                <p class="text-sm text-content-subtle">
-                    Stages a draft in the projects mailbox with the @record.Kind.DisplayName() PDF attached.
-                    Review and send it from Outlook — nothing is sent from here.
-                </p>
-
-                <div class="space-y-2">
-                    <label class="flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer @(selectedChainMailboxId == "" ? "border-accent bg-accent/5" : "border-line hover:border-line-strong")">
-                        <input type="radio" name="email-target" class="mt-0.5" checked="@(selectedChainMailboxId == "")"
-                               @onchange="@(() => selectedChainMailboxId = "")" />
-                        <span>
-                            <span class="block text-sm font-medium text-content">Start a fresh email</span>
-                            <span class="block text-xs text-content-subtle mt-0.5">A new thread — To/CC/BCC pre-filled from the project's correspondence profile.</span>
-                        </span>
-                    </label>
-
-                    <LoadGate IsLoading="@taggedEmailsLoading" Label="Loading tagged emails">
-                    @if (taggedEmails.Count == 0)
-                    {
-                        <p class="text-xs text-content-subtle px-1">No emails are tagged to this request yet, so there is no chain to append to.</p>
-                    }
-                    else
-                    {
-                        <p class="eyebrow pt-1">Or append to a tagged email chain</p>
-                        @foreach (var email in taggedEmails)
-                        {
-                            <label class="flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer @(selectedChainMailboxId == email.MailboxId ? "border-accent bg-accent/5" : "border-line hover:border-line-strong")">
-                                <input type="radio" name="email-target" class="mt-0.5" checked="@(selectedChainMailboxId == email.MailboxId)"
-                                       @onchange="@(() => selectedChainMailboxId = email.MailboxId!)" />
-                                <span class="min-w-0">
-                                    <span class="block text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.Subject) ? Truncate(email.Body, 80) : email.Subject)</span>
-                                    <span class="block text-xs text-content-subtle mt-0.5">@AuthorLabel(email) · @email.PostedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm") — reply-all in this thread, the whole chain quoted beneath.</span>
-                                </span>
-                            </label>
-                        }
-                    }
-                    </LoadGate>
-                </div>
-
-                @if (draftError is not null)
-                {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@draftError</p>
-                }
-            }
-            else
-            {
-                <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2.5">
-                    <p class="text-sm font-medium text-emerald-600">Draft created in the projects mailbox.</p>
-                    <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", draftResult.Recipients)</p>
-                    @if (draftResult.Cc is { Count: > 0 } draftCc)
-                    {
-                        <p class="text-xs text-content-subtle">CC: @string.Join(", ", draftCc)</p>
-                    }
-                    @if (draftResult.Bcc is { Count: > 0 } draftBcc)
-                    {
-                        <p class="text-xs text-content-subtle">BCC: @string.Join(", ", draftBcc)</p>
-                    }
-                    <p class="text-xs text-content-subtle mt-1">Review the recipients and send it from Outlook — nothing has been sent.</p>
-                    @if (!string.IsNullOrWhiteSpace(draftResult.WebLink))
-                    {
-                        <a href="@draftResult.WebLink" target="_blank" rel="noopener"
-                           class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
-                    }
-                </div>
-                <div class="flex justify-end">
-                    <button type="button" class="btn-primary" @onclick="CloseEmailModal">Done</button>
-                </div>
-            }
-        </div>
-    </Modal>
+    <EmailDraftStagingModal IsOpen="emailModalOpen"
+                            KindLabel="@record.Kind.DisplayName()"
+                            TaggedEmails="taggedEmails"
+                            TaggedEmailsLoading="taggedEmailsLoading"
+                            @bind-SelectedChainId="selectedChainMailboxId"
+                            DraftResult="draftResult"
+                            Error="@draftError"
+                            Preparing="preparingDraft"
+                            OnCancel="CloseEmailModal"
+                            OnConfirm="ConfirmEmailDraft" />
 
     <Modal IsOpen="respondingOpen"
            Title="Record a response"
