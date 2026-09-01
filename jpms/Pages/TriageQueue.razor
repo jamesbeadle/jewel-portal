@@ -731,42 +731,24 @@
                would sweep, once the thread has been read (staging tags themselves lives on the
                System Tags window). *@
             <div class="flex flex-col gap-1.5">
-                <div class="flex items-center justify-between gap-3"
-                     title="Yes tags the email to the project's programme — it appears in the Programme tab's Relevant Events. No leaves the programme out of it">
-                    <span class="text-sm text-content">Relevant Event for Programme</span>
-                    <div class="flex items-center shrink-0">
-                        <button type="button" class="@YesNoClass(relevantEventStaged, answer: true, first: true)"
-                                @onclick="() => relevantEventStaged = true">Yes</button>
-                        <button type="button" class="@YesNoClass(relevantEventStaged, answer: false, first: false)"
-                                @onclick="() => relevantEventStaged = false">No</button>
-                    </div>
-                </div>
-                <div class="flex items-center justify-between gap-3"
-                     title="Yes means everything you apply also tags every email currently in this conversation, clearing them from the queue together. No deals with just this email">
-                    <span class="text-sm text-content">Entire thread@(thread.Count > 1 ? $" · {thread.Count} emails" : "")</span>
-                    <div class="flex items-center shrink-0">
-                        <button type="button" class="@YesNoClass(triageEntireThread, answer: true, first: true)"
-                                @onclick="() => triageEntireThread = true">Yes</button>
-                        <button type="button" class="@YesNoClass(triageEntireThread, answer: false, first: false)"
-                                @onclick="() => triageEntireThread = false">No</button>
-                    </div>
-                </div>
+                <TriageDecisionRow @bind-Value="relevantEventStaged"
+                                   Title="Yes tags the email to the project's programme — it appears in the Programme tab's Relevant Events. No leaves the programme out of it">
+                    Relevant Event for Programme
+                </TriageDecisionRow>
+                <TriageDecisionRow @bind-Value="triageEntireThread"
+                                   Title="Yes means everything you apply also tags every email currently in this conversation, clearing them from the queue together. No deals with just this email">
+                    Entire thread@(thread.Count > 1 ? $" · {thread.Count} emails" : "")
+                </TriageDecisionRow>
                 @* Only when the thread already carries record tags (the queue row's "Thread:"
                    chips): Yes files this email under those same records with Apply — nothing
                    new to pick — so a reply to an already-linked thread is one answer, not a
                    re-pick. Blank-until-answered like the two pairs above. *@
                 @if (SelectedThreadTags is { Count: > 0 } inheritable)
                 {
-                    <div class="flex items-center justify-between gap-3"
-                         title="@($"Yes files this email under the tags its thread already carries — {string.Join(", ", inheritable.Select(TriageEmailDisplay.TagLabel))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes")">
-                        <span class="text-sm text-content">Use existing tags <span class="text-content-subtle">· @string.Join(", ", inheritable.Take(3).Select(TriageEmailDisplay.TagLabel))@(inheritable.Count > 3 ? $" +{inheritable.Count - 3}" : "")</span></span>
-                        <div class="flex items-center shrink-0">
-                            <button type="button" class="@YesNoClass(useThreadTags, answer: true, first: true)"
-                                    @onclick="() => useThreadTags = true">Yes</button>
-                            <button type="button" class="@YesNoClass(useThreadTags, answer: false, first: false)"
-                                    @onclick="() => useThreadTags = false">No</button>
-                        </div>
-                    </div>
+                    <TriageDecisionRow @bind-Value="useThreadTags"
+                                       Title="@($"Yes files this email under the tags its thread already carries — {string.Join(", ", inheritable.Select(TriageEmailDisplay.TagLabel))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes")">
+                        Use existing tags <span class="text-content-subtle">· @string.Join(", ", inheritable.Take(3).Select(TriageEmailDisplay.TagLabel))@(inheritable.Count > 3 ? $" +{inheritable.Count - 3}" : "")</span>
+                    </TriageDecisionRow>
                 }
             </div>
         </div>
