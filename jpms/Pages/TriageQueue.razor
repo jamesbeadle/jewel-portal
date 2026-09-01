@@ -387,14 +387,9 @@
             {
                         @if (composeOutcome is { } outcome)
                         {
-                            <div class="panel p-5 mb-4 @(outcome.Sent ? "border-positive/40" : "border-amber-500/40") space-y-2">
-                                <div class="flex items-center justify-between gap-2">
-                                    <p class="text-xs uppercase tracking-wider font-semibold @(outcome.Sent ? "text-positive" : "text-amber-600")">
-                                        @(outcome.Sent ? "Email sent" : "Saved as draft")
-                                    </p>
-                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
-                                            @onclick="() => composeOutcome = null">✕</button>
-                                </div>
+                            <NoticePanel Title="@(outcome.Sent ? "Email sent" : "Saved as draft")"
+                                         Tone="@(outcome.Sent ? NoticePanel.NoticeTone.Positive : NoticePanel.NoticeTone.Warning)"
+                                         OnDismiss="() => composeOutcome = null">
                                 <p class="text-sm text-content">
                                     <span class="font-medium">@outcome.Subject</span>
                                     — @(outcome.Sent ? "sent to" : "addressed to") @(string.Join("; ", outcome.To))@(outcome.Cc.Count > 0 ? $" (cc {string.Join("; ", outcome.Cc)})" : "").
@@ -411,42 +406,27 @@
                                 {
                                     <a class="text-accent underline text-sm" href="@outcome.WebLink" target="_blank" rel="noopener">Open in Outlook</a>
                                 }
-                            </div>
+                            </NoticePanel>
                         }
                         @if (linkNote is not null)
                         {
-                            <div class="panel p-5 mb-4 border-amber-500/40 space-y-2">
-                                <div class="flex items-center justify-between gap-2">
-                                    <p class="text-xs uppercase tracking-wider text-amber-600 font-semibold">Partially linked</p>
-                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
-                                            @onclick="() => linkNote = null">✕</button>
-                                </div>
+                            <NoticePanel Title="Partially linked" Tone="NoticePanel.NoticeTone.Warning" OnDismiss="() => linkNote = null">
                                 <p class="text-sm text-content">@linkNote</p>
-                            </div>
+                            </NoticePanel>
                         }
                         @if (poEmailNote is not null)
                         {
-                            <div class="panel p-5 mb-4 @(poEmailNoteIsSuccess ? "border-positive/40" : "border-amber-500/40") space-y-2">
-                                <div class="flex items-center justify-between gap-2">
-                                    <p class="text-xs uppercase tracking-wider font-semibold @(poEmailNoteIsSuccess ? "text-positive" : "text-amber-600")">
-                                        Purchase-order email
-                                    </p>
-                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
-                                            @onclick="() => poEmailNote = null">✕</button>
-                                </div>
+                            <NoticePanel Title="Purchase-order email"
+                                         Tone="@(poEmailNoteIsSuccess ? NoticePanel.NoticeTone.Positive : NoticePanel.NoticeTone.Warning)"
+                                         OnDismiss="() => poEmailNote = null">
                                 <p class="text-sm text-content">@poEmailNote</p>
-                            </div>
+                            </NoticePanel>
                         }
                         @if (outboxNote is not null)
                         {
-                            <div class="panel p-5 mb-4 border-positive/40 space-y-2">
-                                <div class="flex items-center justify-between gap-2">
-                                    <p class="text-xs uppercase tracking-wider text-positive font-semibold">Outbox</p>
-                                    <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
-                                            @onclick="() => outboxNote = null">✕</button>
-                                </div>
+                            <NoticePanel Title="Outbox" OnDismiss="() => outboxNote = null">
                                 <p class="text-sm text-content">@outboxNote</p>
-                            </div>
+                            </NoticePanel>
                         }
                 <div class="panel p-8 text-center text-sm text-content-subtle">
                     Select an email to process it.
