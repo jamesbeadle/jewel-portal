@@ -1,7 +1,4 @@
 using Jewel.JPMS.Contracts.Subcontractors;
-using Jewel.JPMS.Contracts.Xero;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components.Forms;
 
 namespace Jewel.JPMS.Services;
 

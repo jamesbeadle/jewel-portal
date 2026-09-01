@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Cqrs;
 

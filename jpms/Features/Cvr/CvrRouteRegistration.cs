@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.Cvr;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Cvr;
 

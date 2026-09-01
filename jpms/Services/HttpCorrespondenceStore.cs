@@ -1,8 +1,5 @@
 using Jewel.JPMS.Contracts.Parties;
 using Jewel.JPMS.Contracts.Projects;
-using Jewel.JPMS.Contracts.Requests;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

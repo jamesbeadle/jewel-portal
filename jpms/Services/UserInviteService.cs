@@ -1,7 +1,5 @@
-using System.Net.Http.Json;
 using Jewel.JPMS.Contracts.Auth;
 using Jewel.JPMS.Contracts.Subcontractors;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

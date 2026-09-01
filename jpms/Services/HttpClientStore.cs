@@ -1,7 +1,5 @@
 using Jewel.JPMS.Contracts.Clients;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Clients;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

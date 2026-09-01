@@ -1,5 +1,4 @@
 using Jewel.JPMS;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Architects;
 using Jewel.JPMS.Features.ArchitectInstructions;
 using Jewel.JPMS.Features.Audit;
@@ -44,10 +43,7 @@ using Jewel.JPMS.Features.Subcontractors;
 using Jewel.JPMS.Features.Todos;
 using Jewel.JPMS.Features.UsefulInformation;
 using Jewel.JPMS.Features.Xero;
-using Jewel.JPMS.Services;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);

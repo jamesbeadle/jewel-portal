@@ -1,7 +1,4 @@
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Subcontractors;
-using Jewel.JPMS.Contracts.Xero;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Subcontractors;
 

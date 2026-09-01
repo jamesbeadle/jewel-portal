@@ -1,10 +1,6 @@
-using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Contracts.Audit;
 using Jewel.JPMS.Contracts.DocumentControl;
 using Jewel.JPMS.Contracts.MailboxCompose;
-using Jewel.JPMS.Contracts.Procurement;
-using Jewel.JPMS.Contracts.RecordLinks;
-using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Contracts.Todos;
 using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Todos;

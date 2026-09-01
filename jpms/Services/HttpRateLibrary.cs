@@ -1,7 +1,5 @@
 using Jewel.JPMS.Contracts.Rates;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Rates;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

@@ -1,0 +1,75 @@
+@using Jewel.JPMS.Contracts.WeeklyCashflow
+@namespace Jewel.JPMS.Features.WeeklyCashflow
+@using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
+
+@* A supplier group's combined row: its bills summed per week cell, each cell carrying the
+   ‹ ↺ › controls that move the WHOLE cell together. Open, the member bills render beneath it
+   through the host's row template, so the entry row stays defined once. *@
+<tr class="border-b border-line/50 text-[13px] bg-surface-raised/40">
+    <td class="pl-9 pr-4 py-1.5">
+        <button type="button" class="flex items-start gap-1.5 text-left w-full" @onclick="() => OnToggle.InvokeAsync(Slice.Group.SupplierGroupId)"
+                title="@(Open ? "Collapse to the group line" : $"Show the {Slice.Entries.Count} bills behind this line")">
+            <span class="text-content-subtle mt-0.5 text-[10px]">@(Open ? "▾" : "▸")</span>
+            <span>
+                <span class="text-content font-medium">@Slice.Group.Name</span>
+                <span class="block text-[11px] text-content-faint font-normal">supplier group · @Slice.Entries.Count @(Slice.Entries.Count == 1 ? "bill" : "bills") · ‹ › moves the whole cell</span>
+            </span>
+        </button>
+    </td>
+    @for (var index = 0; index <= View.WeekStarts.Count; index++)
+    {
+        var cellIndex = index;
+        var members = Slice.Entries.Where(row => row.WeekIndex == cellIndex).ToList();
+        <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == View.WeekStarts.Count ? "border-l border-line" : "")">
+            @if (members.Count > 0)
+            {
+                var busy = CellBusy(members);
+                var anyMoved = members.Any(row => row.Moved);
+                <span class="inline-flex items-center gap-0.5">
+                    @if (anyMoved)
+                    {
+                        <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                                title="Send this cell's moved bills back to their due weeks" disabled="@busy"
+                                @onclick="() => OnResetCell.InvokeAsync((Slice, cellIndex))">↺</button>
+                    }
+                    <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                            title="Pay this cell's bills a week earlier" disabled="@(busy || cellIndex == 0)"
+                            @onclick="() => OnMoveCell.InvokeAsync((Slice, cellIndex, Math.Min(cellIndex, View.WeekStarts.Count) - 1))">‹</button>
+                    <span class="@(anyMoved ? "text-accent font-medium" : "text-content")">@(anyMoved ? "‣ " : "")@CellAmount(members.Sum(row => row.Amount))</span>
+                    <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
+                            title="Pay this cell's bills a week later" disabled="@(busy || cellIndex >= View.WeekStarts.Count - 1)"
+                            @onclick="() => OnMoveCell.InvokeAsync((Slice, cellIndex, cellIndex + 1))">›</button>
+                </span>
+            }
+        </td>
+    }
+</tr>
+@if (Open)
+{
+    @foreach (var entry in Slice.Entries)
+    {
+        @EntryRow(entry)
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public WeeklyCashflowView View { get; set; } = default!;
+    [Parameter, EditorRequired] public GroupSlice Slice { get; set; } = default!;
+    [Parameter] public bool Open { get; set; }
+
+    /// <summary>The group's own move is in flight — every cell's controls stand down.</summary>
+    [Parameter] public bool GroupBusy { get; set; }
+    /// <summary>Placement keys with an individual move in flight (a member's busy flag).</summary>
+    [Parameter] public IReadOnlyCollection<string> MovingKeys { get; set; } = Array.Empty<string>();
+
+    /// <summary>How a member bill renders when the group is open — the host's entry row,
+    /// defined once and indented for the group.</summary>
+    [Parameter, EditorRequired] public RenderFragment<WeeklyCashflowEntry> EntryRow { get; set; } = default!;
+
+    [Parameter] public EventCallback<string> OnToggle { get; set; }
+    [Parameter] public EventCallback<(GroupSlice Slice, int CellIndex)> OnResetCell { get; set; }
+    [Parameter] public EventCallback<(GroupSlice Slice, int FromWeek, int ToWeek)> OnMoveCell { get; set; }
+
+    private bool CellBusy(IReadOnlyList<WeeklyCashflowEntry> members) =>
+        GroupBusy || members.Any(row => MovingKeys.Contains(row.PlacementKey));
+}

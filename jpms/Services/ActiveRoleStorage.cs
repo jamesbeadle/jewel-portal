@@ -1,6 +1,4 @@
 using System.Globalization;
-using Jewel.JPMS.Models;
-using Microsoft.JSInterop;
 
 namespace Jewel.JPMS.Services;
 

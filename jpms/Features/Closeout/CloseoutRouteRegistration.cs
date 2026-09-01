@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.Closeout;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Closeout;
 

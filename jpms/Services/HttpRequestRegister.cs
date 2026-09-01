@@ -1,7 +1,4 @@
-using Jewel.JPMS.Contracts.Requests;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Requests;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

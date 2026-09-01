@@ -1,5 +1,3 @@
-using Jewel.JPMS.Contracts.Ai;
-using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Features.RecordLinks;
 using Jewel.JPMS.Features.Triage;

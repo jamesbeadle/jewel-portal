@@ -1,7 +1,5 @@
 using Jewel.JPMS.Contracts.Labour;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Labour;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

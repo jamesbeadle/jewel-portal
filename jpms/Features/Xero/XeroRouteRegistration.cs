@@ -1,5 +1,3 @@
-using Jewel.JPMS.Contracts.Xero;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Xero;
 

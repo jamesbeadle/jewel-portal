@@ -1,6 +1,3 @@
-using Jewel.JPMS.Contracts.Ai;
-using Jewel.JPMS.Contracts.Requests;
-using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.RecordLinks;

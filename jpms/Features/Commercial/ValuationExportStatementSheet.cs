@@ -1,4 +1,3 @@
-using Jewel.JPMS.Contracts.Commercial;
 using static Jewel.JPMS.Features.Commercial.ValuationExportStyles;
 
 namespace Jewel.JPMS.Features.Commercial;

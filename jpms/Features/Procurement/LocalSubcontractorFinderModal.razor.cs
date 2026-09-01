@@ -1,5 +1,3 @@
-using Jewel.JPMS.Contracts.Procurement;
-using Microsoft.AspNetCore.Components;
 
 namespace Jewel.JPMS.Features.Procurement;
 

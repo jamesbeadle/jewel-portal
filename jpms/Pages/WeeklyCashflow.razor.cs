@@ -1,5 +1,6 @@
+using Jewel.JPMS.Features.WeeklyCashflow;
+using static Jewel.JPMS.Features.Cashflow.CashflowDisplay;
 using Jewel.JPMS.Contracts.WeeklyCashflow;
-using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Features.WeeklyCashflow;
 
 namespace Jewel.JPMS.Pages;
@@ -113,17 +114,6 @@ public partial class WeeklyCashflow
 
 
 
-    // Grid cells drop the pennies: fourteen columns of £1,234.56 is noise. Totals underneath
-    // stay exact — the display rounds, the arithmetic never does.
-    private static string CellAmount(decimal value) =>
-        value == 0m ? "—" : value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
-
-    private static string Signed(decimal value) =>
-        value == 0m ? "—"
-        : (value > 0m ? "+" : "") + value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
-
-    private static string WeekLabel(DateTimeOffset weekStart, int index) =>
-        index == 0 ? "This week" : weekStart.UtcDateTime.ToString("d MMM");
 
     // ---- Loading ------------------------------------------------------------
 

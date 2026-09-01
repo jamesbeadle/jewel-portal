@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.ArchitectInstructions;
-using Jewel.JPMS.Contracts.Cqrs;
 
 namespace Jewel.JPMS.Features.ArchitectInstructions;
 

@@ -1,9 +1,5 @@
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using Jewel.JPMS.Contracts.ArchitectInstructions;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components.Forms;
 
 namespace Jewel.JPMS.Services;
 

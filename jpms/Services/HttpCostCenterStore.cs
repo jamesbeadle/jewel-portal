@@ -1,7 +1,5 @@
 using Jewel.JPMS.Contracts.CostCenters;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.CostCenters;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

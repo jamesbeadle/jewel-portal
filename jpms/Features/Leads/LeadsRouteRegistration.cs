@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.Leads;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Leads;
 

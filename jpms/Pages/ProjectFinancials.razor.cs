@@ -1,5 +1,4 @@
 using Jewel.JPMS.Commercial;
-using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.Procurement;

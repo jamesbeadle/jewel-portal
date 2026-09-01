@@ -1,7 +1,4 @@
-using System.Net.Http.Json;
 using System.Text.Json;
-using Jewel.JPMS.Contracts.Cqrs;
-using Jewel.JPMS.Services;
 
 namespace Jewel.JPMS.Cqrs;
 

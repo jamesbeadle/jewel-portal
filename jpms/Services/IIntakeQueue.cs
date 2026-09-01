@@ -1,10 +1,5 @@
 using Jewel.JPMS.Contracts.Closeout;
-using Jewel.JPMS.Contracts.Cqrs;
-using Jewel.JPMS.Contracts.Procurement;
-using Jewel.JPMS.Contracts.RecordLinks;
-using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Contracts.Todos;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

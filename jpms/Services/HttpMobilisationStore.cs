@@ -1,7 +1,5 @@
 using Jewel.JPMS.Contracts.Mobilisation;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Mobilisation;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 
