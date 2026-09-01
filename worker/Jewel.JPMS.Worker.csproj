@@ -62,6 +62,8 @@
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentModel.cs" Link="Shared\Documents\RequestDocumentModel.cs" />
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentBuilder.cs" Link="Shared\Documents\RequestDocumentBuilder.cs" />
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.cs" Link="Shared\Documents\RequestDocumentRenderer.cs" />
+    <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.Sections.cs" Link="Shared\Documents\RequestDocumentRenderer.Sections.cs" />
+    <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.Helpers.cs" Link="Shared\Documents\RequestDocumentRenderer.Helpers.cs" />
     <Compile Include="..\api\Features\Requests\Documents\DocumentFontResolver.cs" Link="Shared\Documents\DocumentFontResolver.cs" />
     <Compile Include="..\api\Features\Requests\Documents\DocumentBranding.cs" Link="Shared\Documents\DocumentBranding.cs" />
     <Compile Include="..\api\Features\Documents\JewelDocumentStyle.cs" Link="Shared\Documents\JewelDocumentStyle.cs" />
