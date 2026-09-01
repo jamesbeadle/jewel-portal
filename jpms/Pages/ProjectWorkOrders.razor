@@ -22,18 +22,7 @@
 
 <PageTitle>Work Orders · JPMS</PageTitle>
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<ApprovedSessionGate>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="work-orders">
         <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <h2 class="text-lg font-semibold text-content">Work orders by @(groupBySupplier ? "supplier" : "cost centre")</h2>
@@ -559,5 +548,5 @@ else
             }
         </Modal>
     </ProjectPageShell>
-}
+</ApprovedSessionGate>
 

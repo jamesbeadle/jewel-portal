@@ -27,7 +27,6 @@ public partial class CashForecast
     // Session checked and the user is signed in. This is NOT "the figures are here": the heading,
     // notice, filter and (for directors) the KPI tiles show at once; everything computed waits
     // behind the one gate.
-    private bool sessionReady;
     // The project list is what the filter and every row are built from, and its fetch throws
     // rather than recording per-project failure — so a failure here opens the gate with a message.
     private bool projectsFailed;
@@ -122,7 +121,6 @@ public partial class CashForecast
         ClaimEntries.OnChanged += StateHasChanged;
         Contracts.OnChange += StateHasChanged;
         Cash.OnChange += StateHasChanged;
-        sessionReady = true;
 
         // The bank position loads alongside the table, directors only (stale-while-revalidate;
         // the store's fetch-once guard covers the very first load).

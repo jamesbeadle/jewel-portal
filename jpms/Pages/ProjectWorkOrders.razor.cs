@@ -26,7 +26,6 @@ public partial class ProjectWorkOrders
 
     // Session checked and the user is signed in. This is NOT "the orders are here": the heading,
     // the grouping toggle and the search box show at once, the table waits behind its own gate.
-    private bool sessionReady;
 
     // The remembered grouping decides how the whole table is rolled up, so the rows wait for it
     // rather than being grouped one way and re-grouped a moment later.
@@ -431,7 +430,6 @@ public partial class ProjectWorkOrders
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         CostCenters.OnChanged += StateHasChanged;
         WorkOrders.OnChanged += StateHasChanged;
-        sessionReady = true;
         // Refresh once per tab entry (stale-while-revalidate, per the front-end
         // data-loading convention) — cached figures render immediately, then update.
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);

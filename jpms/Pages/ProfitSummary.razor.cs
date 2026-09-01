@@ -24,7 +24,6 @@ public partial class ProfitSummary
 {
     // Session checked and the user is signed in. This is NOT "the figures are here": the heading
     // and filter show at once; the tiles, bridge and table wait behind their own signals.
-    private bool sessionReady;
     // The project list is what the filter and every row are built from, and its fetch throws
     // rather than recording per-project failure — so a failure here opens the gate with a message.
     private bool projectsFailed;
@@ -92,7 +91,6 @@ public partial class ProfitSummary
         Claims.OnChanged += StateHasChanged;
         ClaimEntries.OnChanged += StateHasChanged;
         SitePnl.OnChanged += StateHasChanged;
-        sessionReady = true;
         try
         {
             if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
