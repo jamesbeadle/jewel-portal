@@ -1,0 +1,62 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Contracts.Drawings
+
+@* Link project drawings to the package (the tender documents). The ticks are the dialog's own,
+   seeded from what is already linked each time it opens; the page saves the confirmed set. *@
+<Modal IsOpen="IsOpen" Title="Link drawings" ShowFooter="true"
+       ConfirmLabel="@(Busy ? "Saving…" : $"Link {selected.Count}")" CancelLabel="Cancel"
+       OnCancel="OnCancel" OnConfirm="() => OnConfirm.InvokeAsync(selected.ToList())" Class="max-w-lg w-full">
+    @if (ProjectDrawings.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">
+            No drawings on this project yet. Upload them in the Drawings tab, or send an email's
+            attachment to Document Triage and file it to drawings from there.
+        </p>
+    }
+    else
+    {
+        <p class="text-xs text-content-subtle mb-3">Linked drawings are attached to the invite email (latest approved revision, or the newest upload when none is approved). Files that would push the email over the 25&nbsp;MB limit are sent as download links that expire after 7 days.</p>
+        <div class="space-y-1 max-h-80 overflow-y-auto">
+            @foreach (var drawing in ProjectDrawings)
+            {
+                <label class="flex items-center gap-2 text-sm text-content py-1">
+                    <input type="checkbox" checked="@selected.Contains(drawing.DrawingId)"
+                           @onchange="e => Toggle(drawing.DrawingId, e.Value is true)" />
+                    <span class="font-medium">@DrawingNaming.Code(drawing)</span>
+                    <span class="text-content-subtle truncate">· @DrawingNaming.Name(drawing)</span>
+                    @if (DrawingNaming.ApprovedRevisionText(drawing) is { } approvedText)
+                    {
+                        <span class="text-content-subtle">· @approvedText</span>
+                    }
+                </label>
+            }
+        </div>
+    }
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>Every drawing on the project — read by the page when the dialog opens.</summary>
+    [Parameter] public IReadOnlyList<Drawing> ProjectDrawings { get; set; } = Array.Empty<Drawing>();
+    /// <summary>The drawings already linked — the ticks the dialog opens with.</summary>
+    [Parameter] public IReadOnlyList<Drawing> LinkedDrawings { get; set; } = Array.Empty<Drawing>();
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback<IReadOnlyList<string>> OnConfirm { get; set; }
+
+    private readonly HashSet<string> selected = new(StringComparer.OrdinalIgnoreCase);
+    private bool wasOpen;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen)
+        {
+            selected.Clear();
+            foreach (var drawing in LinkedDrawings) selected.Add(drawing.DrawingId);
+        }
+        wasOpen = IsOpen;
+    }
+
+    private void Toggle(string drawingId, bool ticked) =>
+        _ = ticked ? selected.Add(drawingId) : selected.Remove(drawingId);
+}

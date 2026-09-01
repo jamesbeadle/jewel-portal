@@ -1,0 +1,83 @@
+@namespace Jewel.JPMS.Features.Procurement
+
+@* Line-item coverage: a line is covered by a cost centre (the contract-side home its committed
+   value charges to) or a variation order — never both. The pick is the dialog's own, seeded
+   from the line each time one is opened; the page writes the choice through. *@
+<Modal IsOpen="@(Line is not null)" Title="Link line item" ShowFooter="true"
+       ConfirmLabel="Save" CancelLabel="Cancel"
+       OnCancel="OnCancel" OnConfirm="Confirm" Class="max-w-lg w-full">
+    @if (Line is not null)
+    {
+        <p class="text-sm text-content mb-1 font-medium">@Line.Description</p>
+        <p class="text-xs text-content-subtle mb-4">A line is covered by a cost centre (the contract-side home its committed value charges to) or a variation order — never both.</p>
+
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Covered by</label>
+        <select class="field" @bind="coverage">
+            <option value="@BidPackageLineCoverage.Unassigned">Not linked</option>
+            <option value="@BidPackageLineCoverage.ContractLine">Cost centre</option>
+            <option value="@BidPackageLineCoverage.Variation">Variation order</option>
+        </select>
+
+        @if (coverage == BidPackageLineCoverage.ContractLine)
+        {
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Cost centre</label>
+            <select class="field" @bind="costCode">
+                <option value="">Select a cost centre…</option>
+                @foreach (var centre in CostCentres)
+                {
+                    <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
+                }
+            </select>
+        }
+        else if (coverage == BidPackageLineCoverage.Variation)
+        {
+            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Variation order</label>
+            @if (Variations.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">No variation orders on this project yet.</p>
+            }
+            else
+            {
+                <select class="field" @bind="variationId">
+                    <option value="">Select a variation…</option>
+                    @foreach (var v in Variations)
+                    {
+                        <option value="@v.VariationOrderId">@v.DisplayNumber — @v.Title</option>
+                    }
+                </select>
+            }
+        }
+    }
+</Modal>
+
+@code {
+    /// <summary>The line being linked — null keeps the dialog closed.</summary>
+    [Parameter] public BidPackageLineItem? Line { get; set; }
+    [Parameter] public IReadOnlyList<CostCenter> CostCentres { get; set; } = Array.Empty<CostCenter>();
+    [Parameter] public IReadOnlyList<VariationOrder> Variations { get; set; } = Array.Empty<VariationOrder>();
+    [Parameter] public EventCallback OnCancel { get; set; }
+    /// <summary>The choice to write: the coverage, and the cost code or variation it names.</summary>
+    [Parameter] public EventCallback<Pick> OnConfirm { get; set; }
+
+    public sealed record Pick(BidPackageLineCoverage Coverage, string? CostCode, string? VariationOrderId);
+
+    private BidPackageLineItem? seededFrom;
+    private BidPackageLineCoverage coverage = BidPackageLineCoverage.Unassigned;
+    private string? costCode;
+    private string? variationId;
+
+    // Each opened line seeds the pick afresh — the last line's choice must not leak into this one.
+    protected override void OnParametersSet()
+    {
+        if (Line is null || ReferenceEquals(Line, seededFrom)) return;
+        seededFrom = Line;
+        coverage = Line.Coverage;
+        costCode = Line.CostCode;
+        variationId = Line.VariationOrderId;
+    }
+
+    private Task Confirm() => OnConfirm.InvokeAsync(new Pick(
+        coverage,
+        coverage == BidPackageLineCoverage.ContractLine && !string.IsNullOrWhiteSpace(costCode) ? costCode : null,
+        coverage == BidPackageLineCoverage.Variation && !string.IsNullOrWhiteSpace(variationId) ? variationId : null));
+}

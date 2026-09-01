@@ -205,85 +205,12 @@ else
                                    OnCancel="CloseFindModal"
                                    OnConfirm="ConfirmFindInvite" />
 
-    @* ---- Line-item coverage modal: link to a contract BoQ line OR a variation ---- *@
-    <Modal IsOpen="showCoverageModal" Title="Link line item" ShowFooter="true"
-           ConfirmLabel="Save" CancelLabel="Cancel"
-           OnCancel="CloseCoverageModal" OnConfirm="ConfirmCoverage" Class="max-w-lg w-full">
-        @if (linkingLine is not null)
-        {
-            <p class="text-sm text-content mb-1 font-medium">@linkingLine.Description</p>
-            <p class="text-xs text-content-subtle mb-4">A line is covered by a cost centre (the contract-side home its committed value charges to) or a variation order — never both.</p>
+    <LineCoverageModal Line="linkingLine" CostCentres="CostCenters.Alphabetical" Variations="variations"
+                       OnCancel="CloseCoverageModal" OnConfirm="ConfirmCoverage" />
 
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Covered by</label>
-            <select class="field" @bind="coverageChoice">
-                <option value="@BidPackageLineCoverage.Unassigned">Not linked</option>
-                <option value="@BidPackageLineCoverage.ContractLine">Cost centre</option>
-                <option value="@BidPackageLineCoverage.Variation">Variation order</option>
-            </select>
-
-            @if (coverageChoice == BidPackageLineCoverage.ContractLine)
-            {
-                <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Cost centre</label>
-                <select class="field" @bind="coverageCostCode">
-                    <option value="">Select a cost centre…</option>
-                    @foreach (var centre in CostCenters.Alphabetical)
-                    {
-                        <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
-                    }
-                </select>
-            }
-            else if (coverageChoice == BidPackageLineCoverage.Variation)
-            {
-                <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Variation order</label>
-                @if (variations.Count == 0)
-                {
-                    <p class="text-sm text-content-subtle italic">No variation orders on this project yet.</p>
-                }
-                else
-                {
-                    <select class="field" @bind="coverageVariationId">
-                        <option value="">Select a variation…</option>
-                        @foreach (var v in variations)
-                        {
-                            <option value="@v.VariationOrderId">@v.DisplayNumber — @v.Title</option>
-                        }
-                    </select>
-                }
-            }
-        }
-    </Modal>
-
-    @* ---- Link project drawings to the package (the tender documents) ---- *@
-    <Modal IsOpen="showDrawingsModal" Title="Link drawings" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Saving…" : $"Link {selectedDrawingIds.Count}")" CancelLabel="Cancel"
-           OnCancel="CloseDrawingsModal" OnConfirm="ConfirmDrawings" Class="max-w-lg w-full">
-        @if (projectDrawings.Count == 0)
-        {
-            <p class="text-sm text-content-subtle italic">
-                No drawings on this project yet. Upload them in the Drawings tab, or send an email's
-                attachment to Document Triage and file it to drawings from there.
-            </p>
-        }
-        else
-        {
-            <p class="text-xs text-content-subtle mb-3">Linked drawings are attached to the invite email (latest approved revision, or the newest upload when none is approved). Files that would push the email over the 25&nbsp;MB limit are sent as download links that expire after 7 days.</p>
-            <div class="space-y-1 max-h-80 overflow-y-auto">
-                @foreach (var drawing in projectDrawings)
-                {
-                    <label class="flex items-center gap-2 text-sm text-content py-1">
-                        <input type="checkbox" checked="@selectedDrawingIds.Contains(drawing.DrawingId)"
-                               @onchange="e => ToggleDrawing(drawing.DrawingId, e)" />
-                        <span class="font-medium">@DrawingNaming.Code(drawing)</span>
-                        <span class="text-content-subtle truncate">· @DrawingNaming.Name(drawing)</span>
-                        @if (DrawingNaming.ApprovedRevisionText(drawing) is { } approvedText)
-                        {
-                            <span class="text-content-subtle">· @approvedText</span>
-                        }
-                    </label>
-                }
-            </div>
-        }
-    </Modal>
+    <LinkDrawingsModal IsOpen="showDrawingsModal" Busy="busy"
+                       ProjectDrawings="projectDrawings" LinkedDrawings="packageDrawings"
+                       OnCancel="CloseDrawingsModal" OnConfirm="ConfirmDrawings" />
 
     @* ---- The invite composer: compose, persist on the package, SEND — the modal owns the
          whole flow, like a triage reply; each send's outcome comes back here for the banner,
@@ -307,44 +234,12 @@ else
                            CanEdit="CanEdit"
                            OnSaved="LoadAsync" />
 
-    @* ---- Work-order email to the winning subcontractor (drafted, sent from Outlook) ---- *@
-    <Modal IsOpen="showWoEmailModal" Title="Email work order to winner" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Drafting…" : "Create draft in mailbox")" ConfirmDisabled="@busy" CancelLabel="Cancel"
-           OnCancel="CloseWorkOrderEmailModal" OnConfirm="ConfirmWorkOrderEmailDraft" Class="max-w-3xl w-full">
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-            Nothing sends from here — this creates a draft in the shared mailbox, addressed to the winning
-            subcontractor and tagged @package?.Reference, for you to review and send from Outlook.
-        </p>
+    <WorkOrderEmailDraftModal IsOpen="showWoEmailModal" Busy="busy" PackageReference="@package?.Reference"
+                              @bind-Subject="woEmailSubject" @bind-Body="woEmailBody"
+                              OnCancel="CloseWorkOrderEmailModal" OnConfirm="ConfirmWorkOrderEmailDraft" />
 
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
-        <input class="field mb-3" @bind="woEmailSubject" />
-
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Body (HTML)</label>
-        <textarea class="field font-mono text-xs" rows="14" @bind="woEmailBody"></textarea>
-    </Modal>
-
-    @* ---- Delete: for packages raised in error (or unwanted AI suggestions). Awarded packages
-         are refused server-side — the work order carries the committed money. ---- *@
-    <Modal IsOpen="showDeleteModal" Title="Delete bid package"
-           OnCancel="CloseDeleteModal" Class="max-w-lg w-full">
-        <FooterContent>
-            <button type="button" class="btn-neutral" disabled="@busy" @onclick="CloseDeleteModal">Keep it</button>
-            <button type="button" class="btn-neutral text-negative border-negative/40" disabled="@busy" @onclick="ConfirmDelete">
-                @(busy ? "Deleting…" : "Delete package")
-            </button>
-        </FooterContent>
-        <ChildContent>
-            <p class="text-sm text-content-muted mb-3">
-                This deletes <span class="font-medium text-content">@package?.Title</span> for good, along with
-                everything on it: invited subcontractors (the invites, not their directory entries), line items,
-                tender submissions, attachments and drawing links. Emails tagged to the package stay in the mailbox.
-            </p>
-            <p class="text-xs text-content-subtle">
-                If the tender simply ended with no winner, Close is the right record — deletion is for a package
-                that shouldn't exist at all. This can't be undone.
-            </p>
-        </ChildContent>
-    </Modal>
+    <DeletePackageModal IsOpen="showDeleteModal" Busy="busy" PackageTitle="@package?.Title"
+                        OnCancel="CloseDeleteModal" OnConfirm="ConfirmDelete" />
 
     @* ---- Edit package details: summary + line schedule together, one Save. The dialog owns
          the drafts and the every-line-needs-a-cost-code rule; the trimmed schedule comes back

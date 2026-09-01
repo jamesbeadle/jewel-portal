@@ -1,0 +1,32 @@
+@namespace Jewel.JPMS.Features.Procurement
+
+@* Delete: for packages raised in error (or unwanted AI suggestions). Awarded packages are
+   refused server-side — the work order carries the committed money. *@
+<Modal IsOpen="IsOpen" Title="Delete bid package"
+       OnCancel="OnCancel" Class="max-w-lg w-full">
+    <FooterContent>
+        <button type="button" class="btn-neutral" disabled="@Busy" @onclick="() => OnCancel.InvokeAsync()">Keep it</button>
+        <button type="button" class="btn-neutral text-negative border-negative/40" disabled="@Busy" @onclick="() => OnConfirm.InvokeAsync()">
+            @(Busy ? "Deleting…" : "Delete package")
+        </button>
+    </FooterContent>
+    <ChildContent>
+        <p class="text-sm text-content-muted mb-3">
+            This deletes <span class="font-medium text-content">@PackageTitle</span> for good, along with
+            everything on it: invited subcontractors (the invites, not their directory entries), line items,
+            tender submissions, attachments and drawing links. Emails tagged to the package stay in the mailbox.
+        </p>
+        <p class="text-xs text-content-subtle">
+            If the tender simply ended with no winner, Close is the right record — deletion is for a package
+            that shouldn't exist at all. This can't be undone.
+        </p>
+    </ChildContent>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? PackageTitle { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+}
