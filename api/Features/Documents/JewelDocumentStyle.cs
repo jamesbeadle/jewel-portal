@@ -4,14 +4,14 @@ using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using PdfSharp.Fonts;
 
-namespace Jewel.JPMS.Api.Features.Variations.Documents;
+namespace Jewel.JPMS.Api.Features.Documents;
 
 /// <summary>
-/// The variation document's shared look — the JewelBB palette and the table/paragraph helpers the
-/// renderer's section builders lean on. Matches the request (RFI) document exactly, so the two
-/// official documents read as one family; fonts come from the same DocumentFontResolver.
+/// The house style every generated Jewel document shares — the JewelBB palette, the one font
+/// family, and the table/paragraph helpers renderers lean on — so official documents read as one
+/// family. Fonts come from the same DocumentFontResolver.
 /// </summary>
-internal static class VariationDocumentStyle
+internal static class JewelDocumentStyle
 {
     // JewelBB palette — Orange identifies, Navy sets the atmosphere, Gold is the luxury accent.
     public static readonly Color Navy = new(0x1A, 0x1E, 0x29);

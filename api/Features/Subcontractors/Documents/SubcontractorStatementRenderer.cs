@@ -6,6 +6,9 @@ using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
 using PdfSharp.Fonts;
 
+using Jewel.JPMS.Api.Features.Documents;
+using static Jewel.JPMS.Api.Features.Documents.JewelDocumentStyle;
+
 namespace Jewel.JPMS.Api.Features.Subcontractors.Documents;
 
 /// <summary>
@@ -17,22 +20,9 @@ namespace Jewel.JPMS.Api.Features.Subcontractors.Documents;
 /// </summary>
 public static class SubcontractorStatementRenderer
 {
-    // JewelBB palette — matches ProgressReportRenderer.
-    private static readonly Color Navy = new(0x1A, 0x1E, 0x29);
-    private static readonly Color Orange = new(0xFF, 0x83, 0x00);
-    private static readonly Color Gold = new(0xC0, 0x9A, 0x51);
-    private static readonly Color White = new(0xFF, 0xFF, 0xFF);
-    private static readonly Color Panel = new(0xF3, 0xF3, 0xF5);
-    private static readonly Color Hair = new(0xDD, 0xDD, 0xE1);
-    private static readonly Color Muted = new(0x60, 0x66, 0x72);
-    private static readonly Color Ink = new(0x22, 0x26, 0x30);
     private static readonly Color Negative = new(0xB4, 0x23, 0x18);
 
-    private const string FontFamily = "JPMS Sans";
-    private static readonly CultureInfo Uk = CultureInfo.GetCultureInfo("en-GB");
 
-    private static readonly object FontGate = new();
-    private static bool _fontsReady;
 
     public static byte[] Render(SubcontractorStatement statement)
     {
@@ -363,26 +353,10 @@ public static class SubcontractorStatementRenderer
         p.Format.Font.Color = Ink;
     }
 
-    private static void Hairline(Section section)
-    {
-        var table = section.AddTable();
-        table.Borders.Width = 0;
-        table.AddColumn(Unit.FromCentimeter(17.8));
-        var row = table.AddRow();
-        row.Height = Unit.FromMillimeter(0.9);
-        row.HeightRule = RowHeightRule.Exactly;
-        row.Cells[0].Shading.Color = Orange;
-    }
 
     private static void SpaceBefore(Paragraph p, double mm) => p.Format.SpaceBefore = Unit.FromMillimeter(mm);
     private static void SpaceAfter(Paragraph p, double mm) => p.Format.SpaceAfter = Unit.FromMillimeter(mm);
 
-    private static void SpaceAfterTable(Section section)
-    {
-        var spacer = section.AddParagraph();
-        spacer.Format.SpaceAfter = Unit.FromMillimeter(2);
-        spacer.Format.Font.Size = 2;
-    }
 
     private static string StatusLabel(WorkOrderStatus status) => status switch
     {
@@ -394,21 +368,8 @@ public static class SubcontractorStatementRenderer
     };
 
     private static string Money(decimal value) => value.ToString("£#,##0.00;-£#,##0.00", Uk);
-    private static string Date(DateTimeOffset value) => value.ToString("dd MMM yyyy", Uk);
-    private static string Date(System.DateTime value) => value.ToString("dd MMM yyyy", Uk);
+    private static string Date(System.DateTime value) => JewelDocumentStyle.Date(value);
+    private static string Date(DateTimeOffset value) => JewelDocumentStyle.Date(value);
     private static string DateTime(DateTimeOffset value) => value.ToString("dd MMM yyyy HH:mm", Uk);
 
-    private static void EnsureFonts()
-    {
-        if (_fontsReady)
-            return;
-        lock (FontGate)
-        {
-            if (_fontsReady)
-                return;
-            // FontResolver is a global, set-once setting; only install ours if nothing else has.
-            GlobalFontSettings.FontResolver ??= new DocumentFontResolver();
-            _fontsReady = true;
-        }
-    }
 }
