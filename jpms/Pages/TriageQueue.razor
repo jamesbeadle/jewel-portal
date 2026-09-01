@@ -169,118 +169,48 @@
         {
             @if (selected is null)
             {
-                        @if (composeOutcome is { } outcome)
-                        {
-                            <NoticePanel Title="@(outcome.Sent ? "Email sent" : "Saved as draft")"
-                                         Tone="@(outcome.Sent ? NoticePanel.NoticeTone.Positive : NoticePanel.NoticeTone.Warning)"
-                                         OnDismiss="() => composeOutcome = null">
-                                <p class="text-sm text-content">
-                                    <span class="font-medium">@outcome.Subject</span>
-                                    — @(outcome.Sent ? "sent to" : "addressed to") @(string.Join("; ", outcome.To))@(outcome.Cc.Count > 0 ? $" (cc {string.Join("; ", outcome.Cc)})" : "").
-                                    @if (outcome.RaisedRequest is { } raised)
-                                    {
-                                        <span> <span class="font-mono text-xs text-content-muted">@raised.Reference</span> was raised from the email.</span>
-                                    }
-                                </p>
-                                @if (!string.IsNullOrWhiteSpace(outcome.FailureNote))
-                                {
-                                    <p class="text-sm text-amber-600">@outcome.FailureNote</p>
-                                }
-                                @if (!string.IsNullOrWhiteSpace(outcome.WebLink))
-                                {
-                                    <a class="text-accent underline text-sm" href="@outcome.WebLink" target="_blank" rel="noopener">Open in Outlook</a>
-                                }
-                            </NoticePanel>
-                        }
-                        @if (linkNote is not null)
-                        {
-                            <NoticePanel Title="Partially linked" Tone="NoticePanel.NoticeTone.Warning" OnDismiss="() => linkNote = null">
-                                <p class="text-sm text-content">@linkNote</p>
-                            </NoticePanel>
-                        }
-                        @if (poEmailNote is not null)
-                        {
-                            <NoticePanel Title="Purchase-order email"
-                                         Tone="@(poEmailNoteIsSuccess ? NoticePanel.NoticeTone.Positive : NoticePanel.NoticeTone.Warning)"
-                                         OnDismiss="() => poEmailNote = null">
-                                <p class="text-sm text-content">@poEmailNote</p>
-                            </NoticePanel>
-                        }
-                        @if (outboxNote is not null)
-                        {
-                            <NoticePanel Title="Outbox" OnDismiss="() => outboxNote = null">
-                                <p class="text-sm text-content">@outboxNote</p>
-                            </NoticePanel>
-                        }
+                <TriageNoticesStack ComposeOutcome="composeOutcome"
+                                    OnDismissComposeOutcome="() => composeOutcome = null"
+                                    LinkNote="@linkNote"
+                                    OnDismissLinkNote="() => linkNote = null"
+                                    PoEmailNote="@poEmailNote"
+                                    PoEmailNoteIsSuccess="poEmailNoteIsSuccess"
+                                    OnDismissPoEmailNote="() => poEmailNote = null"
+                                    OutboxNote="@outboxNote"
+                                    OnDismissOutboxNote="() => outboxNote = null" />
                 <div class="panel p-8 text-center text-sm text-content-subtle">
                     Select an email to process it.
                 </div>
             }
             else
             {
-                <div class="panel p-5 space-y-4 relative">
-                    <TriageMessageDetail Selected="selected"
-                                         Detail="detail"
-                                         DetailLoading="detailLoading"
-                                         Thread="thread"
-                                         ThreadLoading="threadLoading"
-                                         ThreadError="@threadError"
-                                         ThreadMatchedBySubject="threadMatchedBySubject"
-                                         ShowDocumentTriageTick="true"
-                                         StagedDocumentControlIds="stagedDocControlIds"
-                                         Busy="busy"
-                                         OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
-                                         OnSelectMessage="message => Select(message)"
-                                         OnRetryThread="() => LoadThreadAsync(selected!)"
-                                         OnPreviewAttachment="OpenEmailAttachmentPreview">
-                        <AfterHeader>
-                            @* The filing this email already carries — only ever present on a queue email
-                               that was tagged while open (Create now), so the triager sees the record
-                               tag land without leaving the email. Managing tags stays on the Tagged tab. *@
-                            @if (selected!.Bucket is not null || selected.Categories.Count > 0)
-                            {
-                                <div class="flex flex-wrap items-center gap-1.5">
-                                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tagged</span>
-                                    @if (FixedPathway is { } openEmailPathway)
-                                    {
-                                        <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(openEmailPathway) text-xs font-medium px-2.5 py-1">@TriagePathways.Label(openEmailPathway)</span>
-                                    }
-                                    @foreach (var tag in selected.Categories)
-                                    {
-                                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2.5 py-1">@TriageEmailDisplay.TagLabel(tag)</span>
-                                    }
-                                </div>
-                            }
-                        </AfterHeader>
-                    </TriageMessageDetail>
-
-                            @* Reply (or forward) where the reading ends — you get to the bottom of
-                               an email and answer it or pass it on, so the buttons (and the open
-                               composer) sit right here. *@
-                            @if (!replyOpen)
-                            {
-                                <div class="flex items-center gap-2">
-                                    <button type="button" class="btn-secondary" @onclick="() => OpenReplyComposer(forward: false)">↩ Reply</button>
-                                    <button type="button" class="btn-secondary" @onclick="() => OpenReplyComposer(forward: true)">→ Forward</button>
-                                </div>
-                            }
-                            <div>
-                                    @if (replyOpen)
-                                    {
-                                        <ReplyComposerForm IsForward="replyIsForward"
-                                                           To="@replyToField" ToChanged="OnReplyToInput"
-                                                           Cc="@replyCcField" CcChanged="OnReplyCcInput"
-                                                           Bcc="@replyBccField" BccChanged="OnReplyBccInput"
-                                                           ShowBcc="replyShowBcc" ShowBccChanged="shown => replyShowBcc = shown"
-                                                           Subject="@replySubject" SubjectChanged="OnReplySubjectInput"
-                                                           Body="@replyBody" BodyChanged="html => replyBody = html"
-                                                           Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
-                                                           Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
-                                                           OriginalAttachments="@detail?.Attachments" OriginalMessageId="@selected?.Id"
-                                                           OnDiscard="DiscardReplyDraft" />
-                                    }
-                                </div>
-                </div>
+                <QueueEmailReadingPane Selected="selected"
+                                       Detail="detail"
+                                       DetailLoading="detailLoading"
+                                       Thread="thread"
+                                       ThreadLoading="threadLoading"
+                                       ThreadError="@threadError"
+                                       ThreadMatchedBySubject="threadMatchedBySubject"
+                                       StagedDocumentControlIds="stagedDocControlIds"
+                                       Busy="busy"
+                                       OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
+                                       OnSelectMessage="message => Select(message)"
+                                       OnRetryThread="() => LoadThreadAsync(selected!)"
+                                       OnPreviewAttachment="OpenEmailAttachmentPreview"
+                                       ComposerOpen="replyOpen"
+                                       OnOpenComposer="forward => OpenReplyComposer(forward)">
+                    <ReplyComposerForm IsForward="replyIsForward"
+                                       To="@replyToField" ToChanged="OnReplyToInput"
+                                       Cc="@replyCcField" CcChanged="OnReplyCcInput"
+                                       Bcc="@replyBccField" BccChanged="OnReplyBccInput"
+                                       ShowBcc="replyShowBcc" ShowBccChanged="shown => replyShowBcc = shown"
+                                       Subject="@replySubject" SubjectChanged="OnReplySubjectInput"
+                                       Body="@replyBody" BodyChanged="html => replyBody = html"
+                                       Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
+                                       Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
+                                       OriginalAttachments="@detail?.Attachments" OriginalMessageId="@selected?.Id"
+                                       OnDiscard="DiscardReplyDraft" />
+                </QueueEmailReadingPane>
             }
         }
         else if (view == QueueView.Discarded)

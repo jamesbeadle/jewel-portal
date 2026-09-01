@@ -1,0 +1,82 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Features.Triage
+
+@* The Queue tab's open email: the message in full with its filing chips, and — where the
+   reading ends — the reply and forward buttons. The composer itself is the page's child
+   content: one editor, one draft, owned by the page (parking snapshots its fields). *@
+<div class="panel p-5 space-y-4 relative">
+    <TriageMessageDetail Selected="Selected"
+                         Detail="Detail"
+                         DetailLoading="DetailLoading"
+                         Thread="Thread"
+                         ThreadLoading="ThreadLoading"
+                         ThreadError="@ThreadError"
+                         ThreadMatchedBySubject="ThreadMatchedBySubject"
+                         ShowDocumentTriageTick="true"
+                         StagedDocumentControlIds="StagedDocumentControlIds"
+                         Busy="Busy"
+                         OnToggleDocumentTriage="OnToggleDocumentTriage"
+                         OnSelectMessage="OnSelectMessage"
+                         OnRetryThread="OnRetryThread"
+                         OnPreviewAttachment="OnPreviewAttachment">
+        <AfterHeader>
+            @* The filing this email already carries — only ever present on a queue email
+               that was tagged while open (Create now), so the triager sees the record
+               tag land without leaving the email. Managing tags stays on the Tagged tab. *@
+            @if (Selected.Bucket is not null || Selected.Categories.Count > 0)
+            {
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tagged</span>
+                    @if (TriagePathways.FromBucket(Selected.Bucket) is { } openEmailPathway)
+                    {
+                        <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(openEmailPathway) text-xs font-medium px-2.5 py-1">@TriagePathways.Label(openEmailPathway)</span>
+                    }
+                    @foreach (var tag in Selected.Categories)
+                    {
+                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2.5 py-1">@TriageEmailDisplay.TagLabel(tag)</span>
+                    }
+                </div>
+            }
+        </AfterHeader>
+    </TriageMessageDetail>
+
+    @* Reply (or forward) where the reading ends — you get to the bottom of an email and
+       answer it or pass it on, so the buttons (and the open composer) sit right here. *@
+    @if (!ComposerOpen)
+    {
+        <div class="flex items-center gap-2">
+            <button type="button" class="btn-secondary" @onclick="() => OnOpenComposer.InvokeAsync(false)">↩ Reply</button>
+            <button type="button" class="btn-secondary" @onclick="() => OnOpenComposer.InvokeAsync(true)">→ Forward</button>
+        </div>
+    }
+    <div>
+        @if (ComposerOpen)
+        {
+            @ChildContent
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>The open queue email — the pane only renders with one selected.</summary>
+    [Parameter, EditorRequired] public MailboxMessage Selected { get; set; } = default!;
+    [Parameter] public MailboxMessageDetail? Detail { get; set; }
+    [Parameter] public bool DetailLoading { get; set; }
+    [Parameter] public IReadOnlyList<MailboxMessage> Thread { get; set; } = Array.Empty<MailboxMessage>();
+    [Parameter] public bool ThreadLoading { get; set; }
+    [Parameter] public string? ThreadError { get; set; }
+    [Parameter] public bool ThreadMatchedBySubject { get; set; }
+    [Parameter] public IReadOnlyCollection<string> StagedDocumentControlIds { get; set; } = Array.Empty<string>();
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<(string AttachmentId, bool Ticked)> OnToggleDocumentTriage { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnSelectMessage { get; set; }
+    [Parameter] public EventCallback OnRetryThread { get; set; }
+    [Parameter] public EventCallback<IntakeAttachment> OnPreviewAttachment { get; set; }
+
+    /// <summary>True while the page's reply composer (the child content) is open — the buttons yield to it.</summary>
+    [Parameter] public bool ComposerOpen { get; set; }
+    /// <summary>Opens the composer; true means forward, false means reply.</summary>
+    [Parameter] public EventCallback<bool> OnOpenComposer { get; set; }
+    /// <summary>The page's reply composer, rendered where the reading ends.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
