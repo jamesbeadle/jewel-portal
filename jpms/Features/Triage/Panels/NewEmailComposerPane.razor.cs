@@ -43,8 +43,7 @@ public partial class NewEmailComposerPane
         && MailCompose.HtmlHasContent(body)
         && (!fileToRecord || (!string.IsNullOrEmpty(projectId) && !string.IsNullOrEmpty(recordId)));
 
-    // Clears the form and hands its window back to whatever it showed before — pressed as
-    // Cancel, and called after a successful send so the outcome banner is what remains.
+    // Pressed as Cancel, and after a successful send: clear the form, hand the window back.
     private async Task Close()
     {
         if (busy) return;

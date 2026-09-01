@@ -1,11 +1,9 @@
 @namespace Jewel.JPMS.Features.Triage.Queue
 
 @* One of the triage bar's Yes/No pairs: two joined pill halves, neither lit until the triager
-   picks a side (null = blank). The pairs deliberately start with NEITHER side picked, and the
-   bar's Apply stands down until every pair on show is answered — so tagging the programme and
-   sweeping the thread are always decisions someone actually made, never a default that slipped
-   through. Clicking the picked side again is a no-op, not a clear: "no answer" isn't a state
-   anyone can put back. *@
+   picks a side (null = blank) — the bar's Apply stands down until every pair on show is
+   answered, so each apply carries decisions someone actually made. Clicking the picked side
+   again is a no-op, not a clear: "no answer" isn't a state anyone can put back. *@
 <div class="flex items-center justify-between gap-3" title="@Title">
     <span class="text-sm text-content">@ChildContent</span>
     <div class="flex items-center shrink-0">
@@ -28,8 +26,7 @@
     [Parameter] public bool? Value { get; set; }
     [Parameter] public EventCallback<bool?> ValueChanged { get; set; }
 
-    // Picked reads like a picked record row (accent border on raised surface); the unpicked
-    // side stays muted.
+    // Picked reads like a picked record row (accent on raised surface); unpicked stays muted.
     private string HalfClass(bool answer, bool first) =>
         "px-2.5 py-1 text-xs border transition "
         + (first ? "rounded-l-lg" : "rounded-r-lg -ml-px")
