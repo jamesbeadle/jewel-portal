@@ -1,5 +1,3 @@
-using static Jewel.JPMS.MoneyFormats;
-using Jewel.JPMS.Services.Excel;
 using System.Net.Http;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components;
@@ -10,7 +8,6 @@ using Jewel.JPMS.Components;
 using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Models;
 using Jewel.JPMS.Services;
-using Jewel.JPMS.Services.Excel;
 using Jewel.JPMS.Services.Navigation;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Contracts.Ai;

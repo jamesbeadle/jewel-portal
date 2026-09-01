@@ -2,7 +2,6 @@ using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Features.Procurement;
 
-using static Jewel.JPMS.MoneyFormats;
 
 namespace Jewel.JPMS.Components;
 

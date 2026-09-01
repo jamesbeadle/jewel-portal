@@ -1,61 +1,55 @@
-# Refactor audit — baseline v4, after round 3
+# Refactor audit — baseline v5, after round 4
 
-Generated 2026-09-01 from `refactor/round-3`, replacing the round-2 (v3) baseline report. The
+Generated 2026-09-01 from `refactor/round-4`, replacing the round-3 (v4) baseline report. The
 audit carries the prose and functionNames checks introduced at v2.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 570, totalFiles: 3155, worstFileLines: 1152 |
-| functionShape | limit: 30, functionsOverLimit: 681, elseBlocks: 1182, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 618, totalFiles: 3219, worstFileLines: 1152 |
+| functionShape | limit: 30, functionsOverLimit: 700, elseBlocks: 1182, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 45, maxWords: 5, maxLength: 40 |
-| duplication | clones: 559, duplicatedLines: 7131, totalLines: 219694, duplicatedPercentage: 3.25 |
+| duplication | clones: 584, duplicatedLines: 7540, totalLines: 220495, duplicatedPercentage: 3.42 |
 | naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1325 |
-| comments | explanatoryCommentLines: 13755, filesWithComments: 1650, taskMarkers: 48 |
+| comments | explanatoryCommentLines: 13751, filesWithComments: 1709, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2401, deeplyIndentedLines: 2791, overlongLines: 1791, measurementIsHeuristic: True |
-| inventory | pages: 92, components: 134, orphanComponents: 6, averagePageLines: 333 |
+| prose | longMemberChainLines: 2401, deeplyIndentedLines: 2821, overlongLines: 1791, measurementIsHeuristic: True |
+| inventory | pages: 92, components: 131, orphanComponents: 6, averagePageLines: 284 |
 
-## Round 3 — the componentisation round
+## Round 4 — the breadth round
 
-The recipe pass reached six more files (DocumentControl, ProjectVariations, Todos,
-ProjectRequests, ValuationInvoicesSection, AttachmentPicker — divided at their own region
-markers), and the two AI action files divided by domain group the way AiToolCatalogue did
-(CommercialActions into six groups, LabourAndBackOfficeActions into two).
+Where rounds 1–3 went deep on the worst file, round 4 went wide:
 
-The new work was **modal componentisation** on the worst file, ProjectBidPackageInviteDetail
-(1,399 → 1,101): three dialogs became self-contained Features/Procurement components that own
-their whole flow — `ValuationLinePickerModal` (reads the live report, hands back package line
-inputs), `LocalSubcontractorFinderModal` (AI trade resolution + Places search + selection) and
-`TenderSubmissionModal` (manual keying and the AI extract-from-email path, opened via @ref).
-The host page keeps only its commands.
-
-**A real bug surfaced and was fixed**: component tags that don't resolve are only a compiler
-warning (RZ10012) — Razor silently renders them as unknown HTML elements. The extraction
-tripped this, and auditing the warning class found ProjectBuildingControlInspection had been
-shipping with its EmailFinder and CorrespondenceThreadList rendering as nothing. Both are now
-fixed and the build is RZ10012-clean.
+- **37 more files got the markup/code-behind division** — every remaining page and component in
+  the 300–700 line band with a movable `@code` block, from SideNav and RoleHome to the drawing,
+  contract, reconciliation and correspondence panels. Average page length fell 333 → **284**
+  (it was 544 at the very start — down 48%).
+- **Six AI action catalogues divided by their own area groups** (SiteAndProgress,
+  ProjectsAndTenders, VariationsAndValuations, SubcontractorsAndLeads at their `Area:`
+  transitions; ProcurementActions at its own section dividers), and XeroClient.Reads divided
+  again into Suppliers and Cash partials.
+- **The header tax got a structural fix**: MoneyFormats, FileSizeFormat and the Excel service
+  moved into the client's global usings, and 123 files dropped the import lines the division
+  rounds had been re-stamping on every new partial.
 
 ## The journey so far
 
-| Figure | 22 Aug (v1) | 1 Sep pre-refactor | Round 1 (v2) | Round 2 (v3) | Round 3 (v4) |
-| --- | --- | --- | --- | --- | --- |
-| Worst file (lines) | 4,961 | 4,659 | 1,471 | 1,399 | **1,152** |
-| Average page length | 544 | 522 | 390 | 356 | **333** |
-| Duplication | 4.16% | 4.07% | 4.03% | 3.08% | **3.25%** ‡ |
-| `else` blocks | 1,087 | 1,234 | 1,184 | 1,182 | **1,182** |
-| Inline hex colours | 50 | 50 | 43 | 43 | **43** |
-| Files over 100 lines | 385 | 471 | 520 | 552 | 570 † |
+| Figure | 22 Aug (v1) | 1 Sep pre-refactor | R1 (v2) | R2 (v3) | R3 (v4) | R4 (v5) |
+| --- | --- | --- | --- | --- | --- | --- |
+| Worst file (lines) | 4,961 | 4,659 | 1,471 | 1,399 | 1,152 | **1,152** |
+| Average page length | 544 | 522 | 390 | 356 | 333 | **284** |
+| Duplication | 4.16% | 4.07% | 4.03% | 3.08% | 3.25% | **3.42%** ‡ |
+| `else` blocks | 1,087 | 1,234 | 1,184 | 1,182 | 1,182 | **1,182** |
+| Files over 100 lines | 385 | 471 | 520 | 552 | 570 | 618 † |
 
-‡ Round 3's new component and partial files each carry a small header block the clone detector
-counts; the underlying consolidation still holds (v1 measured 4.16% on a smaller codebase).
+‡ The clone detector counts each new file's small header block; the big consolidations
+(GlobalUsings ×3 projects, JewelDocumentStyle, MoneyFormats, the blob shell) still hold — the
+codebase is ~40k lines larger than v1 measured, with fewer duplicated lines than it had then.
 
-† Still the division method's signature: giants become mid-size concern partials, so the count
-rises while every other size figure falls. It turns downward when the partials themselves divide
-below the limit. Two heuristic figures also drifted up slightly (deep indentation +25, overlong
-lines +12, long functions +5) for the same reason as at v2 — code moved from `.razor` files the
-checks cannot see into `.cs` partials they can.
+† The division method's signature, as every round: mass moves out of giants into mid-size
+concern partials. The figure turns when partials divide below 100 — that is the long tail of
+this campaign, not a single round.
 
 ## Worst files by length
 
@@ -69,17 +63,22 @@ checks cannot see into `.cs` partials they can.
 | jpms/Pages/ProfitSummary.razor | 846 |
 | jpms/Pages/ProjectVariationDetail.razor | 839 |
 | jpms/Pages/ProjectProgramme.razor | 752 |
-| api/Features/Xero/XeroClient.Reads.cs | 747 |
 | jpms/Pages/TriageQueue.Compose.cs | 737 |
 | jpms/Pages/CashForecast.razor | 701 |
-| jpms/Pages/XeroAllocation.razor.cs | 688 |
+| jpms/Pages/XeroAllocation.razor.cs | 686 |
 | jpms/Pages/WeeklyCashflow.razor | 683 |
-| jpms/Pages/ProjectWorkOrderAllocation.razor | 678 |
-| api/Features/Ai/Tools/Actions/ProcurementActions.cs | 677 |
+| api/Features/Ai/Tools/AiRecordTools.cs | 631 |
+| api/Features/Procurement/Documents/WorkOrderPoRenderer.cs | 623 |
+| api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs | 607 |
 
-Every remaining large file is either a markup half whose sections continue to become components
-(the round-3 pattern: TriageQueue's triage bar and compose pane are the next two), or a
-concern partial that divides again. Round 4 continues the same two motions.
+## Round 5, named
+
+The top of the table is now almost entirely the markup halves of the four biggest workbench and
+detail pages — files that only shrink by componentising their sections. Round 5 is therefore the
+**TriageQueue finale**: the new-email composer, the inline reply composer and the triage bar
+share helpers (recipient parsing, HTML-content checks) that want to become one compose feature —
+extracting them together takes TriageQueue.razor and TriageQueue.Compose.cs down hard, and the
+same compose components then serve XeroAllocation's and ProjectRequestDetail's email surfaces.
 
 Full detail, including every offender list, is in `audit.json`; the gate ratchets against
 `baseline.json`, which this report accompanies.

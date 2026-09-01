@@ -45,7 +45,6 @@ using Jewel.JPMS.Features.Todos;
 using Jewel.JPMS.Features.UsefulInformation;
 using Jewel.JPMS.Features.Xero;
 using Jewel.JPMS.Services;
-using Jewel.JPMS.Services.Excel;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Microsoft.Extensions.DependencyInjection;

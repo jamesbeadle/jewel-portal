@@ -1,4 +1,3 @@
-using Jewel.JPMS.Services.Excel;
 using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Variations;
@@ -6,7 +5,6 @@ using Jewel.JPMS.Features.RecordLinks;
 using Jewel.JPMS.Features.Triage;
 using Jewel.JPMS.Features.Triage.Panels;
 
-using static Jewel.JPMS.MoneyFormats;
 
 namespace Jewel.JPMS.Pages;
 

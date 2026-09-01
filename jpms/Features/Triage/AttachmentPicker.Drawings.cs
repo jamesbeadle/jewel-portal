@@ -1,4 +1,3 @@
-using static Jewel.JPMS.MoneyFormats;
 using Jewel.JPMS.Contracts.MailboxCompose;
 using Jewel.JPMS.Features.Drawings;
 

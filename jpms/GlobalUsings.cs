@@ -11,3 +11,6 @@ global using Jewel.JPMS.Cqrs;
 global using Jewel.JPMS.Models;
 global using Jewel.JPMS.Services;
 global using Jewel.JPMS.Services.Navigation;
+global using Jewel.JPMS.Services.Excel;
+global using static Jewel.JPMS.MoneyFormats;
+global using static Jewel.JPMS.FileSizeFormat;
