@@ -1,0 +1,57 @@
+@namespace Jewel.JPMS.Features.Xero
+@using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
+
+<td class="px-3 py-2.5 max-w-0">
+    @* max-w-0 lets the cell shrink below its content so the truncated
+       description wraps the column instead of forcing the table wider. *@
+    <span class="text-content font-medium">@(Line.ContactName ?? "—")</span>
+    @if (Line.Type == "ACCPAYCREDIT")
+    {
+        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5">Credit</span>
+    }
+    @if (IsAwaitingApproval(Line))
+    {
+        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+              title="Awaiting approval in Xero — allocating every line of this bill confirms its cost codes to Xero and approves it">Draft</span>
+    }
+    <span class="block truncate text-content-muted" title="@Line.Description">@(Line.Description ?? "—")</span>
+    <span class="flex items-center gap-1 text-xs text-content-subtle">
+        @if (Line.HasAttachments)
+        {
+            @* The supplier's document as Xero holds it (published by Dext) —
+               previewed in place without leaving the queue. *@
+            <button type="button" title="View the invoice document"
+                    class="inline-flex items-center justify-center w-5 h-5 -ml-1 rounded text-content-subtle hover:text-content hover:bg-surface-raised"
+                    @onclick="() => OnOpenInvoice.InvokeAsync(Line)">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+                </svg>
+            </button>
+        }
+        <span class="truncate" title="@LineMetaText(Line)">@LineMetaText(Line)</span>
+    </span>
+    @if (ShowDisputeState)
+    {
+        @* The dispute's state travels with the line rather than in its
+           own column — who raised it, when, and the latest word. *@
+        <span class="block text-xs text-content-subtle mt-1">
+            Disputed by @(Line.AllocatedBy ?? "—")
+            @(Line.AllocatedAtUtc is { } at ? $" · {at.ToLocalTime():d MMM yyyy}" : "")
+        </span>
+        @if (Line.DisputeMessages?.LastOrDefault() is { } latest)
+        {
+            <span class="block text-xs text-content-subtle truncate" title="@latest.Body">
+                “@latest.Body”
+            </span>
+        }
+    }
+</td>
+
+@code {
+    [Parameter, EditorRequired] public XeroLedgerLine Line { get; set; } = default!;
+    /// <summary>Opens the invoice-document viewer for this line (the paperclip).</summary>
+    [Parameter] public EventCallback<XeroLedgerLine> OnOpenInvoice { get; set; }
+    /// <summary>Disputed rows carry who raised it and the latest word here, under the meta line.</summary>
+    [Parameter] public bool ShowDisputeState { get; set; }
+}

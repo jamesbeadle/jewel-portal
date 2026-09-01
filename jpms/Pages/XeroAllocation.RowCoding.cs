@@ -80,11 +80,6 @@ public partial class XeroAllocation
     private bool IsRowMenuOpen =>
         openRowMenuKey is not null && Paged.Any(line => line.XeroLedgerLineId == openRowMenuKey);
 
-    // Date, invoice number, Xero site and Xero code on one small line under the
-    // description — what used to be the Date column and the description's footnote.
-    private string LineMetaText(XeroLedgerLine line) =>
-        $"{DateText(line.Date)} · {line.InvoiceNumber ?? "—"} · {line.XeroSite ?? "no site"} · {line.XeroCostCode ?? "no Xero code"}";
-
     // The bucket dropdown works like the project/cost-centre ones: pre-selected with
     // the suggestion when one was inferred, blank otherwise, always overridable.
     private string SelectedBucketFor(XeroLedgerLine line) =>

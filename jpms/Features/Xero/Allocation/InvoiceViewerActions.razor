@@ -1,0 +1,152 @@
+@namespace Jewel.JPMS.Features.Xero
+
+@* Allocate without leaving the document: the reader identifies the site and cost centre from
+   the invoice itself, so the row's full set of choices lives in the viewer too — the same
+   page state as the line's row, so a pick made here shows on the row (and moves it between
+   project tabs) if the modal is closed without allocating. Split… and Dispute… swap the bar
+   for their inline editors, so the invoice stays readable while the amounts (or the reason)
+   are keyed in. *@
+@if (SplitOpen)
+{
+    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-4">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Split across cost centres</span>
+            <span class="flex items-center gap-2">
+                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                        disabled="@Busy" @onclick="() => OnApplySplit.InvokeAsync()">
+                    @(Applying ? "Allocating…" : "Allocate split")
+                </button>
+                <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                        disabled="@Busy" @onclick="() => OnCloseSplit.InvokeAsync()">Cancel</button>
+            </span>
+        </div>
+        <SplitEditorForm Rows="SplitRows" Net="@SplitNet" Error="@SplitError"
+                         ProjectOptions="@ProjectOptions" CostCenterOptions="@CostCenterOptions" />
+    </div>
+}
+else if (DisputeOpen)
+{
+    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-3">
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Dispute this cost</span>
+            <span class="flex items-center gap-2">
+                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                        disabled="@Busy" @onclick="() => OnConfirmDispute.InvokeAsync()">
+                    @(Applying ? "Disputing…" : "Move to Disputed")
+                </button>
+                <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                        disabled="@Busy" @onclick="() => OnCloseDispute.InvokeAsync()">Cancel</button>
+            </span>
+        </div>
+        @if (DisputeError is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@DisputeError</p>
+        }
+        <textarea class="w-full min-h-[4.5rem] rounded-lg bg-surface border border-line px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+                  placeholder="Why is this disputed? (optional — the discussion continues on the Disputed tab)"
+                  value="@DisputeMessage" @oninput='e => DisputeMessageChanged.InvokeAsync(e.Value?.ToString() ?? "")'></textarea>
+    </div>
+}
+else
+{
+    @* The full set of row choices, in two rows: code the line to a project
+       and cost centre, or send it to a bucket / ignore it / dispute it. *@
+    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-2">
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16">Allocate</span>
+            <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
+                          Value="@ProjectValue"
+                          ValueChanged="value => OnProjectPicked.InvokeAsync(value)" />
+            <SearchSelect Options="@CostCenterOptions" WidthClass="w-52" Placeholder="Cost centre…"
+                          Value="@CostCenterValue"
+                          ValueChanged="value => OnCostCenterPicked.InvokeAsync(value)" />
+            @* Same rule as the row: an armed bucket takes the primary slot, so
+               it is visible WHY a coded line isn't offering plain Allocate. *@
+            @if (!string.IsNullOrEmpty(ArmedBucket))
+            {
+                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 max-w-[11rem] truncate"
+                        title="@($"Allocate to the {ArmedBucket} bucket — pick a project or cost centre to code it instead")"
+                        disabled="@Busy" @onclick="() => OnBucketAllocate.InvokeAsync()">
+                    @(Applying ? "Allocating…" : $"Allocate to {ArmedBucket}")
+                </button>
+            }
+            else
+            {
+                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                        disabled="@(Busy || !CanAllocate)"
+                        @onclick="() => OnAllocate.InvokeAsync()">
+                    @(Applying ? "Allocating…" : "Allocate")
+                </button>
+            }
+            <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content disabled:opacity-40"
+                    title="Save the project and set its Xero site now — cost centre to follow"
+                    disabled="@(Busy || !CanSetProject)"
+                    @onclick="() => OnSetProject.InvokeAsync()">Set</button>
+            <button class="text-xs text-content-subtle underline underline-offset-4 disabled:opacity-40"
+                    title="Share this line's value across several cost centres (or projects) — one Xero line per share on approval"
+                    disabled="@Busy" @onclick="() => OnOpenSplit.InvokeAsync()">Split…</button>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            @* Choosing a bucket arms the primary button above as "Allocate to
+               <bucket>"; picking a project or cost centre disarms it again. *@
+            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16">Or</span>
+            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
+                    title="Send this line to a bucket instead of a project — no project, no cost centre"
+                    value="@ArmedBucket"
+                    @onchange="e => OnBucketPicked.InvokeAsync(e.Value?.ToString())">
+                <option value="">Bucket…</option>
+                @foreach (var bucket in XeroBuckets.All)
+                {
+                    <option value="@bucket">@bucket</option>
+                }
+            </select>
+            <span class="text-content-subtle text-xs">·</span>
+            <button class="text-xs text-content-subtle underline underline-offset-4 disabled:opacity-40"
+                    title="Not a project cost — moves the line to the Ignored tab"
+                    disabled="@Busy" @onclick="() => OnIgnore.InvokeAsync()">Ignore</button>
+            <button class="text-xs text-content-subtle underline underline-offset-4 disabled:opacity-40"
+                    title="Contest this cost — moves it to the Disputed tab and opens a discussion with the accountant"
+                    disabled="@Busy" @onclick="() => OnOpenDispute.InvokeAsync()">Dispute…</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool Applying { get; set; }
+
+    /// <summary>Split… swaps the bar for the inline split editor over the page's draft rows.</summary>
+    [Parameter] public bool SplitOpen { get; set; }
+    [Parameter] public List<XeroSplitDraft> SplitRows { get; set; } = new();
+    [Parameter] public decimal SplitNet { get; set; }
+    [Parameter] public string? SplitError { get; set; }
+    [Parameter] public EventCallback OnApplySplit { get; set; }
+    [Parameter] public EventCallback OnCloseSplit { get; set; }
+
+    /// <summary>Dispute… composes inline, sharing the page's message with the standalone modal.</summary>
+    [Parameter] public bool DisputeOpen { get; set; }
+    [Parameter] public string? DisputeError { get; set; }
+    [Parameter] public string DisputeMessage { get; set; } = "";
+    [Parameter] public EventCallback<string> DisputeMessageChanged { get; set; }
+    [Parameter] public EventCallback OnConfirmDispute { get; set; }
+    [Parameter] public EventCallback OnCloseDispute { get; set; }
+
+    /// <summary>The same coding state as the line's row, bound through the page.</summary>
+    [Parameter] public string ProjectValue { get; set; } = "";
+    [Parameter] public IReadOnlyList<SearchSelect.Option> ProjectOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public EventCallback<string> OnProjectPicked { get; set; }
+    [Parameter] public string CostCenterValue { get; set; } = "";
+    [Parameter] public IReadOnlyList<SearchSelect.Option> CostCenterOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public EventCallback<string> OnCostCenterPicked { get; set; }
+
+    [Parameter] public string ArmedBucket { get; set; } = "";
+    [Parameter] public EventCallback<string?> OnBucketPicked { get; set; }
+    [Parameter] public bool CanAllocate { get; set; }
+    [Parameter] public EventCallback OnAllocate { get; set; }
+    [Parameter] public EventCallback OnBucketAllocate { get; set; }
+    [Parameter] public bool CanSetProject { get; set; }
+    [Parameter] public EventCallback OnSetProject { get; set; }
+    [Parameter] public EventCallback OnOpenSplit { get; set; }
+    [Parameter] public EventCallback OnIgnore { get; set; }
+    [Parameter] public EventCallback OnOpenDispute { get; set; }
+}

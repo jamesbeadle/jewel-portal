@@ -39,7 +39,6 @@ public partial class XeroAllocation
     private string bulkCostCenterCode = "";
     private string bulkBucket = "";
     private string? bucketFilter;
-    private bool confirmAllocateMatched;
 
     // -- Labour section state (scope §6 recognition) ---------------------------
     // labourTab is a sub-view of the Unallocated status, like activeProjectId: the tab the
