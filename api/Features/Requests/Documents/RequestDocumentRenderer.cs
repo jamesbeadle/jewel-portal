@@ -1,5 +1,4 @@
 using System.Globalization;
-using Jewel.JPMS.Models;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;

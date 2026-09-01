@@ -6,7 +6,6 @@ using Jewel.JPMS.Api.Features.Procurement.Attachments;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.RecordLinks;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;

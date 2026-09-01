@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.Site;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Site.Commands;
 

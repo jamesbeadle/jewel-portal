@@ -18,7 +18,6 @@ using Jewel.JPMS.Contracts.Labour;
 using Jewel.JPMS.Contracts.Platform;
 using Jewel.JPMS.Contracts.Rates;
 using Jewel.JPMS.Contracts.UsefulInformation;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 

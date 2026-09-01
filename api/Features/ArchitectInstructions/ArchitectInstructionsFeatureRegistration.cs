@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.ArchitectInstructions.Storage;
 using Jewel.JPMS.Contracts.ArchitectInstructions;
 using Jewel.JPMS.Contracts.Cqrs;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

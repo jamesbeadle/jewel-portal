@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.Subcontractors;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Subcontractors.Commands;
 

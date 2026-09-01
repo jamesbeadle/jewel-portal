@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.Json;
 using Ganss.Xss;
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
@@ -7,9 +6,7 @@ using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.Procurement;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 

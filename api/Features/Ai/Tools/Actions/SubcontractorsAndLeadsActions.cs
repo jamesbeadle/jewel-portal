@@ -14,7 +14,6 @@ using Jewel.JPMS.Contracts.Directory;
 using Jewel.JPMS.Contracts.Leads;
 using Jewel.JPMS.Contracts.Parties;
 using Jewel.JPMS.Contracts.Subcontractors;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 

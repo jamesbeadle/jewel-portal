@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.Retention;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Retention.Queries;

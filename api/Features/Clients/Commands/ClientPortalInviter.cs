@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Auth;
 using Jewel.JPMS.Contracts.Auth;
-using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 

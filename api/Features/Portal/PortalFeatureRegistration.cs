@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Portal.Commands;
 using Jewel.JPMS.Api.Features.Portal.Queries;
 using Jewel.JPMS.Contracts.Portal;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Portal;

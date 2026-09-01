@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.CostCenters;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.CostCenters.Commands;

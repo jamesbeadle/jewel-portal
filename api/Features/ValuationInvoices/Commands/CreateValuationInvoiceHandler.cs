@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Contracts.ValuationInvoices;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;

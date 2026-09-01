@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Features.Requests.Commands;
 using Jewel.JPMS.Api.Features.Requests.Queries;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -13,7 +13,6 @@ using Jewel.JPMS.Contracts.Drawings;
 using Jewel.JPMS.Contracts.Progress;
 using Jewel.JPMS.Contracts.Site;
 using Jewel.JPMS.Contracts.Todos;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 

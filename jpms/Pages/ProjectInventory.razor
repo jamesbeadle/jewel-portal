@@ -140,7 +140,7 @@ else
                                 <tr class="border-b border-line last:border-0 bg-surface-raised/50">
                                     <td colspan="6" class="px-4 py-3">
                                         <FiledEmailList Emails="@(emailsByItem.TryGetValue(item.InventoryItemId, out var filedEmails) ? filedEmails : null)"
-                                                        EmptyMessage="@($"No emails filed to {item.Reference} yet — file one from the Control Centre (Supplier pathway → Inventory items).")" />
+                                            EmptyMessage="@($"No emails filed to {item.Reference} yet — file one from the Control Centre (Supplier pathway → Inventory items).")" />
                                     </td>
                                 </tr>
                             }

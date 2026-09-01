@@ -1,7 +1,5 @@
-using System.Text.Json;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;
 

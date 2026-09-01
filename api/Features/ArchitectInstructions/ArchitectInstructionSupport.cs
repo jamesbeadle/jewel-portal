@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.ArchitectInstructions;

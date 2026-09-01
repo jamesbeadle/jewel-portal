@@ -1,5 +1,4 @@
 using Jewel.JPMS.Api.Features.Ai.Tools;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Ai;
 

@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Features.RecordLinks.Providers;
 using Jewel.JPMS.Api.Features.RecordLinks.Queries;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks;

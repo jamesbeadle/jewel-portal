@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Bluebeam.Queue;
 

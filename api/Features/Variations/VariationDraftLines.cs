@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Jewel.JPMS.Contracts.Variations;
 
 namespace Jewel.JPMS.Api.Features.Variations;

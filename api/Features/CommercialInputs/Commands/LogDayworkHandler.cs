@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.CommercialInputs;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.CommercialInputs.Commands;
 

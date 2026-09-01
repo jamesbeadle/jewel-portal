@@ -1,5 +1,4 @@
 using Jewel.JPMS.Api.Data;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Subcontractors;

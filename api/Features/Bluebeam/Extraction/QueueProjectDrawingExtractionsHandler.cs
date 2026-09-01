@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Bluebeam.Queue;
 using Jewel.JPMS.Contracts.Drawings;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Bluebeam.Extraction;

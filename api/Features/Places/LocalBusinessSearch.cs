@@ -1,7 +1,4 @@
-using System.Net.Http.Json;
-using System.Text.Json;
 using Jewel.JPMS.Api.Features.Ai;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Places;
 

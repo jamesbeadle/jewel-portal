@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Commands;
 

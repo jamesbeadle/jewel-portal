@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.Procurement.Documents;
 using Jewel.JPMS.Contracts.Procurement;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 

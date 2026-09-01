@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Features.TenderEnquiries.Attachments;
 using Jewel.JPMS.Api.Features.TenderEnquiries.Commands;
 using Jewel.JPMS.Api.Features.TenderEnquiries.Queries;
 using Jewel.JPMS.Contracts.TenderEnquiries;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

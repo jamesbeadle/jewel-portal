@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Commercial;
 using Jewel.JPMS.Contracts.Commercial;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Commands;

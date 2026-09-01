@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Projects.Commands;
 using Jewel.JPMS.Contracts.Leads;
 using Jewel.JPMS.Contracts.Projects;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Leads.Commands;
 

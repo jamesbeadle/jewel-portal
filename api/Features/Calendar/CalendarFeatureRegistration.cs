@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Features.Calendar.Commands;
 using Jewel.JPMS.Api.Features.Calendar.Queries;
 using Jewel.JPMS.Contracts.Calendar;
 using Jewel.JPMS.Contracts.Cqrs;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Calendar;

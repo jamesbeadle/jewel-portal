@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Commercial;
 using Jewel.JPMS.Contracts.Variations;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Variations.Commands;

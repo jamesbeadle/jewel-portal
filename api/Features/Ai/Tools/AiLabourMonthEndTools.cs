@@ -1,9 +1,7 @@
-using System.Text.Json;
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Labour;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

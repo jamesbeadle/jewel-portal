@@ -1,8 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.RecordLinks;
-using Jewel.JPMS.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Queries;
 

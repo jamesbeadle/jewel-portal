@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Requests;
-using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;

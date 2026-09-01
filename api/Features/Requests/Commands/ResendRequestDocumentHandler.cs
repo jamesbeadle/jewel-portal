@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Requests.Commands;

@@ -6,7 +6,6 @@ using Jewel.JPMS.Api.Features.TenderEnquiries.Attachments;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.TenderEnquiries;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.TenderEnquiries.Commands;
 

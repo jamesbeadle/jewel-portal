@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Retention.Commands;
 using Jewel.JPMS.Api.Features.Retention.Queries;
 using Jewel.JPMS.Contracts.Retention;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Retention;

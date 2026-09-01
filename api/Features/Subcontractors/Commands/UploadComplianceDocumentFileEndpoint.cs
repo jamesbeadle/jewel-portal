@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Subcontractors.Storage;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Subcontractors;
-using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.ArchitectInstructions;
 using Jewel.JPMS.Api.Features.BuildingControl;
@@ -13,7 +12,6 @@ using Jewel.JPMS.Contracts.Drawings;
 using Jewel.JPMS.Contracts.Lads;
 using Jewel.JPMS.Contracts.Progress;
 using Jewel.JPMS.Contracts.Site;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;

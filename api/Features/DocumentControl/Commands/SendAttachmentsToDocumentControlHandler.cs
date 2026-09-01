@@ -5,7 +5,6 @@ using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.DocumentControl.Storage;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Contracts.DocumentControl;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.DocumentControl.Commands;

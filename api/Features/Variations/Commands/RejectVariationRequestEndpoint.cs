@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Variations;
-using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;

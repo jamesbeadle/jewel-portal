@@ -1,6 +1,5 @@
 using System.Text;
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Todos;
 

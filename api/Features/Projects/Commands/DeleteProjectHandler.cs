@@ -5,7 +5,6 @@ using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Projects;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Projects.Commands;

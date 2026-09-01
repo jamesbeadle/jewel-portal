@@ -1,9 +1,5 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json;
-using Jewel.JPMS.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 /// <summary>No-op client used when Graph credentials aren't configured: triage shows empty and tag

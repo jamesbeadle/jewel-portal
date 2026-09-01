@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Drawings;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Drawings.Commands;

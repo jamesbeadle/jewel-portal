@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Inventory.Commands;
 using Jewel.JPMS.Api.Features.Inventory.Queries;
 using Jewel.JPMS.Contracts.Inventory;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Inventory;

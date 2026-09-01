@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Jewel.JPMS.Api.Gates;
 using Microsoft.EntityFrameworkCore;
 

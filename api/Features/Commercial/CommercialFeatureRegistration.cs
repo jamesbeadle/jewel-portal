@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Features.Commercial.Commands;
 using Jewel.JPMS.Api.Features.Commercial.Queries;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.Cqrs;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Commercial;

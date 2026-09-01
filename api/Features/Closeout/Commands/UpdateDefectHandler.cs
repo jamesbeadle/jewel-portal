@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.Closeout;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Closeout.Commands;
 

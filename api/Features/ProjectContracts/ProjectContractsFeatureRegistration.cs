@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Features.ProjectContracts.Queries;
 using Jewel.JPMS.Api.Features.ProjectContracts.Storage;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.ProjectContracts;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

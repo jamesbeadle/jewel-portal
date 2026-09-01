@@ -4,7 +4,6 @@ using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Labour;
-using Jewel.JPMS.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;

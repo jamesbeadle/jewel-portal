@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Features.Directory.Commands;
 using Jewel.JPMS.Api.Features.Directory.Queries;
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Directory;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Directory;

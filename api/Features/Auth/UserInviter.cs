@@ -2,8 +2,6 @@ using Jewel.JPMS.Api.Auth;
 using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Auth;
-using Jewel.JPMS.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Jewel.JPMS.Api.Features.Auth;
 

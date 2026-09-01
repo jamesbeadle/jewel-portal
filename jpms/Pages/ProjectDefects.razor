@@ -139,7 +139,7 @@ else
                                 <tr class="border-b border-line last:border-0 bg-surface-raised/50">
                                     <td colspan="7" class="px-4 py-3">
                                         <FiledEmailList Emails="@(emailsByDefect.TryGetValue(defect.DefectId, out var filedEmails) ? filedEmails : null)"
-                                                        EmptyMessage="@($"No emails filed to {defect.Reference} yet — file one from the Control Centre (System Tags → Subcontractor → Defect).")" />
+                                            EmptyMessage="@($"No emails filed to {defect.Reference} yet — file one from the Control Centre (System Tags → Subcontractor → Defect).")" />
                                     </td>
                                 </tr>
                             }

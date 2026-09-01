@@ -3,7 +3,6 @@ using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.Xero;
-using Jewel.JPMS.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Queries;

@@ -1,6 +1,5 @@
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Contracts.Retention;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Api.Features.Retention.Commands;
 
