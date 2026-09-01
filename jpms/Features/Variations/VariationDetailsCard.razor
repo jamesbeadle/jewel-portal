@@ -45,16 +45,16 @@
     @* Issued is the official date the client was notified (stamped when the status
        enters Issued); Created is the system's own stamp for when the record was
        raised. Both shown here — the register lists lead with Issued. *@
-    <div class="flex justify-between"><span class="text-content-subtle">Issued</span><span>@(Order.IssuedAt is null ? "—" : Order.IssuedAt.Value.LocalDateTime.ToString("d MMM yyyy"))</span></div>
+    <div class="flex justify-between"><span class="text-content-subtle">Issued</span><span>@Day(Order.IssuedAt)</span></div>
     @if (Order.ApprovedAt is not null)
     {
-        <div class="flex justify-between"><span class="text-content-subtle">Approved</span><span>@Order.ApprovedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span></div>
+        <div class="flex justify-between"><span class="text-content-subtle">Approved</span><span>@Day(Order.ApprovedAt)</span></div>
     }
     @if (Order.RejectedAt is not null)
     {
-        <div class="flex justify-between"><span class="text-content-subtle">Rejected</span><span>@Order.RejectedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span></div>
+        <div class="flex justify-between"><span class="text-content-subtle">Rejected</span><span>@Day(Order.RejectedAt)</span></div>
     }
-    <div class="flex justify-between"><span class="text-content-subtle">Created</span><span>@Order.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</span></div>
+    <div class="flex justify-between"><span class="text-content-subtle">Created</span><span>@Day(Order.CreatedAt)</span></div>
     </LoadGate>
 </div>
 
@@ -68,6 +68,9 @@
     [Parameter] public bool Busy { get; set; }
     /// <summary>The record as the server returned it after a save — the page swaps its copy.</summary>
     [Parameter] public EventCallback<VariationOrder> OnSaved { get; set; }
+
+    // The house date, from the record's UTC stamps — local day, em-dash for none.
+    private static string Day(DateTimeOffset? stamp) => DateText(stamp?.LocalDateTime);
 
     private bool editingEstimate;
     private bool saving;
