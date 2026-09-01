@@ -1,0 +1,57 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+
+@*
+    The email's read-only twin (PanelKind.EmailMirror): the same header, attachments and body
+    rendered a SECOND time, so one window can sit on the email while the reply is typed at the
+    bottom of the other — copying from the original without scrolling the composer out of view.
+    Both copies read the same live page fields, so the thread tabs, document-triage ticks and
+    previews stay in step whichever side they're clicked on. The reply composer itself
+    deliberately isn't mirrored: one editor, one draft, no two cursors fighting over it.
+*@
+@if (Selected is null)
+{
+    <div class="panel p-8 text-center text-sm text-content-subtle">
+        Open a queue email first — this window shows a reading copy of it.
+    </div>
+}
+else
+{
+    <div class="panel p-5 space-y-4">
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">
+            Reading copy — the reply is written in the other window
+        </p>
+
+        <TriageMessageDetail Selected="Selected"
+                             Detail="Detail"
+                             DetailLoading="DetailLoading"
+                             Thread="Thread"
+                             ThreadLoading="ThreadLoading"
+                             ThreadError="@ThreadError"
+                             ThreadMatchedBySubject="ThreadMatchedBySubject"
+                             ShowDocumentTriageTick="ShowDocumentTriageTick"
+                             StagedDocumentControlIds="StagedDocumentControlIds"
+                             Busy="Busy"
+                             OnToggleDocumentTriage="OnToggleDocumentTriage"
+                             OnSelectMessage="OnSelectMessage"
+                             OnRetryThread="OnRetryThread"
+                             OnPreviewAttachment="OnPreviewAttachment" />
+    </div>
+}
+
+@code {
+    /// <summary>The open queue email — null shows the "open one first" placeholder instead.</summary>
+    [Parameter] public MailboxMessage? Selected { get; set; }
+    [Parameter] public MailboxMessageDetail? Detail { get; set; }
+    [Parameter] public bool DetailLoading { get; set; }
+    [Parameter] public IReadOnlyList<MailboxMessage> Thread { get; set; } = Array.Empty<MailboxMessage>();
+    [Parameter] public bool ThreadLoading { get; set; }
+    [Parameter] public string? ThreadError { get; set; }
+    [Parameter] public bool ThreadMatchedBySubject { get; set; }
+    [Parameter] public bool ShowDocumentTriageTick { get; set; }
+    [Parameter] public IReadOnlyCollection<string> StagedDocumentControlIds { get; set; } = Array.Empty<string>();
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<(string AttachmentId, bool Ticked)> OnToggleDocumentTriage { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnSelectMessage { get; set; }
+    [Parameter] public EventCallback OnRetryThread { get; set; }
+    [Parameter] public EventCallback<IntakeAttachment> OnPreviewAttachment { get; set; }
+}

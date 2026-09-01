@@ -1,0 +1,53 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+
+@* The Discarded tab's email window: the discarded email in full, with the one action a
+   discarded email has — restore, which strips the "discarded" tag and puts it (and its
+   thread) back in the queue. *@
+<div class="panel p-5 space-y-4 relative">
+    @if (ActionError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@ActionError</p>
+    }
+
+    <TriageMessageDetail Selected="Selected"
+                         Detail="Detail"
+                         DetailLoading="DetailLoading"
+                         Thread="Thread"
+                         ThreadLoading="ThreadLoading"
+                         ThreadError="@ThreadError"
+                         ThreadMatchedBySubject="ThreadMatchedBySubject"
+                         ShowDocumentTriageTick="false"
+                         StagedDocumentControlIds="StagedDocumentControlIds"
+                         Busy="Busy"
+                         OnToggleDocumentTriage="OnToggleDocumentTriage"
+                         OnSelectMessage="OnSelectMessage"
+                         OnRetryThread="OnRetryThread"
+                         OnPreviewAttachment="OnPreviewAttachment" />
+
+    <div class="pt-3 border-t border-line">
+        <p class="text-sm text-content-muted mb-3">
+            This email was discarded. Restore it to remove the “discarded” tag and put it back in the queue.
+        </p>
+        <button type="button" class="btn-primary" disabled="@Busy" @onclick="() => OnRestore.InvokeAsync()">Restore to queue</button>
+    </div>
+</div>
+
+@code {
+    /// <summary>The discarded email being viewed — the panel only renders with one selected.</summary>
+    [Parameter, EditorRequired] public MailboxMessage Selected { get; set; } = default!;
+    [Parameter] public MailboxMessageDetail? Detail { get; set; }
+    [Parameter] public bool DetailLoading { get; set; }
+    [Parameter] public IReadOnlyList<MailboxMessage> Thread { get; set; } = Array.Empty<MailboxMessage>();
+    [Parameter] public bool ThreadLoading { get; set; }
+    [Parameter] public string? ThreadError { get; set; }
+    [Parameter] public bool ThreadMatchedBySubject { get; set; }
+    [Parameter] public IReadOnlyCollection<string> StagedDocumentControlIds { get; set; } = Array.Empty<string>();
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? ActionError { get; set; }
+    [Parameter] public EventCallback<(string AttachmentId, bool Ticked)> OnToggleDocumentTriage { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnSelectMessage { get; set; }
+    [Parameter] public EventCallback OnRetryThread { get; set; }
+    [Parameter] public EventCallback<IntakeAttachment> OnPreviewAttachment { get; set; }
+    /// <summary>Restores the email to the queue (the tag comes off server-side).</summary>
+    [Parameter] public EventCallback OnRestore { get; set; }
+}

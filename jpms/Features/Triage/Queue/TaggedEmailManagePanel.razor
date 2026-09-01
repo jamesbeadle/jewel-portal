@@ -1,0 +1,152 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Features.Triage
+@using static Jewel.JPMS.Features.Triage.RecordLinkVocabulary
+
+@* The Tagged tab's email window: the filed email in full, its tags managed underneath —
+   remove a tag, or link the thread to another record via the single-pick dropdown trio
+   (type, project, record). The pick state lives on the page (it is parked with a triage);
+   this panel is the view over it. *@
+<div class="panel p-5 space-y-4 relative">
+    @if (ActionError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@ActionError</p>
+    }
+
+    <TriageMessageDetail Selected="Selected"
+                         Detail="Detail"
+                         DetailLoading="DetailLoading"
+                         Thread="Thread"
+                         ThreadLoading="ThreadLoading"
+                         ThreadError="@ThreadError"
+                         ThreadMatchedBySubject="ThreadMatchedBySubject"
+                         ShowDocumentTriageTick="false"
+                         StagedDocumentControlIds="StagedDocumentControlIds"
+                         Busy="Busy"
+                         OnToggleDocumentTriage="OnToggleDocumentTriage"
+                         OnSelectMessage="OnSelectMessage"
+                         OnRetryThread="OnRetryThread"
+                         OnPreviewAttachment="OnPreviewAttachment" />
+
+    <div class="pt-3 border-t border-line space-y-4">
+        <div>
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Tags on this email</p>
+            @* The pathway badge is shown apart from the tag chips: it isn't removable here —
+               the server drops the bucket itself when the last record tag goes. *@
+            @if (Pathway is { } taggedPathway)
+            {
+                <div class="mb-2">
+                    <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(taggedPathway) text-xs font-medium px-2.5 py-1">Filed under @TriagePathways.Label(taggedPathway)</span>
+                </div>
+            }
+            @if (Selected.Categories.Count == 0)
+            {
+                <p class="text-sm text-content-subtle italic">No workflow tags. (Refresh if you just changed them.)</p>
+            }
+            else
+            {
+                <div class="flex flex-wrap gap-2">
+                    @foreach (var tag in Selected.Categories)
+                    {
+                        <span class="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface-raised px-2.5 py-1 text-xs text-content">
+                            @TriageEmailDisplay.TagLabel(tag)
+                            <button type="button" class="text-content-subtle hover:text-negative" disabled="@Busy" @onclick="() => OnRemoveTag.InvokeAsync(tag)" title="Remove this tag">✕</button>
+                        </span>
+                    }
+                </div>
+            }
+        </div>
+
+        <div>
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Link to another record</p>
+            <div class="space-y-3">
+                @* Each type shows the pathway it files under. Every type is offered
+                   whatever the thread's pathway (the hard client wall was removed
+                   2026-08-21) — a link that would add a second pathway simply files
+                   the thread under both (the heads-up below says so; the confirm
+                   step was retired 2026-08-28). *@
+                <select class="field" value="@((int)LinkRecordType)" @onchange="OnLinkTypeChanged">
+                    @foreach (var recordType in LinkTypeOptions)
+                    {
+                        <option value="@((int)recordType)">@RecordTypeLabel(recordType) — @RecordTypePathwayLabel(recordType)</option>
+                    }
+                </select>
+
+                <select class="field" value="@ProjectId" @onchange="OnProjectChanged">
+                    <option value="">Select a project…</option>
+                    @foreach (var project in ProjectOptions)
+                    {
+                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                    }
+                </select>
+
+                @if (!string.IsNullOrWhiteSpace(ProjectId))
+                {
+                    @if (RecordsLoading)
+                    {
+                        <p class="text-sm text-content-subtle italic">Loading @(RecordTypeLabelPlural(LinkRecordType))…</p>
+                    }
+                    else
+                    {
+                        <select class="field" value="@LinkRecordId" @onchange="OnRecordChanged">
+                            <option value="">Select a @(RecordTypeLabelSingular(LinkRecordType))…</option>
+                            @foreach (var record in Records)
+                            {
+                                <option value="@record.RecordId">@record.Reference — @record.Title</option>
+                            }
+                        </select>
+                    }
+                }
+
+                @* The cross-filing heads-up: a type whose pathway differs from the thread's
+                   files it under both — allowed without a confirm (2026-08-28), so this is
+                   purely informational. Applies to any crossing — Client↔Subcontractor/
+                   Internal included, now the wall is gone. *@
+                @if (Pathway is { } fixedPw && ImpliedPathway(LinkRecordType) is { } linkPw && linkPw != fixedPw)
+                {
+                    <p class="text-xs text-content-subtle">This files the thread under @TriagePathways.Label(linkPw) as well as @TriagePathways.Label(fixedPw).</p>
+                }
+
+                <button type="button" class="btn-primary" disabled="@(Busy || string.IsNullOrWhiteSpace(LinkRecordId))" @onclick="() => OnAddLink.InvokeAsync()">
+                    Link to selected record
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>The tagged email being managed — the panel only renders with one selected.</summary>
+    [Parameter, EditorRequired] public MailboxMessage Selected { get; set; } = default!;
+    [Parameter] public MailboxMessageDetail? Detail { get; set; }
+    [Parameter] public bool DetailLoading { get; set; }
+    [Parameter] public IReadOnlyList<MailboxMessage> Thread { get; set; } = Array.Empty<MailboxMessage>();
+    [Parameter] public bool ThreadLoading { get; set; }
+    [Parameter] public string? ThreadError { get; set; }
+    [Parameter] public bool ThreadMatchedBySubject { get; set; }
+    [Parameter] public IReadOnlyCollection<string> StagedDocumentControlIds { get; set; } = Array.Empty<string>();
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? ActionError { get; set; }
+    [Parameter] public EventCallback<(string AttachmentId, bool Ticked)> OnToggleDocumentTriage { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnSelectMessage { get; set; }
+    [Parameter] public EventCallback OnRetryThread { get; set; }
+    [Parameter] public EventCallback<IntakeAttachment> OnPreviewAttachment { get; set; }
+
+    /// <summary>Removes one workflow tag from the email (the ✕ on its chip).</summary>
+    [Parameter] public EventCallback<string> OnRemoveTag { get; set; }
+
+    /// <summary>The single-pick "link to another record" trio — state page-owned, parked with a triage.</summary>
+    [Parameter] public RecordType LinkRecordType { get; set; }
+    [Parameter] public IReadOnlyList<RecordType> LinkTypeOptions { get; set; } = Array.Empty<RecordType>();
+    [Parameter] public EventCallback<ChangeEventArgs> OnLinkTypeChanged { get; set; }
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public IReadOnlyList<Project> ProjectOptions { get; set; } = Array.Empty<Project>();
+    [Parameter] public EventCallback<ChangeEventArgs> OnProjectChanged { get; set; }
+    [Parameter] public bool RecordsLoading { get; set; }
+    [Parameter] public string LinkRecordId { get; set; } = "";
+    [Parameter] public IReadOnlyList<LinkableRecord> Records { get; set; } = Array.Empty<LinkableRecord>();
+    [Parameter] public EventCallback<ChangeEventArgs> OnRecordChanged { get; set; }
+    [Parameter] public EventCallback OnAddLink { get; set; }
+
+    // The thread's pathway badge — derived from the email's own bucket, not passed in.
+    private TriagePathway? Pathway => TriagePathways.FromBucket(Selected.Bucket);
+}
