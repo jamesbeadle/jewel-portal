@@ -1,0 +1,94 @@
+@using Jewel.JPMS.Contracts.Procurement
+@using Jewel.JPMS.Contracts.Subcontractors
+@namespace Jewel.JPMS.Features.Procurement
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject ISubcontractorStore Subs
+
+@* The invite composer: compose, persist, SEND — all in here, like a triage reply. The tender
+   list is pre-filled into BCC (subcontractors never see each other) and the whole envelope
+   stays editable. The draft persists ON the package (Save draft, and quietly on Cancel), so a
+   half-written invite survives for anyone on the team; the host opens the dialog by @@ref and
+   learns the outcome of each send. Overlay-dismiss off: a stray click must not lose a composed
+   email. *@
+<Modal IsOpen="isOpen" Title="Tender invite email" DismissOnOverlayClick="false"
+       OnCancel="CloseAsync" Class="max-w-3xl w-full">
+    <FooterContent>
+        <button type="button" class="btn-secondary" disabled="@(sending || savingDraft)" @onclick="SaveDraftAsync">
+            @(savingDraft ? "Saving…" : "Save draft")
+        </button>
+        <button type="button" class="btn-neutral" disabled="@sending" @onclick="CloseAsync">Close</button>
+        <button type="button" class="btn-primary" disabled="@(sending || RecipientCount == 0)" @onclick="ConfirmSendAsync">
+            @(sending ? "Sending…" : RecipientCount == 0 ? "No recipients" : $"Send to {RecipientCount} recipient{(RecipientCount == 1 ? "" : "s")}")
+        </button>
+    </FooterContent>
+    <ChildContent>
+    <p class="text-xs text-content-subtle mb-3">
+        Sends now, from the projects mailbox — no trip to Outlook. Recipients are pre-filled into
+        BCC so subcontractors never see each other; the whole envelope is editable. The email is
+        tagged to this package, and tagged replies appear under Tender responses.
+        <span> Attached automatically: the pricing schedule (@(Package?.Reference ?? "BPI")&nbsp;- Pricing Schedule.xlsx, generated from the line items) and the company terms &amp; conditions (when uploaded in Admin → System).</span>
+        @if (AttachedDocumentCount > 0)
+        {
+            <span> Plus @AttachedDocumentCount tender document@(AttachedDocumentCount == 1 ? "" : "s") — any that would push the email over the 25&nbsp;MB limit go out as 7-day download links instead.</span>
+        }
+    </p>
+
+    @if (sendError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@sendError</p>
+    }
+    @if (draftSavedAt is { } savedAt)
+    {
+        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content mb-3">
+            Picked up the saved draft from @savedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm").
+        </p>
+    }
+    @if (MissingEmail.Count > 0)
+    {
+        <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
+            Won't receive it (no email address in the directory): @string.Join(", ", MissingEmail).
+            Add their email in the <a class="underline" href="/directory">Directory</a> and reopen this window.
+        </p>
+    }
+    @if (LineItems.Count == 0)
+    {
+        <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
+            This package has no line items yet, so the pricing schedule has nothing to price.
+            You can still send — or close, add line items, and come back (the draft keeps).
+        </p>
+    }
+
+    <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">To</label>
+    <input class="field mb-1" @bind="to" placeholder="Leave empty — the projects mailbox addresses itself, recipients stay in BCC" />
+    <p class="text-[11px] text-content-subtle mb-3">Semicolon-separated addresses. Empty means the projects mailbox is the visible addressee — the norm for a BCC'd invite.</p>
+
+    <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Cc</label>
+    <input class="field mb-3" @bind="cc" placeholder="Optional — internal people to copy in" />
+
+    <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Bcc — the tender list</label>
+    <textarea class="field mb-3" rows="2" @bind="bcc"></textarea>
+
+    <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
+    <input class="field mb-3" @bind="subject" />
+
+    <div class="flex items-center justify-between mb-1">
+        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle">Message</label>
+        <button type="button" class="text-xs text-accent hover:underline" @onclick="() => editingBody = !editingBody">
+            @(editingBody ? "Back to preview" : "Edit message (HTML)")
+        </button>
+    </div>
+    @if (editingBody)
+    {
+        <textarea class="field font-mono text-xs" rows="14" @bind="body"></textarea>
+        <p class="text-[11px] text-content-subtle mt-1">Sent as HTML — the pre-filled message includes the package's line items for pricing, when there are any.</p>
+    }
+    else
+    {
+        <div class="rounded-lg border border-line bg-white text-gray-900 p-4 text-sm max-h-80 overflow-y-auto">
+            @((MarkupString)body)
+        </div>
+        <p class="text-[11px] text-content-subtle mt-1">This is how the email will look to a tenderer.</p>
+    }
+    </ChildContent>
+</Modal>
