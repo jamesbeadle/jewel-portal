@@ -93,8 +93,4 @@
     private static string SourceLabel(TenderEnquiryAttachmentSource source) =>
         source == TenderEnquiryAttachmentSource.Email ? "from the enquiry email," : "uploaded";
 
-    private static string FormatSize(long bytes) =>
-        bytes >= 1_048_576 ? $"{bytes / 1_048_576.0:0.#} MB"
-        : bytes >= 1024 ? $"{bytes / 1024.0:0.#} KB"
-        : $"{bytes} B";
 }

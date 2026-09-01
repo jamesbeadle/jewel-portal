@@ -1,6 +1,4 @@
 using Jewel.JPMS.Contracts.MailboxCompose;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components;
 
 namespace Jewel.JPMS.Features.Todos.Detail;
 

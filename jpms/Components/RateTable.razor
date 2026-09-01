@@ -18,7 +18,7 @@
                     <td class="px-4 py-3 text-content-muted">@rate.Description</td>
                     <td class="px-4 py-3 text-content-muted hidden md:table-cell">@rate.SupplierName</td>
                     <td class="px-4 py-3 text-right text-content-subtle">@rate.Unit</td>
-                    <td class="px-4 py-3 text-right text-content font-medium">@Money(rate.Value)</td>
+                    <td class="px-4 py-3 text-right text-content font-medium">@WholeMoney(rate.Value)</td>
                     <td class="px-4 py-3 text-content-muted hidden lg:table-cell">
                         @rate.LastPricedAt.LocalDateTime.ToString("d MMM yyyy")
                     </td>
@@ -31,6 +31,4 @@
 @code {
     [Parameter, EditorRequired] public IReadOnlyList<Rate> Rates { get; set; } = Array.Empty<Rate>();
 
-    private static string Money(decimal value) =>
-        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 }

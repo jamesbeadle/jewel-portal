@@ -1,7 +1,4 @@
 using Jewel.JPMS.Contracts.ClientPortal;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
-using Jewel.JPMS.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.ClientPortal;

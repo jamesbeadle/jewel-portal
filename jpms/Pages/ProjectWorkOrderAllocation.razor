@@ -570,9 +570,6 @@ else
         summary.Value <= 0m ? (summary.InvoicedToDate > 0m ? 100 : 0)
             : (int)Math.Clamp(Math.Round(summary.InvoicedToDate / summary.Value * 100m), 0, 100);
 
-    private static string Money(decimal value) =>
-        value.ToString("C2",
-            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     private static string MoneyExact(decimal value) =>
         value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));

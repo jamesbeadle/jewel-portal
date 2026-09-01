@@ -19,18 +19,7 @@
 
 <PageTitle>Project Cashflow · JPMS</PageTitle>
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<ApprovedSessionGate>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="cashflow">
         <h2 class="text-lg font-semibold text-content mb-1">Project Cashflow</h2>
         <p class="text-sm text-content-subtle mb-4 max-w-2xl">
@@ -309,7 +298,7 @@ else
                                  UnallocatedBills="@(unallocatedBills ?? Array.Empty<UnallocatedSiteBill>())"
                                  OnClose="() => showUnpaidInvoices = false" />
     </ProjectPageShell>
-}
+</ApprovedSessionGate>
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
@@ -317,7 +306,6 @@ else
     // Session checked and the user is signed in. This is NOT "the data is here" — keeping the two
     // apart is the whole point: this page reveals its chrome immediately and holds the statement
     // until every figure in it can be shown at once.
-    private bool sessionReady;
 
     // A failed fetch must open the gate, or the jewel pulses forever. The panel then says so
     // instead of showing figures; the toast at the top carries the reference and the detail.
@@ -501,9 +489,6 @@ else
 
     private static string AddBack(decimal value) => value == 0m ? "—" : $"+ {Money(value)}";
 
-    private static string Money(decimal value) =>
-        value.ToString("C2",
-            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     private static string Pct(decimal value) =>
         value.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("en-GB")) + "%";
@@ -522,7 +507,6 @@ else
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
         ValuationReport.Refresh(ProjectId);
         Retention.Refresh(ProjectId);
-        sessionReady = true;
 
         // Fired together, awaited together — the statement stays behind its jewel until they land.
         try

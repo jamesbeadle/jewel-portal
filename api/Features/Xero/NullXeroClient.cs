@@ -1,0 +1,60 @@
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Jewel.JPMS.Contracts.Xero;
+using Microsoft.Extensions.Logging;
+
+namespace Jewel.JPMS.Api.Features.Xero;
+/// <summary>No-op used when no Xero client id/secret is configured; reports itself as such.</summary>
+public sealed class NullXeroClient : IXeroClient
+{
+    public bool IsConfigured => false;
+
+    public Task<XeroTransactionsSnapshot> GetPurchaseInvoicesAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroTransactionsSnapshot.NotConfigured());
+
+    public Task<XeroCashSummarySnapshot> GetCashSummaryAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroCashSummarySnapshot.NotConfigured());
+
+    public Task<XeroAgedPayablesSnapshot> GetAgedPayablesAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroAgedPayablesSnapshot.NotConfigured());
+
+    public Task<XeroAgedReceivablesSnapshot> GetAgedReceivablesAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroAgedReceivablesSnapshot.NotConfigured());
+
+    public Task<XeroTrackingCategoriesSnapshot> GetTrackingCategoriesSnapshotAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroTrackingCategoriesSnapshot.NotConfigured());
+
+    public Task<XeroSuppliersSnapshot> GetSuppliersAsync(bool force, CancellationToken ct) =>
+        Task.FromResult(XeroSuppliersSnapshot.NotConfigured());
+
+    public Task<XeroApprovalResult> ApproveInvoiceAsync(XeroApprovalRequest request, CancellationToken ct) =>
+        Task.FromResult(XeroApprovalResult.Failed(
+            "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
+
+    public Task<XeroApprovalResult> SetSiteTrackingAsync(XeroSiteTrackingRequest request, CancellationToken ct) =>
+        Task.FromResult(XeroApprovalResult.Failed(
+            "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
+
+    public Task<XeroApprovalResult> RecodeDraftBillAsync(XeroDraftCodingRequest request, CancellationToken ct) =>
+        Task.FromResult(XeroApprovalResult.Failed(
+            "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
+
+    public Task<XeroApprovalResult> CreateDraftBillAsync(XeroDraftBillRequest request, CancellationToken ct) =>
+        Task.FromResult(XeroApprovalResult.Failed(
+            "Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings."));
+
+    public Task<IReadOnlyList<XeroInvoiceAttachment>> ListAttachmentsAsync(
+        string invoiceId, bool isCreditNote, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<XeroInvoiceAttachment>>(Array.Empty<XeroInvoiceAttachment>());
+
+    public Task<XeroAttachmentContent?> GetAttachmentAsync(
+        string invoiceId, bool isCreditNote, string fileName, CancellationToken ct) =>
+        Task.FromResult<XeroAttachmentContent?>(null);
+
+    public Task<IReadOnlyList<XeroSitePnlMonthFigures>> GetSiteMonthlyPnlAsync(
+        string siteOption, DateTime fromMonth, DateTime toMonth, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<XeroSitePnlMonthFigures>>(Array.Empty<XeroSitePnlMonthFigures>());
+}
+

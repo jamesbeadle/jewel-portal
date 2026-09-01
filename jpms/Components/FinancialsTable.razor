@@ -142,18 +142,18 @@
                                     class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
                                     title="Show the valuation lines behind this figure"
                                     @onclick="() => OnContractSalesSelected.InvokeAsync((Heading(reportLine), reportLine.CostCodes))">
-                                @Money(contractSales)
+                                @WholeMoney(contractSales)
                             </button>
                         </td>
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
+                        <td class="px-4 py-3 text-right text-content-muted">@WholeMoney(0m)</td>
                     }
                     <td class="px-4 py-3 text-right @MoneyClass(SalesCompletionFor(reportLine.CostCodes))">@Percent(SalesCompletionFor(reportLine.CostCodes))</td>
-                    <td class="px-4 py-3 text-right @MoneyClass(ClaimValueFor(reportLine.CostCodes))">@Money(ClaimValueFor(reportLine.CostCodes))</td>
+                    <td class="px-4 py-3 text-right @MoneyClass(ClaimValueFor(reportLine.CostCodes))">@WholeMoney(ClaimValueFor(reportLine.CostCodes))</td>
 
-                    <td class="px-4 py-3 text-right border-l border-line @MoneyClass(TargetCostFor(reportLine.CostCodes))">@Money(TargetCostFor(reportLine.CostCodes))</td>
+                    <td class="px-4 py-3 text-right border-l border-line @MoneyClass(TargetCostFor(reportLine.CostCodes))">@WholeMoney(TargetCostFor(reportLine.CostCodes))</td>
 
                     @if (woCommitted != 0m)
                     {
@@ -162,21 +162,21 @@
                                     class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
                                     title="Show this line's work orders"
                                     @onclick="() => OnWorkOrderCommittedSelected.InvokeAsync((Heading(reportLine), reportLine.CostCodes))">
-                                @Money(woCommitted)
+                                @WholeMoney(woCommitted)
                             </button>
                         </td>
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
+                        <td class="px-4 py-3 text-right text-content-muted">@WholeMoney(0m)</td>
                     }
 
-                    <td class="px-4 py-3 text-right @MoneyClass(NonWoCostOfSalesFor(reportLine.CostCodes))">@Money(NonWoCostOfSalesFor(reportLine.CostCodes))</td>
+                    <td class="px-4 py-3 text-right @MoneyClass(NonWoCostOfSalesFor(reportLine.CostCodes))">@WholeMoney(NonWoCostOfSalesFor(reportLine.CostCodes))</td>
 
                     @* Committed Cost of Sales = Work Orders + Non-WO Cost of Sales — what is
                        already committed against the line. *@
                     <td class="px-4 py-3 text-right @MoneyClass(committedCoS)"
-                        title="Work Orders + Non-WO Cost of Sales">@Money(committedCoS)</td>
+                        title="Work Orders + Non-WO Cost of Sales">@WholeMoney(committedCoS)</td>
 
                     @* Target − Committed, split by sign per centre: budget still available on
                        the line (Drawdown) and budget already passed (Overspend). Locked lines
@@ -189,20 +189,20 @@
                     else
                     {
                         <td class="px-4 py-3 text-right @(drawdown == 0m ? "text-content-muted" : "text-content")"
-                            title="Target Cost Value − Committed Cost of Sales, where positive — funds still available on the line">@Money(drawdown)</td>
+                            title="Target Cost Value − Committed Cost of Sales, where positive — funds still available on the line">@WholeMoney(drawdown)</td>
                         <td class="px-4 py-3 text-right @(overspend == 0m ? "text-content-muted" : "text-negative")"
-                            title="Target Cost Value − Committed Cost of Sales, where negative — committed cost past the line's target">@Money(overspend)</td>
+                            title="Target Cost Value − Committed Cost of Sales, where negative — committed cost past the line's target">@WholeMoney(overspend)</td>
                     }
 
                     @* Forecasted Cost of Sales = Committed + Drawdown, the cost side's subtotal:
                        an underspent line is expected to spend its full target, an overspent one
                        what is already committed. *@
                     <td class="px-4 py-3 text-right @MoneyClass(forecast)"
-                        title="Committed Cost of Sales + Drawdown — what the line is expected to cost in total">@Money(forecast)</td>
+                        title="Committed Cost of Sales + Drawdown — what the line is expected to cost in total">@WholeMoney(forecast)</td>
 
                     @if (anyLocked)
                     {
-                        <td class="px-4 py-3 text-right font-medium @(profitLoss == 0m ? "text-content-muted" : profitLoss > 0m ? "text-positive" : "text-negative")">@Money(profitLoss)</td>
+                        <td class="px-4 py-3 text-right font-medium @(profitLoss == 0m ? "text-content-muted" : profitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(profitLoss)</td>
                     }
                     else
                     {
@@ -248,13 +248,13 @@
                                     class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
                                     title="Show the allocated purchase invoices behind this figure, and link them to work orders"
                                     @onclick="() => OnCostOfSalesSelected.InvokeAsync((Heading(reportLine), reportLine.CostCodes))">
-                                @Money(CostOfSalesFor(reportLine.CostCodes))
+                                @WholeMoney(CostOfSalesFor(reportLine.CostCodes))
                             </button>
                         </td>
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right text-content-muted">@Money(0m)</td>
+                        <td class="px-4 py-3 text-right text-content-muted">@WholeMoney(0m)</td>
                     }
                 </tr>
             }
@@ -279,13 +279,13 @@
                                   title="Locked — figures frozen; profit / loss realised against actual invoiced cost">Locked</span>
                         }
                     </td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.SalesValue)">@Money(package.SalesValue)</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.SalesValue)">@WholeMoney(package.SalesValue)</td>
                     <td class="px-4 py-3 text-right text-content-muted">
                         @Percent(package.SalesValue == 0m ? 0m : Math.Round(package.ClaimedToDate / package.SalesValue * 100m, 1))
                     </td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.ClaimedToDate)">@Money(package.ClaimedToDate)</td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line @MoneyClass(package.TargetCost)">@Money(package.TargetCost)</td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.WoCommitted)">@Money(package.WoCommitted)</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.ClaimedToDate)">@WholeMoney(package.ClaimedToDate)</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line @MoneyClass(package.TargetCost)">@WholeMoney(package.TargetCost)</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.WoCommitted)">@WholeMoney(package.WoCommitted)</td>
                     <td class="px-4 py-3 text-right text-content-muted"
                         title="Direct invoice spend assigned to this package is included in its Actual Cost of Sales figure">—</td>
                     @if (package.IsLocked)
@@ -300,15 +300,15 @@
                         @* Committed orders plus direct packaged spend — the same figure the
                            package's drawdown nets off its target cost. *@
                         <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.TargetCost - package.Drawdown)"
-                            title="Work orders + direct packaged spend">@Money(package.TargetCost - package.Drawdown)</td>
-                        <td class="px-4 py-3 text-right @(package.Drawdown <= 0m ? "text-content-muted" : "text-content")">@Money(Math.Max(0m, package.Drawdown))</td>
-                        <td class="px-4 py-3 text-right @(package.Drawdown < 0m ? "text-negative" : "text-content-muted")">@Money(Math.Min(0m, package.Drawdown))</td>
+                            title="Work orders + direct packaged spend">@WholeMoney(package.TargetCost - package.Drawdown)</td>
+                        <td class="px-4 py-3 text-right @(package.Drawdown <= 0m ? "text-content-muted" : "text-content")">@WholeMoney(Math.Max(0m, package.Drawdown))</td>
+                        <td class="px-4 py-3 text-right @(package.Drawdown < 0m ? "text-negative" : "text-content-muted")">@WholeMoney(Math.Min(0m, package.Drawdown))</td>
                         <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.TargetCost - package.Drawdown + Math.Max(0m, package.Drawdown))"
-                            title="Committed Cost of Sales + Drawdown — what the package is expected to cost in total">@Money(package.TargetCost - package.Drawdown + Math.Max(0m, package.Drawdown))</td>
+                            title="Committed Cost of Sales + Drawdown — what the package is expected to cost in total">@WholeMoney(package.TargetCost - package.Drawdown + Math.Max(0m, package.Drawdown))</td>
                     }
                     @if (package.IsLocked)
                     {
-                        <td class="px-4 py-3 text-right font-medium @(package.ProfitLoss == 0m ? "text-content-muted" : package.ProfitLoss > 0m ? "text-positive" : "text-negative")">@Money(package.ProfitLoss)</td>
+                        <td class="px-4 py-3 text-right font-medium @(package.ProfitLoss == 0m ? "text-content-muted" : package.ProfitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(package.ProfitLoss)</td>
                     }
                     else
                     {
@@ -320,7 +320,7 @@
                     </td>
                     <td class="px-4 py-3 text-right text-content-muted"
                         title="Packages are reconciled in the Packages section below the table">—</td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.InvoicedToDate)">@Money(package.InvoicedToDate)</td>
+                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.InvoicedToDate)">@WholeMoney(package.InvoicedToDate)</td>
                 </tr>
             }
         </tbody>
@@ -329,21 +329,21 @@
                 <td class="sticky left-0 z-10 bg-surface-raised px-3 py-3"></td>
                 <td class="sticky left-[36px] z-10 bg-surface-raised px-4 py-3"></td>
                 <td class="sticky left-[124px] z-10 bg-surface-raised px-4 py-3 whitespace-nowrap">Total</td>
-                <td class="px-4 py-3 text-right">@Money(TotalContractSales)</td>
+                <td class="px-4 py-3 text-right">@WholeMoney(TotalContractSales)</td>
                 <td class="px-4 py-3 text-right">@Percent(WeightedSalesCompletion)</td>
-                <td class="px-4 py-3 text-right">@Money(TotalClaimValue)</td>
-                <td class="px-4 py-3 text-right border-l border-line">@Money(TotalTargetCost)</td>
-                <td class="px-4 py-3 text-right">@Money(TotalWoCommitted)</td>
-                <td class="px-4 py-3 text-right">@Money(TotalNonWoCostOfSales)</td>
-                <td class="px-4 py-3 text-right">@Money(TotalCommittedCostOfSales)</td>
-                <td class="px-4 py-3 text-right">@Money(TotalDrawdown)</td>
-                <td class="px-4 py-3 text-right @(TotalOverspend < 0m ? "text-negative" : "")">@Money(TotalOverspend)</td>
-                <td class="px-4 py-3 text-right">@Money(TotalForecastCostOfSales)</td>
-                <td class="px-4 py-3 text-right @(TotalProfitLoss == 0m ? "" : TotalProfitLoss > 0m ? "text-positive" : "text-negative")">@Money(TotalProfitLoss)</td>
+                <td class="px-4 py-3 text-right">@WholeMoney(TotalClaimValue)</td>
+                <td class="px-4 py-3 text-right border-l border-line">@WholeMoney(TotalTargetCost)</td>
+                <td class="px-4 py-3 text-right">@WholeMoney(TotalWoCommitted)</td>
+                <td class="px-4 py-3 text-right">@WholeMoney(TotalNonWoCostOfSales)</td>
+                <td class="px-4 py-3 text-right">@WholeMoney(TotalCommittedCostOfSales)</td>
+                <td class="px-4 py-3 text-right">@WholeMoney(TotalDrawdown)</td>
+                <td class="px-4 py-3 text-right @(TotalOverspend < 0m ? "text-negative" : "")">@WholeMoney(TotalOverspend)</td>
+                <td class="px-4 py-3 text-right">@WholeMoney(TotalForecastCostOfSales)</td>
+                <td class="px-4 py-3 text-right @(TotalProfitLoss == 0m ? "" : TotalProfitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(TotalProfitLoss)</td>
                 <td class="px-4 py-3 text-right pr-6">@Percent(WeightedCostCompletion)</td>
                 <td class="px-4 py-3"></td>
                 <td class="px-4 py-3"></td>
-                <td class="px-4 py-3 text-right">@Money(TotalCostOfSales)</td>
+                <td class="px-4 py-3 text-right">@WholeMoney(TotalCostOfSales)</td>
             </tr>
         </tfoot>
     </table>
@@ -860,8 +860,6 @@
     private static string InputValue(decimal value) =>
         value.ToString(value == Math.Truncate(value) ? "0" : "0.#");
 
-    private static string Money(decimal value) =>
-        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     private static string Percent(decimal value) =>
         $"{value.ToString(value == Math.Truncate(value) ? "0" : "0.#")}%";

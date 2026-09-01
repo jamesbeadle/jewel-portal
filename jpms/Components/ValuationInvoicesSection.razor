@@ -745,7 +745,6 @@
         _ => type.ToString()
     };
 
-    private static string Money(decimal value) => value.ToString("C2", Gb);
 
     // Same rows and order as the table (cancelled invoices stay listed, greyed out).
     private ExcelWorkbook? BuildExportWorkbook(bool _)

@@ -62,24 +62,24 @@ else
     </div>
 
     <div class="space-y-3">
-        @foreach (var section in Sections)
+        @foreach (var valuationSection in Sections)
         {
-            @if (section.Lines.Count > 0)
+            @if (valuationSection.Lines.Count > 0)
             {
                 <div class="rounded-xl border border-line bg-surface overflow-hidden">
                     <div class="flex items-center gap-3 px-4 py-3 bg-surface-raised/60">
-                        <span class="font-semibold text-content whitespace-nowrap">@section.Title</span>
+                        <span class="font-semibold text-content whitespace-nowrap">@valuationSection.Title</span>
                         <span class="text-xs text-content-subtle whitespace-nowrap">
-                            @section.Lines.Count @(section.Lines.Count == 1 ? "line" : "lines")
+                            @valuationSection.Lines.Count @(valuationSection.Lines.Count == 1 ? "line" : "lines")
                         </span>
                         <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
                             <span class="text-sm">
                                 <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
-                                <span class="text-content-muted">@Money(section.Claimed)</span>
+                                <span class="text-content-muted">@Money(valuationSection.Claimed)</span>
                             </span>
                             <span class="text-sm">
                                 <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Total</span>
-                                <span class="text-content font-medium">@Money(section.Amount)</span>
+                                <span class="text-content font-medium">@Money(valuationSection.Amount)</span>
                             </span>
                         </span>
                     </div>
@@ -98,7 +98,7 @@ else
                             </thead>
                             <tbody class="divide-y divide-line">
                                 @{ var currentArea = ""; }
-                                @foreach (var row in RowsFor(section))
+                                @foreach (var row in RowsFor(valuationSection))
                                 {
                                     @* Variations consolidate per variation per cost centre (VariationRollUps);
                                        a consolidated row opens to show the frozen lines beneath it. The client's
@@ -133,8 +133,8 @@ else
                                     }
                                     var line = row.Line!;
                                     @* Area title rows, same rule as the live report table (ValuationReportAreas):
-                                       the estimate section frozen on the line, else its cost-centre name. *@
-                                    @if (ValuationReportAreas.GroupsByArea(section.Type))
+                                       the estimate valuationSection frozen on the line, else its cost-centre name. *@
+                                    @if (ValuationReportAreas.GroupsByArea(valuationSection.Type))
                                     {
                                         var area = AreaTitleFor(line);
                                         if (ValuationReportAreas.StartsNewArea(area, currentArea))
@@ -363,7 +363,6 @@ else
         return line.SectionName;
     }
 
-    private static string Money(decimal v) => v.ToString("C2", Gb);
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
 

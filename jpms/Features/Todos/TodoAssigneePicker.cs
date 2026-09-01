@@ -1,5 +1,3 @@
-using Jewel.JPMS.Components;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Features.Todos;
 

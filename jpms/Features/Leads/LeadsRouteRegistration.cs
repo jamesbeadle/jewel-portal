@@ -1,6 +1,4 @@
 using Jewel.JPMS.Contracts.Leads;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Leads;

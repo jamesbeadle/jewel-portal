@@ -505,8 +505,6 @@ else
 
     private decimal OrderTotal => Create.Lines.Sum(line => line.Amount ?? 0m);
 
-    private static string Money(decimal value) =>
-        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     // Email attachments that can actually be acted on: legacy snapshots without an id can't be
     // fetched from the mailbox, so they aren't offered.
@@ -532,8 +530,4 @@ else
     private void OnWorkOrderFilesSelected(Microsoft.AspNetCore.Components.Forms.InputFileChangeEventArgs e) =>
         SetWorkOrder(create => create.UploadFiles.AddRange(e.GetMultipleFiles(20)));
 
-    private static string FormatSize(long bytes) =>
-        bytes >= 1_048_576 ? $"{bytes / 1_048_576.0:0.#} MB"
-        : bytes >= 1024 ? $"{bytes / 1024.0:0.#} KB"
-        : $"{bytes} B";
 }

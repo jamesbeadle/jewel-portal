@@ -22,18 +22,7 @@
     back to the worker.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<ApprovedSessionGate>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="labour">
 
         @if (actionError is not null)
@@ -480,14 +469,13 @@ else
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@overBudgetError</p>
         }
     </Modal>
-}
+</ApprovedSessionGate>
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
     // Session checked and the user is signed in. This is NOT "the data is here" — the tab's
     // headings and its week nav show at once; each panel below holds until its own figures land.
-    private bool sessionReady;
 
     // A failed fetch must open the gates, or the jewels pulse forever. The panel says so instead
     // of showing rows; the toast at the top carries the reference and the detail.
@@ -588,7 +576,6 @@ else
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Labour.OnChange += StateHasChanged;
         CostCenters.OnChanged += StateHasChanged;
-        sessionReady = true;
 
         // Revalidate cached data in the background on every visit (stale-while-revalidate —
         // see the front-end data-loading convention in CLAUDE.md).

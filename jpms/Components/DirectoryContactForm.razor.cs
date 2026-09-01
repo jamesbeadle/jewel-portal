@@ -1,5 +1,3 @@
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components;
 
 namespace Jewel.JPMS.Components;
 

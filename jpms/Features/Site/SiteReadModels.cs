@@ -1,6 +1,4 @@
 using Jewel.JPMS.Contracts.Site;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Features.Site;
 

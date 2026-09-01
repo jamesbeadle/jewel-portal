@@ -372,8 +372,6 @@
         return string.IsNullOrWhiteSpace(humanised) ? "Jewel Bespoke Build" : humanised;
     }
 
-    private static string Money(decimal value) =>
-        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     // "25%" / "12.5%" — no trailing zeros, matching how the percentage was typed.
     private static string Percent(decimal value) =>

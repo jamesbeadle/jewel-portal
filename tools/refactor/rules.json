@@ -1,13 +1,65 @@
 {
-  "sourceGlobs": ["api/**/*.cs", "contracts/**/*.cs", "jpms/**/*.cs", "jpms/**/*.razor", "worker/**/*.cs"],
-  "excludeGlobs": ["**/bin/**", "**/obj/**", "**/Migrations/**", "**/node_modules/**", "**/wwwroot/lib/**"],
+  "sourceGlobs": [
+    "api/**/*.cs",
+    "contracts/**/*.cs",
+    "jpms/**/*.cs",
+    "jpms/**/*.razor",
+    "worker/**/*.cs"
+  ],
+  "excludeGlobs": [
+    "**/bin/**",
+    "**/obj/**",
+    "**/Migrations/**",
+    "**/node_modules/**",
+    "**/wwwroot/lib/**"
+  ],
   "maxFileLines": 100,
   "maxFunctionLines": 30,
-  "fileLengthExemptGlobs": ["**/GlobalUsings.cs", "**/*.Designer.cs"],
-  "booleanPrefixes": ["is", "has", "should", "can", "was", "will", "must", "allows"],
-  "bannedAbbreviations": ["usr", "btn", "cfg", "tmp", "req", "res", "ctx", "idx", "err", "msg", "num", "val", "cnt", "arr", "obj2", "fn"],
-  "commentMarkers": {"line": "//", "documentation": "///", "markup": "@*"},
-  "duplication": {"minTokens": 70, "ignoreGlobs": ["**/bin/**", "**/obj/**", "**/Migrations/**"]},
+  "fileLengthExemptGlobs": [
+    "**/GlobalUsings.cs",
+    "**/*.Designer.cs"
+  ],
+  "booleanPrefixes": [
+    "is",
+    "has",
+    "should",
+    "can",
+    "was",
+    "will",
+    "must",
+    "allows"
+  ],
+  "bannedAbbreviations": [
+    "usr",
+    "btn",
+    "cfg",
+    "tmp",
+    "req",
+    "res",
+    "ctx",
+    "idx",
+    "err",
+    "msg",
+    "num",
+    "val",
+    "cnt",
+    "arr",
+    "obj2",
+    "fn"
+  ],
+  "commentMarkers": {
+    "line": "//",
+    "documentation": "///",
+    "markup": "@*"
+  },
+  "duplication": {
+    "minTokens": 70,
+    "ignoreGlobs": [
+      "**/bin/**",
+      "**/obj/**",
+      "**/Migrations/**"
+    ]
+  },
   "inventory": {
     "pagesGlob": "jpms/Pages/**/*.razor",
     "componentsGlob": "jpms/Components/**/*.razor",
@@ -24,8 +76,21 @@
     }
   },
   "styleTokens": {
-    "markupGlobs": ["jpms/**/*.razor", "jpms/**/*.css"],
+    "markupGlobs": [
+      "jpms/**/*.razor",
+      "jpms/**/*.css"
+    ],
     "forbidInlineHexColours": true,
     "forbidInlineStyleAttributes": true
+  },
+  "prose": {
+    "maxMemberAccessesPerLine": 3,
+    "maxLineLength": 160,
+    "maxIndentDepth": 5,
+    "indentWidth": 4
+  },
+  "functionNames": {
+    "maxWords": 5,
+    "maxLength": 40
   }
 }

@@ -1,7 +1,5 @@
 using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Registers;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Registers;

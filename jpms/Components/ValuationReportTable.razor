@@ -47,46 +47,46 @@ else
         </div>
     }
     <div class="space-y-3">
-        @foreach (var section in Sections)
+        @foreach (var valuationSection in Sections)
         {
-            var isOpen = IsExpanded(section.Type);
+            var isOpen = IsExpanded(valuationSection.Type);
             <div class="rounded-xl border border-line bg-surface overflow-hidden">
-                <button type="button" @onclick="@(() => Toggle(section.Type))" aria-expanded="@isOpen"
+                <button type="button" @onclick="@(() => Toggle(valuationSection.Type))" aria-expanded="@isOpen"
                         class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
                     <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
                          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M9 6l6 6-6 6" />
                     </svg>
-                    <span class="font-semibold text-content whitespace-nowrap">@section.Title</span>
+                    <span class="font-semibold text-content whitespace-nowrap">@valuationSection.Title</span>
                     <span class="text-xs text-content-subtle whitespace-nowrap">
-                        @section.Lines.Count @(section.Lines.Count == 1 ? "line" : "lines")
+                        @valuationSection.Lines.Count @(valuationSection.Lines.Count == 1 ? "line" : "lines")
                     </span>
                     <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
                         @if (SelectedClaim is not null)
                         {
                             <span class="text-sm">
                                 <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
-                                <span class="text-content-muted">@Money(ClaimedTotalFor(section)) (@Pct(PercentTotalFor(section)))</span>
+                                <span class="text-content-muted">@Money(ClaimedTotalFor(valuationSection)) (@Pct(PercentTotalFor(valuationSection)))</span>
                             </span>
                             <span class="text-sm">
                                 <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">This period</span>
-                                <span class="text-content-muted">@Money(PeriodTotalFor(section))</span>
+                                <span class="text-content-muted">@Money(PeriodTotalFor(valuationSection))</span>
                             </span>
                         }
                         <span class="text-sm">
                             <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Total</span>
-                            <span class="text-content font-medium">@Money(section.Amount)</span>
+                            <span class="text-content font-medium">@Money(valuationSection.Amount)</span>
                         </span>
                     </span>
                 </button>
 
                 @if (isOpen)
                 {
-                    @if (section.Lines.Count == 0)
+                    @if (valuationSection.Lines.Count == 0)
                     {
                         <div class="border-t border-line px-4 py-5 text-center text-content-subtle italic text-sm">
-                            No @section.Title.ToLowerInvariant() lines yet.
+                            No @valuationSection.Title.ToLowerInvariant() lines yet.
                         </div>
                     }
                     else
@@ -123,9 +123,9 @@ else
                                 </thead>
                                 <tbody class="divide-y divide-line">
                                     @{ var currentArea = ""; }
-                                    @foreach (var row in RowsFor(section))
+                                    @foreach (var row in RowsFor(valuationSection))
                                     {
-                                        @* The Variations section consolidates each variation's lines per cost
+                                        @* The Variations valuationSection consolidates each variation's lines per cost
                                            centre into one row (VariationRollUps); a rolled-up row opens to show
                                            the lines beneath it, each with its own % complete. *@
                                         @if (row.RollUp is { } rollUp)
@@ -236,11 +236,11 @@ else
                                             continue;
                                         }
                                         var line = row.Line!;
-                                        @* Area title rows — the estimate's own section headings ("Electrics",
+                                        @* Area title rows — the estimate's own valuationSection headings ("Electrics",
                                            "Plumbing & Heating"), falling back to the line's cost-centre name,
                                            so the bill reads in the same titled areas as the estimate instead
                                            of one flat run. Consecutive runs in display order, never a re-sort. *@
-                                        @if (ValuationReportAreas.GroupsByArea(section.Type))
+                                        @if (ValuationReportAreas.GroupsByArea(valuationSection.Type))
                                         {
                                             var area = AreaTitleFor(line);
                                             if (ValuationReportAreas.StartsNewArea(area, currentArea))
@@ -1162,7 +1162,6 @@ else
         return centre is null ? code : $"{code} — {centre.Name}";
     }
 
-    private static string Money(decimal v) => v.ToString("C2", Gb);
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
     // Signed for the "what changed" delta: "+20%", "-5%" (negatives already carry their sign).

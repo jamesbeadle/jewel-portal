@@ -2,7 +2,7 @@ using Jewel.JPMS.Api.Features.Requests.Documents;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
 using MigraDoc.Rendering;
-using static Jewel.JPMS.Api.Features.Variations.Documents.VariationDocumentStyle;
+using static Jewel.JPMS.Api.Features.Documents.JewelDocumentStyle;
 
 namespace Jewel.JPMS.Api.Features.Variations.Documents;
 

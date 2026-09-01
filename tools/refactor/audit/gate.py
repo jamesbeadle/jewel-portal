@@ -18,6 +18,9 @@ RATCHETED_FIGURES = [
     ("comments", "explanatoryCommentLines"),
     ("magicValues", "inlineHexColours"),
     ("inventory", "orphanComponents"),
+    ("prose", "longMemberChainLines"),
+    ("prose", "deeplyIndentedLines"),
+    ("functionNames", "overlongFunctionNames"),
 ]
 
 

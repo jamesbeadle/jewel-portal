@@ -18,18 +18,7 @@
 
 <PageTitle>Valuation Report · JPMS</PageTitle>
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<ApprovedSessionGate>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="valuation">
         <div class="flex items-center justify-between gap-4 mb-4 flex-wrap">
             <h2 class="text-lg font-semibold text-content">Valuation Report</h2>
@@ -386,7 +375,7 @@ else
             </div>
         </Modal>
     </ProjectPageShell>
-}
+</ApprovedSessionGate>
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
@@ -394,7 +383,6 @@ else
     // Session checked and the user is signed in. This is NOT "the report is here" — keeping the
     // two apart is the point: the heading and the New claim button show at once, each panel holds
     // until everything behind it can be shown together.
-    private bool sessionReady;
     private bool busy;
     private bool showStartClaim;
     private bool showLineForm;
@@ -659,7 +647,6 @@ else
     private bool showConfirmNudge;
 
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
-    private static string Money(decimal v) => v.ToString("C2", Gb);
     private static string PctText(decimal v) => v.ToString("0.##", Gb) + "%";
 
     private IReadOnlyList<ValuationClaim> Claims => Store.ClaimsFor(ProjectId);
@@ -876,7 +863,6 @@ else
         // Revalidate the cost-centre master (stale-while-revalidate) — the report table's
         // Variations section and the line form both offer it as a dropdown.
         _ = CostCenters.ListAllAsync();
-        sessionReady = true;
         // The claim card's stage needs the invoice list from first render (the invoices
         // section reports changes later via OnInvoicedToDateChanged).
         await RefreshInvoicesAsync();

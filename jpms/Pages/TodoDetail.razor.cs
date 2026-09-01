@@ -1,9 +1,5 @@
-using Jewel.JPMS.Components;
 using Jewel.JPMS.Contracts.Todos;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Todos;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components;
 
 namespace Jewel.JPMS.Pages;
 

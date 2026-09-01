@@ -155,7 +155,6 @@ else
     private IReadOnlyList<ValuationInvoice> invoices = Array.Empty<ValuationInvoice>();
 
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
-    private static string Money(decimal value) => value.ToString("C2", Gb);
 
     private IReadOnlyList<ValuationReportSnapshot> Snapshots => Store.SnapshotsFor(ProjectId);
 

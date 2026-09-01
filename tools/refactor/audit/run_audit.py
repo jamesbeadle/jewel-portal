@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from . import report
-from .checks import comments, duplication, file_length, function_shape, magic_values, naming
+from .checks import comments, duplication, file_length, function_names, function_shape, magic_values, naming, prose
 from .inventory import pages_and_widgets
 from .source_files import loadRules, resolveSourceFiles
 
@@ -24,7 +24,7 @@ def parseArguments() -> argparse.Namespace:
 
 def runChecks(repositoryRoot: Path, rules: dict) -> dict:
     sourceFiles = resolveSourceFiles(repositoryRoot, rules)
-    fileChecks = [file_length, function_shape, naming, comments, magic_values, pages_and_widgets]
+    fileChecks = [file_length, function_shape, function_names, naming, comments, magic_values, prose, pages_and_widgets]
     results = {}
     for module in fileChecks:
         result = module.check(sourceFiles, rules)

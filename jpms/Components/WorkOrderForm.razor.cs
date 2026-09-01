@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Jewel.JPMS.Contracts.Procurement;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components;
+
+using static Jewel.JPMS.MoneyFormats;
 
 namespace Jewel.JPMS.Components;
 

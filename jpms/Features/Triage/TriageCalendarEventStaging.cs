@@ -1,6 +1,5 @@
 using Jewel.JPMS.Contracts.Calendar;
 using Jewel.JPMS.Contracts.RecordLinks;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Features.Triage;
 

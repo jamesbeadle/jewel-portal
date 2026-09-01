@@ -12,33 +12,20 @@
     login. The list itself lives in UsefulInformationPanel.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
+<ApprovedSessionGate>
     <ProjectPageShell ProjectId="@ProjectId" ActiveTab="useful-information">
         <UsefulInformationPanel ProjectId="@ProjectId" />
     </ProjectPageShell>
-}
+</ApprovedSessionGate>
 
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
     // Session checked and signed in — nothing more (the panel gates on its own data).
-    private bool sessionReady;
 
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
     }
 }

@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.Xero;
-using Jewel.JPMS.Cqrs;
 
 namespace Jewel.JPMS.Features.Xero;
 
