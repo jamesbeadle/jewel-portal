@@ -6,8 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SUMMARY_ORDER = [
-    "fileLength", "functionShape", "duplication", "naming",
-    "comments", "magicValues", "inventory",
+    "fileLength", "functionShape", "functionNames", "duplication", "naming",
+    "comments", "magicValues", "prose", "inventory",
 ]
 
 
