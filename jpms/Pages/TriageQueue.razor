@@ -101,36 +101,8 @@
            promise something that never arrives. It appears if and when there is something to say. *@
         @if (unassignedArrived && unassigned.Count > 0)
         {
-            <div class="panel p-5 mb-6 border-amber-500/40">
-                <div class="flex items-start gap-2 mb-1">
-                    <h2 class="text-sm font-semibold text-amber-700">Unassigned requests</h2>
-                    <span class="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600">@unassigned.Count</span>
-                </div>
-                <p class="text-xs text-content-subtle mb-3">
-                    These requests aren't tied to a live project, so they don't appear in any register. Return one to the Control Centre to process its emails again and pick the right project.
-                </p>
-                @if (unassignedError is not null)
-                {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@unassignedError</p>
-                }
-                <div class="space-y-2">
-                    @foreach (var request in unassigned)
-                    {
-                        <div @key="request.RequestId" class="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2">
-                            <div class="min-w-0">
-                                <p class="text-sm text-content truncate">
-                                    <span class="font-mono text-xs text-content-muted mr-2">@TriageEmailDisplay.Dash(request.Reference)</span>@TriageEmailDisplay.Dash(request.Title)
-                                </p>
-                                <p class="text-[11px] text-content-subtle mt-0.5">Issued @TriageEmailDisplay.Date(request.IssuedAt ?? request.RaisedAt) · @TriageEmailDisplay.Dash(request.RaisedByEmail)</p>
-                            </div>
-                            <button type="button" class="btn-secondary text-xs whitespace-nowrap"
-                                    disabled="@busy" @onclick="() => ReturnUnassigned(request)">
-                                Return to Control Centre
-                            </button>
-                        </div>
-                    }
-                </div>
-            </div>
+            <UnassignedRequestsPanel Requests="unassigned" Error="@unassignedError" Busy="busy"
+                                     OnReturn="ReturnUnassigned" />
         }
         <LoadGate IsLoading="@(!queueArrived)" Prominent="true" Label="Loading the inbox">
         @if (loadError is not null && items.Count == 0)
@@ -943,37 +915,7 @@ else
        automatically once the audit scope widens.) *@
     @if (RecentTriage.Count > 0)
     {
-        <section class="px-3 md:px-4 pb-6">
-            <div class="panel p-5">
-                <details>
-                    <summary class="cursor-pointer select-none">
-                        <h2 class="inline text-sm font-semibold text-content">Recently processed (@RecentTriage.Count)</h2>
-                    </summary>
-                    <div class="divide-y divide-line mt-3">
-                        @foreach (var entry in RecentTriage)
-                        {
-                            <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
-                                <span class="text-[11px] text-content-subtle whitespace-nowrap w-16 shrink-0"
-                                      title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
-                                @if (RecentHref(entry) is { } href)
-                                {
-                                    <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@TriageEmailDisplay.Dash(entry.RecordReference)</a>
-                                }
-                                else
-                                {
-                                    <span class="font-mono text-xs text-content-muted whitespace-nowrap">@TriageEmailDisplay.Dash(entry.RecordReference)</span>
-                                }
-                                <span class="text-xs text-content-muted truncate">@entry.Detail</span>
-                                <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@RecentMeta(entry)</span>
-                            </div>
-                        }
-                    </div>
-                    <div class="mt-3 text-right">
-                        <a href="/audit" class="text-xs text-content-muted hover:text-content underline underline-offset-2">Full audit trail</a>
-                    </div>
-                </details>
-            </div>
-        </section>
+        <RecentTriageFold Entries="RecentTriage" Projects="AllProjects" />
     }
 }
 

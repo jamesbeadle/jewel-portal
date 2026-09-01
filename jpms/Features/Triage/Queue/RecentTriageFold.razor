@@ -1,0 +1,93 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Features.Triage
+@using Jewel.JPMS.Contracts.Audit
+
+@* Recently processed — the audit register's latest link/create decisions, newest first, so the
+   triager can jump straight to the document an email was just filed against. Closed by default —
+   a native <details> fold: it is a reference list, not live work, so the header line with its
+   count is enough until the triager actually wants to look. The host renders it only when there
+   is something to show. *@
+<section class="px-3 md:px-4 pb-6">
+    <div class="panel p-5">
+        <details>
+            <summary class="cursor-pointer select-none">
+                <h2 class="inline text-sm font-semibold text-content">Recently processed (@Entries.Count)</h2>
+            </summary>
+            <div class="divide-y divide-line mt-3">
+                @foreach (var entry in Entries)
+                {
+                    <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
+                        <span class="text-[11px] text-content-subtle whitespace-nowrap w-16 shrink-0"
+                              title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
+                        @if (Href(entry) is { } href)
+                        {
+                            <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@TriageEmailDisplay.Dash(entry.RecordReference)</a>
+                        }
+                        else
+                        {
+                            <span class="font-mono text-xs text-content-muted whitespace-nowrap">@TriageEmailDisplay.Dash(entry.RecordReference)</span>
+                        }
+                        <span class="text-xs text-content-muted truncate">@entry.Detail</span>
+                        <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@Meta(entry)</span>
+                    </div>
+                }
+            </div>
+            <div class="mt-3 text-right">
+                <a href="/audit" class="text-xs text-content-muted hover:text-content underline underline-offset-2">Full audit trail</a>
+            </div>
+        </details>
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<AuditEvent> Entries { get; set; } = default!;
+
+    /// <summary>Every project the host can see, completed ones included, so an old row's
+    /// project reference still resolves.</summary>
+    [Parameter] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+
+    // Where each record family's page lives — the click-through from a recently-triaged row to the
+    // document the email was filed against. Families without a per-record page land on the closest
+    // project tab (work orders, programme, financials, to-dos); anything unresolvable reads as text.
+    private static string? Href(AuditEvent entry)
+    {
+        if (entry.RecordType == RecordType.SubcontractorComms) return "/subcontractors/communications";
+        if (entry.RecordType == RecordType.SupplierComms) return "/suppliers/communications";
+        if (entry.RecordType == RecordType.InternalComms) return "/internal/communications";
+        if (string.IsNullOrEmpty(entry.ProjectId))
+            return entry.RecordType == RecordType.Todo ? "/todos" : null;
+        var projectId = entry.ProjectId;
+        var recordId = entry.RecordId;
+        return entry.RecordType switch
+        {
+            RecordType.Request => string.IsNullOrEmpty(recordId) ? null : $"/projects/{projectId}/requests/view/{recordId}",
+            RecordType.Variation or RecordType.VariationQuote => string.IsNullOrEmpty(recordId) ? null : $"/projects/{projectId}/variations/{recordId}",
+            RecordType.BidPackageInvite => string.IsNullOrEmpty(recordId) ? null : $"/projects/{projectId}/bid-package-invites/{recordId}",
+            RecordType.WorkOrder  => $"/projects/{projectId}/work-orders",
+            RecordType.Scheduling or RecordType.Lad => $"/projects/{projectId}/programme",
+            RecordType.CostCentre => $"/projects/{projectId}/financials",
+            RecordType.Todo       => $"/projects/{projectId}/todos",
+            RecordType.Inventory  => $"/projects/{projectId}/inventory",
+            _ => null
+        };
+    }
+
+    // The right-hand meta on a row: project reference (when the project is known) and who did it.
+    private string Meta(AuditEvent entry)
+    {
+        var project = Projects.FirstOrDefault(p => p.ProjectId == entry.ProjectId);
+        return project is null ? entry.ActorEmail : $"{project.Reference} · {entry.ActorEmail}";
+    }
+
+    // Compact relative stamp for scanning (mirrors the audit trail page); the exact moment sits in
+    // the row's hover title.
+    private static string Ago(DateTimeOffset at)
+    {
+        var span = DateTimeOffset.UtcNow - at;
+        if (span < TimeSpan.FromMinutes(1)) return "just now";
+        if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes}m ago";
+        if (span < TimeSpan.FromHours(24)) return $"{(int)span.TotalHours}h ago";
+        if (span < TimeSpan.FromDays(30)) return $"{(int)span.TotalDays}d ago";
+        return at.LocalDateTime.ToString("d MMM yyyy");
+    }
+}
