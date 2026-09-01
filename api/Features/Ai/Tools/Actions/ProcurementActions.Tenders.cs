@@ -1,6 +1,4 @@
 using Jewel.JPMS.Api.Features.Procurement.Commands;
-using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Procurement;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;

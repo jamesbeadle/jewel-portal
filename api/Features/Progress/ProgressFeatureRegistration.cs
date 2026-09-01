@@ -1,8 +1,6 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Progress.Commands;
 using Jewel.JPMS.Api.Features.Progress.Queries;
 using Jewel.JPMS.Api.Features.Progress.Storage;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Progress;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

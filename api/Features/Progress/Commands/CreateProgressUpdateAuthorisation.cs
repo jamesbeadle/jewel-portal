@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Progress;
 
 namespace Jewel.JPMS.Api.Features.Progress.Commands;

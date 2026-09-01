@@ -1,14 +1,9 @@
 using System.Diagnostics;
 using Jewel.JPMS.Api.Auth;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Ai.Tools;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Connect;
-using Jewel.JPMS.Api.Gates;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Configuration;
 
 namespace Jewel.JPMS.Api.Features.Mcp;

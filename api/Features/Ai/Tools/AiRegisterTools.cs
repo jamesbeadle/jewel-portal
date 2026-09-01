@@ -1,10 +1,8 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Api.Features.Registers;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Features.TenderEnquiries;
 using Jewel.JPMS.Api.Features.UsefulInformation;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Architects;
 using Jewel.JPMS.Contracts.Clients;
 using Jewel.JPMS.Contracts.Directory;

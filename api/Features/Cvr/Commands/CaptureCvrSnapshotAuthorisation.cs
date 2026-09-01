@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Cvr;
 
 namespace Jewel.JPMS.Api.Features.Cvr.Commands;

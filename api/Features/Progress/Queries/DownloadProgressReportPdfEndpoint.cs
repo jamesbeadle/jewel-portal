@@ -1,11 +1,5 @@
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Progress.Documents;
 using Jewel.JPMS.Api.Features.Progress.Storage;
-using Jewel.JPMS.Api.Gates;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Progress.Queries;
 

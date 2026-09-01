@@ -1,9 +1,6 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Features.TenderEnquiries.Attachments;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.TenderEnquiries;
 

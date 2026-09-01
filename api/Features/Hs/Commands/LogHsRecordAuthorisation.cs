@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Hs;
 
 namespace Jewel.JPMS.Api.Features.Hs.Commands;

@@ -1,6 +1,4 @@
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.TenderEnquiries;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.TenderEnquiries.Commands;
 

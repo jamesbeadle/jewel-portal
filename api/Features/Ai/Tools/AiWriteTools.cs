@@ -1,14 +1,10 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Requests.Commands;
 using Jewel.JPMS.Api.Features.Todos;
 using Jewel.JPMS.Api.Features.Todos.Commands;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Ai;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Requests;
 using Jewel.JPMS.Contracts.Todos;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;

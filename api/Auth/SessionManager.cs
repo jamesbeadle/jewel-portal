@@ -1,7 +1,4 @@
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Api.Gates;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Auth;
 

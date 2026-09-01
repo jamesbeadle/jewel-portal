@@ -1,5 +1,3 @@
-using Jewel.JPMS.Api.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Procurement;
 

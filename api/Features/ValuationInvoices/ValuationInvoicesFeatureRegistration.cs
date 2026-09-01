@@ -1,7 +1,5 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 using Jewel.JPMS.Api.Features.ValuationInvoices.Queries;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 using Microsoft.Extensions.DependencyInjection;
 

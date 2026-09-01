@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.WeeklyCashflow.Commands;
 using Jewel.JPMS.Api.Features.WeeklyCashflow.Queries;
 using Jewel.JPMS.Contracts.WeeklyCashflow;

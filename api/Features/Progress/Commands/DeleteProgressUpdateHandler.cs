@@ -1,9 +1,5 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Progress.Storage;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Progress;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Progress.Commands;
 

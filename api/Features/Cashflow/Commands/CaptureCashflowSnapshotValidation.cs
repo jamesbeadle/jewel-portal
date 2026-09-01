@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Contracts.Cashflow;
 
 namespace Jewel.JPMS.Api.Features.Cashflow.Commands;

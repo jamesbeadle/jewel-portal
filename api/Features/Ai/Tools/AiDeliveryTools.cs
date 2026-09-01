@@ -1,9 +1,7 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.ArchitectInstructions;
 using Jewel.JPMS.Api.Features.BuildingControl;
 using Jewel.JPMS.Api.Features.Calendar;
 using Jewel.JPMS.Api.Features.Progress;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.ArchitectInstructions;
 using Jewel.JPMS.Contracts.BuildingControl;
 using Jewel.JPMS.Contracts.Calendar;

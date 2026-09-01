@@ -1,7 +1,5 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Directory.Commands;
 using Jewel.JPMS.Api.Features.Directory.Queries;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Directory;
 using Microsoft.Extensions.DependencyInjection;
 

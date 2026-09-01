@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.CostCenters;
 
 namespace Jewel.JPMS.Api.Features.CostCenters.Commands;

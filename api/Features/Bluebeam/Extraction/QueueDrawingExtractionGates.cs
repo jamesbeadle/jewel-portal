@@ -1,5 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Drawings;
 
 namespace Jewel.JPMS.Api.Features.Bluebeam.Extraction;

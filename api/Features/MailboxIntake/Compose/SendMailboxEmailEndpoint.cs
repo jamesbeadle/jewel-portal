@@ -1,8 +1,4 @@
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.MailboxCompose;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 

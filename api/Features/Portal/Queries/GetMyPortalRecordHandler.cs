@@ -1,8 +1,5 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Subcontractors;
 using Jewel.JPMS.Contracts.Portal;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Portal.Queries;
 

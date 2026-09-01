@@ -1,5 +1,4 @@
 using System.Net.Mail;
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Contracts.Projects;
 
 namespace Jewel.JPMS.Api.Features.Projects.Contacts;

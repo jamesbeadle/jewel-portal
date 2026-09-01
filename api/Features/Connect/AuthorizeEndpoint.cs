@@ -1,10 +1,5 @@
 using Jewel.JPMS.Api.Auth;
-using Jewel.JPMS.Api.Data;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace Jewel.JPMS.Api.Features.Connect;

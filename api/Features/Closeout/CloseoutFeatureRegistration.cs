@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Closeout.Commands;
 using Jewel.JPMS.Api.Features.Closeout.Queries;
 using Jewel.JPMS.Contracts.Closeout;

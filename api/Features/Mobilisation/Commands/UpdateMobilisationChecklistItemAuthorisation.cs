@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Mobilisation;
 
 namespace Jewel.JPMS.Api.Features.Mobilisation.Commands;

@@ -1,6 +1,5 @@
 using Azure.Communication.Email;
 using Jewel.JPMS.Api.Auth;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.AccessRequests;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.Architects;
@@ -53,9 +52,6 @@ using Jewel.JPMS.Api.Features.Todos;
 using Jewel.JPMS.Api.Features.UsefulInformation;
 using Jewel.JPMS.Api.Features.Variations;
 using Jewel.JPMS.Api.Features.Xero;
-using Jewel.JPMS.Api.Gates;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;

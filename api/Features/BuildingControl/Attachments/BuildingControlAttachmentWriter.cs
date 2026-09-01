@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 
 namespace Jewel.JPMS.Api.Features.BuildingControl.Attachments;

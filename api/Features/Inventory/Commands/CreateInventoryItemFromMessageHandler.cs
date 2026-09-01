@@ -1,5 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Inventory;
 using Jewel.JPMS.Contracts.RecordLinks;
 
