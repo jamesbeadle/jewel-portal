@@ -11,6 +11,7 @@
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.Triage
 @using Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Procurement
 @inject AuthService Auth
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
 @inject SessionService Session
@@ -123,7 +124,7 @@ else
                             }
                             @if (PackageReadyForInvites)
                             {
-                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenFindModalAsync">Find subcontractors</button>
+                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenFindModal">Find subcontractors</button>
                                 <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenInviteModal">+ Add subcontractor</button>
                             }
                             else
@@ -419,7 +420,7 @@ else
                                     </div>
                                     @if (CanEdit)
                                     {
-                                        <button type="button" class="btn-secondary px-2 py-1 text-xs shrink-0" disabled="@(busy || extractBusy)"
+                                        <button type="button" class="btn-secondary px-2 py-1 text-xs shrink-0" disabled="@busy"
                                                 title="Read this email and its returned pricing schedule with AI, mapped against the package's line items, ready to review and save as a submission."
                                                 @onclick="() => OpenExtractFromEmail(email)">Extract information</button>
                                     }
@@ -798,114 +799,16 @@ else
         </div>
     </Modal>
 
-    @* ---- Find local subcontractors: Google Places search near the project's site ---- *@
-    <Modal IsOpen="showFindModal" Title="Find local subcontractors" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Adding…" : selectedPlaces.Count == 0 ? "Add to tender list" : $"Add {selectedPlaces.Count} to tender list")"
-           ConfirmDisabled="@(busy || selectedPlaces.Count == 0)" CancelLabel="Close"
-           OnCancel="CloseFindModal" OnConfirm="ConfirmFindInvite" Class="max-w-2xl w-full">
-        <p class="text-xs text-content-subtle mb-3">
-            Searches the web for companies of a trade near the project's site (its town and postcode —
-            set under Edit details on the project). Email addresses and phone numbers are picked up
-            from each company's own website; companies where no email could be found are left out.
-            Ticked companies are added to this package's tender list only — they do NOT join the
-            Directory (add the ones worth keeping from their submitted tenders).
-            <span class="text-content-muted">Nothing is emailed</span> — that happens later, when you
-            compose the Invite email on the package's page, and only when you press Send there.
-        </p>
-
-        @* No trade dropdown: the trade is worked out from the package's own title and details by
-           one cheap AI call when the modal opens, and the search runs itself. The term stays in an
-           editable field so a wrong guess is a one-line correction, never a dropdown hunt
-           (decision 2026-08-20 — the manual pick was pure friction, and on generic package trades
-           like "Specialist" it produced a useless search term anyway). *@
-        @if (findResolving)
-        {
-            @* The house inline spinner (same as the request page's busy rows) — a bare sentence
-               here read as a hang, because the AI call behind it takes a few seconds. *@
-            <p class="flex items-center gap-2 text-sm text-content-subtle mb-3">
-                <span class="w-3 h-3 shrink-0 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></span>
-                Working out the trade from the package's title and details…
-            </p>
-        }
-        else if (findNotReadyReason is not null)
-        {
-            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800 mb-3">@findNotReadyReason</p>
-        }
-        else
-        {
-            <div class="flex gap-2 mb-3">
-                <input class="field flex-1" placeholder="Trade to search for…"
-                       @bind="findTrade" @bind:event="oninput" />
-                <button type="button" class="btn-primary shrink-0 inline-flex items-center gap-2"
-                        disabled="@(findBusy || string.IsNullOrWhiteSpace(findTrade))"
-                        @onclick="() => RunFindSearch(loadMore: false)">
-                    @if (findBusy)
-                    {
-                        <span class="w-3 h-3 shrink-0 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
-                    }
-                    @(findBusy ? "Searching…" : "Search")
-                </button>
-            </div>
-            @if (findTradeNote is not null)
-            {
-                <p class="text-xs text-content-subtle -mt-1 mb-3">@findTradeNote</p>
-            }
-        }
-
-        @if (findError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@findError</p>
-        }
-
-        @if (findResults.Count > 0)
-        {
-            <div class="space-y-1 max-h-96 overflow-y-auto">
-                @foreach (var place in findResults)
-                {
-                    <label class="flex items-start gap-2.5 rounded-lg border border-line bg-surface px-3 py-2.5 cursor-pointer hover:border-line-strong">
-                        <input type="checkbox" class="mt-1" checked="@selectedPlaces.ContainsKey(place.PlaceId)"
-                               @onchange="e => TogglePlace(place, e)" />
-                        <span class="min-w-0">
-                            <span class="flex items-center gap-2 flex-wrap">
-                                <span class="text-sm font-medium text-content">@place.Name</span>
-                                @if (place.ExistingSubcontractorId is not null)
-                                {
-                                    <span class="inline-flex items-center rounded-full bg-accent/10 border border-accent/30 px-1.5 py-0.5 text-[10px] font-medium text-accent">Already in directory</span>
-                                }
-                                @if (place.Rating is not null)
-                                {
-                                    <span class="text-xs text-content-muted">★ @place.Rating.Value.ToString("0.0") (@place.RatingCount)</span>
-                                }
-                            </span>
-                            <span class="block text-xs text-content-subtle truncate">@place.Address</span>
-                            <span class="block text-xs text-content-subtle truncate">
-                                <span class="text-content-muted">@place.Email</span>
-                                @if (!string.IsNullOrEmpty(place.Phone))
-                                {
-                                    <span class="ml-1">· @place.Phone</span>
-                                }
-                                @if (!string.IsNullOrEmpty(place.Website))
-                                {
-                                    <a class="text-accent hover:underline ml-1" href="@place.Website" target="_blank" rel="noopener" @onclick:stopPropagation="true">Website</a>
-                                }
-                            </span>
-                        </span>
-                    </label>
-                }
-            </div>
-            @if (findNextPageToken is not null)
-            {
-                <button type="button" class="btn-secondary w-full mt-3" disabled="@findBusy"
-                        @onclick="() => RunFindSearch(loadMore: true)">
-                    @(findBusy ? "Loading…" : "Load more results")
-                </button>
-            }
-        }
-        else if (findSearched && !findBusy && findError is null)
-        {
-            <p class="text-sm text-content-subtle italic">No companies with a findable email address for that trade near the project. Try a broader trade name.</p>
-        }
-    </Modal>
+    @* ---- Find local subcontractors: Google Places search near the project's site.
+         The finder owns the trade resolution, the search and the selection; ticked
+         companies come back with the trade term and are saved + invited here. ---- *@
+    <LocalSubcontractorFinderModal IsOpen="showFindModal"
+                                   BidPackageId="@BidPackageId"
+                                   ProjectId="@ProjectId"
+                                   FallbackTrade="@(package?.Trade ?? "")"
+                                   Busy="busy"
+                                   OnCancel="CloseFindModal"
+                                   OnConfirm="ConfirmFindInvite" />
 
     @* ---- Line-item coverage modal: link to a contract BoQ line OR a variation ---- *@
     <Modal IsOpen="showCoverageModal" Title="Link line item" ShowFooter="true"
@@ -1070,108 +973,15 @@ else
         </ChildContent>
     </Modal>
 
-    @* ---- Record a tender submission and save it as a quote ---- *@
-    <Modal IsOpen="showExtractModal" Title="Tender submission" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Saving…" : "Save submission")" ConfirmDisabled="@(busy || extractBusy)" CancelLabel="Cancel"
-           OnCancel="CloseExtractModal" OnConfirm="ConfirmSaveExtracted" Class="max-w-3xl w-full">
-        @if (extractSourceEmail is { } sourceEmail)
-        {
-            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-                Extracted from <span class="font-medium text-content">@(string.IsNullOrWhiteSpace(sourceEmail.FromName) ? sourceEmail.FromEmail : sourceEmail.FromName)</span>'s
-                email of @sourceEmail.ReceivedAt.LocalDateTime.ToString("d MMM yyyy") — the figures below are
-                THEIR submission as the AI read it. Review every line (and correct it where the read is
-                wrong) before saving; nothing is recorded until you do.
-            </p>
-        }
-        else
-        {
-            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-                Recording a tender as the subcontractor gave it — the package's line items are pre-filled;
-                enter the rates from their submission.
-            </p>
-        }
-
-        @if (extractBusy)
-        {
-            <div class="flex items-center gap-3 rounded-lg border border-line bg-surface-raised px-3 py-4 mb-3">
-                <JewelSpinner />
-                <p class="text-sm text-content-muted">Reading the tender — the email, its pricing schedule and the package's line items…</p>
-            </div>
-        }
-        else
-        {
-        @if (extractIssues.Count > 0)
-        {
-            <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-sm text-content mb-3">
-                <p class="font-medium mb-1">@(extractProposed ? "The extraction found gaps in this tender:" : "This tender couldn't be read automatically:")</p>
-                <ul class="list-disc pl-5 space-y-0.5">
-                    @foreach (var issue in extractIssues)
-                    {
-                        <li>@issue</li>
-                    }
-                </ul>
-            </div>
-        }
-        else if (extractSourceEmail is not null && extractComplete)
-        {
-            <p class="rounded-lg bg-positive/10 border border-positive/40 px-3 py-2 text-sm text-content mb-3">
-                The tender reads complete — every line item is priced and the sums reconcile. Review the
-                figures and save it as a submission.
-            </p>
-        }
-
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subcontractor</label>
-        <select class="field mb-3" @bind="extractSubcontractorId">
-            <option value="">Select the subcontractor…</option>
-            @foreach (var recipient in recipients)
-            {
-                var sub = Subs.Find(recipient.SubcontractorId);
-                <option value="@recipient.SubcontractorId">@(sub?.CompanyName ?? recipient.SubcontractorId)</option>
-            }
-        </select>
-        @if (extractSourceEmail is not null && !string.IsNullOrWhiteSpace(extractSubcontractorNote))
-        {
-            <p class="text-xs text-content-subtle -mt-2 mb-3">@extractSubcontractorNote</p>
-        }
-
-        <div class="rounded-xl border border-line bg-surface mb-3">
-            <table class="w-full text-sm">
-                <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Rate</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Total</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    @foreach (var draft in extractDrafts)
-                    {
-                        <tr class="@(draft.BidPackageLineItemId is null ? "bg-accent/5" : "")">
-                            <td class="px-3 py-2"><input class="field" @bind="draft.Description" /></td>
-                            <td class="px-3 py-2 hidden sm:table-cell"><input class="field w-16" @bind="draft.Unit" /></td>
-                            <td class="px-3 py-2"><input class="field w-20" type="number" step="any" @bind="draft.Quantity" /></td>
-                            <td class="px-3 py-2"><input class="field w-24" type="number" step="any" @bind="draft.Rate" @onblur="() => RecalcTotal(draft)" /></td>
-                            <td class="px-3 py-2"><input class="field w-28" type="number" step="any" @bind="draft.Total" /></td>
-                            <td class="px-3 py-2 text-right">
-                                <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => extractDrafts.Remove(draft)">Remove</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <div class="flex items-center justify-between mb-3">
-            <button type="button" class="btn-secondary" @onclick="AddExtractLine">Add line</button>
-            <p class="text-sm text-content font-medium">Total: @extractDrafts.Sum(d => d.Total).ToString("£#,##0.00")</p>
-        </div>
-
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Notes (exclusions, caveats, lead times)</label>
-        <textarea class="field" rows="3" @bind="extractNotes"></textarea>
-        }
-    </Modal>
+    @* ---- Record a tender submission and save it as a quote — the modal owns the whole
+         review flow; the page reloads when it reports a save. ---- *@
+    <TenderSubmissionModal @ref="tenderSubmissionModal"
+                           BidPackageId="@BidPackageId"
+                           Recipients="recipients"
+                           LineItems="lineItems"
+                           Busy="busy"
+                           CanEdit="CanEdit"
+                           OnSaved="LoadAsync" />
 
     @* ---- Work-order email to the winning subcontractor (drafted, sent from Outlook) ---- *@
     <Modal IsOpen="showWoEmailModal" Title="Email work order to winner" ShowFooter="true"
@@ -1279,121 +1089,13 @@ else
     </Modal>
 
     @* ---- Select line items from the valuation report: the fast path onto the package.
-         Every priced row of the bill (contract works, PC sums, contingency, variations) is a
-         checkbox; ticked rows are APPENDED as package lines carrying the report's cost code,
-         description, unit and quantity. Sale values are the report's internal figures, shown
-         for context only — they are never stored on the package and never reach a tenderer. ---- *@
-    <Modal IsOpen="showValuationPicker" Title="Select line items" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Adding…" : valuationSelection.Count == 0 ? "Add line items" : valuationSelection.Count == 1 ? "Add 1 line item" : $"Add {valuationSelection.Count} line items")"
-           ConfirmDisabled="@(busy || valuationSelection.Count == 0)" CancelLabel="Cancel"
-           OnCancel="CloseValuationPicker" OnConfirm="ConfirmValuationPicker" Class="max-w-4xl w-full">
-        @if (valuationLines is null && !valuationLinesFailed)
-        {
-            <LoadGate IsLoading="true" Prominent="true" Label="Loading valuation report" />
-        }
-        else if (valuationLines is null)
-        {
-            <p class="text-sm text-negative">Couldn't load the valuation report lines — close this dialog and try again.</p>
-        }
-        else if (SelectableValuationLines.Count == 0)
-        {
-            <p class="text-sm text-content-subtle italic">
-                No priced lines on this project's valuation report yet. Build the report on the
-                Valuation tab first, or key line items by hand under Edit details.
-            </p>
-        }
-        else
-        {
-            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-                Tick the report lines this package covers — each becomes a line item carrying the
-                report's cost code, description, unit and quantity (trade defaults to the package's
-                own). Sale values are internal figures shown for context only — they are not saved
-                on the package and never appear on anything a tenderer sees.
-            </p>
-            @* Search narrows the VIEW only — ticks made before narrowing survive it (the confirm
-               reads valuationSelection against the full report, not the filtered rows). *@
-            <input class="field w-full mb-3" placeholder="Search by description, cost code or section…"
-                   value="@valuationSearch" @oninput="OnValuationSearchInput" />
-            @if (FilteredValuationLines.Count == 0)
-            {
-                <p class="text-sm text-content-subtle italic">
-                    No report lines match "@valuationSearch.Trim()" — clear the search to see every line.
-                    @if (valuationSelection.Count > 0)
-                    {
-                        <text> Your @(valuationSelection.Count == 1 ? "ticked line is" : $"{valuationSelection.Count} ticked lines are") still selected.</text>
-                    }
-                </p>
-            }
-            else
-            {
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[60vh]">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 w-8"></th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Cost code</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 text-right">Qty</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 text-right" title="Internal — never shown to tenderers">Sale value</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var group in FilteredValuationLines.GroupBy(ValuationGroupLabel))
-                        {
-                            var groupIds = group.Where(l => !string.IsNullOrWhiteSpace(l.CostCode)).Select(l => l.ValuationLineItemId).ToList();
-                            var allTicked = groupIds.Count > 0 && groupIds.All(valuationSelection.Contains);
-                            <tr class="bg-surface-raised/60">
-                                <td class="px-3 py-1.5">
-                                    <input type="checkbox" checked="@allTicked" disabled="@(busy || groupIds.Count == 0)"
-                                           title="Select every line shown in this section"
-                                           @onchange="() => ToggleValuationGroup(group)" />
-                                </td>
-                                <td colspan="5" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-content-subtle">@group.Key</td>
-                            </tr>
-                            @foreach (var line in group)
-                            {
-                                var hasCostCode = !string.IsNullOrWhiteSpace(line.CostCode);
-                                <tr class="@(hasCostCode ? "" : "opacity-60")">
-                                    <td class="px-3 py-2">
-                                        <input type="checkbox" checked="@valuationSelection.Contains(line.ValuationLineItemId)"
-                                               disabled="@(busy || !hasCostCode)"
-                                               title="@(hasCostCode ? null : "This line has no cost code on the valuation report — set one there first.")"
-                                               @onchange="() => ToggleValuationLine(line)" />
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        @if (hasCostCode)
-                                        {
-                                            <span class="text-content-muted" title="@CostCentreLabel(line.CostCode)">@line.CostCode</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No cost code</span>
-                                        }
-                                    </td>
-                                    <td class="px-3 py-2 text-content">
-                                        @ValuationLineDescription(line)
-                                        @if (ValuationLineTypeBadge(line) is { } badge)
-                                        {
-                                            <span class="ml-2 inline-flex items-center rounded-full border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">@badge</span>
-                                        }
-                                    </td>
-                                    <td class="px-3 py-2 text-content-muted hidden sm:table-cell">@line.Unit</td>
-                                    <td class="px-3 py-2 text-content-muted text-right">@line.Quantity</td>
-                                    <td class="px-3 py-2 text-content-muted text-right tabular-nums">@line.LineAmount.ToString("£#,##0.00")</td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
-            </div>
-            }
-            <p class="text-xs text-content-subtle mt-2">
-                Lines are appended — nothing already on the package changes. Adjust descriptions,
-                units and quantities afterwards under Edit details, and link coverage from the
-                line list as usual.
-            </p>
-        }
-    </Modal>
+         The picker owns its own read of the live report; confirmed rows come back as
+         package line inputs and are appended through AddBidPackageLineItems. ---- *@
+    <ValuationLinePickerModal IsOpen="showValuationPicker"
+                              ProjectId="@ProjectId"
+                              DefaultTrade="@(package?.Trade ?? "")"
+                              Busy="busy"
+                              OnCancel="CloseValuationPicker"
+                              OnConfirm="AppendValuationLinesAsync" />
 }
 

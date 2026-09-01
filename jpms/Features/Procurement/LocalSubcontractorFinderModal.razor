@@ -1,0 +1,115 @@
+@using Jewel.JPMS.Contracts.Procurement
+@namespace Jewel.JPMS.Features.Procurement
+@inject IQueryClient Queries
+
+@* Find local subcontractors: a Google Places search near the project's site. The modal works
+   out the trade from the package's own title and details (one cheap AI call) when it opens,
+   runs the search itself, and hands the ticked companies — with the trade term used — back to
+   the host. Nothing is emailed from here, and nothing joins the Directory. *@
+<Modal IsOpen="IsOpen" Title="Find local subcontractors" ShowFooter="true"
+       ConfirmLabel="@(Busy ? "Adding…" : selection.Count == 0 ? "Add to tender list" : $"Add {selection.Count} to tender list")"
+       ConfirmDisabled="@(Busy || selection.Count == 0)" CancelLabel="Close"
+       OnCancel="() => OnCancel.InvokeAsync()" OnConfirm="ConfirmAsync" Class="max-w-2xl w-full">
+    <p class="text-xs text-content-subtle mb-3">
+        Searches the web for companies of a trade near the project's site (its town and postcode —
+        set under Edit details on the project). Email addresses and phone numbers are picked up
+        from each company's own website; companies where no email could be found are left out.
+        Ticked companies are added to this package's tender list only — they do NOT join the
+        Directory (add the ones worth keeping from their submitted tenders).
+        <span class="text-content-muted">Nothing is emailed</span> — that happens later, when you
+        compose the Invite email on the package's page, and only when you press Send there.
+    </p>
+
+    @* No trade dropdown: the trade is worked out from the package's own title and details by
+       one cheap AI call when the modal opens, and the search runs itself. The term stays in an
+       editable field so a wrong guess is a one-line correction, never a dropdown hunt
+       (decision 2026-08-20 — the manual pick was pure friction, and on generic package trades
+       like "Specialist" it produced a useless search term anyway). *@
+    @if (resolving)
+    {
+        @* The house inline spinner (same as the request page's busy rows) — a bare sentence
+           here read as a hang, because the AI call behind it takes a few seconds. *@
+        <p class="flex items-center gap-2 text-sm text-content-subtle mb-3">
+            <span class="w-3 h-3 shrink-0 rounded-full border-2 border-accent/30 border-t-accent animate-spin"></span>
+            Working out the trade from the package's title and details…
+        </p>
+    }
+    else if (notReadyReason is not null)
+    {
+        <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800 mb-3">@notReadyReason</p>
+    }
+    else
+    {
+        <div class="flex gap-2 mb-3">
+            <input class="field flex-1" placeholder="Trade to search for…"
+                   @bind="trade" @bind:event="oninput" />
+            <button type="button" class="btn-primary shrink-0 inline-flex items-center gap-2"
+                    disabled="@(searchBusy || string.IsNullOrWhiteSpace(trade))"
+                    @onclick="() => RunSearch(loadMore: false)">
+                @if (searchBusy)
+                {
+                    <span class="w-3 h-3 shrink-0 rounded-full border-2 border-white/30 border-t-white animate-spin"></span>
+                }
+                @(searchBusy ? "Searching…" : "Search")
+            </button>
+        </div>
+        @if (tradeNote is not null)
+        {
+            <p class="text-xs text-content-subtle -mt-1 mb-3">@tradeNote</p>
+        }
+    }
+
+    @if (searchError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@searchError</p>
+    }
+
+    @if (results.Count > 0)
+    {
+        <div class="space-y-1 max-h-96 overflow-y-auto">
+            @foreach (var place in results)
+            {
+                <label class="flex items-start gap-2.5 rounded-lg border border-line bg-surface px-3 py-2.5 cursor-pointer hover:border-line-strong">
+                    <input type="checkbox" class="mt-1" checked="@selection.ContainsKey(place.PlaceId)"
+                           @onchange="e => TogglePlace(place, e)" />
+                    <span class="min-w-0">
+                        <span class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-medium text-content">@place.Name</span>
+                            @if (place.ExistingSubcontractorId is not null)
+                            {
+                                <span class="inline-flex items-center rounded-full bg-accent/10 border border-accent/30 px-1.5 py-0.5 text-[10px] font-medium text-accent">Already in directory</span>
+                            }
+                            @if (place.Rating is not null)
+                            {
+                                <span class="text-xs text-content-muted">★ @place.Rating.Value.ToString("0.0") (@place.RatingCount)</span>
+                            }
+                        </span>
+                        <span class="block text-xs text-content-subtle truncate">@place.Address</span>
+                        <span class="block text-xs text-content-subtle truncate">
+                            <span class="text-content-muted">@place.Email</span>
+                            @if (!string.IsNullOrEmpty(place.Phone))
+                            {
+                                <span class="ml-1">· @place.Phone</span>
+                            }
+                            @if (!string.IsNullOrEmpty(place.Website))
+                            {
+                                <a class="text-accent hover:underline ml-1" href="@place.Website" target="_blank" rel="noopener" @onclick:stopPropagation="true">Website</a>
+                            }
+                        </span>
+                    </span>
+                </label>
+            }
+        </div>
+        @if (nextPageToken is not null)
+        {
+            <button type="button" class="btn-secondary w-full mt-3" disabled="@searchBusy"
+                    @onclick="() => RunSearch(loadMore: true)">
+                @(searchBusy ? "Loading…" : "Load more results")
+            </button>
+        }
+    }
+    else if (hasSearched && !searchBusy && searchError is null)
+    {
+        <p class="text-sm text-content-subtle italic">No companies with a findable email address for that trade near the project. Try a broader trade name.</p>
+    }
+</Modal>
