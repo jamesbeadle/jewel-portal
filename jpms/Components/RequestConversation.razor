@@ -432,13 +432,6 @@
 
     private int InternalCount => allMessages.Count(m => m.Visibility == MessageVisibility.Internal);
 
-    // Same formatting as the shared correspondence list's attachment block.
-    private static string FormatSize(long bytes)
-    {
-        if (bytes >= 1_048_576) return $"{bytes / 1_048_576.0:0.#} MB";
-        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
-        return $"{bytes} B";
-    }
 
     // The request-scoped attachment stream. Both ids travel so the server can re-find the message
     // by internetMessageId when its Graph id has gone stale — same re-find as the body fetch.

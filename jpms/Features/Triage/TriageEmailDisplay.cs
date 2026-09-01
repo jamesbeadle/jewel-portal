@@ -70,12 +70,6 @@ public static class TriageEmailDisplay
         return words.Length == 0 ? char.ToUpperInvariant(name.Trim()[0]).ToString() : new string(words);
     }
 
-    public static string FormatSize(long bytes)
-    {
-        if (bytes >= 1_048_576) return $"{bytes / 1_048_576.0:0.#} MB";
-        if (bytes >= 1024) return $"{bytes / 1024.0:0.#} KB";
-        return $"{bytes} B";
-    }
 
     /// <summary>Same previewable set as the drawing viewer: PDFs (the in-app viewer) and images.</summary>
     public static bool IsPreviewable(IntakeAttachment attachment)

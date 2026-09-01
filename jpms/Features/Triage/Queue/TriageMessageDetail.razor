@@ -53,7 +53,7 @@
                     <span class="flex items-center gap-3 whitespace-nowrap">
                         @if (attachment.Size > 0)
                         {
-                            <span class="text-xs text-content-subtle">@TriageEmailDisplay.FormatSize(attachment.Size)</span>
+                            <span class="text-xs text-content-subtle">@FormatSize(attachment.Size)</span>
                         }
                         @if (!string.IsNullOrEmpty(attachment.Id))
                         {

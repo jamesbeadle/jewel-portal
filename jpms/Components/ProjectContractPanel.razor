@@ -472,11 +472,4 @@
 
     private static string Text(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
-    private static string FormatSize(long? bytes)
-    {
-        if (bytes is not { } size) return "Unknown size";
-        if (size >= 1024 * 1024) return $"{size / (1024.0 * 1024.0):0.#} MB";
-        if (size >= 1024) return $"{size / 1024.0:0.#} KB";
-        return $"{size} B";
-    }
 }
