@@ -101,8 +101,7 @@ else
         }
     }
 
-    // Same previewable set as the triage and drawing viewers: browsers render PDFs
-    // and images natively in an iframe; everything else gets a Download link only.
+    // Same previewable set as the triage and drawing viewers: PDFs and images inline.
     private static bool IsPreviewable(XeroInvoiceAttachment attachment) =>
         attachment.MimeType.Contains("pdf", StringComparison.OrdinalIgnoreCase)
         || attachment.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
