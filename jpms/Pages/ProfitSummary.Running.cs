@@ -4,7 +4,9 @@ using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Projects;
+using Jewel.JPMS.Features.Cvr;
 using Jewel.JPMS.Features.Xero;
+using static Jewel.JPMS.Features.Cvr.ProfitDisplay;
 
 namespace Jewel.JPMS.Pages;
 
@@ -23,52 +25,6 @@ public partial class ProfitSummary
     // no invoicing ever has no honest running % — the cell says n/a and carries the £ in its
     // hover rather than printing an exploded figure. The trajectory stays in £ — the running
     // total the cumulative panel's gap shows.
-
-    // Money movements within £50 of zero read as no movement (stale detection, trajectory
-    // "flat", and the grid's "—" for a month where nothing happened at all).
-    private const decimal MovementZeroThreshold = 50m;
-
-    // One month's (or window's) own figures. Percent is null when nothing was invoiced —
-    // no base, no honest percentage (the n/a cell); Empty is a month where nothing moved
-    // at all (the "—" cell).
-    private sealed record MonthCell(decimal Income, decimal Profit)
-    {
-        public decimal? Percent => Income == 0m ? null : Profit / Income * 100m;
-        public bool Empty => Income == 0m && Math.Abs(Profit) < MovementZeroThreshold;
-    }
-
-    // The grid's cell: the job to date at a month end. Running is the main figure (null while
-    // nothing has ever been invoiced — no base, no honest percentage: the n/a cell); Empty is
-    // a month end before anything had happened at all (the "—" cell). Own is that month's own
-    // figures, kept for the hover.
-    private sealed record RunningCell(MonthCell Own, decimal CumIncome, decimal CumProfit)
-    {
-        public decimal? Running => CumIncome == 0m ? null : CumProfit / CumIncome * 100m;
-        public bool Empty => CumIncome == 0m && Math.Abs(CumProfit) < MovementZeroThreshold;
-    }
-
-    private sealed record MovementRow(
-        Project Project,
-        IReadOnlyList<RunningCell> MonthCells,  // the window's month ends, oldest first
-        IReadOnlyList<decimal?> MovementsPp,    // per month: running % minus the prior month end's (null when either side has no %)
-        MonthCell Window,                       // the six months' own figures taken together (the Δ cell's hover)
-        decimal? WindowDelta,                   // running % now minus six months ago — "6-mo Δ" (null when there was no % back then)
-        decimal? RunningPercent,                // running % to date — "Position now"
-        decimal PositionMoney,                  // cumulative profit £ (the memo line)
-        decimal MoneySixMonthDelta,             // £ over the window — the trajectory's headline
-        bool Stale);
-
-    private sealed record MovementModel(
-        IReadOnlyList<DateTime> Months,
-        IReadOnlyList<MovementRow> Rows,
-        IReadOnlyList<RunningCell> ColumnTotals,   // the combined book to date, per month end
-        IReadOnlyList<decimal?> TotalMovementsPp,
-        MonthCell TotalWindow,
-        decimal? TotalWindowDelta,
-        decimal? TotalRunningPercent,
-        decimal TotalPositionMoney,
-        IReadOnlyList<Project> Excluded,
-        decimal ShadeMax);
 
     // The site's operating profit — the accountant's definition (2026-08-12), so the grid
     // reconciles with his Xero P&L exactly.
@@ -137,8 +93,8 @@ public partial class ProfitSummary
             var running = CellFor(pnl, _ => true);
             // Stale needs history: a job whose data only starts inside the window isn't
             // "stalled", it's young — only flag silence on jobs that were already running.
-            var stale = ownCells.All(cell => Math.Abs(cell.Profit) < MovementZeroThreshold
-                                             && Math.Abs(cell.Income) < MovementZeroThreshold)
+            var stale = ownCells.All(cell => Math.Abs(cell.Profit) < RunningMovement.ZeroThreshold
+                                             && Math.Abs(cell.Income) < RunningMovement.ZeroThreshold)
                         && pnl.Any(row => row.Month < months[0]);
 
             rows.Add(new MovementRow(
@@ -181,42 +137,6 @@ public partial class ProfitSummary
             rows.Sum(row => row.PositionMoney),
             excluded, shadeMax);
     }
-
-    /// <summary>The grid's cell shading: green improving, red worsening, alpha scaling with the movement's share of the biggest (capped).</summary>
-    private static string MovementCellStyle(decimal movementPp, decimal shadeMax)
-    {
-        if (shadeMax <= 0m) return "background:#12151c";
-        var alpha = (0.10m + 0.55m * Math.Min(Math.Abs(movementPp), shadeMax) / shadeMax)
-            .ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
-        return movementPp < 0m
-            ? $"background:rgba(194,85,85,{alpha})"
-            : $"background:rgba(46,160,101,{alpha})";
-    }
-
-    /// <summary>The grid's unit: a percentage with one decimal ("26.5%", "−39.0%"), the accountant's rounding.</summary>
-    private static string PctCell(decimal value) =>
-        value >= 0m ? $"{value:0.0}%" : $"−{Math.Abs(value):0.0}%";
-
-    /// <summary>A movement in percentage points, one decimal, always signed ("+15.3", "−11.8") — Jeremy's small print.</summary>
-    private static string SignedPp(decimal value) =>
-        value >= 0m ? $"+{value:0.0}" : $"−{Math.Abs(value):0.0}";
-
-    /// <summary>The small-print line: the movement, or "—" for no meaningful movement (or no prior % to move from).</summary>
-    private static string MovementPrint(decimal? movementPp) =>
-        movementPp is decimal move && Math.Abs(move) >= 0.05m ? SignedPp(move) : "—";
-
-    /// <summary>The running cell's hover: the position to date, then the month's own figures — the old grid's cell, preserved.</summary>
-    private static string RunningCellHover(DateTime month, RunningCell cell)
-    {
-        var own = cell.Own.Percent is decimal ownPct
-            ? $"this month: invoiced {MoneyCompact(cell.Own.Income)} · profit {SignedMoneyCompact(cell.Own.Profit)} ({PctCell(ownPct)})"
-            : $"this month: nothing invoiced · profit {SignedMoneyCompact(cell.Own.Profit)}";
-        return $"{month:MMM yy} — to date: invoiced {MoneyCompact(cell.CumIncome)} · profit {SignedMoneyCompact(cell.CumProfit)} · {own}";
-    }
-
-    /// <summary>Signed compact £ for the grid's hovers ("+£8.1k", "−£4.8k").</summary>
-    private static string SignedMoneyCompact(decimal value) =>
-        value >= 0m ? $"+{MoneyCompact(value)}" : MoneyCompact(value);
 
     /// <summary>Signed £k with one decimal — the trajectory's six-month headline ("+4.7", "−12.0").</summary>
     private static string DeltaK(decimal value) =>
