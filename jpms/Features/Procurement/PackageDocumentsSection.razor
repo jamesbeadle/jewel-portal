@@ -1,0 +1,92 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Contracts.Drawings
+@inject IBidPackageAttachmentStore PackageAttachments
+
+@* The tender documents: uploaded files and the project drawings linked to the package —
+   everything here is attached to the invite email when it's drafted. *@
+<section class="mb-8">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="eyebrow">Documents</h3>
+        @if (CanEdit)
+        {
+            <div class="flex items-center gap-4">
+                <label class="text-xs text-accent hover:underline cursor-pointer @(Busy ? "opacity-50 pointer-events-none" : "")">
+                    + Add files
+                    <InputFile OnChange="OnFilesSelected" multiple class="hidden" />
+                </label>
+                <button type="button" class="text-xs text-accent hover:underline" @onclick="() => OnLinkDrawings.InvokeAsync()">Link drawings</button>
+            </div>
+        }
+    </div>
+
+    <LoadGate IsLoading="@(!Loaded)" Label="Loading documents">
+    @if (Attachments.Count > 0)
+    {
+        <ul class="space-y-2 mb-3">
+            @foreach (var attachment in Attachments)
+            {
+                <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <a class="text-sm font-medium text-content hover:underline"
+                           href="@PackageAttachments.FileUrl(BidPackageId, attachment.BidPackageAttachmentId)" download>@attachment.DisplayName</a>
+                        <span class="text-xs text-content-subtle ml-2">@FormatSize(attachment.FileSizeBytes)</span>
+                    </div>
+                    @if (CanEdit)
+                    {
+                        <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@Busy"
+                                @onclick="() => OnRemoveAttachment.InvokeAsync(attachment)">Remove</button>
+                    }
+                </li>
+            }
+        </ul>
+    }
+    @if (Drawings.Count == 0 && Attachments.Count == 0)
+    {
+        @* Only once the fetch has answered — the page's banner carries a failure. *@
+        @if (Fetched)
+        {
+            <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
+                No tender documents yet. Upload files with “+ Add files”, or link drawings from the
+                project's Drawings section — everything here is attached to the invite email when it's
+                drafted, along with the generated pricing schedule (files too large for one email go
+                out as 7-day download links instead).
+            </div>
+        }
+    }
+    else if (Drawings.Count > 0)
+    {
+        <ul class="space-y-2">
+            @foreach (var drawing in Drawings)
+            {
+                <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                        <span class="text-sm font-medium text-content">@DrawingNaming.Code(drawing)</span>
+                        <span class="text-sm text-content-muted ml-2">@DrawingNaming.Name(drawing)</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium @(drawing.HasApprovedRevision ? "border-line bg-surface-raised text-content-muted" : "border-amber-200 bg-amber-50 text-amber-800")">
+                            @(DrawingNaming.ApprovedRevisionText(drawing) ?? "No approved revision")
+                        </span>
+                        <a class="text-xs text-accent hover:underline" href="@($"/projects/{ProjectId}/drawings/{drawing.DrawingId}")">Open</a>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+    </LoadGate>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string BidPackageId { get; set; } = "";
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter] public IReadOnlyList<BidPackageAttachment> Attachments { get; set; } = Array.Empty<BidPackageAttachment>();
+    [Parameter] public IReadOnlyList<Drawing> Drawings { get; set; } = Array.Empty<Drawing>();
+    /// <summary>The gate lifts on Loaded; the empty state waits for Fetched (a failed read lifts one, not the other).</summary>
+    [Parameter] public bool Loaded { get; set; }
+    [Parameter] public bool Fetched { get; set; }
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<InputFileChangeEventArgs> OnFilesSelected { get; set; }
+    [Parameter] public EventCallback OnLinkDrawings { get; set; }
+    [Parameter] public EventCallback<BidPackageAttachment> OnRemoveAttachment { get; set; }
+}

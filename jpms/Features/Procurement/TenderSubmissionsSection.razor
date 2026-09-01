@@ -1,0 +1,146 @@
+@namespace Jewel.JPMS.Features.Procurement
+
+@* Tender submissions: the filed tender emails, each one click from a reviewable submission
+   (filed from the Control Centre's System actions → File Bid Package Tender, or tagged by
+   hand — the package tag is what lists them), the award summary once there is one, and the
+   quotes compared line by line. *@
+<section class="mb-8">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="eyebrow">Tender submissions</h3>
+        @if (CanEdit && HasRecipients)
+        {
+            <button type="button" class="text-xs text-accent hover:underline" disabled="@Busy"
+                    title="Key in a tender received outside email — phoned through, posted, or from a message that wasn't tagged."
+                    @onclick="() => OnRecordManually.InvokeAsync()">Record tender manually</button>
+        }
+    </div>
+
+    @if (Emails.Count > 0)
+    {
+        <div class="rounded-xl border border-line bg-surface mb-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b border-line">
+                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tender responses</p>
+                <span class="text-[11px] text-content-subtle">Extract a tender to review it against the line schedule and save it as a submission.</span>
+            </div>
+            <ul class="divide-y divide-line">
+                @foreach (var email in Emails)
+                {
+                    <li class="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+                        <div class="min-w-0">
+                            <p class="text-sm text-content truncate">
+                                <span class="font-medium">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                                <span class="text-content-subtle"> — @email.Subject</span>
+                                @if (email.HasAttachments)
+                                {
+                                    <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                }
+                            </p>
+                            <p class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
+                        </div>
+                        @if (CanEdit)
+                        {
+                            <button type="button" class="btn-secondary px-2 py-1 text-xs shrink-0" disabled="@Busy"
+                                    title="Read this email and its returned pricing schedule with AI, mapped against the package's line items, ready to review and save as a submission."
+                                    @onclick="() => OnExtractFromEmail.InvokeAsync(email)">Extract information</button>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    }
+
+    @if (AwardNote is not null)
+    {
+        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@AwardNote</p>
+    }
+
+    @* Persistent award summary — who won, for how much, and the purchase-order it raised. *@
+    @if (Awarded is { } awarded)
+    {
+        <div class="rounded-xl border border-positive/30 bg-positive/10 px-4 py-3 mb-3 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm text-content">
+                <span class="font-semibold">Awarded</span> to
+                <span class="font-medium">@awarded.SubcontractorName</span>
+                at @awarded.Order.Value.ToString("£#,##0.00")
+                on @awarded.Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy") —
+                <a class="text-accent hover:underline" href="@($"/projects/{ProjectId}/work-orders")"
+                   title="Open the project's Work Orders tab, where this order's cost-coded lines feed the cost-centre totals.">
+                    work order WO-@awarded.Order.Number.ToString("0000")</a>
+                raised as the purchase order.
+            </p>
+            @if (CanEdit)
+            {
+                <button type="button" class="text-xs text-accent hover:underline" disabled="@Busy"
+                        title="Draft the work-order email to the winning subcontractor in the shared mailbox — reviewed and sent from Outlook, nothing sends from here."
+                        @onclick="() => OnEmailWorkOrder.InvokeAsync()">Email work order to winner</button>
+            }
+        </div>
+        @if (WorkOrderEmailNote is not null)
+        {
+            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
+                @WorkOrderEmailNote
+                @if (WorkOrderEmailLink is not null)
+                {
+                    <a class="text-accent underline ml-1" href="@WorkOrderEmailLink" target="_blank" rel="noopener">Open the draft in Outlook</a>
+                }
+            </p>
+        }
+    }
+
+    <LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="Loading tender submissions">
+    @if (Quotes.Count == 0)
+    {
+        @* Only once the fetch has answered — the page's banner carries a failure. *@
+        @if (Fetched)
+        {
+            <p class="text-sm text-content-subtle italic">
+                No tender submissions yet. File each returned tender email from the Control
+                Centre (System actions → File Bid Package Tender) and it appears above ready
+                to extract — or use “Record tender manually” for a tender phoned through or
+                posted.
+            </p>
+        }
+    }
+    else
+    {
+        <TenderQuoteComparisonTable Quotes="Quotes" QuoteLines="QuoteLines" LineItems="LineItems"
+                                    Recipients="Recipients"
+                                    AwardEnabled="@AwardEnabled"
+                                    CanAddToDirectory="CanAddToDirectory"
+                                    Busy="Busy"
+                                    OnAward="OnAward"
+                                    OnAddToDirectory="OnAddToDirectory" />
+    }
+    </LoadGate>
+</section>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool CanAddToDirectory { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool HasRecipients { get; set; }
+    /// <summary>The package's tagged emails — each a tender response to extract.</summary>
+    [Parameter] public IReadOnlyList<MailboxMessage> Emails { get; set; } = Array.Empty<MailboxMessage>();
+
+    [Parameter] public string? AwardNote { get; set; }
+    /// <summary>The work order the award raised, once the package is awarded.</summary>
+    [Parameter] public ProjectWorkOrderDetail? Awarded { get; set; }
+    [Parameter] public string? WorkOrderEmailNote { get; set; }
+    [Parameter] public string? WorkOrderEmailLink { get; set; }
+
+    [Parameter] public IReadOnlyList<Quote> Quotes { get; set; } = Array.Empty<Quote>();
+    [Parameter] public IReadOnlyList<QuoteLineItem> QuoteLines { get; set; } = Array.Empty<QuoteLineItem>();
+    [Parameter] public IReadOnlyList<BidPackageLineItem> LineItems { get; set; } = Array.Empty<BidPackageLineItem>();
+    [Parameter] public IReadOnlyList<BidPackageRecipient> Recipients { get; set; } = Array.Empty<BidPackageRecipient>();
+    /// <summary>The gate lifts on Loaded; the empty line waits for Fetched (a failed read lifts one, not the other).</summary>
+    [Parameter] public bool Loaded { get; set; }
+    [Parameter] public bool Fetched { get; set; }
+    [Parameter] public bool AwardEnabled { get; set; }
+
+    [Parameter] public EventCallback OnRecordManually { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnExtractFromEmail { get; set; }
+    [Parameter] public EventCallback OnEmailWorkOrder { get; set; }
+    [Parameter] public EventCallback<Quote> OnAward { get; set; }
+    [Parameter] public EventCallback<string> OnAddToDirectory { get; set; }
+}

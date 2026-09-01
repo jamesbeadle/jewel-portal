@@ -182,23 +182,4 @@ public partial class ProjectBidPackageInviteDetail
     }
 
     // ---- Website links on the recipient list ----
-
-    // Directory websites arrive as the search stored them — sometimes bare domains. A missing
-    // scheme would make the browser treat the href as a relative path, so add one.
-    private static string WebsiteHref(string website)
-    {
-        var trimmed = website.Trim();
-        return trimmed.Contains("://") ? trimmed : $"https://{trimmed}";
-    }
-
-    // The label is the tidy form: no scheme, no www., no trailing slash — "fence-masters.co.uk".
-    private static string WebsiteLabel(string website)
-    {
-        var label = website.Trim();
-        var schemeAt = label.IndexOf("://", StringComparison.Ordinal);
-        if (schemeAt >= 0) label = label[(schemeAt + 3)..];
-        if (label.StartsWith("www.", StringComparison.OrdinalIgnoreCase)) label = label[4..];
-        return label.TrimEnd('/');
-    }
-
 }

@@ -107,467 +107,59 @@ else
 
             @if (activeTab == "tender-list")
             {
-            @* ---- Invited subcontractors ---- *@
-            <section class="mb-8">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="eyebrow">Invited to tender</h3>
-                    @if (CanEdit)
-                    {
-                        <div class="flex items-center gap-4">
-                            @if (recipients.Count > 0)
-                            {
-                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenComposeModal">Invite email</button>
-                            }
-                            @if (PackageReadyForInvites)
-                            {
-                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenFindModal">Find subcontractors</button>
-                                <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenInviteModal">+ Add subcontractor</button>
-                            }
-                            else
-                            {
-                                @* Inviting is gated on the package saying what it is: the details are what
-                                   the invite, the pricing schedule and the trade match all work from. *@
-                                <span class="text-xs text-content-subtle italic"
-                                      title="A title plus a specification summary or line items — set under Details — are what the invite email, the pricing schedule and the trade match all work from.">
-                                    Add the package's details to invite subcontractors
-                                </span>
-                            }
-                        </div>
-                    }
-                </div>
-
-                @if (sendNote is not null)
-                {
-                    <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
-                        @sendNote
-                        @if (draftWebLink is not null)
-                        {
-                            <a class="text-accent underline ml-1" href="@draftWebLink" target="_blank" rel="noopener">Open it in Outlook on the web</a>
-                        }
-                    </p>
-                }
-
-                <LoadGate IsLoading="@(!RecipientsReady)" Prominent="true" Label="Loading invited subcontractors">
-                @if (recipients.Count == 0)
-                {
-                    @* Only once the fetch has answered — the banner above carries a failure. *@
-                    @if (fetchedRecipients is not null)
-                    {
-                        <p class="text-sm text-content-subtle italic">No subcontractors invited yet.</p>
-                    }
-                }
-                else
-                {
-                    <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                        <table class="w-full text-sm">
-                            <thead class="bg-surface-raised border-b border-line">
-                                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Subcontractor</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Added</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-line">
-                                @foreach (var recipient in recipients)
-                                {
-                                    var sub = Subs.Find(recipient.SubcontractorId);
-                                    <tr>
-                                        <td class="px-4 py-3">
-                                            <span class="text-content font-medium">@(sub?.CompanyName ?? recipient.SubcontractorId)</span>
-                                            @if (sub is { IsProspect: true })
-                                            {
-                                                @* Tender-only prospect: on this list but deliberately NOT in the
-                                                   Directory — promotion happens from their submitted tender. *@
-                                                <span class="ml-2 inline-flex items-center rounded-full bg-surface border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle"
-                                                      title="Only on tender lists — not in the Directory. Add them from their submitted tender if they're worth keeping.">Not in directory</span>
-                                            }
-                                            @if (sub is not null && string.IsNullOrWhiteSpace(sub.ContactEmail))
-                                            {
-                                                <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No email address</span>
-                                            }
-                                            else if (sub is not null)
-                                            {
-                                                <span class="block text-xs text-content-subtle">@sub.ContactEmail</span>
-                                            }
-                                            @if (sub is not null && !string.IsNullOrWhiteSpace(sub.Website))
-                                            {
-                                                @* Their site in a new tab — the quickest sanity-check on who a
-                                                   search-found company actually is before the invite drafts. *@
-                                                <a class="block text-xs text-accent hover:underline truncate max-w-xs"
-                                                   href="@WebsiteHref(sub.Website)" target="_blank" rel="noopener">@WebsiteLabel(sub.Website)</a>
-                                            }
-                                        </td>
-                                        <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.TradesLabel ?? "")</td>
-                                        <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
-                                        @* "Invited" as a word implies an email went out, which the system can't know
-                                           (sends happen in Outlook) — "On list" says exactly what is true. The other
-                                           statuses read fine as-is. *@
-                                        <td class="px-4 py-3 @(recipient.Status == BidPackageRecipientStatus.Declined ? "text-content-subtle" : "text-content-muted")">@(recipient.Status == BidPackageRecipientStatus.Invited ? "On list" : recipient.Status.ToString())</td>
-                                        <td class="px-4 py-3 text-right">
-                                            @if (CanEdit)
-                                            {
-                                                @* Row actions follow the button colour rule: acts are green
-                                                   (btn-secondary), the destructive one warns (btn-neutral +
-                                                   negative text/border) — compact paddings for a table row. *@
-                                                <span class="inline-flex items-center gap-2">
-                                                    @if (recipient.Status == BidPackageRecipientStatus.Responded
-                                                        && sub is { IsProspect: true } && CanAddToDirectory)
-                                                    {
-                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
-                                                                title="Their tender is in and this company isn't in the Directory yet — add it if they're worth keeping for future work."
-                                                                @onclick="() => AddToDirectory(sub!.SubcontractorId)">Add to directory</button>
-                                                    }
-                                                    @if (recipient.Status == BidPackageRecipientStatus.Declined)
-                                                    {
-                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
-                                                                title="Put them back in the running — restores Responded if they have a tender in, otherwise back on the list."
-                                                                @onclick="() => SetDeclined(recipient, false)">Undo decline</button>
-                                                    }
-                                                    else if (recipient.Status != BidPackageRecipientStatus.Won)
-                                                    {
-                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
-                                                                title="Record that they've declined to tender (e.g. told you by phone). Keeps them on the list for the record."
-                                                                @onclick="() => SetDeclined(recipient, true)">Mark declined</button>
-                                                    }
-                                                    <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40" disabled="@busy"
-                                                            @onclick="() => RemoveRecipient(recipient)">Remove</button>
-                                                </span>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    <p class="text-xs text-content-subtle mt-2">
-                        Adding a subcontractor only builds the invite list — nothing is emailed until you
-                        compose the “Invite email” above and press Send there. It sends from the projects
-                        mailbox, with everyone in BCC; a half-written invite is saved on the package.
-                    </p>
-                }
-                </LoadGate>
-            </section>
+                <InvitedSubcontractorsSection Recipients="recipients"
+                                              Loaded="RecipientsReady" Fetched="@(fetchedRecipients is not null)"
+                                              CanEdit="CanEdit" CanAddToDirectory="CanAddToDirectory" Busy="busy"
+                                              ReadyForInvites="PackageReadyForInvites"
+                                              SendNote="@sendNote" DraftWebLink="@draftWebLink"
+                                              OnComposeInvite="OpenComposeModal"
+                                              OnFindSubcontractors="OpenFindModal"
+                                              OnAddSubcontractor="OpenInviteModal"
+                                              OnAddToDirectory="AddToDirectory"
+                                              OnSetDeclined="pick => SetDeclined(pick.Recipient, pick.Declined)"
+                                              OnRemove="RemoveRecipient" />
             }
 
             @if (activeTab == "details")
             {
-            @* ---- Specification summary: the "what this package covers" bullets printed at the
-                   top of the pricing schedule workbook that travels with the invite. One Edit for
-                   the whole tab — summary and line items are edited together in one dialog. ---- *@
-            <section class="mb-8">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="eyebrow">Specification summary</h3>
-                    @if (CanEdit)
-                    {
-                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy" @onclick="EditDetails">Edit details</button>
-                    }
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(package.SpecificationSummary))
-                {
-                    <ul class="space-y-1">
-                        @foreach (var line in package.SpecificationSummary.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-                        {
-                            <li class="text-sm text-content-muted">• @line.Trim().TrimStart('•', '-', ' ')</li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <p class="text-sm text-content-subtle italic">
-                        No summary yet. One line per point — it prints at the top of the pricing schedule
-                        each tenderer receives, so say what the package covers and to what standard.
-                    </p>
-                }
-            </section>
-
-            @* ---- Line items, grouped by trade — same tab, same Edit details dialog.
-                   "Select line items" is the fast path: tick the valuation report's priced rows
-                   and they arrive as lines carrying their cost code, so every cost-centre home
-                   put out to tender is one that exists on the sale side. ---- *@
-            <section class="mb-8">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="eyebrow">Line items</h3>
-                    @if (CanEdit)
-                    {
-                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
-                                title="Tick lines from the valuation report — each becomes a line item on this package, carrying its cost code."
-                                @onclick="OpenValuationPicker">Select line items</button>
-                    }
-                </div>
-
-                <LoadGate IsLoading="@(!LineItemsReady)" Prominent="true" Label="Loading line items">
-                @if (lineItems.Count == 0)
-                {
-                    @* Only once the fetch has answered — the banner above carries a failure. *@
-                    @if (fetchedLineItems is not null)
-                    {
-                        <p class="text-sm text-content-subtle italic">No line items on this package yet.</p>
-                    }
-                }
-                else
-                {
-                    @foreach (var group in lineItems.GroupBy(item => item.Trade).OrderBy(g => g.Key))
-                    {
-                        <div class="mb-4">
-                            <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">@(string.IsNullOrWhiteSpace(group.Key) ? "Unspecified" : group.Key)</p>
-                            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                                <table class="w-full text-sm">
-                                    <thead class="bg-surface-raised border-b border-line">
-                                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Description</th>
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 hidden sm:table-cell">Unit</th>
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Qty</th>
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Cost code</th>
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Covered by</th>
-                                            @if (CanEdit)
-                                            {
-                                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2"></th>
-                                            }
-                                        </tr>
-                                    </thead>
-                                    <tbody class="divide-y divide-line">
-                                        @foreach (var item in group)
-                                        {
-                                            <tr>
-                                                <td class="px-4 py-2 text-content">@item.Description</td>
-                                                <td class="px-4 py-2 text-content-muted hidden sm:table-cell">@item.Unit</td>
-                                                <td class="px-4 py-2 text-content-muted">@item.Quantity</td>
-                                                <td class="px-4 py-2">
-                                                    @if (string.IsNullOrWhiteSpace(item.CostCode))
-                                                    {
-                                                        <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
-                                                              title="This line predates the cost-code rule — edit the line items to set one.">No cost code</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="text-content-muted" title="@CostCentreLabel(item.CostCode)">@item.CostCode</span>
-                                                    }
-                                                </td>
-                                                <td class="px-4 py-2">
-                                                    @if (item.Coverage == BidPackageLineCoverage.Unassigned)
-                                                    {
-                                                        <span class="text-xs text-content-subtle italic">Not linked</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium @(item.Coverage == BidPackageLineCoverage.Variation ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted")">@CoverageLabel(item)</span>
-                                                    }
-                                                </td>
-                                                @if (CanEdit)
-                                                {
-                                                    <td class="px-4 py-2 text-right">
-                                                        <button type="button" class="text-xs text-accent hover:underline" disabled="@busy" @onclick="() => OpenCoverageModal(item)">@(item.Coverage == BidPackageLineCoverage.Unassigned ? "Link" : "Change")</button>
-                                                    </td>
-                                                }
-                                            </tr>
-                                        }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    }
-                }
-                </LoadGate>
-            </section>
-
+                <PackageDetailsSections SpecificationSummary="@(package.SpecificationSummary ?? "")"
+                                        LineItems="lineItems"
+                                        Loaded="LineItemsReady" Fetched="@(fetchedLineItems is not null)"
+                                        CanEdit="CanEdit" Busy="busy"
+                                        CostCentreLabel="CostCentreLabel" CoverageLabel="CoverageLabel"
+                                        OnEditDetails="EditDetails"
+                                        OnSelectLineItems="OpenValuationPicker"
+                                        OnLinkCoverage="OpenCoverageModal" />
             }
 
             @if (activeTab == "submissions")
             {
-            @* ---- Tender submissions: quotes compared line by line ---- *@
-            <section class="mb-8">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="eyebrow">Tender submissions</h3>
-                    @if (CanEdit && recipients.Count > 0)
-                    {
-                        <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
-                                title="Key in a tender received outside email — phoned through, posted, or from a message that wasn't tagged."
-                                @onclick="OpenManualTenderModal">Record tender manually</button>
-                    }
-                </div>
-
-                @* ---- Tender responses: the filed tender emails, each one click from a reviewable
-                       submission. Filed from the Control Centre (System actions → File Bid Package
-                       Tender) or tagged by hand — the package tag is what lists them here. ---- *@
-                @if (emails.Count > 0)
-                {
-                    <div class="rounded-xl border border-line bg-surface mb-3">
-                        <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 border-b border-line">
-                            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Tender responses</p>
-                            <span class="text-[11px] text-content-subtle">Extract a tender to review it against the line schedule and save it as a submission.</span>
-                        </div>
-                        <ul class="divide-y divide-line">
-                            @foreach (var email in emails)
-                            {
-                                <li class="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
-                                    <div class="min-w-0">
-                                        <p class="text-sm text-content truncate">
-                                            <span class="font-medium">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
-                                            <span class="text-content-subtle"> — @email.Subject</span>
-                                            @if (email.HasAttachments)
-                                            {
-                                                <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
-                                            }
-                                        </p>
-                                        <p class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
-                                    </div>
-                                    @if (CanEdit)
-                                    {
-                                        <button type="button" class="btn-secondary px-2 py-1 text-xs shrink-0" disabled="@busy"
-                                                title="Read this email and its returned pricing schedule with AI, mapped against the package's line items, ready to review and save as a submission."
-                                                @onclick="() => OpenExtractFromEmail(email)">Extract information</button>
-                                    }
-                                </li>
-                            }
-                        </ul>
-                    </div>
-                }
-
-                @if (awardNote is not null)
-                {
-                    <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@awardNote</p>
-                }
-
-                @* Persistent award summary — who won, for how much, and the purchase-order it raised. *@
-                @if (package.Status == BidPackageStatus.Awarded && AwardedOrder is { } awarded)
-                {
-                    <div class="rounded-xl border border-positive/30 bg-positive/10 px-4 py-3 mb-3 flex flex-wrap items-center justify-between gap-3">
-                        <p class="text-sm text-content">
-                            <span class="font-semibold">Awarded</span> to
-                            <span class="font-medium">@awarded.SubcontractorName</span>
-                            at @awarded.Order.Value.ToString("£#,##0.00")
-                            on @awarded.Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy") —
-                            <a class="text-accent hover:underline" href="@($"/projects/{ProjectId}/work-orders")"
-                               title="Open the project's Work Orders tab, where this order's cost-coded lines feed the cost-centre totals.">
-                                work order WO-@awarded.Order.Number.ToString("0000")</a>
-                            raised as the purchase order.
-                        </p>
-                        @if (CanEdit)
-                        {
-                            <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
-                                    title="Draft the work-order email to the winning subcontractor in the shared mailbox — reviewed and sent from Outlook, nothing sends from here."
-                                    @onclick="OpenWorkOrderEmailModal">Email work order to winner</button>
-                        }
-                    </div>
-                    @if (woEmailNote is not null)
-                    {
-                        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
-                            @woEmailNote
-                            @if (woEmailLink is not null)
-                            {
-                                <a class="text-accent underline ml-1" href="@woEmailLink" target="_blank" rel="noopener">Open the draft in Outlook</a>
-                            }
-                        </p>
-                    }
-                }
-
-                <LoadGate IsLoading="@(!QuotesReady)" Prominent="true" Label="Loading tender submissions">
-                @if (quotes.Count == 0)
-                {
-                    @* Only once the fetch has answered — the banner above carries a failure. *@
-                    @if (fetchedQuotes is not null)
-                    {
-                        <p class="text-sm text-content-subtle italic">
-                            No tender submissions yet. File each returned tender email from the Control
-                            Centre (System actions → File Bid Package Tender) and it appears above ready
-                            to extract — or use “Record tender manually” for a tender phoned through or
-                            posted.
-                        </p>
-                    }
-                }
-                else
-                {
-                    <TenderQuoteComparisonTable Quotes="quotes" QuoteLines="quoteLines" LineItems="lineItems"
-                                                Recipients="recipients"
-                                                AwardEnabled="@(CanEdit && package.Status != BidPackageStatus.Awarded)"
-                                                CanAddToDirectory="CanAddToDirectory"
-                                                Busy="busy"
-                                                OnAward="AwardTo"
-                                                OnAddToDirectory="AddToDirectory" />
-                }
-                </LoadGate>
-            </section>
-
+                <TenderSubmissionsSection ProjectId="@ProjectId"
+                                          CanEdit="CanEdit" CanAddToDirectory="CanAddToDirectory" Busy="busy"
+                                          HasRecipients="@(recipients.Count > 0)"
+                                          Emails="emails"
+                                          AwardNote="@awardNote"
+                                          Awarded="@(package.Status == BidPackageStatus.Awarded ? AwardedOrder : null)"
+                                          WorkOrderEmailNote="@woEmailNote" WorkOrderEmailLink="@woEmailLink"
+                                          Quotes="quotes" QuoteLines="quoteLines" LineItems="lineItems" Recipients="recipients"
+                                          Loaded="QuotesReady" Fetched="@(fetchedQuotes is not null)"
+                                          AwardEnabled="@(CanEdit && package.Status != BidPackageStatus.Awarded)"
+                                          OnRecordManually="OpenManualTenderModal"
+                                          OnExtractFromEmail="OpenExtractFromEmail"
+                                          OnEmailWorkOrder="OpenWorkOrderEmailModal"
+                                          OnAward="AwardTo"
+                                          OnAddToDirectory="AddToDirectory" />
             }
 
             @if (activeTab == "documents")
             {
-            @* ---- Documents: project drawings linked to this package ---- *@
-            <section class="mb-8">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="eyebrow">Documents</h3>
-                    @if (CanEdit)
-                    {
-                        <div class="flex items-center gap-4">
-                            <label class="text-xs text-accent hover:underline cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
-                                + Add files
-                                <InputFile OnChange="OnAttachmentFilesSelected" multiple class="hidden" />
-                            </label>
-                            <button type="button" class="text-xs text-accent hover:underline" @onclick="OpenDrawingsModal">Link drawings</button>
-                        </div>
-                    }
-                </div>
-
-                <LoadGate IsLoading="@(!DrawingsReady)" Label="Loading documents">
-                @if (packageAttachments.Count > 0)
-                {
-                    <ul class="space-y-2 mb-3">
-                        @foreach (var attachment in packageAttachments)
-                        {
-                            <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-                                <div>
-                                    <a class="text-sm font-medium text-content hover:underline"
-                                       href="@PackageAttachments.FileUrl(BidPackageId, attachment.BidPackageAttachmentId)" download>@attachment.DisplayName</a>
-                                    <span class="text-xs text-content-subtle ml-2">@FormatFileSize(attachment.FileSizeBytes)</span>
-                                </div>
-                                @if (CanEdit)
-                                {
-                                    <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy"
-                                            @onclick="() => RemoveAttachment(attachment)">Remove</button>
-                                }
-                            </li>
-                        }
-                    </ul>
-                }
-                @if (packageDrawings.Count == 0 && packageAttachments.Count == 0)
-                {
-                    @* Only once the fetch has answered — the banner above carries a failure. *@
-                    @if (fetchedPackageDrawings is not null)
-                    {
-                        <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
-                            No tender documents yet. Upload files with “+ Add files”, or link drawings from the
-                            project's Drawings section — everything here is attached to the invite email when it's
-                            drafted, along with the generated pricing schedule (files too large for one email go
-                            out as 7-day download links instead).
-                        </div>
-                    }
-                }
-                else if (packageDrawings.Count > 0)
-                {
-                    <ul class="space-y-2">
-                        @foreach (var drawing in packageDrawings)
-                        {
-                            <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-                                <div>
-                                    <span class="text-sm font-medium text-content">@DrawingNaming.Code(drawing)</span>
-                                    <span class="text-sm text-content-muted ml-2">@DrawingNaming.Name(drawing)</span>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium @(drawing.HasApprovedRevision ? "border-line bg-surface-raised text-content-muted" : "border-amber-200 bg-amber-50 text-amber-800")">
-                                        @(DrawingNaming.ApprovedRevisionText(drawing) ?? "No approved revision")
-                                    </span>
-                                    <a class="text-xs text-accent hover:underline" href="@($"/projects/{ProjectId}/drawings/{drawing.DrawingId}")">Open</a>
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                }
-                </LoadGate>
-            </section>
-
+                <PackageDocumentsSection BidPackageId="@BidPackageId" ProjectId="@ProjectId"
+                                         Attachments="packageAttachments" Drawings="packageDrawings"
+                                         Loaded="DrawingsReady" Fetched="@(fetchedPackageDrawings is not null)"
+                                         CanEdit="CanEdit" Busy="busy"
+                                         OnFilesSelected="OnAttachmentFilesSelected"
+                                         OnLinkDrawings="OpenDrawingsModal"
+                                         OnRemoveAttachment="RemoveAttachment" />
             }
 
             @if (activeTab == "emails")

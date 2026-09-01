@@ -78,12 +78,4 @@ public partial class ProjectBidPackageInviteDetail
         catch { error = "Couldn't remove the attachment. Please try again."; }
         finally { busy = false; }
     }
-
-    private static string FormatFileSize(long bytes) => bytes switch
-    {
-        >= 1024 * 1024 => $"{bytes / (1024d * 1024d):0.#} MB",
-        >= 1024 => $"{bytes / 1024d:0.#} KB",
-        _ => $"{bytes} B"
-    };
-
 }
