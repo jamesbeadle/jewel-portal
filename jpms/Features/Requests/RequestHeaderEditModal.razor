@@ -1,0 +1,127 @@
+@namespace Jewel.JPMS.Features.Requests
+@using static Jewel.JPMS.Features.Requests.RequestEditParsing
+
+@* Edit reference & status — the page header's own editor (reference, status, subject, and the
+   close date when closing; critical path on an RFI). The draft is the dialog's own, seeded from
+   the record each time it opens; the page sends the command and says whether it took. *@
+<Modal IsOpen="IsOpen"
+       Title="Edit reference &amp; status"
+       ConfirmLabel="@(Busy ? "Saving…" : "Save changes")"
+       OnCancel="() => IsOpenChanged.InvokeAsync(false)"
+       OnConfirm="SaveAsync"
+       Class="max-w-xl">
+    <div class="space-y-4">
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" Required="true" />
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Status</label>
+                <select class="field" value="@((int)status)" @onchange="OnStatusChanged">
+                    @foreach (var option in StatusOptions)
+                    {
+                        <option value="@((int)option)">@option.DisplayName()</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <FormField Label="Subject" Value="@title" OnChange="v => title = v" Required="true" />
+
+        @if (status == RequestStatus.Closed)
+        {
+            <FormField Label="Date closed" Value="@closedAt" OnChange="v => closedAt = v" InputType="date" Required="true" />
+        }
+
+        @if (Record.Kind is RequestType.Rfi)
+        {
+            <label class="flex items-start gap-2 text-sm text-content">
+                <input type="checkbox" class="mt-0.5" @bind="criticalPath" />
+                <span>Critical path <span class="text-content-subtle">— programme-related; shows under Critical Path RFIs on the Programme tab</span></span>
+            </label>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public Request Record { get; set; } = default!;
+    [Parameter] public IReadOnlyList<RequestStatus> StatusOptions { get; set; } = Array.Empty<RequestStatus>();
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>Bound: the page's Actions menu opens it.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    /// <summary>Sends the edit; true means it took and the dialog closes, false keeps it open with the server's words.</summary>
+    [Parameter, EditorRequired] public Func<UpdateRequestDetails, Task<(bool Saved, string? Error)>> Send { get; set; } = default!;
+
+    private bool wasOpen;
+    private string reference = "";
+    private string title = "";
+    private RequestStatus status = RequestStatus.NeedsAction;
+    private string closedAt = "";
+    private bool criticalPath;
+    private string? error;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen)
+        {
+            reference = Record.Reference;
+            title = Record.Title;
+            status = Record.Status;
+            closedAt = Record.ClosedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
+            criticalPath = Record.CriticalPath;
+            error = null;
+        }
+        wasOpen = IsOpen;
+    }
+
+    private void OnStatusChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var raw)) status = (RequestStatus)raw;
+        // Switching to Closed pre-fills today so the common case is one click — the date stays
+        // editable for closures recorded after the fact, and save refuses a blank one.
+        if (status == RequestStatus.Closed && string.IsNullOrWhiteSpace(closedAt))
+            closedAt = DateTime.Today.ToString("yyyy-MM-dd");
+    }
+
+    private async Task SaveAsync()
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(reference)) { error = "A reference is required."; return; }
+        if (string.IsNullOrWhiteSpace(title)) { error = "A subject is required."; return; }
+
+        // The close date only travels when the record is closed; backdating is fine, forward-dating
+        // isn't, and a blank is refused — left to the server it would silently stamp today, which
+        // misdates closures recorded after the fact and skews the frozen Days-out count.
+        var closed = status == RequestStatus.Closed ? ParseDate(closedAt) : null;
+        if (status == RequestStatus.Closed && closed is null) { error = "A closed date is required — the days-out count is fixed from it."; return; }
+        if (closed is { } date && date.Date > DateTime.Today) { error = "The closed date cannot be in the future."; return; }
+
+        var command = new UpdateRequestDetails(
+            Record.RequestId,
+            reference.Trim(),
+            title.Trim(),
+            Record.Description,
+            status,
+            Record.Value,
+            Record.ResponseText,
+            Record.RespondedByEmail,
+            Record.ImpliesVariation,
+            Record.DrawingRef,
+            Record.ResponseDue,
+            Record.RelatedDrawingSpec,
+            Record.InternalNotes,
+            Record.ClientNotes,
+            ClosedAt: closed,
+            // Only the RFI modal shows the checkbox; null keeps the tag untouched elsewhere.
+            CriticalPath: Record.Kind is RequestType.Rfi ? criticalPath : null);
+
+        // e.g. the reference was manually edited onto a number already in use on this project.
+        var (saved, refusal) = await Send(command);
+        if (saved) await IsOpenChanged.InvokeAsync(false);
+        else error = refusal;
+    }
+}

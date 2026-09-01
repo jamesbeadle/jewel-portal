@@ -6,62 +6,28 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectRequestDetail
 {
-    // ---- Detail edit: the Detail panel's text ---------------------------------------------------
+    private void OpenDetailEdit() { if (record is not null) editingDetail = true; }
 
-    private void OpenDetailEdit()
+    // ---- The three edit dialogs (header, facts, detail) build their own commands; this is the
+    // one send they share. The page swaps in the saved record; a refusal goes back to the dialog
+    // the user is still standing in.
+    private async Task<(bool Saved, string? Error)> SendEdit(UpdateRequestDetails command)
     {
-        if (record is null) return;
-        editDescription = record.Description ?? "";
-        editError = null;
-        editingDetail = true;
-    }
-
-    private void CancelDetailEdit() => editingDetail = false;
-
-    private async Task SaveDetailEdit()
-    {
-        if (record is null || busy || !CanEditDetails) return;
-        editError = null;
-
-        var command = new UpdateRequestDetails(
-            record.RequestId,
-            record.Reference,
-            record.Title,
-            editDescription?.Trim() ?? "",
-            record.Status,
-            record.Value,
-            record.ResponseText,
-            record.RespondedByEmail,
-            record.ImpliesVariation,
-            record.DrawingRef,
-            record.ResponseDue,
-            record.RelatedDrawingSpec,
-            record.InternalNotes,
-            record.ClientNotes);
-
-        if (await SendEdit(command)) editingDetail = false;
-    }
-
-    /// <summary>Shared send for the three edit modals: true on success (the caller closes its
-    /// modal), false leaves the modal open with the error shown inside it.</summary>
-    private async Task<bool> SendEdit(UpdateRequestDetails command)
-    {
+        if (record is null || busy || !CanEditDetails) return (false, null);
         try
         {
             busy = true;
             record = await RequestRegister.UpdateAsync(command);
             responseDraft = record.ResponseText ?? "";
-            return true;
+            return (true, null);
         }
         catch (CommandFailedException ex)
         {
-            editError = ex.Message;
-            return false;
+            return (false, ex.Message);
         }
         catch
         {
-            editError = "Couldn't save the changes. Please try again.";
-            return false;
+            return (false, "Couldn't save the changes. Please try again.");
         }
         finally
         {

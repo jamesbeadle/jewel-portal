@@ -357,103 +357,10 @@ else
     @* The old single "Edit request details" modal is split three ways, each opened from an Edit
        control on the surface it edits: the page header (reference, status, subject), the facts
        strip (dates, drawing refs, value) and the Detail panel (the detail text). *@
-    <Modal IsOpen="editingHeader"
-           Title="Edit reference &amp; status"
-           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
-           OnCancel="CancelHeaderEdit"
-           OnConfirm="SaveHeaderEdit"
-           Class="max-w-xl">
-        <div class="space-y-4">
-            @if (editError is not null)
-            {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@editError</p>
-            }
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Reference" Value="@editReference" OnChange="v => editReference = v" Required="true" />
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Status</label>
-                    <select class="field" value="@((int)editStatus)" @onchange="OnEditStatusChanged">
-                        @foreach (var option in StatusOptions)
-                        {
-                            <option value="@((int)option)">@option.DisplayName()</option>
-                        }
-                    </select>
-                </div>
-            </div>
-
-            <FormField Label="Subject" Value="@editTitle" OnChange="v => editTitle = v" Required="true" />
-
-            @if (editStatus == RequestStatus.Closed)
-            {
-                <FormField Label="Date closed" Value="@editClosedAt" OnChange="v => editClosedAt = v" InputType="date" Required="true" />
-            }
-
-            @if (record.Kind is RequestType.Rfi)
-            {
-                <label class="flex items-start gap-2 text-sm text-content">
-                    <input type="checkbox" class="mt-0.5" @bind="editCriticalPath" />
-                    <span>Critical path <span class="text-content-subtle">— programme-related; shows under Critical Path RFIs on the Programme tab</span></span>
-                </label>
-            }
-        </div>
-    </Modal>
-
-    <Modal IsOpen="editingFacts"
-           Title="Edit request facts"
-           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
-           OnCancel="CancelFactsEdit"
-           OnConfirm="SaveFactsEdit"
-           Class="max-w-2xl">
-        <div class="space-y-4">
-            @if (editError is not null)
-            {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@editError</p>
-            }
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Date issued" Value="@editIssuedAt" OnChange="v => editIssuedAt = v" InputType="date" />
-                <FormField Label="Response due" Value="@editResponseDue" OnChange="v => editResponseDue = v" InputType="date" />
-                @* Offered on every closed record — including legacy closes that predate the close
-                   date and so have none recorded yet. Required while closed: the date is what the
-                   frozen Days-out count is computed from. *@
-                @if (record.Status is RequestStatus.Closed || record.ClosedAt is not null)
-                {
-                    <FormField Label="Date closed" Value="@editClosedAt" OnChange="v => editClosedAt = v" InputType="date" Required="true" />
-                }
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField Label="Drawing / detail ref" Value="@editDrawingRef" OnChange="v => editDrawingRef = v" />
-            </div>
-
-            <FormField Label="Related drawing / spec" Value="@editRelatedSpec" OnChange="v => editRelatedSpec = v" />
-
-            @if (record.Kind is not RequestType.Rfi)
-            {
-                <FormField Label="Value (£, optional)" Value="@editValue" OnChange="v => editValue = v" />
-            }
-        </div>
-    </Modal>
-
-    <Modal IsOpen="editingDetail"
-           Title="Edit detail"
-           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
-           OnCancel="CancelDetailEdit"
-           OnConfirm="SaveDetailEdit"
-           Class="max-w-2xl">
-        <div class="space-y-4">
-            @if (editError is not null)
-            {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@editError</p>
-            }
-
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
-                <textarea class="field" rows="6" value="@editDescription" @oninput="OnEditDescriptionInput"></textarea>
-            </div>
-        </div>
-    </Modal>
+    <RequestHeaderEditModal Record="record" StatusOptions="StatusOptions" Busy="busy"
+                            @bind-IsOpen="editingHeader" Send="SendEdit" />
+    <RequestFactsEditModal Record="record" Busy="busy" @bind-IsOpen="editingFacts" Send="SendEdit" />
+    <RequestDetailEditModal Record="record" Busy="busy" @bind-IsOpen="editingDetail" Send="SendEdit" />
 
     @* The backdrop does not dismiss — a stray click must not throw away a drafted variation.
        The X and Cancel still close it, and both keep the draft for reopening. *@

@@ -138,18 +138,6 @@ public partial class ProjectRequestDetail
     private bool editingHeader;
     private bool editingFacts;
     private bool editingDetail;
-    private string editReference = "";
-    private string editTitle = "";
-    private string editDescription = "";
-    private string editIssuedAt = "";
-    private string editResponseDue = "";
-    private string editClosedAt = "";
-    private string editDrawingRef = "";
-    private string editRelatedSpec = "";
-    private string editValue = "";
-    private RequestStatus editStatus = RequestStatus.NeedsAction;
-    private bool editCriticalPath;
-    private string? editError;
 
     protected override async Task OnInitializedAsync()
     {
