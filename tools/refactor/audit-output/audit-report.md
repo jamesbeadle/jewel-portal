@@ -8,7 +8,7 @@ Generated 2026-09-01 07:11 UTC.
 | --- | --- |
 | fileLength | limit: 100, filesOverLimit: 471, totalFiles: 2992, worstFileLines: 4659 |
 | functionShape | limit: 30, functionsOverLimit: 673, elseBlocks: 1234, measurementIsHeuristic: True |
-| functionNames | overlongFunctionNames: 297, maxWords: 5, maxLength: 40 |
+| functionNames | overlongFunctionNames: 45, maxWords: 5, maxLength: 40 |
 | duplication | clones: 744, duplicatedLines: 8934, totalLines: 219486, duplicatedPercentage: 4.07 |
 | naming | bannedAbbreviationHits: 472, unprefixedBooleans: 1343 |
 | comments | explanatoryCommentLines: 13814, filesWithComments: 1506, taskMarkers: 48 |

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-01T07:11:31+00:00",
+  "generatedAt": "2026-09-01T07:11:56+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
@@ -14,7 +14,7 @@
       "measurementIsHeuristic": true
     },
     "functionNames": {
-      "overlongFunctionNames": 297,
+      "overlongFunctionNames": 45,
       "maxWords": 5,
       "maxLength": 40
     },
@@ -2161,245 +2161,15 @@
     "functionNames": {
       "name": "functionNames",
       "summary": {
-        "overlongFunctionNames": 297,
+        "overlongFunctionNames": 45,
         "maxWords": 5,
         "maxLength": 40
       },
       "offenders": [
         {
-          "file": "api/Features/ArchitectInstructions/ArchitectInstructionHandlers.cs",
-          "line": 21,
-          "name": "ListArchitectInstructionsForProjectHandler"
-        },
-        {
-          "file": "api/Features/ArchitectInstructions/ArchitectInstructionHandlers.cs",
-          "line": 51,
-          "name": "GetArchitectInstructionByIdHandler"
-        },
-        {
-          "file": "api/Features/ArchitectInstructions/ArchitectInstructionHandlers.cs",
-          "line": 148,
-          "name": "ImportArchitectInstructionFromMessageHandler"
-        },
-        {
-          "file": "api/Features/ArchitectInstructions/ArchitectInstructionHandlers.cs",
-          "line": 233,
-          "name": "LinkArchitectInstructionToVariationHandler"
-        },
-        {
-          "file": "api/Features/ArchitectInstructions/ArchitectInstructionHandlers.cs",
-          "line": 283,
-          "name": "UnlinkArchitectInstructionFromVariationHandler"
-        },
-        {
-          "file": "api/Features/Boq/Commands/SignOffBoqForProjectEndpoint.cs",
-          "line": 18,
-          "name": "SignOffBoqForProjectEndpoint"
-        },
-        {
-          "file": "api/Features/Boq/Commands/SignOffBoqForProjectHandler.cs",
-          "line": 14,
-          "name": "SignOffBoqForProjectHandler"
-        },
-        {
-          "file": "api/Features/Boq/Commands/SignOffBoqForProjectValidation.cs",
-          "line": 12,
-          "name": "SignOffBoqForProjectValidation"
-        },
-        {
-          "file": "api/Features/Boq/Queries/GetBoqSignOffForProjectEndpoint.cs",
-          "line": 16,
-          "name": "GetBoqSignOffForProjectEndpoint"
-        },
-        {
-          "file": "api/Features/Boq/Queries/GetBoqSignOffForProjectHandler.cs",
-          "line": 14,
-          "name": "GetBoqSignOffForProjectHandler"
-        },
-        {
-          "file": "api/Features/Boq/Queries/ListBoqLinesForProjectEndpoint.cs",
-          "line": 16,
-          "name": "ListBoqLinesForProjectEndpoint"
-        },
-        {
-          "file": "api/Features/Boq/Queries/ListBoqLinesForProjectHandler.cs",
-          "line": 14,
-          "name": "ListBoqLinesForProjectHandler"
-        },
-        {
-          "file": "api/Features/BuildingControl/Attachments/AzureBlobBuildingControlAttachmentStore.cs",
-          "line": 20,
-          "name": "AzureBlobBuildingControlAttachmentStore"
-        },
-        {
           "file": "api/Features/BuildingControl/Attachments/BuildingControlAttachmentEndpoints.cs",
           "line": 71,
           "name": "UploadBuildingControlInspectionAttachments"
-        },
-        {
-          "file": "api/Features/BuildingControl/Attachments/BuildingControlAttachmentHandlers.cs",
-          "line": 16,
-          "name": "SetBuildingControlAttachmentKindHandler"
-        },
-        {
-          "file": "api/Features/BuildingControl/Attachments/BuildingControlAttachmentHandlers.cs",
-          "line": 89,
-          "name": "CopyEmailAttachmentsToBuildingControlInspectionHandler"
-        },
-        {
-          "file": "api/Features/BuildingControl/Commands/BuildingControlCaseCommands.cs",
-          "line": 137,
-          "name": "SetBuildingControlCaseStatusHandler"
-        },
-        {
-          "file": "api/Features/BuildingControl/Commands/BuildingControlInspectionCommands.cs",
-          "line": 99,
-          "name": "SetBuildingControlInspectionStatusHandler"
-        },
-        {
-          "file": "api/Features/BuildingControl/Commands/CreateBuildingControlInspectionFromMessage.cs",
-          "line": 37,
-          "name": "CreateBuildingControlInspectionFromMessageHandler"
-        },
-        {
-          "file": "api/Features/BuildingControl/Commands/CreateBuildingControlInspectionFromMessage.cs",
-          "line": 105,
-          "name": "CreateBuildingControlInspectionFromMessageEndpoint"
-        },
-        {
-          "file": "api/Features/BuildingControl/Queries/GetBuildingControlForProject.cs",
-          "line": 19,
-          "name": "GetBuildingControlForProjectHandler"
-        },
-        {
-          "file": "api/Features/BuildingControl/Queries/GetBuildingControlForProject.cs",
-          "line": 50,
-          "name": "GetBuildingControlForProjectEndpoint"
-        },
-        {
-          "file": "api/Features/Calendar/Commands/CreateCalendarEventFromMessageEndpoint.cs",
-          "line": 20,
-          "name": "CreateCalendarEventFromMessageEndpoint"
-        },
-        {
-          "file": "api/Features/Calendar/Commands/CreateCalendarEventFromMessageHandler.cs",
-          "line": 28,
-          "name": "CreateCalendarEventFromMessageHandler"
-        },
-        {
-          "file": "api/Features/Calendar/Queries/CalendarQueryHandlers.cs",
-          "line": 13,
-          "name": "ListCalendarEventsForProjectHandler"
-        },
-        {
-          "file": "api/Features/ClientPortal/Commands/PostMyClientRequestMessageEndpoint.cs",
-          "line": 23,
-          "name": "PostMyClientRequestMessageEndpoint"
-        },
-        {
-          "file": "api/Features/ClientPortal/Commands/PostMyClientRequestMessageHandler.cs",
-          "line": 17,
-          "name": "PostMyClientRequestMessageHandler"
-        },
-        {
-          "file": "api/Features/ClientPortal/Commands/PostMyClientVariationOrderMessageEndpoint.cs",
-          "line": 23,
-          "name": "PostMyClientVariationOrderMessageEndpoint"
-        },
-        {
-          "file": "api/Features/ClientPortal/Commands/PostMyClientVariationOrderMessageHandler.cs",
-          "line": 17,
-          "name": "PostMyClientVariationOrderMessageHandler"
-        },
-        {
-          "file": "api/Features/ClientPortal/Queries/GetMyClientVariationOrderEndpoint.cs",
-          "line": 17,
-          "name": "GetMyClientVariationOrderEndpoint"
-        },
-        {
-          "file": "api/Features/ClientPortal/Queries/GetMyClientVariationOrderHandler.cs",
-          "line": 12,
-          "name": "GetMyClientVariationOrderHandler"
-        },
-        {
-          "file": "api/Features/ClientPortal/Queries/ListMyClientRequestMessagesEndpoint.cs",
-          "line": 18,
-          "name": "ListMyClientRequestMessagesEndpoint"
-        },
-        {
-          "file": "api/Features/ClientPortal/Queries/ListMyClientRequestMessagesHandler.cs",
-          "line": 14,
-          "name": "ListMyClientRequestMessagesHandler"
-        },
-        {
-          "file": "api/Features/ClientPortal/Queries/ListMyClientVariationOrderMessagesEndpoint.cs",
-          "line": 18,
-          "name": "ListMyClientVariationOrderMessagesEndpoint"
-        },
-        {
-          "file": "api/Features/ClientPortal/Queries/ListMyClientVariationOrderMessagesHandler.cs",
-          "line": 14,
-          "name": "ListMyClientVariationOrderMessagesHandler"
-        },
-        {
-          "file": "api/Features/ClientPortal/Queries/ListMyClientVariationOrdersEndpoint.cs",
-          "line": 17,
-          "name": "ListMyClientVariationOrdersEndpoint"
-        },
-        {
-          "file": "api/Features/ClientPortal/Queries/ListMyClientVariationOrdersHandler.cs",
-          "line": 12,
-          "name": "ListMyClientVariationOrdersHandler"
-        },
-        {
-          "file": "api/Features/Closeout/Queries/GetVatAnalysisForProjectEndpoint.cs",
-          "line": 15,
-          "name": "GetVatAnalysisForProjectEndpoint"
-        },
-        {
-          "file": "api/Features/Closeout/Queries/GetVatAnalysisForProjectHandler.cs",
-          "line": 12,
-          "name": "GetVatAnalysisForProjectHandler"
-        },
-        {
-          "file": "api/Features/Commercial/Commands/PrepareValuationReportSnapshotEmailDraftEndpoint.cs",
-          "line": 23,
-          "name": "PrepareValuationReportSnapshotEmailDraftEndpoint"
-        },
-        {
-          "file": "api/Features/Commercial/Commands/PrepareValuationReportSnapshotEmailDraftHandler.cs",
-          "line": 24,
-          "name": "PrepareValuationReportSnapshotEmailDraftHandler"
-        },
-        {
-          "file": "api/Features/Commercial/Commands/SetCostCentreCostCompletionEndpoint.cs",
-          "line": 18,
-          "name": "SetCostCentreCostCompletionEndpoint"
-        },
-        {
-          "file": "api/Features/Commercial/Commands/SetCostCentreCostCompletionHandler.cs",
-          "line": 14,
-          "name": "SetCostCentreCostCompletionHandler"
-        },
-        {
-          "file": "api/Features/Commercial/Commands/SetValuationLineCostCentreEndpoint.cs",
-          "line": 18,
-          "name": "SetValuationLineCostCentreEndpoint"
-        },
-        {
-          "file": "api/Features/Commercial/Commands/SetValuationLineCostCentreHandler.cs",
-          "line": 33,
-          "name": "SetValuationLineCostCentreHandler"
-        },
-        {
-          "file": "api/Features/Commercial/Commands/SetXeroLineWorkOrderLinksEndpoint.cs",
-          "line": 18,
-          "name": "SetXeroLineWorkOrderLinksEndpoint"
-        },
-        {
-          "file": "api/Features/Commercial/Commands/SetXeroLineWorkOrderLinksHandler.cs",
-          "line": 28,
-          "name": "SetXeroLineWorkOrderLinksHandler"
         },
         {
           "file": "api/Features/Commercial/CommercialIdentifierFactory.cs",
@@ -2415,6 +2185,211 @@
           "file": "api/Features/Commercial/CommercialIdentifierFactory.cs",
           "line": 18,
           "name": "NextValuationReportSnapshotLineId"
+        },
+        {
+          "file": "api/Features/Commercial/CommercialIdentifierFactory.cs",
+          "line": 20,
+          "name": "NextXeroLineWorkOrderLinkId"
+        },
+        {
+          "file": "api/Features/Commercial/CommercialIdentifierFactory.cs",
+          "line": 23,
+          "name": "NextReconciliationPackageSalesLineId"
+        },
+        {
+          "file": "api/Features/Commercial/CommercialIdentifierFactory.cs",
+          "line": 24,
+          "name": "NextReconciliationPackageCostLineId"
+        },
+        {
+          "file": "api/Features/Commercial/DraftClaimRebase.cs",
+          "line": 29,
+          "name": "GuardNoClaimInFlightAsync"
+        },
+        {
+          "file": "api/Features/Commercial/ValuationReportSnapshotCapture.cs",
+          "line": 211,
+          "name": "ClientReferencesByCostCodeAsync"
+        },
+        {
+          "file": "api/Features/Labour/LabourIdentifierFactory.cs",
+          "line": 11,
+          "name": "NextXeroLineTimesheetCoverId"
+        },
+        {
+          "file": "api/Features/Labour/LabourIdentifierFactory.cs",
+          "line": 16,
+          "name": "NextLabourWeekSignOffId"
+        },
+        {
+          "file": "api/Features/Labour/LabourIdentifierFactory.cs",
+          "line": 19,
+          "name": "NextCostCodeXeroMappingId"
+        },
+        {
+          "file": "api/Features/MailboxIntake/Graph/MailboxGraphClient.cs",
+          "line": 285,
+          "name": "ListUntaggedIdsInConversationAsync"
+        },
+        {
+          "file": "api/Features/MailboxIntake/Graph/MailboxGraphClient.cs",
+          "line": 287,
+          "name": "ListTaggedIdsInConversationAsync"
+        },
+        {
+          "file": "api/Features/MailboxIntake/Graph/MailboxGraphClient.cs",
+          "line": 786,
+          "name": "ListUntaggedIdsInConversationAsync"
+        },
+        {
+          "file": "api/Features/MailboxIntake/Graph/MailboxGraphClient.cs",
+          "line": 801,
+          "name": "ListTaggedIdsInConversationAsync"
+        },
+        {
+          "file": "api/Features/MailboxIntake/Graph/MailboxGraphClient.cs",
+          "line": 967,
+          "name": "FindByInternetMessageIdAsync"
+        },
+        {
+          "file": "api/Features/Procurement/CostCodeMasterGuard.cs",
+          "line": 11,
+          "name": "EnsureCostCodesInMasterAsync"
+        },
+        {
+          "file": "api/Features/TenderEnquiries/Commands/SetTenderEnquiryStatusHandler.cs",
+          "line": 80,
+          "name": "MoveProjectOnFromLeadAsync"
+        },
+        {
+          "file": "api/Features/Xero/Ledger/XeroWriteBackService.cs",
+          "line": 121,
+          "name": "SetSiteForInvoiceLinesAsync"
+        },
+        {
+          "file": "jpms/Components/ValuationReportTable.RollUpEdit.cs",
+          "line": 29,
+          "name": "OnRollUpEditKeyDownAsync"
+        },
+        {
+          "file": "jpms/Components/ValuationReportTable.RollUpEdit.cs",
+          "line": 35,
+          "name": "OnRollUpEditBlurAsync"
+        },
+        {
+          "file": "jpms/Services/HttpIntakeQueue.cs",
+          "line": 59,
+          "name": "ReplyInThreadFromMessageAsync"
+        },
+        {
+          "file": "jpms/Services/HttpIntakeQueue.cs",
+          "line": 106,
+          "name": "CreateBidPackageFromMessageAsync"
+        },
+        {
+          "file": "jpms/Services/HttpIntakeQueue.cs",
+          "line": 109,
+          "name": "CreateWorkOrderFromMessageAsync"
+        },
+        {
+          "file": "jpms/Services/HttpIntakeQueue.cs",
+          "line": 112,
+          "name": "LogTenderEnquiryFromMessageAsync"
+        },
+        {
+          "file": "jpms/Services/HttpIntakeQueue.cs",
+          "line": 116,
+          "name": "CreateTodoItemsFromMessageAsync"
+        },
+        {
+          "file": "jpms/Services/HttpLabourStore.cs",
+          "line": 348,
+          "name": "SetCostCodeXeroMappingAsync"
+        },
+        {
+          "file": "jpms/Services/HttpLabourStore.cs",
+          "line": 382,
+          "name": "SetTimesheetCoverForMonthAsync"
+        },
+        {
+          "file": "jpms/Services/HttpVariationStore.cs",
+          "line": 153,
+          "name": "ListVariationRequestsForProjectAsync"
+        },
+        {
+          "file": "jpms/Services/HttpVariationStore.cs",
+          "line": 171,
+          "name": "IssueWorkOrderForVariationOrderAsync"
+        },
+        {
+          "file": "jpms/Components/FinancialsTable.razor",
+          "line": 658,
+          "name": "NonWoCostOfSalesFor"
+        },
+        {
+          "file": "jpms/Components/ProjectDetailsEditor.razor",
+          "line": 252,
+          "name": "OnOnBehalfOfClientChanged"
+        },
+        {
+          "file": "jpms/Components/ValuationReportTable.razor",
+          "line": 1044,
+          "name": "OnVoReviseKeyDownAsync"
+        },
+        {
+          "file": "jpms/Pages/DocumentControl.razor",
+          "line": 667,
+          "name": "PrefillDrawingFieldsFromFileName"
+        },
+        {
+          "file": "jpms/Pages/ProjectFinancials.razor",
+          "line": 284,
+          "name": "HandleWorkOrderLinkChangedAsync"
+        },
+        {
+          "file": "jpms/Pages/ProjectRequestDetail.razor",
+          "line": 1572,
+          "name": "OnDraftLineCostCodeChanged"
+        },
+        {
+          "file": "jpms/Pages/ProjectRequestDetail.razor",
+          "line": 1616,
+          "name": "OnOnBehalfOfClientChanged"
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.razor",
+          "line": 2767,
+          "name": "ReloadLinkRecordsKeepingPicksAsync"
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.razor",
+          "line": 2947,
+          "name": "TryPrefillProjectFromEmailAsync"
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.razor",
+          "line": 4205,
+          "name": "OnNewEmailRecordTypeChanged"
+        },
+        {
+          "file": "worker/MailboxIntake/Graph/GraphMailClient.cs",
+          "line": 135,
+          "name": "GetMessageParentFolderIdAsync"
+        },
+        {
+          "file": "worker/MailboxIntake/Graph/GraphMailClient.cs",
+          "line": 159,
+          "name": "FindMessageIdByInternetMessageIdAsync"
+        },
+        {
+          "file": "worker/MailboxIntake/Graph/NullGraphMailClient.cs",
+          "line": 40,
+          "name": "GetMessageParentFolderIdAsync"
+        },
+        {
+          "file": "worker/MailboxIntake/Graph/NullGraphMailClient.cs",
+          "line": 52,
+          "name": "FindMessageIdByInternetMessageIdAsync"
         }
       ]
     },
