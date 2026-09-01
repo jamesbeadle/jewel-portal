@@ -241,14 +241,6 @@ public partial class TriageQueue
 
 
 
-    // Sits beside Apply in the triage bar's action row — armed it reads negative, so the state
-    // is visible right where the button that would act on it lives.
-    private string DiscardTabClass =>
-        "rounded-lg px-3 py-1.5 text-sm border transition "
-        + (discardArmed
-            ? "border-negative text-negative bg-negative/10 font-medium"
-            : "border-line text-content-subtle hover:text-negative hover:border-negative/50");
-
     private string ProjectLabelFor(string projectId) =>
         AllProjects.FirstOrDefault(project => project.ProjectId == projectId)?.Name ?? "the chosen project";
 

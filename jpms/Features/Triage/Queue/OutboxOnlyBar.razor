@@ -1,0 +1,41 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+
+@* The triage bar's stand-in when NO email is selected but replies are lined up in the Outbox:
+   the queue can be applied on its own (decision 2026-08-12) — the one Apply, minus the
+   per-email decisions that need a selection. *@
+<div class="panel px-4 py-3 mb-3 relative space-y-3">
+    @if (ActionError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@ActionError</p>
+    }
+    <div class="flex flex-wrap items-center gap-3">
+        @if (PendingSummary is { } pending)
+        {
+            <p class="text-sm text-content flex-1">This will @pending.</p>
+        }
+        <div class="flex items-center gap-2">
+            <button type="button" class="btn-primary" disabled="@(Busy || PendingSummary is null)" @onclick="() => OnApply.InvokeAsync(false)">
+                @ApplyLabel
+            </button>
+            @if (OutboxSendCount > 0)
+            {
+                <button type="button" class="btn-secondary" disabled="@Busy" @onclick="() => OnApply.InvokeAsync(true)"
+                        title="Stages every lined-up email as an Outlook draft instead of sending it">
+                    @(OutboxSendCount == 1 ? "Save reply as draft" : "Save replies as drafts")
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? ActionError { get; set; }
+    /// <summary>The plain-words apply preview ("This will …"), or null when nothing is staged.</summary>
+    [Parameter] public string? PendingSummary { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string ApplyLabel { get; set; } = "Apply";
+    /// <summary>Replies lined up to send — above zero, the save-as-drafts button appears.</summary>
+    [Parameter] public int OutboxSendCount { get; set; }
+    /// <summary>Fires the one Apply; true means stage the lined-up emails as drafts instead of sending.</summary>
+    [Parameter] public EventCallback<bool> OnApply { get; set; }
+}

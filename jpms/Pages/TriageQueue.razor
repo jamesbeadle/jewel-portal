@@ -669,135 +669,6 @@
         }
     </div>;
 
-    @*
-        The triage bar — rendered ABOVE the two-window split, because the selected email is the
-        one thing global to everything below: whatever the windows are showing, this strip says
-        which email is being dealt with, holds the decisions that belong to the email itself
-        (project, the staged-work doors, the two Yes/No decisions) and fires the one Apply. Selecting another
-        email swaps the bar's subject; the windows carry on where they were.
-    *@
-    RenderFragment TriageBarContent =@<div class="panel px-4 py-3 mb-3 relative space-y-3">
-        <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <div class="min-w-0 max-w-full xl:max-w-sm">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Dealing with</p>
-                <p class="text-sm font-medium text-content truncate" title="@TriageEmailDisplay.Dash(selected!.Subject)">@TriageEmailDisplay.Dash(selected.Subject)</p>
-                <p class="text-[11px] text-content-subtle truncate">@TriageEmailDisplay.DisplayFrom(selected) · @TriageEmailDisplay.Date(selected.ReceivedAt)</p>
-            </div>
-
-            @* PROJECT — the easiest decision, made first; everything staged below uses it.
-               Auto-matched from the email text when a single live project's name appears. The
-               picker carries the completed-projects toggle inside its own panel (ProjectSelect). *@
-            <div class="flex flex-wrap items-center gap-2">
-                <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Project</label>
-                <ProjectSelect Projects="@AllProjects" Value="@triageProjectId" ValueChanged="OnTriageProjectPicked"
-                               ToggleTitle="The email's project — everything staged files against it" />
-            </div>
-
-            @* The email-global decisions, stacked and compact — the full wording lives in the
-               hover titles. Each is a Yes/No pair that starts BLANK: neither side is pre-picked,
-               and Apply stands down until every pair on show is answered, so every apply carries a
-               conscious choice rather than an inherited default. The thread row says how many emails a Yes
-               would sweep, once the thread has been read (staging tags themselves lives on the
-               System Tags window). *@
-            <div class="flex flex-col gap-1.5">
-                <TriageDecisionRow @bind-Value="relevantEventStaged"
-                                   Title="Yes tags the email to the project's programme — it appears in the Programme tab's Relevant Events. No leaves the programme out of it">
-                    Relevant Event for Programme
-                </TriageDecisionRow>
-                <TriageDecisionRow @bind-Value="triageEntireThread"
-                                   Title="Yes means everything you apply also tags every email currently in this conversation, clearing them from the queue together. No deals with just this email">
-                    Entire thread@(thread.Count > 1 ? $" · {thread.Count} emails" : "")
-                </TriageDecisionRow>
-                @* Only when the thread already carries record tags (the queue row's "Thread:"
-                   chips): Yes files this email under those same records with Apply — nothing
-                   new to pick — so a reply to an already-linked thread is one answer, not a
-                   re-pick. Blank-until-answered like the two pairs above. *@
-                @if (SelectedThreadTags is { Count: > 0 } inheritable)
-                {
-                    <TriageDecisionRow @bind-Value="useThreadTags"
-                                       Title="@($"Yes files this email under the tags its thread already carries — {string.Join(", ", inheritable.Select(TriageEmailDisplay.TagLabel))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes")">
-                        Use existing tags <span class="text-content-subtle">· @string.Join(", ", inheritable.Take(3).Select(TriageEmailDisplay.TagLabel))@(inheritable.Count > 3 ? $" +{inheritable.Count - 3}" : "")</span>
-                    </TriageDecisionRow>
-                }
-            </div>
-        </div>
-
-        @if (projectAutoMatched && !string.IsNullOrWhiteSpace(triageProjectId))
-        {
-            <p class="text-xs text-accent">Project matched from the email — change it if that's wrong.</p>
-        }
-        @if (actionError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
-        }
-        @if (discardArmed)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-content">
-                Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Applied by the Apply button.
-            </p>
-        }
-        @* ---- The one action bar: whatever is set up here and in the windows below — a reply,
-               to-dos, a record filing — is applied together, in one click. ---- *@
-        <div class="pt-2 border-t border-line flex flex-wrap items-center gap-3">
-            @if (PendingSummary is { } pending)
-            {
-                <p class="text-sm text-content flex-1">This will @pending.</p>
-            }
-            else
-            {
-                <p class="text-sm text-content-subtle flex-1">Write a reply in the email window, or stage tags, new records and to-dos in the pathway panes — Client, Subcontractor, Supplier, Internal — then apply it all in one go here.</p>
-            }
-            <div class="flex items-center gap-2">
-                @* The disable reason stands NEXT TO the button it disables (2026-08-27: "I
-                   shouldn't have to go around checking whether I've done things — the UX should
-                   guide me"). A tooltip on a disabled button is invisible; this isn't. *@
-                @if (!busy && PendingSummary is not null && (TriageDecisionsMissing || DocTriageProjectMissing))
-                {
-                    <p class="text-xs text-amber-600 max-w-xs text-right">@(TriageDecisionsMissing ? DecisionsMissingHint : DocTriageProjectMissingHint)</p>
-                }
-                <button type="button" class="@DiscardTabClass" @onclick="() => discardArmed = !discardArmed">🗑 Discard</button>
-                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null || TriageDecisionsMissing || DocTriageProjectMissing)"
-                        @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
-                    @ApplyButtonLabel
-                </button>
-                @if (OutboxSendCount > 0)
-                {
-                    <button type="button" class="btn-secondary" disabled="@(busy || TriageDecisionsMissing || DocTriageProjectMissing)" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
-                            title="Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it">
-                        @(OutboxSendCount == 1 ? "Save reply as draft" : "Save replies as drafts")
-                    </button>
-                }
-            </div>
-        </div>
-    </div>;
-
-    @* The bar's stand-in when NO email is selected but replies are lined up in the Outbox: the
-       queue can be applied on its own (decision 2026-08-12) — the one Apply, minus the per-email
-       decisions that need a selection. *@
-    RenderFragment OutboxOnlyBarContent =@<div class="panel px-4 py-3 mb-3 relative space-y-3">
-        @if (actionError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
-        }
-        <div class="flex flex-wrap items-center gap-3">
-            @if (PendingSummary is { } pending)
-            {
-                <p class="text-sm text-content flex-1">This will @pending.</p>
-            }
-            <div class="flex items-center gap-2">
-                <button type="button" class="btn-primary" disabled="@(busy || PendingSummary is null)" @onclick="() => DoApplyAll(saveAsDraftOnly: false)">
-                    @ApplyButtonLabel
-                </button>
-                @if (OutboxSendCount > 0)
-                {
-                    <button type="button" class="btn-secondary" disabled="@busy" @onclick="() => DoApplyAll(saveAsDraftOnly: true)"
-                            title="Stages every lined-up email as an Outlook draft instead of sending it">
-                        @(OutboxSendCount == 1 ? "Save reply as draft" : "Save replies as drafts")
-                    </button>
-                }
-            </div>
-        </div>
-    </div>;
 
 }
 
@@ -845,11 +716,36 @@ else
         @* The selected email is global to both windows, so its bar sits above the split. *@
         @if (view == QueueView.Active && selected is not null)
         {
-            @TriageBarContent
+            <TriageBar Selected="selected"
+                       Projects="@AllProjects"
+                       ProjectId="@triageProjectId"
+                       OnProjectPicked="OnTriageProjectPicked"
+                       @bind-RelevantEventStaged="relevantEventStaged"
+                       @bind-TriageEntireThread="triageEntireThread"
+                       @bind-UseThreadTags="useThreadTags"
+                       ThreadCount="thread.Count"
+                       ThreadTags="@SelectedThreadTags"
+                       ProjectAutoMatched="projectAutoMatched"
+                       ActionError="@actionError"
+                       @bind-DiscardArmed="discardArmed"
+                       PendingSummary="@PendingSummary"
+                       DecisionsMissing="TriageDecisionsMissing"
+                       DecisionsMissingHint="@DecisionsMissingHint"
+                       DocTriageProjectMissing="DocTriageProjectMissing"
+                       DocTriageProjectMissingHint="@DocTriageProjectMissingHint"
+                       Busy="busy"
+                       ApplyLabel="@ApplyButtonLabel"
+                       OutboxSendCount="OutboxSendCount"
+                       OnApply="saveAsDraftOnly => DoApplyAll(saveAsDraftOnly)" />
         }
         else if (view == QueueView.Active && queuedReplies.Count > 0)
         {
-            @OutboxOnlyBarContent
+            <OutboxOnlyBar ActionError="@actionError"
+                           PendingSummary="@PendingSummary"
+                           Busy="busy"
+                           ApplyLabel="@ApplyButtonLabel"
+                           OutboxSendCount="OutboxSendCount"
+                           OnApply="saveAsDraftOnly => DoApplyAll(saveAsDraftOnly)" />
         }
         <div class="flex-1 min-h-0">
         <PanelWorkspace State="workspace"
