@@ -1,0 +1,17 @@
+@namespace Jewel.JPMS.Features.Xero
+
+@* The strip that appears over the table while lines are ticked: "<n> selected", the tab's
+   bulk actions (child content), and Clear. Each tab passes its own actions; the count and
+   the clearing stay the same everywhere. *@
+<div class="mb-4 rounded-xl border border-line bg-surface-raised px-4 py-3 flex items-center gap-3 flex-wrap text-sm">
+    <span class="text-content font-medium">@Count selected</span>
+    @ChildContent
+    <button class="text-xs text-content-subtle underline underline-offset-4" @onclick="() => OnClear.InvokeAsync()">Clear</button>
+</div>
+
+@code {
+    [Parameter] public int Count { get; set; }
+    /// <summary>The tab's bulk actions, rendered between the count and Clear.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public EventCallback OnClear { get; set; }
+}
