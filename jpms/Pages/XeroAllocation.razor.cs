@@ -1,5 +1,6 @@
 using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Features.Projects;
+using Jewel.JPMS.Features.Xero;
 
 
 namespace Jewel.JPMS.Pages;
@@ -208,10 +209,8 @@ public partial class XeroAllocation
     }
 
 
-    private static decimal SignedNet(XeroLedgerLine line) =>
-        line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net;
+    private static decimal SignedNet(XeroLedgerLine line) => XeroLedgerDisplay.SignedNet(line);
 
-    private static string DateText(DateTime? date) => date?.ToString("d MMM yyyy") ?? "—";
 
 
     public void Dispose()

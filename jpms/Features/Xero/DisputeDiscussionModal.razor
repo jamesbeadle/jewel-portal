@@ -1,5 +1,6 @@
 @using Jewel.JPMS.Contracts.Xero
 @namespace Jewel.JPMS.Features.Xero
+@using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
 
 @* The discussion thread on a disputed line — a pure VIEW over the host's state: the host
    re-resolves the line from the store on every render (not a captured snapshot), so a reply
@@ -77,8 +78,4 @@
     [Parameter] public EventCallback OnSend { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
 
-    private static decimal SignedNet(XeroLedgerLine line) =>
-        line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net;
-
-    private static string DateText(DateTime? date) => date?.ToString("d MMM yyyy") ?? "—";
 }
