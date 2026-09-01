@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-01T12:53:21+00:00",
+  "generatedAt": "2026-09-01T12:55:46+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
@@ -19,10 +19,10 @@
       "maxLength": 40
     },
     "duplication": {
-      "clones": 590,
-      "duplicatedLines": 7628,
-      "totalLines": 220661,
-      "duplicatedPercentage": 3.46
+      "clones": 584,
+      "duplicatedLines": 7540,
+      "totalLines": 220495,
+      "duplicatedPercentage": 3.42
     },
     "naming": {
       "bannedAbbreviationHits": 468,
@@ -103,7 +103,7 @@
         },
         {
           "file": "jpms/Pages/XeroAllocation.razor.cs",
-          "lines": 688
+          "lines": 686
         },
         {
           "file": "jpms/Pages/WeeklyCashflow.razor",
@@ -163,7 +163,7 @@
         },
         {
           "file": "jpms/Components/WorkOrderForm.razor.cs",
-          "lines": 509
+          "lines": 508
         },
         {
           "file": "api/Features/Ai/Tools/AiSourceTools.cs",
@@ -183,7 +183,7 @@
         },
         {
           "file": "jpms/Components/ValuationInvoicesSection.razor.cs",
-          "lines": 478
+          "lines": 476
         },
         {
           "file": "worker/MailboxIntake/Graph/GraphMailClient.cs",
@@ -194,16 +194,16 @@
           "lines": 473
         },
         {
-          "file": "jpms/Pages/ProjectWorkOrders.razor.cs",
+          "file": "jpms/Pages/DocumentControl.razor",
           "lines": 456
         },
         {
           "file": "jpms/Pages/Todos.razor.cs",
-          "lines": 456
+          "lines": 455
         },
         {
-          "file": "jpms/Pages/DocumentControl.razor",
-          "lines": 456
+          "file": "jpms/Pages/ProjectWorkOrders.razor.cs",
+          "lines": 454
         },
         {
           "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.Labour.cs",
@@ -218,11 +218,11 @@
           "lines": 441
         },
         {
-          "file": "jpms/Components/ManualWorkOrderModal.razor.cs",
-          "lines": 431
+          "file": "api/Features/Ai/Sources/AiFiledDocuments.cs",
+          "lines": 430
         },
         {
-          "file": "api/Features/Ai/Sources/AiFiledDocuments.cs",
+          "file": "jpms/Components/ManualWorkOrderModal.razor.cs",
           "lines": 430
         },
         {
@@ -275,7 +275,7 @@
         },
         {
           "file": "jpms/Pages/ProjectProgramme.razor.cs",
-          "lines": 369
+          "lines": 368
         },
         {
           "file": "api/Features/Xero/XeroClient.Writes.cs",
@@ -294,12 +294,12 @@
           "lines": 363
         },
         {
-          "file": "jpms/Pages/DocumentControl.Filing.cs",
+          "file": "jpms/Components/FinancialsTable.razor",
           "lines": 363
         },
         {
-          "file": "jpms/Components/FinancialsTable.razor",
-          "lines": 363
+          "file": "jpms/Pages/DocumentControl.Filing.cs",
+          "lines": 362
         },
         {
           "file": "jpms/Pages/TriageQueue.StagedCreate.cs",
@@ -342,20 +342,16 @@
           "lines": 341
         },
         {
-          "file": "jpms/Components/FinancialsTable.razor.cs",
-          "lines": 341
-        },
-        {
           "file": "jpms/Features/Triage/Panels/CorrespondenceThreadList.razor",
           "lines": 341
         },
         {
-          "file": "jpms/Pages/WorkOrderPo.razor",
+          "file": "jpms/Components/FinancialsTable.razor.cs",
           "lines": 339
         },
         {
-          "file": "jpms/Pages/ProjectWorkOrderAllocation.razor.cs",
-          "lines": 338
+          "file": "jpms/Pages/WorkOrderPo.razor",
+          "lines": 339
         },
         {
           "file": "jpms/Pages/Registers.razor",
@@ -366,6 +362,10 @@
           "lines": 337
         },
         {
+          "file": "jpms/Pages/ProjectWorkOrderAllocation.razor.cs",
+          "lines": 336
+        },
+        {
           "file": "jpms/Pages/ProjectBuildingControl.razor",
           "lines": 336
         },
@@ -374,16 +374,16 @@
           "lines": 334
         },
         {
-          "file": "jpms/Pages/ProfitSummary.Running.cs",
-          "lines": 333
-        },
-        {
           "file": "jpms/Components/TaggedEmailSearch.razor",
           "lines": 333
         },
         {
           "file": "jpms/Pages/AgedReceivables.razor",
           "lines": 333
+        },
+        {
+          "file": "jpms/Pages/ProfitSummary.Running.cs",
+          "lines": 332
         },
         {
           "file": "jpms/Components/CostCentreReconciliationModal.razor",
@@ -411,7 +411,7 @@
         },
         {
           "file": "jpms/Pages/Workers.razor.cs",
-          "lines": 322
+          "lines": 321
         },
         {
           "file": "jpms/Pages/Clients.razor",
@@ -434,11 +434,11 @@
           "lines": 316
         },
         {
-          "file": "jpms/Pages/ProjectValuation.razor.cs",
-          "lines": 316
+          "file": "api/Features/Ai/Tools/AiMailboxTools.cs",
+          "lines": 314
         },
         {
-          "file": "api/Features/Ai/Tools/AiMailboxTools.cs",
+          "file": "jpms/Pages/ProjectValuation.razor.cs",
           "lines": 314
         },
         {
@@ -506,16 +506,16 @@
           "lines": 295
         },
         {
-          "file": "jpms/Pages/ProjectBuildingControl.razor.cs",
-          "lines": 294
-        },
-        {
           "file": "jpms/Components/ProjectContractPanel.razor",
           "lines": 294
         },
         {
           "file": "jpms/Pages/ProjectProgress.razor",
           "lines": 294
+        },
+        {
+          "file": "jpms/Pages/ProjectBuildingControl.razor.cs",
+          "lines": 293
         },
         {
           "file": "api/Features/Ai/Tools/Actions/VariationsAndValuationsActions.Variations.cs",
@@ -527,7 +527,7 @@
         },
         {
           "file": "jpms/Pages/AiSkillsAdmin.razor.cs",
-          "lines": 290
+          "lines": 289
         },
         {
           "file": "contracts/Ai/ModalCatalog.Procurement.cs",
@@ -551,10 +551,6 @@
         },
         {
           "file": "jpms/Components/DrawingUploadForm.razor.cs",
-          "lines": 284
-        },
-        {
-          "file": "jpms/Pages/ProjectCalendar.razor.cs",
           "lines": 283
         },
         {
@@ -562,12 +558,12 @@
           "lines": 282
         },
         {
-          "file": "jpms/Pages/LabourXeroMapping.razor",
+          "file": "jpms/Pages/ProjectCalendar.razor.cs",
           "lines": 282
         },
         {
-          "file": "jpms/Components/RoleHome.razor.cs",
-          "lines": 281
+          "file": "jpms/Pages/LabourXeroMapping.razor",
+          "lines": 282
         },
         {
           "file": "jpms/Components/RequestAttachmentsPanel.razor",
@@ -576,6 +572,10 @@
         {
           "file": "jpms/Pages/AiSkillsAdmin.razor",
           "lines": 281
+        },
+        {
+          "file": "jpms/Components/RoleHome.razor.cs",
+          "lines": 280
         },
         {
           "file": "jpms/Pages/ProjectRequests.razor",
@@ -590,20 +590,20 @@
           "lines": 278
         },
         {
-          "file": "jpms/Pages/XeroTransactions.razor.cs",
-          "lines": 278
-        },
-        {
           "file": "jpms/Pages/ProjectBidPackageInviteDetail.Invites.cs",
           "lines": 277
         },
         {
+          "file": "jpms/Pages/XeroTransactions.razor.cs",
+          "lines": 276
+        },
+        {
           "file": "jpms/Pages/CostCodes.razor.cs",
-          "lines": 275
+          "lines": 274
         },
         {
           "file": "jpms/Components/ReconciliationPackageBuilderModal.razor.cs",
-          "lines": 274
+          "lines": 273
         },
         {
           "file": "api/Features/Procurement/PricingScheduleWorkbook.cs",
@@ -619,7 +619,7 @@
         },
         {
           "file": "jpms/Components/ProjectTodoList.razor.cs",
-          "lines": 268
+          "lines": 267
         },
         {
           "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.BackOffice.cs",
@@ -630,23 +630,19 @@
           "lines": 266
         },
         {
-          "file": "jpms/Pages/ProjectDrawings.razor.cs",
-          "lines": 265
-        },
-        {
           "file": "jpms/Pages/ProjectCalendar.razor",
           "lines": 265
-        },
-        {
-          "file": "jpms/Pages/ProjectCashflow.razor.cs",
-          "lines": 264
         },
         {
           "file": "jpms/Layout/SideNav.razor",
           "lines": 264
         },
         {
-          "file": "jpms/Features/Triage/AttachmentPicker.Drawings.cs",
+          "file": "jpms/Pages/ProjectDrawings.razor.cs",
+          "lines": 263
+        },
+        {
+          "file": "jpms/Pages/ProjectCashflow.razor.cs",
           "lines": 262
         },
         {
@@ -659,6 +655,10 @@
         },
         {
           "file": "api/Features/Xero/Ledger/SyncXeroLedgerHandler.cs",
+          "lines": 261
+        },
+        {
+          "file": "jpms/Features/Triage/AttachmentPicker.Drawings.cs",
           "lines": 261
         },
         {
@@ -682,10 +682,6 @@
           "lines": 256
         },
         {
-          "file": "jpms/Pages/XeroAllocation.Export.cs",
-          "lines": 256
-        },
-        {
           "file": "jpms/Components/RequestConversation.razor",
           "lines": 256
         },
@@ -706,16 +702,20 @@
           "lines": 255
         },
         {
+          "file": "jpms/Pages/XeroAllocation.Export.cs",
+          "lines": 254
+        },
+        {
           "file": "api/Features/MailboxIntake/Graph/IMailboxGraphClient.cs",
           "lines": 253
         },
         {
           "file": "jpms/Pages/LabourOverview.razor.cs",
-          "lines": 253
+          "lines": 252
         },
         {
           "file": "jpms/Pages/SubcontractorDetail.razor.cs",
-          "lines": 252
+          "lines": 251
         },
         {
           "file": "jpms/Pages/XeroTransactions.razor",
@@ -735,7 +735,7 @@
         },
         {
           "file": "jpms/Pages/ProjectRequests.TabsAndSearch.cs",
-          "lines": 248
+          "lines": 247
         },
         {
           "file": "jpms/Components/WorkOrderLineRecodeModal.razor",
@@ -746,19 +746,15 @@
           "lines": 247
         },
         {
-          "file": "jpms/Pages/ProjectValuation.Export.cs",
-          "lines": 246
-        },
-        {
-          "file": "jpms/Pages/Subcontractors.razor.cs",
-          "lines": 246
-        },
-        {
           "file": "api/Features/Commercial/Commands/SaveReconciliationPackageHandler.cs",
           "lines": 245
         },
         {
           "file": "api/Features/MailboxIntake/Graph/IntakeMessageReader.cs",
+          "lines": 244
+        },
+        {
+          "file": "jpms/Pages/ProjectValuation.Export.cs",
           "lines": 244
         },
         {
@@ -774,7 +770,7 @@
           "lines": 243
         },
         {
-          "file": "jpms/Pages/ProjectVariationDetail.Status.cs",
+          "file": "jpms/Pages/Subcontractors.razor.cs",
           "lines": 243
         },
         {
@@ -782,11 +778,11 @@
           "lines": 243
         },
         {
-          "file": "api/Features/Requests/Documents/DocumentBranding.cs",
-          "lines": 238
+          "file": "jpms/Pages/ProjectVariationDetail.Status.cs",
+          "lines": 241
         },
         {
-          "file": "jpms/Pages/ProfitSummary.Figures.cs",
+          "file": "api/Features/Requests/Documents/DocumentBranding.cs",
           "lines": 238
         },
         {
@@ -795,6 +791,10 @@
         },
         {
           "file": "contracts/Ai/ModalCatalog.Variations.cs",
+          "lines": 237
+        },
+        {
+          "file": "jpms/Pages/ProfitSummary.Figures.cs",
           "lines": 237
         },
         {
@@ -810,10 +810,6 @@
           "lines": 236
         },
         {
-          "file": "jpms/Pages/XeroAllocation.Settlement.cs",
-          "lines": 236
-        },
-        {
           "file": "jpms/Components/UsefulInformationPanel.razor",
           "lines": 236
         },
@@ -822,24 +818,20 @@
           "lines": 236
         },
         {
-          "file": "jpms/Components/ValuationSnapshotViewer.razor.cs",
-          "lines": 235
-        },
-        {
-          "file": "jpms/Pages/ProjectWorkOrders.Lifecycle.cs",
-          "lines": 235
-        },
-        {
           "file": "jpms/Components/CostCentreCostOfSalesModal.razor",
           "lines": 235
         },
         {
-          "file": "jpms/Pages/ProjectProgramme.RelevantEvents.cs",
-          "lines": 232
+          "file": "jpms/Pages/ProjectWorkOrders.Lifecycle.cs",
+          "lines": 234
         },
         {
-          "file": "jpms/Program.cs",
-          "lines": 232
+          "file": "jpms/Pages/XeroAllocation.Settlement.cs",
+          "lines": 234
+        },
+        {
+          "file": "jpms/Components/ValuationSnapshotViewer.razor.cs",
+          "lines": 233
         },
         {
           "file": "jpms/Services/HttpDrawingStore.cs",
@@ -854,7 +846,11 @@
           "lines": 231
         },
         {
-          "file": "jpms/Pages/ProjectFinancials.razor.cs",
+          "file": "jpms/Pages/ProjectProgramme.RelevantEvents.cs",
+          "lines": 231
+        },
+        {
+          "file": "jpms/Program.cs",
           "lines": 231
         },
         {
@@ -862,15 +858,19 @@
           "lines": 230
         },
         {
-          "file": "jpms/Pages/AuditTrail.razor.cs",
+          "file": "jpms/Pages/ProjectFinancials.razor.cs",
           "lines": 230
         },
         {
-          "file": "jpms/Layout/SideNav.razor.cs",
+          "file": "jpms/Pages/AuditTrail.razor.cs",
           "lines": 229
         },
         {
           "file": "api/Features/Requests/MailboxTriageEndpoints.cs",
+          "lines": 228
+        },
+        {
+          "file": "jpms/Layout/SideNav.razor.cs",
           "lines": 228
         },
         {
@@ -910,10 +910,6 @@
           "lines": 225
         },
         {
-          "file": "jpms/Pages/ProjectVariationDetail.Communications.cs",
-          "lines": 225
-        },
-        {
           "file": "jpms/Components/ProjectRetentionPanel.razor",
           "lines": 225
         },
@@ -922,8 +918,8 @@
           "lines": 224
         },
         {
-          "file": "jpms/Pages/ProjectBuildingControlInspection.razor.cs",
-          "lines": 223
+          "file": "jpms/Pages/ProjectVariationDetail.Communications.cs",
+          "lines": 224
         },
         {
           "file": "jpms/Features/Triage/Queue/TriageMessageDetail.razor",
@@ -936,6 +932,10 @@
         {
           "file": "worker/MailboxIntake/Actions/MailboxActionWorker.cs",
           "lines": 223
+        },
+        {
+          "file": "jpms/Pages/ProjectBuildingControlInspection.razor.cs",
+          "lines": 222
         },
         {
           "file": "jpms/Components/MyDayWorkspace.razor",
@@ -974,10 +974,6 @@
           "lines": 218
         },
         {
-          "file": "jpms/Pages/ProjectBidPackageInvites.razor.cs",
-          "lines": 218
-        },
-        {
           "file": "contracts/Ai/PageGuides/OfficePageGuides.cs",
           "lines": 217
         },
@@ -990,36 +986,40 @@
           "lines": 217
         },
         {
-          "file": "jpms/Components/CostCentreCostOfSalesModal.razor.cs",
-          "lines": 215
-        },
-        {
-          "file": "jpms/Components/CostCentreSalesLinesModal.razor.cs",
-          "lines": 215
-        },
-        {
-          "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor.cs",
-          "lines": 215
-        },
-        {
-          "file": "jpms/Pages/CashForecast.razor.cs",
-          "lines": 215
-        },
-        {
-          "file": "jpms/Pages/PortalHome.razor.cs",
-          "lines": 215
+          "file": "jpms/Pages/ProjectBidPackageInvites.razor.cs",
+          "lines": 216
         },
         {
           "file": "contracts/Models/Request.cs",
           "lines": 214
         },
         {
-          "file": "jpms/Components/RequestConversation.razor.cs",
+          "file": "jpms/Components/CostCentreCostOfSalesModal.razor.cs",
           "lines": 214
         },
         {
-          "file": "jpms/Pages/ProjectArchitectInstructions.razor.cs",
+          "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor.cs",
           "lines": 214
+        },
+        {
+          "file": "jpms/Pages/CashForecast.razor.cs",
+          "lines": 214
+        },
+        {
+          "file": "jpms/Pages/PortalHome.razor.cs",
+          "lines": 214
+        },
+        {
+          "file": "jpms/Components/CostCentreSalesLinesModal.razor.cs",
+          "lines": 213
+        },
+        {
+          "file": "jpms/Components/RequestConversation.razor.cs",
+          "lines": 213
+        },
+        {
+          "file": "jpms/Pages/ProjectArchitectInstructions.razor.cs",
+          "lines": 213
         },
         {
           "file": "jpms/Pages/TriageQueue.TaggedSearch.cs",
@@ -1063,14 +1063,6 @@
         },
         {
           "file": "jpms/Pages/CashForecast.Forecast.cs",
-          "lines": 209
-        },
-        {
-          "file": "jpms/Pages/ProjectDrawingDetail.razor.cs",
-          "lines": 208
-        },
-        {
-          "file": "jpms/Pages/ProjectLabour.Approval.cs",
           "lines": 208
         },
         {
@@ -1082,7 +1074,7 @@
           "lines": 207
         },
         {
-          "file": "jpms/Pages/LabourOverview.WeekEntry.cs",
+          "file": "jpms/Pages/ProjectDrawingDetail.razor.cs",
           "lines": 207
         },
         {
@@ -1102,8 +1094,16 @@
           "lines": 206
         },
         {
+          "file": "jpms/Pages/LabourOverview.WeekEntry.cs",
+          "lines": 206
+        },
+        {
           "file": "jpms/Components/WorkOrderForm.razor",
           "lines": 206
+        },
+        {
+          "file": "jpms/Pages/ProjectLabour.Approval.cs",
+          "lines": 205
         },
         {
           "file": "api/Features/Ai/Tools/AiActionGatewayTools.cs",
@@ -1115,7 +1115,7 @@
         },
         {
           "file": "jpms/Pages/ProjectCommunications.razor.cs",
-          "lines": 202
+          "lines": 201
         },
         {
           "file": "api/Features/Labour/Commands/WorkerPlanningSlices.cs",
@@ -1154,10 +1154,6 @@
           "lines": 195
         },
         {
-          "file": "jpms/Pages/XeroAllocation.SendTo.cs",
-          "lines": 195
-        },
-        {
           "file": "jpms/Components/ProjectCorrespondencePanel.razor",
           "lines": 195
         },
@@ -1168,6 +1164,10 @@
         {
           "file": "jpms/Components/DrawingUploadForm.razor",
           "lines": 194
+        },
+        {
+          "file": "jpms/Pages/XeroAllocation.SendTo.cs",
+          "lines": 193
         },
         {
           "file": "jpms/Components/ValuationSnapshotEmailModal.razor",
@@ -1218,11 +1218,11 @@
           "lines": 189
         },
         {
-          "file": "jpms/Pages/WeeklyCashflow.razor.cs",
-          "lines": 189
+          "file": "api/Features/Procurement/Attachments/WorkOrderAttachmentEndpoints.cs",
+          "lines": 188
         },
         {
-          "file": "api/Features/Procurement/Attachments/WorkOrderAttachmentEndpoints.cs",
+          "file": "jpms/Pages/WeeklyCashflow.razor.cs",
           "lines": 188
         },
         {
@@ -1234,20 +1234,16 @@
           "lines": 187
         },
         {
-          "file": "jpms/Components/PackageReconciliationSection.razor.cs",
-          "lines": 187
-        },
-        {
-          "file": "jpms/Components/ProjectContractPanel.razor.cs",
-          "lines": 187
-        },
-        {
           "file": "jpms/Components/DrawingRevisionList.razor",
           "lines": 187
         },
         {
-          "file": "jpms/Features/Commercial/ValuationExportPendingSheet.cs",
+          "file": "jpms/Components/ProjectContractPanel.razor.cs",
           "lines": 186
+        },
+        {
+          "file": "jpms/Components/PackageReconciliationSection.razor.cs",
+          "lines": 185
         },
         {
           "file": "jpms/Components/ProgressReportForm.razor",
@@ -1255,6 +1251,10 @@
         },
         {
           "file": "api/Features/Ai/Tools/Actions/AiActionSchema.cs",
+          "lines": 184
+        },
+        {
+          "file": "jpms/Features/Commercial/ValuationExportPendingSheet.cs",
           "lines": 184
         },
         {
@@ -1282,10 +1282,6 @@
           "lines": 182
         },
         {
-          "file": "jpms/Components/ProjectCorrespondencePanel.razor.cs",
-          "lines": 181
-        },
-        {
           "file": "jpms/Features/Triage/TodosModal.razor",
           "lines": 181
         },
@@ -1294,20 +1290,8 @@
           "lines": 181
         },
         {
-          "file": "jpms/Pages/ProjectLabour.Settlement.cs",
+          "file": "jpms/Components/ProjectCorrespondencePanel.razor.cs",
           "lines": 180
-        },
-        {
-          "file": "jpms/Pages/ProjectValuation.Invoices.cs",
-          "lines": 180
-        },
-        {
-          "file": "jpms/Pages/Subcontractors.Consolidation.cs",
-          "lines": 179
-        },
-        {
-          "file": "jpms/Pages/XeroAllocation.InvoiceViewer.cs",
-          "lines": 179
         },
         {
           "file": "jpms/Services/HttpProgressStore.cs",
@@ -1315,6 +1299,14 @@
         },
         {
           "file": "api/Features/Variations/Commands/ReturnVariationOrderToQuotingHandler.cs",
+          "lines": 178
+        },
+        {
+          "file": "jpms/Pages/ProjectValuation.Invoices.cs",
+          "lines": 178
+        },
+        {
+          "file": "jpms/Pages/XeroAllocation.InvoiceViewer.cs",
           "lines": 178
         },
         {
@@ -1330,11 +1322,19 @@
           "lines": 177
         },
         {
+          "file": "jpms/Pages/ProjectLabour.Settlement.cs",
+          "lines": 177
+        },
+        {
           "file": "jpms/Features/Triage/Panels/RecordLinkSection.razor",
           "lines": 177
         },
         {
           "file": "jpms/Components/ValuationReportTable.VariationEdits.cs",
+          "lines": 176
+        },
+        {
+          "file": "jpms/Pages/Subcontractors.Consolidation.cs",
           "lines": 176
         },
         {
@@ -1386,10 +1386,6 @@
           "lines": 171
         },
         {
-          "file": "jpms/Pages/ProjectVariations.StatusChanges.cs",
-          "lines": 171
-        },
-        {
           "file": "jpms/Pages/PortalWorkOrderView.razor",
           "lines": 171
         },
@@ -1402,7 +1398,7 @@
           "lines": 170
         },
         {
-          "file": "jpms/Components/FinancialsTable.Figures.cs",
+          "file": "jpms/Pages/ProjectVariations.StatusChanges.cs",
           "lines": 170
         },
         {
@@ -1418,10 +1414,6 @@
           "lines": 169
         },
         {
-          "file": "jpms/Features/Triage/Panels/PathwayActionsSection.razor.cs",
-          "lines": 169
-        },
-        {
           "file": "jpms/Components/ManualWorkOrderModal.razor",
           "lines": 169
         },
@@ -1430,7 +1422,11 @@
           "lines": 168
         },
         {
-          "file": "jpms/Pages/AiActionsAdmin.razor.cs",
+          "file": "jpms/Components/FinancialsTable.Figures.cs",
+          "lines": 168
+        },
+        {
+          "file": "jpms/Features/Triage/Panels/PathwayActionsSection.razor.cs",
           "lines": 168
         },
         {
@@ -1446,23 +1442,23 @@
           "lines": 167
         },
         {
-          "file": "jpms/Pages/ProjectLabour.razor.cs",
-          "lines": 167
-        },
-        {
-          "file": "jpms/Components/ProjectContractTermsDialog.razor.cs",
-          "lines": 166
-        },
-        {
           "file": "jpms/Components/ValuationReportTable.PercentEditing.cs",
           "lines": 166
         },
         {
-          "file": "jpms/Pages/ProfitSummary.razor.cs",
+          "file": "jpms/Pages/AiActionsAdmin.razor.cs",
           "lines": 166
         },
         {
           "file": "api/Features/Xero/XeroClient.SitePnl.cs",
+          "lines": 165
+        },
+        {
+          "file": "jpms/Components/ProjectContractTermsDialog.razor.cs",
+          "lines": 165
+        },
+        {
+          "file": "jpms/Pages/ProfitSummary.razor.cs",
           "lines": 165
         },
         {
@@ -1474,15 +1470,15 @@
           "lines": 164
         },
         {
+          "file": "jpms/Pages/ProjectLabour.razor.cs",
+          "lines": 164
+        },
+        {
           "file": "api/Features/Labour/Commands/ApproveTimesheetsSlice.cs",
           "lines": 163
         },
         {
           "file": "api/Features/Labour/LabourFeatureRegistration.cs",
-          "lines": 163
-        },
-        {
-          "file": "jpms/Pages/WeeklyCashflow.Grid.cs",
           "lines": 163
         },
         {
@@ -1499,6 +1495,10 @@
         },
         {
           "file": "jpms/Features/Drawings/DrawingsReadModel.cs",
+          "lines": 162
+        },
+        {
+          "file": "jpms/Pages/WeeklyCashflow.Grid.cs",
           "lines": 162
         },
         {
@@ -1574,10 +1574,6 @@
           "lines": 156
         },
         {
-          "file": "jpms/Components/ProjectRetentionPanel.razor.cs",
-          "lines": 155
-        },
-        {
           "file": "jpms/Services/Excel/ExcelWorkbook.cs",
           "lines": 155
         },
@@ -1591,6 +1587,10 @@
         },
         {
           "file": "api/Features/Requests/Queries/MailboxLiveQueryHandlers.cs",
+          "lines": 154
+        },
+        {
+          "file": "jpms/Components/ProjectRetentionPanel.razor.cs",
           "lines": 154
         },
         {
@@ -1611,10 +1611,6 @@
         },
         {
           "file": "contracts/Models/Labour.cs",
-          "lines": 151
-        },
-        {
-          "file": "jpms/Features/Triage/Panels/PathwayPane.razor.cs",
           "lines": 151
         },
         {
@@ -1662,6 +1658,10 @@
           "lines": 149
         },
         {
+          "file": "jpms/Features/Triage/Panels/PathwayPane.razor.cs",
+          "lines": 149
+        },
+        {
           "file": "api/Features/BuildingControl/Commands/BuildingControlInspectionCommands.cs",
           "lines": 148
         },
@@ -1682,10 +1682,6 @@
           "lines": 147
         },
         {
-          "file": "jpms/Features/Triage/AttachmentPicker.razor.cs",
-          "lines": 147
-        },
-        {
           "file": "jpms/Components/NewProjectForm.razor",
           "lines": 147
         },
@@ -1695,6 +1691,10 @@
         },
         {
           "file": "api/Features/Procurement/Queries/SearchLocalSubcontractorsHandler.cs",
+          "lines": 146
+        },
+        {
+          "file": "jpms/Features/Triage/AttachmentPicker.razor.cs",
           "lines": 146
         },
         {
@@ -1714,19 +1714,19 @@
           "lines": 144
         },
         {
-          "file": "jpms/Pages/CashForecast.Statement.cs",
-          "lines": 144
-        },
-        {
-          "file": "jpms/Pages/ProjectRequests.RowActions.cs",
-          "lines": 144
-        },
-        {
           "file": "jpms/Components/InviteUserForm.razor",
           "lines": 144
         },
         {
           "file": "api/Features/Ai/Tools/Actions/CommercialActions.Cvr.cs",
+          "lines": 143
+        },
+        {
+          "file": "jpms/Pages/CashForecast.Statement.cs",
+          "lines": 143
+        },
+        {
+          "file": "jpms/Pages/ProjectRequests.RowActions.cs",
           "lines": 143
         },
         {
@@ -1778,10 +1778,6 @@
           "lines": 140
         },
         {
-          "file": "jpms/Pages/CashForecast.Export.cs",
-          "lines": 140
-        },
-        {
           "file": "jpms/Services/UserInviteService.cs",
           "lines": 140
         },
@@ -1798,7 +1794,7 @@
           "lines": 139
         },
         {
-          "file": "jpms/Pages/ProjectVariationDetail.Estimate.cs",
+          "file": "jpms/Pages/CashForecast.Export.cs",
           "lines": 139
         },
         {
@@ -1811,6 +1807,10 @@
         },
         {
           "file": "api/Features/Requests/Commands/ReplyInThreadFromMessageHandler.cs",
+          "lines": 138
+        },
+        {
+          "file": "jpms/Pages/ProjectVariationDetail.Estimate.cs",
           "lines": 138
         },
         {
@@ -1834,15 +1834,15 @@
           "lines": 137
         },
         {
-          "file": "jpms/Pages/XeroAllocation.SplitEditor.cs",
-          "lines": 137
-        },
-        {
           "file": "jpms/Components/RecordTabBar.razor",
           "lines": 136
         },
         {
           "file": "api/Features/Progress/Commands/CreateProgressUpdateEndpoint.cs",
+          "lines": 135
+        },
+        {
+          "file": "jpms/Pages/XeroAllocation.SplitEditor.cs",
           "lines": 135
         },
         {
@@ -1930,10 +1930,6 @@
           "lines": 129
         },
         {
-          "file": "jpms/Pages/ProfitSummary.Cumulative.cs",
-          "lines": 128
-        },
-        {
           "file": "api/Features/Labour/Commands/SettlementCommandGates.cs",
           "lines": 127
         },
@@ -1942,15 +1938,15 @@
           "lines": 127
         },
         {
+          "file": "jpms/Pages/ProfitSummary.Cumulative.cs",
+          "lines": 127
+        },
+        {
           "file": "api/Data/Entities/ValuationReportEntities.cs",
           "lines": 126
         },
         {
           "file": "api/Features/Commercial/Documents/ValuationReportSnapshotPdfBuilder.cs",
-          "lines": 126
-        },
-        {
-          "file": "jpms/Components/FinancialsTable.Export.cs",
           "lines": 126
         },
         {
@@ -1986,14 +1982,6 @@
           "lines": 125
         },
         {
-          "file": "jpms/Pages/ProjectWorkOrders.Export.cs",
-          "lines": 125
-        },
-        {
-          "file": "jpms/Pages/WeeklyCashflow.GroupsDialog.cs",
-          "lines": 125
-        },
-        {
           "file": "jpms/Features/Procurement/ValuationLinePickerModal.razor",
           "lines": 125
         },
@@ -2014,7 +2002,15 @@
           "lines": 124
         },
         {
-          "file": "jpms/Pages/ProjectProgramme.GanttGeometry.cs",
+          "file": "jpms/Components/FinancialsTable.Export.cs",
+          "lines": 124
+        },
+        {
+          "file": "jpms/Pages/ProjectWorkOrders.Export.cs",
+          "lines": 124
+        },
+        {
+          "file": "jpms/Pages/WeeklyCashflow.GroupsDialog.cs",
           "lines": 124
         },
         {
@@ -2027,6 +2023,10 @@
         },
         {
           "file": "api/Features/RecordLinks/Providers/RequestLinkProvider.cs",
+          "lines": 123
+        },
+        {
+          "file": "jpms/Pages/ProjectProgramme.GanttGeometry.cs",
           "lines": 123
         },
         {
@@ -2054,10 +2054,6 @@
           "lines": 122
         },
         {
-          "file": "jpms/Pages/WeeklyCashflow.ItemDialog.cs",
-          "lines": 122
-        },
-        {
           "file": "jpms/Components/ProjectMultiSelect.razor",
           "lines": 122
         },
@@ -2079,6 +2075,10 @@
         },
         {
           "file": "api/Features/Commercial/Commands/ReconciliationPackageEndpoints.cs",
+          "lines": 121
+        },
+        {
+          "file": "jpms/Pages/WeeklyCashflow.ItemDialog.cs",
           "lines": 121
         },
         {
@@ -2294,10 +2294,6 @@
           "lines": 110
         },
         {
-          "file": "jpms/Pages/WeeklyCashflow.Moving.cs",
-          "lines": 110
-        },
-        {
           "file": "jpms/Services/HttpCloseoutStore.cs",
           "lines": 110
         },
@@ -2306,7 +2302,7 @@
           "lines": 109
         },
         {
-          "file": "jpms/Features/Commercial/ValuationReportExportWorkbook.cs",
+          "file": "jpms/Pages/WeeklyCashflow.Moving.cs",
           "lines": 109
         },
         {
@@ -2327,6 +2323,10 @@
         },
         {
           "file": "jpms/Cqrs/HttpQueryClient.cs",
+          "lines": 108
+        },
+        {
+          "file": "jpms/Features/Commercial/ValuationReportExportWorkbook.cs",
           "lines": 108
         },
         {
@@ -2395,10 +2395,6 @@
         },
         {
           "file": "api/Features/Requests/Commands/MergeRequestsHandler.cs",
-          "lines": 105
-        },
-        {
-          "file": "jpms/Pages/Subcontractors.XeroImport.cs",
           "lines": 105
         },
         {
@@ -2478,10 +2474,6 @@
           "lines": 103
         },
         {
-          "file": "jpms/Pages/ProjectRequests.Merge.cs",
-          "lines": 103
-        },
-        {
           "file": "jpms/Components/DrawingRevisionUploadForm.razor",
           "lines": 103
         },
@@ -2507,6 +2499,14 @@
         },
         {
           "file": "jpms/Features/Triage/Panels/RecordExplorerPane.razor.cs",
+          "lines": 102
+        },
+        {
+          "file": "jpms/Pages/ProjectRequests.Merge.cs",
+          "lines": 102
+        },
+        {
+          "file": "jpms/Pages/Subcontractors.XeroImport.cs",
           "lines": 102
         },
         {
@@ -2856,7 +2856,7 @@
         },
         {
           "file": "jpms/Components/FinancialsTable.Figures.cs",
-          "line": 61,
+          "line": 59,
           "name": "NonWoCostOfSalesFor"
         },
         {
@@ -2876,12 +2876,12 @@
         },
         {
           "file": "jpms/Pages/DocumentControl.Filing.cs",
-          "line": 187,
+          "line": 186,
           "name": "PrefillDrawingFieldsFromFileName"
         },
         {
           "file": "jpms/Pages/ProjectFinancials.razor.cs",
-          "line": 101,
+          "line": 100,
           "name": "HandleWorkOrderLinkChangedAsync"
         },
         {
@@ -3614,7 +3614,7 @@
         },
         {
           "file": "jpms/Pages/Todos.razor.cs",
-          "line": 182
+          "line": 181
         },
         {
           "file": "jpms/Pages/TriageQueue.ProjectMatch.cs",
@@ -6092,19 +6092,19 @@
     "duplication": {
       "name": "duplication",
       "summary": {
-        "clones": 590,
-        "duplicatedLines": 7628,
-        "totalLines": 220661,
-        "duplicatedPercentage": 3.46
+        "clones": 584,
+        "duplicatedLines": 7540,
+        "totalLines": 220495,
+        "duplicatedPercentage": 3.42
       },
       "offenders": [
         {
-          "file": "api/Features/Commercial/Documents/CostCentreReconciliationRenderer.cs",
-          "duplicatedLineInstances": 474
+          "file": "jpms/Pages/AiSkillsAdmin.razor.cs",
+          "duplicatedLineInstances": 593
         },
         {
-          "file": "jpms/Pages/AiSkillsAdmin.razor.cs",
-          "duplicatedLineInstances": 390
+          "file": "api/Features/Commercial/Documents/CostCentreReconciliationRenderer.cs",
+          "duplicatedLineInstances": 474
         },
         {
           "file": "api/Features/Boq/Commands/AddBoqLineEndpoint.cs",
@@ -6135,10 +6135,6 @@
           "duplicatedLineInstances": 152
         },
         {
-          "file": "jpms/Pages/ProjectLabour.Approval.cs",
-          "duplicatedLineInstances": 151
-        },
-        {
           "file": "jpms/Pages/TriageQueue.Attachments.cs",
           "duplicatedLineInstances": 144
         },
@@ -6147,16 +6143,20 @@
           "duplicatedLineInstances": 133
         },
         {
-          "file": "jpms/Pages/ProjectCashflow.razor.cs",
-          "duplicatedLineInstances": 132
-        },
-        {
           "file": "jpms/Pages/ProjectBidPackageInviteDetail.Award.cs",
           "duplicatedLineInstances": 128
         },
         {
           "file": "jpms/Pages/AgedPayables.razor",
           "duplicatedLineInstances": 125
+        },
+        {
+          "file": "api/Features/Procurement/Attachments/BidPackageAttachmentEndpoints.cs",
+          "duplicatedLineInstances": 118
+        },
+        {
+          "file": "api/Features/Procurement/Commands/AddBidPackageLineItemsEndpoint.cs",
+          "duplicatedLineInstances": 117
         }
       ]
     }

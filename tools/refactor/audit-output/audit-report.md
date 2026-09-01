@@ -1,6 +1,6 @@
 # Refactor audit
 
-Generated 2026-09-01 12:53 UTC.
+Generated 2026-09-01 12:55 UTC.
 
 ## Summary
 
@@ -9,7 +9,7 @@ Generated 2026-09-01 12:53 UTC.
 | fileLength | limit: 100, filesOverLimit: 618, totalFiles: 3219, worstFileLines: 1152 |
 | functionShape | limit: 30, functionsOverLimit: 700, elseBlocks: 1182, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 45, maxWords: 5, maxLength: 40 |
-| duplication | clones: 590, duplicatedLines: 7628, totalLines: 220661, duplicatedPercentage: 3.46 |
+| duplication | clones: 584, duplicatedLines: 7540, totalLines: 220495, duplicatedPercentage: 3.42 |
 | naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1325 |
 | comments | explanatoryCommentLines: 13751, filesWithComments: 1709, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
@@ -30,7 +30,7 @@ Generated 2026-09-01 12:53 UTC.
 | jpms/Pages/ProjectProgramme.razor | 752 |
 | jpms/Pages/TriageQueue.Compose.cs | 737 |
 | jpms/Pages/CashForecast.razor | 701 |
-| jpms/Pages/XeroAllocation.razor.cs | 688 |
+| jpms/Pages/XeroAllocation.razor.cs | 686 |
 | jpms/Pages/WeeklyCashflow.razor | 683 |
 | api/Features/Ai/Tools/AiRecordTools.cs | 631 |
 | api/Features/Procurement/Documents/WorkOrderPoRenderer.cs | 623 |
