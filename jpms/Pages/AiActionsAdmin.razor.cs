@@ -1,5 +1,3 @@
-using Jewel.JPMS.Contracts.Ai;
-using Jewel.JPMS.Contracts.Cqrs;
 
 namespace Jewel.JPMS.Pages;
 

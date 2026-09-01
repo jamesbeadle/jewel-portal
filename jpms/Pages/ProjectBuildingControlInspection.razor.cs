@@ -1,6 +1,5 @@
 using Jewel.JPMS.Contracts.BuildingControl;
 using Jewel.JPMS.Contracts.MailboxCompose;
-using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Features.BuildingControl;
 using Jewel.JPMS.Features.Triage.Panels;
 

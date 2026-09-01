@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.ClientPortal;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.ClientPortal;
 

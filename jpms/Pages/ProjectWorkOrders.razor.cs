@@ -1,6 +1,3 @@
-using Jewel.JPMS.Contracts.Ai;
-using Jewel.JPMS.Contracts.Commercial;
-using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Projects;

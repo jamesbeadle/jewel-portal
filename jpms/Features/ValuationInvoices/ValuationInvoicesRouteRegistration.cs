@@ -1,4 +1,3 @@
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 
 namespace Jewel.JPMS.Features.ValuationInvoices;

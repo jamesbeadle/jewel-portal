@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.Inventory;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Inventory;
 

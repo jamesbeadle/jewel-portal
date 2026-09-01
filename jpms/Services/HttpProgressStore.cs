@@ -1,10 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Headers;
 using Jewel.JPMS.Contracts.Progress;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Progress;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components.Forms;
 
 namespace Jewel.JPMS.Services;
 

@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.Mobilisation;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Mobilisation;
 

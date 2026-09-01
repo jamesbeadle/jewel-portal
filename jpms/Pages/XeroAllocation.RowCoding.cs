@@ -1,4 +1,3 @@
-using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Features.Projects;
 
 namespace Jewel.JPMS.Pages;

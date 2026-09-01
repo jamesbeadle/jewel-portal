@@ -1,6 +1,3 @@
-using Jewel.JPMS.Contracts.Cqrs;
-using Jewel.JPMS.Contracts.RecordLinks;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.RecordLinks;
 

@@ -1,6 +1,3 @@
-using Jewel.JPMS.Contracts.Commercial;
-using Jewel.JPMS.Contracts.Xero;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Components;
 

@@ -1,6 +1,4 @@
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Site;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Site;
 

@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.WeeklyCashflow;
-using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Features.WeeklyCashflow;
 
 namespace Jewel.JPMS.Pages;

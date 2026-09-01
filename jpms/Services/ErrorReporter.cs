@@ -1,7 +1,4 @@
 using System.Text.Json;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components;
 
 namespace Jewel.JPMS.Services;
 

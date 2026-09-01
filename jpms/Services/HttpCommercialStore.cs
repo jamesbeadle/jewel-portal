@@ -1,8 +1,5 @@
-using Jewel.JPMS.Contracts.Commercial;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Cashflow;
 using Jewel.JPMS.Features.Commercial;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

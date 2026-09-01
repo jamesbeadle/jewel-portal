@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.WeeklyCashflow;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.WeeklyCashflow;
 

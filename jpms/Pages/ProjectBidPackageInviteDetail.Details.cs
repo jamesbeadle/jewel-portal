@@ -1,4 +1,3 @@
-using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Features.Procurement;
 
 namespace Jewel.JPMS.Pages;

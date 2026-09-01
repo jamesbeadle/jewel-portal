@@ -1,8 +1,4 @@
-using Jewel.JPMS.Contracts.Cqrs;
-using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Todos;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

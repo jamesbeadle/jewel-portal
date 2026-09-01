@@ -1,4 +1,3 @@
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Parties;
 
 namespace Jewel.JPMS.Features.Parties;

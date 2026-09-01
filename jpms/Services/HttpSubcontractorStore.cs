@@ -1,10 +1,6 @@
 using System.Net.Http.Headers;
 using Jewel.JPMS.Contracts.Subcontractors;
-using Jewel.JPMS.Contracts.Xero;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Subcontractors;
-using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Components.Forms;
 
 namespace Jewel.JPMS.Services;
 

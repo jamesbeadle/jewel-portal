@@ -1,6 +1,3 @@
-using Jewel.JPMS.Contracts.Commercial;
-using Jewel.JPMS.Cqrs;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

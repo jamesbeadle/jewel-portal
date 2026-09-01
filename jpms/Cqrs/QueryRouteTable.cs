@@ -1,4 +1,3 @@
-using Jewel.JPMS.Contracts.Cqrs;
 
 namespace Jewel.JPMS.Cqrs;
 

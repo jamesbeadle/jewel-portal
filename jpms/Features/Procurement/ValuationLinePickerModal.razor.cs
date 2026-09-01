@@ -1,7 +1,4 @@
-using Jewel.JPMS.Contracts.Commercial;
-using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Features.CostCenters;
-using Microsoft.AspNetCore.Components;
 
 namespace Jewel.JPMS.Features.Procurement;
 

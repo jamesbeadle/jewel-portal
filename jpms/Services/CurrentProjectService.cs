@@ -1,6 +1,4 @@
 using System.Text.Json;
-using Jewel.JPMS.Models;
-using Microsoft.JSInterop;
 
 namespace Jewel.JPMS.Services;
 

@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.CostCenters;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.CostCenters;
 

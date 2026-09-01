@@ -1,4 +1,3 @@
-using Jewel.JPMS.Contracts.Commercial;
 
 namespace Jewel.JPMS.Components;
 

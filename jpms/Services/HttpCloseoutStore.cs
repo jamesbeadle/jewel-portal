@@ -1,7 +1,5 @@
 using Jewel.JPMS.Contracts.Closeout;
-using Jewel.JPMS.Cqrs;
 using Jewel.JPMS.Features.Closeout;
-using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Services;
 

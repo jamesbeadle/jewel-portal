@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.Rates;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Features.Rates;
 
