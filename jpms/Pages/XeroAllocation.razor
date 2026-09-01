@@ -667,7 +667,8 @@ else
                     <LedgerLineSummary Line="splitLine">
                         @(splitLine.InvoiceNumber ?? "—") · @Money(splitLine.Net) net
                     </LedgerLineSummary>
-                    @SplitEditorCore
+                    <SplitEditorForm Rows="splitRows" Net="@(splitLine?.Net ?? 0m)" Error="@splitError"
+                                     ProjectOptions="@ProjectOptions" CostCenterOptions="@CostCenterOptions" />
                 </div>
             }
         </Modal>
@@ -825,7 +826,8 @@ else
                                                 disabled="@isBusy" @onclick="CloseSplit">Cancel</button>
                                     </span>
                                 </div>
-                                @SplitEditorCore
+                                <SplitEditorForm Rows="splitRows" Net="@(splitLine?.Net ?? 0m)" Error="@splitError"
+                                     ProjectOptions="@ProjectOptions" CostCenterOptions="@CostCenterOptions" />
                             </div>
                         }
                         else if (disputeLine?.XeroLedgerLineId == docLine.XeroLedgerLineId)
@@ -972,58 +974,4 @@ else
             }
         </Modal>
     </section>
-}
-
-
-@code {
-    // The rows, tally and explainer — everything but the header card and the
-    // confirm/cancel buttons, which each host supplies.
-    private RenderFragment SplitEditorCore => @<div class="space-y-4">
-        @if (splitError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@splitError</p>
-        }
-
-        <div class="space-y-2">
-            <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-content-subtle font-semibold">
-                <span class="w-56">Project</span>
-                <span class="grow">Cost centre</span>
-                <span class="w-32 text-right">Net £</span>
-                <span class="w-7"></span>
-            </div>
-            @foreach (var row in splitRows)
-            {
-                <div class="flex items-center gap-2">
-                    <SearchSelect Options="@ProjectOptions" WidthClass="w-56"
-                                  Value="@row.ProjectId"
-                                  ValueChanged="value => OnSplitProjectChanged(row, value)" />
-                    <SearchSelect Options="@CostCenterOptions" WidthClass="grow min-w-0"
-                                  Value="@row.Code"
-                                  ValueChanged="value => OnSplitCodeChanged(row, value)" />
-                    <input class="w-32 bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm text-right"
-                           type="number" step="0.01" min="0" placeholder="0.00"
-                           value="@(row.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
-                           @onchange="e => OnSplitAmountChanged(row, e.Value?.ToString())" />
-                    <button type="button" aria-label="Remove row" disabled="@(splitRows.Count <= 2)"
-                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40"
-                            @onclick="() => RemoveSplitRow(row)">
-                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                             stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                    </button>
-                </div>
-            }
-            <button type="button" class="text-xs font-medium text-content-muted hover:text-content underline underline-offset-4"
-                    @onclick="AddSplitRow">+ Add row</button>
-        </div>
-
-        <p class="text-sm @(SplitRemaining == 0m ? "text-content-muted" : "text-negative")">
-            @Money(SplitAssigned) of @Money(splitLine?.Net ?? 0m) assigned
-            @(SplitRemaining == 0m ? "— fully assigned." : $"— {Money(SplitRemaining)} remaining.")
-        </p>
-        <p class="text-xs text-content-subtle">
-            Rows can point at different projects. On approval the Xero line is split into one line
-            per row (amounts pro-rated, invoice total unchanged) with each row's project site and
-            cost code stamped on it.
-        </p>
-    </div>;
 }
