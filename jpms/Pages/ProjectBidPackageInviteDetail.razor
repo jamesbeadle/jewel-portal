@@ -1279,121 +1279,13 @@ else
     </Modal>
 
     @* ---- Select line items from the valuation report: the fast path onto the package.
-         Every priced row of the bill (contract works, PC sums, contingency, variations) is a
-         checkbox; ticked rows are APPENDED as package lines carrying the report's cost code,
-         description, unit and quantity. Sale values are the report's internal figures, shown
-         for context only — they are never stored on the package and never reach a tenderer. ---- *@
-    <Modal IsOpen="showValuationPicker" Title="Select line items" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Adding…" : valuationSelection.Count == 0 ? "Add line items" : valuationSelection.Count == 1 ? "Add 1 line item" : $"Add {valuationSelection.Count} line items")"
-           ConfirmDisabled="@(busy || valuationSelection.Count == 0)" CancelLabel="Cancel"
-           OnCancel="CloseValuationPicker" OnConfirm="ConfirmValuationPicker" Class="max-w-4xl w-full">
-        @if (valuationLines is null && !valuationLinesFailed)
-        {
-            <LoadGate IsLoading="true" Prominent="true" Label="Loading valuation report" />
-        }
-        else if (valuationLines is null)
-        {
-            <p class="text-sm text-negative">Couldn't load the valuation report lines — close this dialog and try again.</p>
-        }
-        else if (SelectableValuationLines.Count == 0)
-        {
-            <p class="text-sm text-content-subtle italic">
-                No priced lines on this project's valuation report yet. Build the report on the
-                Valuation tab first, or key line items by hand under Edit details.
-            </p>
-        }
-        else
-        {
-            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-                Tick the report lines this package covers — each becomes a line item carrying the
-                report's cost code, description, unit and quantity (trade defaults to the package's
-                own). Sale values are internal figures shown for context only — they are not saved
-                on the package and never appear on anything a tenderer sees.
-            </p>
-            @* Search narrows the VIEW only — ticks made before narrowing survive it (the confirm
-               reads valuationSelection against the full report, not the filtered rows). *@
-            <input class="field w-full mb-3" placeholder="Search by description, cost code or section…"
-                   value="@valuationSearch" @oninput="OnValuationSearchInput" />
-            @if (FilteredValuationLines.Count == 0)
-            {
-                <p class="text-sm text-content-subtle italic">
-                    No report lines match "@valuationSearch.Trim()" — clear the search to see every line.
-                    @if (valuationSelection.Count > 0)
-                    {
-                        <text> Your @(valuationSelection.Count == 1 ? "ticked line is" : $"{valuationSelection.Count} ticked lines are") still selected.</text>
-                    }
-                </p>
-            }
-            else
-            {
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[60vh]">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 w-8"></th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Cost code</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 text-right">Qty</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 text-right" title="Internal — never shown to tenderers">Sale value</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var group in FilteredValuationLines.GroupBy(ValuationGroupLabel))
-                        {
-                            var groupIds = group.Where(l => !string.IsNullOrWhiteSpace(l.CostCode)).Select(l => l.ValuationLineItemId).ToList();
-                            var allTicked = groupIds.Count > 0 && groupIds.All(valuationSelection.Contains);
-                            <tr class="bg-surface-raised/60">
-                                <td class="px-3 py-1.5">
-                                    <input type="checkbox" checked="@allTicked" disabled="@(busy || groupIds.Count == 0)"
-                                           title="Select every line shown in this section"
-                                           @onchange="() => ToggleValuationGroup(group)" />
-                                </td>
-                                <td colspan="5" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-content-subtle">@group.Key</td>
-                            </tr>
-                            @foreach (var line in group)
-                            {
-                                var hasCostCode = !string.IsNullOrWhiteSpace(line.CostCode);
-                                <tr class="@(hasCostCode ? "" : "opacity-60")">
-                                    <td class="px-3 py-2">
-                                        <input type="checkbox" checked="@valuationSelection.Contains(line.ValuationLineItemId)"
-                                               disabled="@(busy || !hasCostCode)"
-                                               title="@(hasCostCode ? null : "This line has no cost code on the valuation report — set one there first.")"
-                                               @onchange="() => ToggleValuationLine(line)" />
-                                    </td>
-                                    <td class="px-3 py-2">
-                                        @if (hasCostCode)
-                                        {
-                                            <span class="text-content-muted" title="@CostCentreLabel(line.CostCode)">@line.CostCode</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No cost code</span>
-                                        }
-                                    </td>
-                                    <td class="px-3 py-2 text-content">
-                                        @ValuationLineDescription(line)
-                                        @if (ValuationLineTypeBadge(line) is { } badge)
-                                        {
-                                            <span class="ml-2 inline-flex items-center rounded-full border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">@badge</span>
-                                        }
-                                    </td>
-                                    <td class="px-3 py-2 text-content-muted hidden sm:table-cell">@line.Unit</td>
-                                    <td class="px-3 py-2 text-content-muted text-right">@line.Quantity</td>
-                                    <td class="px-3 py-2 text-content-muted text-right tabular-nums">@line.LineAmount.ToString("£#,##0.00")</td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                </table>
-            </div>
-            }
-            <p class="text-xs text-content-subtle mt-2">
-                Lines are appended — nothing already on the package changes. Adjust descriptions,
-                units and quantities afterwards under Edit details, and link coverage from the
-                line list as usual.
-            </p>
-        }
-    </Modal>
+         The picker owns its own read of the live report; confirmed rows come back as
+         package line inputs and are appended through AddBidPackageLineItems. ---- *@
+    <ValuationLinePickerModal IsOpen="showValuationPicker"
+                              ProjectId="@ProjectId"
+                              DefaultTrade="@(package?.Trade ?? "")"
+                              Busy="busy"
+                              OnCancel="CloseValuationPicker"
+                              OnConfirm="AppendValuationLinesAsync" />
 }
 
