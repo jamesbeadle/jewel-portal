@@ -1,0 +1,144 @@
+@namespace Jewel.JPMS.Features.Requests
+
+@* The record's shape — its type (with promotion) and who it corresponds with. Document and
+   email actions live with the official form; this rail panel only says what the request is
+   and where its email goes. *@
+<div class="panel p-5 space-y-3">
+    <h3 class="eyebrow">Request type &amp; recipients</h3>
+    @if (!Record.Kind.IsEmailable())
+    {
+        <p class="text-sm text-content-subtle">
+            A @Record.Kind.DisplayName() request is the pre-official stage — there is no
+            official document yet and nothing is emailed. Promoting it to an RFI mints the
+            reference and creates the official document, ready to email when you choose.
+        </p>
+    }
+
+    @if (CanEdit)
+    {
+        <div class="space-y-4">
+        <p class="text-sm text-content">
+            Current: <span class="font-medium">@Record.Kind.DisplayName()</span>
+            @if (Record.HasRfq)
+            {
+                <span class="ml-2 inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">RFQ enabled</span>
+            }
+        </p>
+
+        @if (Error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+        }
+
+        @if (Record.Kind is not RequestType.Rfi)
+        {
+            @* The button itself is in the title bar (primary slot until there is
+               something to email); this just explains what it will do. *@
+            <p class="text-xs text-content-subtle">Promoting mints the RFI reference and creates the official document — use <span class="text-content font-medium">Promote to RFI</span> at the top of the page. No email is drafted by promotion; when you are ready to issue, the Email button appears in its place.</p>
+        }
+        <div>
+            <label class="eyebrow block mb-1">Issued to</label>
+            <select class="field" value="@PartySelectionValue" @onchange="OnPartySelected" disabled="@Busy">
+                <option value="">— None —</option>
+                @if (Clients.Count > 0)
+                {
+                    <optgroup label="Clients">
+                        @foreach (var client in Clients)
+                        {
+                            <option value="@($"{ClientPrefix}{client.ClientId}")">@client.Name</option>
+                        }
+                    </optgroup>
+                }
+                @if (Architects.Count > 0)
+                {
+                    <optgroup label="Architects">
+                        @foreach (var architect in Architects)
+                        {
+                            <option value="@($"{ArchitectPrefix}{architect.ArchitectId}")">@architect.Name</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+            <p class="text-xs text-content-subtle mt-1">The email an RFI is issued to comes from this party — a client directly, or an architect acting on the client's behalf.</p>
+        </div>
+
+        @if (Record.PartyKind == PartyKind.Architect && !string.IsNullOrEmpty(Record.PartyId))
+        {
+            <div>
+                <label class="eyebrow block mb-1">On behalf of client</label>
+                <select class="field" value="@(Record.OnBehalfOfClientId ?? "")" @onchange="e => OnBehalfPicked.InvokeAsync(NullIfBlank(e.Value?.ToString()))" disabled="@Busy">
+                    <option value="">— Not recorded —</option>
+                    @foreach (var client in Clients)
+                    {
+                        <option value="@client.ClientId">@client.Name</option>
+                    }
+                </select>
+                <p class="text-xs text-content-subtle mt-1">Optional: the client this architect is acting for.</p>
+            </div>
+        }
+
+        @if (RecipientPreview is not null)
+        {
+            <div class="rounded-lg bg-surface-raised border border-line px-3 py-2 space-y-1">
+                <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle">Draft will be addressed to</p>
+                @if (RecipientPreview.To.Count == 0)
+                {
+                    <p class="text-xs text-negative">No correspondent resolves — link a party or set a project contact's routing to To.</p>
+                }
+                else
+                {
+                    <p class="text-xs text-content"><span class="font-medium">To:</span> @RecipientLine(RecipientPreview.To)</p>
+                }
+                @if (RecipientPreview.Cc.Count > 0)
+                {
+                    <p class="text-xs text-content"><span class="font-medium">CC:</span> @RecipientLine(RecipientPreview.Cc)</p>
+                }
+                @if (RecipientPreview.Bcc.Count > 0)
+                {
+                    <p class="text-xs text-content"><span class="font-medium">BCC:</span> @RecipientLine(RecipientPreview.Bcc)</p>
+                }
+                <p class="text-[10px] text-content-subtle">From the project's correspondence profile (Setup tab). BCC never appears on the document or the shared trail.</p>
+            </div>
+        }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Request Record { get; set; } = default!;
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public IReadOnlyList<Client> Clients { get; set; } = Array.Empty<Client>();
+    [Parameter] public IReadOnlyList<Architect> Architects { get; set; } = Array.Empty<Architect>();
+    /// <summary>Who the draft would go to, resolved from the party and the project's profile.</summary>
+    [Parameter] public RequestRecipientSet? RecipientPreview { get; set; }
+    /// <summary>The party picked: its kind and id (null id = none).</summary>
+    [Parameter] public EventCallback<(PartyKind Kind, string? PartyId)> OnPartyPicked { get; set; }
+    /// <summary>The client an architect acts for (null = not recorded).</summary>
+    [Parameter] public EventCallback<string?> OnBehalfPicked { get; set; }
+
+    private const string ClientPrefix = "client:";
+    private const string ArchitectPrefix = "architect:";
+
+    // The composite value driving the party select: "client:{id}" / "architect:{id}" / "".
+    private string PartySelectionValue =>
+        string.IsNullOrEmpty(Record.PartyId)
+            ? ""
+            : (Record.PartyKind == PartyKind.Architect ? ArchitectPrefix : ClientPrefix) + Record.PartyId;
+
+    private Task OnPartySelected(ChangeEventArgs e)
+    {
+        var selection = e.Value?.ToString() ?? "";
+        if (selection.StartsWith(ArchitectPrefix, StringComparison.Ordinal))
+            return OnPartyPicked.InvokeAsync((PartyKind.Architect, selection[ArchitectPrefix.Length..]));
+        if (selection.StartsWith(ClientPrefix, StringComparison.Ordinal))
+            return OnPartyPicked.InvokeAsync((PartyKind.Client, selection[ClientPrefix.Length..]));
+        return OnPartyPicked.InvokeAsync((PartyKind.Client, null));
+    }
+
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
+
+    private static string RecipientLine(IReadOnlyList<CorrespondenceRecipient> recipients) =>
+        string.Join(", ", recipients.Select(r => string.IsNullOrWhiteSpace(r.Name) ? r.Email : $"{r.Name} <{r.Email}>"));
+}

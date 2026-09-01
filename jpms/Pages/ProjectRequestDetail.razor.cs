@@ -52,25 +52,12 @@ public partial class ProjectRequestDetail
     private IReadOnlyList<Client> clients = Array.Empty<Client>();
     private IReadOnlyList<Architect> architects = Array.Empty<Architect>();
 
-    private const string ClientPrefix = "client:";
-    private const string ArchitectPrefix = "architect:";
-
-    // The composite value driving the party select: "client:{id}" / "architect:{id}" / "".
-    private string PartySelectionValue =>
-        record is null || string.IsNullOrEmpty(record.PartyId)
-            ? ""
-            : (record.PartyKind == PartyKind.Architect ? ArchitectPrefix : ClientPrefix) + record.PartyId;
     private string? ladderError;
     private VariationOrder? variation;
     private string? variationError;
 
     // Official document form editor (the itemised queries + narrative sections).
     private bool editingForm;
-    private string? formError;
-    private List<FormItemRow> formItems = new();
-    private string formBasis = "";
-    private string formResponseAction = "";
-    private string formImpact = "";
 
     // Email draft staging (Outlook draft in the projects mailbox) — all lives in the email modal.
     private bool emailModalOpen;
@@ -253,9 +240,6 @@ public partial class ProjectRequestDetail
         try { recipientPreview = record is null ? null : await Correspondence.ResolveRequestRecipientsAsync(record.RequestId); }
         catch { recipientPreview = null; }
     }
-
-    private static string RecipientLine(IReadOnlyList<CorrespondenceRecipient> recipients) =>
-        string.Join(", ", recipients.Select(r => string.IsNullOrWhiteSpace(r.Name) ? r.Email : $"{r.Name} <{r.Email}>"));
 
     private async Task LoadVariationAsync()
     {
