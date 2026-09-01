@@ -483,61 +483,17 @@
                             <div>
                                     @if (replyOpen)
                                     {
-                                        <div class="space-y-3">
-                                            <div class="flex items-center justify-between">
-                                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">@(replyIsForward ? "Forward" : "Reply") — sends from the projects mailbox</p>
-                                                <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="DiscardReplyDraft">Discard draft</button>
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
-                                                <input class="field" type="text" placeholder="name@example.com; other@example.com"
-                                                       value="@replyToField" @oninput="OnReplyToInput" />
-                                            </div>
-                                            <div>
-                                                <div class="flex items-center justify-between">
-                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
-                                                    @if (!replyShowBcc)
-                                                    {
-                                                        <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => replyShowBcc = true">Bcc</button>
-                                                    }
-                                                </div>
-                                                <input class="field" type="text" placeholder="Copied recipients — separated by ;"
-                                                       value="@replyCcField" @oninput="OnReplyCcInput" />
-                                            </div>
-                                            @if (replyShowBcc)
-                                            {
-                                                <div>
-                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
-                                                    <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
-                                                           value="@replyBccField" @oninput="OnReplyBccInput" />
-                                                </div>
-                                            }
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
-                                                <input class="field" type="text" value="@replySubject" @oninput="OnReplySubjectInput" />
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">@(replyIsForward ? "Your message *" : "Your reply *")</label>
-                                                <RichTextEditor @bind-Value="replyBody" MinHeight="180"
-                                                                Placeholder="@(replyIsForward ? "Write the message — the forwarded email is quoted behind it…" : "Write the reply — the whole thread is quoted behind it…")" />
-                                            </div>
-
-                                            @* A forward carries the original email's attachments automatically (Graph's
-                                               createForward copies them onto the draft), so the picker only offers EXTRA
-                                               files — offering the originals again would attach every file twice. *@
-                                            <AttachmentPicker Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
-                                                              Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
-                                                              OriginalAttachments="@(replyIsForward ? null : detail?.Attachments)" OriginalMessageId="@selected?.Id" />
-                                            @if (replyIsForward && detail is { Attachments.Count: > 0 } forwardedDetail)
-                                            {
-                                                <p class="text-xs text-content-subtle">
-                                                    The original email's @(forwardedDetail.Attachments.Count == 1 ? "attachment travels" : $"{forwardedDetail.Attachments.Count} attachments travel")
-                                                    with the forward automatically.
-                                                </p>
-                                            }
-
-                                        </div>
+                                        <ReplyComposerForm IsForward="replyIsForward"
+                                                           To="@replyToField" ToChanged="OnReplyToInput"
+                                                           Cc="@replyCcField" CcChanged="OnReplyCcInput"
+                                                           Bcc="@replyBccField" BccChanged="OnReplyBccInput"
+                                                           ShowBcc="replyShowBcc" ShowBccChanged="shown => replyShowBcc = shown"
+                                                           Subject="@replySubject" SubjectChanged="OnReplySubjectInput"
+                                                           Body="@replyBody" BodyChanged="html => replyBody = html"
+                                                           Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
+                                                           Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
+                                                           OriginalAttachments="@detail?.Attachments" OriginalMessageId="@selected?.Id"
+                                                           OnDiscard="DiscardReplyDraft" />
                                     }
                                 </div>
                 </div>
