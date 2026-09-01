@@ -1,17 +1,17 @@
 # Refactor audit
 
-Generated 2026-09-01 10:28 UTC.
+Generated 2026-09-01 10:31 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 556, totalFiles: 3123, worstFileLines: 1399 |
+| fileLength | limit: 100, filesOverLimit: 552, totalFiles: 3125, worstFileLines: 1399 |
 | functionShape | limit: 30, functionsOverLimit: 676, elseBlocks: 1182, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 45, maxWords: 5, maxLength: 40 |
-| duplication | clones: 775, duplicatedLines: 9087, totalLines: 220321, duplicatedPercentage: 4.12 |
+| duplication | clones: 540, duplicatedLines: 6755, totalLines: 219113, duplicatedPercentage: 3.08 |
 | naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1323 |
-| comments | explanatoryCommentLines: 13768, filesWithComments: 1620, taskMarkers: 48 |
+| comments | explanatoryCommentLines: 13771, filesWithComments: 1622, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
 | prose | longMemberChainLines: 2400, deeplyIndentedLines: 2791, overlongLines: 1795, measurementIsHeuristic: True |
 | inventory | pages: 92, components: 131, orphanComponents: 6, averagePageLines: 356 |
@@ -30,11 +30,11 @@ Generated 2026-09-01 10:28 UTC.
 | jpms/Pages/ProjectVariationDetail.razor | 839 |
 | jpms/Pages/ProjectVariations.razor | 813 |
 | jpms/Pages/Todos.razor | 785 |
-| api/Features/Ai/Tools/Actions/CommercialActions.cs | 776 |
+| api/Features/Ai/Tools/Actions/CommercialActions.cs | 775 |
 | jpms/Components/ValuationInvoicesSection.razor | 773 |
-| api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.cs | 768 |
+| api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.cs | 767 |
 | jpms/Pages/ProjectProgramme.razor | 752 |
-| api/Features/Xero/XeroClient.Reads.cs | 749 |
+| api/Features/Xero/XeroClient.Reads.cs | 747 |
 | jpms/Pages/ProjectRequests.razor | 745 |
 | jpms/Pages/TriageQueue.Compose.cs | 737 |
 | jpms/Features/Triage/AttachmentPicker.razor | 716 |
