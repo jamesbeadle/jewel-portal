@@ -1,0 +1,66 @@
+@namespace Jewel.JPMS.Features.Xero
+
+@* The bulk-recode modal from the Allocated tab, in both directions: send the selected lines
+   to a cost centre (each keeping its project) or to a project (each keeping its centre).
+   Re-allocating replaces any stored split, so lines split across the OTHER axis have nothing
+   single to keep and are reported as skipped. The page owns the selection, the sendable
+   arithmetic and the picked destination; this modal is the view over them. *@
+<Modal IsOpen="@IsOpen" Title="@Title"
+       ConfirmLabel="@(Applying ? "Sending…" : $"Send {SendableCount} {(SendableCount == 1 ? "line" : "lines")}")" CancelLabel="Cancel"
+       ConfirmDisabled="@(Busy || string.IsNullOrEmpty(Value) || SendableCount == 0)"
+       OnConfirm="OnConfirm" OnCancel="OnCancel" Class="max-w-lg">
+    @if (IsOpen)
+    {
+        <div class="space-y-4">
+            @if (Error is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+            }
+            <p class="text-sm text-content-muted">
+                <span class="text-content font-medium">@SendableCount @(SendableCount == 1 ? "line" : "lines")</span>
+                · @Money(SendableNet) net move to the chosen @DestinationNoun.
+                @KeepNote
+            </p>
+            @if (SkippedCount > 0)
+            {
+                <p class="text-xs text-content-subtle">
+                    @SkippedCount of the selected lines are @SkippedReason — they'll be left unchanged.
+                    Undo and re-split those lines individually.
+                </p>
+            }
+            <SearchSelect Options="@Options" WidthClass="w-full" Placeholder="@Placeholder"
+                          Value="@Value" ValueChanged="value => ValueChanged.InvokeAsync(value)" />
+            <p class="text-xs text-content-subtle">@XeroNote</p>
+        </div>
+    }
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool Applying { get; set; }
+
+    /// <summary>The lines that CAN move — the page's arithmetic over the selection.</summary>
+    [Parameter] public int SendableCount { get; set; }
+    [Parameter] public decimal SendableNet { get; set; }
+    /// <summary>Selected-but-unmovable lines, and why ("split across more than one project, so there's no single project to keep").</summary>
+    [Parameter] public int SkippedCount { get; set; }
+    [Parameter] public string SkippedReason { get; set; } = "";
+
+    /// <summary>"cost centre" or "project" — the sentence's object.</summary>
+    [Parameter] public string DestinationNoun { get; set; } = "";
+    /// <summary>What each line keeps ("Each line keeps its project — only the cost centre changes…").</summary>
+    [Parameter] public string KeepNote { get; set; } = "";
+    /// <summary>What happens in Xero — differs per direction.</summary>
+    [Parameter] public string XeroNote { get; set; } = "";
+
+    [Parameter] public IReadOnlyList<SearchSelect.Option> Options { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public string Placeholder { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+}

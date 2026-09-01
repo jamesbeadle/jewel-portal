@@ -466,116 +466,41 @@ else
            chosen cost centre, each keeping the project it's already allocated
            to. Re-allocating replaces any previous split (the API clears the
            split rows), so a line once shared across centres moves whole. *@
-        <Modal IsOpen="@sendToCostCentreOpen" Title="Send to cost centre"
-               ConfirmLabel="@(isApplying ? "Sending…" : $"Send {SendableSelected.Count} {(SendableSelected.Count == 1 ? "line" : "lines")}")" CancelLabel="Cancel"
-               ConfirmDisabled="@(isBusy || string.IsNullOrEmpty(sendCostCenterCode) || SendableSelected.Count == 0)"
-               OnConfirm="SendToCostCentreAsync" OnCancel="CloseSendToCostCentre" Class="max-w-lg">
-            @if (sendToCostCentreOpen)
-            {
-                <div class="space-y-4">
-                    @if (sendError is not null)
-                    {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@sendError</p>
-                    }
-                    <p class="text-sm text-content-muted">
-                        <span class="text-content font-medium">@SendableSelected.Count @(SendableSelected.Count == 1 ? "line" : "lines")</span>
-                        · @Money(SendableSelected.Sum(SignedNet)) net move to the chosen cost centre.
-                        Each line keeps its project — only the cost centre changes; a line previously
-                        split across centres moves whole.
-                    </p>
-                    @if (SelectedAllocated.Count > SendableSelected.Count)
-                    {
-                        <p class="text-xs text-content-subtle">
-                            @(SelectedAllocated.Count - SendableSelected.Count) of the selected lines are split across
-                            more than one project, so there's no single project to keep — they'll be left unchanged.
-                            Undo and re-split those lines individually.
-                        </p>
-                    }
-                    <SearchSelect Options="@CostCenterOptions" WidthClass="w-full" Placeholder="Cost centre…"
-                                  @bind-Value="sendCostCenterCode" />
-                    <p class="text-xs text-content-subtle">
-                        Bills still awaiting approval have their new coding confirmed back to Xero;
-                        bills already approved in Xero are re-coded in JPMS only.
-                    </p>
-                </div>
-            }
-        </Modal>
+        <SendLinesModal IsOpen="@sendToCostCentreOpen" Title="Send to cost centre"
+                        Error="@sendError" Busy="@isBusy" Applying="@isApplying"
+                        SendableCount="SendableSelected.Count"
+                        SendableNet="SendableSelected.Sum(SignedNet)"
+                        SkippedCount="@(SelectedAllocated.Count - SendableSelected.Count)"
+                        SkippedReason="split across more than one project, so there's no single project to keep"
+                        DestinationNoun="cost centre"
+                        KeepNote="Each line keeps its project — only the cost centre changes; a line previously split across centres moves whole."
+                        XeroNote="Bills still awaiting approval have their new coding confirmed back to Xero; bills already approved in Xero are re-coded in JPMS only."
+                        Options="@CostCenterOptions" Placeholder="Cost centre…"
+                        @bind-Value="sendCostCenterCode"
+                        OnConfirm="SendToCostCentreAsync" OnCancel="CloseSendToCostCentre" />
 
-        @* Bulk re-site from the Allocated tab: the change-of-mind move. Every
-           selected line moves to the chosen project, each keeping the cost
-           centre it's already coded to, and the bill's Sites tracking in Xero
-           is rewritten to the new project's site — draft or approved (paid
-           bills are locked in Xero and move in JPMS only). Re-allocating
-           replaces any stored split, so lines split across cost centres have
-           no single centre to keep and are left unchanged. *@
-        <Modal IsOpen="@sendToProjectOpen" Title="Send to project"
-               ConfirmLabel="@(isApplying ? "Sending…" : $"Send {ProjectSendableSelected.Count} {(ProjectSendableSelected.Count == 1 ? "line" : "lines")}")" CancelLabel="Cancel"
-               ConfirmDisabled="@(isBusy || string.IsNullOrEmpty(sendProjectId) || ProjectSendableSelected.Count == 0)"
-               OnConfirm="SendToProjectAsync" OnCancel="CloseSendToProject" Class="max-w-lg">
-            @if (sendToProjectOpen)
-            {
-                <div class="space-y-4">
-                    @if (sendProjectError is not null)
-                    {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@sendProjectError</p>
-                    }
-                    <p class="text-sm text-content-muted">
-                        <span class="text-content font-medium">@ProjectSendableSelected.Count @(ProjectSendableSelected.Count == 1 ? "line" : "lines")</span>
-                        · @Money(ProjectSendableSelected.Sum(SignedNet)) net move to the chosen project.
-                        Each line keeps its cost centre — only the project changes.
-                    </p>
-                    @if (SelectedAllocated.Count > ProjectSendableSelected.Count)
-                    {
-                        <p class="text-xs text-content-subtle">
-                            @(SelectedAllocated.Count - ProjectSendableSelected.Count) of the selected lines are split across
-                            cost centres, so there's no single centre to keep — they'll be left unchanged.
-                            Undo and re-split those lines individually.
-                        </p>
-                    }
-                    <SearchSelect Options="@ProjectOptions" WidthClass="w-full" Placeholder="Project…"
-                                  @bind-Value="sendProjectId" />
-                    <p class="text-xs text-content-subtle">
-                        The Xero Sites tracking is rewritten to the new project's site on draft and
-                        approved bills alike; paid bills are locked in Xero and move in JPMS only.
-                    </p>
-                </div>
-            }
-        </Modal>
+        @* Bulk re-site from the Allocated tab: the change-of-mind move — the Xero Sites
+           tracking is rewritten to the new project's site (paid bills are locked in Xero
+           and move in JPMS only). *@
+        <SendLinesModal IsOpen="@sendToProjectOpen" Title="Send to project"
+                        Error="@sendProjectError" Busy="@isBusy" Applying="@isApplying"
+                        SendableCount="ProjectSendableSelected.Count"
+                        SendableNet="ProjectSendableSelected.Sum(SignedNet)"
+                        SkippedCount="@(SelectedAllocated.Count - ProjectSendableSelected.Count)"
+                        SkippedReason="split across cost centres, so there's no single centre to keep"
+                        DestinationNoun="project"
+                        KeepNote="Each line keeps its cost centre — only the project changes."
+                        XeroNote="The Xero Sites tracking is rewritten to the new project's site on draft and approved bills alike; paid bills are locked in Xero and move in JPMS only."
+                        Options="@ProjectOptions" Placeholder="Project…"
+                        @bind-Value="sendProjectId"
+                        OnConfirm="SendToProjectAsync" OnCancel="CloseSendToProject" />
 
-        @* Opening a dispute: the line moves to the Disputed tab — which is itself the
-           signal to the accountant, like the Unallocated count — with an optional
-           opening message starting the thread. Any coding on the line is kept as the
-           position under discussion. *@
         @* Hidden while the invoice document modal is open — a dispute started from
            the viewer composes inline there, like a split. *@
-        <Modal IsOpen="@(disputeLine is not null && viewLine is null)" Title="Dispute this cost"
-               ConfirmLabel="@(isApplying ? "Disputing…" : "Move to Disputed")" CancelLabel="Cancel"
-               ConfirmDisabled="@isBusy" OnConfirm="ConfirmDisputeAsync" OnCancel="CloseDispute" Class="max-w-lg">
-            @if (disputeLine is not null)
-            {
-                <div class="space-y-4">
-                    @if (disputeError is not null)
-                    {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@disputeError</p>
-                    }
-                    <LedgerLineSummary Line="disputeLine">
-                        @(disputeLine.InvoiceNumber ?? "—") · @DateText(disputeLine.Date) · @Money(SignedNet(disputeLine)) net
-                    </LedgerLineSummary>
-                    <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1.5">
-                            Why is this disputed?
-                        </label>
-                        <textarea class="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-content placeholder:text-content-subtle"
-                                  rows="4" placeholder="Optional — starts the discussion, e.g. “This isn't ours / wrong site — should this be on Elm Grove?”"
-                                  @bind="disputeMessage" @bind:event="oninput"></textarea>
-                    </div>
-                    <p class="text-xs text-content-subtle">
-                        The line moves to the Disputed tab, where the discussion continues and the agreed
-                        project and cost centre can be set. Either side returns it to allocation when settled.
-                    </p>
-                </div>
-            }
-        </Modal>
+        <DisputeLineModal Line="@(viewLine is null ? disputeLine : null)"
+                          Error="@disputeError" Busy="@isBusy" Applying="@isApplying"
+                          @bind-Message="disputeMessage"
+                          OnConfirm="ConfirmDisputeAsync" OnCancel="CloseDispute" />
 
         <DisputeDiscussionModal IsOpen="@(discussLineId is not null)"
                                 Line="DiscussLine"

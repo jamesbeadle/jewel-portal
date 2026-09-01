@@ -1,0 +1,47 @@
+@namespace Jewel.JPMS.Features.Xero
+@using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
+
+@* Opening a dispute: the line moves to the Disputed tab — which is itself the signal to the
+   accountant, like the Unallocated count — with an optional opening message starting the
+   thread. Any coding on the line is kept as the position under discussion. *@
+<Modal IsOpen="@(Line is not null)" Title="Dispute this cost"
+       ConfirmLabel="@(Applying ? "Disputing…" : "Move to Disputed")" CancelLabel="Cancel"
+       ConfirmDisabled="@Busy" OnConfirm="OnConfirm" OnCancel="OnCancel" Class="max-w-lg">
+    @if (Line is not null)
+    {
+        <div class="space-y-4">
+            @if (Error is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+            }
+            <LedgerLineSummary Line="Line">
+                @(Line.InvoiceNumber ?? "—") · @DateText(Line.Date) · @Money(SignedNet(Line)) net
+            </LedgerLineSummary>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1.5">
+                    Why is this disputed?
+                </label>
+                <textarea class="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+                          rows="4" placeholder="Optional — starts the discussion, e.g. “This isn't ours / wrong site — should this be on Elm Grove?”"
+                          value="@Message" @oninput='e => MessageChanged.InvokeAsync(e.Value?.ToString() ?? "")'></textarea>
+            </div>
+            <p class="text-xs text-content-subtle">
+                The line moves to the Disputed tab, where the discussion continues and the agreed
+                project and cost centre can be set. Either side returns it to allocation when settled.
+            </p>
+        </div>
+    }
+</Modal>
+
+@code {
+    /// <summary>The line being disputed — null keeps the modal closed.</summary>
+    [Parameter] public XeroLedgerLine? Line { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool Applying { get; set; }
+    /// <summary>The optional opening message — page-owned, shared with the viewer's inline compose.</summary>
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public EventCallback<string> MessageChanged { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+}
