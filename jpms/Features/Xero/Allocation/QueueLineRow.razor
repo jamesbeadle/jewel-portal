@@ -1,0 +1,97 @@
+@namespace Jewel.JPMS.Features.Xero
+@using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
+
+@* One unallocated line: identity, net, the two coding dropdowns and one primary button plus a
+   menu. A pure view — the picks live on the page (they survive paging and drive which project
+   tab the line sits under), bound through here. *@
+<tr>
+    <td class="px-3 py-2.5">
+        <input type="checkbox" checked="@Selected" @onchange="() => OnToggleSelected.InvokeAsync()" />
+    </td>
+    <LedgerLineIdentityCell Line="Line" OnOpenInvoice="OnOpenInvoice" />
+    <td class="px-3 py-2.5 text-right text-content font-medium whitespace-nowrap align-top">@Money(SignedNet(Line))</td>
+    <td class="px-3 py-2.5">
+        <SearchSelect Options="@ProjectOptions" WidthClass="w-44"
+                      Value="@ProjectValue"
+                      ValueChanged="value => OnProjectPicked.InvokeAsync(value)" />
+        @if (Line.WriteBackStatus == XeroWriteBackStatus.Failed)
+        {
+            <span class="block w-44 truncate text-xs text-negative mt-0.5"
+                  title="@($"{Line.WriteBackError} Press Set to retry.")">⚠ Xero write failed</span>
+        }
+    </td>
+    <td class="px-3 py-2.5">
+        <SearchSelect Options="@CostCenterOptions" WidthClass="w-52"
+                      Value="@CostCenterValue"
+                      ValueChanged="value => OnCostCenterPicked.InvokeAsync(value)" />
+    </td>
+    <td class="px-3 py-2.5 text-right whitespace-nowrap">
+        @* One primary button per row. Project + cost centre arms Allocate; a
+           bucket (suggested from the Xero code, or chosen in the menu or the
+           document viewer) arms "Allocate to <bucket>" instead — and wins if
+           both are set, since picking a bucket was the later, deliberate act. *@
+        @if (!string.IsNullOrEmpty(ArmedBucket))
+        {
+            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 max-w-[11rem] truncate align-middle"
+                    title="@($"Allocate to the {ArmedBucket} bucket — no project, no cost centre")"
+                    disabled="@Busy"
+                    @onclick="() => OnBucket.InvokeAsync(ArmedBucket)">Allocate to @ArmedBucket</button>
+        }
+        else
+        {
+            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 align-middle"
+                    disabled="@(Busy || !CanAllocate)"
+                    @onclick="() => OnAllocate.InvokeAsync()">Allocate</button>
+        }
+        @* The half-step: project decided, allocation not yet. Saves the
+           project — which is when the row moves to that project's tab —
+           and writes the Xero site without approving. This is also the
+           change-of-mind move: pick a different project on a line the
+           accountant coded and Set re-sites it in Xero and re-tabs it
+           here. Pressing it again is the Xero retry. Unset (in the menu,
+           only on lines with a saved project) reverses an accidental Set:
+           project cleared here and the site removed in Xero. *@
+        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40 align-middle"
+                title="Save the project and set its Xero site now — moves the line to that project's tab, cost centre to follow"
+                disabled="@(Busy || !CanSetProject)"
+                @onclick="() => OnSetProject.InvokeAsync()">Set</button>
+        @* Everything else — the seven buckets, Split, Ignore, Dispute and
+           Unset — lives in the row's menu, so the row stays one line wide. *@
+        @* whitespace-normal: the cell's nowrap would otherwise reach the
+           menu panel and clip its longer bucket names. *@
+        <DropdownMenu Label="More" WidthClass="w-72" Disabled="@Busy"
+                      ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:text-content transition"
+                      Class="inline-block text-left ml-2 align-middle whitespace-normal"
+                      Items="MenuItems"
+                      OnOpenChanged="open => OnMenuOpenChanged.InvokeAsync(open)" />
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public XeroLedgerLine Line { get; set; } = default!;
+    [Parameter] public bool Selected { get; set; }
+    [Parameter] public EventCallback OnToggleSelected { get; set; }
+    [Parameter] public EventCallback<XeroLedgerLine> OnOpenInvoice { get; set; }
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>The page's pick for this line (local pick > saved project > Xero suggestion).</summary>
+    [Parameter] public string ProjectValue { get; set; } = "";
+    [Parameter] public IReadOnlyList<SearchSelect.Option> ProjectOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public EventCallback<string> OnProjectPicked { get; set; }
+    [Parameter] public string CostCenterValue { get; set; } = "";
+    [Parameter] public IReadOnlyList<SearchSelect.Option> CostCenterOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public EventCallback<string> OnCostCenterPicked { get; set; }
+
+    /// <summary>The armed bucket, if any — it takes the primary button's slot over Allocate.</summary>
+    [Parameter] public string ArmedBucket { get; set; } = "";
+    [Parameter] public bool CanAllocate { get; set; }
+    [Parameter] public EventCallback OnAllocate { get; set; }
+    [Parameter] public EventCallback<string> OnBucket { get; set; }
+    [Parameter] public bool CanSetProject { get; set; }
+    [Parameter] public EventCallback OnSetProject { get; set; }
+
+    /// <summary>The row's More menu (buckets, Split, Ignore, Dispute, Unset) — built by the page.</summary>
+    [Parameter] public IReadOnlyList<DropdownMenu.Item> MenuItems { get; set; } = Array.Empty<DropdownMenu.Item>();
+    /// <summary>The page lifts the table's overflow cap while a row menu is open.</summary>
+    [Parameter] public EventCallback<bool> OnMenuOpenChanged { get; set; }
+}

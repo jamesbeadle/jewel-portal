@@ -1,0 +1,59 @@
+@namespace Jewel.JPMS.Features.Xero
+@using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
+
+@* One disputed line — the dispute workbench: the coding both sides are converging on is
+   edited and SAVED here (visible to the other party), the thread is a click away, and either
+   side returns the line to allocation. *@
+<tr>
+    <LedgerLineIdentityCell Line="Line" OnOpenInvoice="OnOpenInvoice" ShowDisputeState="true" />
+    <td class="px-3 py-2.5 text-right text-content font-medium whitespace-nowrap align-top">@Money(SignedNet(Line))</td>
+    <td class="px-3 py-2.5">
+        <SearchSelect Options="@ProjectOptions" WidthClass="w-44"
+                      Value="@ProjectValue"
+                      ValueChanged="value => OnProjectPicked.InvokeAsync(value)" />
+    </td>
+    <td class="px-3 py-2.5">
+        <SearchSelect Options="@CostCenterOptions" WidthClass="w-52"
+                      Value="@CostCenterValue"
+                      ValueChanged="value => OnCostCenterPicked.InvokeAsync(value)" />
+    </td>
+    <td class="px-3 py-2.5 text-right whitespace-nowrap">
+        @* Save persists the coding both sides are converging on — the
+           line STAYS disputed, but the other party sees the proposal.
+           Return to allocation is the resolution: back to the queue
+           with the agreed coding kept, so a fully coded line lands on
+           its project's tab armed for Allocate. Either side may press
+           either button. Who disputed it and the latest word sit in
+           the Line cell; the thread itself opens from here. *@
+        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content align-middle"
+                @onclick="() => OnOpenDiscussion.InvokeAsync()">
+            Discussion (@(Line.DisputeMessages?.Count ?? 0))…
+        </button>
+        <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40 align-middle"
+                title="Save the proposed project and cost centre on the line — it stays disputed"
+                disabled="@(Busy || string.IsNullOrEmpty(ProjectValue))"
+                @onclick="() => OnSaveCoding.InvokeAsync()">Save</button>
+        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface ml-2 disabled:opacity-40 align-middle"
+                title="Resolve the dispute — the line returns to the allocation queue keeping the coding set here"
+                disabled="@Busy"
+                @onclick="() => OnResolve.InvokeAsync()">Return to allocation</button>
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public XeroLedgerLine Line { get; set; } = default!;
+    [Parameter] public EventCallback<XeroLedgerLine> OnOpenInvoice { get; set; }
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>The proposed coding under discussion (local pick > saved > Xero suggestion).</summary>
+    [Parameter] public string ProjectValue { get; set; } = "";
+    [Parameter] public IReadOnlyList<SearchSelect.Option> ProjectOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public EventCallback<string> OnProjectPicked { get; set; }
+    [Parameter] public string CostCenterValue { get; set; } = "";
+    [Parameter] public IReadOnlyList<SearchSelect.Option> CostCenterOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public EventCallback<string> OnCostCenterPicked { get; set; }
+
+    [Parameter] public EventCallback OnOpenDiscussion { get; set; }
+    [Parameter] public EventCallback OnSaveCoding { get; set; }
+    [Parameter] public EventCallback OnResolve { get; set; }
+}

@@ -1,0 +1,113 @@
+@namespace Jewel.JPMS.Features.Xero
+@using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
+
+@* One settled line on the Allocated, Buckets or Ignored tab: where it went (project and
+   centre(s), bucket, or reason), who sent it there, and the undo family. *@
+<tr>
+    @if (ShowCheckbox)
+    {
+        <td class="px-3 py-2.5">
+            <input type="checkbox" checked="@Selected" @onchange="() => OnToggleSelected.InvokeAsync()" />
+        </td>
+    }
+    <LedgerLineIdentityCell Line="Line" OnOpenInvoice="OnOpenInvoice" />
+    <td class="px-3 py-2.5 text-right text-content font-medium whitespace-nowrap align-top">@Money(SignedNet(Line))</td>
+    <td class="px-3 py-2.5 text-content-muted">
+        @if (Mode == XeroAllocationStatus.Allocated)
+        {
+            @if (Line.Splits is { Count: > 0 })
+            {
+                var multiProject = Line.Splits.Select(split => split.ProjectId ?? Line.ProjectId)
+                    .Distinct().Count() > 1;
+                <span class="text-content">@(multiProject ? "Multiple projects" : ProjectName(Line.ProjectId ?? Line.Splits[0].ProjectId))</span>
+                foreach (var split in Line.Splits)
+                {
+                    <span class="block text-xs text-content-subtle">
+                        @if (multiProject)
+                        {
+                            <span class="text-content-muted">@ProjectName(split.ProjectId ?? Line.ProjectId) · </span>
+                        }
+                        @CostCenterText(split.CostCenterCode) · @Money(Line.Type == "ACCPAYCREDIT" ? -split.Net : split.Net)
+                    </span>
+                }
+            }
+            else
+            {
+                <span class="text-content">@ProjectName(Line.ProjectId)</span>
+                <span class="block text-xs text-content-subtle">@CostCenterText(Line.CostCenterCode)</span>
+            }
+            @if (WriteBackBadge is { } badge)
+            {
+                <span class="block text-xs mt-0.5 @badge.Css" title="@badge.Tooltip">@badge.Text</span>
+                @* The tooltip is easy to miss — failures need their reason readable at a glance. *@
+                @if (Line.WriteBackStatus == XeroWriteBackStatus.Failed
+                     && !string.IsNullOrWhiteSpace(Line.WriteBackError))
+                {
+                    <span class="block text-xs mt-0.5 text-content-subtle whitespace-normal max-w-md">@Line.WriteBackError</span>
+                }
+            }
+        }
+        else if (Mode == XeroAllocationStatus.Bucketed)
+        {
+            <span class="text-content">@(Line.Bucket ?? "—")</span>
+        }
+        else
+        {
+            @(Line.Note ?? "—")
+        }
+    </td>
+    <td class="px-3 py-2.5 text-content-subtle text-xs hidden md:table-cell">
+        @(Line.AllocatedBy ?? "—")
+        <span class="block">@(Line.AllocatedAtUtc?.ToLocalTime().ToString("d MMM yyyy") ?? "")</span>
+    </td>
+    <td class="px-3 py-2.5 text-right whitespace-nowrap">
+        @if (Mode == XeroAllocationStatus.Allocated && Line.WriteBackStatus == XeroWriteBackStatus.Failed)
+        {
+            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                    disabled="@Busy" title="@Line.WriteBackError"
+                    @onclick="() => OnRetryWriteBack.InvokeAsync()">Retry Xero</button>
+        }
+        <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
+                disabled="@Busy" @onclick="() => OnUndo.InvokeAsync()">Undo</button>
+        @if (Mode == XeroAllocationStatus.Allocated)
+        {
+            <button class="text-xs text-content-subtle underline underline-offset-4 ml-2"
+                    title="Contest this cost — un-allocates it into the Disputed tab and opens a discussion with the accountant"
+                    disabled="@Busy" @onclick="() => OnOpenDispute.InvokeAsync()">Dispute…</button>
+        }
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public XeroLedgerLine Line { get; set; } = default!;
+    /// <summary>Which settled tab the row is on — decides the summary cell and the actions.</summary>
+    [Parameter] public XeroAllocationStatus Mode { get; set; }
+    /// <summary>Only the Allocated tab bulk-selects.</summary>
+    [Parameter] public bool ShowCheckbox { get; set; }
+    [Parameter] public bool Selected { get; set; }
+    [Parameter] public EventCallback OnToggleSelected { get; set; }
+    [Parameter] public EventCallback<XeroLedgerLine> OnOpenInvoice { get; set; }
+    [Parameter] public bool Busy { get; set; }
+
+    /// <summary>Names come from the masters the page holds; the row only displays them.</summary>
+    [Parameter, EditorRequired] public Func<string?, string> ProjectName { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<string?, string> CostCenterText { get; set; } = default!;
+
+    [Parameter] public EventCallback OnRetryWriteBack { get; set; }
+    [Parameter] public EventCallback OnUndo { get; set; }
+    [Parameter] public EventCallback OnOpenDispute { get; set; }
+
+    private sealed record BadgeModel(string Text, string? Tooltip, string Css);
+
+    /// <summary>Status line under an allocated line's cost centre(s): what Xero knows.</summary>
+    private BadgeModel? WriteBackBadge => Line.WriteBackStatus switch
+    {
+        XeroWriteBackStatus.Approved => new("✓ Approved in Xero",
+            Line.WriteBackAtUtc?.ToLocalTime().ToString("d MMM yyyy HH:mm"), "text-positive"),
+        XeroWriteBackStatus.Failed => new("⚠ Xero write-back failed",
+            Line.WriteBackError, "text-negative"),
+        _ when IsAwaitingApproval(Line) => new("Draft — approves in Xero once the whole bill is allocated",
+            null, "text-content-subtle"),
+        _ => null
+    };
+}

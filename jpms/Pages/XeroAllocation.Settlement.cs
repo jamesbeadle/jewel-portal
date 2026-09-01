@@ -1,4 +1,5 @@
 using Jewel.JPMS.Features.Projects;
+using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay;
 
 
 namespace Jewel.JPMS.Pages;
@@ -51,16 +52,6 @@ public partial class XeroAllocation
     // is the actual, the bill is settlement of it. The re-read of the unallocated queue is what
     // moves the line into the covered fold — the covered flag rides the ledger line.
 
-    private static DateTimeOffset? SettlementMonthOf(XeroLedgerLine line) =>
-        line.Date is { } date
-            // date.Year/Month only — never the DateTime itself, whose Kind would make the
-            // offset constructor throw for Local kinds (the BST lesson).
-            ? new DateTimeOffset(new DateTime(date.Year, date.Month, 1), TimeSpan.Zero)
-            : null;
-
-    private static bool CanMarkCover(XeroLedgerLine line) =>
-        line.MatchedSubcontractorId is not null && line.Date is not null;
-
     // ---- Inline settlement-identity fix on the Labour tab (2026-08-31) -------------------------
 
     private readonly Dictionary<string, string> inlineLinkPicks = new();
@@ -105,13 +96,6 @@ public partial class XeroAllocation
         catch (CommandFailedException failure) { errorMessage = failure.Message; }
         finally { isApplying = false; }
     }
-
-    private string MarkCoverHint(XeroLedgerLine line) =>
-        line.MatchedSubcontractorId is null
-            ? "Covering reconciles by settlement counterparty — link a company or flag the worker a sole trader (inline, left) first"
-            : line.Date is null
-                ? "The line has no bill date, so there is no month to settle against"
-                : $"Mark this line as settlement of {line.MatchedWorkerName}'s {SettlementMonthOf(line):MMMM yyyy} timesheets — covered value is excluded from cost-of-sales aggregations; the worker-month verdict lives on the Labour overview's Settlement view";
 
     private async Task MarkCoverAsync(XeroLedgerLine line)
     {
