@@ -21,8 +21,6 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 
 public sealed partial class SendMailboxEmailHandler
 {
-    // ---- Envelope and body shaping: recipients, pathway names, the plain-text twin ------------
-
     private static List<ComposeRecipient> CleanRecipients(IReadOnlyList<ComposeRecipient>? recipients) =>
         (recipients ?? Array.Empty<ComposeRecipient>())
         .Where(r => !string.IsNullOrWhiteSpace(r.Email) && r.Email.Contains('@'))

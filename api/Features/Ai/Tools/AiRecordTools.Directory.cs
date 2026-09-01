@@ -1,18 +1,12 @@
-using Ganss.Xss;
 using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
-using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;
 
 internal static partial class AiRecordTools
 {
-    // The subcontractor/supplier directory search — the id every procurement action starts from.
     private static IEnumerable<AiTool> DirectoryTools()
     {
         var readers = JpmsRoleSets.AllInternal;

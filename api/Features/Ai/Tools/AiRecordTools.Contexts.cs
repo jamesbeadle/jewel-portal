@@ -1,4 +1,3 @@
-using Ganss.Xss;
 using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Api.Gates;
@@ -6,13 +5,11 @@ using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;
 
 internal static partial class AiRecordTools
 {
-    // Whole-record context reads: the bid package and the work order, each with its money and its people.
     private static IEnumerable<AiTool> ContextTools()
     {
         var readers = JpmsRoleSets.AllInternal;

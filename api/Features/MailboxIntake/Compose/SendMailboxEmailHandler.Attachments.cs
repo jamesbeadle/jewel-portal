@@ -21,8 +21,6 @@ namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 
 public sealed partial class SendMailboxEmailHandler
 {
-    // ---- Attachment resolution: bytes in hand before anything is created ----------------------
-
     private async Task<List<MailboxDraftAttachment>> ResolveAttachmentsAsync(
         SendMailboxEmail command, IReadOnlyDictionary<string, SendMailboxEmailHandler.UploadedFile>? uploads, CancellationToken ct)
     {

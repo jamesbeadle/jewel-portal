@@ -12,7 +12,6 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 
 internal static partial class AiRecordTools
 {
-    // The record's mail: correspondence headlines, full tagged-email bodies, and one attachment's content.
     private static IEnumerable<AiTool> CorrespondenceTools()
     {
         var readers = JpmsRoleSets.AllInternal;
