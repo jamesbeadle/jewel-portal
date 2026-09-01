@@ -483,61 +483,17 @@
                             <div>
                                     @if (replyOpen)
                                     {
-                                        <div class="space-y-3">
-                                            <div class="flex items-center justify-between">
-                                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">@(replyIsForward ? "Forward" : "Reply") — sends from the projects mailbox</p>
-                                                <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="DiscardReplyDraft">Discard draft</button>
-                                            </div>
-
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
-                                                <input class="field" type="text" placeholder="name@example.com; other@example.com"
-                                                       value="@replyToField" @oninput="OnReplyToInput" />
-                                            </div>
-                                            <div>
-                                                <div class="flex items-center justify-between">
-                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
-                                                    @if (!replyShowBcc)
-                                                    {
-                                                        <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => replyShowBcc = true">Bcc</button>
-                                                    }
-                                                </div>
-                                                <input class="field" type="text" placeholder="Copied recipients — separated by ;"
-                                                       value="@replyCcField" @oninput="OnReplyCcInput" />
-                                            </div>
-                                            @if (replyShowBcc)
-                                            {
-                                                <div>
-                                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
-                                                    <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
-                                                           value="@replyBccField" @oninput="OnReplyBccInput" />
-                                                </div>
-                                            }
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
-                                                <input class="field" type="text" value="@replySubject" @oninput="OnReplySubjectInput" />
-                                            </div>
-                                            <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">@(replyIsForward ? "Your message *" : "Your reply *")</label>
-                                                <RichTextEditor @bind-Value="replyBody" MinHeight="180"
-                                                                Placeholder="@(replyIsForward ? "Write the message — the forwarded email is quoted behind it…" : "Write the reply — the whole thread is quoted behind it…")" />
-                                            </div>
-
-                                            @* A forward carries the original email's attachments automatically (Graph's
-                                               createForward copies them onto the draft), so the picker only offers EXTRA
-                                               files — offering the originals again would attach every file twice. *@
-                                            <AttachmentPicker Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
-                                                              Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
-                                                              OriginalAttachments="@(replyIsForward ? null : detail?.Attachments)" OriginalMessageId="@selected?.Id" />
-                                            @if (replyIsForward && detail is { Attachments.Count: > 0 } forwardedDetail)
-                                            {
-                                                <p class="text-xs text-content-subtle">
-                                                    The original email's @(forwardedDetail.Attachments.Count == 1 ? "attachment travels" : $"{forwardedDetail.Attachments.Count} attachments travel")
-                                                    with the forward automatically.
-                                                </p>
-                                            }
-
-                                        </div>
+                                        <ReplyComposerForm IsForward="replyIsForward"
+                                                           To="@replyToField" ToChanged="OnReplyToInput"
+                                                           Cc="@replyCcField" CcChanged="OnReplyCcInput"
+                                                           Bcc="@replyBccField" BccChanged="OnReplyBccInput"
+                                                           ShowBcc="replyShowBcc" ShowBccChanged="shown => replyShowBcc = shown"
+                                                           Subject="@replySubject" SubjectChanged="OnReplySubjectInput"
+                                                           Body="@replyBody" BodyChanged="html => replyBody = html"
+                                                           Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
+                                                           Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
+                                                           OriginalAttachments="@detail?.Attachments" OriginalMessageId="@selected?.Id"
+                                                           OnDiscard="DiscardReplyDraft" />
                                     }
                                 </div>
                 </div>
@@ -775,42 +731,24 @@
                would sweep, once the thread has been read (staging tags themselves lives on the
                System Tags window). *@
             <div class="flex flex-col gap-1.5">
-                <div class="flex items-center justify-between gap-3"
-                     title="Yes tags the email to the project's programme — it appears in the Programme tab's Relevant Events. No leaves the programme out of it">
-                    <span class="text-sm text-content">Relevant Event for Programme</span>
-                    <div class="flex items-center shrink-0">
-                        <button type="button" class="@YesNoClass(relevantEventStaged, answer: true, first: true)"
-                                @onclick="() => relevantEventStaged = true">Yes</button>
-                        <button type="button" class="@YesNoClass(relevantEventStaged, answer: false, first: false)"
-                                @onclick="() => relevantEventStaged = false">No</button>
-                    </div>
-                </div>
-                <div class="flex items-center justify-between gap-3"
-                     title="Yes means everything you apply also tags every email currently in this conversation, clearing them from the queue together. No deals with just this email">
-                    <span class="text-sm text-content">Entire thread@(thread.Count > 1 ? $" · {thread.Count} emails" : "")</span>
-                    <div class="flex items-center shrink-0">
-                        <button type="button" class="@YesNoClass(triageEntireThread, answer: true, first: true)"
-                                @onclick="() => triageEntireThread = true">Yes</button>
-                        <button type="button" class="@YesNoClass(triageEntireThread, answer: false, first: false)"
-                                @onclick="() => triageEntireThread = false">No</button>
-                    </div>
-                </div>
+                <TriageDecisionRow @bind-Value="relevantEventStaged"
+                                   Title="Yes tags the email to the project's programme — it appears in the Programme tab's Relevant Events. No leaves the programme out of it">
+                    Relevant Event for Programme
+                </TriageDecisionRow>
+                <TriageDecisionRow @bind-Value="triageEntireThread"
+                                   Title="Yes means everything you apply also tags every email currently in this conversation, clearing them from the queue together. No deals with just this email">
+                    Entire thread@(thread.Count > 1 ? $" · {thread.Count} emails" : "")
+                </TriageDecisionRow>
                 @* Only when the thread already carries record tags (the queue row's "Thread:"
                    chips): Yes files this email under those same records with Apply — nothing
                    new to pick — so a reply to an already-linked thread is one answer, not a
                    re-pick. Blank-until-answered like the two pairs above. *@
                 @if (SelectedThreadTags is { Count: > 0 } inheritable)
                 {
-                    <div class="flex items-center justify-between gap-3"
-                         title="@($"Yes files this email under the tags its thread already carries — {string.Join(", ", inheritable.Select(TriageEmailDisplay.TagLabel))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes")">
-                        <span class="text-sm text-content">Use existing tags <span class="text-content-subtle">· @string.Join(", ", inheritable.Take(3).Select(TriageEmailDisplay.TagLabel))@(inheritable.Count > 3 ? $" +{inheritable.Count - 3}" : "")</span></span>
-                        <div class="flex items-center shrink-0">
-                            <button type="button" class="@YesNoClass(useThreadTags, answer: true, first: true)"
-                                    @onclick="() => useThreadTags = true">Yes</button>
-                            <button type="button" class="@YesNoClass(useThreadTags, answer: false, first: false)"
-                                    @onclick="() => useThreadTags = false">No</button>
-                        </div>
-                    </div>
+                    <TriageDecisionRow @bind-Value="useThreadTags"
+                                       Title="@($"Yes files this email under the tags its thread already carries — {string.Join(", ", inheritable.Select(TriageEmailDisplay.TagLabel))} — so Apply needs no new picks. No means you pick this email's records yourself in the pathway panes")">
+                        Use existing tags <span class="text-content-subtle">· @string.Join(", ", inheritable.Take(3).Select(TriageEmailDisplay.TagLabel))@(inheritable.Count > 3 ? $" +{inheritable.Count - 3}" : "")</span>
+                    </TriageDecisionRow>
                 }
             </div>
         </div>
@@ -892,86 +830,6 @@
         </div>
     </div>;
 
-    RenderFragment ComposePaneContent =@<div class="panel p-5">
-        <h2 class="text-base font-semibold text-content mb-4">New email</h2>
-        <div class="space-y-3">
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
-            Sends from the <span class="font-medium text-content">projects mailbox</span>. Optionally file it to a record so the sent copy shows in that record's correspondence — replies will arrive in the queue either way.
-        </p>
-
-        @if (newEmailError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@newEmailError</p>
-        }
-
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
-            <input class="field" type="text" placeholder="name@example.com; other@example.com"
-                   value="@newEmailTo" @oninput="OnNewEmailToInput" />
-        </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
-                <input class="field" type="text" placeholder="Separated by ;"
-                       value="@newEmailCc" @oninput="OnNewEmailCcInput" />
-            </div>
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
-                <input class="field" type="text" placeholder="Separated by ;"
-                       value="@newEmailBcc" @oninput="OnNewEmailBccInput" />
-            </div>
-        </div>
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
-            <input class="field" type="text" value="@newEmailSubject" @oninput="OnNewEmailSubjectInput" />
-        </div>
-        <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Message *</label>
-            <RichTextEditor Value="@newEmailBody" ValueChanged="OnNewEmailBodyChanged" MinHeight="200" Placeholder="Write the email…" />
-        </div>
-
-        <AttachmentPicker Attachments="newEmailAttachments" AttachmentsChanged="OnNewEmailAttachmentsChanged"
-                          Projects="ProjectOptionsFor(newEmailProjectId)" ProjectId="@newEmailProjectId" />
-
-        <div class="rounded-lg border border-line p-3 space-y-2">
-            <label class="flex items-center gap-2 text-sm text-content">
-                <input type="checkbox" checked="@newEmailFile" @onchange="OnNewEmailFileToggled" />
-                File this email to a record (the sent copy shows in its correspondence)
-            </label>
-            @if (newEmailFile)
-            {
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <select class="field" value="@newEmailProjectId" @onchange="OnNewEmailProjectChanged">
-                        <option value="">Select a project…</option>
-                        @foreach (var project in ProjectOptionsFor(newEmailProjectId))
-                        {
-                            <option value="@project.ProjectId">@project.Reference — @project.Name</option>
-                        }
-                    </select>
-                    <select class="field" value="@((int)newEmailRecordType)" @onchange="OnNewEmailRecordTypeChanged">
-                        @foreach (var recordType in RecordTypeOptions)
-                        {
-                            <option value="@((int)recordType)">@RecordTypeLabel(recordType)</option>
-                        }
-                    </select>
-                    <select class="field" value="@newEmailRecordId" @onchange="OnNewEmailRecordChanged" disabled="@(string.IsNullOrEmpty(newEmailProjectId))">
-                        <option value="">@(string.IsNullOrEmpty(newEmailProjectId) ? "Select a project first…" : newEmailRecordsLoading ? "Loading…" : "Select a record…")</option>
-                        @foreach (var record in newEmailRecords)
-                        {
-                            <option value="@record.RecordId">@record.Reference — @record.Title</option>
-                        }
-                    </select>
-                </div>
-            }
-        </div>
-
-        <div class="flex items-center justify-end gap-2 pt-1">
-            <button type="button" class="btn-ghost" disabled="@newEmailBusy" @onclick="CloseNewEmail">Cancel</button>
-            <button type="button" class="btn-secondary" disabled="@(newEmailBusy || !NewEmailIsSendable)" @onclick="() => DoSendNewEmail(saveAsDraftOnly: true)">Save as draft</button>
-            <button type="button" class="btn-primary" disabled="@(newEmailBusy || !NewEmailIsSendable)" @onclick="() => DoSendNewEmail(saveAsDraftOnly: false)">@(newEmailBusy ? "Sending…" : "Send")</button>
-        </div>
-    </div>
-    </div>;
 }
 
 @if (!sessionReady)
@@ -1049,7 +907,13 @@ else
                 <PreviewPane Request="@workspace.Preview" OnClose="() => workspace.ClosePreview()" />
             </PreviewContent>
             <XeroContent><XeroExplorerPane OnPreview="OpenXeroPreview" /></XeroContent>
-            <ComposeContent>@ComposePaneContent</ComposeContent>
+            <ComposeContent>
+                <NewEmailComposerPane ProjectOptionsFor="ProjectOptionsFor"
+                                      LinkableRecordTypes="RecordTypeOptions"
+                                      RecordTypeLabel="RecordTypeLabel"
+                                      OnClosed="() => workspace.Close(PanelKind.Compose)"
+                                      OnSent="outcome => composeOutcome = outcome" />
+            </ComposeContent>
             <OutboxContent>
                 <OutboxPane QueuedReplies="queuedReplies"
                             OnChanged="StateHasChanged"

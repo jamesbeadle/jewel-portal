@@ -79,17 +79,6 @@ public partial class ProjectBidPackageInviteDetail
     private static string Append(string? existing, string line) =>
         string.IsNullOrEmpty(existing) ? line : existing + "\n" + line;
 
-    // ---- Line-item editing ----
-
-    private sealed class LineDraft
-    {
-        public string Trade { get; set; } = "";
-        public string Description { get; set; } = "";
-        public string Unit { get; set; } = "";
-        public decimal Quantity { get; set; }
-        public string CostCode { get; set; } = "";
-    }
-
     // "00006-12 — Plastering" for a known code; the bare code when the master list hasn't loaded.
     private string CostCentreLabel(string code)
     {

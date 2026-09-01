@@ -190,4 +190,75 @@ public partial class XeroAllocation
             projectId,
             string.IsNullOrEmpty(centre) ? null : centre));
     }
+
+    private async Task SendToProjectAsync()
+    {
+        if (isBusy || string.IsNullOrEmpty(sendProjectId)) return;
+        var sendable = ProjectSendableSelected;
+        var skipped = SelectedAllocated.Count - sendable.Count;
+        if (sendable.Count == 0) return;
+
+        isApplying = true; sendProjectError = null;
+        try
+        {
+            foreach (var group in sendable.GroupBy(line => line.CostCenterCode!))
+            {
+                var ids = group.Select(line => line.XeroLedgerLineId).ToList();
+                await Ledger.ApplyAsync(new SetXeroAllocation(
+                    ids, XeroAllocationAction.Allocate, sendProjectId, group.Key));
+                // Cleared per group, not at the end: a failure part-way leaves
+                // exactly the unapplied lines selected for a retry.
+                foreach (var id in ids)
+                {
+                    selectedIds.Remove(id);
+                    chosenProject.Remove(id);
+                    chosenCostCenter.Remove(id);
+                    chosenBucket.Remove(id);
+                }
+            }
+            sendToProjectOpen = false;
+            syncMessage = $"{sendable.Count} {(sendable.Count == 1 ? "line" : "lines")} sent to {ProjectName(sendProjectId)}."
+                + (skipped > 0
+                    ? $" {skipped} selected lines are split across cost centres and were left unchanged — undo and re-split those individually."
+                    : "");
+        }
+        catch (CommandFailedException failure) { sendProjectError = failure.Message; }
+        finally { isApplying = false; }
+    }
+
+    // The line-level project catches whole-line allocations and single-project
+    // splits (the API keeps the common project on the line); per-split projects
+    // catch a multi-project split any time one share belongs to the filter.
+
+    private async Task ResolveDisputeAsync(XeroLedgerLine line)
+    {
+        if (isBusy) return;
+        // Unsaved dropdown picks travel with the resolution: they are saved first,
+        // then the line resolves — so "pick, then Return to allocation" needs no
+        // separate Save. If the save fails, the resolve does not run.
+        var projectId = SelectedProjectFor(line);
+        var centre = SelectedCostCenterFor(line);
+        isApplying = true; errorMessage = null;
+        try
+        {
+            if (!string.IsNullOrEmpty(projectId)
+                && (projectId != line.ProjectId || (string.IsNullOrEmpty(centre) ? null : centre) != line.CostCenterCode))
+                await Ledger.ApplyAsync(new SetXeroAllocation(
+                    new[] { line.XeroLedgerLineId },
+                    XeroAllocationAction.SetProject,
+                    projectId,
+                    string.IsNullOrEmpty(centre) ? null : centre));
+            await Ledger.ApplyAsync(new SetXeroAllocation(
+                new[] { line.XeroLedgerLineId }, XeroAllocationAction.ResolveDispute));
+            selectedIds.Remove(line.XeroLedgerLineId);
+            chosenProject.Remove(line.XeroLedgerLineId);
+            chosenCostCenter.Remove(line.XeroLedgerLineId);
+            chosenBucket.Remove(line.XeroLedgerLineId);
+            if (discussLineId == line.XeroLedgerLineId) CloseDiscussion();
+            syncMessage = "Dispute resolved — the line is back in the allocation queue"
+                + (string.IsNullOrEmpty(projectId) ? "." : $" under {ProjectName(projectId)}, ready to allocate.");
+        }
+        catch (CommandFailedException failure) { errorMessage = failure.Message; }
+        finally { isApplying = false; }
+    }
 }

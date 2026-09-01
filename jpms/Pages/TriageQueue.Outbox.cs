@@ -356,6 +356,29 @@ public partial class TriageQueue
         }
     }
 
+    // The Discarded tab's one action: un-discard the open email, back into the live queue.
+    private async Task DoRestore()
+    {
+        if (selected is null || busy) return;
+        actionError = null;
+        try
+        {
+            busyLabel = "Restoring";
+            busy = true;
+            await Intake.RestoreMessageAsync(selected.Id, selected.InternetMessageId);
+            selected = null;
+            detail = null;
+            detailLoading = false;
+            ReturnWorkspaceToQueue();
+            await ReloadDiscardedInPlaceAsync();
+        }
+        catch
+        {
+            actionError = "Couldn't restore that email. Please try again.";
+        }
+        finally { busy = false; }
+    }
+
     private async Task ReloadTaggedInPlaceAsync()
     {
         await LoadTaggedAsync();

@@ -420,22 +420,6 @@ public partial class TriageQueue
     private IReadOnlyList<ComposeDraftAttachment> replyAttachments = Array.Empty<ComposeDraftAttachment>();
     private ComposeOutcome? composeOutcome;
 
-    // ---- New email (fresh outbound thread) ----
-    private bool newEmailBusy;
-    private string? newEmailError;
-    private string newEmailTo = "";
-    private string newEmailCc = "";
-    private string newEmailBcc = "";
-    private string newEmailSubject = "";
-    private string newEmailBody = "";
-    private IReadOnlyList<ComposeDraftAttachment> newEmailAttachments = Array.Empty<ComposeDraftAttachment>();
-    private bool newEmailFile;
-    private string newEmailProjectId = "";
-    private RecordType newEmailRecordType = RecordType.Request;
-    private string newEmailRecordId = "";
-    private bool newEmailRecordsLoading;
-    private IReadOnlyList<LinkableRecord> newEmailRecords = Array.Empty<LinkableRecord>();
-
     // To-do draft rows (Features.Triage.TodoDraftRow), edited in the System Actions pane's
     // "Create To-do Items" action; one to-do is raised PER ASSIGNEE per row when the apply runs.
     private List<TodoDraftRow> createTodoRows = new() { new TodoDraftRow() };

@@ -350,9 +350,9 @@ public partial class TriageQueue
     // Each edit also marks the envelope as the user's (2026-08-28): the reply-all prefill rides
     // in on the detail fetch, and an address or subject typed BEFORE that slow fetch lands must
     // never be overwritten by it — first touch takes ownership, the late prefill backs off.
-    private void OnReplyToInput(ChangeEventArgs e) { replyToField = e.Value?.ToString() ?? ""; replyEnvelopePrefilled = true; }
-    private void OnReplyCcInput(ChangeEventArgs e) { replyCcField = e.Value?.ToString() ?? ""; replyEnvelopePrefilled = true; }
-    private void OnReplyBccInput(ChangeEventArgs e) { replyBccField = e.Value?.ToString() ?? ""; replyEnvelopePrefilled = true; }
-    private void OnReplySubjectInput(ChangeEventArgs e) { replySubject = e.Value?.ToString() ?? ""; replyEnvelopePrefilled = true; }
+    private void OnReplyToInput(string value) { replyToField = value; replyEnvelopePrefilled = true; }
+    private void OnReplyCcInput(string value) { replyCcField = value; replyEnvelopePrefilled = true; }
+    private void OnReplyBccInput(string value) { replyBccField = value; replyEnvelopePrefilled = true; }
+    private void OnReplySubjectInput(string value) { replySubject = value; replyEnvelopePrefilled = true; }
 
 }

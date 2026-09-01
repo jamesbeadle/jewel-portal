@@ -1,6 +1,7 @@
 @page "/finance/allocation"
 @using Jewel.JPMS.Contracts.Xero
 @using Jewel.JPMS.Features.Projects
+@using Jewel.JPMS.Features.Xero
 @inject AuthService Auth
 @inject SessionService Session
 @inject IXeroLedgerStore Ledger
@@ -663,13 +664,9 @@ else
             @if (splitLine is not null)
             {
                 <div class="space-y-4">
-                    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm">
-                        <span class="text-content font-medium">@(splitLine.ContactName ?? "—")</span>
-                        <span class="text-content-muted"> · @(splitLine.Description ?? "—")</span>
-                        <span class="block text-xs text-content-subtle mt-0.5">
-                            @(splitLine.InvoiceNumber ?? "—") · @Money(splitLine.Net) net
-                        </span>
-                    </div>
+                    <LedgerLineSummary Line="splitLine">
+                        @(splitLine.InvoiceNumber ?? "—") · @Money(splitLine.Net) net
+                    </LedgerLineSummary>
                     @SplitEditorCore
                 </div>
             }
@@ -771,13 +768,9 @@ else
                     {
                         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@disputeError</p>
                     }
-                    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm">
-                        <span class="text-content font-medium">@(disputeLine.ContactName ?? "—")</span>
-                        <span class="text-content-muted"> · @(disputeLine.Description ?? "—")</span>
-                        <span class="block text-xs text-content-subtle mt-0.5">
-                            @(disputeLine.InvoiceNumber ?? "—") · @DateText(disputeLine.Date) · @Money(SignedNet(disputeLine)) net
-                        </span>
-                    </div>
+                    <LedgerLineSummary Line="disputeLine">
+                        @(disputeLine.InvoiceNumber ?? "—") · @DateText(disputeLine.Date) · @Money(SignedNet(disputeLine)) net
+                    </LedgerLineSummary>
                     <div>
                         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1.5">
                             Why is this disputed?
@@ -794,79 +787,20 @@ else
             }
         </Modal>
 
-        @* The discussion thread on a disputed line. Re-resolved from the store on every
-           render (not a captured snapshot), so a reply just sent — or the other side's
-           message arriving with a refresh — appears without reopening the modal. *@
-        <Modal IsOpen="@(discussLineId is not null)" Title="Dispute discussion" ShowFooter="false"
-               OnCancel="CloseDiscussion" Class="max-w-2xl">
-            @if (DiscussLine is { } discussed)
-            {
-                <div class="space-y-4">
-                    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm">
-                        <span class="text-content font-medium">@(discussed.ContactName ?? "—")</span>
-                        <span class="text-content-muted"> · @(discussed.Description ?? "—")</span>
-                        <span class="block text-xs text-content-subtle mt-0.5">
-                            @(discussed.InvoiceNumber ?? "—") · @DateText(discussed.Date) · @Money(SignedNet(discussed)) net
-                            · disputed by @(discussed.AllocatedBy ?? "—")
-                        </span>
-                    </div>
-
-                    @if (discussed.DisputeMessages is { Count: > 0 } thread)
-                    {
-                        <div class="space-y-3 max-h-[45vh] overflow-y-auto pr-1">
-                            @foreach (var message in thread)
-                            {
-                                <div class="rounded-lg border border-line px-3 py-2">
-                                    <span class="block text-xs text-content-subtle">
-                                        @message.Author · @message.SentAtUtc.ToLocalTime().ToString("d MMM yyyy HH:mm")
-                                    </span>
-                                    <span class="block text-sm text-content whitespace-pre-wrap mt-0.5">@message.Body</span>
-                                </div>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        <p class="text-sm text-content-subtle">No messages yet — write the first one below.</p>
-                    }
-
-                    @if (discussError is not null)
-                    {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@discussError</p>
-                    }
-                    <div class="flex items-start gap-2">
-                        <textarea class="grow bg-surface border border-line rounded-lg px-3 py-2 text-sm text-content placeholder:text-content-subtle"
-                                  rows="3" placeholder="Reply…" @bind="discussMessage" @bind:event="oninput"></textarea>
-                        <button class="text-sm font-medium rounded-lg px-3 py-2 bg-content text-surface disabled:opacity-50"
-                                disabled="@(isBusy || string.IsNullOrWhiteSpace(discussMessage))"
-                                @onclick="SendDiscussionMessageAsync">Send</button>
-                    </div>
-                    <p class="text-xs text-content-subtle">
-                        Set the agreed project and cost centre on the line's row (Save keeps it disputed);
-                        Return to allocation resolves the dispute and puts the line back in the queue.
-                    </p>
-                </div>
-            }
-            else
-            {
-                <p class="text-sm text-content-subtle py-4">
-                    This line is no longer disputed — it has been returned to allocation.
-                </p>
-            }
-        </Modal>
+        <DisputeDiscussionModal IsOpen="@(discussLineId is not null)"
+                                Line="DiscussLine"
+                                @bind-Message="discussMessage"
+                                Busy="isBusy" Error="@discussError"
+                                OnSend="SendDiscussionMessageAsync" OnClose="CloseDiscussion" />
 
         <Modal IsOpen="@(viewLine is not null)" Title="Invoice document" ShowFooter="false"
                OnCancel="CloseInvoiceView" Class="max-w-4xl">
             @if (viewLine is not null)
             {
                 <div class="space-y-3">
-                    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 text-sm">
-                        <span class="text-content font-medium">@(viewLine.ContactName ?? "—")</span>
-                        <span class="text-content-muted"> · @(viewLine.Description ?? "—")</span>
-                        <span class="block text-xs text-content-subtle mt-0.5">
-                            @(viewLine.InvoiceNumber ?? "—") · @DateText(viewLine.Date) · @Money(SignedNet(viewLine)) net
-                        </span>
-                    </div>
+                    <LedgerLineSummary Line="viewLine">
+                        @(viewLine.InvoiceNumber ?? "—") · @DateText(viewLine.Date) · @Money(SignedNet(viewLine)) net
+                    </LedgerLineSummary>
 
                     @* Allocate without leaving the document: the reader identifies the
                        site and cost centre from the invoice itself, so the controls live

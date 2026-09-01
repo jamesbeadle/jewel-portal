@@ -235,17 +235,6 @@ public partial class TriageQueue
     private string DecisionsMissingHint =>
         $"Answer {AndJoin(MissingDecisionNames())} — Yes or No — first";
 
-    // The bar's Yes/No pair: two joined pill halves, neither lit until the triager picks a side
-    // (null = blank). Picked reads like a picked record row (accent border on raised surface);
-    // the unpicked side stays muted. Clicking the picked side again is a no-op, not a clear —
-    // the whole point is that "no answer" isn't a state anyone can put back.
-    private static string YesNoClass(bool? decided, bool answer, bool first) =>
-        "px-2.5 py-1 text-xs border transition "
-        + (first ? "rounded-l-lg" : "rounded-r-lg -ml-px")
-        + (decided == answer
-            ? " relative border-accent bg-surface-raised text-content font-medium"
-            : " border-line text-content-subtle hover:text-content hover:border-line-strong");
-
     private string ApplyButtonLabel
     {
         get

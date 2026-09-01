@@ -15,38 +15,14 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectBidPackageInviteDetail
 {
-    // ---- Invite (modal over the directory) ----
-
-    private string? tradeFilter;
+    // ---- Invite: SubcontractorInvitePickerModal picks; this page saves and invites. ----
 
     private void OpenInviteModal()
     {
         // Same readiness gate as the button that opens this — belt for a stale render.
         if (!PackageReadyForInvites) return;
-        selected.Clear();
-        subSearch = "";
-        // Trade is required by the directory — prefill with the package's trade so quick-add just works.
-        if (string.IsNullOrWhiteSpace(quickAddTradeId))
-            quickAddTradeId = CuratedTradeIdFor(package?.Trade) ?? "";
-        // Pre-filter to the package's trade when the directory knows it — one less tap.
-        tradeFilter = InvitableTrades()
-            .FirstOrDefault(t => string.Equals(t, package?.Trade, StringComparison.OrdinalIgnoreCase));
         showInviteModal = true;
     }
-
-    // The distinct trade names among companies that could be invited (never clients/architects,
-    // never tender-only prospects — the picker is the curated directory).
-    // A company with several trades appears under each of them.
-    private IReadOnlyList<string> InvitableTrades() =>
-        Subs.All()
-            .Where(s => !s.IsProspect)
-            .Where(s => s.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier)
-            .SelectMany(s => s.Trades)
-            .Select(t => t.Name.Trim())
-            .Where(t => t.Length > 0)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .OrderBy(t => t, StringComparer.OrdinalIgnoreCase)
-            .ToList();
 
     // The curated trade id for a trade name, when the list knows it.
     private string? CuratedTradeIdFor(string? name) =>
@@ -65,78 +41,32 @@ public partial class ProjectBidPackageInviteDetail
 
     private void CloseInviteModal() => showInviteModal = false;
 
-    private void OnSearchInput(ChangeEventArgs e) => subSearch = e.Value?.ToString() ?? "";
-
-    private IReadOnlyList<Subcontractor> Invitable()
+    private async Task ConfirmInvite(SubcontractorInvitePick pick)
     {
-        var invited = recipients.Select(r => r.SubcontractorId).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var q = (subSearch ?? "").Trim();
-        return Subs.All()
-            // Only companies we tender to — never clients or architects, and never tender-only
-            // prospects: the picker offers the curated directory, prospects are re-found via the
-            // local search (which reuses their record rather than duplicating it).
-            .Where(s => s.Category is DirectoryCategory.Subcontractor or DirectoryCategory.Supplier)
-            .Where(s => !s.IsProspect)
-            .Where(s => !invited.Contains(s.SubcontractorId))
-            // Any of the company's trades counts — "Boarding" and "Plastering" both surface a
-            // company that carries both, where the old free-text compound string never matched.
-            .Where(s => tradeFilter is null || s.Trades.Any(t => string.Equals(t.Name.Trim(), tradeFilter, StringComparison.OrdinalIgnoreCase)))
-            .Where(s => q.Length == 0
-                || (s.CompanyName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase)
-                || s.Trades.Any(t => t.Name.Contains(q, StringComparison.OrdinalIgnoreCase))
-                || (s.ContactName ?? "").Contains(q, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-    }
-
-    private void Toggle(string subcontractorId, ChangeEventArgs e)
-    {
-        if (e.Value is true) selected.Add(subcontractorId);
-        else selected.Remove(subcontractorId);
-    }
-
-    // ---- Quick-add: invite someone who isn't in the directory yet ----
-
-    private string quickAddName = "";
-    private string quickAddEmail = "";
-    private string quickAddTradeId = "";
-
-    private bool QuickAddReady =>
-        !string.IsNullOrWhiteSpace(quickAddName)
-        && quickAddEmail.Contains('@') && quickAddEmail.Trim().Length >= 5;
-
-    // Something typed but not enough to include — surfaced so a half-filled row isn't silently dropped.
-    private bool quickAddPartial =>
-        !QuickAddReady && (!string.IsNullOrWhiteSpace(quickAddName) || !string.IsNullOrWhiteSpace(quickAddEmail));
-
-    private int InviteCount() => selected.Count + (QuickAddReady ? 1 : 0);
-
-    private async Task ConfirmInvite()
-    {
-        if (busy || InviteCount() == 0 || !CanEdit) return;
+        if (busy || !CanEdit) return;
+        if (pick.SubcontractorIds.Count == 0 && pick.QuickAdd is null) return;
         error = null;
         try
         {
             busy = true;
-            var ids = selected.ToList();
-            if (QuickAddReady)
+            var ids = pick.SubcontractorIds.ToList();
+            if (pick.QuickAdd is { } quickAdd)
             {
                 // Save the ad-hoc contact as a tender-only PROSPECT (not a directory entry), then
                 // invite like any other. The record requires a trade — fall back to the package's,
                 // then "General". They join the Directory only if promoted from a submitted tender
                 // (or by winning the package) — quality is judged on the tender, not the invite.
-                var tradeId = !string.IsNullOrWhiteSpace(quickAddTradeId) ? quickAddTradeId
+                var tradeId = !string.IsNullOrWhiteSpace(quickAdd.TradeId) ? quickAdd.TradeId
                     : await EnsureTradeIdAsync(package?.Trade);
                 var created = await Commands.SendAsync(
                     new AddSubcontractorToDirectory(
-                        quickAddName.Trim(), new[] { tradeId }, quickAddName.Trim(),
-                        quickAddEmail.Trim(), "", "", IsProspect: true), CancellationToken.None);
+                        quickAdd.Name, new[] { tradeId }, quickAdd.Name,
+                        quickAdd.Email, "", "", IsProspect: true), CancellationToken.None);
                 ids.Add(created.SubcontractorId);
                 await SubsReadModel.RefreshAsync(CancellationToken.None);
             }
             fetchedRecipients = await Commands.SendAsync(
                 new InviteSubcontractorsToBidPackage(BidPackageId, ids), CancellationToken.None);
-            selected.Clear();
-            quickAddName = quickAddEmail = quickAddTradeId = "";
             showInviteModal = false;
             package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
         }

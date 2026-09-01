@@ -1,0 +1,96 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+@using Jewel.JPMS.Features.Triage
+
+@* The inline reply/forward form under the open email — a pure VIEW over the page's own fields.
+   The state must live with the page: triage PARKS a half-written reply when the triager jumps
+   to another email (ParkedTriage) and the bar's one Send/Apply is what actually sends, reading
+   the same fields. So unlike MailReplyComposer (which owns its state and its send), this
+   component renders the form and hands every keystroke straight back; envelope edits also flip
+   the page's prefill-ownership flag inside the callbacks the page passes. *@
+<div class="space-y-3">
+    <div class="flex items-center justify-between">
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">@(IsForward ? "Forward" : "Reply") — sends from the projects mailbox</p>
+        <button type="button" class="text-xs text-content-subtle hover:text-negative underline" @onclick="() => OnDiscard.InvokeAsync()">Discard draft</button>
+    </div>
+
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
+        <input class="field" type="text" placeholder="name@example.com; other@example.com"
+               value="@To" @oninput="e => ToChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+    </div>
+    <div>
+        <div class="flex items-center justify-between">
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
+            @if (!ShowBcc)
+            {
+                <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => ShowBccChanged.InvokeAsync(true)">Bcc</button>
+            }
+        </div>
+        <input class="field" type="text" placeholder="Copied recipients — separated by ;"
+               value="@Cc" @oninput="e => CcChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+    </div>
+    @if (ShowBcc)
+    {
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
+            <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
+                   value="@Bcc" @oninput="e => BccChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+        </div>
+    }
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
+        <input class="field" type="text" value="@Subject" @oninput="e => SubjectChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+    </div>
+    <div>
+        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">@(IsForward ? "Your message *" : "Your reply *")</label>
+        <RichTextEditor Value="@Body" ValueChanged="BodyChanged" MinHeight="180"
+                        Placeholder="@(IsForward ? "Write the message — the forwarded email is quoted behind it…" : "Write the reply — the whole thread is quoted behind it…")" />
+    </div>
+
+    @* A forward carries the original email's attachments automatically (Graph's createForward
+       copies them onto the draft), so the picker only offers EXTRA files — offering the originals
+       again would attach every file twice. *@
+    <AttachmentPicker Attachments="Attachments" AttachmentsChanged="AttachmentsChanged"
+                      Projects="@Projects" ProjectId="@ProjectId"
+                      OriginalAttachments="@(IsForward ? null : OriginalAttachments)" OriginalMessageId="@OriginalMessageId" />
+    @if (IsForward && OriginalAttachments is { Count: > 0 } forwarded)
+    {
+        <p class="text-xs text-content-subtle">
+            The original email's @(forwarded.Count == 1 ? "attachment travels" : $"{forwarded.Count} attachments travel")
+            with the forward automatically.
+        </p>
+    }
+</div>
+
+@code {
+    /// <summary>Forward shape (blank envelope, "FW:" subject) instead of reply shape.</summary>
+    [Parameter] public bool IsForward { get; set; }
+
+    // The envelope, page-owned: each field with its change callback. The page's callbacks also
+    // mark the envelope user-edited, so the late-landing reply-all prefill can't overwrite typing.
+    [Parameter] public string To { get; set; } = "";
+    [Parameter] public EventCallback<string> ToChanged { get; set; }
+    [Parameter] public string Cc { get; set; } = "";
+    [Parameter] public EventCallback<string> CcChanged { get; set; }
+    [Parameter] public string Bcc { get; set; } = "";
+    [Parameter] public EventCallback<string> BccChanged { get; set; }
+    [Parameter] public bool ShowBcc { get; set; }
+    [Parameter] public EventCallback<bool> ShowBccChanged { get; set; }
+    [Parameter] public string Subject { get; set; } = "";
+    [Parameter] public EventCallback<string> SubjectChanged { get; set; }
+    [Parameter] public string Body { get; set; } = "";
+    [Parameter] public EventCallback<string> BodyChanged { get; set; }
+    [Parameter] public IReadOnlyList<ComposeDraftAttachment> Attachments { get; set; } = Array.Empty<ComposeDraftAttachment>();
+    [Parameter] public EventCallback<IReadOnlyList<ComposeDraftAttachment>> AttachmentsChanged { get; set; }
+
+    /// <summary>Project pool and context for the attachment picker's drawing / photo sources.</summary>
+    [Parameter] public IReadOnlyList<Project> Projects { get; set; } = Array.Empty<Project>();
+    [Parameter] public string? ProjectId { get; set; }
+
+    /// <summary>The open email's attachments — offered by the picker on a reply, and counted in
+    /// the travels-automatically note on a forward.</summary>
+    [Parameter] public IReadOnlyList<IntakeAttachment>? OriginalAttachments { get; set; }
+    [Parameter] public string? OriginalMessageId { get; set; }
+
+    [Parameter] public EventCallback OnDiscard { get; set; }
+}

@@ -484,99 +484,13 @@ else
                 }
                 else
                 {
-                    <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                        <table class="w-full text-sm">
-                            <thead class="bg-surface-raised border-b border-line">
-                                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Line item</th>
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 hidden sm:table-cell">Qty</th>
-                                    @foreach (var quote in quotes)
-                                    {
-                                        var sub = Subs.Find(quote.SubcontractorId);
-                                        var won = recipients.Any(r =>
-                                            string.Equals(r.SubcontractorId, quote.SubcontractorId, StringComparison.OrdinalIgnoreCase)
-                                            && r.Status == BidPackageRecipientStatus.Won);
-                                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 text-right">
-                                            @(sub?.CompanyName ?? quote.SubcontractorId)
-                                            @if (won)
-                                            {
-                                                <span class="ml-1.5 inline-flex items-center rounded-full bg-positive/10 border border-positive/30 px-1.5 py-0.5 text-[10px] font-medium text-positive normal-case tracking-normal">Won</span>
-                                            }
-                                            @if (sub is { IsProspect: true } && CanAddToDirectory)
-                                            {
-                                                @* A submitted tender is the moment to judge quality — this is the
-                                                   deliberate act that puts a tender-only prospect in the Directory. *@
-                                                <span class="block mt-1">
-                                                    <button type="button" class="btn-secondary px-2 py-0.5 text-[11px] normal-case tracking-normal font-medium" disabled="@busy"
-                                                            title="This company isn't in the Directory — it was only added to this tender list. Add it if the tender's worth keeping them for."
-                                                            @onclick="() => AddToDirectory(sub!.SubcontractorId)">Add to directory</button>
-                                                </span>
-                                            }
-                                        </th>
-                                    }
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-line">
-                                @foreach (var item in lineItems)
-                                {
-                                    <tr>
-                                        <td class="px-4 py-2 text-content">@item.Description</td>
-                                        <td class="px-4 py-2 text-content-muted hidden sm:table-cell">@item.Quantity @item.Unit</td>
-                                        @foreach (var quote in quotes)
-                                        {
-                                            var line = quoteLines.FirstOrDefault(l => l.QuoteId == quote.QuoteId && l.BidPackageLineItemId == item.LineItemId);
-                                            <td class="px-4 py-2 text-right text-content-muted">
-                                                @(line is null ? "—" : line.Total.ToString("£#,##0.00"))
-                                            </td>
-                                        }
-                                    </tr>
-                                }
-                                @{ var extras = quoteLines.Where(l => l.BidPackageLineItemId is null).ToList(); }
-                                @if (extras.Count > 0)
-                                {
-                                    <tr>
-                                        <td class="px-4 py-2 text-content-subtle italic">Outside package scope</td>
-                                        <td class="px-4 py-2 hidden sm:table-cell"></td>
-                                        @foreach (var quote in quotes)
-                                        {
-                                            var sum = extras.Where(l => l.QuoteId == quote.QuoteId).Sum(l => l.Total);
-                                            <td class="px-4 py-2 text-right text-content-subtle italic">@(sum == 0 ? "—" : sum.ToString("£#,##0.00"))</td>
-                                        }
-                                    </tr>
-                                }
-                            </tbody>
-                            <tfoot class="bg-surface-raised border-t border-line">
-                                <tr class="font-semibold text-content">
-                                    <td class="px-4 py-2">Total</td>
-                                    <td class="px-4 py-2 hidden sm:table-cell"></td>
-                                    @foreach (var quote in quotes)
-                                    {
-                                        <td class="px-4 py-2 text-right">@quote.Value.ToString("£#,##0.00")</td>
-                                    }
-                                </tr>
-                                @if (CanEdit && package.Status != BidPackageStatus.Awarded)
-                                {
-                                    <tr>
-                                        <td class="px-4 py-2"></td>
-                                        <td class="px-4 py-2 hidden sm:table-cell"></td>
-                                        @foreach (var quote in quotes)
-                                        {
-                                            <td class="px-4 py-2 text-right">
-                                                <button type="button" class="text-xs text-accent hover:underline" disabled="@busy"
-                                                        @onclick="() => AwardTo(quote)">Award</button>
-                                            </td>
-                                        }
-                                    </tr>
-                                }
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    @foreach (var quote in quotes.Where(q => !string.IsNullOrWhiteSpace(q.Notes)))
-                    {
-                        var sub = Subs.Find(quote.SubcontractorId);
-                        <p class="text-xs text-content-subtle mt-2"><span class="font-medium text-content-muted">@(sub?.CompanyName ?? quote.SubcontractorId):</span> @quote.Notes</p>
-                    }
+                    <TenderQuoteComparisonTable Quotes="quotes" QuoteLines="quoteLines" LineItems="lineItems"
+                                                Recipients="recipients"
+                                                AwardEnabled="@(CanEdit && package.Status != BidPackageStatus.Awarded)"
+                                                CanAddToDirectory="CanAddToDirectory"
+                                                Busy="busy"
+                                                OnAward="AwardTo"
+                                                OnAddToDirectory="AddToDirectory" />
                 }
                 </LoadGate>
             </section>
@@ -733,71 +647,16 @@ else
         </LoadGate>
     </ProjectPageShell>
 
-    @* ---- Add-subcontractor modal: the directory, searchable ---- *@
-    <Modal IsOpen="showInviteModal" Title="Add subcontractors to the tender list" ShowFooter="true"
-           ConfirmLabel="@(InviteCount() == 0 ? "Add to tender list" : $"Add {InviteCount()} to tender list")" ConfirmDisabled="@(busy || InviteCount() == 0)" CancelLabel="Cancel"
-           OnCancel="CloseInviteModal" OnConfirm="ConfirmInvite" Class="max-w-lg w-full">
-        <div class="mb-3 flex gap-2">
-            <input class="field flex-1" placeholder="Search by company, trade or contact…"
-                   value="@subSearch" @oninput="OnSearchInput" />
-            @* Trade filter — a compact dropdown (the full chip list overwhelmed the modal). *@
-            @if (InvitableTrades().Count > 1)
-            {
-                <select class="field w-44 shrink-0" value="@(tradeFilter ?? "")"
-                        @onchange="e => tradeFilter = string.IsNullOrEmpty(e.Value?.ToString()) ? null : e.Value!.ToString()">
-                    <option value="">All trades</option>
-                    @foreach (var trade in InvitableTrades())
-                    {
-                        <option value="@trade">@trade</option>
-                    }
-                </select>
-            }
-        </div>
-        @if (Invitable().Count == 0)
-        {
-            <p class="text-sm text-content-subtle italic">No matching subcontractors in the directory.</p>
-        }
-        else
-        {
-            <div class="space-y-1 max-h-80 overflow-y-auto">
-                @foreach (var sub in Invitable())
-                {
-                    <label class="flex items-center gap-2 text-sm text-content py-1">
-                        <input type="checkbox" checked="@selected.Contains(sub.SubcontractorId)"
-                               @onchange="e => Toggle(sub.SubcontractorId, e)" />
-                        <span class="font-medium">@sub.CompanyName</span>
-                        <span class="text-content-subtle">· @sub.TradesLabel</span>
-                        @if (string.IsNullOrWhiteSpace(sub.ContactEmail))
-                        {
-                            <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No email</span>
-                        }
-                    </label>
-                }
-            </div>
-        }
-
-        @* Ad-hoc invite: saved as a tender-only prospect, then included in this invite list.
-           They only reach the Directory if promoted from a submitted tender (or by winning). *@
-        <div class="mt-4 pt-4 border-t border-line">
-            <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Not in the directory?</p>
-            <p class="text-xs text-content-subtle mb-2">Add their details — they're included in this invite without joining the Directory. If their tender's good, add them to the Directory from it.</p>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <input class="field" placeholder="Company or name *" @bind="quickAddName" @bind:event="oninput" />
-                <input class="field" type="email" placeholder="Email address *" @bind="quickAddEmail" @bind:event="oninput" />
-                <select class="field" @bind="quickAddTradeId">
-                    <option value="">Trade…</option>
-                    @foreach (var trade in Subs.Trades())
-                    {
-                        <option value="@trade.TradeId">@trade.Name</option>
-                    }
-                </select>
-            </div>
-            @if (quickAddPartial)
-            {
-                <p class="text-xs text-amber-800 mt-1">Enter both a name and a valid email address to include them.</p>
-            }
-        </div>
-    </Modal>
+    @* ---- Add-subcontractor modal: the directory, searchable. The picker owns the search,
+         filter, ticks and quick-add row; the ticked ids (and any quick-add contact) come back
+         here to be saved and invited. ---- *@
+    <SubcontractorInvitePickerModal IsOpen="showInviteModal"
+                                    InvitedIds="@recipients.Select(r => r.SubcontractorId).ToList()"
+                                    DefaultTrade="@(package?.Trade ?? "")"
+                                    DefaultTradeId="@(CuratedTradeIdFor(package?.Trade) ?? "")"
+                                    Busy="busy"
+                                    OnCancel="CloseInviteModal"
+                                    OnConfirm="ConfirmInvite" />
 
     @* ---- Find local subcontractors: Google Places search near the project's site.
          The finder owns the trade resolution, the search and the selection; ticked
@@ -890,88 +749,17 @@ else
         }
     </Modal>
 
-    @* ---- The invite composer: compose, persist, SEND — all in here, like a triage reply.
-         The tender list is pre-filled into BCC (subcontractors never see each other) and the
-         whole envelope stays editable. The draft persists ON the package (Save draft, and
-         quietly on Cancel), so a half-written invite survives for anyone on the team.
-         Overlay-dismiss off: a stray click must not lose a composed email. ---- *@
-    <Modal IsOpen="showComposeModal" Title="Tender invite email" DismissOnOverlayClick="false"
-           OnCancel="CloseComposeModal" Class="max-w-3xl w-full">
-        <FooterContent>
-            <button type="button" class="btn-secondary" disabled="@(busy || savingDraft)" @onclick="SaveInviteDraft">
-                @(savingDraft ? "Saving…" : "Save draft")
-            </button>
-            <button type="button" class="btn-neutral" disabled="@busy" @onclick="CloseComposeModal">Close</button>
-            <button type="button" class="btn-primary" disabled="@(busy || ComposeRecipientCount() == 0)" @onclick="ConfirmSendInvite">
-                @(busy ? "Sending…" : ComposeRecipientCount() == 0 ? "No recipients" : $"Send to {ComposeRecipientCount()} recipient{(ComposeRecipientCount() == 1 ? "" : "s")}")
-            </button>
-        </FooterContent>
-        <ChildContent>
-        <p class="text-xs text-content-subtle mb-3">
-            Sends now, from the projects mailbox — no trip to Outlook. Recipients are pre-filled into
-            BCC so subcontractors never see each other; the whole envelope is editable. The email is
-            tagged to this package, and tagged replies appear under Tender responses.
-            <span> Attached automatically: the pricing schedule (@(package?.Reference ?? "BPI")&nbsp;- Pricing Schedule.xlsx, generated from the line items) and the company terms &amp; conditions (when uploaded in Admin → System).</span>
-            @if (packageAttachments.Count > 0 || packageDrawings.Count > 0)
-            {
-                <span> Plus @(packageAttachments.Count + packageDrawings.Count) tender document@(packageAttachments.Count + packageDrawings.Count == 1 ? "" : "s") — any that would push the email over the 25&nbsp;MB limit go out as 7-day download links instead.</span>
-            }
-        </p>
-
-        @if (composeDraftSavedAt is { } savedAt)
-        {
-            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content mb-3">
-                Picked up the saved draft from @savedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm").
-            </p>
-        }
-        @if (MissingEmail().Count > 0)
-        {
-            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
-                Won't receive it (no email address in the directory): @string.Join(", ", MissingEmail()).
-                Add their email in the <a class="underline" href="/directory">Directory</a> and reopen this window.
-            </p>
-        }
-        @if (lineItems.Count == 0)
-        {
-            <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
-                This package has no line items yet, so the pricing schedule has nothing to price.
-                You can still send — or close, add line items, and come back (the draft keeps).
-            </p>
-        }
-
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">To</label>
-        <input class="field mb-1" @bind="composeTo" placeholder="Leave empty — the projects mailbox addresses itself, recipients stay in BCC" />
-        <p class="text-[11px] text-content-subtle mb-3">Semicolon-separated addresses. Empty means the projects mailbox is the visible addressee — the norm for a BCC'd invite.</p>
-
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Cc</label>
-        <input class="field mb-3" @bind="composeCc" placeholder="Optional — internal people to copy in" />
-
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Bcc — the tender list</label>
-        <textarea class="field mb-3" rows="2" @bind="composeBcc"></textarea>
-
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
-        <input class="field mb-3" @bind="composeSubject" />
-
-        <div class="flex items-center justify-between mb-1">
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle">Message</label>
-            <button type="button" class="text-xs text-accent hover:underline" @onclick="() => editingBody = !editingBody">
-                @(editingBody ? "Back to preview" : "Edit message (HTML)")
-            </button>
-        </div>
-        @if (editingBody)
-        {
-            <textarea class="field font-mono text-xs" rows="14" @bind="composeBody"></textarea>
-            <p class="text-[11px] text-content-subtle mt-1">Sent as HTML — the pre-filled message includes the package's line items for pricing, when there are any.</p>
-        }
-        else
-        {
-            <div class="rounded-lg border border-line bg-white text-gray-900 p-4 text-sm max-h-80 overflow-y-auto">
-                @((MarkupString)composeBody)
-            </div>
-            <p class="text-[11px] text-content-subtle mt-1">This is how the email will look to a tenderer.</p>
-        }
-        </ChildContent>
-    </Modal>
+    @* ---- The invite composer: compose, persist on the package, SEND — the modal owns the
+         whole flow, like a triage reply; each send's outcome comes back here for the banner,
+         the package record and the email list. ---- *@
+    <TenderInviteComposerModal @ref="inviteComposer"
+                               BidPackageId="@BidPackageId"
+                               Package="package"
+                               LineItems="lineItems"
+                               Recipients="recipients"
+                               AttachedDocumentCount="@(packageAttachments.Count + packageDrawings.Count)"
+                               CanEdit="CanEdit"
+                               OnSent="OnInviteSent" />
 
     @* ---- Record a tender submission and save it as a quote — the modal owns the whole
          review flow; the page reloads when it reports a save. ---- *@
@@ -1022,71 +810,16 @@ else
         </ChildContent>
     </Modal>
 
-    @* ---- Edit package details (modal): summary + line schedule together, one Save.
-         DismissOnOverlayClick off: a stray click must not throw away a half-keyed schedule. ---- *@
-    <Modal IsOpen="showDetailsModal" Title="Edit package details" DismissOnOverlayClick="false"
-           OnCancel="CancelDetails" Class="max-w-4xl w-full">
-        <FooterContent>
-            <button type="button" class="btn-secondary" disabled="@busy" @onclick="AddLine">Add line</button>
-            <button type="button" class="btn-neutral" disabled="@busy" @onclick="CancelDetails">Cancel</button>
-            <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveDetails">@(busy ? "Saving…" : "Save details")</button>
-        </FooterContent>
-        <ChildContent>
-            @if (error is not null)
-            {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
-            }
-
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Specification summary</label>
-            <p class="text-xs text-content-subtle mb-2">
-                One point per line — it prints at the top of the pricing schedule each tenderer receives,
-                so say what the package covers and to what standard.
-            </p>
-            <textarea class="field w-full min-h-28 mb-4" rows="6"
-                      placeholder="One point per line — e.g. All flat roofing to BS 6229:2018."
-                      @bind="specDraft"></textarea>
-
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Line items</label>
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            <th class="px-3 py-2">Trade</th>
-                            <th class="px-3 py-2">Description</th>
-                            <th class="px-3 py-2 hidden sm:table-cell">Unit</th>
-                            <th class="px-3 py-2">Qty</th>
-                            <th class="px-3 py-2">Cost code</th>
-                            <th class="px-3 py-2"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @for (var i = 0; i < lineDrafts.Count; i++)
-                        {
-                            var draft = lineDrafts[i];
-                            <tr>
-                                <td class="px-3 py-2"><input class="field" @bind="draft.Trade" placeholder="e.g. Electrical" /></td>
-                                <td class="px-3 py-2"><input class="field" @bind="draft.Description" placeholder="Description" /></td>
-                                <td class="px-3 py-2 hidden sm:table-cell"><input class="field" @bind="draft.Unit" placeholder="e.g. m²" /></td>
-                                <td class="px-3 py-2"><input class="field" type="number" step="any" @bind="draft.Quantity" /></td>
-                                <td class="px-3 py-2">
-                                    <select class="field min-w-[14rem]" @bind="draft.CostCode">
-                                        <option value="">Cost centre…</option>
-                                        @foreach (var centre in CostCenters.Alphabetical)
-                                        {
-                                            <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
-                                        }
-                                    </select>
-                                </td>
-                                <td class="px-3 py-2 text-right">
-                                    <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40" @onclick="() => RemoveLine(draft)">Remove</button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </ChildContent>
-    </Modal>
+    @* ---- Edit package details: summary + line schedule together, one Save. The dialog owns
+         the drafts and the every-line-needs-a-cost-code rule; the trimmed schedule comes back
+         here for the two save commands. ---- *@
+    <PackageDetailsEditorModal IsOpen="showDetailsModal"
+                               SpecificationSummary="@(package?.SpecificationSummary ?? "")"
+                               LineItems="lineItems"
+                               Busy="busy"
+                               Error="@error"
+                               OnCancel="CancelDetails"
+                               OnSave="SaveDetails" />
 
     @* ---- Select line items from the valuation report: the fast path onto the package.
          The picker owns its own read of the live report; confirmed rows come back as
