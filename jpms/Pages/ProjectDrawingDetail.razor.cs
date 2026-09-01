@@ -1,4 +1,3 @@
-using static Jewel.JPMS.MoneyFormats;
 using Jewel.JPMS.Features.Drawings;
 
 namespace Jewel.JPMS.Pages;

@@ -1,9 +1,7 @@
-using static Jewel.JPMS.MoneyFormats;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Features.Triage.Panels;
-using Jewel.JPMS.Services.Excel;
 
 namespace Jewel.JPMS.Components;
 

@@ -5,7 +5,6 @@ using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.RecordLinks;
 
-using static Jewel.JPMS.MoneyFormats;
 
 namespace Jewel.JPMS.Pages;
 

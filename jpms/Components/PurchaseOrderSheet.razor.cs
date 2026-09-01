@@ -1,4 +1,3 @@
-using static Jewel.JPMS.MoneyFormats;
 using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Components;

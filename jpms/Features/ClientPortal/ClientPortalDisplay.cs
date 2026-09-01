@@ -1,7 +1,6 @@
 using System.Globalization;
 using Jewel.JPMS.Contracts.ClientPortal;
 
-using static Jewel.JPMS.MoneyFormats;
 
 namespace Jewel.JPMS.Features.ClientPortal;
 

@@ -1,4 +1,3 @@
-using static Jewel.JPMS.MoneyFormats;
 using Jewel.JPMS.Contracts.Todos;
 using Jewel.JPMS.Features.Projects;
 using Jewel.JPMS.Features.Requests;

@@ -1,4 +1,3 @@
-using Jewel.JPMS.Services.Excel;
 using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.Procurement;
@@ -7,7 +6,6 @@ using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Projects;
 using Jewel.JPMS.Features.Subcontractors;
 
-using static Jewel.JPMS.MoneyFormats;
 
 namespace Jewel.JPMS.Pages;
 

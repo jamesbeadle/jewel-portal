@@ -1,4 +1,3 @@
-using Jewel.JPMS.Services.Excel;
 using Jewel.JPMS.Commercial;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.Cqrs;

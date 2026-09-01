@@ -1,8 +1,6 @@
-using Jewel.JPMS.Services.Excel;
 using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Features.Projects;
 
-using static Jewel.JPMS.MoneyFormats;
 
 namespace Jewel.JPMS.Pages;
 

@@ -1,4 +1,3 @@
-using static Jewel.JPMS.MoneyFormats;
 using Jewel.JPMS.Commercial;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Features.Commercial;

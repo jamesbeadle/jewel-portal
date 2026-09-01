@@ -1,5 +1,3 @@
-using static Jewel.JPMS.MoneyFormats;
-using Jewel.JPMS.Services.Excel;
 using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Contracts.Cqrs;
 
