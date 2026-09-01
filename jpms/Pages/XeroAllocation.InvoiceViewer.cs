@@ -5,38 +5,16 @@ namespace Jewel.JPMS.Pages;
 
 public partial class XeroAllocation
 {
-    // The list is fetched live from Xero when the modal opens; the bytes are
-    // proxied through the API on demand — nothing is stored in JPMS.
+    // The document itself lives in InvoiceDocumentPreview (fetch, chips, iframe); this page
+    // owns which line is open and the allocate-from-the-viewer actions below.
 
     private XeroLedgerLine? viewLine;
-    private IReadOnlyList<XeroInvoiceAttachment>? viewAttachments;
-    private XeroInvoiceAttachment? viewSelected;
     private string? viewError;
 
-    private async Task OpenInvoiceViewAsync(XeroLedgerLine line)
+    private void OpenInvoiceView(XeroLedgerLine line)
     {
         viewLine = line;
-        viewAttachments = null;
-        viewSelected = null;
         viewError = null;
-        try
-        {
-            var attachments = await Queries.AskAsync(
-                new ListXeroInvoiceAttachments(line.XeroInvoiceId, line.Type == "ACCPAYCREDIT"),
-                CancellationToken.None);
-            if (viewLine != line) return; // The modal was closed (or reopened) while fetching.
-            viewAttachments = attachments;
-            // PDFs and images preview in place; pre-select the first previewable one.
-            viewSelected = attachments.FirstOrDefault(IsPreviewable) ?? attachments.FirstOrDefault();
-            if (attachments.Count == 0)
-                viewError = "Xero holds no documents for this invoice — it may have been removed since the last sync.";
-        }
-        catch (Exception)
-        {
-            if (viewLine != line) return;
-            viewError = "Couldn't fetch the invoice's documents from Xero. If this keeps happening, check that the "
-                + "Xero custom connection has the accounting.attachments scope ticked in the Xero developer portal.";
-        }
     }
 
     private void CloseInvoiceView()
@@ -50,8 +28,6 @@ public partial class XeroAllocation
         if (disputeLine is not null && disputeLine.XeroLedgerLineId == viewLine?.XeroLedgerLineId)
             CloseDispute();
         viewLine = null;
-        viewAttachments = null;
-        viewSelected = null;
         viewError = null;
     }
 
@@ -156,23 +132,4 @@ public partial class XeroAllocation
         chosenBucket.Remove(lineId);
     }
 
-    // Same previewable set as the triage and drawing viewers: browsers render PDFs
-    // and images natively in an iframe; everything else gets a Download link only.
-    private static bool IsPreviewable(XeroInvoiceAttachment attachment) =>
-        attachment.MimeType.Contains("pdf", StringComparison.OrdinalIgnoreCase)
-        || attachment.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-
-    // The file name travels in the query string, never the path — supplier file
-    // names carry spaces and characters that don't survive a URL path segment.
-    private string InvoiceAttachmentUrl(XeroInvoiceAttachment attachment, bool inline) =>
-        $"/api/xero/invoice/attachment?id={Uri.EscapeDataString(viewLine?.XeroInvoiceId ?? "")}"
-        + $"&file={Uri.EscapeDataString(attachment.FileName)}"
-        + (viewLine?.Type == "ACCPAYCREDIT" ? "&credit=1" : "")
-        + (inline ? "&inline=1" : "");
-
-    private string InvoiceAttachmentChipClass(XeroInvoiceAttachment attachment) =>
-        (viewSelected == attachment
-            ? "bg-content text-surface border-content"
-            : "bg-surface text-content-muted border-line hover:text-content")
-        + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
 }
