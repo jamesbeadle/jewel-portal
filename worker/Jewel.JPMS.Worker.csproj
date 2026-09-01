@@ -63,6 +63,7 @@
     <Compile Include="..\api\Features\Requests\Documents\RequestDocumentRenderer.cs" Link="Shared\Documents\RequestDocumentRenderer.cs" />
     <Compile Include="..\api\Features\Requests\Documents\DocumentFontResolver.cs" Link="Shared\Documents\DocumentFontResolver.cs" />
     <Compile Include="..\api\Features\Requests\Documents\DocumentBranding.cs" Link="Shared\Documents\DocumentBranding.cs" />
+    <Compile Include="..\api\Features\Documents\JewelDocumentStyle.cs" Link="Shared\Documents\JewelDocumentStyle.cs" />
     <!-- Shared recipient resolution: the worker send, the Outlook draft, and the recipients
          preview all resolve To/CC/BCC through the same code so the paths can never drift. -->
     <Compile Include="..\api\Features\Requests\Recipients\RequestRecipientResolver.cs" Link="Shared\RequestRecipientResolver.cs" />
@@ -74,7 +75,16 @@
          auto-allocation handlers the API's HTTP endpoints use, compiled from the identical files so
          the overnight run and the allocation page's buttons can never drift apart. -->
     <Compile Include="..\api\Cqrs\ICommandHandler.cs" Link="Shared\Cqrs\ICommandHandler.cs" />
+    <Compile Include="..\api\Features\Xero\IXeroClient.cs" Link="Shared\Xero\IXeroClient.cs" />
+    <Compile Include="..\api\Features\Xero\NullXeroClient.cs" Link="Shared\Xero\NullXeroClient.cs" />
+    <Compile Include="..\api\Features\Xero\XeroCallFailedException.cs" Link="Shared\Xero\XeroCallFailedException.cs" />
     <Compile Include="..\api\Features\Xero\XeroClient.cs" Link="Shared\Xero\XeroClient.cs" />
+    <Compile Include="..\api\Features\Xero\XeroClient.Reads.cs" Link="Shared\Xero\XeroClient.Reads.cs" />
+    <Compile Include="..\api\Features\Xero\XeroClient.Writes.cs" Link="Shared\Xero\XeroClient.Writes.cs" />
+    <Compile Include="..\api\Features\Xero\XeroClient.SitePnl.cs" Link="Shared\Xero\XeroClient.SitePnl.cs" />
+    <Compile Include="..\api\Features\Xero\XeroClient.Attachments.cs" Link="Shared\Xero\XeroClient.Attachments.cs" />
+    <Compile Include="..\api\Features\Xero\XeroClient.LineItems.cs" Link="Shared\Xero\XeroClient.LineItems.cs" />
+    <Compile Include="..\api\Features\Xero\XeroClient.Http.cs" Link="Shared\Xero\XeroClient.Http.cs" />
     <Compile Include="..\api\Features\Xero\XeroOptions.cs" Link="Shared\Xero\XeroOptions.cs" />
     <Compile Include="..\api\Features\Xero\XeroApproval.cs" Link="Shared\Xero\XeroApproval.cs" />
     <Compile Include="..\api\Features\Xero\Ledger\SyncXeroLedgerHandler.cs" Link="Shared\Xero\SyncXeroLedgerHandler.cs" />
