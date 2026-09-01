@@ -1,57 +1,55 @@
-# Refactor audit — baseline v11, after round 10
+# Refactor audit — baseline v12, after round 11
 
-Generated 2026-09-01 from `refactor/round-10`, replacing the round-9 (v10) baseline report. The
+Generated 2026-09-01 from `refactor/round-11`, replacing the round-10 (v11) baseline report. The
 audit carries the prose and functionNames checks introduced at v2.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 618, totalFiles: 3262, worstFileLines: 954 |
-| functionShape | limit: 30, functionsOverLimit: 700, elseBlocks: 1182, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 621, totalFiles: 3267, worstFileLines: 954 |
+| functionShape | limit: 30, functionsOverLimit: 704, elseBlocks: 1182, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 44, maxWords: 5, maxLength: 40 |
-| duplication | clones: 468, duplicatedLines: 6040, totalLines: 214587, duplicatedPercentage: 2.81 |
+| duplication | clones: 469, duplicatedLines: 6044, totalLines: 214643, duplicatedPercentage: 2.82 |
 | naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1348 |
-| comments | explanatoryCommentLines: 13728, filesWithComments: 1744, taskMarkers: 48 |
+| comments | explanatoryCommentLines: 13728, filesWithComments: 1748, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
 | prose | longMemberChainLines: 2400, deeplyIndentedLines: 2803, overlongLines: 1775, measurementIsHeuristic: True |
 | inventory | pages: 92, components: 131, orphanComponents: 6, averagePageLines: 272 |
 
-## Round 10 — under three percent
+## Round 11 — the api's last giants
 
-**Duplication fell to 2.81%** — through the 3% floor for the first time (4.16% at the start;
-3.20% a round ago). The client got the same cure the api did:
+The three files that had sat in the api's tail since the audit began all divided, clearing
+every remaining 500+ line file out of `api/Data` and `api/Features/*/Documents`:
 
-- **The seven Contracts namespaces the pages stamp most went global** (Ai, Commercial, Cqrs,
-  Procurement, RecordLinks, Requests, Xero), mirrored into `_Imports.razor` so razor tag
-  resolution and C# agree on one list, and 429 files dropped their redundant imports.
-  Verified on a clean build: zero RZ10012, all 434 tests green.
-- **The weekly plan's rows became CashflowEntryRow and CashflowGroupRow** — the ‹ ↺ › movement
-  cell and the supplier group's combined row as Features/WeeklyCashflow components, the group
-  rendering its open members through the host's one row template. WeeklyCashflow.razor
-  683 → 604.
-- **The cashflow twins now share one display module** (CellAmount, Signed, MonthLabel were
-  hand-written identically on both pages), and the forecast's SVG balance line became
-  ForecastBalanceChart. CashForecast.razor 701 → 665.
-- ProjectProgramme was assessed and left whole for a dedicated round: it is one Gantt over
-  its geometry partial — dividing it well means shaping chart components, not slicing markup.
+- **JpmsContext divided**: the DbSet catalogue (grouped by feature area, as its comments always
+  were) keeps the context file at 228 lines; OnModelCreating — the composite keys and the
+  pinned read-path indexes with their production history — is a 370-line Model partial. The
+  model text is unchanged, so the migrations snapshot is untouched, and the worker's compile
+  list gained the new file at write time (the round-1 lesson, now a habit).
+- **ValuationReportSnapshotRenderer (577 → 98) and RequestDocumentRenderer (523 → 61)** divided
+  at their own Sections/Helpers markers — WorkOrderPoRenderer's round-8 recipe, third and
+  fourth applications. RequestDocumentRenderer is worker-compiled; its partials joined the list.
+- **Assessed in depth, deliberately deferred**: XeroAllocation's allocation row is one mega-row
+  with four per-status variants over ~15 page members, and TriageQueue's Tagged panel leans on
+  the page's whole linking vocabulary. Both need a designed row-coordinator pass — round 12's
+  centrepiece, not a forced afternoon extraction.
 
 ## The journey so far
 
-| Figure | 22 Aug (v1) | R5 (v6) | R6 (v7) | R7 (v8) | R8 (v9) | R9 (v10) | R10 (v11) |
+| Figure | 22 Aug (v1) | R6 (v7) | R7 (v8) | R8 (v9) | R9 (v10) | R10 (v11) | R11 (v12) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Worst file (lines) | 4,961 | 1,101 | 1,029 | 1,016 | 958 | 958 | **954** |
-| Average page length | 544 | 283 | 279 | 275 | 275 | 274 | **272** |
-| Duplication | 4.16% | 3.41% | 3.39% | 3.41% | 3.44% | 3.20% | **2.81%** |
-| Total lines measured | — | — | — | — | 221,094 | 215,666 | **214,587** |
+| Worst file (lines) | 4,961 | 1,029 | 1,016 | 958 | 958 | 954 | **954** |
+| Average page length | 544 | 279 | 275 | 275 | 274 | 272 | **272** |
+| Duplication | 4.16% | 3.39% | 3.41% | 3.44% | 3.20% | 2.81% | **2.82%** |
 | `else` blocks | 1,087 | 1,182 | 1,182 | 1,182 | 1,182 | 1,182 | **1,182** |
 | Overlong function names | — | 44 | 44 | 44 | 44 | 44 | **44** |
-| Functions over 30 lines | — | 700 | 699 | 697 | 700 | 703 | **700** |
-| Files over 100 lines | 385 | 618 | 622 | 624 | 628 | 621 | **618** |
+| Functions over 30 lines | — | 699 | 697 | 700 | 703 | 700 | 704 † |
+| Files over 100 lines | 385 | 622 | 624 | 628 | 621 | 618 | 621 † |
 
-Every figure moved the right way or held. Files-over-100 is back to its round-4 level with a
-codebase that has since gained thirty components; functions-over-30 recovered the three the
-DoApplyAll division cost it.
+† The division signature, as every round a giant splits: five new 100–400-line partials where
+three 500–600-line files stood, and the heuristic re-counting what it can now see. The api no
+longer has a single file over 500 lines outside the generated migrations.
 
 ## Worst files by length
 
@@ -68,18 +66,20 @@ DoApplyAll division cost it.
 | jpms/Pages/ProfitSummary.razor | 736 |
 | jpms/Pages/CashForecast.razor | 665 |
 | jpms/Pages/WeeklyCashflow.razor | 604 |
-| api/Data/JpmsContext.cs | 592 |
 | jpms/Services/Excel/ExcelWorkbookWriter.cs | 589 |
-| api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.cs | 577 |
 | api/Features/Ai/Tools/AiCommercialTools.cs | 560 |
+| jpms/Pages/ProjectWorkOrders.razor | 548 |
+| jpms/Pages/TriageQueue.Outbox.cs | 520 |
 
-## Round 11, named
+## Round 12, named
 
-The two workbench giants keep the top: TriageQueue's email pane and XeroAllocation's allocation
-table are the row-family extractions the weekly plan just modelled (CashflowEntryRow is the
-template). ProjectProgramme's Gantt earns its dedicated chart-component round, and the api's
-remaining pair — JpmsContext (the entity map, divisible by feature area) and the two big
-renderers — round out the list.
+The worst-files table is now client markup top to bottom. Round 12 is the **workbench row
+round**, designed rather than sliced: XeroAllocation's allocation row wants a row coordinator
+(the per-line picks the RowCoding partial already holds, handed to a row component the way
+CashflowEntryRow models it), and TriageQueue's Tagged panel wants the page's linking vocabulary
+(RecordTypeOptions and its label family) promoted to a Features/Triage module first — the move
+that unblocked the compose pane in round 5. ProjectProgramme's Gantt chart components and
+ExcelWorkbookWriter round out the list.
 
 Full detail, including every offender list, is in `audit.json`; the gate ratchets against
 `baseline.json`, which this report accompanies.
