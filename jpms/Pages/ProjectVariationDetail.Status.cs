@@ -17,6 +17,8 @@ using Jewel.JPMS.Features.RecordLinks;
 using Jewel.JPMS.Features.Triage;
 using Jewel.JPMS.Features.Triage.Panels;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Pages;
 
 public partial class ProjectVariationDetail
@@ -239,7 +241,6 @@ public partial class ProjectVariationDetail
     }
 
 
-    private static string Money(decimal value) => value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     private VariationApprovePanel? editLinesPanel;
     private VariationApprovePanel? buildUpPanel;

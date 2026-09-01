@@ -505,8 +505,6 @@ else
 
     private decimal OrderTotal => Create.Lines.Sum(line => line.Amount ?? 0m);
 
-    private static string Money(decimal value) =>
-        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     // Email attachments that can actually be acted on: legacy snapshots without an id can't be
     // fetched from the mailbox, so they aren't offered.

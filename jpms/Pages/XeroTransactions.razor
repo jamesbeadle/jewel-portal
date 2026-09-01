@@ -84,8 +84,8 @@
             @if (activeView == View.Transactions)
             {
                 <p class="text-sm text-content-muted mb-4">
-                    @Filtered.Count shown · @Money(Filtered.Sum(t => Sign(t) * t.Total)) total (net of credit notes) ·
-                    @Money(Filtered.Sum(t => Sign(t) * t.AmountDue)) outstanding.
+                    @Filtered.Count shown · @WholeMoney(Filtered.Sum(t => Sign(t) * t.Total)) total (net of credit notes) ·
+                    @WholeMoney(Filtered.Sum(t => Sign(t) * t.AmountDue)) outstanding.
                     <span class="text-content-subtle">Click a row for its lines.</span>
                 </p>
 
@@ -129,8 +129,8 @@
                                     <td class="px-4 py-3 text-content-muted">@DistinctText(transaction.Lines.Select(l => l.Site))</td>
                                     <td class="px-4 py-3 text-content-muted hidden lg:table-cell">@DistinctText(transaction.Lines.Select(l => l.CostCode))</td>
                                     <td class="px-4 py-3 text-content-subtle">@transaction.Status</td>
-                                    <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell">@Money(transaction.SubTotal)</td>
-                                    <td class="px-4 py-3 text-right text-content font-medium">@Money(transaction.Total)</td>
+                                    <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell">@WholeMoney(transaction.SubTotal)</td>
+                                    <td class="px-4 py-3 text-right text-content font-medium">@WholeMoney(transaction.Total)</td>
                                 </tr>
                                 @if (expandedId == transaction.TransactionId)
                                 {
@@ -164,7 +164,7 @@
                                                                 <td class="px-2 py-1.5 text-content-muted">@AccountText(line)</td>
                                                                 <td class="px-2 py-1.5 text-content-muted">@(line.Site ?? "—")</td>
                                                                 <td class="px-2 py-1.5 text-content-muted">@(line.CostCode ?? "—")</td>
-                                                                <td class="px-2 py-1.5 text-right text-content">@Money(line.LineAmount)</td>
+                                                                <td class="px-2 py-1.5 text-right text-content">@WholeMoney(line.LineAmount)</td>
                                                             </tr>
                                                         }
                                                     </tbody>
@@ -187,11 +187,11 @@
                     <span class="text-content-subtle">
                         @if (AwaitingApprovalNet != 0)
                         {
-                            <text>Includes @Money(AwaitingApprovalNet) awaiting approval. </text>
+                            <text>Includes @WholeMoney(AwaitingApprovalNet) awaiting approval. </text>
                         }
                         @if (OtherExcludedNet != 0)
                         {
-                            <text>Drafts: @Money(OtherExcludedNet) excluded.</text>
+                            <text>Drafts: @WholeMoney(OtherExcludedNet) excluded.</text>
                         }
                     </span>
                 </p>
@@ -217,7 +217,7 @@
                                     {
                                         <td class="px-4 py-3 text-right text-content font-semibold">@MoneyOrDash(site.ForYear(year))</td>
                                     }
-                                    <td class="px-4 py-3 text-right text-content font-semibold">@Money(site.Total)</td>
+                                    <td class="px-4 py-3 text-right text-content font-semibold">@WholeMoney(site.Total)</td>
                                 </tr>
                                 @foreach (var costCode in site.CostCodes)
                                 {
@@ -227,7 +227,7 @@
                                         {
                                             <td class="px-4 py-2.5 text-right text-content-muted">@MoneyOrDash(costCode.ForYear(year))</td>
                                         }
-                                        <td class="px-4 py-2.5 text-right text-content-muted">@Money(costCode.Total)</td>
+                                        <td class="px-4 py-2.5 text-right text-content-muted">@WholeMoney(costCode.Total)</td>
                                     </tr>
                                 }
                             }
@@ -239,7 +239,7 @@
                                 {
                                     <td class="px-4 py-3 text-right text-content font-semibold">@MoneyOrDash(Breakdown.Sum(site => site.ForYear(year)))</td>
                                 }
-                                <td class="px-4 py-3 text-right text-content font-semibold">@Money(Breakdown.Sum(site => site.Total))</td>
+                                <td class="px-4 py-3 text-right text-content font-semibold">@WholeMoney(Breakdown.Sum(site => site.Total))</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -436,11 +436,9 @@
     private static string DateText(DateTime? date) =>
         date?.ToString("d MMM yyyy") ?? "—";
 
-    private static string Money(decimal value) =>
-        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     private static string MoneyOrDash(decimal value) =>
-        value == 0m ? "—" : Money(value);
+        value == 0m ? "—" : WholeMoney(value);
 
     // One workbook, one sheet per view — both exported regardless of which tab is
     // active, each reusing the page's own computed lists so the export matches the

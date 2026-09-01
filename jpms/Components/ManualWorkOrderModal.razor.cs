@@ -7,6 +7,8 @@ using Jewel.JPMS.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Components;
 
 public partial class ManualWorkOrderModal : IDisposable
@@ -431,5 +433,4 @@ public partial class ManualWorkOrderModal : IDisposable
     private static string Truncate(string value, int max) =>
         value.Length <= max ? value : value[..max] + "…";
 
-    private static string Money(decimal value) => WorkOrderForm.Money(value);
 }

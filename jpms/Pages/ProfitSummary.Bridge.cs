@@ -18,6 +18,8 @@ using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Projects;
 using Jewel.JPMS.Features.Xero;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Pages;
 
 public partial class ProfitSummary

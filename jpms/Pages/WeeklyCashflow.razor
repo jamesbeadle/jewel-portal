@@ -1334,8 +1334,6 @@
         </p>
     };
 
-    private static string Money(decimal value) =>
-        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     // Grid cells drop the pennies: fourteen columns of £1,234.56 is noise. Totals underneath
     // stay exact — the display rounds, the arithmetic never does.

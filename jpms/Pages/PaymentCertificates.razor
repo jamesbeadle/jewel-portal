@@ -64,7 +64,7 @@
                             <div class="px-4 py-3 bg-surface-raised border-b border-line flex items-baseline justify-between gap-3">
                                 <p class="text-sm font-semibold text-content">@group.Title</p>
                                 <p class="text-xs text-content-subtle">
-                                    @group.Rows.Count certificate@(group.Rows.Count == 1 ? "" : "s")@(group.Total is { } total ? $" · {Money(total)} certified" : "")
+                                    @group.Rows.Count certificate@(group.Rows.Count == 1 ? "" : "s")@(group.Total is { } total ? $" · {WholeMoney(total)} certified" : "")
                                 </p>
                             </div>
                             <table class="w-full text-sm">
@@ -88,7 +88,7 @@
                                             <td class="px-4 py-2.5 whitespace-nowrap text-content">@certificate.IssuedDate.LocalDateTime.ToString("d MMM yyyy")</td>
                                             <td class="px-4 py-2.5 text-content">@ClaimLabel(certificate)</td>
                                             <td class="px-4 py-2.5 text-right tabular-nums text-content">
-                                                @(certificate.CertifiedAmount is { } amount ? Money(amount) : "—")
+                                                @(certificate.CertifiedAmount is { } amount ? WholeMoney(amount) : "—")
                                             </td>
                                             <td class="px-4 py-2.5 text-right whitespace-nowrap">
                                                 @if (IsPdf(certificate))
@@ -227,8 +227,6 @@
         (certificate.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase)
         || certificate.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
 
-    private static string Money(decimal value) =>
-        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     public void Dispose()
     {

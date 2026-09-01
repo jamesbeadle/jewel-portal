@@ -489,9 +489,6 @@
 
     private static string AddBack(decimal value) => value == 0m ? "—" : $"+ {Money(value)}";
 
-    private static string Money(decimal value) =>
-        value.ToString("C2",
-            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     private static string Pct(decimal value) =>
         value.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("en-GB")) + "%";

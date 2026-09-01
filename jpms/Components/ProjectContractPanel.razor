@@ -450,8 +450,8 @@
     private static IEnumerable<(string Label, string Value)> Summary(ProjectContract contract)
     {
         yield return ("Form", contract.FormDisplayName);
-        yield return ("Contract sum", Money(contract.ContractSum));
-        yield return ("LADs", $"{Money(contract.LiquidatedDamagesPerWeek)} / week");
+        yield return ("Contract sum", WholeMoney(contract.ContractSum));
+        yield return ("LADs", $"{WholeMoney(contract.LiquidatedDamagesPerWeek)} / week");
         yield return ("Employer", Text(contract.EmployerName));
         yield return ("Contract administrator", Text(contract.ContractAdministratorName));
         yield return ("Contractor", Text(contract.ContractorName));
@@ -465,7 +465,6 @@
         yield return ("Daywork", $"{Pct(contract.DayworkLabourPercent)} labour · {Pct(contract.DayworkMaterialsPercent)} materials · {Pct(contract.DayworkPlantPercent)} plant");
     }
 
-    private static string Money(decimal value) => value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     private static string Pct(decimal value) => $"{value:0.##}%";
 

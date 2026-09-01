@@ -2,6 +2,8 @@ using System.Globalization;
 using Jewel.JPMS.Contracts.ClientPortal;
 using Jewel.JPMS.Models;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Features.ClientPortal;
 
 /// <summary>Display helpers shared by the client portal's variation views.</summary>

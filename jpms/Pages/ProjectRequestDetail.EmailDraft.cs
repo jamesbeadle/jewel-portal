@@ -16,6 +16,8 @@ using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.RecordLinks;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Pages;
 
 public partial class ProjectRequestDetail
@@ -90,8 +92,6 @@ public partial class ProjectRequestDetail
     private static string Date(DateTimeOffset? value) =>
         value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
 
-    private static string Money(decimal value) =>
-        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
 
     private static string StatusClass(RequestStatus status) => status switch

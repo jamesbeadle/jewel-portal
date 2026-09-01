@@ -13,6 +13,8 @@ using Jewel.JPMS.Services.Navigation;
 using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Features.Projects;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Pages;
 
 public partial class XeroAllocation
@@ -686,8 +688,6 @@ public partial class XeroAllocation
 
     private static string DateText(DateTime? date) => date?.ToString("d MMM yyyy") ?? "—";
 
-    private static string Money(decimal value) =>
-        value.ToString("C2", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     public void Dispose()
     {

@@ -273,8 +273,6 @@
         date?.ToString("d MMM yyyy") ?? "—";
 
     // Pence shown: this page gets reconciled against Xero's own report to the penny.
-    private static string Money(decimal value) =>
-        value.ToString("C", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     // One workbook, two sheets, both computed from the same maths as the page so the export
     // can never disagree with the screen.

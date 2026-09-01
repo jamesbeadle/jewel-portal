@@ -13,6 +13,8 @@ using Jewel.JPMS.Services.Navigation;
 using Jewel.JPMS.Contracts.Xero;
 using Jewel.JPMS.Features.Projects;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Pages;
 
 public partial class XeroAllocation

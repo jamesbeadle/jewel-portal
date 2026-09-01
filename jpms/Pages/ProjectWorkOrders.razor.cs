@@ -18,6 +18,8 @@ using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Projects;
 using Jewel.JPMS.Features.Subcontractors;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Pages;
 
 public partial class ProjectWorkOrders
@@ -420,9 +422,6 @@ public partial class ProjectWorkOrders
     }
 
 
-    private static string Money(decimal value) =>
-        value.ToString("C2",
-            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     protected override async Task OnInitializedAsync()
     {

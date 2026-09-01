@@ -184,7 +184,6 @@
         finally { busy = false; }
     }
 
-    private static string Money(decimal value) => value.ToString("C2", Gb);
 
     // Same register, same order (newest first — Snapshots is already sorted that way).
     private ExcelWorkbook? BuildExportWorkbook(bool _)

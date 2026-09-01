@@ -77,7 +77,7 @@
                         }
                     </td>
                     <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell whitespace-nowrap">
-                        @(record.Value is null ? "—" : Money(record.Value.Value))
+                        @(record.Value is null ? "—" : WholeMoney(record.Value.Value))
                     </td>
                     <td class="px-4 py-3" @onclick:stopPropagation="true">
                         @if (CanChangeStatus)
@@ -241,8 +241,6 @@
     private static string Date(DateTimeOffset? value) =>
         value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
 
-    private static string Money(decimal value) =>
-        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     private static string StatusLabel(RequestStatus status) => status.DisplayName();
 

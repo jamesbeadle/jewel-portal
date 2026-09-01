@@ -1162,7 +1162,6 @@ else
         return centre is null ? code : $"{code} — {centre.Name}";
     }
 
-    private static string Money(decimal v) => v.ToString("C2", Gb);
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
     // Signed for the "what changed" delta: "+20%", "-5%" (negatives already carry their sign).

@@ -4,6 +4,8 @@ using Jewel.JPMS.Models;
 using Jewel.JPMS.Services.Excel;
 using static Jewel.JPMS.Features.Commercial.ValuationExportStyles;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Features.Commercial;
 
 /// <summary>One line of a pending variation's staged build-up — the client-agreed pricing captured before approval.</summary>

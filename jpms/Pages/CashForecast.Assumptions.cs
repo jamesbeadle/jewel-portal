@@ -20,6 +20,8 @@ using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Projects;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Pages;
 
 public partial class CashForecast
@@ -88,9 +90,6 @@ public partial class CashForecast
 
     private static string AddBack(decimal value) => value == 0m ? "—" : $"+ {Money(value)}";
 
-    private static string Money(decimal value) =>
-        value.ToString("C2",
-            System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     // Forecast cells drop the pennies: twelve columns of £1,234.56 is noise, and the invariant
     // is checked on the exact decimals underneath, never on what is displayed.

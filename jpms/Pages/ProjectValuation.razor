@@ -647,7 +647,6 @@
     private bool showConfirmNudge;
 
     private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
-    private static string Money(decimal v) => v.ToString("C2", Gb);
     private static string PctText(decimal v) => v.ToString("0.##", Gb) + "%";
 
     private IReadOnlyList<ValuationClaim> Claims => Store.ClaimsFor(ProjectId);

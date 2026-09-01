@@ -18,6 +18,8 @@ using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Projects;
 using Jewel.JPMS.Features.Xero;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Pages;
 
 public partial class ProfitSummary
@@ -27,8 +29,6 @@ public partial class ProfitSummary
     private static string ProfitClass(decimal value) =>
         value == 0m ? "text-content-muted" : value > 0m ? "text-positive" : "text-negative";
 
-    private static string Money(decimal value) =>
-        value < 0m ? $"-£{Math.Abs(value):N0}" : $"£{value:N0}";
 
     private static string SignedMoney(decimal value) =>
         value == 0m ? "—" : value > 0m ? $"+£{value:N0}" : $"-£{Math.Abs(value):N0}";

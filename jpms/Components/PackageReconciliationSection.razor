@@ -78,27 +78,27 @@
                                           title="@($"Locked {row.LockedAt?.ToString("dd MMM yyyy")} — figures frozen; profit / loss realised against actual invoiced cost")">Locked</span>
                                 }
                             </td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.SalesValue)</td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap text-content">@WholeMoney(row.SalesValue)</td>
                             <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted"
                                 title="@(row.SalesValue == 0m ? "" : $"{Math.Round(row.ClaimedToDate / row.SalesValue * 100m, 1)}% of the package's sales value claimed")">
-                                @Money(row.ClaimedToDate)
+                                @WholeMoney(row.ClaimedToDate)
                             </td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line text-content">@Money(row.TargetCost)</td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(row.WoCommitted)</td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line text-content">@WholeMoney(row.TargetCost)</td>
+                            <td class="px-4 py-3 text-right whitespace-nowrap text-content">@WholeMoney(row.WoCommitted)</td>
                             <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted"
                                 title="@(row.WoCommitted == 0m ? "" : $"{Math.Round(row.InvoicedToDate / row.WoCommitted * 100m, 1)}% of committed orders invoiced")">
-                                @Money(row.InvoicedToDate)
+                                @WholeMoney(row.InvoicedToDate)
                             </td>
                             @if (row.IsLocked)
                             {
                                 <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted" title="Locked — profit / loss realised as sales less invoiced cost">—</td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap font-medium @(row.ProfitLoss == 0m ? "text-content-muted" : row.ProfitLoss > 0m ? "text-positive" : "text-negative")">@Money(row.ProfitLoss)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap font-medium @(row.ProfitLoss == 0m ? "text-content-muted" : row.ProfitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(row.ProfitLoss)</td>
                             }
                             else
                             {
-                                <td class="px-4 py-3 text-right whitespace-nowrap @(row.Drawdown < 0m ? "text-negative" : row.Drawdown == 0m ? "text-content-muted" : "text-content")">@Money(row.Drawdown)</td>
+                                <td class="px-4 py-3 text-right whitespace-nowrap @(row.Drawdown < 0m ? "text-negative" : row.Drawdown == 0m ? "text-content-muted" : "text-content")">@WholeMoney(row.Drawdown)</td>
                                 <td class="px-4 py-3 text-right whitespace-nowrap @(row.Margin < 0m ? "text-negative" : "text-content")"
-                                    title="Forecast buying gain — on lock, profit / loss is realised as sales value less actual invoiced cost">@Money(row.Margin)</td>
+                                    title="Forecast buying gain — on lock, profit / loss is realised as sales value less actual invoiced cost">@WholeMoney(row.Margin)</td>
                             }
                             <td class="px-4 py-3 text-right whitespace-nowrap">
                                 @if (CanManage)
@@ -143,8 +143,8 @@
         <button type="button" @onclick="() => showUnallocated = !showUnallocated"
                 class="text-sm text-content-subtle hover:text-content underline underline-offset-4">
             @(showUnallocated ? "Hide" : "Show") not-yet-packaged
-            (@UnpackagedOrders.Count work orders · @Money(UnpackagedOrders.Sum(detail => detail.Lines.Sum(line => line.LineTotal))) ·
-            @Money(LinesWithRemaining.Sum(entry => entry.Remaining)) sales unassigned)
+            (@UnpackagedOrders.Count work orders · @WholeMoney(UnpackagedOrders.Sum(detail => detail.Lines.Sum(line => line.LineTotal))) ·
+            @WholeMoney(LinesWithRemaining.Sum(entry => entry.Remaining)) sales unassigned)
         </button>
         @if (showUnallocated)
         {
@@ -161,7 +161,7 @@
                         {
                             <p class="text-sm text-content-muted">
                                 <span class="font-mono text-[11px] text-content-subtle">@($"WO-{detail.Order.Number:0000}")</span>
-                                @detail.SubcontractorName · @Money(detail.Lines.Sum(line => line.LineTotal))
+                                @detail.SubcontractorName · @WholeMoney(detail.Lines.Sum(line => line.LineTotal))
                             </p>
                         }
                     }
@@ -178,7 +178,7 @@
                         {
                             <p class="text-sm text-content-muted" title="@entry.Line.Description">
                                 <span class="font-mono text-[11px] text-content-subtle">@entry.Line.CostCode</span>
-                                @Truncate(entry.Line.Description, 44) · @Money(entry.Remaining) remaining
+                                @Truncate(entry.Line.Description, 44) · @WholeMoney(entry.Remaining) remaining
                             </p>
                         }
                         @if (LinesWithRemaining.Count > 30)
@@ -384,6 +384,4 @@
     private static string Truncate(string value, int max) =>
         value.Length <= max ? value : value[..max] + "…";
 
-    private static string Money(decimal value) =>
-        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 }

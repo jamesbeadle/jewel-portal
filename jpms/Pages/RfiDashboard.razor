@@ -111,7 +111,7 @@ else
                                     }
                                 </td>
                                 <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell whitespace-nowrap">
-                                    @(record.Value is null ? "—" : Money(record.Value.Value))
+                                    @(record.Value is null ? "—" : WholeMoney(record.Value.Value))
                                 </td>
                                 <td class="px-4 py-3">
                                     <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">
@@ -218,8 +218,6 @@ else
     private static string Date(DateTimeOffset? value) =>
         value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
 
-    private static string Money(decimal value) =>
-        value.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 
     private static string StatusLabel(RequestStatus status) => status.DisplayName();
 

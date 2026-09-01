@@ -1,6 +1,8 @@
 using Jewel.JPMS.Services.Excel;
 using static Jewel.JPMS.Features.Commercial.ValuationExportStyles;
 
+using static Jewel.JPMS.MoneyFormats;
+
 namespace Jewel.JPMS.Features.Commercial;
 
 /// <summary>The rows of one bill section on a statement tab: column headings, one row per line, the section total.</summary>
