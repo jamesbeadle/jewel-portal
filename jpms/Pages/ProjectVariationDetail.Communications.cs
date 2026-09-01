@@ -48,7 +48,6 @@ public partial class ProjectVariationDetail
     private bool CanManage => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.QuantitySurveyor);
 
-    private IReadOnlyList<Subcontractor> Subs => Subcontractors.All();
 
     // The approved variation's build-up lives on the valuation report; until its lines land,
     // ApprovedCostCentres falls back to the order's single primary code.
@@ -88,7 +87,6 @@ public partial class ProjectVariationDetail
         {
             orderLoaded = false;
             editLinesModalOpen = false;
-            buildUpModalOpen = false;
             await ReloadAsync();
         }
     }

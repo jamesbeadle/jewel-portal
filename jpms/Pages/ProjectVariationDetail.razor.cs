@@ -38,7 +38,6 @@ public partial class ProjectVariationDetail
     private bool returningToQuoting;
     private bool rejectingOrder;   // post-approval reject (reverses commercial writes) — inline panel
     private bool decliningOrder;   // pre-approval decline (plain status move) — confirm modal
-    private bool deletingOrder;
     private bool editLinesModalOpen;
 
     // The approved variation's current lines, shaped for the edit panel to seed its rows.
@@ -61,8 +60,6 @@ public partial class ProjectVariationDetail
         VariationOrderStatus.Approved, VariationOrderStatus.Rejected
     };
 
-    private string selSubId = "";
-    private string selValue = "";
 
     // ---- Originating-request repair: the candidates the panel offers ----
     private IReadOnlyList<VariationOrder> projectQuotes = Array.Empty<VariationOrder>();

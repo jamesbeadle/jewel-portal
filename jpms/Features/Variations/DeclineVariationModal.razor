@@ -1,0 +1,45 @@
+@namespace Jewel.JPMS.Features.Variations
+
+@* Declining a variation the client never approved is a plain status move — nothing comes off
+   the Valuation Report, no omit is recorded, no budget is released — but it IS terminal:
+   Rejected has no way back, so the pill disappears once it is reached. That deserves a
+   deliberate confirm rather than a one-click move, which is what this modal is. The
+   post-approval reject keeps its own inline panel, because it reverses real commercial writes
+   and needs to say so next to the figures it will change. *@
+<Modal IsOpen="IsOpen"
+       Title="@($"Decline {Order.DisplayNumber}?")"
+       ConfirmLabel="@(Busy ? "Declining…" : "Decline variation")"
+       CancelLabel="Keep it open"
+       ConfirmDisabled="@Busy"
+       OnCancel="() => IsOpenChanged.InvokeAsync(false)"
+       OnConfirm="OnConfirm"
+       Class="max-w-md">
+    <div class="space-y-3">
+        @if (Error is not null)
+        {
+            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</div>
+        }
+        <p class="text-sm text-content">
+            <span class="font-mono">@Order.DisplayNumber</span> — @Order.Title
+        </p>
+        <p class="text-sm text-content-subtle">
+            Closes the variation as <span class="text-content font-medium">Rejected</span>: the client
+            declined it, or it has been withdrawn. It stays on the register for the record, but nothing
+            commercial is written — no line reaches the Valuation Report and no budget is committed.
+        </p>
+        <p class="text-xs text-content-subtle">
+            Rejected is the end of the road for this variation — it can't be reopened. If the work is
+            still live, leave it where it is instead.
+        </p>
+    </div>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public VariationOrder Order { get; set; } = default!;
+    /// <summary>Bound: the status pill's "Rejected" pick opens it.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+}

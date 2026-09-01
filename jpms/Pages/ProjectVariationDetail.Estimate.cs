@@ -32,8 +32,6 @@ public partial class ProjectVariationDetail
         finally { busy = false; }
     }
 
-    private void OnSubChanged(ChangeEventArgs e) => selSubId = e.Value?.ToString() ?? "";
-
     private async Task ApproveWithLines(VariationApprovePanel.ApproveRequest request)
     {
         if (busy) return;

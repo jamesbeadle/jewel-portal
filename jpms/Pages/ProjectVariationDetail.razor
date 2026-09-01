@@ -266,8 +266,7 @@ else
                            ShowFooter="false"
                            OnCancel="CloseEditLines"
                            Class="max-w-3xl">
-                        <VariationApprovePanel @ref="editLinesPanel"
-                                               ShowHeading="false"
+                        <VariationApprovePanel ShowHeading="false"
                                                InitialLines="@CurrentLineInputs"
                                                SubmitLabel="Save lines"
                                                HelpOverride="Editing re-prices these lines on the Valuation Report and moves the CVR and cost-centre budgets by the difference. Nothing else changes."
@@ -278,199 +277,24 @@ else
                 }
                 else if (CanManage && order.Status is VariationOrderStatus.Quoting or VariationOrderStatus.Issued or VariationOrderStatus.AwaitingArchitectInstruction)
                 {
-                    @* Approval runs from either pre-approved status. With a recorded tender (a
-                       subcontractor and agreed value) this is the normal end of the pipeline;
-                       without one it is a MANUAL approval — the route for historic (seeded) and
-                       client-instructed variations that never tendered. The write-through
-                       (Valuation Report, CVR, cost-centre budgets) is identical either way. The
-                       build-up itself is captured in a modal (VariationApprovePanel) — the sidebar
-                       is too narrow for the line table. *@
-                    var isManualApproval = string.IsNullOrEmpty(order.SelectedSubcontractorId);
-                    <div class="panel p-5 space-y-3">
-                        <h3 class="eyebrow">@(isManualApproval ? "Approve manually & raise Variation Order" : "Approve & raise Variation Order")</h3>
-                        <p class="text-xs text-content-subtle">
-                            Build the variation up from priced lines — one per cost centre — then approve. Each line writes onto
-                            the Valuation Report and commits its own cost centre's budget.
-                        </p>
-                        <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="() => approveModalOpen = true">
-                            @(isManualApproval ? "Approve manually & raise VO…" : "Approve & raise VO…")
-                        </button>
-                    </div>
-
-                    <Modal IsOpen="approveModalOpen"
-                           Title="@($"Approve {order.Reference} — {order.Title}")"
-                           ShowFooter="false"
-                           OnCancel="@(() => approveModalOpen = false)"
-                           Class="max-w-3xl">
-                        @* Pre-seeded from the staged agreed build-up when there is one, so approval
-                           is a check of the agreed lines rather than a retype of them. *@
-                        <VariationApprovePanel IsManual="@isManualApproval"
-                                               ShowHeading="false"
-                                               EstimatedValue="order.EstimatedValue"
-                                               DefaultDescription="@order.Title"
-                                               InitialLines="@order.DraftLines"
-                                               Busy="@busy"
-                                               OnApprove="ApproveWithLines" />
-                    </Modal>
-
-                    @* The agreed build-up, STAGED before approval: the client-agreed priced lines
-                       (from the agreed spreadsheet, the client's email — or the assistant reading
-                       them) captured now so the estimate reads the agreed figure and approval
-                       opens pre-seeded. Nothing reaches the Valuation Report until approval. *@
-                    <div class="panel p-5 space-y-3">
-                        <h3 class="eyebrow">Agreed build-up (staged)</h3>
-                        @if (order.DraftLines is { Count: > 0 } staged)
-                        {
-                            <div class="space-y-1">
-                                @foreach (var line in staged)
-                                {
-                                    <div class="flex justify-between gap-3 text-sm">
-                                        <span class="text-content truncate" title="@line.Description">
-                                            <span class="font-mono text-content-subtle">@line.CostCode</span> @line.Description
-                                        </span>
-                                        <span class="font-mono whitespace-nowrap">@MoneyPennies(line.Quantity * line.Rate)</span>
-                                    </div>
-                                }
-                                <div class="flex justify-between text-sm pt-1 border-t border-line">
-                                    <span class="text-content-subtle">Staged total (the estimate)</span>
-                                    <span class="font-mono font-semibold">@MoneyPennies(staged.Sum(line => line.Quantity * line.Rate))</span>
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <p class="text-xs text-content-subtle">
-                                Nothing staged yet. Capture the client-agreed lines here — the total becomes the estimate
-                                and the approve modal opens with them filled in.
-                            </p>
-                        }
-                        <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="OpenBuildUp">
-                            @(order.DraftLines is { Count: > 0 } ? "Edit staged build-up…" : "Stage agreed build-up…")
-                        </button>
-                    </div>
-
-                    <Modal IsOpen="buildUpModalOpen"
-                           Title="@($"Agreed build-up — {order.DisplayNumber}")"
-                           ShowFooter="false"
-                           OnCancel="CloseBuildUp"
-                           Class="max-w-3xl">
-                        <VariationApprovePanel @ref="buildUpPanel"
-                                               ShowHeading="false"
-                                               InitialLines="@order.DraftLines"
-                                               EstimatedValue="order.EstimatedValue"
-                                               DefaultDescription="@order.Title"
-                                               SubmitLabel="Stage build-up"
-                                               HelpOverride="Stages the client-agreed lines on this variation: their total becomes the estimate and the approve modal opens pre-filled with them. Nothing is written to the Valuation Report until approval."
-                                               Busy="@busy"
-                                               SubmitError="@buildUpError"
-                                               OnApprove="StageBuildUp" />
-                        <details class="mt-4" open="@buildUpNarrativesOpen">
-                            <summary class="text-sm text-content-muted cursor-pointer select-none" @onclick="() => buildUpNarrativesOpen = !buildUpNarrativesOpen" @onclick:preventDefault="true">
-                                VO document sections (commercial basis, programme impact, exclusions)
-                            </summary>
-                            <div class="mt-3 space-y-3">
-                                <div>
-                                    <label class="eyebrow block mb-1">Commercial basis</label>
-                                    <textarea class="field min-h-[4rem]" value="@buildUpCommercialBasis" @oninput="e => { buildUpCommercialBasis = e.Value?.ToString() ?? string.Empty; }"></textarea>
-                                </div>
-                                <div>
-                                    <label class="eyebrow block mb-1">Programme impact</label>
-                                    <textarea class="field min-h-[4rem]" value="@buildUpProgrammeImpact" @oninput="e => { buildUpProgrammeImpact = e.Value?.ToString() ?? string.Empty; }"></textarea>
-                                </div>
-                                <div>
-                                    <label class="eyebrow block mb-1">Exclusions</label>
-                                    <textarea class="field min-h-[4rem]" value="@buildUpExclusions" @oninput="e => { buildUpExclusions = e.Value?.ToString() ?? string.Empty; }"></textarea>
-                                </div>
-                            </div>
-                        </details>
-                    </Modal>
+                    <VariationApproveOffer Order="order" Busy="busy"
+                                           @bind-ModalOpen="approveModalOpen"
+                                           OnApprove="ApproveWithLines" />
+                    <StagedBuildUpPanel @key="VariationOrderId" Order="order" Busy="busy"
+                                        OnStaged="OnBuildUpStaged" />
                 }
 
                 @if (CanManage && ApprovedOrder is null)
                 {
-                    @* The agreed tender: who the works will be instructed to if the variation is
-                       approved, and the value they agreed. Tendering itself happens on the project's
-                       bid packages (separate records since 2026-08-12) — this simply records the
-                       outcome on the sales-side document. *@
-                    <div class="panel p-5 space-y-3">
-                        <h3 class="eyebrow">Record agreed tender</h3>
-                        <div>
-                            <label class="eyebrow block mb-1">Subcontractor</label>
-                            <select class="field" value="@selSubId" @onchange="OnSubChanged">
-                                <option value="">— Choose —</option>
-                                @foreach (var sub in Subs)
-                                {
-                                    <option value="@sub.SubcontractorId">@sub.CompanyName</option>
-                                }
-                            </select>
-                        </div>
-                        <FormField Label="Agreed value (£)" Value="@selValue" OnChange="v => selValue = v" InputType="number" />
-                        <button type="button" class="btn-primary w-full" disabled="@busy" @onclick="SelectTender">Record agreed tender</button>
-                    </div>
-                }
-
-                @if (CanManage && ApprovedOrder is null)
-                {
-                    <div class="panel p-5">
-                        @if (!deletingOrder)
-                        {
-                            <button type="button" class="w-full text-xs text-content-subtle hover:text-negative underline underline-offset-2"
-                                    disabled="@busy" @onclick="() => deletingOrder = true">
-                                Wrong variation? Delete it…
-                            </button>
-                        }
-                        else
-                        {
-                            <p class="text-xs text-content-subtle mb-2">
-                                Permanently deletes <span class="font-mono">@order.Reference</span>. Bid packages are their own
-                                records and are not deleted with it. Nothing is on the Valuation Report yet, so no commercial
-                                records change — but this can't be undone.
-                            </p>
-                            <div class="flex gap-2">
-                                <button type="button" class="btn-neutral w-full text-negative" disabled="@busy" @onclick="DeleteOrder">
-                                    @(busy ? "Deleting…" : "Confirm — delete variation")
-                                </button>
-                                <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => deletingOrder = false">Keep</button>
-                            </div>
-                        }
-                    </div>
+                    <RecordAgreedTenderPanel VariationOrderId="@VariationOrderId" Busy="busy"
+                                             OnRecorded="OnTenderRecorded" />
+                    <DeleteVariationPanel Reference="@order.Reference" Busy="busy" OnDelete="DeleteOrder" />
                 }
             </div>
         </div>
 
-        @* Declining a variation the client never approved is a plain status move — nothing comes
-           off the Valuation Report, no omit is recorded, no budget is released — but it IS terminal:
-           Rejected has no way back, so the pill disappears once it is reached. That deserves a
-           deliberate confirm rather than a one-click move, which is what this modal is. The
-           post-approval reject keeps its own inline panel, because it reverses real commercial
-           writes and needs to say so next to the figures it will change. *@
-        <Modal IsOpen="decliningOrder"
-               Title="@($"Decline {order.DisplayNumber}?")"
-               ConfirmLabel="@(busy ? "Declining…" : "Decline variation")"
-               CancelLabel="Keep it open"
-               ConfirmDisabled="@busy"
-               OnCancel="() => decliningOrder = false"
-               OnConfirm="RejectOrder"
-               Class="max-w-md">
-            <div class="space-y-3">
-                @if (error is not null)
-                {
-                    <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</div>
-                }
-                <p class="text-sm text-content">
-                    <span class="font-mono">@order.DisplayNumber</span> — @order.Title
-                </p>
-                <p class="text-sm text-content-subtle">
-                    Closes the variation as <span class="text-content font-medium">Rejected</span>: the client
-                    declined it, or it has been withdrawn. It stays on the register for the record, but nothing
-                    commercial is written — no line reaches the Valuation Report and no budget is committed.
-                </p>
-                <p class="text-xs text-content-subtle">
-                    Rejected is the end of the road for this variation — it can't be reopened. If the work is
-                    still live, leave it where it is instead.
-                </p>
-            </div>
-        </Modal>
+        <DeclineVariationModal Order="order" @bind-IsOpen="decliningOrder" Busy="busy" Error="@error"
+                               OnConfirm="RejectOrder" />
     </ProjectPageShell>
 }
 

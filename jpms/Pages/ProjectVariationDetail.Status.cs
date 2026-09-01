@@ -192,37 +192,9 @@ public partial class ProjectVariationDetail
         finally { busy = false; }
     }
 
-    private async Task SelectTender()
-    {
-        if (busy) return;
-        error = null;
-        if (string.IsNullOrWhiteSpace(selSubId)) { error = "Choose a subcontractor."; return; }
-        decimal? value = decimal.TryParse(selValue, out var parsed) ? parsed : null;
-        try
-        {
-            busy = true;
-            order = await Variations.SelectTenderAsync(VariationOrderId, selSubId, value);
-            await ReloadAsync();
-        }
-        catch { error = "Couldn't record the agreed tender. Please try again."; }
-        finally { busy = false; }
-    }
-
     private string SelectedSubName()
     {
         if (order?.SelectedSubcontractorId is null) return "—";
         return Subcontractors.Find(order.SelectedSubcontractorId)?.CompanyName ?? order.SelectedSubcontractorId;
     }
-
-
-
-    private VariationApprovePanel? editLinesPanel;
-    private VariationApprovePanel? buildUpPanel;
-    private bool buildUpModalOpen;
-    private bool buildUpNarrativesOpen;
-    private string? buildUpError;
-    private string buildUpCommercialBasis = "";
-    private string buildUpProgrammeImpact = "";
-    private string buildUpExclusions = "";
-
 }
