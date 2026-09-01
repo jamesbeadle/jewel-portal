@@ -40,18 +40,11 @@
     each verified by reading the categories back. Nothing about un-triaged mail is stored in the database.
 *@
 
-@*
-    Shared message body + attachments, used by both the Queue and Discarded detail panes. Declared
-    before first use; reads the live `detail` / `selected` fields each time it is rendered.
-*@
 @{
-    // Small paperclip glyph flagging an email as carrying attachments — shown on list rows
-    // (queue / discarded / tagged) and thread panel rows. Inherits the row's text colour.
-
     @*
-        The four page-owned pane contents for the workspace (the other four panes own their own
-        data). Declared here as fragments — like MessageHeader/MessageBody above — so every one
-        reads the page's live fields and the page stays the single orchestrator it always was.
+        The two page-owned pane contents left in the workspace (every other pane is a component
+        that owns its data or takes an explicit interface): thin dispatchers on `view`, so the
+        page stays the single orchestrator it always was.
     *@
 
     RenderFragment InboxPaneContent =@<div class="space-y-4 lg:pr-1">

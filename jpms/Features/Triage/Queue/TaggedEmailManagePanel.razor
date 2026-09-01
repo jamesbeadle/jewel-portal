@@ -147,6 +147,5 @@
     [Parameter] public EventCallback<ChangeEventArgs> OnRecordChanged { get; set; }
     [Parameter] public EventCallback OnAddLink { get; set; }
 
-    // The thread's pathway badge — derived from the email's own bucket, not passed in.
     private TriagePathway? Pathway => TriagePathways.FromBucket(Selected.Bucket);
 }

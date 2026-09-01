@@ -1,7 +1,5 @@
 @namespace Jewel.JPMS.Features.Triage.Queue
 
-@* The Discarded tab's inbox list: the "JPMS/Discarded"-tagged pile, plain rows and a pager —
-   restore lives on the open email, not the list. *@
 <LoadGate IsLoading="@(!Arrived)" Prominent="true" Label="Loading discarded emails">
     @if (LoadError is not null && Items.Count == 0)
     {
