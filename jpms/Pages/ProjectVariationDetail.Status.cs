@@ -176,30 +176,19 @@ public partial class ProjectVariationDetail
         finally { busy = false; }
     }
 
-    private void StartReviseValue()
+    // Answers whether the revision took — the panel keeps its editor open on a refusal.
+    private async Task<bool> ReviseVoValue(decimal value)
     {
-        reviseValue = order?.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
-        revisingValue = true;
+        if (busy || order is null) return false;
         error = null;
-    }
-
-    private async Task ReviseVoValue()
-    {
-        if (busy || order is null) return;
-        error = null;
-        if (!decimal.TryParse(reviseValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value))
-        {
-            error = "Enter a valid revised value.";
-            return;
-        }
         try
         {
             busy = true;
             order = await Variations.ReviseVariationOrderValueAsync(VariationOrderId, value);
-            revisingValue = false;
             await ReloadAsync();
+            return true;
         }
-        catch { error = "Couldn't revise the variation order value. Please try again."; }
+        catch { error = "Couldn't revise the variation order value. Please try again."; return false; }
         finally { busy = false; }
     }
 

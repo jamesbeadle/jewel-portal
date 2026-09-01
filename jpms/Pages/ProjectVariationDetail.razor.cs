@@ -22,9 +22,6 @@ public partial class ProjectVariationDetail
     private Request? request; // originating request, for the lineage bar
 
 
-    private bool revisingValue;
-    private string reviseValue = "";
-
     // ---- Retitle -------------------------------------------------------------------------------
     // Editing the title in place, at any stage. Held apart from the approve/revise flows on purpose:
     // this moves the wording and nothing else, so it can never be the thing that quietly shifted a

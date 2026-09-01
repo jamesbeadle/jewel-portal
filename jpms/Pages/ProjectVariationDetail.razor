@@ -246,117 +246,20 @@ else
                 @if (ApprovedOrder is not null)
                 {
                     var approved = ApprovedOrder!;
-                    @* The approved-state section of this one record — not a second document.
-                       The id anchors the pill's Reject / Return-to-quoting routes, which scroll here
-                       and flash the panel (jpmsFocusElement) so the click lands visibly. *@
-                    <div id="variation-order" class="panel p-5 space-y-3">
-                        <h3 class="eyebrow">Approved figures</h3>
-                        <div class="text-sm text-content flex items-center">
-                            <span class="font-mono font-semibold">@(approved.VariationRef ?? approved.DisplayNumber)</span>
-                        </div>
-                        <div class="flex justify-between text-sm"><span class="text-content-subtle">Value</span><span>@Money(approved.Value)</span></div>
-                        @* The cost-centre split is read off the valuation report's lines, so it waits
-                           for them: one centre that quietly becomes three is the same lie as a £0. *@
-                        <LoadGate IsLoading="@(!ValuationLinesReady)" Label="Loading cost centres">
-                        @{ var centres = ApprovedCostCentres; }
-                        <div class="flex justify-between text-sm gap-3">
-                            <span class="text-content-subtle whitespace-nowrap">Cost @(centres.Count > 1 ? "centres" : "centre")</span>
-                            <span class="font-mono text-right">@(centres.Count == 0 ? "—" : string.Join(", ", centres))</span>
-                        </div>
-                        @if (VariationLines.Count > 1)
-                        {
-                            <p class="text-xs text-content-subtle">@VariationLines.Count lines across @centres.Count cost centres — the full build-up is under “Variation lines” on the left.</p>
-                        }
-                        else
-                        {
-                            <p class="text-xs text-content-subtle">Added to the Valuation Report and committed to the cost centre.</p>
-                        }
-                        </LoadGate>
-                        @if (CanManage)
-                        {
-                            <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="IssueWorkOrder">Issue work order</button>
-                        }
-                        @if (CanManage)
-                        {
-                            @* Add / edit / remove the priced lines without un-approving — the report,
-                               CVR and per-centre budgets move by the difference. *@
-                            @* Held shut until the report lines are in: the dialog seeds itself from
-                               them, so opening it early would offer an empty build-up and saving
-                               that would read as "the user deleted every line". *@
-                            <button type="button" class="btn-secondary w-full"
-                                    disabled="@(busy || !ValuationLinesReady)" @onclick="OpenEditLines">Edit lines</button>
-                        }
-                        @* Same reason as Edit lines: before the report lines land, "one line" is
-                           indistinguishable from "none loaded yet", and revising against none would
-                           move the CVR and the budget with no line to show for it. *@
-                        @if (CanManage && ValuationLinesReady && VariationLines.Count <= 1)
-                        {
-                            @if (!revisingValue)
-                            {
-                                <button type="button" class="btn-secondary w-full" disabled="@busy" @onclick="StartReviseValue">Revise value</button>
-                            }
-                            else
-                            {
-                                <div class="pt-3 border-t border-line space-y-3">
-                                    <FormField Label="Revised value (£)" Value="@reviseValue" OnChange="v => reviseValue = v" InputType="number" Required="true" />
-                                    <p class="text-xs text-content-subtle">
-                                        Re-prices the @(approved.VariationRef ?? approved.DisplayNumber) line on the Valuation Report, records the
-                                        difference on the CVR and moves the committed cost-centre budget.
-                                    </p>
-                                    <div class="flex gap-2">
-                                        <button type="button" class="btn-primary" disabled="@busy" @onclick="ReviseVoValue">Save revised value</button>
-                                        <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => revisingValue = false">Cancel</button>
-                                    </div>
-                                </div>
-                            }
-                        }
-                        @if (CanManage)
-                        {
-                            <div class="pt-3 border-t border-line space-y-2">
-                                @if (!returningToQuoting)
-                                {
-                                    <button type="button" class="w-full text-xs text-content-subtle hover:text-negative underline underline-offset-2"
-                                            disabled="@busy" @onclick="() => returningToQuoting = true">
-                                        Approved in error? Return to quoting…
-                                    </button>
-                                }
-                                else
-                                {
-                                    <p class="text-xs text-content-subtle">
-                                        Un-approves this variation: <span class="font-mono">@(approved.VariationRef ?? approved.DisplayNumber)</span> is removed
-                                        (its number is freed for a future approval), its value comes off the Valuation Report,
-                                        CVR and cost-centre budget, and @order.Reference returns to <span class="font-medium text-content">Quoting</span>.
-                                        For approvals that shouldn't have happened — a real rejection should use Reject so
-                                        the record stays on the register. Blocked once work orders instruct it or value has been claimed.
-                                    </p>
-                                    <div class="flex gap-2">
-                                        <button type="button" class="btn-neutral w-full text-negative" disabled="@busy" @onclick="ReturnToQuoting">
-                                            @(busy ? "Returning…" : "Confirm — return to quoting")
-                                        </button>
-                                        <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => returningToQuoting = false">Keep</button>
-                                    </div>
-                                }
-                            </div>
-                        }
-                        @if (CanManage && rejectingOrder)
-                        {
-                            <div class="pt-3 border-t border-line space-y-2">
-                                <p class="text-xs text-content-subtle">
-                                    Rejecting <span class="font-mono">@(approved.VariationRef ?? approved.DisplayNumber)</span> is a real commercial
-                                    event: the order stays on the register as Rejected, its line comes off the
-                                    Valuation Report, an offsetting omit is recorded on the CVR and the committed
-                                    cost-centre budget is released. If the approval itself was a data error, use
-                                    Return to quoting instead so the V-ref is freed.
-                                </p>
-                                <div class="flex gap-2">
-                                    <button type="button" class="btn-neutral w-full text-negative" disabled="@busy" @onclick="RejectOrder">
-                                        @(busy ? "Rejecting…" : "Confirm — reject variation order")
-                                    </button>
-                                    <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => rejectingOrder = false">Keep</button>
-                                </div>
-                            </div>
-                        }
-                    </div>
+                    <ApprovedFiguresPanel Approved="approved"
+                                          Reference="@order.Reference"
+                                          CanManage="CanManage"
+                                          Busy="busy"
+                                          ValuationLinesReady="ValuationLinesReady"
+                                          CostCentres="ApprovedCostCentres"
+                                          LineCount="VariationLines.Count"
+                                          OnIssueWorkOrder="IssueWorkOrder"
+                                          OnEditLines="OpenEditLines"
+                                          ReviseValue="ReviseVoValue"
+                                          @bind-ReturningToQuoting="returningToQuoting"
+                                          OnReturnToQuoting="ReturnToQuoting"
+                                          @bind-RejectingOrder="rejectingOrder"
+                                          OnReject="RejectOrder" />
 
                     <Modal IsOpen="editLinesModalOpen"
                            Title="@($"Edit lines — {order.Reference}")"
