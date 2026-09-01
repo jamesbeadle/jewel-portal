@@ -1,4 +1,4 @@
-﻿using Jewel.JPMS.Api.Features.Subcontractors.Commands;
+using Jewel.JPMS.Api.Features.Subcontractors.Commands;
 using Jewel.JPMS.Api.Features.Subcontractors.Queries;
 using Jewel.JPMS.Api.Features.Subcontractors.Storage;
 using Jewel.JPMS.Contracts.Subcontractors;

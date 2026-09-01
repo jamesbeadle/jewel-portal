@@ -344,7 +344,7 @@ public partial class TriageQueue
             var inheritedRecords = await ResolveInheritedRecordsAsync(plan);
             if (inheritedRecords is null) return;
 
-            await SendStagedAttachmentsToDocTriageAsync(plan);
+            await SendDocTriageAttachmentsAsync(plan);
             filed |= await RaiseTodoDraftsAsync(plan);
             filed |= await LinkPickedRecordsAsync(plan);
             filed |= await LinkInheritedRecordsAsync(plan, inheritedRecords);
@@ -427,10 +427,13 @@ public partial class TriageQueue
     }
 
     private bool ApplyHasWork(ApplyPlan plan) =>
-        plan.Replying || plan.Drafts.Count > 0 || plan.Picks.Count > 0 || plan.CreateReady
-        || plan.RelevantEvent || plan.Discarding || stagedSystemActions.Count > 0
-        || queuedReplies.Count > 0 || stagedDocControlIds.Count > 0
-        || plan.InheritStems.Count > 0 || plan.CreatedNowOnly;
+        plan.Replying || plan.CreateReady || plan.RelevantEvent || plan.Discarding
+        || plan.Drafts.Count > 0
+        || plan.Picks.Count > 0
+        || stagedSystemActions.Count > 0 || queuedReplies.Count > 0
+        || stagedDocControlIds.Count > 0
+        || plan.InheritStems.Count > 0
+        || plan.CreatedNowOnly;
 
     // Every way an apply refuses to run, in one gauntlet — the reason to show, or null to
     // proceed. The bar's Yes/No pairs start blank on purpose (an apply with any unanswered is a
@@ -504,10 +507,11 @@ public partial class TriageQueue
     //      themselves land with the picks. Null = stop the apply (the error is set). ----
     private async Task<IReadOnlyList<LinkableRecord>?> ResolveInheritedRecordsAsync(ApplyPlan plan)
     {
-        if (plan.Anchor is null || plan.InheritStems.Count == 0) return Array.Empty<LinkableRecord>();
+        var stems = plan.InheritStems;
+        if (plan.Anchor is null || stems.Count == 0) return Array.Empty<LinkableRecord>();
         busyLabel = "Matching the thread's tags";
         var inherited = await Queries.AskAsync(
-            new ResolveRecordTags(plan.InheritStems.Select(TriageEmailDisplay.TagLabel).ToList()), CancellationToken.None);
+            new ResolveRecordTags(stems.Select(TriageEmailDisplay.TagLabel).ToList()), CancellationToken.None);
         if (inherited.Count > 0) return inherited;
         actionError = "The thread's existing tags couldn't be matched to records — pick this email's records by hand instead.";
         return null;
@@ -516,7 +520,7 @@ public partial class TriageQueue
     // ---- Document Triage: ticked attachments copy out FIRST, so the files are safely in the
     //      queue before anything else (a discard included) moves the email on. Never consumes
     //      the email — only the files are copied out; `filed` deliberately stays untouched. ----
-    private async Task SendStagedAttachmentsToDocTriageAsync(ApplyPlan plan)
+    private async Task SendDocTriageAttachmentsAsync(ApplyPlan plan)
     {
         if (plan.Anchor is not { } anchor || stagedDocControlIds.Count == 0) return;
         busyLabel = "Sending to Document Triage";
@@ -533,15 +537,16 @@ public partial class TriageQueue
     private async Task<bool> RaiseTodoDraftsAsync(ApplyPlan plan)
     {
         if (plan.Drafts.Count == 0) return false;
+        var anchor = plan.Anchor!;
         busyLabel = "Creating to-dos";
         // No request link here: to-dos are their own concern, and linking the email to a
         // record — a request included — is the filing section's job.
         await Intake.CreateTodoItemsFromMessageAsync(new CreateTodoItemsFromMessage(
-            plan.Anchor!.Id,
+            anchor.Id,
             NullIfBlank(triageProjectId),
             plan.Drafts,
             LinkRequestId: null,
-            InternetMessageId: plan.Anchor.InternetMessageId,
+            InternetMessageId: anchor.InternetMessageId,
             Pathway: pathway is { } chosenForTodos ? TriagePathways.Label(chosenForTodos) : null,
             Scope: plan.Scope));
         // One batch per apply: clear the rows so nothing can double-raise.
@@ -575,10 +580,11 @@ public partial class TriageQueue
     {
         if (plan.Anchor is not { } anchor || inheritedRecords.Count == 0) return false;
         busyLabel = "Linking to the thread's tags";
+        var picks = plan.Picks;
         var linked = false;
         foreach (var record in inheritedRecords)
         {
-            if (plan.Picks.Any(pick => pick.Type == record.Type
+            if (picks.Any(pick => pick.Type == record.Type
                 && string.Equals(pick.RecordId, record.RecordId, StringComparison.Ordinal)))
                 continue;
             await Intake.LinkMessageToRecordAsync(
@@ -598,9 +604,10 @@ public partial class TriageQueue
     private async Task<bool> TagRelevantEventAsync(ApplyPlan plan)
     {
         if (!plan.RelevantEvent) return false;
+        var anchor = plan.Anchor!;
         busyLabel = "Tagging relevant event";
         await Intake.LinkMessageToRecordAsync(
-            plan.Anchor!.Id, plan.Anchor.InternetMessageId, RecordType.Scheduling, triageProjectId,
+            anchor.Id, anchor.InternetMessageId, RecordType.Scheduling, triageProjectId,
             pathway: null,
             allowCrossPathway: true,
             scope: plan.Scope);
@@ -625,8 +632,9 @@ public partial class TriageQueue
     private async Task<bool> DiscardAnchorAsync(ApplyPlan plan)
     {
         if (!plan.Discarding) return false;
+        var anchor = plan.Anchor!;
         busyLabel = "Discarding";
-        await Intake.DiscardMessageAsync(plan.Anchor!.Id, plan.Anchor.InternetMessageId);
+        await Intake.DiscardMessageAsync(anchor.Id, anchor.InternetMessageId);
         return true;
     }
 
