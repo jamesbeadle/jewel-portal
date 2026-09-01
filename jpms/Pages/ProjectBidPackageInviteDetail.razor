@@ -11,6 +11,7 @@
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.Triage
 @using Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Procurement
 @inject AuthService Auth
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
 @inject SessionService Session
@@ -419,7 +420,7 @@ else
                                     </div>
                                     @if (CanEdit)
                                     {
-                                        <button type="button" class="btn-secondary px-2 py-1 text-xs shrink-0" disabled="@(busy || extractBusy)"
+                                        <button type="button" class="btn-secondary px-2 py-1 text-xs shrink-0" disabled="@busy"
                                                 title="Read this email and its returned pricing schedule with AI, mapped against the package's line items, ready to review and save as a submission."
                                                 @onclick="() => OpenExtractFromEmail(email)">Extract information</button>
                                     }
@@ -972,108 +973,15 @@ else
         </ChildContent>
     </Modal>
 
-    @* ---- Record a tender submission and save it as a quote ---- *@
-    <Modal IsOpen="showExtractModal" Title="Tender submission" ShowFooter="true"
-           ConfirmLabel="@(busy ? "Saving…" : "Save submission")" ConfirmDisabled="@(busy || extractBusy)" CancelLabel="Cancel"
-           OnCancel="CloseExtractModal" OnConfirm="ConfirmSaveExtracted" Class="max-w-3xl w-full">
-        @if (extractSourceEmail is { } sourceEmail)
-        {
-            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-                Extracted from <span class="font-medium text-content">@(string.IsNullOrWhiteSpace(sourceEmail.FromName) ? sourceEmail.FromEmail : sourceEmail.FromName)</span>'s
-                email of @sourceEmail.ReceivedAt.LocalDateTime.ToString("d MMM yyyy") — the figures below are
-                THEIR submission as the AI read it. Review every line (and correct it where the read is
-                wrong) before saving; nothing is recorded until you do.
-            </p>
-        }
-        else
-        {
-            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
-                Recording a tender as the subcontractor gave it — the package's line items are pre-filled;
-                enter the rates from their submission.
-            </p>
-        }
-
-        @if (extractBusy)
-        {
-            <div class="flex items-center gap-3 rounded-lg border border-line bg-surface-raised px-3 py-4 mb-3">
-                <JewelSpinner />
-                <p class="text-sm text-content-muted">Reading the tender — the email, its pricing schedule and the package's line items…</p>
-            </div>
-        }
-        else
-        {
-        @if (extractIssues.Count > 0)
-        {
-            <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-sm text-content mb-3">
-                <p class="font-medium mb-1">@(extractProposed ? "The extraction found gaps in this tender:" : "This tender couldn't be read automatically:")</p>
-                <ul class="list-disc pl-5 space-y-0.5">
-                    @foreach (var issue in extractIssues)
-                    {
-                        <li>@issue</li>
-                    }
-                </ul>
-            </div>
-        }
-        else if (extractSourceEmail is not null && extractComplete)
-        {
-            <p class="rounded-lg bg-positive/10 border border-positive/40 px-3 py-2 text-sm text-content mb-3">
-                The tender reads complete — every line item is priced and the sums reconcile. Review the
-                figures and save it as a submission.
-            </p>
-        }
-
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subcontractor</label>
-        <select class="field mb-3" @bind="extractSubcontractorId">
-            <option value="">Select the subcontractor…</option>
-            @foreach (var recipient in recipients)
-            {
-                var sub = Subs.Find(recipient.SubcontractorId);
-                <option value="@recipient.SubcontractorId">@(sub?.CompanyName ?? recipient.SubcontractorId)</option>
-            }
-        </select>
-        @if (extractSourceEmail is not null && !string.IsNullOrWhiteSpace(extractSubcontractorNote))
-        {
-            <p class="text-xs text-content-subtle -mt-2 mb-3">@extractSubcontractorNote</p>
-        }
-
-        <div class="rounded-xl border border-line bg-surface mb-3">
-            <table class="w-full text-sm">
-                <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 hidden sm:table-cell">Unit</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Qty</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Rate</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Total</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2"></th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    @foreach (var draft in extractDrafts)
-                    {
-                        <tr class="@(draft.BidPackageLineItemId is null ? "bg-accent/5" : "")">
-                            <td class="px-3 py-2"><input class="field" @bind="draft.Description" /></td>
-                            <td class="px-3 py-2 hidden sm:table-cell"><input class="field w-16" @bind="draft.Unit" /></td>
-                            <td class="px-3 py-2"><input class="field w-20" type="number" step="any" @bind="draft.Quantity" /></td>
-                            <td class="px-3 py-2"><input class="field w-24" type="number" step="any" @bind="draft.Rate" @onblur="() => RecalcTotal(draft)" /></td>
-                            <td class="px-3 py-2"><input class="field w-28" type="number" step="any" @bind="draft.Total" /></td>
-                            <td class="px-3 py-2 text-right">
-                                <button type="button" class="text-xs text-content-muted hover:text-negative" @onclick="() => extractDrafts.Remove(draft)">Remove</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-        <div class="flex items-center justify-between mb-3">
-            <button type="button" class="btn-secondary" @onclick="AddExtractLine">Add line</button>
-            <p class="text-sm text-content font-medium">Total: @extractDrafts.Sum(d => d.Total).ToString("£#,##0.00")</p>
-        </div>
-
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Notes (exclusions, caveats, lead times)</label>
-        <textarea class="field" rows="3" @bind="extractNotes"></textarea>
-        }
-    </Modal>
+    @* ---- Record a tender submission and save it as a quote — the modal owns the whole
+         review flow; the page reloads when it reports a save. ---- *@
+    <TenderSubmissionModal @ref="tenderSubmissionModal"
+                           BidPackageId="@BidPackageId"
+                           Recipients="recipients"
+                           LineItems="lineItems"
+                           Busy="busy"
+                           CanEdit="CanEdit"
+                           OnSaved="LoadAsync" />
 
     @* ---- Work-order email to the winning subcontractor (drafted, sent from Outlook) ---- *@
     <Modal IsOpen="showWoEmailModal" Title="Email work order to winner" ShowFooter="true"
