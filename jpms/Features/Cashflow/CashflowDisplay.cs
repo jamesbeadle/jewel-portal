@@ -1,7 +1,7 @@
-namespace Jewel.JPMS.Features.WeeklyCashflow;
+namespace Jewel.JPMS.Features.Cashflow;
 
-/// <summary>How the weekly plan's figures read on screen — shared by the page and its row
-/// components, defined once.</summary>
+/// <summary>How the cashflow pages' figures read on screen — the weekly plan and the cash
+/// forecast share their cells, defined once.</summary>
 public static class CashflowDisplay
 {
     // Grid cells drop the pennies: fourteen columns of £1,234.56 is noise. Totals underneath
@@ -15,4 +15,7 @@ public static class CashflowDisplay
 
     public static string WeekLabel(DateTimeOffset weekStart, int index) =>
         index == 0 ? "This week" : weekStart.UtcDateTime.ToString("d MMM");
+
+    public static string MonthLabel(DateTime month) =>
+        month.ToString("MMM yy", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
 }

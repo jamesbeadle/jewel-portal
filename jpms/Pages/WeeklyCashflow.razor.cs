@@ -1,5 +1,5 @@
 using Jewel.JPMS.Features.WeeklyCashflow;
-using static Jewel.JPMS.Features.WeeklyCashflow.CashflowDisplay;
+using static Jewel.JPMS.Features.Cashflow.CashflowDisplay;
 using Jewel.JPMS.Contracts.WeeklyCashflow;
 using Jewel.JPMS.Features.WeeklyCashflow;
 

@@ -1,3 +1,4 @@
+using static Jewel.JPMS.Features.Cashflow.CashflowDisplay;
 using Jewel.JPMS.Commercial;
 using Jewel.JPMS.Contracts.Projects;
 using Jewel.JPMS.Contracts.Retention;
