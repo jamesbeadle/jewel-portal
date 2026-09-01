@@ -1,5 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.Rates;
 
 namespace Jewel.JPMS.Api.Features.Rates.Commands;

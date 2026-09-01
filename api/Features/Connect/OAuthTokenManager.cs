@@ -1,7 +1,5 @@
 using Jewel.JPMS.Api.Auth;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Connect;
 

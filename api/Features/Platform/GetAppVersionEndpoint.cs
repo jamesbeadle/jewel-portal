@@ -1,8 +1,3 @@
-using Jewel.JPMS.Api.Data;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Platform;
 

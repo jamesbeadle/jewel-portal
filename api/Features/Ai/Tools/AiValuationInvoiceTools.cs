@@ -1,5 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.ValuationInvoices;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,8 +1,4 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.ValuationInvoices;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.ValuationInvoices.Commands;
 

@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Directory;
 
 namespace Jewel.JPMS.Api.Features.Directory.Commands;

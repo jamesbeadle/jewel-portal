@@ -1,12 +1,9 @@
 using System.Text;
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Commercial;
 using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Contracts.Procurement;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 

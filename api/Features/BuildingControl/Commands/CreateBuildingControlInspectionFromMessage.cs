@@ -1,17 +1,9 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Audit;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.RecordLinks;
 using Jewel.JPMS.Api.Features.Requests;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.BuildingControl;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.BuildingControl.Commands;
 

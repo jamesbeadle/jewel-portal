@@ -1,8 +1,6 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.DocumentControl;
 using Jewel.JPMS.Api.Features.WeeklyCashflow;
 using Jewel.JPMS.Api.Features.Xero.Ledger;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.DocumentControl;
 using Jewel.JPMS.Contracts.WeeklyCashflow;
 using Jewel.JPMS.Contracts.Xero;

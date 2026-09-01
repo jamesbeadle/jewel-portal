@@ -1,8 +1,6 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.AccessRequests.Commands;
 using Jewel.JPMS.Api.Features.AccessRequests.Queries;
 using Jewel.JPMS.Contracts.AccessRequests;
-using Jewel.JPMS.Contracts.Cqrs;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.AccessRequests;

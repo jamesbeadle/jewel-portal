@@ -1,14 +1,6 @@
 using System.Globalization;
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.ArchitectInstructions.Storage;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.ArchitectInstructions;
-using Jewel.JPMS.Contracts.Cqrs;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.ArchitectInstructions;
 

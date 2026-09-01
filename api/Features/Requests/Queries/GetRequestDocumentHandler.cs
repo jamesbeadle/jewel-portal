@@ -1,5 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Requests.Documents;
 using Jewel.JPMS.Contracts.Requests;
 

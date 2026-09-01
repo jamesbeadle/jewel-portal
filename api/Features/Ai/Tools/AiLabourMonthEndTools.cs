@@ -1,8 +1,5 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Labour;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Labour;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;

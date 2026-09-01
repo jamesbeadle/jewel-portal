@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Contracts.Subcontractors;
 
 namespace Jewel.JPMS.Api.Features.Subcontractors.Commands;

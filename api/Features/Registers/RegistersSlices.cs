@@ -1,13 +1,5 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
-using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Registers;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Registers;

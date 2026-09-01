@@ -1,8 +1,6 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Projects.Commands;
 using Jewel.JPMS.Api.Features.Projects.Contacts;
 using Jewel.JPMS.Api.Features.Projects.Queries;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Projects;
 using Microsoft.Extensions.DependencyInjection;
 

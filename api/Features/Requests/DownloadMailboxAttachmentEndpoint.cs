@@ -1,8 +1,4 @@
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
-using Jewel.JPMS.Api.Gates;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.Requests;
 

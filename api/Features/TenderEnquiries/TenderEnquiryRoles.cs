@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Gates;
 
 namespace Jewel.JPMS.Api.Features.TenderEnquiries;
 

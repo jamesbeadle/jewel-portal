@@ -1,9 +1,4 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
-using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Directory;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Directory.Commands;
 

@@ -1,10 +1,6 @@
 using System.Globalization;
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.Commercial;
-using Jewel.JPMS.Contracts.Cqrs;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Commercial.Commands;
 

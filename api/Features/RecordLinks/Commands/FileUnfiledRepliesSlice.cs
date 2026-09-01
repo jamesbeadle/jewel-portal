@@ -1,7 +1,4 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Requests;
-using Jewel.JPMS.Api.Gates;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Commands;

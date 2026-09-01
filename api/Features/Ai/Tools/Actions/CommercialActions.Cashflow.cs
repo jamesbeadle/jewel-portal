@@ -2,11 +2,9 @@ using Jewel.JPMS.Api.Features.Cashflow.Commands;
 using Jewel.JPMS.Api.Features.Commercial.Commands;
 using Jewel.JPMS.Api.Features.CommercialInputs.Commands;
 using Jewel.JPMS.Api.Features.Cvr.Commands;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Cashflow;
 using Jewel.JPMS.Contracts.Commercial;
 using Jewel.JPMS.Contracts.CommercialInputs;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Cvr;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;

@@ -1,8 +1,5 @@
 using Jewel.JPMS.Api.Auth;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Models;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Gates;
 

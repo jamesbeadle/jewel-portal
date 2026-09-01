@@ -1,7 +1,5 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Ai.Queries;
 using Jewel.JPMS.Contracts.Ai;
-using Jewel.JPMS.Contracts.Cqrs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

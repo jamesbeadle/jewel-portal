@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Calendar;
 
 namespace Jewel.JPMS.Api.Features.Calendar.Commands;

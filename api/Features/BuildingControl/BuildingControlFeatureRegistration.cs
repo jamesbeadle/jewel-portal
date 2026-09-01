@@ -1,9 +1,7 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.BuildingControl.Attachments;
 using Jewel.JPMS.Api.Features.BuildingControl.Commands;
 using Jewel.JPMS.Api.Features.BuildingControl.Queries;
 using Jewel.JPMS.Contracts.BuildingControl;
-using Jewel.JPMS.Contracts.Cqrs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 

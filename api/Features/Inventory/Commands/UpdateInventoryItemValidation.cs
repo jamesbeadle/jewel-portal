@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Contracts.Inventory;
 
 namespace Jewel.JPMS.Api.Features.Inventory.Commands;

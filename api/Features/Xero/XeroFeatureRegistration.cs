@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Xero.Ledger;
 using Jewel.JPMS.Api.Features.Xero.Queries;
 using Jewel.JPMS.Contracts.Xero;

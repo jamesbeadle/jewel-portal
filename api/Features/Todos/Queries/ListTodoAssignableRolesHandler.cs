@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Contracts.Todos;
 
 namespace Jewel.JPMS.Api.Features.Todos.Queries;

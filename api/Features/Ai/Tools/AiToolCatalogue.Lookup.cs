@@ -2,9 +2,7 @@ using Ganss.Xss;
 using Jewel.JPMS.Api.Features.Labour; // SiteClock (view_labour_week's week arithmetic)
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph; // IIntakeMessageReader (record email reads)
 using Jewel.JPMS.Api.Features.Requests; // TriageRoles (internal, same assembly)
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Ai;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;

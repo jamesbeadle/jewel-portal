@@ -1,11 +1,5 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Features.Audit;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Procurement;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 

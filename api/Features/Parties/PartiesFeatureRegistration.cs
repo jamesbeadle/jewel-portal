@@ -1,5 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Contracts.Cqrs;
 using Jewel.JPMS.Contracts.Parties;
 using Microsoft.Extensions.DependencyInjection;
 

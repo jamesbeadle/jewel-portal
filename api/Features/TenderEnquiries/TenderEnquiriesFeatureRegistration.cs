@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.TenderEnquiries.Attachments;
 using Jewel.JPMS.Api.Features.TenderEnquiries.Commands;
 using Jewel.JPMS.Api.Features.TenderEnquiries.Queries;

@@ -1,10 +1,5 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Requests; // TriageRoles (internal, same assembly)
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Audit;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.Audit;
 

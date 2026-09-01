@@ -1,8 +1,5 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 using Jewel.JPMS.Contracts.CommercialInputs;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.CommercialInputs.Commands;
 

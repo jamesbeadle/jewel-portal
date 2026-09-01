@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Procurement.Attachments;
 using Jewel.JPMS.Api.Features.Procurement.Commands;
 using Jewel.JPMS.Api.Features.Procurement.Queries;

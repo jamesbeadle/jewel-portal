@@ -1,6 +1,4 @@
 using System.Reflection;
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Gates;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;

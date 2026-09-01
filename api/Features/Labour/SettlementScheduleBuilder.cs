@@ -1,6 +1,4 @@
-using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Contracts.Labour;
-using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Features.Labour;
 

@@ -2,7 +2,6 @@ using Jewel.JPMS.Api.Features.Calendar;
 using Jewel.JPMS.Api.Features.Calendar.Commands;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Contracts.Calendar;
-using Jewel.JPMS.Contracts.Cqrs;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 

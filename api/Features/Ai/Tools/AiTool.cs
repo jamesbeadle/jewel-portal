@@ -1,5 +1,3 @@
-using Jewel.JPMS.Api.Data;
-using Jewel.JPMS.Api.Gates;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;
 

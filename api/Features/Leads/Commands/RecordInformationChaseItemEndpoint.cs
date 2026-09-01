@@ -1,9 +1,4 @@
-using Jewel.JPMS.Api.Cqrs;
-using Jewel.JPMS.Api.Gates;
 using Jewel.JPMS.Contracts.Leads;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Functions.Worker;
 
 namespace Jewel.JPMS.Api.Features.Leads.Commands;
 

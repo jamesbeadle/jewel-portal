@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Contracts.RecordLinks;
 
 namespace Jewel.JPMS.Api.Features.RecordLinks.Queries;

@@ -1,4 +1,3 @@
-using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Bluebeam.Extraction;
 using Jewel.JPMS.Api.Features.Bluebeam.Queue;
 using Jewel.JPMS.Contracts.Drawings;

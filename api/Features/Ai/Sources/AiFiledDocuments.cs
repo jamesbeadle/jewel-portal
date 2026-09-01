@@ -9,8 +9,6 @@ using Jewel.JPMS.Api.Features.ProjectContracts;
 using Jewel.JPMS.Api.Features.ProjectContracts.Storage;
 using Jewel.JPMS.Api.Features.Subcontractors.Storage;
 using Jewel.JPMS.Api.Features.TenderEnquiries.Attachments;
-using Jewel.JPMS.Api.Gates;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Sources;
