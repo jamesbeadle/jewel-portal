@@ -1,0 +1,66 @@
+@namespace Jewel.JPMS.Features.Labour
+@using static Jewel.JPMS.Features.Labour.LabourDisplay
+
+@* One chip per day of the month for one worker: square weekday chips in the site's colour,
+   hatched for an absence, hollow for an elapsed day with nothing recorded, faint for the
+   future. Weekend days appear only when this worker has something recorded on them (Jack's ask
+   2026-08-29: 16 worked days but 14 chips — his two Saturdays were invisible), and render as
+   ROUND chips so the Mon–Fri rhythm still reads at a glance. *@
+<div class="flex gap-[3px]">
+    @foreach (var date in StripDates)
+    {
+        var isWeekend = date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+        var shape = isWeekend ? "rounded-full" : "rounded-[3px]";
+        var entries = byDate[date].ToList();
+        var absence = entries.FirstOrDefault(entry => entry.Absence is not null);
+        var sheet = entries.FirstOrDefault(entry => entry.Status is not null);
+        @if (absence is not null)
+        {
+            <span class="inline-block w-3 h-3 @shape"
+                  title="@($"{date:ddd dd MMM} — {AbsenceLabel(absence.Absence!.Value)}")"
+                  style="background: repeating-linear-gradient(45deg, #34373B 0 2px, transparent 2px 4px); border: 1px solid #34373B;"></span>
+        }
+        else if (sheet is not null)
+        {
+            <span class="inline-block w-3 h-3 @shape @(sheet.Status == TimesheetStatus.Rejected ? "ring-1 ring-negative" : "")"
+                  title="@($"{date:ddd dd MMM} — {sheet.ProjectName}, {sheet.Hours:0.#} h ({StatusLabel(sheet.Status!.Value)})")"
+                  style="background:@ColourOf(sheet.ProjectId)"></span>
+        }
+        else if (date <= today)
+        {
+            <span class="inline-block w-3 h-3 @shape border border-line-strong"
+                  title="@($"{date:ddd dd MMM} — nothing recorded")"></span>
+        }
+        else
+        {
+            <span class="inline-block w-3 h-3 @shape bg-surface-field/60"
+                  title="@date.ToString("ddd dd MMM")"></span>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public LabourOverviewWorker Worker { get; set; } = default!;
+
+    /// <summary>The month's weekdays, from the host's open month.</summary>
+    [Parameter, EditorRequired] public IEnumerable<DateTime> MonthWeekdays { get; set; } = default!;
+
+    /// <summary>The host's session-stable project colour map, so every strip agrees.</summary>
+    [Parameter, EditorRequired] public Func<string, string> ColourOf { get; set; } = default!;
+
+    private ILookup<DateTime, LabourOverviewDay> byDate = default!;
+    private readonly DateTime today = DateTime.Today;
+
+    protected override void OnParametersSet() =>
+        byDate = Worker.Days.ToLookup(day => day.Date.UtcDateTime.Date);
+
+    private IEnumerable<DateTime> StripDates
+    {
+        get
+        {
+            var workedWeekends = byDate.Select(group => group.Key)
+                .Where(date => date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday);
+            return MonthWeekdays.Concat(workedWeekends).Distinct().OrderBy(date => date);
+        }
+    }
+}

@@ -1,3 +1,4 @@
+using static Jewel.JPMS.Features.Labour.LabourDisplay;
 using Jewel.JPMS.Contracts.Labour;
 using Jewel.JPMS.Contracts.Ai;
 using Jewel.JPMS.Features.CostCenters;

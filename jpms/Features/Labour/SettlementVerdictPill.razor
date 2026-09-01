@@ -1,0 +1,23 @@
+@namespace Jewel.JPMS.Features.Labour
+
+@* The schedule's one-word reconciliation verdict against the covered bill. *@
+@switch (Schedule.Verdict)
+{
+    case ScheduleVerdict.Matches:
+        <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-positive/10 text-positive">Matches</span>
+        break;
+    case ScheduleVerdict.VarianceOpen:
+        <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative"
+              title="@($"Covered bill differs by £{Schedule.Difference:N2}")">Variance £@Math.Abs(Schedule.Difference).ToString("N0")</span>
+        break;
+    case ScheduleVerdict.NoBillYet:
+        <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle">No bill yet</span>
+        break;
+    default:
+        <span class="text-content-faint text-xs">—</span>
+        break;
+}
+
+@code {
+    [Parameter, EditorRequired] public WorkerSettlementSchedule Schedule { get; set; } = default!;
+}
