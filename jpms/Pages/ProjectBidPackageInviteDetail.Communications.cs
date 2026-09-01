@@ -55,8 +55,6 @@ public partial class ProjectBidPackageInviteDetail
     }
 
     private bool showInviteModal;
-    private string subSearch = "";
-    private readonly HashSet<string> selected = new(StringComparer.OrdinalIgnoreCase);
 
     private bool CanManage => Session.AvailableRoles.Any(r =>
         r is Role.Admin or Role.ManagingDirector or Role.ProjectManager);
