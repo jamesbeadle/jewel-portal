@@ -1,0 +1,35 @@
+@namespace Jewel.JPMS.Components
+
+@* The emails filed to one record, shown inside an expanded table row: a loading line while the
+   tags are read, the caller's own "none yet" guidance, or one compact line per email. *@
+@if (Emails is null)
+{
+    <p class="text-sm text-content-subtle italic">Loading emails…</p>
+}
+else if (Emails.Count == 0)
+{
+    <p class="text-sm text-content-subtle italic">@EmptyMessage</p>
+}
+else
+{
+    <div class="space-y-1.5">
+        @foreach (var email in Emails)
+        {
+            <div class="flex items-baseline gap-3 text-sm">
+                <span class="text-content-subtle whitespace-nowrap shrink-0">@email.ReceivedAt.ToLocalTime().ToString("d MMM yyyy")</span>
+                <span class="text-content truncate" title="@email.BodyPreview">@email.Subject</span>
+                <span class="text-content-subtle truncate shrink-0">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                @if (email.HasAttachments)
+                {
+                    <span class="text-content-subtle shrink-0" title="Has attachments">📎</span>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>Null while the record's tagged emails are still being read.</summary>
+    [Parameter] public IReadOnlyList<MailboxMessage>? Emails { get; set; }
+    [Parameter, EditorRequired] public string EmptyMessage { get; set; } = "";
+}
