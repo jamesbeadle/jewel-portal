@@ -1,0 +1,131 @@
+@namespace Jewel.JPMS.Features.Variations
+@inject IVariationStore Variations
+
+@* Official document pane: the narrative sections and the document's own actions — the same
+   arrangement as the request page's official form. The PDF is rendered fresh from the record on
+   every download, and the composer's System documents picker attaches the identical bytes at
+   send time. The section editor is the pane's own: wording only, at every stage — the same rule
+   as the retitle — so the draft never needs to be parked with anything else. *@
+<div class="panel p-5">
+    <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+            <h3 class="eyebrow">Official Variation Order document</h3>
+            <p class="text-xs text-content-subtle mt-0.5">
+                Scope, commercial basis, programme impact and exclusions, rendered on the issued PDF
+                with the cost breakdown. Attach it to an email from the Control Centre's System documents picker.
+            </p>
+        </div>
+        <Toolbar>
+            <ToolbarButton Icon="download" Label="Download the Variation Order PDF"
+                           Href="@DocumentHref" Download="true" />
+        </Toolbar>
+    </div>
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+
+    @if (!editing)
+    {
+        <div class="space-y-3">
+            <div>
+                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope of works</h4>
+                <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.Description) ? "—" : Order.Description)</p>
+            </div>
+            <div>
+                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</h4>
+                <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.CommercialBasis) ? "—" : Order.CommercialBasis)</p>
+            </div>
+            <div>
+                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</h4>
+                <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.ProgrammeImpact) ? "—" : Order.ProgrammeImpact)</p>
+            </div>
+            <div>
+                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</h4>
+                <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.Exclusions) ? "—" : Order.Exclusions)</p>
+            </div>
+            @if (CanManage)
+            {
+                <button type="button" class="btn-secondary" disabled="@Busy" @onclick="StartEdit">Edit sections</button>
+            }
+        </div>
+    }
+    else
+    {
+        @* The next download or send picks the new prose up; nothing commercial moves. *@
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</label>
+                <textarea class="field" rows="4" value="@commercialBasis"
+                          @oninput="e => commercialBasis = e.Value?.ToString() ?? string.Empty"
+                          placeholder="What the price is based on — tender-face position, rate basis, OH&amp;P…"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</label>
+                <textarea class="field" rows="4" value="@programmeImpact"
+                          @oninput="e => programmeImpact = e.Value?.ToString() ?? string.Empty"
+                          placeholder="Effect on the programme — procurement, mobilisation, works duration…"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</label>
+                <textarea class="field" rows="4" value="@exclusions"
+                          @oninput="e => exclusions = e.Value?.ToString() ?? string.Empty"
+                          placeholder="What this variation expressly does not price…"></textarea>
+            </div>
+            <p class="text-xs text-content-subtle">
+                Clearing a section removes it from the document. The PDF renders fresh on every
+                download and send, so the new wording reaches the very next copy.
+            </p>
+            <div class="flex gap-2">
+                <button type="button" class="btn-primary" disabled="@(Busy || saving)" @onclick="SaveAsync">Save sections</button>
+                <button type="button" class="btn-neutral" disabled="@(Busy || saving)" @onclick="() => editing = false">Cancel</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public VariationOrder Order { get; set; } = default!;
+    [Parameter] public bool CanManage { get; set; }
+    /// <summary>The page's busy — the editor stands down while another action runs.</summary>
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>The record as the server returned it after a save — the page swaps its copy.</summary>
+    [Parameter] public EventCallback<VariationOrder> OnSaved { get; set; }
+
+    private string DocumentHref => $"/api/variation-orders/{Order.VariationOrderId}/document";
+
+    private bool editing;
+    private bool saving;
+    private string commercialBasis = "";
+    private string programmeImpact = "";
+    private string exclusions = "";
+    // Held here so it renders inside the pane being edited, next to the fields it is about.
+    private string? error;
+
+    private void StartEdit()
+    {
+        commercialBasis = Order.CommercialBasis ?? "";
+        programmeImpact = Order.ProgrammeImpact ?? "";
+        exclusions = Order.Exclusions ?? "";
+        error = null;
+        editing = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (saving) return;
+        error = null;
+        try
+        {
+            saving = true;
+            var saved = await Variations.UpdateNarrativesAsync(
+                Order.VariationOrderId, commercialBasis, programmeImpact, exclusions);
+            editing = false;
+            await OnSaved.InvokeAsync(saved);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't save the document sections. Please try again."; }
+        finally { saving = false; }
+    }
+}

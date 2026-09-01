@@ -31,22 +31,6 @@ public partial class ProjectVariationDetail
     private static string RefLabel(Request record) =>
         string.IsNullOrWhiteSpace(record.Reference) ? record.DisplayNumber : record.Reference;
 
-    private async Task LinkToRequest()
-    {
-        if (linkBusy || string.IsNullOrWhiteSpace(linkTargetRequestId)) return;
-        linkError = null;
-        try
-        {
-            linkBusy = true;
-            await Variations.LinkToRequestAsync(VariationOrderId, linkTargetRequestId);
-            linkTargetRequestId = "";
-            await ReloadAsync(); // the lineage bar re-renders with the request chip in place
-        }
-        catch (CommandFailedException ex) { linkError = ex.Message; }
-        catch { linkError = "Couldn't link the request. Please try again."; }
-        finally { linkBusy = false; }
-    }
-
     private void StartRename()
     {
         renameTitle = order?.Title ?? "";

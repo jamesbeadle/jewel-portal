@@ -1,0 +1,107 @@
+@namespace Jewel.JPMS.Features.Variations
+@inject IVariationStore Variations
+
+@* The record's facts in the sidebar. One panel, one arrival: the selected sub's name comes from
+   the subcontractor directory, so the rows wait for it rather than showing a raw id first. The
+   estimate editor is the card's own — the figure is free-standing only while the order is
+   pre-approval and nothing else owns it (a staged build-up's total IS the estimate; an approved
+   order's figure is the contract value). Blank or zero = currently unpriced — the valuation
+   export's Pending tab then leaves the order out. *@
+<div class="panel p-5 space-y-3 text-sm">
+    <LoadGate IsLoading="@(!DetailsLoaded)" Label="Loading details">
+    <div class="flex justify-between"><span class="text-content-subtle">Reference</span><span class="font-mono">@Order.Reference</span></div>
+    <div class="flex justify-between"><span class="text-content-subtle">Status</span><span>@Order.Status.DisplayName()</span></div>
+    <div class="flex justify-between items-center gap-2">
+        <span class="text-content-subtle">Estimated value</span>
+        <span class="flex items-center gap-1.5">
+            @(Order.EstimatedValue is null ? "—" : Money(Order.EstimatedValue.Value))
+            @if (CanEditEstimate && !editingEstimate)
+            {
+                <button type="button" class="btn-secondary text-xs px-2 py-0.5 shrink-0"
+                        title="Edit the estimate — blank or zero marks the order unpriced, taking it off the export's Pending tab"
+                        disabled="@Busy" @onclick="StartEditEstimate">Edit</button>
+            }
+        </span>
+    </div>
+    @if (editingEstimate)
+    {
+        <div class="space-y-2">
+            <FormField Label="Estimate £" Value="@estimateText" OnChange="v => estimateText = v" />
+            <p class="text-xs text-content-subtle">
+                Blank or zero marks the order as currently unpriced — the valuation export's
+                Pending tab lists only orders carrying a figure.
+            </p>
+            @if (estimateError is not null)
+            {
+                <p class="text-xs text-negative">@estimateError</p>
+            }
+            <div class="flex gap-2">
+                <button type="button" class="btn-primary text-xs px-2 py-1" disabled="@(Busy || saving)" @onclick="SaveEstimateAsync">Save estimate</button>
+                <button type="button" class="btn-neutral text-xs px-2 py-1" disabled="@(Busy || saving)" @onclick="() => editingEstimate = false">Cancel</button>
+            </div>
+        </div>
+    }
+    <div class="flex justify-between"><span class="text-content-subtle">Selected sub</span><span>@SelectedSubName</span></div>
+    @* Issued is the official date the client was notified (stamped when the status
+       enters Issued); Created is the system's own stamp for when the record was
+       raised. Both shown here — the register lists lead with Issued. *@
+    <div class="flex justify-between"><span class="text-content-subtle">Issued</span><span>@(Order.IssuedAt is null ? "—" : Order.IssuedAt.Value.LocalDateTime.ToString("d MMM yyyy"))</span></div>
+    @if (Order.ApprovedAt is not null)
+    {
+        <div class="flex justify-between"><span class="text-content-subtle">Approved</span><span>@Order.ApprovedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span></div>
+    }
+    @if (Order.RejectedAt is not null)
+    {
+        <div class="flex justify-between"><span class="text-content-subtle">Rejected</span><span>@Order.RejectedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span></div>
+    }
+    <div class="flex justify-between"><span class="text-content-subtle">Created</span><span>@Order.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</span></div>
+    </LoadGate>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public VariationOrder Order { get; set; } = default!;
+    /// <summary>The subcontractor directory has answered — the rows wait for the sub's name.</summary>
+    [Parameter] public bool DetailsLoaded { get; set; }
+    [Parameter] public string SelectedSubName { get; set; } = "—";
+    /// <summary>Pre-approval, manager, and no staged build-up owning the figure.</summary>
+    [Parameter] public bool CanEditEstimate { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>The record as the server returned it after a save — the page swaps its copy.</summary>
+    [Parameter] public EventCallback<VariationOrder> OnSaved { get; set; }
+
+    private bool editingEstimate;
+    private bool saving;
+    private string estimateText = "";
+    private string? estimateError;
+
+    private void StartEditEstimate()
+    {
+        estimateText = Order.EstimatedValue?.ToString("0.##") ?? "";
+        estimateError = null;
+        editingEstimate = true;
+    }
+
+    private async Task SaveEstimateAsync()
+    {
+        if (saving) return;
+        estimateError = null;
+        decimal? estimate = null;
+        var text = estimateText.Trim().TrimStart('£').Replace(",", "");
+        if (text.Length > 0)
+        {
+            if (!decimal.TryParse(text, out var parsed)) { estimateError = "Enter a number, or leave blank for unpriced."; return; }
+            if (parsed < 0m) { estimateError = "An estimate cannot be negative."; return; }
+            estimate = parsed;
+        }
+        try
+        {
+            saving = true;
+            var saved = await Variations.SetEstimateAsync(Order.VariationOrderId, estimate);
+            editingEstimate = false;
+            await OnSaved.InvokeAsync(saved);
+        }
+        catch (CommandFailedException ex) { estimateError = ex.Message; }
+        catch { estimateError = "Couldn't save the estimate. Please try again."; }
+        finally { saving = false; }
+    }
+}

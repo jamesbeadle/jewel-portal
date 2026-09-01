@@ -31,15 +31,6 @@ public partial class ProjectVariationDetail
     // figure. Cancelling simply drops the draft — the record is untouched until Save.
     private bool renamingOrder;
 
-    // ---- Official document pane: the PDF's own link and the narrative-sections editor ----------
-    // The narratives' error is held apart from the page's `error` so it renders inside the pane
-    // being edited, next to the fields it is about.
-    private string DocumentHref => $"/api/variation-orders/{VariationOrderId}/document";
-    private bool editingNarratives;
-    private string narrativeCommercialBasis = "";
-    private string narrativeProgrammeImpact = "";
-    private string narrativeExclusions = "";
-    private string? narrativesError;
     private string renameTitle = "";
 
     // The Architect's Instructions that cover this variation — the evidence behind its figures, and
@@ -76,10 +67,7 @@ public partial class ProjectVariationDetail
     private string selSubId = "";
     private string selValue = "";
 
-    // ---- Originating-request repair (the register's old inline Link… UI now lives here) ----
-    private string linkTargetRequestId = "";
-    private bool linkBusy;
-    private string? linkError;
+    // ---- Originating-request repair: the candidates the panel offers ----
     private IReadOnlyList<VariationOrder> projectQuotes = Array.Empty<VariationOrder>();
 
 }

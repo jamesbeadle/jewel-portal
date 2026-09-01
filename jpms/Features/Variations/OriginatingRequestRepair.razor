@@ -1,0 +1,76 @@
+@namespace Jewel.JPMS.Features.Variations
+@inject IVariationStore Variations
+
+@* Originating request: repair the missing link on the record itself. Seeded (historic)
+   variations predate the request link, so the lineage bar shows "No request". This is where
+   the missing RFI/request gets attached — one deliberate pick on the record, not squeezed into
+   the register. The pick is the panel's own; the page reloads once the link lands. *@
+<div class="panel p-5">
+    <h3 class="eyebrow mb-2">Originating request</h3>
+    @if (CanManage)
+    {
+        <p class="text-sm text-content-muted mb-3">
+            This variation isn't linked to the request (RFI) it was raised from — its history
+            can't be traced yet. Pick the right one to complete the chain; the lineage bar
+            above fills in as soon as it's linked.
+        </p>
+        <div class="flex flex-wrap items-center gap-2">
+            <SearchSelect Options="@Candidates"
+                          Value="@targetRequestId"
+                          ValueChanged="v => targetRequestId = v"
+                          Placeholder="Choose a request…"
+                          WidthClass="w-full sm:w-96"
+                          InputClass="bg-surface border border-line px-3 py-2"
+                          Disabled="@linking" />
+            <button type="button" class="btn-primary"
+                    disabled="@(linking || string.IsNullOrWhiteSpace(targetRequestId))"
+                    @onclick="LinkAsync">
+                @(linking ? "Linking…" : "Link request")
+            </button>
+        </div>
+        @if (error is not null)
+        {
+            <p class="text-xs text-negative mt-2">@error</p>
+        }
+        <p class="text-xs text-content-subtle mt-3">
+            RFIs are listed first — the stage a variation order is normally raised from. Requests
+            already carrying a variation order aren't offered (a request has at most one).
+        </p>
+    }
+    else
+    {
+        <p class="text-sm text-content-subtle italic">
+            This variation isn't linked to an originating request. A project manager or QS can
+            attach the right RFI here.
+        </p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string VariationOrderId { get; set; } = "";
+    [Parameter] public bool CanManage { get; set; }
+    /// <summary>RFIs first, then the rest of the register, minus requests already carrying an order.</summary>
+    [Parameter] public IReadOnlyList<SearchSelect.Option> Candidates { get; set; } = Array.Empty<SearchSelect.Option>();
+    /// <summary>The link landed — the page re-reads so the lineage bar fills in.</summary>
+    [Parameter] public EventCallback OnLinked { get; set; }
+
+    private string targetRequestId = "";
+    private bool linking;
+    private string? error;
+
+    private async Task LinkAsync()
+    {
+        if (linking || string.IsNullOrWhiteSpace(targetRequestId)) return;
+        error = null;
+        try
+        {
+            linking = true;
+            await Variations.LinkToRequestAsync(VariationOrderId, targetRequestId);
+            targetRequestId = "";
+            await OnLinked.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't link the request. Please try again."; }
+        finally { linking = false; }
+    }
+}

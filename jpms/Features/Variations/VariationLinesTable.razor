@@ -1,0 +1,52 @@
+@namespace Jewel.JPMS.Features.Variations
+
+@* The approved variation's priced lines as they sit on the Valuation Report — the build-up
+   behind the figure in the sidebar. *@
+<div class="panel p-5">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="eyebrow">Variation lines</h3>
+        <span class="text-xs text-content-subtle">On the Valuation Report as <span class="font-mono">@VariationRef</span></span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-content-subtle border-b border-line">
+                    <th class="py-2 pr-3 font-medium">Cost centre</th>
+                    <th class="py-2 pr-3 font-medium">Description</th>
+                    <th class="py-2 pr-3 font-medium text-right">Qty</th>
+                    <th class="py-2 pr-3 font-medium text-right">Rate £</th>
+                    <th class="py-2 font-medium text-right">Amount £</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-line">
+                @foreach (var line in Lines)
+                {
+                    <tr>
+                        <td class="py-2 pr-3 font-mono text-xs whitespace-nowrap">@line.CostCode</td>
+                        <td class="py-2 pr-3">@line.Description</td>
+                        <td class="py-2 pr-3 text-right font-mono">@line.Quantity.ToString("0.##", Gb)</td>
+                        <td class="py-2 pr-3 text-right font-mono">@line.Rate.ToString("N2", Gb)</td>
+                        <td class="py-2 text-right font-mono @(line.LineAmount < 0m ? "text-negative" : "")">@line.LineAmount.ToString("N2", Gb)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr class="border-t border-line-strong font-semibold text-content">
+                    <td class="py-2 pr-3" colspan="4">Total</td>
+                    @* whitespace-nowrap: a negative total must never wrap its minus sign onto
+                       its own line and read as positive. *@
+                    <td class="py-2 text-right font-mono whitespace-nowrap @(Total < 0m ? "text-negative" : "")">@Total.ToString("C2", Gb)</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ValuationLineItem> Lines { get; set; } = Array.Empty<ValuationLineItem>();
+    /// <summary>The V-ref the lines sit under on the report.</summary>
+    [Parameter] public string? VariationRef { get; set; }
+
+    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
+    private decimal Total => Lines.Sum(line => line.LineAmount);
+}

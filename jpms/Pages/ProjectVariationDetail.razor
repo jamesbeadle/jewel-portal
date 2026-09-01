@@ -6,6 +6,7 @@
 @using Jewel.JPMS.Features.RecordLinks
 @using Jewel.JPMS.Features.Triage
 @using Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Variations
 @inject AuthService Auth
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
 @inject SessionService Session
@@ -193,179 +194,22 @@ else
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
             <div class="lg:col-span-2 space-y-5">
-                @* ---- Official document pane: the narrative sections and the document's own
-                       actions — the same arrangement as the request page's official form. The PDF
-                       is rendered fresh from the record on every download, and the composer's
-                       System documents picker attaches the identical bytes at send time. *@
-                <div class="panel p-5">
-                    <div class="flex items-start justify-between gap-3 mb-3">
-                        <div>
-                            <h3 class="eyebrow">Official Variation Order document</h3>
-                            <p class="text-xs text-content-subtle mt-0.5">
-                                Scope, commercial basis, programme impact and exclusions, rendered on the issued PDF
-                                with the cost breakdown. Attach it to an email from the Control Centre's System documents picker.
-                            </p>
-                        </div>
-                        <Toolbar>
-                            <ToolbarButton Icon="download" Label="Download the Variation Order PDF"
-                                           Href="@DocumentHref" Download="true" />
-                        </Toolbar>
-                    </div>
-
-                    @if (narrativesError is not null)
-                    {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@narrativesError</p>
-                    }
-
-                    @if (!editingNarratives)
-                    {
-                        <div class="space-y-3">
-                            <div>
-                                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope of works</h4>
-                                <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(order.Description) ? "—" : order.Description)</p>
-                            </div>
-                            <div>
-                                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</h4>
-                                <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(order.CommercialBasis) ? "—" : order.CommercialBasis)</p>
-                            </div>
-                            <div>
-                                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</h4>
-                                <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(order.ProgrammeImpact) ? "—" : order.ProgrammeImpact)</p>
-                            </div>
-                            <div>
-                                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</h4>
-                                <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(order.Exclusions) ? "—" : order.Exclusions)</p>
-                            </div>
-                            @if (CanManage)
-                            {
-                                <button type="button" class="btn-secondary" disabled="@busy" @onclick="StartEditNarratives">Edit sections</button>
-                            }
-                        </div>
-                    }
-                    else
-                    {
-                        @* Wording only, at every stage — the same rule as the retitle. The next
-                           download or send picks the new prose up; nothing commercial moves. *@
-                        <div class="space-y-3">
-                            <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</label>
-                                <textarea class="field" rows="4" value="@narrativeCommercialBasis"
-                                          @oninput="e => narrativeCommercialBasis = e.Value?.ToString() ?? string.Empty"
-                                          placeholder="What the price is based on — tender-face position, rate basis, OH&amp;P…"></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</label>
-                                <textarea class="field" rows="4" value="@narrativeProgrammeImpact"
-                                          @oninput="e => narrativeProgrammeImpact = e.Value?.ToString() ?? string.Empty"
-                                          placeholder="Effect on the programme — procurement, mobilisation, works duration…"></textarea>
-                            </div>
-                            <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</label>
-                                <textarea class="field" rows="4" value="@narrativeExclusions"
-                                          @oninput="e => narrativeExclusions = e.Value?.ToString() ?? string.Empty"
-                                          placeholder="What this variation expressly does not price…"></textarea>
-                            </div>
-                            <p class="text-xs text-content-subtle">
-                                Clearing a section removes it from the document. The PDF renders fresh on every
-                                download and send, so the new wording reaches the very next copy.
-                            </p>
-                            <div class="flex gap-2">
-                                <button type="button" class="btn-primary" disabled="@busy" @onclick="SaveNarratives">Save sections</button>
-                                <button type="button" class="btn-neutral" disabled="@busy" @onclick="() => editingNarratives = false">Cancel</button>
-                            </div>
-                        </div>
-                    }
-                </div>
+                <VariationDocumentPanel Order="order" CanManage="CanManage" Busy="busy"
+                                        OnSaved="saved => order = saved" />
 
                 @if (ApprovedOrder is not null && VariationLines.Count > 0)
                 {
-                    <div class="panel p-5">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="eyebrow">Variation lines</h3>
-                            <span class="text-xs text-content-subtle">On the Valuation Report as <span class="font-mono">@ApprovedOrder!.VariationRef</span></span>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead>
-                                    <tr class="text-left text-content-subtle border-b border-line">
-                                        <th class="py-2 pr-3 font-medium">Cost centre</th>
-                                        <th class="py-2 pr-3 font-medium">Description</th>
-                                        <th class="py-2 pr-3 font-medium text-right">Qty</th>
-                                        <th class="py-2 pr-3 font-medium text-right">Rate £</th>
-                                        <th class="py-2 font-medium text-right">Amount £</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-line">
-                                    @foreach (var vline in VariationLines)
-                                    {
-                                        <tr>
-                                            <td class="py-2 pr-3 font-mono text-xs whitespace-nowrap">@vline.CostCode</td>
-                                            <td class="py-2 pr-3">@vline.Description</td>
-                                            <td class="py-2 pr-3 text-right font-mono">@vline.Quantity.ToString("0.##", Gb)</td>
-                                            <td class="py-2 pr-3 text-right font-mono">@vline.Rate.ToString("N2", Gb)</td>
-                                            <td class="py-2 text-right font-mono @(vline.LineAmount < 0m ? "text-negative" : "")">@vline.LineAmount.ToString("N2", Gb)</td>
-                                        </tr>
-                                    }
-                                </tbody>
-                                <tfoot>
-                                    <tr class="border-t border-line-strong font-semibold text-content">
-                                        <td class="py-2 pr-3" colspan="4">Total</td>
-                                        @* whitespace-nowrap: a negative total must never wrap its minus sign onto
-                                           its own line and read as positive. *@
-                                        <td class="py-2 text-right font-mono whitespace-nowrap @(VariationLines.Sum(vline => vline.LineAmount) < 0m ? "text-negative" : "")">@MoneyPennies(VariationLines.Sum(vline => vline.LineAmount))</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                    </div>
+                    <VariationLinesTable Lines="VariationLines" VariationRef="@ApprovedOrder!.VariationRef" />
                 }
 
-                @* ---- Originating request: repair the missing link on the record itself ----
-                       Seeded (historic) variations predate the request link, so the lineage
-                       bar shows "No request". This is where the missing RFI/request gets attached
-                       — one deliberate pick on the record, not squeezed into the register. *@
+                @* ---- Originating request: seeded (historic) variations predate the request link —
+                       the missing RFI/request gets attached here, on the record. ---- *@
                 @if (string.IsNullOrWhiteSpace(order.RequestId))
                 {
-                    <div class="panel p-5">
-                        <h3 class="eyebrow mb-2">Originating request</h3>
-                        @if (CanManage)
-                        {
-                            <p class="text-sm text-content-muted mb-3">
-                                This variation isn't linked to the request (RFI) it was raised from — its history
-                                can't be traced yet. Pick the right one to complete the chain; the lineage bar
-                                above fills in as soon as it's linked.
-                            </p>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <SearchSelect Options="@LinkCandidateOptions"
-                                              Value="@linkTargetRequestId"
-                                              ValueChanged="v => linkTargetRequestId = v"
-                                              Placeholder="Choose a request…"
-                                              WidthClass="w-full sm:w-96"
-                                              InputClass="bg-surface border border-line px-3 py-2"
-                                              Disabled="@linkBusy" />
-                                <button type="button" class="btn-primary"
-                                        disabled="@(linkBusy || string.IsNullOrWhiteSpace(linkTargetRequestId))"
-                                        @onclick="LinkToRequest">
-                                    @(linkBusy ? "Linking…" : "Link request")
-                                </button>
-                            </div>
-                            @if (linkError is not null)
-                            {
-                                <p class="text-xs text-negative mt-2">@linkError</p>
-                            }
-                            <p class="text-xs text-content-subtle mt-3">
-                                RFIs are listed first — the stage a variation order is normally raised from. Requests
-                                already carrying a variation order aren't offered (a request has at most one).
-                            </p>
-                        }
-                        else
-                        {
-                            <p class="text-sm text-content-subtle italic">
-                                This variation isn't linked to an originating request. A project manager or QS can
-                                attach the right RFI here.
-                            </p>
-                        }
-                    </div>
+                    <OriginatingRequestRepair VariationOrderId="@VariationOrderId"
+                                              CanManage="CanManage"
+                                              Candidates="@LinkCandidateOptions"
+                                              OnLinked="ReloadAsync" />
                 }
 
                 @* ---- Conversation: the typed record — internal notes plus the shared thread the
@@ -376,136 +220,28 @@ else
                 @* ---- Communications: the mail behind this record, read live by tag ----
                        Emails tagged to the record's quoting reference or (once approved) its V-ref
                        in mailbox triage appear here, so the correspondence behind the variation is
-                       visible where the record lives — not only on the project's Communications
-                       tab. The shared thread list carries the consistent Reply widget: replying
-                       from here SENDS there and then (the Control Centre is where replies queue),
-                       and the sent copy inherits the thread's tags, so it files straight back
-                       into this list. *@
+                       visible where the record lives — not only on the project's Communications tab. *@
                 <div class="panel p-5">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="eyebrow">Communications</h3>
-                        <div class="flex items-center gap-3">
-                            @if (emailsLoaded && emails.Count > 0)
-                            {
-                                <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@emails.Count</span>
-                            }
-                            @* Search the whole mailbox and tag what belongs here — the list AND the
-                               assistant's read_record_emails both get richer with each tag. *@
-                            <EmailFinder Type="RecordType.VariationQuote" RecordId="@VariationOrderId"
-                                         RecordReference="@order.Reference" ExcludeTag="@($"JPMS/{order.Reference}")"
-                                         OnLinked="LoadEmailsAsync" />
-                        </div>
-                    </div>
-
-                    @if (emailsError is not null)
-                    {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@emailsError</p>
-                    }
-
-                    <LoadGate IsLoading="@(!emailsLoaded)" Prominent="true" Label="Loading emails">
-                    @if (commsReplySent is not null)
-                    {
-                        <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
-                            <p class="text-sm text-content">@commsReplySent</p>
-                            <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
-                                    @onclick="() => commsReplySent = null">✕</button>
-                        </div>
-                    }
-                    @if (commsReplyTo is { } replyingTo)
-                    {
-                        <div class="mb-3 space-y-2">
-                            <p class="text-sm text-content-muted">
-                                @(commsComposeIsForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyingTo.FromName) ? replyingTo.FromEmail : replyingTo.FromName)</span> —
-                                <span class="italic">@replyingTo.Subject</span>
-                            </p>
-                            <MailReplyComposer @key="@($"{replyingTo.Id}:{commsComposeIsForward}")" ReplyTo="replyingTo" Forward="commsComposeIsForward"
-                                               Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@ProjectId"
-                                               FooterNote="@(commsComposeIsForward
-                                                   ? "The forward sends now from the projects mailbox and files itself back into this list."
-                                                   : "The reply sends now from the projects mailbox and files itself back into this list.")"
-                                               OnSent="OnCommsReplySent" OnCancel="() => commsReplyTo = null" />
-                        </div>
-                    }
-                    @if (emails.Count == 0)
-                    {
-                        @* Only when the mailbox actually answered "none" — a failure says so above. *@
-                        @if (emailsError is null)
-                        {
-                        <p class="text-sm text-content-subtle italic">
+                    <RecordCorrespondencePanel Type="RecordType.VariationQuote" RecordId="@VariationOrderId"
+                                               RecordReference="@order.Reference" ProjectId="@ProjectId"
+                                               Emails="emails" Loaded="emailsLoaded" Error="@emailsError"
+                                               OnReload="LoadEmailsAsync">
+                        <EmptyMessage>
                             No emails are tagged to this variation yet. Tag an email to
                             <span class="font-medium not-italic text-content">@order.Reference</span>@(ApprovedOrder is not null ? $" or {order.VariationRef}" : "")
                             in mailbox triage and it appears here.
-                        </p>
-                        }
-                    }
-                    else
-                    {
-                        <CorrespondenceThreadList Emails="emails" ExcludeTag="@($"JPMS/{order.Reference}")"
-                                                  OnReply="email => StartCommsCompose(email, forward: false)"
-                                                  OnForward="email => StartCommsCompose(email, forward: true)"
-                                                  OnUntagged="_ => LoadEmailsAsync()" />
-                    }
-                    </LoadGate>
+                        </EmptyMessage>
+                    </RecordCorrespondencePanel>
                 </div>
             </div>
 
             <div class="space-y-5">
-                <div class="panel p-5 space-y-3 text-sm">
-                    @* One panel, one arrival: the selected sub's name comes from the subcontractor
-                       directory, so the rows wait for it rather than showing a raw id first. *@
-                    <LoadGate IsLoading="@(!Subcontractors.IsLoaded)" Label="Loading details">
-                    <div class="flex justify-between"><span class="text-content-subtle">Reference</span><span class="font-mono">@order.Reference</span></div>
-                    <div class="flex justify-between"><span class="text-content-subtle">Status</span><span>@order.Status.DisplayName()</span></div>
-                    @* The estimate is editable while the order is pre-approval and nothing else owns
-                       the figure (a staged build-up's total IS the estimate; an approved order's
-                       figure is the contract value). Blank or zero = currently unpriced — the
-                       valuation export's Pending tab then leaves the order out. *@
-                    <div class="flex justify-between items-center gap-2">
-                        <span class="text-content-subtle">Estimated value</span>
-                        <span class="flex items-center gap-1.5">
-                            @(order.EstimatedValue is null ? "—" : Money(order.EstimatedValue.Value))
-                            @if (CanEditEstimate && !editingEstimate)
-                            {
-                                <button type="button" class="btn-secondary text-xs px-2 py-0.5 shrink-0"
-                                        title="Edit the estimate — blank or zero marks the order unpriced, taking it off the export's Pending tab"
-                                        disabled="@busy" @onclick="StartEditEstimate">Edit</button>
-                            }
-                        </span>
-                    </div>
-                    @if (editingEstimate)
-                    {
-                        <div class="space-y-2">
-                            <FormField Label="Estimate £" Value="@estimateText" OnChange="v => estimateText = v" />
-                            <p class="text-xs text-content-subtle">
-                                Blank or zero marks the order as currently unpriced — the valuation export's
-                                Pending tab lists only orders carrying a figure.
-                            </p>
-                            @if (estimateError is not null)
-                            {
-                                <p class="text-xs text-negative">@estimateError</p>
-                            }
-                            <div class="flex gap-2">
-                                <button type="button" class="btn-primary text-xs px-2 py-1" disabled="@busy" @onclick="SaveEstimate">Save estimate</button>
-                                <button type="button" class="btn-neutral text-xs px-2 py-1" disabled="@busy" @onclick="CancelEditEstimate">Cancel</button>
-                            </div>
-                        </div>
-                    }
-                    <div class="flex justify-between"><span class="text-content-subtle">Selected sub</span><span>@SelectedSubName()</span></div>
-                    @* Issued is the official date the client was notified (stamped when the status
-                       enters Issued); Created is the system's own stamp for when the record was
-                       raised. Both shown here — the register lists lead with Issued. *@
-                    <div class="flex justify-between"><span class="text-content-subtle">Issued</span><span>@(order.IssuedAt is null ? "—" : order.IssuedAt.Value.LocalDateTime.ToString("d MMM yyyy"))</span></div>
-                    @if (order.ApprovedAt is not null)
-                    {
-                        <div class="flex justify-between"><span class="text-content-subtle">Approved</span><span>@order.ApprovedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span></div>
-                    }
-                    @if (order.RejectedAt is not null)
-                    {
-                        <div class="flex justify-between"><span class="text-content-subtle">Rejected</span><span>@order.RejectedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span></div>
-                    }
-                    <div class="flex justify-between"><span class="text-content-subtle">Created</span><span>@order.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</span></div>
-                    </LoadGate>
-                </div>
+                <VariationDetailsCard Order="order"
+                                      DetailsLoaded="Subcontractors.IsLoaded"
+                                      SelectedSubName="@SelectedSubName()"
+                                      CanEditEstimate="CanEditEstimate"
+                                      Busy="busy"
+                                      OnSaved="saved => order = saved" />
 
                 @if (ApprovedOrder is not null)
                 {
