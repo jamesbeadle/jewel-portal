@@ -1,0 +1,84 @@
+@using Jewel.JPMS.Contracts.Xero
+@namespace Jewel.JPMS.Features.Xero
+
+@* The discussion thread on a disputed line — a pure VIEW over the host's state: the host
+   re-resolves the line from the store on every render (not a captured snapshot), so a reply
+   just sent — or the other side's message arriving with a refresh — appears without reopening
+   the dialog, and the reply text lives with the host so its send can clear it. A null line
+   with the dialog open means the dispute was resolved under the reader's feet. *@
+<Modal IsOpen="IsOpen" Title="Dispute discussion" ShowFooter="false"
+       OnCancel="() => OnClose.InvokeAsync()" Class="max-w-2xl">
+    @if (Line is { } discussed)
+    {
+        <div class="space-y-4">
+            <LedgerLineSummary Line="discussed">
+                @(discussed.InvoiceNumber ?? "—") · @DateText(discussed.Date) · @Money(SignedNet(discussed)) net
+                · disputed by @(discussed.AllocatedBy ?? "—")
+            </LedgerLineSummary>
+
+            @if (discussed.DisputeMessages is { Count: > 0 } thread)
+            {
+                <div class="space-y-3 max-h-[45vh] overflow-y-auto pr-1">
+                    @foreach (var message in thread)
+                    {
+                        <div class="rounded-lg border border-line px-3 py-2">
+                            <span class="block text-xs text-content-subtle">
+                                @message.Author · @message.SentAtUtc.ToLocalTime().ToString("d MMM yyyy HH:mm")
+                            </span>
+                            <span class="block text-sm text-content whitespace-pre-wrap mt-0.5">@message.Body</span>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-sm text-content-subtle">No messages yet — write the first one below.</p>
+            }
+
+            @if (Error is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+            }
+            <div class="flex items-start gap-2">
+                <textarea class="grow bg-surface border border-line rounded-lg px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+                          rows="3" placeholder="Reply…"
+                          value="@Message" @oninput="e => MessageChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"></textarea>
+                <button class="text-sm font-medium rounded-lg px-3 py-2 bg-content text-surface disabled:opacity-50"
+                        disabled="@(Busy || string.IsNullOrWhiteSpace(Message))"
+                        @onclick="() => OnSend.InvokeAsync()">Send</button>
+            </div>
+            <p class="text-xs text-content-subtle">
+                Set the agreed project and cost centre on the line's row (Save keeps it disputed);
+                Return to allocation resolves the dispute and puts the line back in the queue.
+            </p>
+        </div>
+    }
+    else
+    {
+        <p class="text-sm text-content-subtle py-4">
+            This line is no longer disputed — it has been returned to allocation.
+        </p>
+    }
+</Modal>
+
+@code {
+    /// <summary>The dialog shows while the host holds a disputed line id — even one the store
+    /// no longer resolves, which renders the returned-to-allocation notice instead.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+
+    /// <summary>Re-resolved by the host from the store each render — never a snapshot.</summary>
+    [Parameter] public XeroLedgerLine? Line { get; set; }
+
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public EventCallback<string> MessageChanged { get; set; }
+
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public EventCallback OnSend { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private static decimal SignedNet(XeroLedgerLine line) =>
+        line.Type == "ACCPAYCREDIT" ? -line.Net : line.Net;
+
+    private static string DateText(DateTime? date) => date?.ToString("d MMM yyyy") ?? "—";
+}
