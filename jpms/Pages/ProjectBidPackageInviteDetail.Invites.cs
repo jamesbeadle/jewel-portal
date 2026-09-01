@@ -1,3 +1,4 @@
+using Jewel.JPMS.Features.Procurement;
 using System.Text.Json;
 using Jewel.JPMS.Contracts.Procurement;
 using Jewel.JPMS.Contracts.Subcontractors;
@@ -144,21 +145,7 @@ public partial class ProjectBidPackageInviteDetail
         finally { busy = false; }
     }
 
-    // ---- Find local subcontractors (Google Places search near the project's site) ----
-
-    private bool showFindModal;
-    private bool findBusy;
-    private bool findSearched;
-    private bool findResolving;
-    private string findTrade = "";
-    private string? findError;
-    private string? findTradeNote;
-    private string? findNotReadyReason;
-    private string? findNextPageToken;
-    private readonly List<LocalSubcontractor> findResults = new();
-    private readonly Dictionary<string, LocalSubcontractor> selectedPlaces = new(StringComparer.Ordinal);
-
-    // Inviting subcontractors is gated on the package actually saying what it is: a title plus
+    // The tender list opens for business only once the package has a title AND some scope
     // details (a specification summary or line items). The details are what the invite email, the
     // pricing schedule and the AI trade match all work from — inviting before they exist sends
     // people a tender for nothing. Mirrors the server's rule in ResolveBidPackageTradeHandler:
@@ -167,115 +154,29 @@ public partial class ProjectBidPackageInviteDetail
         !string.IsNullOrWhiteSpace(package?.Title)
         && (!string.IsNullOrWhiteSpace(package?.SpecificationSummary) || lineItems.Count > 0);
 
-    // Opens the modal and resolves the search trade FROM the package (title + details, one cheap
-    // AI call) instead of asking the user to pick one — then runs the search itself. The resolved
-    // term lands in an editable field, so a wrong guess costs one correction. Every failure path
-    // degrades to the package's own stored trade rather than stranding the modal.
-    private async Task OpenFindModalAsync()
-    {
-        findTrade = "";
-        findResults.Clear();
-        selectedPlaces.Clear();
-        findNextPageToken = null;
-        findError = null;
-        findSearched = false;
-        findTradeNote = null;
-        findNotReadyReason = null;
-        showFindModal = true;
-        findResolving = true;
-        StateHasChanged();
+    // ---- Find local subcontractors (Google Places search near the project's site) ----
+    // The finder (LocalSubcontractorFinderModal) owns the trade resolution, the search and the
+    // selection; this page saves the ticked companies as tender-only prospects and invites them.
 
-        try
-        {
-            var resolution = await Queries.AskAsync(
-                new ResolveBidPackageTrade(BidPackageId), CancellationToken.None);
-            if (resolution is null || !resolution.Ready)
-            {
-                findNotReadyReason = resolution?.Reason
-                    ?? "This package needs its details (under Details) before subcontractors are invited.";
-            }
-            else
-            {
-                findTrade = resolution.Trade ?? package?.Trade ?? "";
-                findTradeNote = resolution.UsedAi
-                    ? "Worked out from the package's title and details — edit it and press Search if it's off."
-                    : resolution.Reason;
-            }
-        }
-        catch
-        {
-            findTrade = package?.Trade ?? "";
-            findTradeNote = "The trade couldn't be worked out just now — using the package's own trade.";
-        }
-        finally
-        {
-            findResolving = false;
-        }
-        // Repaint BEFORE the auto-search: Blazor only re-renders an async handler at its first
-        // yield and its end, so without this the modal keeps saying "Working out the trade…"
-        // through the whole web search — which reads as a hang.
-        StateHasChanged();
+    private bool showFindModal;
 
-        if (findNotReadyReason is null && !string.IsNullOrWhiteSpace(findTrade))
-            await RunFindSearch(loadMore: false);
-        StateHasChanged();
-    }
+    private void OpenFindModal() => showFindModal = true;
 
     private void CloseFindModal() => showFindModal = false;
-
-    private async Task RunFindSearch(bool loadMore)
-    {
-        if (findBusy || string.IsNullOrWhiteSpace(findTrade)) return;
-        findBusy = true;
-        findError = null;
-        // Explicit repaint so the button's spinner shows even when this is called mid-handler
-        // (the auto-search after trade resolution) rather than as its own click event.
-        StateHasChanged();
-        try
-        {
-            var result = await Queries.AskAsync(
-                new SearchLocalSubcontractors(ProjectId, findTrade.Trim(), loadMore ? findNextPageToken : null),
-                CancellationToken.None);
-            if (!loadMore)
-            {
-                findResults.Clear();
-                selectedPlaces.Clear();
-            }
-            if (result.Error is not null)
-            {
-                findError = result.Error;
-                findNextPageToken = null;
-            }
-            else
-            {
-                findResults.AddRange(result.Results.Where(hit => findResults.All(existing => existing.PlaceId != hit.PlaceId)));
-                findNextPageToken = result.NextPageToken;
-            }
-            findSearched = true;
-        }
-        catch { findError = "The search failed. Please try again."; }
-        finally { findBusy = false; }
-    }
-
-    private void TogglePlace(LocalSubcontractor place, ChangeEventArgs e)
-    {
-        if (e.Value is true) selectedPlaces[place.PlaceId] = place;
-        else selectedPlaces.Remove(place.PlaceId);
-    }
 
     // Save each ticked company as a tender-only prospect (unless the directory already knows it),
     // then invite them all. Prospects stay OUT of the Directory until promoted from a submitted
     // tender or by winning the package — only companies judged worth keeping get added.
-    private async Task ConfirmFindInvite()
+    private async Task ConfirmFindInvite(LocalSubcontractorPick pick)
     {
-        if (busy || selectedPlaces.Count == 0 || !CanEdit) return;
+        if (busy || pick.Places.Count == 0 || !CanEdit) return;
         error = null;
         try
         {
             busy = true;
             var ids = new List<string>();
             var directoryChanged = false;
-            foreach (var place in selectedPlaces.Values)
+            foreach (var place in pick.Places)
             {
                 if (!string.IsNullOrEmpty(place.ExistingSubcontractorId))
                 {
@@ -303,7 +204,7 @@ public partial class ProjectBidPackageInviteDetail
                 }
                 var created = await Commands.SendAsync(
                     new AddSubcontractorToDirectory(
-                        place.Name, new[] { await EnsureTradeIdAsync(findTrade) }, "", place.Email ?? "", place.Phone ?? "", "",
+                        place.Name, new[] { await EnsureTradeIdAsync(pick.Trade) }, "", place.Email ?? "", place.Phone ?? "", "",
                         DirectoryCategory.Subcontractor, "", "", "", place.Website ?? "", IsProspect: true),
                     CancellationToken.None);
                 ids.Add(created.SubcontractorId);
@@ -313,7 +214,6 @@ public partial class ProjectBidPackageInviteDetail
 
             fetchedRecipients = await Commands.SendAsync(
                 new InviteSubcontractorsToBidPackage(BidPackageId, ids), CancellationToken.None);
-            selectedPlaces.Clear();
             showFindModal = false;
             package = await Queries.AskAsync(new GetBidPackageById(BidPackageId), CancellationToken.None);
             sendNote = $"Added {ids.Count} compan{(ids.Count == 1 ? "y" : "ies")} from the local search to the tender list — nothing has been emailed, and they are NOT in the Directory (add the good ones from their submitted tenders). Their addresses were picked up from their websites, so worth a quick check on the list above; when you're ready, compose the Invite email and it sends when you press Send.";
