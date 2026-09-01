@@ -572,71 +572,19 @@ else
 
             @if (activeTab == "emails")
             {
-            @* ---- Tender responses & related emails (read live by the package's tag) ----
-                   The shared thread list carries the consistent communications widget — threads,
-                   full email on demand, attachments with preview/download, tag chips, and the
-                   Reply/Forward affordance: replying from here SENDS there and then from the
-                   projects mailbox, and the sent copy inherits the thread's tags, so it files
-                   straight back into this list. *@
+            @* ---- Tender responses & related emails (read live by the package's tag) ---- *@
             <section>
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="eyebrow">Tender responses & related emails</h3>
-                    <div class="flex items-center gap-3">
-                        @if (fetchedEmails is not null && emails.Count > 0)
-                        {
-                            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@emails.Count</span>
-                        }
-                        @* Search the whole mailbox and tag what belongs here — the list below AND
-                           the assistant's read_record_emails both get richer with each tag. *@
-                        <EmailFinder Type="RecordType.BidPackageInvite" RecordId="@BidPackageId"
-                                     RecordReference="@package.Reference" ExcludeTag="@($"JPMS/{package.Reference}")"
-                                     OnLinked="ReloadEmailsAsync" />
-                    </div>
-                </div>
-                <LoadGate IsLoading="@(!EmailsReady)" Prominent="true" Label="Loading related emails">
-                @if (commsReplySent is not null)
-                {
-                    <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
-                        <p class="text-sm text-content">@commsReplySent</p>
-                        <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
-                                @onclick="() => commsReplySent = null">✕</button>
-                    </div>
-                }
-                @if (commsReplyTo is { } replyingTo)
-                {
-                    <div class="mb-3 space-y-2">
-                        <p class="text-sm text-content-muted">
-                            @(commsComposeIsForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(replyingTo.FromName) ? replyingTo.FromEmail : replyingTo.FromName)</span> —
-                            <span class="italic">@replyingTo.Subject</span>
-                        </p>
-                        <MailReplyComposer @ref="commsComposer" @key="@($"{replyingTo.Id}:{commsComposeIsForward}")" ReplyTo="replyingTo" Forward="commsComposeIsForward"
-                                           Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@ProjectId"
-                                           FooterNote="@(commsComposeIsForward
-                                               ? "The forward sends now from the projects mailbox and files itself back into this list."
-                                               : "The reply sends now from the projects mailbox and files itself back into this list.")"
-                                           OnSent="OnCommsReplySent" OnCancel="CancelCommsCompose"
-                                           />
-                    </div>
-                }
-                @if (emails.Count == 0)
-                {
-                    @* Only once the fetch has answered — the banner above carries a failure. *@
-                    @if (fetchedEmails is not null)
-                    {
-                        <p class="text-sm text-content-subtle italic">
-                            No emails tagged to this bid package. Replies to the invite land in Triage —
-                            tag them with @package.Reference and they appear here.
-                        </p>
-                    }
-                }
-                else
-                {
-                    <CorrespondenceThreadList Emails="emails" ExcludeTag="@($"JPMS/{package.Reference}")"
-                                              OnReply="email => StartCommsCompose(email, forward: false)"
-                                              OnForward="email => StartCommsCompose(email, forward: true)"
-                                              OnUntagged="_ => ReloadEmailsAsync()" />
-                }
-                </LoadGate>
+                <RecordCorrespondencePanel Type="RecordType.BidPackageInvite" RecordId="@BidPackageId"
+                                           RecordReference="@package.Reference" ProjectId="@ProjectId"
+                                           Title="Tender responses & related emails" LoadingLabel="Loading related emails"
+                                           Emails="emails" Loaded="EmailsReady"
+                                           Error="@(EmailsReady && fetchedEmails is null ? "Couldn't load the related emails — the reason is in the banner above." : null)"
+                                           OnReload="ReloadEmailsAsync">
+                    <EmptyMessage>
+                        No emails tagged to this bid package. Replies to the invite land in Triage —
+                        tag them with @package.Reference and they appear here.
+                    </EmptyMessage>
+                </RecordCorrespondencePanel>
             </section>
             }
         }

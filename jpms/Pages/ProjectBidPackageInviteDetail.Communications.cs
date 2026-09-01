@@ -11,39 +11,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectBidPackageInviteDetail
 {
-    // ---- Communications: the shared Reply/Forward composer over the tagged-email list ----
-    // The email a Reply or Forward was pressed on (the shared composer opens above the list;
-    // sending from a record page sends immediately), which of the two it was, and the
-    // confirmation left behind by the last send.
-    private MailReplyComposer? commsComposer;
-    private MailboxMessage? commsReplyTo;
-    private bool commsComposeIsForward;
-    private string? commsReplySent;
-
-    private void StartCommsCompose(MailboxMessage message, bool forward)
-    {
-        commsReplyTo = message;
-        commsComposeIsForward = forward;
-    }
-
-    private void CancelCommsCompose()
-    {
-        commsReplyTo = null;
-    }
-
-    private async Task OnCommsReplySent(Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome outcome)
-    {
-        var wasForward = commsComposeIsForward;
-        commsReplyTo = null;
-        commsComposeIsForward = false;
-        commsReplySent = outcome.Sent
-            ? $"{(wasForward ? "Forward" : "Reply")} sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
-            : $"The {(wasForward ? "forward" : "reply")} was saved to the mailbox's Drafts — review and send it from Outlook.";
-        // The sent copy self-files by tag; re-read so it appears in the list straight away.
-        try { fetchedEmails = await Queries.AskAsync(new ListBidPackageEmails(BidPackageId), CancellationToken.None); }
-        catch { /* the list simply refreshes on the next full load */ }
-    }
-
     /// <summary>After the Find-emails dialog tags something: re-read so it appears straight away.</summary>
     private async Task ReloadEmailsAsync()
     {
