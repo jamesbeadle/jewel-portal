@@ -1,0 +1,56 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+
+@* The Discarded tab's inbox list: the "JPMS/Discarded"-tagged pile, plain rows and a pager —
+   restore lives on the open email, not the list. *@
+<LoadGate IsLoading="@(!Arrived)" Prominent="true" Label="Loading discarded emails">
+    @if (LoadError is not null && Items.Count == 0)
+    {
+        @* A failed page has nothing to report; "no discarded emails" would read as an answer. *@
+        <p class="text-sm text-negative">Couldn't load the discarded emails. The reason is in the red bar above — reload to try again.</p>
+    }
+    else if (Total == 0)
+    {
+        <div class="panel p-8 text-center">
+            <p class="text-sm text-content">No discarded emails.</p>
+            <p class="text-xs text-content-subtle mt-1">Emails you discard from the queue show up here, and can be restored.</p>
+        </div>
+    }
+    else
+    {
+        <div class="relative space-y-2">
+            @if (ListLoading)
+            {
+                <JewelSpinner Overlay="true" Label="Loading" />
+            }
+            @foreach (var item in Items)
+            {
+                <TriageEmailRow Item="item"
+                                IsSelected="@(SelectedId == item.Id)"
+                                OnSelect="item => OnSelect.InvokeAsync(item)" />
+            }
+
+            <EmailListPager PageIndex="PageIndex"
+                            PageCount="PageCount"
+                            Total="Total"
+                            HasNext="HasNext"
+                            OnPrevious="OnPrevious"
+                            OnNext="OnNext" />
+        </div>
+    }
+</LoadGate>
+
+@code {
+    /// <summary>True once the discarded list's first page has answered — the gate lifts then.</summary>
+    [Parameter] public bool Arrived { get; set; }
+    [Parameter] public string? LoadError { get; set; }
+    [Parameter] public IReadOnlyList<MailboxMessage> Items { get; set; } = Array.Empty<MailboxMessage>();
+    [Parameter] public int Total { get; set; }
+    [Parameter] public bool ListLoading { get; set; }
+    [Parameter] public string? SelectedId { get; set; }
+    [Parameter] public EventCallback<MailboxMessage> OnSelect { get; set; }
+    [Parameter] public int PageIndex { get; set; }
+    [Parameter] public int PageCount { get; set; }
+    [Parameter] public bool HasNext { get; set; }
+    [Parameter] public EventCallback OnPrevious { get; set; }
+    [Parameter] public EventCallback OnNext { get; set; }
+}

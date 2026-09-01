@@ -114,8 +114,6 @@ public partial class TriageQueue
 
     // --------------------------------------------------------------------------------------------
 
-    private string FilterButtonLabel => selectedTags.Count == 0 ? "All tags" : $"{selectedTags.Count} selected";
-
     // Tick/untick a tag in the multi-select filter, then re-read the (OR-filtered) list from page one.
     // Using the tag filter drops any active pathway chip — the two can't be intersected server-side.
     private async Task ToggleTag(string tag)
@@ -156,14 +154,6 @@ public partial class TriageQueue
         detailLoading = false;
         ResetTaggedPaging();
         await LoadTaggedAsync();
-    }
-
-    private string PathwayFilterChipClass(string? bucket)
-    {
-        var baseClass = "rounded-full border px-3 py-1 text-xs font-medium transition";
-        return pathwayBucketFilter == bucket
-            ? $"{baseClass} border-accent bg-surface-raised text-content"
-            : $"{baseClass} border-line text-content-muted hover:text-content hover:border-line-strong";
     }
 
     private async Task PreviousTagged()

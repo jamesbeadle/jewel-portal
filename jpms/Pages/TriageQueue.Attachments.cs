@@ -185,12 +185,6 @@ public partial class TriageQueue
                     && string.Equals(project.ProjectId, selectedProjectId, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-    // Subtle text-link styling for the list-sort preference (deliberately not a button pair).
-    private string SortLinkClass(bool newest) =>
-        newestFirst == newest
-            ? "text-content font-medium underline underline-offset-4 decoration-line-strong"
-            : "text-content-subtle hover:text-content";
-
     // The loaded records for the chosen type + project (empty until both are chosen and the load runs).
     private IReadOnlyList<LinkableRecord> ProjectRecords() => linkRecords;
 

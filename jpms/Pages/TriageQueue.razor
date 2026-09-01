@@ -93,259 +93,74 @@
 
         @if (view == QueueView.Active)
         {
-        @* No gate: this panel only exists when there ARE unassigned requests, so on most loads it
-           is absent before the register answers and absent after it — announcing that wait would
-           promise something that never arrives. It appears if and when there is something to say. *@
-        @if (unassignedArrived && unassigned.Count > 0)
-        {
-            <UnassignedRequestsPanel Requests="unassigned" Error="@unassignedError" Busy="busy"
-                                     OnReturn="ReturnUnassigned" />
-        }
-        <LoadGate IsLoading="@(!queueArrived)" Prominent="true" Label="Loading the inbox">
-        @if (loadError is not null && items.Count == 0)
-        {
-            @* A failed page has no queue to report; "nothing in the queue" would read as one. *@
-            <p class="text-sm text-negative">Couldn't load the inbox. The reason is in the red bar above — reload to try again.</p>
-        }
-        else if (total == 0)
-        {
-            <div class="panel p-8 text-center">
-                <p class="text-sm text-content">Nothing in the queue.</p>
-                <p class="text-xs text-content-subtle mt-1">Every email in the requests mailbox has been dealt with.</p>
-            </div>
-        }
-        else
-        {
-            <div class="relative space-y-2">
-                    @* Sort is a light, rarely-used view preference — small muted text under the
-                       header, not an action button. The choice is remembered per user. *@
-                    <div class="flex items-center gap-3 text-xs px-1">
-                        <button type="button" disabled="@listLoading" @onclick="() => SetSortAsync(newest: false)" class="@SortLinkClass(false)">Oldest first</button>
-                        <button type="button" disabled="@listLoading" @onclick="() => SetSortAsync(newest: true)" class="@SortLinkClass(true)">Newest first</button>
-                    </div>
-                    @if (listLoading)
-                    {
-                        <JewelSpinner Overlay="true" Label="Loading" />
-                    }
-                    @{ string? lastQueueGroup = null; }
-                    @foreach (var item in items)
-                    {
-                        @* Outlook-style date group headers — Today / Yesterday / day names / dates. *@
-                        var queueGroup = TriageEmailDisplay.DateGroupLabel(item.ReceivedAt);
-                        @if (queueGroup != lastQueueGroup)
-                        {
-                            lastQueueGroup = queueGroup;
-                            <p class="text-xs font-semibold text-content-muted uppercase tracking-wider pt-2 pb-0.5 px-1">@queueGroup</p>
-                        }
-                        <TriageEmailRow Item="item"
-                                        IsSelected="@(selected?.Id == item.Id)"
-                                        HasParkedDraft="@parkedTriageByEmailId.ContainsKey(item.Id)"
-                                        InlineDraftMarker="true"
-                                        ShowThreadTags="true"
-                                        ShowFilingChips="true"
-                                        OnSelect="item => Select(item)" />
-                    }
-
-                    <EmailListPager PageIndex="queueIndex"
-                                    PageCount="QueuePageCount"
-                                    Total="total"
-                                    HasNext="@(queueNext is not null)"
-                                    OnPrevious="PreviousPage"
-                                    OnNext="NextPage" />
-                </div>
-        }
-        </LoadGate>
+            <QueueInboxList Unassigned="unassigned"
+                            UnassignedArrived="unassignedArrived"
+                            UnassignedError="@unassignedError"
+                            OnReturnUnassigned="ReturnUnassigned"
+                            Arrived="queueArrived"
+                            LoadError="@loadError"
+                            Items="items"
+                            Total="total"
+                            ListLoading="listLoading"
+                            Busy="busy"
+                            NewestFirst="newestFirst"
+                            OnSetSort="newest => SetSortAsync(newest)"
+                            SelectedId="@selected?.Id"
+                            ParkedEmailIds="parkedTriageByEmailId.Keys"
+                            OnSelect="item => Select(item)"
+                            PageIndex="queueIndex"
+                            PageCount="QueuePageCount"
+                            HasNext="@(queueNext is not null)"
+                            OnPrevious="PreviousPage"
+                            OnNext="NextPage" />
         }
         else if (view == QueueView.Discarded)
         {
-            <LoadGate IsLoading="@(!discardedArrived)" Prominent="true" Label="Loading discarded emails">
-            @if (loadError is not null && discardedItems.Count == 0)
-            {
-                @* A failed page has nothing to report; "no discarded emails" would read as an answer. *@
-                <p class="text-sm text-negative">Couldn't load the discarded emails. The reason is in the red bar above — reload to try again.</p>
-            }
-            else if (discardedTotal == 0)
-            {
-                <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">No discarded emails.</p>
-                    <p class="text-xs text-content-subtle mt-1">Emails you discard from the queue show up here, and can be restored.</p>
-                </div>
-            }
-            else
-            {
-                <div class="relative space-y-2">
-                        @if (listLoading)
-                        {
-                            <JewelSpinner Overlay="true" Label="Loading" />
-                        }
-                        @foreach (var item in discardedItems)
-                        {
-                            <TriageEmailRow Item="item"
-                                            IsSelected="@(selected?.Id == item.Id)"
-                                            OnSelect="item => Select(item)" />
-                        }
-
-                        <EmailListPager PageIndex="discardedIndex"
-                                        PageCount="DiscardedPageCount"
-                                        Total="discardedTotal"
-                                        HasNext="@(discardedNext is not null)"
-                                        OnPrevious="PreviousDiscarded"
-                                        OnNext="NextDiscarded" />
-                    </div>
-            }
-            </LoadGate>
+            <DiscardedInboxList Arrived="discardedArrived"
+                                LoadError="@loadError"
+                                Items="discardedItems"
+                                Total="discardedTotal"
+                                ListLoading="listLoading"
+                                SelectedId="@selected?.Id"
+                                OnSelect="item => Select(item)"
+                                PageIndex="discardedIndex"
+                                PageCount="DiscardedPageCount"
+                                HasNext="@(discardedNext is not null)"
+                                OnPrevious="PreviousDiscarded"
+                                OnNext="NextDiscarded" />
         }
         else
         {
-            @* Search the tagged pile — one box, two answers. A record reference ("WO-0045",
-               "TODO-0011", "RFI-012") resolves to its tag (ResolveRecordTags) and becomes the
-               server-side tag filter, so the list below IS that record's mail — paging, selection
-               and the tags pane all as normal. Anything else free-text searches the whole mailbox
-               (SearchMailboxMessages — subjects, senders, bodies, attachment names) and shows the
-               tagged matches in the list's place. While a query is live the pathway/tag controls
-               render disabled (never hidden): the search owns the one server-side filter slot. *@
-            <div class="relative mb-3 max-w-xl">
-                <input type="search" class="field w-full text-sm pr-8"
-                       placeholder="Search tagged emails — subject or sender, or a record reference (WO-0045)"
-                       value="@taggedSearch" @oninput="OnTaggedSearchInput" />
-                @if (taggedSearch.Trim().Length > 0)
-                {
-                    <button type="button" title="Clear search"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 text-content-faint hover:text-content-muted text-sm leading-none"
-                            @onclick="ClearTaggedSearchAsync">✕</button>
-                }
-            </div>
-
-            @* Pathway filter: one chip per pathway, read server-side as an exact bucket-category
-               filter. Kept separate from (and mutually exclusive with) the tag filter below — Graph
-               composes category filters with OR only, so combining them would show a union, not the
-               intersection the combination looks like. *@
-            <div class="flex flex-wrap items-center gap-2 mb-3">
-                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Pathway</span>
-                <button type="button" class="@PathwayFilterChipClass(null) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(null)">All</button>
-                <button type="button" class="@PathwayFilterChipClass(TriagePathways.ClientBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(TriagePathways.ClientBucket)">Client</button>
-                <button type="button" class="@PathwayFilterChipClass(TriagePathways.SubcontractorBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(TriagePathways.SubcontractorBucket)">Subcontractor</button>
-                <button type="button" class="@PathwayFilterChipClass(TriagePathways.SupplierBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(TriagePathways.SupplierBucket)">Supplier</button>
-                <button type="button" class="@PathwayFilterChipClass(TriagePathways.InternalBucket) disabled:opacity-50" disabled="@TaggedSearchActive" title="@PathwayDisabledTitle" @onclick="() => SetPathwayFilter(TriagePathways.InternalBucket)">Internal</button>
-            </div>
-
-            @* The tag list accrues from the emails that have loaded, so before the first page lands
-               the dropdown offers only "Discarded" — a short list that looks like the whole list. *@
-            @if (taggedArrived)
-            {
-            <div class="flex flex-wrap items-center gap-2 mb-5">
-                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
-                <div class="relative">
-                    <button type="button"
-                            class="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5 disabled:opacity-50"
-                            disabled="@TaggedSearchActive" title="@PathwayDisabledTitle"
-                            @onclick="ToggleFilterMenu">
-                        @FilterButtonLabel
-                        <span class="text-[9px] leading-none">▾</span>
-                    </button>
-                    @if (filterOpen)
-                    {
-                        <div class="absolute z-20 mt-1 w-60 max-h-72 overflow-y-auto rounded-lg border border-line bg-surface-raised shadow-lg p-1">
-                            <button type="button"
-                                    class="w-full text-left rounded px-3 py-1.5 text-sm text-content-muted hover:bg-surface hover:text-content"
-                                    @onclick="ClearTagFilters">
-                                All tags
-                            </button>
-                            <div class="my-1 border-t border-line"></div>
-                            @foreach (var tag in knownTags)
-                            {
-                                <label class="flex items-center gap-2 rounded px-3 py-1.5 text-sm text-content hover:bg-surface cursor-pointer">
-                                    <input type="checkbox" checked="@selectedTags.Contains(tag)" @onchange="() => ToggleTag(tag)" />
-                                    <span>@TriageEmailDisplay.TagLabel(tag)</span>
-                                </label>
-                            }
-                        </div>
-                    }
-                </div>
-                @foreach (var tag in selectedTags)
-                {
-                    <span class="inline-flex items-center gap-1.5 rounded-full border border-accent bg-surface-raised px-2.5 py-1 text-xs text-content">
-                        @TriageEmailDisplay.TagLabel(tag)
-                        <button type="button" class="text-content-subtle hover:text-negative disabled:opacity-50" disabled="@TaggedSearchActive" @onclick="() => ToggleTag(tag)" title="Remove filter">✕</button>
-                    </span>
-                }
-            </div>
-            }
-            @* What the search box is currently answering — the resolved record, the in-flight
-               read, or the free-text match count. A line of text, so it renders only once known. *@
-            @if (taggedSearchRecord is LinkableRecord searchRecord)
-            {
-                <p class="text-xs text-content-subtle mb-3">
-                    Showing emails tagged to <span class="font-mono">@searchRecord.Reference</span> — @searchRecord.Title.
-                    @if (ExplorerRecordTypes.FullPageHref(searchRecord) is string searchHref)
-                    {
-                        <a class="underline underline-offset-2 hover:text-content" href="@searchHref">Open @searchRecord.Reference</a>
-                    }
-                </p>
-            }
-            else if (taggedSearching)
-            {
-                <p class="text-xs text-content-subtle mb-3">Searching the mailbox…</p>
-            }
-            else if (taggedSearchResults is not null)
-            {
-                <p class="text-xs text-content-subtle mb-3">
-                    @taggedSearchResults.Count email@(taggedSearchResults.Count == 1 ? "" : "s") match@(taggedSearchResults.Count == 1 ? "es" : "") "@taggedSearchPending" — best matches first, untagged queue emails included.
-                </p>
-            }
-
-            <LoadGate IsLoading="@(!taggedArrived)" Prominent="true" Label="Loading tagged emails">
-            @if (loadError is not null && taggedItems.Count == 0 && taggedSearchResults is null)
-            {
-                @* A failed page has nothing to report; "no tagged emails" would read as an answer. *@
-                <p class="text-sm text-negative">Couldn't load the tagged emails. The reason is in the red bar above — reload to try again.</p>
-            }
-            else if (taggedSearchResults is { Count: 0 })
-            {
-                <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">No emails match "@taggedSearchPending".</p>
-                    <p class="text-xs text-content-subtle mt-1">The search covers subjects, senders, bodies and attachment names across the whole mailbox — or type a record reference like WO-0045 to list that record's mail.</p>
-                </div>
-            }
-            else if (taggedTotal == 0 && taggedSearchResults is null)
-            {
-                <div class="panel p-8 text-center">
-                    <p class="text-sm text-content">@(taggedSearchRecord is not null ? $"No emails are tagged to {taggedSearchRecord.Reference} yet." : selectedTags.Count == 0 ? "No tagged emails." : "No emails with the selected tags.")</p>
-                    <p class="text-xs text-content-subtle mt-1">Emails linked to a request (or discarded) appear here. Open one to add it to another request or remove a tag.</p>
-                </div>
-            }
-            else
-            {
-                var taggedRows = taggedSearchResults ?? taggedItems;
-                <div class="relative space-y-2">
-                        @if (listLoading)
-                        {
-                            <JewelSpinner Overlay="true" Label="Loading" />
-                        }
-                        @foreach (var item in taggedRows)
-                        {
-                            <TriageEmailRow Item="item"
-                                            IsSelected="@(selected?.Id == item.Id)"
-                                            HasParkedDraft="@parkedTriageByEmailId.ContainsKey(item.Id)"
-                                            ShowFilingChips="true"
-                                            ShowUntaggedFallback="true"
-                                            OnSelect="item => Select(item)" />
-                        }
-
-                        @* Free-text results are one relevance-ordered page, not the cursor-paged
-                           pile, so the pager stands down while they're up. *@
-                        @if (taggedSearchResults is null)
-                        {
-                            <EmailListPager PageIndex="taggedIndex"
-                                            PageCount="TaggedPageCount"
-                                            Total="taggedTotal"
-                                            HasNext="@(taggedNext is not null)"
-                                            OnPrevious="PreviousTagged"
-                                            OnNext="NextTagged" />
-                        }
-                    </div>
-            }
-            </LoadGate>
+            <TaggedInboxBrowser SearchText="@taggedSearch"
+                                OnSearchInput="OnTaggedSearchInput"
+                                OnClearSearch="ClearTaggedSearchAsync"
+                                SearchActive="TaggedSearchActive"
+                                PathwayDisabledTitle="@PathwayDisabledTitle"
+                                PathwayBucketFilter="@pathwayBucketFilter"
+                                OnSetPathwayFilter="bucket => SetPathwayFilter(bucket)"
+                                Arrived="taggedArrived"
+                                FilterOpen="filterOpen"
+                                OnToggleFilterMenu="ToggleFilterMenu"
+                                OnClearTagFilters="ClearTagFilters"
+                                KnownTags="knownTags"
+                                SelectedTags="selectedTags"
+                                OnToggleTag="tag => ToggleTag(tag)"
+                                SearchRecord="taggedSearchRecord"
+                                Searching="taggedSearching"
+                                SearchResults="taggedSearchResults"
+                                SearchPending="@taggedSearchPending"
+                                LoadError="@loadError"
+                                Items="taggedItems"
+                                Total="taggedTotal"
+                                ListLoading="listLoading"
+                                SelectedId="@selected?.Id"
+                                ParkedEmailIds="parkedTriageByEmailId.Keys"
+                                OnSelect="item => Select(item)"
+                                PageIndex="taggedIndex"
+                                PageCount="TaggedPageCount"
+                                HasNext="@(taggedNext is not null)"
+                                OnPrevious="PreviousTagged"
+                                OnNext="NextTagged" />
         }
     </div>;
 
