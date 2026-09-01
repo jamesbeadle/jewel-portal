@@ -1,90 +1,94 @@
-# Refactor audit — baseline v6, after round 5
+# Refactor audit — baseline v7, after round 6
 
-Generated 2026-09-01 from `refactor/round-5`, replacing the round-4 (v5) baseline report. The
+Generated 2026-09-01 from `refactor/round-6`, replacing the round-5 (v6) baseline report. The
 audit carries the prose and functionNames checks introduced at v2.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 618, totalFiles: 3222, worstFileLines: 1101 |
-| functionShape | limit: 30, functionsOverLimit: 700, elseBlocks: 1182, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 622, totalFiles: 3233, worstFileLines: 1029 |
+| functionShape | limit: 30, functionsOverLimit: 699, elseBlocks: 1182, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 44, maxWords: 5, maxLength: 40 |
-| duplication | clones: 583, duplicatedLines: 7523, totalLines: 220560, duplicatedPercentage: 3.41 |
-| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1325 |
-| comments | explanatoryCommentLines: 13751, filesWithComments: 1712, taskMarkers: 48 |
+| duplication | clones: 581, duplicatedLines: 7493, totalLines: 220821, duplicatedPercentage: 3.39 |
+| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1331 |
+| comments | explanatoryCommentLines: 13751, filesWithComments: 1723, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2401, deeplyIndentedLines: 2821, overlongLines: 1785, measurementIsHeuristic: True |
-| inventory | pages: 92, components: 131, orphanComponents: 6, averagePageLines: 283 |
+| prose | longMemberChainLines: 2400, deeplyIndentedLines: 2819, overlongLines: 1782, measurementIsHeuristic: True |
+| inventory | pages: 92, components: 131, orphanComponents: 6, averagePageLines: 279 |
 
-## Round 5 — the TriageQueue compose finale
+## Round 6 — the workbench twins
 
-TriageQueue is no longer the worst file in the codebase — for the first time since the audit
-began. The round moved its whole compose story out of the page:
+The two pages that inherited the top of the table each gave up their self-contained pieces:
 
-- **NewEmailComposerPane** — the Compose window is now a self-contained component owning its
-  envelope, body, attachments, the file-to-a-record picks and the send itself. The page keeps
-  two lines of wiring (close the window, show the outcome banner) in place of a 15-field state
-  block, a partial file, and an 80-line fragment.
-- **ReplyComposerForm** — the inline reply/forward form became a pure-view component. The
-  fields deliberately stay page-owned: triage parks a half-written reply per email
-  (ParkedTriage) and the bar's one Send is what actually sends, so the component renders the
-  form and hands every keystroke straight back.
-- **TriageDecisionRow** — the bar's blank-until-answered Yes/No pill pair was stamped out
-  three times (Relevant Event, Entire thread, Use existing tags); it is now one component
-  owning the styling and the no-un-answer rule.
-- The triage bar itself was assessed and deliberately left on the page: its sentences and
-  gates are the page's own orchestration voice — a twenty-parameter view component would
-  relocate it without dividing it.
-- **A live deploy failure was fixed mid-round** (also delivered for `main` as its own commit):
-  round 4's division of XeroClient.Reads left the two new partials off the worker's hand-picked
-  compile list, so CI's worker publish failed with CS0535. Both files are on the list, and every
-  IXeroClient member's implementation is verified present in the worker's compile set.
+**ProjectBidPackageInviteDetail, 1,101 → 834** — three modals and a table became components,
+each following the round-3 modal pattern (own state, reset on open, one pick or outcome back
+to the page):
+
+- **SubcontractorInvitePickerModal** — the directory search, trade filter, ticks and quick-add
+  row; the page saves and invites the pick beside its sibling, the local-search confirm.
+- **PackageDetailsEditorModal** — the summary + line-schedule drafts and the
+  every-line-needs-a-cost-code rule; the page keeps the two save commands behind one Save.
+- **TenderInviteComposerModal** — the whole invite flow: envelope, default letter, the draft
+  persisted on the package (loaded on open, saved quietly on close) and the send itself, with
+  the send error now shown inside the dialog. The page turns each outcome into its banner.
+- **TenderQuoteComparisonTable** — one column per tender, the Won badge, the prospect's
+  add-to-directory act and per-column Award.
+
+**XeroAllocation, code-behind 686 → 224** — the catch-all divided by concern into Tabs (project
+and labour grouping, tab switching, last-tab memory) and RowCoding (per-row picks, menus,
+buckets, options, selection), with two strays (SendToProjectAsync, ResolveDisputeAsync)
+rejoining their siblings in SendTo. Its markup gave up **DisputeDiscussionModal** (a pure view
+— the page still re-resolves the line from the store each render) and **LedgerLineSummary**,
+the supplier · description card that all four line modals had each drawn by hand.
+
+Also carried into this branch: the round-5 worker compile-list fix for round 4's Xero read
+partials (already applied to `main` for the deploy).
 
 ## The journey so far
 
-| Figure | 22 Aug (v1) | R1 (v2) | R2 (v3) | R3 (v4) | R4 (v5) | R5 (v6) |
-| --- | --- | --- | --- | --- | --- | --- |
-| Worst file (lines) | 4,961 | 1,471 | 1,399 | 1,152 | 1,152 | **1,101** |
-| TriageQueue.razor | 4,961 | 1,471 | 1,399 | 1,152 | 1,152 | **1,016** |
-| Average page length | 544 | 390 | 356 | 333 | 284 | **283** |
-| Duplication | 4.16% | 4.03% | 3.08% | 3.25% | 3.42% | **3.41%** |
-| `else` blocks | 1,087 | 1,184 | 1,182 | 1,182 | 1,182 | **1,182** |
-| Overlong function names | — | — | 45 | 45 | 45 | **44** |
-| Files over 100 lines | 385 | 520 | 552 | 570 | 618 | **618** † |
+| Figure | 22 Aug (v1) | R1 (v2) | R2 (v3) | R3 (v4) | R4 (v5) | R5 (v6) | R6 (v7) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Worst file (lines) | 4,961 | 1,471 | 1,399 | 1,152 | 1,152 | 1,101 | **1,029** |
+| Average page length | 544 | 390 | 356 | 333 | 284 | 283 | **279** |
+| Duplication | 4.16% | 4.03% | 3.08% | 3.25% | 3.42% | 3.41% | **3.39%** |
+| `else` blocks | 1,087 | 1,184 | 1,182 | 1,182 | 1,182 | 1,182 | **1,182** |
+| Overlong function names | — | — | 45 | 45 | 45 | 44 | **44** |
+| Functions over 30 lines | — | — | — | — | 700 | 700 | **699** |
+| Files over 100 lines | 385 | 520 | 552 | 570 | 618 | 618 | 622 † |
 
-† Flat for the first time: round 5's extractions moved code into three new components without
-any of them crossing the limit — the figure's long climb (mass leaving giants for mid-size
-partials) has crested; the long tail of dividing those partials below 100 is what remains.
+† +4: dividing a 686-line code-behind into three concern partials and giving two big modals
+their own components trades one giant for a few mid-size files — the division method's
+signature, as every round. The worst file has fallen 4,961 → 1,029 while it happened.
 
 ## Worst files by length
 
 | File | Lines |
 | --- | --- |
-| jpms/Pages/ProjectBidPackageInviteDetail.razor | 1101 |
-| jpms/Pages/XeroAllocation.razor | 1095 |
+| jpms/Pages/XeroAllocation.razor | 1029 |
 | jpms/Pages/TriageQueue.razor | 1016 |
 | jpms/Pages/LabourOverview.razor | 981 |
 | jpms/Pages/ProjectRequestDetail.razor | 874 |
 | jpms/Pages/ProfitSummary.razor | 846 |
 | jpms/Pages/ProjectVariationDetail.razor | 839 |
+| jpms/Pages/ProjectBidPackageInviteDetail.razor | 834 |
 | jpms/Pages/ProjectProgramme.razor | 752 |
 | jpms/Pages/TriageQueue.Compose.cs | 726 |
 | jpms/Pages/CashForecast.razor | 701 |
-| jpms/Pages/XeroAllocation.razor.cs | 686 |
 | jpms/Pages/WeeklyCashflow.razor | 683 |
 | api/Features/Ai/Tools/AiRecordTools.cs | 631 |
 | api/Features/Procurement/Documents/WorkOrderPoRenderer.cs | 623 |
 | api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs | 607 |
+| api/Data/JpmsContext.cs | 592 |
 
-## Round 6, named
+## Round 7, named
 
-The table's top is now the two workbench twins: **ProjectBidPackageInviteDetail** (1,101) and
-**XeroAllocation** (1,095 + a 686-line code-behind). Both are section-shaped pages whose markup
-only shrinks by componentising sections, and both already lean on the shared mail widgets — so
-round 6 divides them the TriageQueue way: find each page's two or three natural sections, give
-each a component or a concern partial, and let any shared table/panel shapes surface as they
-did for the compose feature.
+XeroAllocation.razor (1,029) still leads: what remains is the allocation table itself and the
+invoice-document viewer that hosts the inline split and dispute editors — the page's real
+workbench, extractable only as a set (the viewer, the split editor and the row controls share
+one coding state). Behind it, LabourOverview (981) and ProjectRequestDetail (874) have not yet
+been divided at all, and a codebase-wide `DateText` helper is now hand-written in at least five
+places — a display module (the TriageEmailDisplay pattern) wants to absorb it.
 
 Full detail, including every offender list, is in `audit.json`; the gate ratchets against
 `baseline.json`, which this report accompanies.
