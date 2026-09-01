@@ -9,6 +9,7 @@
 @inject WeeklyCashflowPlanReadModel Plan
 @inject ICommandSender Commands
 @inject NavigationManager Nav
+@using static Jewel.JPMS.Features.WeeklyCashflow.CashflowDisplay
 @implements IDisposable
 
 <PageTitle>Weekly Cashflow · JPMS</PageTitle>
@@ -545,11 +546,33 @@
                 .ToHashSet(StringComparer.Ordinal);
             @foreach (var slice in grouped)
             {
-                @GroupSection((view, slice))
+                <CashflowGroupRow View="view" Slice="slice"
+                                  Open="expandedGroups.Contains(slice.Group.SupplierGroupId)"
+                                  GroupBusy="movingGroupIds.Contains(slice.Group.SupplierGroupId)"
+                                  MovingKeys="movingKeys"
+                                  OnToggle="ToggleGroup"
+                                  OnResetCell="args => ResetGroupCellAsync(args.Slice, args.CellIndex)"
+                                  OnMoveCell="args => MoveGroupCellAsync(args.Slice, args.FromWeek, args.ToWeek)">
+                    <EntryRow Context="member">
+                        <CashflowEntryRow View="view" Entry="member" InGroup="true"
+                                          Busy="movingKeys.Contains(member.PlacementKey)"
+                                          Excluding="excludingKeys.Contains(member.PlacementKey)"
+                                          OnEdit="OpenEditDialog"
+                                          OnExclude="row => SetExclusionAsync(row.PlacementKey, true)"
+                                          OnReset="ResetEntryAsync"
+                                          OnMove="args => MoveEntryAsync(args.Entry, args.ToWeek)" />
+                    </EntryRow>
+                </CashflowGroupRow>
             }
             @foreach (var entry in EntriesFor(view, band).Where(row => !groupedKeys.Contains(row.PlacementKey)))
             {
-                @EntryRow((view, entry, false))
+                <CashflowEntryRow View="view" Entry="entry"
+                                  Busy="movingKeys.Contains(entry.PlacementKey)"
+                                  Excluding="excludingKeys.Contains(entry.PlacementKey)"
+                                  OnEdit="OpenEditDialog"
+                                  OnExclude="row => SetExclusionAsync(row.PlacementKey, true)"
+                                  OnReset="ResetEntryAsync"
+                                  OnMove="args => MoveEntryAsync(args.Entry, args.ToWeek)" />
             }
             @foreach (var excluded in excludedSeeds.Where(seed => seed.Band == band))
             {
@@ -570,107 +593,6 @@
                 </tr>
             }
         }
-    };
-    private RenderFragment GroupSection((WeeklyCashflowView View, GroupSlice Slice) args) => __builder =>
-    {
-        var (view, slice) = args;
-        var open = expandedGroups.Contains(slice.Group.SupplierGroupId);
-        <tr class="border-b border-line/50 text-[13px] bg-surface-raised/40">
-            <td class="pl-9 pr-4 py-1.5">
-                <button type="button" class="flex items-start gap-1.5 text-left w-full" @onclick="() => ToggleGroup(slice.Group.SupplierGroupId)"
-                        title="@(open ? "Collapse to the group line" : $"Show the {slice.Entries.Count} bills behind this line")">
-                    <span class="text-content-subtle mt-0.5 text-[10px]">@(open ? "▾" : "▸")</span>
-                    <span>
-                        <span class="text-content font-medium">@slice.Group.Name</span>
-                        <span class="block text-[11px] text-content-faint font-normal">supplier group · @slice.Entries.Count @(slice.Entries.Count == 1 ? "bill" : "bills") · ‹ › moves the whole cell</span>
-                    </span>
-                </button>
-            </td>
-            @for (var index = 0; index <= view.WeekStarts.Count; index++)
-            {
-                var cellIndex = index;
-                var members = slice.Entries.Where(row => row.WeekIndex == cellIndex).ToList();
-                <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == view.WeekStarts.Count ? "border-l border-line" : "")">
-                    @if (members.Count > 0)
-                    {
-                        var busy = movingGroupIds.Contains(slice.Group.SupplierGroupId) || members.Any(row => movingKeys.Contains(row.PlacementKey));
-                        var anyMoved = members.Any(row => row.Moved);
-                        <span class="inline-flex items-center gap-0.5">
-                            @if (anyMoved)
-                            {
-                                <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
-                                        title="Send this cell's moved bills back to their due weeks" disabled="@busy"
-                                        @onclick="() => ResetGroupCellAsync(slice, cellIndex)">↺</button>
-                            }
-                            <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
-                                    title="Pay this cell's bills a week earlier" disabled="@(busy || cellIndex == 0)"
-                                    @onclick="() => MoveGroupCellAsync(slice, cellIndex, Math.Min(cellIndex, view.WeekStarts.Count) - 1)">‹</button>
-                            <span class="@(anyMoved ? "text-accent font-medium" : "text-content")">@(anyMoved ? "‣ " : "")@CellAmount(members.Sum(row => row.Amount))</span>
-                            <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
-                                    title="Pay this cell's bills a week later" disabled="@(busy || cellIndex >= view.WeekStarts.Count - 1)"
-                                    @onclick="() => MoveGroupCellAsync(slice, cellIndex, cellIndex + 1)">›</button>
-                        </span>
-                    }
-                </td>
-            }
-        </tr>
-        @if (open)
-        {
-            @foreach (var entry in slice.Entries)
-            {
-                @EntryRow((view, entry, true))
-            }
-        }
-    };
-    private RenderFragment EntryRow((WeeklyCashflowView View, WeeklyCashflowEntry Entry, bool InGroup) args) => __builder =>
-    {
-        var (view, entry, inGroup) = args;
-        <tr class="border-b border-line/50 text-[13px]">
-            <td class="@(inGroup ? "pl-14" : "pl-9") pr-4 py-1.5">
-                @if (entry.ItemId is { } itemId)
-                {
-                    <button type="button" class="text-content-muted hover:text-content underline-offset-2 hover:underline text-left"
-                            title="Edit this item" @onclick="() => OpenEditDialog(itemId)">@entry.Label</button>
-                }
-                else
-                {
-                    <span class="text-content-muted">@entry.Label</span>
-                    <button type="button" class="ml-1.5 text-[11px] text-content-faint hover:text-negative align-middle disabled:opacity-30"
-                            title="Don't count this entry — a direct debit or manual item already covers it. It parks, struck through, at the foot of this band."
-                            disabled="@excludingKeys.Contains(entry.PlacementKey)"
-                            @onclick="() => SetExclusionAsync(entry.PlacementKey, true)">⊘</button>
-                }
-                <span class="block text-[11px] text-content-faint">
-                    @entry.Detail@(entry.NaturalDueOn is { } due ? $" · due {due.UtcDateTime:d MMM}" : " · no due date")@(entry.ExpectedOn is { } expected ? $" · expected {expected.UtcDateTime:d MMM}" : "")
-                </span>
-            </td>
-            @for (var index = 0; index <= view.WeekStarts.Count; index++)
-            {
-                var cellIndex = index;
-                <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == view.WeekStarts.Count ? "border-l border-line" : "")">
-                    @if (entry.WeekIndex == cellIndex)
-                    {
-                        var busy = movingKeys.Contains(entry.PlacementKey);
-                        <span class="inline-flex items-center gap-0.5">
-                            @if (entry.Moved)
-                            {
-                                <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
-                                        title="@(entry.ExpectedOn is null ? "Back to its due week" : "Back to its Xero expected week")" disabled="@busy"
-                                        @onclick="() => ResetEntryAsync(entry)">↺</button>
-                            }
-                            <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
-                                    title="Pay a week earlier" disabled="@(busy || cellIndex == 0)"
-                                    @onclick="() => MoveEntryAsync(entry, Math.Min(cellIndex, view.WeekStarts.Count) - 1)">‹</button>
-                            <span class="@(entry.Moved ? "text-accent font-medium" : "text-content")"
-                                  title="@(entry.Moved ? "Moved here — the " + (entry.ExpectedOn is null ? "due" : "Xero expected") + " week is " + (entry.NaturalOn is { } naturalOn ? naturalOn.UtcDateTime.ToString("d MMM") : "unknown") : null)">@(entry.Moved ? "‣ " : "")@CellAmount(entry.Amount)</span>
-                            <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
-                                    title="Pay a week later" disabled="@(busy || cellIndex >= view.WeekStarts.Count - 1)"
-                                    @onclick="() => MoveEntryAsync(entry, cellIndex + 1)">›</button>
-                        </span>
-                    }
-                </td>
-            }
-        </tr>
     };
     private static RenderFragment LoadingFigure(string label) => __builder =>
     {

@@ -117,7 +117,6 @@ public partial class WeeklyCashflow
     private string? ExcludedByFor(string placementKey) =>
         Plan.Current?.Exclusions.FirstOrDefault(exclusion => exclusion.PlacementKey == placementKey)?.ExcludedByEmail;
 
-    private sealed record GroupSlice(WeeklyCashflowSupplierGroup Group, IReadOnlyList<WeeklyCashflowEntry> Entries);
 
     /// <summary>The supplier groups as they land on this grid: each group with the band entries
     /// whose supplier (label) it holds. A group none of whose suppliers has a bill right now
