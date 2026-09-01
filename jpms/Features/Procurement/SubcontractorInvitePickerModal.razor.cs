@@ -112,8 +112,7 @@ public partial class SubcontractorInvitePickerModal
 
     private int PickCount => selection.Count + (QuickAddReady ? 1 : 0);
 
-    // The host saves and invites, closing the modal on success — a failure keeps the modal
-    // open with everything still ticked for a retry.
+    // The host saves and invites; a failure keeps the modal open with everything still ticked.
     private async Task ConfirmAsync()
     {
         if (Busy || PickCount == 0) return;

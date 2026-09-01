@@ -180,8 +180,7 @@ public partial class TenderInviteComposerModal
                 isOpen = false;
                 draftSavedAt = null;
             }
-            // Sent or staged-in-Drafts, the host hears about it either way — it owns the
-            // package record, the banner and the email list this send touches.
+            // Sent or staged-in-Drafts, the host hears about it either way.
             await OnSent.InvokeAsync(outcome);
         }
         catch (CommandFailedException ex) { sendError = $"Couldn't send the invite: {ex.Message}"; }

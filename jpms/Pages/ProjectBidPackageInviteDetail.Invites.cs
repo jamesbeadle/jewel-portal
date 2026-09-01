@@ -15,8 +15,7 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectBidPackageInviteDetail
 {
-    // ---- Invite (SubcontractorInvitePickerModal over the directory — it owns the search,
-    //      filter, ticks and quick-add row; this page saves and invites what it hands back) ----
+    // ---- Invite: SubcontractorInvitePickerModal picks; this page saves and invites. ----
 
     private void OpenInviteModal()
     {

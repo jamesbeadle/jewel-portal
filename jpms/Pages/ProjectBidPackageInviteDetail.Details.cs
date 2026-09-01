@@ -5,9 +5,8 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectBidPackageInviteDetail
 {
-    // ---- Package details: the specification summary + the line-item schedule, edited together
-    // in ONE dialog (PackageDetailsEditorModal owns the drafts and the cost-code rule). Two
-    // commands behind its one Save land here. ----
+    // ---- Package details: summary + line schedule, one dialog (PackageDetailsEditorModal
+    // owns the drafts and the cost-code rule). Its one Save lands as two commands here. ----
 
     private bool showDetailsModal;
 
