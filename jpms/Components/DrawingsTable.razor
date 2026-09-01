@@ -31,26 +31,26 @@
         }
         else
         {
-            @foreach (var section in VisibleSections)
+            @foreach (var folderSection in VisibleSections)
             {
                 <tbody class="divide-y divide-line border-t border-line">
                     <tr class="bg-surface-raised/70 cursor-pointer select-none hover:bg-surface-raised transition"
-                        @onclick="() => ToggleCollapse(section.Key)">
-                        <td colspan="@ColumnCount" class="px-4 py-2" style="@IndentStyle(section.Depth)">
+                        @onclick="() => ToggleCollapse(folderSection.Key)">
+                        <td colspan="@ColumnCount" class="px-4 py-2" style="@IndentStyle(folderSection.Depth)">
                             <div class="flex items-center gap-2">
                                 <ActionIcon Name="chevron-down"
-                                            Class="@(IsCollapsed(section.Key) ? "w-3.5 h-3.5 text-content-subtle -rotate-90 transition-transform" : "w-3.5 h-3.5 text-content-subtle transition-transform")" />
-                                @if (section.Folder is not null)
+                                            Class="@(IsCollapsed(folderSection.Key) ? "w-3.5 h-3.5 text-content-subtle -rotate-90 transition-transform" : "w-3.5 h-3.5 text-content-subtle transition-transform")" />
+                                @if (folderSection.Folder is not null)
                                 {
                                     <ActionIcon Name="folder" Class="w-4 h-4 text-content-subtle" />
-                                    <span class="font-medium text-content">@section.Folder.Name</span>
+                                    <span class="font-medium text-content">@folderSection.Folder.Name</span>
                                 }
                                 else
                                 {
                                     <span class="font-medium text-content-muted italic">Ungrouped</span>
                                 }
-                                <span class="text-xs text-content-subtle tabular-nums" title="Drawings in this folder, sub-folders included">@SubtreeCount(section)</span>
-                                @if (CanManage && section.Folder is { } folder)
+                                <span class="text-xs text-content-subtle tabular-nums" title="Drawings in this folder, sub-folders included">@SubtreeCount(folderSection)</span>
+                                @if (CanManage && folderSection.Folder is { } folder)
                                 {
                                     <span class="ml-auto flex items-center gap-1">
                                         <button type="button" title="Upload drawings into this folder" aria-label="Upload drawings into this folder"
@@ -78,19 +78,19 @@
                             </div>
                         </td>
                     </tr>
-                    @if (!IsCollapsed(section.Key))
+                    @if (!IsCollapsed(folderSection.Key))
                     {
-                        @if (section.Drawings.Count == 0 && !HasSubFolders(section))
+                        @if (folderSection.Drawings.Count == 0 && !HasSubFolders(folderSection))
                         {
                             <tr>
-                                <td colspan="@ColumnCount" class="px-4 py-3 text-xs text-content-subtle italic" style="@IndentStyle(section.Depth + 1)">No drawings in this folder yet.</td>
+                                <td colspan="@ColumnCount" class="px-4 py-3 text-xs text-content-subtle italic" style="@IndentStyle(folderSection.Depth + 1)">No drawings in this folder yet.</td>
                             </tr>
                         }
                         else
                         {
-                            @foreach (var drawing in section.Drawings)
+                            @foreach (var drawing in folderSection.Drawings)
                             {
-                                @DrawingRow(drawing, section.Depth + 1)
+                                @DrawingRow(drawing, folderSection.Depth + 1)
                             }
                         }
                     }
