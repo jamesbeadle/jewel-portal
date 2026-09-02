@@ -92,13 +92,13 @@ else
 
         @if (view == "workers")
         {
-            <WorkerPlacementTable @key="MonthKey" Snapshot="snapshot" Loading="@(Loading && !dataFailed)" Year="year" Month="month"
+            <WorkerPlacementTable @key="@($"workers:{MonthKey}")" Snapshot="snapshot" Loading="@(Loading && !dataFailed)" Year="year" Month="month"
                                   MonthWeekdays="MonthWeekdays()" ColourOf="ColourOf"
                                   OnRecordAbsence="OpenAbsenceToday" />
         }
         else if (view == "sites")
         {
-            <SiteCostTable @key="MonthKey" Snapshot="snapshot" Loading="@(Loading && !dataFailed)" ColourOf="ColourOf" />
+            <SiteCostTable @key="@($"sites:{MonthKey}")" Snapshot="snapshot" Loading="@(Loading && !dataFailed)" ColourOf="ColourOf" />
         }
         else if (view == "costcodes")
         {
@@ -112,7 +112,7 @@ else
         }
         else
         {
-            <SettlementSchedulesPanel @key="MonthKey" Schedules="Labour.Schedules(year, month)"
+            <SettlementSchedulesPanel @key="@($"settlement:{MonthKey}")" Schedules="Labour.Schedules(year, month)"
                                       Loading="@(!Labour.SchedulesLoadedFor(year, month) && !dataFailed)"
                                       RunningCoding="isRunningCoding" CodingResults="codingResults"
                                       OnRunCoding="RunCodingAsync"
@@ -122,7 +122,7 @@ else
         @* ---- Chase list: conditional panel — absent while loading, absent when clear. ---- *@
         @if (snapshot is not null && snapshot.Chase.Count > 0)
         {
-            <ChaseListPanel @key="MonthKey" Items="snapshot.Chase" DismissedThisMonth="snapshot.DismissedThisMonth"
+            <ChaseListPanel @key="@($"chase:{MonthKey}")" Items="snapshot.Chase" DismissedThisMonth="snapshot.DismissedThisMonth"
                             OnDismissed="RefreshAsync" OnRecordAbsence="item => OpenAbsence(item.WorkerId, item.WorkerName, item.Date)" />
         }
         @* A month whose chase list is empty but carries dismissals still says so — a clean list
