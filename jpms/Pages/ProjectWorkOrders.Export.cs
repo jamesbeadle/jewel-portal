@@ -1,5 +1,6 @@
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.Procurement;
+using static Jewel.JPMS.Features.Procurement.WorkOrderDisplay;
 using Jewel.JPMS.Features.Projects;
 using Jewel.JPMS.Features.Subcontractors;
 

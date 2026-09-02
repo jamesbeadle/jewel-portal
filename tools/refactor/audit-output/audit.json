@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-02T07:13:25+00:00",
+  "generatedAt": "2026-09-02T07:21:00+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 651,
-      "totalFiles": 3388,
-      "worstFileLines": 548
+      "filesOverLimit": 652,
+      "totalFiles": 3394,
+      "worstFileLines": 520
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 699,
+      "functionsOverLimit": 698,
       "elseBlocks": 1170,
       "measurementIsHeuristic": true
     },
@@ -21,16 +21,16 @@
     "duplication": {
       "clones": 490,
       "duplicatedLines": 6220,
-      "totalLines": 216540,
+      "totalLines": 216620,
       "duplicatedPercentage": 2.87
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1485
+      "unprefixedBooleans": 1489
     },
     "comments": {
-      "explanatoryCommentLines": 13698,
-      "filesWithComments": 1850,
+      "explanatoryCommentLines": 13682,
+      "filesWithComments": 1855,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -39,16 +39,16 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 2397,
+      "longMemberChainLines": 2396,
       "deeplyIndentedLines": 2800,
-      "overlongLines": 1678,
+      "overlongLines": 1677,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 132,
       "orphanComponents": 6,
-      "averagePageLines": 216
+      "averagePageLines": 214
     }
   },
   "details": {
@@ -56,15 +56,11 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 651,
-        "totalFiles": 3388,
-        "worstFileLines": 548
+        "filesOverLimit": 652,
+        "totalFiles": 3394,
+        "worstFileLines": 520
       },
       "offenders": [
-        {
-          "file": "jpms/Pages/ProjectWorkOrders.razor",
-          "lines": 548
-        },
         {
           "file": "jpms/Pages/TriageQueue.Outbox.cs",
           "lines": 520
@@ -118,10 +114,6 @@
           "lines": 453
         },
         {
-          "file": "jpms/Pages/ProjectWorkOrders.razor.cs",
-          "lines": 451
-        },
-        {
           "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Sections.cs",
           "lines": 448
         },
@@ -160,6 +152,10 @@
         {
           "file": "api/Features/Xero/Ledger/SetXeroAllocationHandler.cs",
           "lines": 422
+        },
+        {
+          "file": "jpms/Pages/ProjectWorkOrders.razor.cs",
+          "lines": 419
         },
         {
           "file": "jpms/Services/Navigation/SidebarFolders.cs",
@@ -243,6 +239,10 @@
         },
         {
           "file": "jpms/Pages/TriageQueue.StagedCreate.cs",
+          "lines": 354
+        },
+        {
+          "file": "jpms/Pages/ProjectWorkOrders.razor",
           "lines": 354
         },
         {
@@ -779,10 +779,6 @@
         },
         {
           "file": "jpms/Pages/ProjectValuation.Export.cs",
-          "lines": 231
-        },
-        {
-          "file": "jpms/Pages/ProjectWorkOrders.Lifecycle.cs",
           "lines": 231
         },
         {
@@ -1638,6 +1634,10 @@
           "lines": 150
         },
         {
+          "file": "jpms/Features/Procurement/DraftWorkOrdersPanel.razor.cs",
+          "lines": 150
+        },
+        {
           "file": "api/Data/Entities/LabourPlanningEntities.cs",
           "lines": 149
         },
@@ -2118,6 +2118,10 @@
           "lines": 122
         },
         {
+          "file": "jpms/Pages/ProjectWorkOrders.Export.cs",
+          "lines": 122
+        },
+        {
           "file": "jpms/Components/ProjectMultiSelect.razor",
           "lines": 122
         },
@@ -2143,10 +2147,6 @@
         },
         {
           "file": "jpms/Features/Variations/VariationsRouteRegistration.cs",
-          "lines": 121
-        },
-        {
-          "file": "jpms/Pages/ProjectWorkOrders.Export.cs",
           "lines": 121
         },
         {
@@ -2403,6 +2403,10 @@
         },
         {
           "file": "jpms/Components/UpdateToast.razor",
+          "lines": 109
+        },
+        {
+          "file": "jpms/Features/Procurement/DeleteWorkOrderModal.razor",
           "lines": 109
         },
         {
@@ -2671,7 +2675,7 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 699,
+        "functionsOverLimit": 698,
         "elseBlocks": 1170,
         "measurementIsHeuristic": true
       },
@@ -3107,7 +3111,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1485
+        "unprefixedBooleans": 1489
       },
       "offenders": {
         "abbreviations": [
@@ -3569,8 +3573,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13698,
-        "filesWithComments": 1850,
+        "explanatoryCommentLines": 13682,
+        "filesWithComments": 1855,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4275,9 +4279,9 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 2397,
+        "longMemberChainLines": 2396,
         "deeplyIndentedLines": 2800,
-        "overlongLines": 1678,
+        "overlongLines": 1677,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4895,22 +4899,10 @@
         "pages": 92,
         "components": 132,
         "orphanComponents": 6,
-        "averagePageLines": 216
+        "averagePageLines": 214
       },
       "offenders": {
         "pages": [
-          {
-            "page": "jpms/Pages/ProjectWorkOrders.razor",
-            "lines": 548,
-            "widgets": [
-              "table",
-              "modal",
-              "loadGate",
-              "toast",
-              "dropdown",
-              "export"
-            ]
-          },
           {
             "page": "jpms/Pages/Subcontractors.razor",
             "lines": 517,
@@ -5008,6 +5000,19 @@
             "lines": 364,
             "widgets": [
               "loadGate"
+            ]
+          },
+          {
+            "page": "jpms/Pages/ProjectWorkOrders.razor",
+            "lines": 354,
+            "widgets": [
+              "table",
+              "modal",
+              "loadGate",
+              "toast",
+              "dropdown",
+              "panel",
+              "export"
             ]
           },
           {
@@ -5702,16 +5707,16 @@
             "reusedBy": 24
           },
           {
+            "component": "jpms/Components/DropdownMenu.razor",
+            "reusedBy": 21
+          },
+          {
             "component": "jpms/Components/JewelSpinner.razor",
             "reusedBy": 19
           },
           {
             "component": "jpms/Components/Toolbar.razor",
             "reusedBy": 19
-          },
-          {
-            "component": "jpms/Components/DropdownMenu.razor",
-            "reusedBy": 18
           },
           {
             "component": "jpms/Components/ToolbarButton.razor",
@@ -6209,7 +6214,7 @@
       "summary": {
         "clones": 490,
         "duplicatedLines": 6220,
-        "totalLines": 216540,
+        "totalLines": 216620,
         "duplicatedPercentage": 2.87
       },
       "offenders": [

@@ -1,0 +1,57 @@
+@namespace Jewel.JPMS.Features.Procurement
+
+@* Orders without a cost-centre breakdown: no priced lines yet, so their value isn't in the
+   grouped table above. Each carries the same Actions menu as the table's rows (minus Re-code,
+   which needs a priced line to move) and the same two-click cancel — the page owns both. *@
+<h3 class="text-sm font-semibold text-content mt-6 mb-2">Orders without a cost-centre breakdown</h3>
+<p class="text-xs text-content-subtle mb-2">
+    These orders have no priced lines yet, so their value isn't included in the
+    @(GroupBySupplier ? "supplier" : "cost-centre") table above.
+</p>
+<ul class="text-sm divide-y divide-line rounded-xl border border-line bg-surface">
+    @foreach (var detail in Orders)
+    {
+        <li class="px-4 py-2 flex items-center gap-3">
+            <span class="font-mono text-[11px] text-content-subtle">@detail.Order.Reference</span>
+            <span class="text-content font-medium">@detail.Order.Title</span>
+            <span class="text-content-subtle">@detail.SubcontractorName</span>
+            <span class="ml-auto">@Money(detail.Order.Value)</span>
+            @if (CancelPendingFor(detail))
+            {
+                <button type="button"
+                        class="text-xs font-medium text-negative underline underline-offset-4"
+                        title="@($"Void {detail.Order.Reference} — it keeps its number as a record, but its value stops counting everywhere and there is no undo")"
+                        disabled="@CancelBusy"
+                        @onclick="() => OnCancel.InvokeAsync(detail)">
+                    @(CancelBusy ? "Working…" : "Confirm cancel")
+                </button>
+                <button type="button"
+                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                        disabled="@CancelBusy"
+                        @onclick="() => OnKeep.InvokeAsync()">
+                    Keep order
+                </button>
+            }
+            else
+            {
+                <DropdownMenu Label="Actions" WidthClass="w-72"
+                              Disabled="@CancelBusy"
+                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                              Class="inline-block text-left"
+                              Items="MenuItems(detail)" />
+            }
+        </li>
+    }
+</ul>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<ProjectWorkOrderDetail> Orders { get; set; } = default!;
+    [Parameter] public bool GroupBySupplier { get; set; }
+    /// <summary>Which order, if any, is showing its inline confirm-cancel pair.</summary>
+    [Parameter, EditorRequired] public Func<ProjectWorkOrderDetail, bool> CancelPendingFor { get; set; } = default!;
+    [Parameter] public bool CancelBusy { get; set; }
+    /// <summary>The order's Actions menu — the page builds it, because its choices are the page's role gates.</summary>
+    [Parameter, EditorRequired] public Func<ProjectWorkOrderDetail, IReadOnlyList<DropdownMenu.Item>> MenuItems { get; set; } = default!;
+    [Parameter] public EventCallback<ProjectWorkOrderDetail> OnCancel { get; set; }
+    [Parameter] public EventCallback OnKeep { get; set; }
+}

@@ -1,0 +1,49 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using static Jewel.JPMS.Features.Procurement.WorkOrderDisplay
+
+@* Rejected drafts stay on the page as a quiet record of the decision — they count nowhere.
+   Their one menu action is Delete, for records that shouldn't even be a quiet note (raised in
+   error, duplicated). The muted colours and struck value do the quieting — an opacity on the
+   list would dim the Actions menu with it. *@
+<details class="mb-6">
+    <summary class="text-xs font-medium text-content-subtle cursor-pointer select-none">
+        Rejected work orders (@Orders.Count)
+    </summary>
+    <ul class="mt-2 text-sm divide-y divide-line rounded-xl border border-line bg-surface">
+        @foreach (var detail in Orders)
+        {
+            <li class="px-4 py-2 flex items-center gap-3">
+                <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Rejected</span>
+                <span class="text-content-muted">@detail.Order.Title</span>
+                <span class="text-content-subtle">@detail.SubcontractorName</span>
+                <span class="ml-auto text-content-subtle line-through">@Money(detail.Order.Value)</span>
+                <DropdownMenu Label="Actions" WidthClass="w-72" Disabled="@Busy"
+                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                              Class="inline-block text-left"
+                              Items="MenuItems(detail)" />
+            </li>
+        }
+    </ul>
+</details>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<ProjectWorkOrderDetail> Orders { get; set; } = default!;
+    /// <summary>A delete is in flight — every menu stands down.</summary>
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback<ProjectWorkOrderDetail> OnDelete { get; set; }
+
+    // A rejected order's menu is short: the record is already decided, so all that is left is
+    // reading the PO it would have been, and removing records that shouldn't even be a quiet note.
+    private IReadOnlyList<DropdownMenu.Item> MenuItems(ProjectWorkOrderDetail detail) =>
+        new List<DropdownMenu.Item>
+        {
+            new(Label: "Preview PO",
+                Href: PurchaseOrderPath(ProjectId, detail.Order.WorkOrderId),
+                Hint: "Open the purchase order as it would have read — it keeps its Draft mark; no number was ever minted"),
+            new(Label: "Delete…",
+                OnSelect: EventCallback.Factory.Create(this, () => OnDelete.InvokeAsync(detail)),
+                Hint: "Delete this rejected order outright — it counts nowhere already; this removes the record itself",
+                Destructive: true, Group: 1)
+        };
+}

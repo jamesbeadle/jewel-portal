@@ -1,5 +1,6 @@
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.Procurement;
+using static Jewel.JPMS.Features.Procurement.WorkOrderDisplay;
 using Jewel.JPMS.Features.Projects;
 using Jewel.JPMS.Features.Subcontractors;
 
@@ -113,12 +114,9 @@ public partial class ProjectWorkOrders
 
     private Dictionary<string, WorkOrderInvoiceSummary> SummariesByOrder => summariesByOrder ?? NoSummaries;
 
-    // An em dash, not a zero. "GBP 0.00 paid" and "we have not been told what is paid" are
-    // different answers, and the second one must not be able to pass for the first.
-    private const string Dash = "–";
-
-    private const string UnknownPaidHint =
-        "No Xero bill is linked to this order yet, so nothing is known about what has been paid — link its bills on the WO Allocation tab";
+    // Project-wide, so any row carries it; null until a purchase line has ever been synced.
+    private DateTimeOffset? LedgerSyncedAtUtc =>
+        SummariesByOrder.Values.Select(summary => summary.LedgerSyncedAtUtc).FirstOrDefault();
 
     private WorkOrderPaymentStatus PaymentStatusOf(ProjectWorkOrderDetail detail) =>
         SummariesByOrder.TryGetValue(detail.Order.WorkOrderId, out var summary)
@@ -146,11 +144,6 @@ public partial class ProjectWorkOrders
 
     private decimal UnknownCommittedOf(List<OrderLine> lines) =>
         lines.Where(entry => !PaymentKnown(entry.Detail)).Sum(entry => entry.Line.LineTotal);
-
-    private const string UnknownCommittedHint =
-        "Committed value on orders with no Xero bill linked — nothing is known about what has " +
-        "been paid on them, so they count in neither paid nor remaining. Link their bills on " +
-        "the WO Allocation tab and they move into the remaining figure.";
 
     private List<GroupRow> Rows => RowsFrom(VisibleLines);
 
@@ -296,34 +289,9 @@ public partial class ProjectWorkOrders
 
     private static string Reference(WorkOrder order) => order.Reference;
 
-    // ── Deciding a draft: approve (mints the next number) or reject (terminal) ──
-    // Two clicks on purpose either way: an approval mints a number that is never taken
-    // back, and a rejection has no undo. pendingDraftId holds the draft awaiting its
-    // confirm click, pendingDecision which decision was asked for.
-    private enum DraftDecision { Approve, Reject }
-
-    // Drafts link to the same printable purchase order page as issued orders — it renders
-    // unreleased orders with a Draft reference and badge, so the sheet can be read (and saved
-    // as a PDF) BEFORE approving releases the order and emails the PO to the supplier.
-    private string PurchaseOrderPathFor(ProjectWorkOrderDetail detail) =>
-        $"/projects/{ProjectId}/work-orders/{detail.Order.WorkOrderId}/po";
-
-    private string? pendingDraftId;
-    private DraftDecision pendingDecision;
-    private bool decisionBusy;
-    private string? decisionError;
-
-    // The delete confirm modal: which order it is asking about — an undecided draft or a
-    // rejected one — and its own busy/error state so a refused delete reads back inside the
-    // modal rather than under the list.
-    private ProjectWorkOrderDetail? deletingOrder;
+    private DeleteWorkOrderModal deleteModal = default!;
+    // A delete is in flight — the rejected list's menus stand down on it.
     private bool deleteBusy;
-    private string? deleteError;
-
-    private bool DeletingRejectedOrder => deletingOrder?.Order.IsRejected == true;
-
-    private DraftDecision? PendingFor(ProjectWorkOrderDetail detail) =>
-        pendingDraftId == detail.Order.WorkOrderId ? pendingDecision : null;
 
     // ── Cancelling an issued order: terminal, directors and the FD only ──
     // Same two-click shape as the draft decisions: cancelling voids an order the supplier
@@ -352,7 +320,7 @@ public partial class ProjectWorkOrders
         var items = new List<DropdownMenu.Item>
         {
             new("View PO",
-                Href: $"/projects/{ProjectId}/work-orders/{line.Detail.Order.WorkOrderId}/po",
+                Href: PurchaseOrderPath(ProjectId, line.Detail.Order.WorkOrderId),
                 Hint: "View / print the purchase order sent to the supplier")
         };
         if (CanEditOrder(line.Detail.Order))
@@ -383,7 +351,7 @@ public partial class ProjectWorkOrders
         var items = new List<DropdownMenu.Item>
         {
             new("View PO",
-                Href: $"/projects/{ProjectId}/work-orders/{detail.Order.WorkOrderId}/po",
+                Href: PurchaseOrderPath(ProjectId, detail.Order.WorkOrderId),
                 Hint: "View / print the purchase order sent to the supplier")
         };
         if (CanEditOrder(detail.Order))
