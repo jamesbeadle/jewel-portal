@@ -1,0 +1,133 @@
+@namespace Jewel.JPMS.Features.Labour
+@using static Jewel.JPMS.Features.Labour.LabourDisplay
+@inject ILabourStore Labour
+
+@* One worker's month opened up: the day-by-day record on the left, the forecast settings
+   (contracted days, CIS rate) on the right. The settings editor is the panel's own — keyed by
+   worker at the call site, so opening another worker starts clean. *@
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+        <h4 class="text-xs uppercase tracking-wide text-content-subtle mb-2">Day by day</h4>
+        @if (Worker.Days.Count == 0)
+        {
+            <p class="text-sm text-content-subtle italic">Nothing recorded this month yet.</p>
+        }
+        else
+        {
+            <table class="w-full text-sm">
+                <tbody>
+                    @foreach (var day in Worker.Days)
+                    {
+                        <tr class="border-b border-line/40">
+                            <td class="py-1.5 pr-3 text-content-muted whitespace-nowrap">@day.Date.ToString("ddd dd MMM")</td>
+                            <td class="py-1.5 pr-3">
+                                @if (day.Absence is not null)
+                                {
+                                    <span class="text-content-subtle">@AbsenceLabel(day.Absence.Value)</span>
+                                }
+                                else
+                                {
+                                    <span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:@ColourOf(day.ProjectId)"></span>
+                                    <span class="text-content">@day.ProjectName</span>
+                                }
+                            </td>
+                            <td class="py-1.5 pr-3 text-right tabular-nums text-content-muted">@(day.Hours > 0 ? $"{day.Hours:0.#} h" : "")</td>
+                            <td class="py-1.5 text-right">
+                                @if (day.Status is not null)
+                                {
+                                    <StatusPill Status="@day.Status.Value" />
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+    <div>
+        <h4 class="text-xs uppercase tracking-wide text-content-subtle mb-2">Forecast settings</h4>
+        <div class="space-y-3 max-w-[240px]">
+            <label class="block text-sm text-content-muted">Contracted days / month
+                <input class="field mt-1" type="number" step="0.5" min="0" max="31" @bind="contractedDays" />
+            </label>
+            <label class="block text-sm text-content-muted">CIS rate
+                <select class="field mt-1" @bind="cisRateText">
+                    <option value="20">20% — standard</option>
+                    <option value="30">30% — unverified</option>
+                    <option value="0">0% — gross status</option>
+                </select>
+            </label>
+            <div class="flex items-center gap-2">
+                <button type="button" class="btn-secondary" disabled="@saving" @onclick="SaveAsync">Save</button>
+                <button type="button" class="btn-secondary" @onclick="() => OnRecordAbsence.InvokeAsync(Worker)">Record absence</button>
+                @if (saved)
+                {
+                    <span class="text-sm text-positive">Saved</span>
+                }
+            </div>
+            @if (error is not null)
+            {
+                <p class="text-sm text-negative">@error</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public LabourOverviewWorker Worker { get; set; } = default!;
+    [Parameter] public int Year { get; set; }
+    [Parameter] public int Month { get; set; }
+    [Parameter, EditorRequired] public Func<string, string> ColourOf { get; set; } = default!;
+    /// <summary>Record an absence for this worker, today.</summary>
+    [Parameter] public EventCallback<LabourOverviewWorker> OnRecordAbsence { get; set; }
+
+    // The CIS select binds a STRING: the rate arrives from the API as a decimal whose scale
+    // follows the stored value ("20.00"), and a <select @bind> matches its options by string —
+    // bound to the decimal, "20.00" matched no option, the select rendered blank, and picking
+    // "20" then compared numerically equal to the current value, so Save sent nothing. loaded*
+    // keep what the panel opened with so Save knows what genuinely changed.
+    private decimal contractedDays;
+    private string cisRateText = "20";
+    private decimal loadedContractedDays;
+    private decimal loadedCisRate;
+    private bool saving;
+    private bool saved;
+    private string? error;
+
+    protected override void OnInitialized()
+    {
+        loadedContractedDays = Worker.ContractedDays;
+        loadedCisRate = Worker.CisRatePercent;
+        contractedDays = loadedContractedDays;
+        cisRateText = loadedCisRate.ToString("0");
+    }
+
+    private async Task SaveAsync()
+    {
+        saving = true; saved = false; error = null;
+        try
+        {
+            var cisRate = decimal.TryParse(cisRateText, out var parsed) ? parsed : loadedCisRate;
+            var changed = false;
+            if (contractedDays != loadedContractedDays)
+            {
+                await Labour.SetWorkerContractAsync(Year, Month, Worker.WorkerId, contractedDays);
+                changed = true;
+            }
+            if (cisRate != loadedCisRate)
+            {
+                await Labour.SetWorkerCisStatusAsync(Year, Month, Worker.WorkerId, cisRate, "");
+                changed = true;
+            }
+            // Show the saved values back from the server — without this, a successful save
+            // changed nothing on screen and read as "it does nothing".
+            if (changed) await Labour.RefreshOverviewAsync(Year, Month);
+            loadedContractedDays = contractedDays;
+            loadedCisRate = cisRate;
+            saved = true;
+        }
+        catch (CommandFailedException failure) { error = failure.Message; }
+        catch (Exception) { error = "Could not save the contract settings — try again."; }
+        finally { saving = false; }
+    }
+}

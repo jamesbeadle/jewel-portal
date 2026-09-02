@@ -1,3 +1,4 @@
+using static Jewel.JPMS.Features.Labour.LabourDisplay;
 using Jewel.JPMS.Contracts.Labour;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.Projects;
@@ -6,19 +7,7 @@ namespace Jewel.JPMS.Pages;
 
 public partial class LabourOverview
 {
-    // ---- Formatting & colours -----------------------------------------------------------------
-
-    private static string Pounds(decimal value) => value.ToString("£#,##0");
-    private static string Days(decimal value) => value == 0m ? "0" : value.ToString("0.##");
-
-    private static string ConfidenceLabel(LabourOverviewTotals totals) =>
-        totals.ElapsedWorkerDays == 0 ? "0%"
-            : $"{(double)totals.ConfirmedWorkerDays / totals.ElapsedWorkerDays:P0}";
-
-    private static string BarWidth(decimal value, decimal max) =>
-        max <= 0m ? "0%" : $"{(double)(value / max) * 100:0}%";
-
-    // A muted categorical palette for site chips; stable per project within the session.
+    // ---- Site colours: a muted categorical palette, stable per project within the session ----
     private static readonly string[] SiteColours =
     {
         "#5B8DEF", "#57C4AD", "#C4884A", "#9C7BD8", "#D96C8A", "#6BA85E", "#4FA8C7", "#B0A24E",

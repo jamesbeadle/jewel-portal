@@ -1,0 +1,86 @@
+@namespace Jewel.JPMS.Features.Labour
+@using Jewel.JPMS.Contracts.Labour
+
+@* Weekly sign-off: a view over approval, never a second state machine. A week signs off only
+   when every elapsed weekday is approved, rejected with a reason, or covered by a recorded
+   absence — this marker records that the week was looked at whole. *@
+<Panel Title="Weekly sign-off" Class="mb-6" BodyClass="p-0" IsLoading="@Loading" LoadingLabel="Loading sign-off">
+    @if (Snapshot is null)
+    {
+        <p class="p-5 text-sm text-negative">Couldn't load the overview — refresh to try again.</p>
+    }
+    else
+    {
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                    <th class="px-5 py-3">Name</th>
+                    @foreach (var weekStart in MonthWeeks)
+                    {
+                        <th class="px-2 py-3 text-center">w/c @weekStart.ToString("dd MMM")</th>
+                    }
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var worker in Snapshot.Workers)
+                {
+                    <tr class="border-b border-line/60">
+                        <td class="px-5 py-2.5 font-medium text-content whitespace-nowrap">@worker.Name</td>
+                        @foreach (var weekStart in MonthWeeks)
+                        {
+                            <td class="px-2 py-2.5 text-center">@WeekCell(worker, weekStart)</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <p class="px-5 py-3 text-[11px] text-content-subtle border-t border-line">
+            A week signs off only when every elapsed weekday is approved, rejected with a
+            reason, or covered by a recorded absence. Approvals themselves live on each
+            project's Labour tab — this marker records that the week was looked at whole.
+        </p>
+    }
+</Panel>
+
+@code {
+    [Parameter] public LabourOverviewSnapshot? Snapshot { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public IEnumerable<DateTime> MonthWeeks { get; set; } = Array.Empty<DateTime>();
+    [Parameter] public EventCallback<(string WorkerId, DateTime WeekStart)> OnSignOff { get; set; }
+    [Parameter] public EventCallback<(string WorkerId, DateTimeOffset WeekStart)> OnRemoveSignOff { get; set; }
+
+    private RenderFragment WeekCell(LabourOverviewWorker worker, DateTime weekStart) => __builder =>
+    {
+        var signOff = worker.SignOffs.FirstOrDefault(row => row.WeekStart.UtcDateTime.Date == weekStart);
+        var today = DateTime.Today;
+        @if (signOff is not null)
+        {
+            <button type="button"
+                    class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-positive/10 text-positive"
+                    title="@($"Signed off by {signOff.SignedOffByEmail} on {signOff.SignedOffAt:dd MMM HH:mm} — press to undo")"
+                    @onclick="() => OnRemoveSignOff.InvokeAsync((worker.WorkerId, signOff.WeekStart))">Signed off</button>
+        }
+        else if (weekStart > today)
+        {
+            <span class="text-content-faint text-xs">—</span>
+        }
+        else
+        {
+            var settled = worker.Days
+                .Where(day => day.Status is TimesheetStatus.Approved or TimesheetStatus.Rejected)
+                .Select(day => day.Date.UtcDateTime.Date).ToHashSet();
+            var absent = worker.Days.Where(day => day.Absence is not null)
+                .Select(day => day.Date.UtcDateTime.Date).ToHashSet();
+            var signable = ForecastRules.WeekIsSignable(weekStart, today, settled, absent);
+            @if (signable)
+            {
+                <button type="button" class="btn-secondary text-xs py-0.5"
+                        @onclick="() => OnSignOff.InvokeAsync((worker.WorkerId, weekStart))">Sign off</button>
+            }
+            else
+            {
+                <span class="text-[11px] text-content-subtle" title="Elapsed days still need approving, rejecting or an absence recording.">Open</span>
+            }
+        }
+    };
+}

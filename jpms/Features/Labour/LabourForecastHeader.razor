@@ -1,0 +1,53 @@
+@namespace Jewel.JPMS.Features.Labour
+@using static Jewel.JPMS.Features.Labour.LabourDisplay
+
+@* Forecast header: one leading figure, quiet secondaries, the confidence bar. The bar is an
+   instrument, not a progress bar: one segment per week. *@
+<Panel Class="mb-6" BodyClass="p-5" IsLoading="@Loading" LoadingLabel="Loading forecast">
+    @if (Snapshot is null)
+    {
+        <p class="text-sm text-negative">Couldn't load the overview. The details are in the red bar at the top — refresh to try again.</p>
+    }
+    else
+    {
+        var totals = Snapshot.Totals;
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
+            <MetricStat Label="Projected labour spend" Value="@Pounds(totals.ProjectedSpend)" Class="md:col-span-2" />
+            <article>
+                <p class="text-sm text-content-subtle">Time off logged</p>
+                <p class="mt-1 text-xl font-semibold text-content tracking-tight tabular-nums">− @Pounds(totals.TimeOffCost)</p>
+                <p class="text-[11px] text-content-subtle">holiday and days not worked</p>
+            </article>
+            <article>
+                <p class="text-sm text-content-subtle">Amount due after CIS</p>
+                <p class="mt-1 text-xl font-semibold text-content tracking-tight tabular-nums">@Pounds(totals.AmountDueTotal)</p>
+                <p class="text-[11px] text-content-subtle">net payable this month</p>
+            </article>
+        </div>
+
+        <div class="mt-5">
+            <div class="flex items-baseline justify-between text-xs text-content-subtle mb-1">
+                <span>@ConfidenceLabel(totals) of elapsed days confirmed by timesheet</span>
+                @if (totals.UnconfirmedCost > 0m)
+                {
+                    <span class="tabular-nums">@Pounds(totals.UnconfirmedCost) unconfirmed</span>
+                }
+            </div>
+            <div class="flex gap-1 h-2">
+                @foreach (var week in totals.Weeks)
+                {
+                    var share = week.ElapsedWorkerDays == 0 ? 0 : (double)week.ConfirmedWorkerDays / week.ElapsedWorkerDays;
+                    <div class="flex-1 rounded-full bg-surface-field overflow-hidden"
+                         title="@($"w/c {week.WeekStart:dd MMM} — {week.ConfirmedWorkerDays}/{week.ElapsedWorkerDays} days confirmed{(week.UnconfirmedCost > 0m ? $", {Pounds(week.UnconfirmedCost)} unconfirmed" : "")}")">
+                        <div class="h-full bg-accent" style="width: @($"{share * 100:0}%")"></div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</Panel>
+
+@code {
+    [Parameter] public LabourOverviewSnapshot? Snapshot { get; set; }
+    [Parameter] public bool Loading { get; set; }
+}

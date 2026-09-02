@@ -1,0 +1,352 @@
+@namespace Jewel.JPMS.Features.Site
+@using Jewel.JPMS.Contracts.Lads
+@inject IRequestRegister RequestRegister
+@inject ICommandSender Commands
+@inject AuthService Auth
+
+@* Claims: the formal time/notice documents around the programme — Jewel's own Notices of Delay
+   (JCT ICD 2024 cl. 2.19) and the Extensions of Time they give rise to, plus the Liquidated
+   Damages claims the client can make against Jewel. The three forms are the workbench's own;
+   the page prefills the NOD from a detected delay event and re-reads the LADs when one lands. *@
+@if ((Error ?? error) is { } shown)
+{
+    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@shown</p>
+}
+
+<div class="flex flex-wrap gap-2 mb-5">
+    <button type="button" class="btn-secondary" @onclick="() => ToggleForm(Form.Nod)">Raise Notice of Delay</button>
+    <button type="button" class="btn-secondary" @onclick="() => ToggleForm(Form.Eot)">Raise Extension of Time</button>
+    <button type="button" class="btn-secondary" @onclick="() => ToggleForm(Form.Lad)">Record LADs claim</button>
+</div>
+
+@if (openForm == Form.Nod)
+{
+    <div class="panel p-4 mb-5 space-y-3">
+        <p class="text-sm font-semibold text-content">Raise a Notice of Delay</p>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <input class="field" @bind="nodTitle" placeholder="e.g. Delay to steel delivery — structural frame" />
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <textarea class="field" rows="3" @bind="nodDescription" placeholder="The cause of delay, the works affected and the expected programme impact."></textarea>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(nodTitle))" @onclick="RaiseNodAsync">Raise NOD</button>
+            <button type="button" class="btn-neutral" @onclick="() => ToggleForm(Form.None)">Cancel</button>
+        </div>
+    </div>
+}
+else if (openForm == Form.Eot)
+{
+    <div class="panel p-4 mb-5 space-y-3">
+        <p class="text-sm font-semibold text-content">Raise an Extension of Time</p>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <input class="field" @bind="eotTitle" placeholder="e.g. EOT — 10 working days, steel delivery delay" />
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <textarea class="field" rows="3" @bind="eotDescription" placeholder="The extension sought and the grounds for it."></textarea>
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Arises from Notice of Delay (optional)</label>
+            <select class="field" @bind="eotRelatedNodId">
+                <option value="">No related NOD</option>
+                @foreach (var nod in Nods)
+                {
+                    <option value="@nod.RequestId">@nod.Reference — @nod.Title</option>
+                }
+            </select>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(eotTitle))" @onclick="RaiseEotAsync">Raise EOT</button>
+            <button type="button" class="btn-neutral" @onclick="() => ToggleForm(Form.None)">Cancel</button>
+        </div>
+    </div>
+}
+else if (openForm == Form.Lad)
+{
+    <div class="panel p-4 mb-5 space-y-3">
+        <p class="text-sm font-semibold text-content">Record a Liquidated Damages claim</p>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <input class="field" @bind="ladTitle" placeholder="e.g. LADs notice — completion overrun" />
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <textarea class="field" rows="3" @bind="ladDescription" placeholder="The client's notice and the completion date it's claimed against."></textarea>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period from</label>
+                <input type="date" class="field" @bind="ladPeriodFrom" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period to</label>
+                <input type="date" class="field" @bind="ladPeriodTo" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Days claimed</label>
+                <input type="number" min="0" class="field" @bind="ladDaysClaimed" />
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Rate / week (£)</label>
+                <input type="number" min="0" step="0.01" class="field" @bind="ladRatePerWeek" />
+            </div>
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount claimed (£)</label>
+            <input type="number" min="0" step="0.01" class="field" @bind="ladAmount" />
+        </div>
+        <div class="flex gap-2">
+            <button type="button" class="btn-primary" disabled="@(busy || string.IsNullOrWhiteSpace(ladTitle))" @onclick="RecordLadAsync">Record claim</button>
+            <button type="button" class="btn-neutral" @onclick="() => ToggleForm(Form.None)">Cancel</button>
+        </div>
+    </div>
+}
+
+<div class="space-y-6">
+    <div>
+        <h3 class="text-sm font-semibold text-content mb-2">Notices of Delay <span class="font-normal text-content-subtle">— raised by Jewel (JCT ICD 2024 cl. 2.19)</span></h3>
+        <LoadGate IsLoading="@(!RequestsReady)" Label="Loading notices">
+        @if (Nods.Count == 0)
+        {
+            <div class="panel p-5 text-center"><p class="text-xs text-content-subtle">No Notices of Delay on this project.</p></div>
+        }
+        else
+        {
+            <ul class="space-y-2">
+                @foreach (var nod in Nods)
+                {
+                    <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-content-muted">@nod.Reference</span>
+                                <span class="text-sm font-medium text-content">@nod.Title</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@nod.Status</span>
+                                <span class="text-xs text-content-subtle">@((nod.IssuedAt ?? nod.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(nod.Description))
+                        {
+                            <p class="text-xs text-content-subtle mt-1 line-clamp-2">@nod.Description</p>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        </LoadGate>
+    </div>
+
+    <div>
+        <h3 class="text-sm font-semibold text-content mb-2">Extensions of Time <span class="font-normal text-content-subtle">— raised by Jewel (JCT ICD 2024 cl. 2.19/2.20)</span></h3>
+        <LoadGate IsLoading="@(!RequestsReady)" Label="Loading extensions">
+        @if (Eots.Count == 0)
+        {
+            <div class="panel p-5 text-center"><p class="text-xs text-content-subtle">No Extensions of Time on this project.</p></div>
+        }
+        else
+        {
+            <ul class="space-y-2">
+                @foreach (var eot in Eots)
+                {
+                    <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-content-muted">@eot.Reference</span>
+                                <span class="text-sm font-medium text-content">@eot.Title</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                @if (RelatedNodReference(eot) is { } nodRef)
+                                {
+                                    <span class="inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent" title="Arises from this Notice of Delay">from @nodRef</span>
+                                }
+                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@eot.Status</span>
+                                <span class="text-xs text-content-subtle">@((eot.IssuedAt ?? eot.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(eot.Description))
+                        {
+                            <p class="text-xs text-content-subtle mt-1 line-clamp-2">@eot.Description</p>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        </LoadGate>
+    </div>
+
+    <div>
+        <h3 class="text-sm font-semibold text-content mb-2">Liquidated Damages <span class="font-normal text-content-subtle">— claimed by the client against Jewel</span></h3>
+        <LoadGate IsLoading="@(!LadsLoaded)" Label="Loading LADs claims">
+        @if (Lads.Count == 0)
+        {
+            @* Only when the fetch actually answered "none" — a failure says so above. *@
+            @if (!LadsFailed)
+            {
+                <div class="panel p-5 text-center"><p class="text-xs text-content-subtle">No LADs claims recorded on this project.</p></div>
+            }
+        }
+        else
+        {
+            <ul class="space-y-2">
+                @foreach (var lad in Lads)
+                {
+                    <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-xs text-content-muted">@lad.Reference</span>
+                                <span class="text-sm font-medium text-content">@lad.Title</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@lad.Status.DisplayName()</span>
+                                <span class="text-xs text-content-subtle">@lad.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-content-subtle mt-1">
+                            @ClaimPeriod(lad)@(lad.DaysClaimed > 0 ? $" · {lad.DaysClaimed} days" : "")@(lad.RatePerWeek > 0 ? $" · {Money(lad.RatePerWeek)}/week" : "") · <span class="font-medium text-content">@Money(lad.Amount)</span>
+                        </p>
+                        @if (!string.IsNullOrWhiteSpace(lad.Description))
+                        {
+                            <p class="text-xs text-content-subtle mt-1 line-clamp-2">@lad.Description</p>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        </LoadGate>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    /// <summary>The LADs claims and their read state — page-owned, because the tab badge counts them.</summary>
+    [Parameter] public IReadOnlyList<LadClaim> Lads { get; set; } = Array.Empty<LadClaim>();
+    [Parameter] public bool LadsLoaded { get; set; }
+    [Parameter] public bool LadsFailed { get; set; }
+    /// <summary>The page's own failure to report (the LADs read), shown over the forms' own.</summary>
+    [Parameter] public string? Error { get; set; }
+    /// <summary>A LADs claim landed — the page re-reads the list.</summary>
+    [Parameter] public EventCallback OnLadRecorded { get; set; }
+
+    private enum Form { None, Nod, Eot, Lad }
+    private Form openForm = Form.None;
+    private bool busy;
+    private string? error;
+
+    private string nodTitle = "";
+    private string nodDescription = "";
+    private string eotTitle = "";
+    private string eotDescription = "";
+    private string eotRelatedNodId = "";
+    private string ladTitle = "";
+    private string ladDescription = "";
+    private DateTime? ladPeriodFrom;
+    private DateTime? ladPeriodTo;
+    private int ladDaysClaimed;
+    private decimal ladRatePerWeek;
+    private decimal ladAmount;
+
+    private bool RequestsReady => RequestRegister.LoadedFor(ProjectId);
+    private IReadOnlyList<Request> Nods => RequestRegister.ForProject(ProjectId, RequestType.NoticeOfDelay);
+    private IReadOnlyList<Request> Eots => RequestRegister.ForProject(ProjectId, RequestType.ExtensionOfTime);
+
+    /// <summary>Opens the NOD form pre-filled — the human still reviews and raises it.</summary>
+    public void PrefillNod(string title, string description)
+    {
+        nodTitle = title;
+        nodDescription = description;
+        openForm = Form.Nod;
+        StateHasChanged();
+    }
+
+    private void ToggleForm(Form form)
+    {
+        openForm = openForm == form ? Form.None : form;
+        error = null;
+    }
+
+    private async Task RaiseNodAsync()
+    {
+        if (busy || string.IsNullOrWhiteSpace(nodTitle)) return;
+        busy = true; error = null;
+        try
+        {
+            await RequestRegister.RaiseAsync(new RaiseRequest(
+                ProjectId, RequestType.NoticeOfDelay, Reference: "", nodTitle.Trim(), nodDescription.Trim(),
+                Value: null, RaisedByEmail: Auth.CurrentUser!.Email));
+            nodTitle = "";
+            nodDescription = "";
+            openForm = Form.None;
+        }
+        catch { error = "Couldn't raise the Notice of Delay. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task RaiseEotAsync()
+    {
+        if (busy || string.IsNullOrWhiteSpace(eotTitle)) return;
+        busy = true; error = null;
+        try
+        {
+            await RequestRegister.RaiseAsync(new RaiseRequest(
+                ProjectId, RequestType.ExtensionOfTime, Reference: "", eotTitle.Trim(), eotDescription.Trim(),
+                Value: null, RaisedByEmail: Auth.CurrentUser!.Email,
+                RelatedNodRequestId: string.IsNullOrWhiteSpace(eotRelatedNodId) ? null : eotRelatedNodId));
+            eotTitle = "";
+            eotDescription = "";
+            eotRelatedNodId = "";
+            openForm = Form.None;
+        }
+        catch { error = "Couldn't raise the Extension of Time. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task RecordLadAsync()
+    {
+        if (busy || string.IsNullOrWhiteSpace(ladTitle)) return;
+        busy = true; error = null;
+        try
+        {
+            await Commands.SendAsync(new AddLadClaim(
+                ProjectId, ladTitle.Trim(), ladDescription.Trim(),
+                // Date-only values: pin to UTC midnight so the stored instant is timezone-stable
+                // (a local offset would shift the date in UTC-based comparisons and reports).
+                PeriodFrom: ladPeriodFrom is { } from ? new DateTimeOffset(from.Date, TimeSpan.Zero) : null,
+                PeriodTo: ladPeriodTo is { } to ? new DateTimeOffset(to.Date, TimeSpan.Zero) : null,
+                DaysClaimed: ladDaysClaimed,
+                RatePerWeek: ladRatePerWeek,
+                Amount: ladAmount), CancellationToken.None);
+            ladTitle = "";
+            ladDescription = "";
+            ladPeriodFrom = null;
+            ladPeriodTo = null;
+            ladDaysClaimed = 0;
+            ladRatePerWeek = 0m;
+            ladAmount = 0m;
+            openForm = Form.None;
+            await OnLadRecorded.InvokeAsync();
+        }
+        catch { error = "Couldn't record the LADs claim. Please try again."; }
+        finally { busy = false; }
+    }
+
+    // The reference of the NOD an EOT arises from, resolved against the project's NODs — null when
+    // the EOT stands alone (or the NOD has since been deleted).
+    private string? RelatedNodReference(Request eot) =>
+        string.IsNullOrWhiteSpace(eot.RelatedNodRequestId)
+            ? null
+            : Nods.FirstOrDefault(n => n.RequestId == eot.RelatedNodRequestId)?.Reference;
+
+    private static string ClaimPeriod(LadClaim lad) =>
+        (lad.PeriodFrom, lad.PeriodTo) switch
+        {
+            ({ } from, { } to) => $"{from.LocalDateTime:d MMM yyyy} – {to.LocalDateTime:d MMM yyyy}",
+            ({ } from, null)   => $"from {from.LocalDateTime:d MMM yyyy}",
+            (null, { } to)     => $"to {to.LocalDateTime:d MMM yyyy}",
+            _                  => "Period not recorded"
+        };
+}

@@ -1,0 +1,72 @@
+@namespace Jewel.JPMS.Features.Site
+
+@* RFIs tagged Critical Path — programme-related requests whose answers gate work on the
+   programme's critical path. The tag is set on the RFI itself (detail page → Actions or Edit
+   details); this view is the programme-side lens on that subset, open and closed, so it doubles
+   as the programme-impact history. *@
+<LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="Loading critical path RFIs">
+@if (Rfis.Count == 0)
+{
+    <div class="panel p-8 text-center">
+        <p class="text-sm text-content">No critical path RFIs on this project.</p>
+        <p class="text-xs text-content-subtle mt-1">
+            Tag an RFI as <span class="font-medium text-content">Critical path</span> from its detail page (Actions → Mark as critical path) and it will appear here.
+        </p>
+    </div>
+}
+else
+{
+    <ul class="space-y-2">
+        @foreach (var rfi in Rfis)
+        {
+            <li>
+                <a href="@($"/projects/{ProjectId}/requests/view/{rfi.RequestId}")"
+                   class="block rounded-lg border border-line bg-surface px-4 py-3 hover:border-accent/60 transition">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs text-content-muted">@rfi.Reference</span>
+                            <span class="text-sm font-medium text-content">@rfi.Title</span>
+                            <span class="inline-flex items-center rounded bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600">Critical path</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            @if (rfi.DaysOutstanding is int days)
+                            {
+                                <span class="text-xs @(rfi.IsOverdue ? "text-negative font-semibold" : "text-content-subtle")"
+                                      title="Days outstanding since raised">@days d outstanding</span>
+                            }
+                            <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(rfi.Status)">@rfi.Status.DisplayName()</span>
+                            <span class="text-xs text-content-subtle">@((rfi.IssuedAt ?? rfi.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-content-subtle">
+                        @if (rfi.ResponseDue is { } due)
+                        {
+                            <span>Response due @due.LocalDateTime.ToString("d MMM yyyy")</span>
+                        }
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(rfi.Description))
+                    {
+                        <p class="text-xs text-content-subtle mt-1 line-clamp-2">@rfi.Description</p>
+                    }
+                </a>
+            </li>
+        }
+    </ul>
+}
+</LoadGate>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    [Parameter] public IReadOnlyList<Request> Rfis { get; set; } = Array.Empty<Request>();
+    [Parameter] public bool Loaded { get; set; }
+
+    // Mirrors the request detail page's colouring so an RFI reads the same on both sides.
+    private static string StatusClass(RequestStatus status) => status switch
+    {
+        RequestStatus.NeedsAction    => "bg-amber-500/10 text-amber-600",
+        RequestStatus.Open           => "bg-blue-500/10 text-blue-600",
+        RequestStatus.NeedsVariation => "bg-violet-500/10 text-violet-600",
+        RequestStatus.Closed         => "bg-surface-raised border border-line text-content-muted",
+        _                            => "bg-surface-raised border border-line text-content-muted"
+    };
+}

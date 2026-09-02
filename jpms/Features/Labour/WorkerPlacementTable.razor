@@ -1,0 +1,79 @@
+@namespace Jewel.JPMS.Features.Labour
+@using static Jewel.JPMS.Features.Labour.LabourDisplay
+
+@* The hero: the placement grid — who was where, day by day. Select a row for the day-by-day
+   detail, absence recording and contract settings. *@
+<Panel Title="By worker" Class="mb-6" BodyClass="p-0" IsLoading="@Loading" LoadingLabel="Loading workers">
+    @if (Snapshot is null)
+    {
+        <p class="p-5 text-sm text-negative">Couldn't load the overview — refresh to try again.</p>
+    }
+    else if (Snapshot.Workers.Count == 0)
+    {
+        <p class="p-5 text-sm text-content-subtle italic">No active workers. Add them on the Workers page.</p>
+    }
+    else
+    {
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                        <th class="px-5 py-3">Name</th>
+                        <th class="px-2 py-3 text-right">Rate</th>
+                        <th class="px-2 py-3 text-right">Contracted</th>
+                        <th class="px-2 py-3 text-right">Worked</th>
+                        <th class="px-2 py-3 text-right">Off</th>
+                        <th class="px-2 py-3">Month</th>
+                        <th class="px-5 py-3 text-right">Projected</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var worker in Snapshot.Workers)
+                    {
+                        <tr class="border-b border-line/60 hover:bg-surface-raised/40 cursor-pointer"
+                            @onclick="() => Toggle(worker.WorkerId)">
+                            <td class="px-5 py-2.5 font-medium text-content whitespace-nowrap">@worker.Name</td>
+                            <td class="px-2 py-2.5 text-right tabular-nums text-content-muted whitespace-nowrap">@Pounds(worker.DayRate)</td>
+                            <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.ContractedDays)</td>
+                            <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.DaysWorked)</td>
+                            <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(worker.DaysOff)</td>
+                            <td class="px-2 py-2.5"><WorkerPlacementStrip Worker="worker" MonthWeekdays="MonthWeekdays" ColourOf="ColourOf" /></td>
+                            <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(worker.ProjectedCost)</td>
+                        </tr>
+                        @if (expandedWorkerId == worker.WorkerId)
+                        {
+                            <tr class="border-b border-line/60 bg-surface-raised/30">
+                                <td colspan="8" class="px-5 py-4">
+                                    <WorkerDetailPanel @key="worker.WorkerId" Worker="worker" Year="Year" Month="Month"
+                                                       ColourOf="ColourOf" OnRecordAbsence="OnRecordAbsence" />
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="px-5 py-3 text-[11px] text-content-subtle border-t border-line">
+            Chips are coloured by site; hatched = recorded absence, hollow = elapsed day with nothing recorded yet.
+            Weekdays always show; round chips are weekend days, drawn only when something was recorded on them.
+            Select a row for the day-by-day detail, absence recording and contract settings.
+        </p>
+    }
+</Panel>
+
+@code {
+    [Parameter] public LabourOverviewSnapshot? Snapshot { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public int Year { get; set; }
+    [Parameter] public int Month { get; set; }
+    [Parameter] public IEnumerable<DateTime> MonthWeekdays { get; set; } = Array.Empty<DateTime>();
+    /// <summary>The page's site palette — stable per project within the session.</summary>
+    [Parameter, EditorRequired] public Func<string, string> ColourOf { get; set; } = default!;
+    /// <summary>Record an absence for a worker, today.</summary>
+    [Parameter] public EventCallback<LabourOverviewWorker> OnRecordAbsence { get; set; }
+
+    private string? expandedWorkerId;
+
+    private void Toggle(string workerId) =>
+        expandedWorkerId = expandedWorkerId == workerId ? null : workerId;
+}
