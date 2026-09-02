@@ -7,7 +7,9 @@ namespace Jewel.JPMS.Api.Features.Labour.Commands;
 // approve_worker_week — so the two surfaces cannot drift: same LabourRoleSets gates as the
 // endpoints, same signable rule re-checked at the moment of signing, same skip-and-report gates
 // inside the coding run. Names resolve through WorkerNameResolver (shared with week entry);
-// weeks normalise to Monday inside the delegated handlers.
+// weeks normalise to Monday inside the delegated handlers, and the month whose part of the week
+// is meant follows the same rule as the overview (LabourWeekParts): the given monthStart, else
+// the month of the weekStart date as given.
 
 // ---- sign_off_labour_week ---------------------------------------------------------------------
 
@@ -45,7 +47,7 @@ public sealed class SignOffWorkerWeekByNameHandler : ICommandHandler<SignOffWork
             // The overview's own handler: normalises the Monday, re-checks the signable rule at
             // the moment of signing, upserts the marker with the caller stamped.
             return await signOff.HandleAsync(
-                new SignOffLabourWeek(worker.WorkerId, command.WeekStart),
+                new SignOffLabourWeek(worker.WorkerId, command.WeekStart, command.MonthStart),
                 command.SignedOffByEmail, cancellationToken);
         }
         catch (WeekNotSignableException refusal)
@@ -91,7 +93,7 @@ public sealed class RemoveWorkerWeekSignOffByNameHandler : ICommandHandler<Remov
         var workers = await context.Workers.AsNoTracking().ToListAsync(cancellationToken);
         var worker = WorkerNameResolver.Resolve(workers, command.WorkerName, "removing their week's sign-off");
         return await remove.HandleAsync(
-            new RemoveLabourWeekSignOff(worker.WorkerId, command.WeekStart), cancellationToken);
+            new RemoveLabourWeekSignOff(worker.WorkerId, command.WeekStart, command.MonthStart), cancellationToken);
     }
 }
 

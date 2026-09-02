@@ -2663,6 +2663,9 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
 
+                    b.Property<DateTimeOffset>("MonthStart")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<DateTimeOffset>("SignedOffAt")
                         .HasColumnType("datetimeoffset");
 
@@ -2681,9 +2684,9 @@ namespace Jewel.JPMS.Api.Migrations
 
                     b.HasKey("LabourWeekSignOffId");
 
-                    b.HasIndex("WorkerId", "WeekStart")
+                    b.HasIndex("WorkerId", "WeekStart", "MonthStart")
                         .IsUnique()
-                        .HasDatabaseName("IX_LabourWeekSignOffs_WorkerId_WeekStart");
+                        .HasDatabaseName("IX_LabourWeekSignOffs_WorkerId_WeekStart_MonthStart");
 
                     b.ToTable("LabourWeekSignOffs");
                 });

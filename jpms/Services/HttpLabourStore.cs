@@ -288,17 +288,22 @@ public sealed class HttpLabourStore : ILabourStore
         await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
     }
 
+    // The month in view is the month whose part of the week is signed (2026-09-02) — a week
+    // straddling the month end is two markers, one per month, addressed by MonthStart.
     public async Task SignOffWeekAsync(int year, int month, string workerId, DateTimeOffset weekStart)
     {
-        await commands.SendAsync(new SignOffLabourWeek(workerId, weekStart), CancellationToken.None);
+        await commands.SendAsync(new SignOffLabourWeek(workerId, weekStart, MonthStartOf(year, month)), CancellationToken.None);
         await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
     }
 
     public async Task RemoveWeekSignOffAsync(int year, int month, string workerId, DateTimeOffset weekStart)
     {
-        await commands.SendAsync(new RemoveLabourWeekSignOff(workerId, weekStart), CancellationToken.None);
+        await commands.SendAsync(new RemoveLabourWeekSignOff(workerId, weekStart, MonthStartOf(year, month)), CancellationToken.None);
         await overviewReadModel.RefreshAsync(year, month, CancellationToken.None);
     }
+
+    private static DateTimeOffset MonthStartOf(int year, int month) =>
+        new(new DateTime(year, month, 1), TimeSpan.Zero);
 
     public SettlementScheduleSnapshot? Schedules(int year, int month)
     {

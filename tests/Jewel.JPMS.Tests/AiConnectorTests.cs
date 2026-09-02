@@ -69,6 +69,21 @@ public sealed class AiConnectorTests
         }
     }
 
+    // The report-as-files tool (2026-09-02) mirrors the download endpoints' gate: every internal
+    // role can pull the portal's own PDF and workbook; an external login never sees project money.
+    [Fact]
+    public void ExportValuationReport_isAnInternalRead()
+    {
+        var director = AiToolCatalogue.ForConnector(UserWith(Role.ManagingDirector));
+        var tool = Assert.Single(director, candidate => candidate.Name == "export_valuation_report");
+        Assert.Equal(AiToolKind.Read, tool.Kind);
+
+        var quantitySurveyor = AiToolCatalogue.ForConnector(UserWith(Role.QuantitySurveyor)).Select(t => t.Name);
+        Assert.Contains("export_valuation_report", quantitySurveyor);
+        var subcontractor = AiToolCatalogue.ForConnector(UserWith(Role.Subcontractor)).Select(t => t.Name);
+        Assert.DoesNotContain("export_valuation_report", subcontractor);
+    }
+
     [Fact]
     public void SaveSkill_isNotOfferedOutsideTheSkillGate()
     {

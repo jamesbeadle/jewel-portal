@@ -126,106 +126,29 @@ public partial class ValuationSnapshotViewer
         Projects.OnChanged -= OnCostCentresChanged;
     }
 
-    private static string CodeFor(ValuationReportSnapshotLine line) =>
-        line.ElementType == ValuationElementType.Variation
-            ? (string.IsNullOrWhiteSpace(line.VariationRef) ? line.CostCode : VariationRefs.Padded(line.VariationRef))
-            : (string.IsNullOrWhiteSpace(line.CostCode) ? line.SectionCode : line.CostCode);
-
-    // Variation lines lead with their own line description; VO title is the fallback —
-    // mirrors ValuationReportTable so the snapshot reads like the live report.
-    private static string TitleFor(ValuationReportSnapshotLine line)
-    {
-        if (line.ElementType == ValuationElementType.Variation)
-            return string.IsNullOrWhiteSpace(line.Description) ? line.VariationTitle : line.Description;
-        if (!string.IsNullOrWhiteSpace(line.Description)) return line.Description;
-        return line.SectionName;
-    }
+    // The code and title fallbacks are the shared export mapping's (ValuationSnapshotExport) —
+    // the same rule the workbook, the PDF and the live report table read a line by.
+    private static string CodeFor(ValuationReportSnapshotLine line) => ValuationSnapshotExport.CodeFor(line);
+    private static string TitleFor(ValuationReportSnapshotLine line) => ValuationSnapshotExport.TitleFor(line);
 
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
 
-    // Every frozen line plus the summary footer, so the workbook and the screen (and the PDF,
-    // rendered from the same lines) always agree. The workbook is the shared shape (Summary with
-    // variations as one row per order, one tab per variation order carrying its lines, and the
-    // Pending variations tab read from the live register) and does its own consolidating; each
-    // line's "Previous" is its cumulative claimed less the period increment frozen at capture.
+    // Every frozen line plus the summary footer, mapped by the shared ValuationSnapshotExport so
+    // the workbook this button downloads and the one the connector's export_valuation_report
+    // hands out are the same file — and both agree with the screen and the PDF, rendered from
+    // the same lines. The workbook does its own consolidating (Summary with variations as one
+    // row per order, one tab per variation order, and the Pending variations tab read from the
+    // live register).
     private ExcelWorkbook? BuildExportWorkbook(bool _)
     {
         if (detail is null) return null;
         var snapshot = detail.Snapshot;
 
-        var exportLines = new List<ValuationExportLine>();
-        foreach (var section in Sections)
-        {
-            foreach (var line in section.Lines)
-            {
-                exportLines.Add(ExportLineFor(section, line));
-            }
-        }
-
-        var periodTotal = detail.Lines
-            .Where(line => line.CountsTowardTotals)
-            .Sum(line => line.PeriodIncrement);
-
-        var summary = new List<ValuationExportSummaryRow>
-        {
-            new("Original contract sum", snapshot.ContractSum),
-            new("Net variations", snapshot.NetVariations),
-            new("Revised contract sum", snapshot.RevisedContractSum, Strong: true),
-            new("Total works complete", snapshot.TotalWorksComplete),
-            new("Works claimed this period", periodTotal),
-            new($"Retention held ({Pct(snapshot.RetentionPercent)})", snapshot.RetentionHeld),
-            new($"Retention released ({Pct(snapshot.RetentionReleasePercent)})", snapshot.RetentionReleased),
-            new("Certified to date", snapshot.CertifiedToDate),
-        };
-        if (snapshot.DepositPercent > 0m || snapshot.DepositReleased != 0m)
-        {
-            summary.Add(new("Payment due before deposit (ex VAT)", snapshot.PaymentDueExVat + snapshot.DepositReleased));
-            summary.Add(new($"Less deposit released ({Pct(snapshot.DepositPercent)})", snapshot.DepositReleased));
-        }
-        summary.Add(new("Payment due (ex VAT)", snapshot.PaymentDueExVat, Strong: true));
-
         return ValuationReportExportWorkbook.Build(
-            new ValuationExportMeta(
-                snapshot.Label,
-                $"Snapshot taken {snapshot.TakenAt.ToString("dd MMM yyyy HH:mm", Gb)} · immutable record from the JPMS register",
-                IsDraft: false),
-            exportLines,
-            summary,
+            ValuationSnapshotExport.Meta(snapshot, isDraft: false),
+            ValuationSnapshotExport.Lines(detail.Lines, CostCentreNameFor),
+            ValuationSnapshotExport.Summary(snapshot, detail.Lines),
             variationOrders is null ? null : ValuationExportPendingVariations.From(variationOrders));
     }
-
-    private ValuationExportLine ExportLineFor(Section section, ValuationReportSnapshotLine line) =>
-        new(section.Title,
-            line.ElementType,
-            ValuationReportAreas.GroupsByArea(section.Type) ? AreaTitleFor(line) : "",
-            CodeFor(line),
-            TitleFor(line),
-            LineTypeLabel(line.LineType),
-            line.CountsTowardTotals,
-            line.Unit,
-            line.Quantity,
-            line.Rate,
-            line.LineAmount,
-            line.PercentComplete,
-            line.CumulativeClaimed - line.PeriodIncrement,
-            line.PeriodIncrement,
-            line.CumulativeClaimed,
-            line.Comments,
-            line.VariationRef,
-            line.VariationTitle,
-            line.CostCode,
-            line.DisplayOrder,
-            line.ClientReference);
-
-    // Same wording as the PDF renderer, so the workbook and the statement agree.
-    private static string LineTypeLabel(ValuationLineType type) => type switch
-    {
-        ValuationLineType.Priced => "Priced",
-        ValuationLineType.ProvisionalSum => "Provisional sum",
-        ValuationLineType.Omit => "Omit",
-        ValuationLineType.Declined => "Declined",
-        ValuationLineType.Tbc => "TBC",
-        _ => type.ToString()
-    };
 }

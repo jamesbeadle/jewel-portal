@@ -161,9 +161,9 @@ public sealed partial class JpmsContext
             .IsUnique()
             .HasDatabaseName("IX_WorkerAbsences_WorkerId_Date");
         modelBuilder.Entity<LabourWeekSignOffEntity>()
-            .HasIndex(row => new { row.WorkerId, row.WeekStart })
+            .HasIndex(row => new { row.WorkerId, row.WeekStart, row.MonthStart })
             .IsUnique()
-            .HasDatabaseName("IX_LabourWeekSignOffs_WorkerId_WeekStart");
+            .HasDatabaseName("IX_LabourWeekSignOffs_WorkerId_WeekStart_MonthStart");
         modelBuilder.Entity<LabourChaseDismissalEntity>()
             .HasIndex(row => new { row.WorkerId, row.Date })
             .IsUnique()

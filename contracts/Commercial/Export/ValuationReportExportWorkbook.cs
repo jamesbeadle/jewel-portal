@@ -1,5 +1,8 @@
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Documents.Excel;
+using Jewel.JPMS.Models;
 
-namespace Jewel.JPMS.Features.Commercial;
+namespace Jewel.JPMS.Contracts.Commercial.Export;
 
 /// <summary>Identity strip for an exported valuation report workbook.</summary>
 /// <param name="StatementLabel">e.g. "VI-0004 raise", or "June 2026 — working copy" for a live export.</param>

@@ -18,6 +18,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- DejaVu Sans, the face the Linux Functions host resolves for every PDF: the layout tests
+         render with it (RequestDocuments__FontPath) so the widths they prove are production's,
+         not the narrower Arial a Mac would pick. Bitstream Vera licence — Fonts/LICENCE.txt. -->
+    <None Include="Fonts\*.ttf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\contracts\Jewel.JPMS.Contracts.csproj" />
     <!-- The AI transcript tests reach api internals (BuildTranscript, AiImageToolResult) via
          InternalsVisibleTo. This pulls the Functions/EF deps in, but the transcript logic itself

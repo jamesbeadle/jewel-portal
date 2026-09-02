@@ -1,6 +1,9 @@
-using static Jewel.JPMS.Features.Commercial.ValuationExportStyles;
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Documents.Excel;
+using Jewel.JPMS.Models;
+using static Jewel.JPMS.Contracts.Commercial.Export.ValuationExportStyles;
 
-namespace Jewel.JPMS.Features.Commercial;
+namespace Jewel.JPMS.Contracts.Commercial.Export;
 
 /// <summary>The navy title band at the top of a statement tab, with the working-copy stamp and the
 /// legend line under it. Sized from the sheet's own column grid, so the 10-column statement tabs

@@ -46,12 +46,19 @@ public sealed record LabourOverviewDay(
     TimesheetStatus? Status,
     AbsenceKind? Absence);
 
-/// <summary>A signed-off week for a worker (WeekStart is the Monday).</summary>
+/// <summary>
+/// A signed-off week for a worker (WeekStart is the Monday) — or, for a week that straddles a
+/// month end, the part of it inside one month: MonthStart is the first of the month the marker
+/// settles (2026-09-02). A week inside one month has one marker; a straddling week has one per
+/// month, so "to 31 Aug" and "from 1 Sep" sign off separately and August's month-end never
+/// waits for September's days (ForecastRules.WeekPart).
+/// </summary>
 public sealed record LabourWeekSignOff(
     string WorkerId,
     DateTimeOffset WeekStart,
     string SignedOffByEmail,
-    DateTimeOffset SignedOffAt);
+    DateTimeOffset SignedOffAt,
+    DateTimeOffset MonthStart = default);
 
 /// <summary>
 /// One worker's month on the Labour overview: forecast inputs, recorded days, projected cost and

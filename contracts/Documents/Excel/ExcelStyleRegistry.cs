@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace Jewel.JPMS.Services.Excel;
+namespace Jewel.JPMS.Contracts.Documents.Excel;
 
 /// <summary>
 /// The workbook writer's style registry: builds styles.xml from the styles the sheets

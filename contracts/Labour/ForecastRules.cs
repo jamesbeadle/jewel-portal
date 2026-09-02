@@ -82,10 +82,42 @@ public static class ForecastRules
         return date.Date.AddDays(-offset);
     }
 
+    /// <summary>The first of the month containing <paramref name="date"/>.</summary>
+    public static DateTime MonthStartOf(DateTime date) => new(date.Year, date.Month, 1);
+
+    // ---- Week parts -----------------------------------------------------------------------------
+    // Sign-off is per worker, per week AND per month (2026-09-02, the accountant's ask). A week
+    // that straddles a month end — Mon 31 Aug to Sun 6 Sep — is two parts: "to 31 Aug", which
+    // August's month-end needs, and "from 1 Sep", which September's does. Before the split the
+    // old month could not close until the whole week had elapsed and every September day in it
+    // was approved, so August's Xero run waited for the 6th. A week inside one month is one part.
+
+    /// <summary>True when the week beginning <paramref name="weekStart"/> has days in more than
+    /// one month — the Sunday falls in a later month than the Monday.</summary>
+    public static bool WeekStraddlesMonthEnd(DateTime weekStart) =>
+        MonthStartOf(weekStart.AddDays(6)) != MonthStartOf(weekStart);
+
+    /// <summary>True when the week beginning <paramref name="weekStart"/> has at least one day
+    /// (Mon–Sun) in the month beginning <paramref name="monthStart"/>.</summary>
+    public static bool WeekTouchesMonth(DateTime weekStart, DateTime monthStart) =>
+        weekStart.Date.AddDays(6) >= monthStart.Date && weekStart.Date < monthStart.Date.AddMonths(1);
+
+    /// <summary>The first and last calendar day of the week's part inside the month — the whole
+    /// week when it lies within the month.</summary>
+    public static (DateTime First, DateTime Last) WeekPart(DateTime weekStart, DateTime monthStart)
+    {
+        var monthEnd = monthStart.Date.AddMonths(1).AddDays(-1);
+        var first = weekStart.Date > monthStart.Date ? weekStart.Date : monthStart.Date;
+        var weekEnd = weekStart.Date.AddDays(6);
+        var last = weekEnd < monthEnd ? weekEnd : monthEnd;
+        return (first, last);
+    }
+
     /// <summary>
-    /// A week is signable only when every elapsed Mon–Fri day in it (within the month, up to
-    /// today) is confirmed: an approved timesheet, a rejected-with-reason timesheet, or a
-    /// recorded absence. Days with only Submitted timesheets are not yet signable.
+    /// A week is signable only when every elapsed Mon–Fri day in it (up to today) is confirmed:
+    /// an approved timesheet, a rejected-with-reason timesheet, or a recorded absence. Days with
+    /// only Submitted timesheets are not yet signable. This is the whole-week rule; a month's
+    /// sign-off uses <see cref="WeekPartIsSignable"/>, which looks only at the days inside it.
     /// </summary>
     public static bool WeekIsSignable(
         DateTime weekStart, DateTime today,
@@ -96,6 +128,28 @@ public static class ForecastRules
         {
             var day = weekStart.AddDays(i);
             if (day > today) break;
+            if (!approvedOrRejectedDays.Contains(day) && !absenceDays.Contains(day)) return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The signable rule for one month's part of a week: every elapsed Mon–Fri day of the week
+    /// that falls INSIDE the month (up to today) is confirmed. Days of the same week in the
+    /// neighbouring month are that month's business — so "to 31 Aug" can be signed on 1 Sep with
+    /// only Monday approved, and September's days in the week never hold August up.
+    /// </summary>
+    public static bool WeekPartIsSignable(
+        DateTime weekStart, DateTime monthStart, DateTime today,
+        IReadOnlySet<DateTime> approvedOrRejectedDays,
+        IReadOnlySet<DateTime> absenceDays)
+    {
+        var (first, last) = WeekPart(weekStart, monthStart);
+        for (var i = 0; i < 5; i++)
+        {
+            var day = weekStart.AddDays(i);
+            if (day > today) break;
+            if (day < first || day > last) continue;
             if (!approvedOrRejectedDays.Contains(day) && !absenceDays.Contains(day)) return false;
         }
         return true;

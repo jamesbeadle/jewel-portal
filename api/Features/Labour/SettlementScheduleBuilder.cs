@@ -30,8 +30,11 @@ public sealed class SettlementScheduleBuilder
         var cisStatuses = await context.WorkerCisStatuses
             .Where(row => row.EffectiveFrom < monthEnd).OrderBy(row => row.EffectiveFrom)
             .ToListAsync(cancellationToken);
+        // Sign-off markers are per month part (2026-09-02): only THIS month's rows count, so a
+        // week straddling the month end settles here on its own part and the neighbouring
+        // month's part is that month's business.
         var signOffs = await context.LabourWeekSignOffs
-            .Where(row => row.WeekStart >= monthStart.AddDays(-6) && row.WeekStart < monthEnd)
+            .Where(row => row.MonthStart == monthStart)
             .ToListAsync(cancellationToken);
         var covers = await context.XeroLineTimesheetCovers
             .Where(cover => cover.PeriodStart < monthEnd && cover.PeriodEnd > monthStart)
@@ -104,8 +107,9 @@ public sealed class SettlementScheduleBuilder
                 : Math.Abs(difference) < 0.01m ? ScheduleVerdict.Matches
                 : ScheduleVerdict.VarianceOpen;
 
-            // Fully signed off = every week that carries approved time in this month has its
-            // sign-off marker. The §6a run refuses anything less.
+            // Fully signed off = every week that carries approved time in this month has this
+            // month's sign-off marker (its part of the week, for a week straddling the month
+            // end). The §6a run refuses anything less.
             var approvedWeeks = sheets
                 .Select(sheet => ForecastRules.WeekStartOf(sheet.WorkedOn.UtcDateTime.Date))
                 .Distinct().ToList();

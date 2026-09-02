@@ -12,6 +12,8 @@ global using Jewel.JPMS.Models;
 global using Jewel.JPMS.Services;
 global using Jewel.JPMS.Services.Navigation;
 global using Jewel.JPMS.Services.Excel;
+global using Jewel.JPMS.Contracts.Documents.Excel;
+global using Jewel.JPMS.Contracts.Commercial.Export;
 global using static Jewel.JPMS.MoneyFormats;
 global using static Jewel.JPMS.FileSizeFormat;
 global using static Jewel.JPMS.DateFormats;

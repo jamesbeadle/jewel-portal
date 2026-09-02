@@ -29,6 +29,14 @@ description: "The monthly valuation claim and invoice cycle — the money path f
   copy; anything presented, emailed or quoted as "the valuation" must come from the snapshot
   behind the invoice (get_valuation_snapshot). Comparing live vs frozen is how you answer "what
   moved since we claimed".
+- **The report as a file comes from export_valuation_report — never rebuild it.** When the user
+  wants the valuation as a PDF or spreadsheet, that tool renders the portal's OWN documents (the
+  valuation page's Download PDF / Export to Excel, server-side) and returns download links that
+  expire after seven days. Hand the links over as links. The default is the live report as a
+  working copy (stamped as such on every page — for checking a claim before it goes anywhere);
+  pass valuationReportSnapshotId for the frozen statement, the only form a client may be sent.
+  Reconstructing a statement from get_valuation_context / get_valuation_snapshot figures
+  produces a file that looks like the portal's and is not — do not.
 - **Retention is stamped server-side** from the project's terms — never compute or pass it.
 - **Certified-to-date = issued + paid invoices (gross of deposit credits).** Quote it from
   list_valuation_invoices' summary, never by adding numbers yourself.

@@ -42,12 +42,19 @@ public sealed record RecordWorkerAbsenceByName(
     string RecordedByEmail = "") : ICommand<WorkerAbsence>;
 
 /// <summary>
-/// Signs off one worker's week (WeekStart = Monday). Server enforces ForecastRules.WeekIsSignable:
-/// every elapsed weekday is approved, rejected-with-reason, or covered by an absence. Sign-off is
-/// a marker over the approval state machine, never a second one.
+/// Signs off one worker's week (WeekStart = any date in the week; the server normalises to the
+/// Monday) for one month: MonthStart names the month whose part of the week is being signed
+/// (the first of the month; any date in it works), and left null it is the month of the
+/// WeekStart date as given. For a week inside one month that is the whole week; for a week
+/// that straddles a month end it is the days on that month's side only (2026-09-02). Server
+/// enforces ForecastRules.WeekPartIsSignable: every elapsed weekday of the part is approved,
+/// rejected-with-reason, or covered by an absence. Sign-off is a marker over the approval state
+/// machine, never a second one.
 /// </summary>
-public sealed record SignOffLabourWeek(string WorkerId, DateTimeOffset WeekStart)
+public sealed record SignOffLabourWeek(string WorkerId, DateTimeOffset WeekStart, DateTimeOffset? MonthStart = null)
     : ICommand<LabourWeekSignOff>;
 
-public sealed record RemoveLabourWeekSignOff(string WorkerId, DateTimeOffset WeekStart)
+/// <summary>The undo of SignOffLabourWeek, addressed the same way: the week, and the month whose
+/// part of it to un-sign (null = the month of the WeekStart date as given).</summary>
+public sealed record RemoveLabourWeekSignOff(string WorkerId, DateTimeOffset WeekStart, DateTimeOffset? MonthStart = null)
     : ICommand<Acknowledgement>;

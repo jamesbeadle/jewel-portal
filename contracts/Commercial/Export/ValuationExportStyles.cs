@@ -1,6 +1,8 @@
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Documents.Excel;
+using Jewel.JPMS.Models;
 
-
-namespace Jewel.JPMS.Features.Commercial;
+namespace Jewel.JPMS.Contracts.Commercial.Export;
 
 /// <summary>
 /// The cell styles of the branded statement tabs (the writer deduplicates them): navy title

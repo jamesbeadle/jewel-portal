@@ -1,8 +1,11 @@
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Documents.Excel;
+using Jewel.JPMS.Models;
 using Jewel.JPMS.Contracts.Variations;
-using static Jewel.JPMS.Features.Commercial.ValuationExportStyles;
+using static Jewel.JPMS.Contracts.Commercial.Export.ValuationExportStyles;
 
 
-namespace Jewel.JPMS.Features.Commercial;
+namespace Jewel.JPMS.Contracts.Commercial.Export;
 
 /// <summary>One line of a pending variation's staged build-up — the client-agreed pricing captured before approval.</summary>
 public sealed record ValuationExportPendingLine(string CostCode, string Description, decimal Quantity, decimal Rate)

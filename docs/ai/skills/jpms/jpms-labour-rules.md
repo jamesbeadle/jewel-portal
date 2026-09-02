@@ -37,6 +37,12 @@ description: "Labour and timesheet doctrine — how hours become cost and what i
 3. **sign_off_labour_week** per worker-week (confirm-first). The server re-checks the signable
    rule: every elapsed day approved, rejected or a recorded absence. A refusal names the days —
    fix them, never work around them.
+   - **A week that straddles the month end signs off per month** (2026-09-02, the accountant's
+     ask: August must close on the 1st). view_worker_month marks such a week with `monthPart`;
+     pass `monthStart` (any date in the month you are closing) to sign that month's days only —
+     31 Aug signs August's part of the week of 31 Aug, 1 Sep signs September's. The new month's
+     days never hold the old month's settlement up, and a whole week inside one month is
+     unchanged (one marker).
 4. **view_settlement_month** — who will code, who will skip and why (FullySignedOff, verdict,
    lastCodingOutcome).
 5. **run_xero_coding** (confirm-first) — recodes the covered Dext draft bill or stages a draft;

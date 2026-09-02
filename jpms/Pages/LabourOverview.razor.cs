@@ -101,6 +101,8 @@ public partial class LabourOverview
     private void OpenAbsenceToday(LabourOverviewWorker worker) =>
         OpenAbsence(worker.WorkerId, worker.Name, DateTimeOffset.UtcNow);
 
+    // Sign-off is per month part of a week (2026-09-02): the store stamps the month in view on
+    // the command, so a week straddling the month end signs off THIS month's days only.
     private async Task SignOffAsync(string workerId, DateTime weekStart)
     {
         actionError = null;
@@ -124,6 +126,17 @@ public partial class LabourOverview
             if (date.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday)) yield return date;
     }
 
-    private IEnumerable<DateTime> MonthWeeks() =>
-        MonthWeekdays().Select(ForecastRules.WeekStartOf).Distinct().OrderBy(date => date);
+    // The weeks the month's sign-off table shows: every week with a weekday in the month, plus
+    // any week that touches the month only at a weekend but has time recorded on it (a Saturday
+    // 1st with a timesheet needs its month part signed like any other day) — so the settlement
+    // gate never waits on a part the table cannot show.
+    private IEnumerable<DateTime> MonthWeeks(LabourOverviewSnapshot? snapshot)
+    {
+        var weekdays = MonthWeekdays().Select(ForecastRules.WeekStartOf);
+        var recorded = snapshot?.Workers
+            .SelectMany(worker => worker.Days)
+            .Select(day => ForecastRules.WeekStartOf(day.Date.UtcDateTime.Date))
+            ?? Enumerable.Empty<DateTime>();
+        return weekdays.Concat(recorded).Distinct().OrderBy(date => date);
+    }
 }

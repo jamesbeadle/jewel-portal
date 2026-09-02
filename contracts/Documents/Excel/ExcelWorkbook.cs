@@ -1,4 +1,4 @@
-namespace Jewel.JPMS.Services.Excel;
+namespace Jewel.JPMS.Contracts.Documents.Excel;
 
 /// <summary>
 /// Number/display format applied to a column when exporting to Excel.

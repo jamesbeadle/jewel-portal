@@ -283,7 +283,9 @@ internal sealed partial class LabourAndBackOfficeActions
                 + "fully signed-off worker-months are written to Xero by run_xero_coding. The "
                 + "server re-checks the signable rule at the moment of signing — every elapsed "
                 + "day must be approved, rejected or recorded as absence — and refuses with the "
-                + "reason when it fails. Touches no timesheet; sign-off is a marker over "
+                + "reason when it fails. A week that straddles a month end signs off PER MONTH: "
+                + "its old-month days on their own (so the old month settles on the 1st) and its "
+                + "new-month days later. Touches no timesheet; sign-off is a marker over "
                 + "approval, never a second state machine.",
             CommandType: typeof(SignOffWorkerWeekByName),
             ResultType: typeof(LabourWeekSignOff),
@@ -294,7 +296,11 @@ internal sealed partial class LabourAndBackOfficeActions
             NameStamps: Array.Empty<string>(),
             RequiresConfirmation: true,
             Notes: "workerName as the user says it; weekStart is any date in the week wanted "
-                + "(normalised to that week's Monday). Show the user the week first "
+                + "(normalised to that week's Monday). monthStart names the month whose part of "
+                + "the week to sign — any date in that month — and matters only when the week "
+                + "straddles a month end (view_worker_month marks those with monthPart); left "
+                + "out, it is the month of the weekStart date you pass, so 31 Aug signs August's "
+                + "days of that week and 1 Sep signs September's. Show the user the week first "
                 + "(view_labour_week) and get their yes — signing off is what arms the Xero "
                 + "coding run for that week. A refusal names the unsettled days: approve or "
                 + "reject them, or record a genuine absence (record_worker_absence), then sign "
@@ -313,10 +319,12 @@ internal sealed partial class LabourAndBackOfficeActions
             VisibleTo: LabourRoleSets.ApproveTimesheets,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "workerName as the user says it; weekStart is any date in the week. A "
-                + "worker-month the coding run has ALREADY written stays written — removing a "
-                + "sign-off never un-codes a bill; re-running after a schedule change is a "
-                + "deliberate human decision taken on the settlement view."),
+            Notes: "workerName as the user says it; weekStart is any date in the week; "
+                + "monthStart picks the month's part of a week that straddles a month end (left "
+                + "out: the month of weekStart as given). A worker-month the coding run has "
+                + "ALREADY written stays written — removing a sign-off never un-codes a bill; "
+                + "re-running after a schedule change is a deliberate human decision taken on "
+                + "the settlement view."),
 
         new AiAction(
             Name: "run_xero_coding",

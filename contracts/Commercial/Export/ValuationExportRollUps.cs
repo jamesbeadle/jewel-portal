@@ -1,5 +1,8 @@
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Documents.Excel;
+using Jewel.JPMS.Models;
 
-namespace Jewel.JPMS.Features.Commercial;
+namespace Jewel.JPMS.Contracts.Commercial.Export;
 
 /// <summary>
 /// Shapes the exported lines into the rows the workbook's Summary tab shows. Contract, PC and

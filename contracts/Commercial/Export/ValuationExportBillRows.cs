@@ -1,7 +1,10 @@
-using static Jewel.JPMS.Features.Commercial.ValuationExportStyles;
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Documents.Excel;
+using Jewel.JPMS.Models;
+using static Jewel.JPMS.Contracts.Commercial.Export.ValuationExportStyles;
 
 
-namespace Jewel.JPMS.Features.Commercial;
+namespace Jewel.JPMS.Contracts.Commercial.Export;
 
 /// <summary>The rows of one bill section on a statement tab: column headings, one row per line, the section total.</summary>
 internal static class ValuationExportBillRows

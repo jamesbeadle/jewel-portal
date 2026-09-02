@@ -1,6 +1,9 @@
-using static Jewel.JPMS.Features.Commercial.ValuationExportStyles;
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Documents.Excel;
+using Jewel.JPMS.Models;
+using static Jewel.JPMS.Contracts.Commercial.Export.ValuationExportStyles;
 
-namespace Jewel.JPMS.Features.Commercial;
+namespace Jewel.JPMS.Contracts.Commercial.Export;
 
 /// <summary>
 /// One tab per approved variation order — the detail behind the Summary tab's one-row-per-order

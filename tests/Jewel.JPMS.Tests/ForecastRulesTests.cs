@@ -102,4 +102,72 @@ public class ForecastRulesTests
         // Today is the Monday itself: only Monday needs settling; Tue–Fri are future.
         Assert.True(ForecastRules.WeekIsSignable(Monday, Monday,
             new HashSet<DateTime> { Monday }, new HashSet<DateTime>()));
+
+    // ---- Week parts (2026-09-02): the week of Mon 31 Aug 2026 runs to Sun 6 Sep -------------
+
+    private static readonly DateTime StraddlingMonday = new(2026, 8, 31);
+    private static readonly DateTime August = new(2026, 8, 1);
+    private static readonly DateTime September = new(2026, 9, 1);
+
+    [Fact]
+    public void AWeekAcrossTheMonthEndStraddles_aWeekInsideOneMonthDoesNot()
+    {
+        Assert.True(ForecastRules.WeekStraddlesMonthEnd(StraddlingMonday));
+        Assert.False(ForecastRules.WeekStraddlesMonthEnd(Monday));                 // 17–23 Aug
+        Assert.True(ForecastRules.WeekStraddlesMonthEnd(new DateTime(2026, 12, 28))); // into January
+    }
+
+    [Fact]
+    public void AWeekTouchesEveryMonthItHasADayIn()
+    {
+        Assert.True(ForecastRules.WeekTouchesMonth(StraddlingMonday, August));
+        Assert.True(ForecastRules.WeekTouchesMonth(StraddlingMonday, September));
+        Assert.False(ForecastRules.WeekTouchesMonth(StraddlingMonday, new DateTime(2026, 10, 1)));
+        Assert.False(ForecastRules.WeekTouchesMonth(Monday, September));
+    }
+
+    [Fact]
+    public void TheMonthPartOfAStraddlingWeekIsItsDaysOnThatSideOfTheMonthEnd()
+    {
+        Assert.Equal((StraddlingMonday, StraddlingMonday), ForecastRules.WeekPart(StraddlingMonday, August));      // 31 Aug only
+        Assert.Equal((September, new DateTime(2026, 9, 6)), ForecastRules.WeekPart(StraddlingMonday, September)); // 1–6 Sep
+        Assert.Equal((Monday, Monday.AddDays(6)), ForecastRules.WeekPart(Monday, August));                        // the whole week
+    }
+
+    [Fact]
+    public void AugustsPartSignsOffOnTheFirst_withOnlyMondayApproved()
+    {
+        // 2 Sep: Tue and Wed have elapsed with nothing approved — September's business, not August's.
+        var settled = new HashSet<DateTime> { StraddlingMonday };
+        var today = new DateTime(2026, 9, 2);
+        Assert.True(ForecastRules.WeekPartIsSignable(StraddlingMonday, August, today, settled, new HashSet<DateTime>()));
+        Assert.False(ForecastRules.WeekPartIsSignable(StraddlingMonday, September, today, settled, new HashSet<DateTime>()));
+        // The whole-week rule still wants the September days — that is exactly what held August up.
+        Assert.False(ForecastRules.WeekIsSignable(StraddlingMonday, today, settled, new HashSet<DateTime>()));
+    }
+
+    [Fact]
+    public void AugustsPartIsNotSignableWhileMondayItselfIsOpen() =>
+        Assert.False(ForecastRules.WeekPartIsSignable(StraddlingMonday, August, new DateTime(2026, 9, 2),
+            new HashSet<DateTime> { September, new DateTime(2026, 9, 2) }, new HashSet<DateTime>()));
+
+    [Fact]
+    public void SeptembersPartIgnoresAugustsMonday()
+    {
+        var settled = new HashSet<DateTime> { September, new DateTime(2026, 9, 2) };
+        Assert.True(ForecastRules.WeekPartIsSignable(StraddlingMonday, September, new DateTime(2026, 9, 2), settled, new HashSet<DateTime>()));
+    }
+
+    [Fact]
+    public void AWeekInsideOneMonthSignsByTheWholeWeekRule()
+    {
+        var settled = new HashSet<DateTime> { Monday, Monday.AddDays(1) };
+        var absent = new HashSet<DateTime> { Monday.AddDays(2) };
+        Assert.Equal(
+            ForecastRules.WeekIsSignable(Monday, Monday.AddDays(2), settled, absent),
+            ForecastRules.WeekPartIsSignable(Monday, August, Monday.AddDays(2), settled, absent));
+        Assert.Equal(
+            ForecastRules.WeekIsSignable(Monday, Monday.AddDays(3), settled, absent),
+            ForecastRules.WeekPartIsSignable(Monday, August, Monday.AddDays(3), settled, absent));
+    }
 }

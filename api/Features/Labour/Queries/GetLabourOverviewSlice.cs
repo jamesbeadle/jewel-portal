@@ -53,8 +53,10 @@ public sealed class GetLabourOverviewHandler : IQueryHandler<GetLabourOverview, 
         var openAttendance = await context.SiteAttendances
             .Where(row => row.WorkDate >= monthStart && row.WorkDate < monthEnd && row.SignedOutAt == null)
             .ToListAsync(cancellationToken);
+        // This month's sign-off markers only (per month part, 2026-09-02): a straddling week's
+        // other part belongs to the neighbouring month's overview.
         var signOffs = await context.LabourWeekSignOffs
-            .Where(row => row.WeekStart >= monthStart.AddDays(-6) && row.WeekStart < monthEnd)
+            .Where(row => row.MonthStart == monthStart)
             .ToListAsync(cancellationToken);
         var contracts = await context.WorkerContracts
             .Where(row => row.EffectiveFrom < monthEnd).OrderBy(row => row.EffectiveFrom)
@@ -201,7 +203,7 @@ public sealed class GetLabourOverviewHandler : IQueryHandler<GetLabourOverview, 
             }
 
             var workerSignOffs = signOffsByWorker[worker.WorkerId]
-                .Select(row => new LabourWeekSignOff(row.WorkerId, row.WeekStart, row.SignedOffByEmail, row.SignedOffAt))
+                .Select(row => new LabourWeekSignOff(row.WorkerId, row.WeekStart, row.SignedOffByEmail, row.SignedOffAt, row.MonthStart))
                 .OrderBy(row => row.WeekStart).ToList();
 
             projectedSpend += projected;

@@ -106,7 +106,8 @@ else
         }
         else if (view == "signoff")
         {
-            <WeeklySignOffTable Snapshot="snapshot" Loading="@(Loading && !dataFailed)" MonthWeeks="MonthWeeks()"
+            <WeeklySignOffTable Snapshot="snapshot" Loading="@(Loading && !dataFailed)" MonthWeeks="MonthWeeks(snapshot)"
+                                MonthStart="@(new DateTime(year, month, 1))"
                                 OnSignOff="pick => SignOffAsync(pick.WorkerId, pick.WeekStart)"
                                 OnRemoveSignOff="pick => RemoveSignOffAsync(pick.WorkerId, pick.WeekStart)" />
         }

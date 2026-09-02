@@ -3,7 +3,10 @@
 
 @* Weekly sign-off: a view over approval, never a second state machine. A week signs off only
    when every elapsed weekday is approved, rejected with a reason, or covered by a recorded
-   absence — this marker records that the week was looked at whole. *@
+   absence — this marker records that the week was looked at whole. Sign-off is per MONTH part
+   of a week (2026-09-02): a week that straddles the month end shows here as this month's days
+   only ("to 31 Aug" in August, "from 1 Sep" in September) and signs off on those days alone,
+   so the old month's settlement never waits for the new month's. *@
 <Panel Title="Weekly sign-off" Class="mb-6" BodyClass="p-0" IsLoading="@Loading" LoadingLabel="Loading sign-off">
     @if (Snapshot is null)
     {
@@ -17,7 +20,13 @@
                     <th class="px-5 py-3">Name</th>
                     @foreach (var weekStart in MonthWeeks)
                     {
-                        <th class="px-2 py-3 text-center">w/c @weekStart.ToString("dd MMM")</th>
+                        <th class="px-2 py-3 text-center">
+                            <div>w/c @weekStart.ToString("dd MMM")</div>
+                            @if (PartLabel(weekStart) is { } part)
+                            {
+                                <div class="normal-case tracking-normal font-normal text-content-faint" title="This week runs into the next month — this column signs off only the days in @MonthStart.ToString("MMMM").">@part</div>
+                            }
+                        </th>
                     }
                 </tr>
             </thead>
@@ -38,6 +47,8 @@
             A week signs off only when every elapsed weekday is approved, rejected with a
             reason, or covered by a recorded absence. Approvals themselves live on each
             project's Labour tab — this marker records that the week was looked at whole.
+            A week that runs across the month end signs off month by month: this month's days
+            here, the rest on next month's page.
         </p>
     }
 </Panel>
@@ -46,13 +57,25 @@
     [Parameter] public LabourOverviewSnapshot? Snapshot { get; set; }
     [Parameter] public bool Loading { get; set; }
     [Parameter] public IEnumerable<DateTime> MonthWeeks { get; set; } = Array.Empty<DateTime>();
+    /// <summary>The first of the month in view — the month whose part of each week this table signs.</summary>
+    [Parameter] public DateTime MonthStart { get; set; }
     [Parameter] public EventCallback<(string WorkerId, DateTime WeekStart)> OnSignOff { get; set; }
     [Parameter] public EventCallback<(string WorkerId, DateTimeOffset WeekStart)> OnRemoveSignOff { get; set; }
 
+    // "to 31 Aug" / "from 1 Sep" for a week that straddles the month end; null for a whole week.
+    private string? PartLabel(DateTime weekStart)
+    {
+        if (!ForecastRules.WeekStraddlesMonthEnd(weekStart)) return null;
+        var (first, last) = ForecastRules.WeekPart(weekStart, MonthStart);
+        return first == weekStart ? $"to {last:%d} {last:MMM}" : $"from {first:%d} {first:MMM}";
+    }
+
     private RenderFragment WeekCell(LabourOverviewWorker worker, DateTime weekStart) => __builder =>
     {
+        // The snapshot carries this month's markers only, so the match is this month's part.
         var signOff = worker.SignOffs.FirstOrDefault(row => row.WeekStart.UtcDateTime.Date == weekStart);
         var today = DateTime.Today;
+        var (partStart, _) = ForecastRules.WeekPart(weekStart, MonthStart);
         @if (signOff is not null)
         {
             <button type="button"
@@ -60,7 +83,7 @@
                     title="@($"Signed off by {signOff.SignedOffByEmail} on {signOff.SignedOffAt:dd MMM HH:mm} — press to undo")"
                     @onclick="() => OnRemoveSignOff.InvokeAsync((worker.WorkerId, signOff.WeekStart))">Signed off</button>
         }
-        else if (weekStart > today)
+        else if (partStart > today)
         {
             <span class="text-content-faint text-xs">—</span>
         }
@@ -71,7 +94,7 @@
                 .Select(day => day.Date.UtcDateTime.Date).ToHashSet();
             var absent = worker.Days.Where(day => day.Absence is not null)
                 .Select(day => day.Date.UtcDateTime.Date).ToHashSet();
-            var signable = ForecastRules.WeekIsSignable(weekStart, today, settled, absent);
+            var signable = ForecastRules.WeekPartIsSignable(weekStart, MonthStart, today, settled, absent);
             @if (signable)
             {
                 <button type="button" class="btn-secondary text-xs py-0.5"

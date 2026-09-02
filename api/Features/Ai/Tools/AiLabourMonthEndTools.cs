@@ -134,9 +134,6 @@ internal static class AiLabourMonthEndTools
 
                     var monthStart = new DateTimeOffset(new DateTime(year, month, 1), TimeSpan.Zero);
                     var monthEnd = monthStart.AddMonths(1);
-                    // Weeks straddle month edges: take the Monday of the month's first day through
-                    // the end of the week holding its last, so edge days keep their week context.
-                    var firstMonday = monthStart.AddDays(-(((int)monthStart.DayOfWeek + 6) % 7));
 
                     var sheets = await context.Db.Timesheets.AsNoTracking()
                         .Where(row => row.WorkerId == worker.WorkerId
@@ -147,9 +144,11 @@ internal static class AiLabourMonthEndTools
                         .Where(row => row.WorkerId == worker.WorkerId
                                       && row.Date >= monthStart && row.Date < monthEnd)
                         .ToListAsync(ct);
+                    // This month's markers only: sign-off is per month part of a week
+                    // (2026-09-02), so a week straddling the month end reports the state of
+                    // ITS part here and the other part on the neighbouring month.
                     var signOffs = await context.Db.LabourWeekSignOffs.AsNoTracking()
-                        .Where(row => row.WorkerId == worker.WorkerId
-                                      && row.WeekStart >= firstMonday && row.WeekStart < monthEnd)
+                        .Where(row => row.WorkerId == worker.WorkerId && row.MonthStart == monthStart)
                         .ToListAsync(ct);
                     var projectIds = sheets.Select(row => row.ProjectId).Distinct().ToList();
                     var projects = await context.Db.Projects.AsNoTracking()
@@ -167,12 +166,22 @@ internal static class AiLabourMonthEndTools
                     }
 
                     var signedWeeks = signOffs.ToDictionary(row => WeekOf(row.WeekStart), row => row);
+                    string? MonthPartOf(DateTimeOffset weekStart)
+                    {
+                        var week = weekStart.UtcDateTime.Date;
+                        if (!ForecastRules.WeekStraddlesMonthEnd(week)) return null;
+                        var (first, last) = ForecastRules.WeekPart(week, monthStart.UtcDateTime.Date);
+                        return first == last ? $"{first:%d} {first:MMM}" : $"{first:%d}–{last:%d} {last:MMM}";
+                    }
                     var weeks = sheets
                         .GroupBy(row => WeekOf(row.WorkedOn))
                         .OrderBy(group => group.Key)
                         .Select(group => new
                         {
                             weekStart = group.Key.ToString("yyyy-MM-dd"),
+                            // Present only for a week that straddles the month end: the days of
+                            // it that belong to THIS month, which is what its sign-off covers.
+                            monthPart = MonthPartOf(group.Key),
                             signedOff = signedWeeks.ContainsKey(group.Key),
                             signedOffBy = signedWeeks.TryGetValue(group.Key, out var marker)
                                 ? (string.IsNullOrWhiteSpace(marker.SignedOffByEmail) ? null : marker.SignedOffByEmail)
@@ -222,7 +231,10 @@ internal static class AiLabourMonthEndTools
                             ? "Nothing recorded for this worker in this month."
                             : "A week signs off (sign_off_labour_week) only when every elapsed day is "
                               + "approved, rejected or covered by an absence — Submitted days here are "
-                              + "what stands in the way. Approve per project with approve_worker_week."
+                              + "what stands in the way. Approve per project with approve_worker_week. "
+                              + "A week with a monthPart straddles the month end and signs off per month: "
+                              + "pass monthStart (any date in this month) to sign THIS month's days only — "
+                              + "the other month's days never hold this month's settlement up."
                     });
                 }),
 

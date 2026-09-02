@@ -31,11 +31,17 @@ public static partial class ValuationReportSnapshotRenderer
         p.Format.Font.Color = Muted;
     }
 
+    // Bill money never wraps: the column is sized (ValuationReportBillColumns) so a six-figure
+    // negative fits at the line size and a seven-figure total at the bold size — bold glyphs are
+    // wider, so totals drop half a point to stay inside the same column.
+    private const double LineMoneySize = 7.5;
+    private const double TotalMoneySize = 7;
+
     private static void MoneyCell(Cell cell, decimal amount, bool bold = false, Color? colour = null)
     {
-        cell.Format.RightIndent = Unit.FromMillimeter(1.5);
+        cell.Format.RightIndent = Unit.FromMillimeter(1);
         var p = cell.AddParagraph(Money(amount));
-        p.Format.Font.Size = 8;
+        p.Format.Font.Size = bold ? TotalMoneySize : LineMoneySize;
         p.Format.Font.Bold = bold;
         p.Format.Font.Color = colour ?? Ink;
     }
@@ -67,7 +73,14 @@ public static partial class ValuationReportSnapshotRenderer
         ValueCell(row.Cells[3], v2);
     }
 
-    private static string Money(decimal value) => value.ToString("£#,##0.00;-£#,##0.00", Uk);
+    // A negative carries U+2212 MINUS SIGN, not the hyphen-minus: MigraDoc treats a hyphen as a
+    // line-break opportunity unless a digit follows it directly, and "-£" puts the pound sign
+    // in between — so a negative that did not fit its column printed as "-" on one line and
+    // "£10,573.80" on the next (accountant 2026-09-02). The minus sign is a plain glyph to the
+    // layout engine, so the figure and its sign stay one word. Every face the font resolver
+    // can pick (DejaVu, Liberation, Lato, Arial…) carries it.
+    internal const char MinusSign = '−';
+    internal static string Money(decimal value) => value.ToString($"£#,##0.00;{MinusSign}£#,##0.00", Uk);
     private static string Num(decimal value) => value.ToString("0.##", Uk);
     private static string Pct(decimal value) => value.ToString("0.##", Uk) + "%";
 }

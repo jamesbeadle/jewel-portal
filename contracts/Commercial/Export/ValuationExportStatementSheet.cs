@@ -1,6 +1,9 @@
-using static Jewel.JPMS.Features.Commercial.ValuationExportStyles;
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Documents.Excel;
+using Jewel.JPMS.Models;
+using static Jewel.JPMS.Contracts.Commercial.Export.ValuationExportStyles;
 
-namespace Jewel.JPMS.Features.Commercial;
+namespace Jewel.JPMS.Contracts.Commercial.Export;
 
 /// <summary>How one branded statement tab reads: its name, the legend line under the title band, and
 /// the sub-heading a line sits under ("" = no sub-heading, or continue the one above).</summary>

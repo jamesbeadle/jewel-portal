@@ -26,15 +26,21 @@ internal sealed record ValuationReportBillColumns(bool HasClientReference)
     public int Last => Claimed;
 
     // Description takes the room the numbers don't need — itemised lines wrap hard in a narrow
-    // column (accountant 2026-08-26) and every other column holds figures of a known width.
-    public double CodeWidthCentimetres => 1.4;
-    public double ClientReferenceWidthCentimetres => 1.3;
-    public double DescriptionWidthCentimetres => HasClientReference ? 4.9 : 6.2;
+    // column (accountant 2026-08-26) — but the money columns must hold their widest figure on
+    // ONE line first (accountant 2026-09-02: negatives printed as a bare "-" with the figure
+    // spilling onto the next line). Sized for the host's DejaVu Sans, the widest face the
+    // resolver may pick: a six-figure negative on a line and a seven-figure bold total both
+    // fit MoneyWidthCentimetres at the money font sizes ValuationReportSnapshotRenderer uses.
+    public double CodeWidthCentimetres => 1.1;
+    public double ClientReferenceWidthCentimetres => 1.1;
+    public double DescriptionWidthCentimetres => HasClientReference ? 4.15 : 5.25;
     public double QuantityWidthCentimetres => 0.8;
     public double RateWidthCentimetres => 1.2;
-    public double AmountWidthCentimetres => 1.8;
-    public double PercentWidthCentimetres => 0.9;
-    public double PreviousWidthCentimetres => 1.8;
-    public double PeriodWidthCentimetres => 1.8;
-    public double ClaimedWidthCentimetres => 1.9;
+    public double AmountWidthCentimetres => MoneyWidthCentimetres;
+    public double PercentWidthCentimetres => 0.85;
+    public double PreviousWidthCentimetres => MoneyWidthCentimetres;
+    public double PeriodWidthCentimetres => MoneyWidthCentimetres;
+    public double ClaimedWidthCentimetres => MoneyWidthCentimetres;
+
+    private const double MoneyWidthCentimetres = 2.15;
 }

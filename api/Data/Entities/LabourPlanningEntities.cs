@@ -50,7 +50,9 @@ public sealed class WorkerCisStatusEntity
 /// The per-worker weekly sign-off marker (scope §4): records that a PM signed this worker's week
 /// off after every elapsed day was approved, rejected-and-explained, or covered by an absence.
 /// Sign-off is a view over approval, not a second state machine — deleting the row un-signs the
-/// week without touching any timesheet.
+/// week without touching any timesheet. One row per worker, week AND month (2026-09-02): a week
+/// that straddles a month end carries a row for each month it touches, so the old month's part
+/// ("to 31 Aug") settles on the 1st without waiting for the new month's days.
 /// </summary>
 public sealed class LabourWeekSignOffEntity
 {
@@ -58,6 +60,9 @@ public sealed class LabourWeekSignOffEntity
     [MaxLength(64)]      public string WorkerId { get; set; } = "";
     // Monday of the week (midnight UTC).
     public DateTimeOffset WeekStart { get; set; }
+    // First of the month this marker settles (midnight UTC) — the week's own month for a week
+    // inside one month; for a straddling week, whichever side of the month end the row covers.
+    public DateTimeOffset MonthStart { get; set; }
     [MaxLength(256)]     public string SignedOffByEmail { get; set; } = "";
     public DateTimeOffset SignedOffAt { get; set; }
 }

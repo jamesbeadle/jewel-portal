@@ -1,6 +1,9 @@
-using static Jewel.JPMS.Features.Commercial.ValuationExportStyles;
+using Jewel.JPMS.Contracts.Commercial;
+using Jewel.JPMS.Contracts.Documents.Excel;
+using Jewel.JPMS.Models;
+using static Jewel.JPMS.Contracts.Commercial.Export.ValuationExportStyles;
 
-namespace Jewel.JPMS.Features.Commercial;
+namespace Jewel.JPMS.Contracts.Commercial.Export;
 
 /// <summary>The valuation summary block under the bill — labels wide, values in the rightmost money column, as on the PDF.</summary>
 internal static class ValuationExportSummaryFooter

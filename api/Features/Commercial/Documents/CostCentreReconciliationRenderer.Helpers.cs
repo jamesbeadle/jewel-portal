@@ -123,6 +123,10 @@ public static partial class CostCentreReconciliationRenderer
     }
 
     /// <summary>Explicit sign and symbol, independent of the process's globalization mode.</summary>
-    private static string Money(decimal value) => value.ToString("£#,##0.00;-£#,##0.00", Uk);
+    // U+2212 MINUS SIGN, not the hyphen-minus: MigraDoc breaks a line after a hyphen that is not
+    // followed by a digit, so "-£1,000.00" could print as a bare "-" with the figure on the next
+    // line (the valuation report did exactly that, 2026-09-02). Same rule as
+    // ValuationReportSnapshotRenderer.Money.
+    private static string Money(decimal value) => value.ToString("£#,##0.00;\u2212£#,##0.00", Uk);
     private static string Pct(decimal value) => value.ToString("0.#", Uk) + "%";
 }

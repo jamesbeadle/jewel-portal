@@ -2,7 +2,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 
-namespace Jewel.JPMS.Services.Excel;
+namespace Jewel.JPMS.Contracts.Documents.Excel;
 
 /// <summary>
 /// Writes an <see cref="ExcelWorkbook"/> as a real .xlsx file (SpreadsheetML in a zip)

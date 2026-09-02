@@ -13,15 +13,20 @@ namespace Jewel.JPMS.Contracts.Labour;
 
 /// <summary>
 /// Places the weekly sign-off marker on a worker's week — the Labour overview's Sign off, by
-/// name. The server re-checks the signable rule at the moment of signing (every elapsed day
-/// approved, rejected or recorded as absence) and refuses with the reason when it fails. Sign-off
-/// freezes the week for settlement: fully signed-off worker-months are what run_xero_coding will
-/// write to Xero. SignedOffByEmail is stamped server-side from the connector caller.
+/// name. The server re-checks the signable rule at the moment of signing (every elapsed day of
+/// the month's part of the week approved, rejected or recorded as absence) and refuses with the
+/// reason when it fails. Sign-off freezes the week for settlement: fully signed-off worker-months
+/// are what run_xero_coding will write to Xero. SignedOffByEmail is stamped server-side from the
+/// connector caller.
 /// </summary>
 public sealed record SignOffWorkerWeekByName(
     string WorkerName,
     DateTimeOffset WeekStart,
-    string SignedOffByEmail = "") : ICommand<LabourWeekSignOff>;
+    string SignedOffByEmail = "",
+    // The month whose part of the week to sign (any date in it) — only matters for a week that
+    // straddles a month end, which signs off in two parts (2026-09-02). Left out, the month of
+    // WeekStart as given: pass 31 Aug for August's part of that week, 1 Sep for September's.
+    DateTimeOffset? MonthStart = null) : ICommand<LabourWeekSignOff>;
 
 /// <summary>
 /// Removes the weekly sign-off marker from a worker's week — the undo of sign-off. Touches no
@@ -30,7 +35,8 @@ public sealed record SignOffWorkerWeekByName(
 /// </summary>
 public sealed record RemoveWorkerWeekSignOffByName(
     string WorkerName,
-    DateTimeOffset WeekStart) : ICommand<Acknowledgement>;
+    DateTimeOffset WeekStart,
+    DateTimeOffset? MonthStart = null) : ICommand<Acknowledgement>;
 
 /// <summary>
 /// The §6a automation, run for one month from the connector — the Labour overview's "Run Xero

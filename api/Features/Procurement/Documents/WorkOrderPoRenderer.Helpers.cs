@@ -129,7 +129,11 @@ public static partial class WorkOrderPoRenderer
     private static void SpaceAfter(Paragraph p, double mm) => p.Format.SpaceAfter = Unit.FromMillimeter(mm);
 
 
-    private static string Money(decimal value) => value.ToString("£#,##0.00;-£#,##0.00", Uk);
+    // U+2212 MINUS SIGN, not the hyphen-minus: MigraDoc breaks a line after a hyphen that is not
+    // followed by a digit, so "-£1,000.00" could print as a bare "-" with the figure on the next
+    // line (the valuation report did exactly that, 2026-09-02). Same rule as
+    // ValuationReportSnapshotRenderer.Money.
+    private static string Money(decimal value) => value.ToString("£#,##0.00;\u2212£#,##0.00", Uk);
     private static string Date(DateTimeOffset value) => value.LocalDateTime.ToString("d MMM yyyy", Uk);
     private static string DateTime(DateTimeOffset value) => value.LocalDateTime.ToString("d MMM yyyy, HH:mm", Uk);
 }

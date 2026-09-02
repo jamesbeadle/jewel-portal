@@ -129,8 +129,11 @@ public static class CommercialFeatureRegistration
         services.AddScoped<ICommandHandler<DeleteValuationReportSnapshot, Acknowledgement>, DeleteValuationReportSnapshotHandler>();
 
         // Snapshot exports — the branded PDF (download endpoint and email attachment render
-        // through the one builder, so they never diverge) and the client-facing email draft.
+        // through the one builder, so they never diverge), the spreadsheet the portal's Export
+        // button produces rendered server-side for the connector (2026-09-02), and the
+        // client-facing email draft.
         services.AddScoped<Documents.ValuationReportSnapshotPdfBuilder>();
+        services.AddScoped<Documents.ValuationReportWorkbookBuilder>();
 
         // Cost-centre reconciliation PDF — the Financials tab's per-line report for the
         // accountant, assembled from the same query handlers the tab itself reads.

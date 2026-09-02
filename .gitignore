@@ -78,3 +78,4 @@ ziB7Ad8I
 # Python bytecode from the refactor audit
 __pycache__/
 *.pyc
+.claude-transfer/
