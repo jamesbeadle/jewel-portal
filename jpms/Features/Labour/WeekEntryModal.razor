@@ -1,0 +1,104 @@
+@namespace Jewel.JPMS.Features.Labour
+@using Jewel.JPMS.Features.CostCenters
+@using Jewel.JPMS.Features.Projects
+
+@* Enter a week: the accountant's weekly entry. A site per day, straight from how the crews
+   report. Every filled day lands as a Submitted timesheet in that site's approval queue — the
+   MD codes the cost code and approves on the project's Labour tab. Days already recorded are
+   locked here. Opened by the page with OpenAsync(); the dialog owns the rows and the save. *@
+<Modal IsOpen="@open" Title="Enter a worker's week" Class="max-w-2xl"
+       ConfirmLabel="@(saving ? "Saving…" : "Save week")" ConfirmDisabled="@saving"
+       OnCancel="() => open = false" OnConfirm="SaveAsync"
+       DismissOnOverlayClick="false">
+    <p class="text-xs text-content-subtle mb-3">
+        A site per day, straight from how the crews report. Every filled day lands as a
+        Submitted timesheet in that site's approval queue — the MD codes the cost code and
+        approves on the project's Labour tab. Days already recorded are locked here.
+    </p>
+    <div class="flex flex-wrap items-end gap-3 mb-4">
+        <label class="block text-sm text-content-muted">Worker
+            <select class="field mt-1" @bind="workerId" @bind:after="RebuildRowsAsync">
+                <option value="">Worker…</option>
+                @foreach (var worker in Labour.Workers().Where(worker => worker.IsActive).OrderBy(worker => worker.Name))
+                {
+                    <option value="@worker.WorkerId">@worker.Name</option>
+                }
+            </select>
+        </label>
+        <div class="flex items-center gap-2 text-sm pb-0.5">
+            <button type="button" class="btn-secondary" disabled="@saving" @onclick="() => MoveWeekAsync(-7)">‹ Prev</button>
+            <span class="text-content-subtle w-36 text-center">w/c @weekStart.ToString("ddd dd MMM yyyy")</span>
+            <button type="button" class="btn-secondary" disabled="@saving" @onclick="() => MoveWeekAsync(7)">Next ›</button>
+        </div>
+        <span class="flex-1"></span>
+        <button type="button" class="btn-secondary" title="Copies the first filled day's site, hours and cost code over the other unlocked weekdays."
+                @onclick="CopyFirstDayDown">Copy down (Mon–Fri)</button>
+    </div>
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                <th class="py-2 pr-3">Day</th>
+                <th class="py-2 pr-3">Site</th>
+                <th class="py-2 pr-3 w-20">Hours</th>
+                <th class="py-2">Cost code</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in rows)
+            {
+                var isWeekend = row.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
+                <tr class="border-b border-line/40 align-middle">
+                    <td class="py-1.5 pr-3 whitespace-nowrap @(isWeekend ? "text-content-subtle" : "text-content-muted")">@row.Date.ToString("ddd dd MMM")</td>
+                    @if (row.Locked)
+                    {
+                        <td colspan="3" class="py-1.5 text-content-subtle">
+                            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised mr-2">recorded</span>@row.LockedDetail
+                        </td>
+                    }
+                    else
+                    {
+                        <td class="py-1.5 pr-3">
+                            @if (Projects.Current is null)
+                            {
+                                <select class="field w-full" disabled><option>Loading projects…</option></select>
+                            }
+                            else
+                            {
+                                <select class="field w-full" value="@row.ProjectId"
+                                        @onchange="@(args => row.ProjectId = (string)args.Value!)">
+                                    <option value="">— not on site</option>
+                                    @foreach (var project in Projects.Current.InWorkOrder())
+                                    {
+                                        <option value="@project.ProjectId">@project.Reference — @project.Name</option>
+                                    }
+                                </select>
+                            }
+                        </td>
+                        <td class="py-1.5 pr-3">
+                            <input class="field w-20" type="number" step="0.5" min="0.5" max="24"
+                                   @bind="row.Hours" />
+                        </td>
+                        <td class="py-1.5">
+                            <select class="field w-full" @bind="row.CostCode"
+                                    disabled="@(!CostCenters.IsLoaded)">
+                                <option value="">MD codes at approval…</option>
+                                @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
+                                {
+                                    <option value="@centre.Code">@centre.Code — @centre.Name</option>
+                                }
+                            </select>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-3">@error</p>
+    }
+    <p class="text-xs text-content-subtle mt-3">
+        Hours in half-hour steps — a whole day is 8. Leave a day's site as "— not on site" to
+        skip it; record holidays and sick days with Record absence instead.
+    </p>
+</Modal>

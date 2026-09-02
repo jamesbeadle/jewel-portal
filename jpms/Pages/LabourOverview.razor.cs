@@ -1,3 +1,4 @@
+using Jewel.JPMS.Features.Labour;
 using static Jewel.JPMS.Features.Labour.LabourDisplay;
 using Jewel.JPMS.Contracts.Labour;
 using Jewel.JPMS.Features.CostCenters;
@@ -22,15 +23,11 @@ public partial class LabourOverview
     };
 
 
-    // Absence modal state.
-    private bool absenceOpen;
-    private bool absenceSaving;
-    private string absenceWorkerId = "";
-    private string absenceWorkerName = "";
-    private DateTime absenceDate = DateTime.Today;
-    private DateTime absenceEndDate = DateTime.Today;
-    private AbsenceKind absenceKind = AbsenceKind.Holiday;
-    private string absenceNote = "";
+    // The dialogs own their fields; the page opens them and shows the week's summary.
+    private AbsenceModal? absenceModal;
+    private SettlementLineModal? settlementLineModal;
+    private WeekEntryModal? weekEntryModal;
+    private IReadOnlyList<string>? weekSummaryLines;
 
     private bool Loading => !Labour.OverviewLoadedFor(year, month) && !dataFailed;
     private string MonthLabel => new DateTime(year, month, 1).ToString("MMMM yyyy");
@@ -96,35 +93,8 @@ public partial class LabourOverview
         finally { refreshing = false; }
     }
 
-    private void OpenAbsence(string workerId, string workerName, DateTimeOffset date)
-    {
-        absenceWorkerId = workerId; absenceWorkerName = workerName;
-        absenceDate = date.UtcDateTime.Date; absenceEndDate = absenceDate;
-        absenceKind = AbsenceKind.Holiday; absenceNote = "";
-        absenceOpen = true;
-    }
-
-    private async Task SaveAbsenceAsync()
-    {
-        absenceSaving = true; actionError = null;
-        try
-        {
-            // One day or a range — the store records each weekday and refreshes once. Partial
-            // failure keeps the modal open with the dates that did not land, so a retry only
-            // re-attempts what is actually missing.
-            var failedDates = await Labour.RecordAbsenceRangeAsync(year, month, absenceWorkerId,
-                absenceDate, absenceEndDate, absenceKind, absenceNote);
-            if (failedDates.Count == 0) { absenceOpen = false; }
-            else
-            {
-                actionError = "Could not record "
-                    + string.Join(", ", failedDates.Select(date => date.ToString("ddd dd MMM")))
-                    + " — those days may already have an absence. The rest were recorded.";
-            }
-        }
-        catch (Exception) { actionError = "Could not record the absence — try again."; }
-        finally { absenceSaving = false; }
-    }
+    private void OpenAbsence(string workerId, string workerName, DateTimeOffset date) =>
+        absenceModal!.Open(workerId, workerName, date);
 
     private async Task SignOffAsync(string workerId, DateTime weekStart)
     {

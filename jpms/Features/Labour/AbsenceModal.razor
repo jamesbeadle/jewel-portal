@@ -1,0 +1,97 @@
+@namespace Jewel.JPMS.Features.Labour
+@inject ILabourStore Labour
+
+@* Record absence — one day or a range; the store records each weekday and refreshes once.
+   Opened by the page (from the chase list, a worker's row, or cold) with Open(); the dialog
+   owns the fields and the outcome. *@
+<Modal IsOpen="@open"
+       Title="@(string.IsNullOrWhiteSpace(workerName) ? "Record absence" : $"Record absence — {workerName}")"
+       ConfirmLabel="Record" ConfirmDisabled="@(saving || string.IsNullOrWhiteSpace(workerId))"
+       OnCancel="() => open = false" OnConfirm="SaveAsync"
+       DismissOnOverlayClick="false">
+    <div class="space-y-3">
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+        <label class="block text-sm text-content-muted">Worker
+            <select class="field mt-1" @bind="workerId" @bind:after="WorkerChanged">
+                <option value="">Worker…</option>
+                @foreach (var worker in Labour.Workers().Where(worker => worker.IsActive).OrderBy(worker => worker.Name))
+                {
+                    <option value="@worker.WorkerId">@worker.Name</option>
+                }
+            </select>
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+            <label class="block text-sm text-content-muted">From
+                <input class="field mt-1" type="date" @bind="date" />
+            </label>
+            <label class="block text-sm text-content-muted">To
+                <input class="field mt-1" type="date" @bind="endDate" />
+            </label>
+        </div>
+        <p class="text-xs text-content-subtle">Leave To as the same day for a single day off. A longer
+            range records each weekday in it — "off all week" is one entry, Monday to Friday.</p>
+        <label class="block text-sm text-content-muted">Kind
+            <select class="field mt-1" @bind="kind">
+                <option value="@AbsenceKind.Holiday">Holiday</option>
+                <option value="@AbsenceKind.HalfDay">Half day</option>
+                <option value="@AbsenceKind.NotWorked">Not worked</option>
+                <option value="@AbsenceKind.Sick">Sick</option>
+            </select>
+        </label>
+        <label class="block text-sm text-content-muted">Note (optional)
+            <input class="field mt-1" @bind="note" placeholder="e.g. booked leave" />
+        </label>
+    </div>
+</Modal>
+
+@code {
+    /// <summary>The month the overview is showing — the store refreshes it after recording.</summary>
+    [Parameter] public int Year { get; set; }
+    [Parameter] public int Month { get; set; }
+
+    private bool open;
+    private bool saving;
+    private string? error;
+    private string workerId = "";
+    private string workerName = "";
+    private DateTime date = DateTime.Today;
+    private DateTime endDate = DateTime.Today;
+    private AbsenceKind kind = AbsenceKind.Holiday;
+    private string note = "";
+
+    /// <summary>Opens the dialog for a worker on a day — from the chase list, a worker's row, or cold.</summary>
+    public void Open(string forWorkerId, string forWorkerName, DateTimeOffset onDate)
+    {
+        workerId = forWorkerId; workerName = forWorkerName;
+        date = onDate.UtcDateTime.Date; endDate = date;
+        kind = AbsenceKind.Holiday; note = ""; error = null;
+        open = true;
+        StateHasChanged();
+    }
+
+    private void WorkerChanged() =>
+        workerName = Labour.Workers().FirstOrDefault(worker => worker.WorkerId == workerId)?.Name ?? "";
+
+    private async Task SaveAsync()
+    {
+        saving = true; error = null;
+        try
+        {
+            // Partial failure keeps the dialog open with the dates that did not land, so a retry
+            // only re-attempts what is actually missing.
+            var failedDates = await Labour.RecordAbsenceRangeAsync(Year, Month, workerId, date, endDate, kind, note);
+            if (failedDates.Count == 0) { open = false; }
+            else
+            {
+                error = "Could not record "
+                    + string.Join(", ", failedDates.Select(failed => failed.ToString("ddd dd MMM")))
+                    + " — those days may already have an absence. The rest were recorded.";
+            }
+        }
+        catch (Exception) { error = "Could not record the absence — try again."; }
+        finally { saving = false; }
+    }
+}
