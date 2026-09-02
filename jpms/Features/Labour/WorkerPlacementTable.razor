@@ -69,8 +69,8 @@
     [Parameter] public IEnumerable<DateTime> MonthWeekdays { get; set; } = Array.Empty<DateTime>();
     /// <summary>The page's site palette — stable per project within the session.</summary>
     [Parameter, EditorRequired] public Func<string, string> ColourOf { get; set; } = default!;
-    /// <summary>Opens the absence dialog for (worker id, worker name, date).</summary>
-    [Parameter] public EventCallback<(string WorkerId, string WorkerName, DateTimeOffset Date)> OnRecordAbsence { get; set; }
+    /// <summary>Record an absence for a worker, today.</summary>
+    [Parameter] public EventCallback<LabourOverviewWorker> OnRecordAbsence { get; set; }
 
     private string? expandedWorkerId;
 

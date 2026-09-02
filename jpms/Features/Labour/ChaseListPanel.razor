@@ -37,7 +37,7 @@
                         else
                         {
                             <button type="button" class="text-xs text-content-subtle hover:text-content underline mr-3"
-                                    @onclick="() => OnRecordAbsence.InvokeAsync((item.WorkerId, item.WorkerName, item.Date))">Record absence</button>
+                                    @onclick="() => OnRecordAbsence.InvokeAsync(item)">Record absence</button>
                             <button type="button" class="text-xs text-content-subtle hover:text-content underline"
                                     title="The day was reviewed and needs no timesheet and no absence — dismissed with a reason, audited; it leaves the list and the unconfirmed figures together"
                                     @onclick="() => StartDismiss(item)">Dismiss</button>
@@ -70,7 +70,8 @@
     [Parameter] public int DismissedThisMonth { get; set; }
     /// <summary>A day was dismissed (audited) — the page re-reads the month.</summary>
     [Parameter] public EventCallback OnDismissed { get; set; }
-    [Parameter] public EventCallback<(string WorkerId, string WorkerName, DateTimeOffset Date)> OnRecordAbsence { get; set; }
+    /// <summary>Record an absence for the chased day.</summary>
+    [Parameter] public EventCallback<LabourChaseItem> OnRecordAbsence { get; set; }
 
     private bool showAll;
     private string? dismissingKey;

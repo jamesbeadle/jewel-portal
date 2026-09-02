@@ -167,8 +167,10 @@
     {
         get
         {
-            var starts = Tasks.Select(t => t.PlannedStart).Concat(BaselineTasks.Select(b => b.PlannedStart)).ToList();
-            var ends = Tasks.Select(t => t.PlannedEnd).Concat(BaselineTasks.Select(b => b.PlannedEnd)).ToList();
+            var starts = Tasks.Select(t => t.PlannedStart)
+                .Concat(BaselineTasks.Select(b => b.PlannedStart)).ToList();
+            var ends = Tasks.Select(t => t.PlannedEnd)
+                .Concat(BaselineTasks.Select(b => b.PlannedEnd)).ToList();
             var start = starts.Min().AddDays(-3);
             var end = ends.Max().AddDays(3);
             if (end <= start) end = start.AddDays(1);

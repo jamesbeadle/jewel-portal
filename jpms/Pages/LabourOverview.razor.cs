@@ -96,6 +96,9 @@ public partial class LabourOverview
     private void OpenAbsence(string workerId, string workerName, DateTimeOffset date) =>
         absenceModal!.Open(workerId, workerName, date);
 
+    private void OpenAbsenceToday(LabourOverviewWorker worker) =>
+        OpenAbsence(worker.WorkerId, worker.Name, DateTimeOffset.UtcNow);
+
     private async Task SignOffAsync(string workerId, DateTime weekStart)
     {
         actionError = null;

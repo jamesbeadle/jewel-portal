@@ -94,7 +94,7 @@ else
         {
             <WorkerPlacementTable @key="MonthKey" Snapshot="snapshot" Loading="@(Loading && !dataFailed)" Year="year" Month="month"
                                   MonthWeekdays="MonthWeekdays()" ColourOf="ColourOf"
-                                  OnRecordAbsence="pick => OpenAbsence(pick.WorkerId, pick.WorkerName, pick.Date)" />
+                                  OnRecordAbsence="OpenAbsenceToday" />
         }
         else if (view == "sites")
         {
@@ -123,7 +123,7 @@ else
         @if (snapshot is not null && snapshot.Chase.Count > 0)
         {
             <ChaseListPanel @key="MonthKey" Items="snapshot.Chase" DismissedThisMonth="snapshot.DismissedThisMonth"
-                            OnDismissed="RefreshAsync" OnRecordAbsence="pick => OpenAbsence(pick.WorkerId, pick.WorkerName, pick.Date)" />
+                            OnDismissed="RefreshAsync" OnRecordAbsence="item => OpenAbsence(item.WorkerId, item.WorkerName, item.Date)" />
         }
         @* A month whose chase list is empty but carries dismissals still says so — a clean list
            should read as "reviewed", never "unchecked". *@

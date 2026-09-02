@@ -59,7 +59,7 @@
             </label>
             <div class="flex items-center gap-2">
                 <button type="button" class="btn-secondary" disabled="@saving" @onclick="SaveAsync">Save</button>
-                <button type="button" class="btn-secondary" @onclick="() => OnRecordAbsence.InvokeAsync((Worker.WorkerId, Worker.Name, DateTimeOffset.UtcNow))">Record absence</button>
+                <button type="button" class="btn-secondary" @onclick="() => OnRecordAbsence.InvokeAsync(Worker)">Record absence</button>
                 @if (saved)
                 {
                     <span class="text-sm text-positive">Saved</span>
@@ -78,7 +78,8 @@
     [Parameter] public int Year { get; set; }
     [Parameter] public int Month { get; set; }
     [Parameter, EditorRequired] public Func<string, string> ColourOf { get; set; } = default!;
-    [Parameter] public EventCallback<(string WorkerId, string WorkerName, DateTimeOffset Date)> OnRecordAbsence { get; set; }
+    /// <summary>Record an absence for this worker, today.</summary>
+    [Parameter] public EventCallback<LabourOverviewWorker> OnRecordAbsence { get; set; }
 
     // The CIS select binds a STRING: the rate arrives from the API as a decimal whose scale
     // follows the stored value ("20.00"), and a <select @bind> matches its options by string —

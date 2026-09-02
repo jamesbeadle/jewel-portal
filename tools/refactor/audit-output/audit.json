@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-01T20:45:27+00:00",
+  "generatedAt": "2026-09-02T05:46:53+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 638,
-      "totalFiles": 3316,
-      "worstFileLines": 785
+      "filesOverLimit": 644,
+      "totalFiles": 3333,
+      "worstFileLines": 736
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 700,
+      "functionsOverLimit": 698,
       "elseBlocks": 1182,
       "measurementIsHeuristic": true
     },
@@ -19,18 +19,18 @@
       "maxLength": 40
     },
     "duplication": {
-      "clones": 486,
-      "duplicatedLines": 6166,
-      "totalLines": 215987,
-      "duplicatedPercentage": 2.85
+      "clones": 488,
+      "duplicatedLines": 6207,
+      "totalLines": 216128,
+      "duplicatedPercentage": 2.87
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1461
+      "unprefixedBooleans": 1474
     },
     "comments": {
-      "explanatoryCommentLines": 13727,
-      "filesWithComments": 1795,
+      "explanatoryCommentLines": 13726,
+      "filesWithComments": 1811,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -41,14 +41,14 @@
     "prose": {
       "longMemberChainLines": 2398,
       "deeplyIndentedLines": 2801,
-      "overlongLines": 1726,
+      "overlongLines": 1703,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 131,
       "orphanComponents": 6,
-      "averagePageLines": 246
+      "averagePageLines": 231
     }
   },
   "details": {
@@ -56,23 +56,11 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 638,
-        "totalFiles": 3316,
-        "worstFileLines": 785
+        "filesOverLimit": 644,
+        "totalFiles": 3333,
+        "worstFileLines": 736
       },
       "offenders": [
-        {
-          "file": "jpms/Pages/LabourOverview.razor",
-          "lines": 785
-        },
-        {
-          "file": "jpms/Pages/ProjectProgramme.razor",
-          "lines": 750
-        },
-        {
-          "file": "jpms/Pages/TriageQueue.Compose.cs",
-          "lines": 742
-        },
         {
           "file": "jpms/Pages/ProfitSummary.razor",
           "lines": 736
@@ -167,6 +155,10 @@
         },
         {
           "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.Labour.cs",
+          "lines": 445
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.Apply.cs",
           "lines": 445
         },
         {
@@ -278,12 +270,12 @@
           "lines": 355
         },
         {
-          "file": "jpms/Pages/ProjectProgramme.razor.cs",
-          "lines": 355
-        },
-        {
           "file": "jpms/Pages/TriageQueue.StagedCreate.cs",
           "lines": 354
+        },
+        {
+          "file": "jpms/Features/Site/Programme/ProgrammeClaimsWorkbench.razor",
+          "lines": 352
         },
         {
           "file": "jpms/Pages/DocumentControl.Filing.cs",
@@ -404,6 +396,10 @@
         {
           "file": "api/Features/ArchitectInstructions/ArchitectInstructionEndpoints.cs",
           "lines": 312
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.Compose.cs",
+          "lines": 311
         },
         {
           "file": "jpms/Pages/RfiDashboard.razor",
@@ -702,10 +698,6 @@
           "lines": 252
         },
         {
-          "file": "jpms/Pages/LabourOverview.razor.cs",
-          "lines": 251
-        },
-        {
           "file": "jpms/Pages/ProfitSummary.Running.cs",
           "lines": 250
         },
@@ -810,6 +802,10 @@
           "lines": 233
         },
         {
+          "file": "jpms/Features/Site/Programme/RelevantEventsList.razor",
+          "lines": 233
+        },
+        {
           "file": "jpms/Components/CostCentreCostOfSalesModal.razor",
           "lines": 232
         },
@@ -835,6 +831,10 @@
         },
         {
           "file": "jpms/Components/RequestForm.razor.cs",
+          "lines": 230
+        },
+        {
+          "file": "jpms/Features/Site/Programme/ProgrammeGanttChart.razor",
           "lines": 230
         },
         {
@@ -948,10 +948,6 @@
         {
           "file": "jpms/Components/ClaimProgressDialog.razor",
           "lines": 219
-        },
-        {
-          "file": "jpms/Pages/ProjectProgramme.RelevantEvents.cs",
-          "lines": 218
         },
         {
           "file": "jpms/Services/HttpValuationReportStore.cs",
@@ -1075,10 +1071,6 @@
         },
         {
           "file": "api/Features/MailboxIntake/Graph/MailboxGraphClient.Conversations.cs",
-          "lines": 206
-        },
-        {
-          "file": "jpms/Pages/LabourOverview.WeekEntry.cs",
           "lines": 206
         },
         {
@@ -1219,6 +1211,10 @@
         },
         {
           "file": "jpms/Features/Procurement/InvitedSubcontractorsSection.razor",
+          "lines": 188
+        },
+        {
+          "file": "jpms/Features/Site/Programme/ProgrammeWorkbench.razor",
           "lines": 188
         },
         {
@@ -1534,6 +1530,10 @@
           "lines": 159
         },
         {
+          "file": "jpms/Features/Site/Programme/ProgrammeWorkbench.razor.cs",
+          "lines": 158
+        },
+        {
           "file": "jpms/Components/WorkOrderAttachmentsPanel.razor",
           "lines": 158
         },
@@ -1619,6 +1619,10 @@
         },
         {
           "file": "api/Features/Requests/Queries/MailboxLiveQueryHandlers.cs",
+          "lines": 152
+        },
+        {
+          "file": "jpms/Features/Labour/WeekEntryModal.razor.cs",
           "lines": 152
         },
         {
@@ -1758,6 +1762,10 @@
           "lines": 142
         },
         {
+          "file": "jpms/Pages/LabourOverview.razor",
+          "lines": 142
+        },
+        {
           "file": "api/Features/Ai/Tools/Actions/CommercialActions.Cvr.cs",
           "lines": 141
         },
@@ -1886,6 +1894,10 @@
           "lines": 133
         },
         {
+          "file": "jpms/Features/Labour/WorkerDetailPanel.razor",
+          "lines": 133
+        },
+        {
           "file": "api/Data/Entities/PeopleEntities.cs",
           "lines": 132
         },
@@ -1975,6 +1987,10 @@
         },
         {
           "file": "contracts/Commercial/ValuationSummaryFigures.cs",
+          "lines": 127
+        },
+        {
+          "file": "jpms/Pages/LabourOverview.razor.cs",
           "lines": 127
         },
         {
@@ -2350,10 +2366,6 @@
           "lines": 110
         },
         {
-          "file": "jpms/Pages/ProjectProgramme.GanttGeometry.cs",
-          "lines": 110
-        },
-        {
           "file": "jpms/Features/Variations/VariationDetailsCard.razor",
           "lines": 110
         },
@@ -2434,6 +2446,10 @@
           "lines": 107
         },
         {
+          "file": "jpms/Features/Labour/SettlementSchedulesPanel.razor",
+          "lines": 107
+        },
+        {
           "file": "api/Features/DocumentControl/Storage/AzureBlobDocumentControlStore.cs",
           "lines": 106
         },
@@ -2451,6 +2467,10 @@
         },
         {
           "file": "jpms/Cqrs/HttpQueryClient.cs",
+          "lines": 106
+        },
+        {
+          "file": "jpms/Features/Labour/ChaseListPanel.razor",
           "lines": 106
         },
         {
@@ -2503,6 +2523,10 @@
         },
         {
           "file": "jpms/Features/Drawings/DrawingsRouteRegistration.cs",
+          "lines": 104
+        },
+        {
+          "file": "jpms/Features/Labour/WeekEntryModal.razor",
           "lines": 104
         },
         {
@@ -2619,7 +2643,7 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 700,
+        "functionsOverLimit": 698,
         "elseBlocks": 1182,
         "measurementIsHeuristic": true
       },
@@ -3055,7 +3079,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1461
+        "unprefixedBooleans": 1474
       },
       "offenders": {
         "abbreviations": [
@@ -3517,8 +3541,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13727,
-        "filesWithComments": 1795,
+        "explanatoryCommentLines": 13726,
+        "filesWithComments": 1811,
         "taskMarkers": 48
       },
       "offenders": [
@@ -3964,12 +3988,52 @@
             "line": 54
           },
           {
+            "file": "jpms/Features/Labour/CostCodeTable.razor",
+            "line": 35
+          },
+          {
+            "file": "jpms/Features/Labour/LabourForecastHeader.razor",
+            "line": 42
+          },
+          {
+            "file": "jpms/Features/Labour/SiteCostTable.razor",
+            "line": 32
+          },
+          {
+            "file": "jpms/Features/Labour/SiteCostTable.razor",
+            "line": 36
+          },
+          {
+            "file": "jpms/Features/Labour/WorkerDetailPanel.razor",
+            "line": 30
+          },
+          {
             "file": "jpms/Features/Labour/WorkerPlacementStrip.razor",
             "line": 21
           },
           {
             "file": "jpms/Features/Labour/WorkerPlacementStrip.razor",
             "line": 27
+          },
+          {
+            "file": "jpms/Features/Site/Programme/ProgrammeGanttChart.razor",
+            "line": 16
+          },
+          {
+            "file": "jpms/Features/Site/Programme/ProgrammeGanttChart.razor",
+            "line": 49
+          },
+          {
+            "file": "jpms/Features/Site/Programme/ProgrammeGanttChart.razor",
+            "line": 52
+          },
+          {
+            "file": "jpms/Features/Site/Programme/ProgrammeGanttChart.razor",
+            "line": 54
+          },
+          {
+            "file": "jpms/Features/Site/Programme/ProgrammeGanttChart.razor",
+            "line": 59
           },
           {
             "file": "jpms/Features/Triage/AttachmentPicker.razor",
@@ -4006,26 +4070,6 @@
           {
             "file": "jpms/Features/Triage/Workspace/PanelWorkspace.razor",
             "line": 13
-          },
-          {
-            "file": "jpms/Pages/LabourOverview.razor",
-            "line": 117
-          },
-          {
-            "file": "jpms/Pages/LabourOverview.razor",
-            "line": 222
-          },
-          {
-            "file": "jpms/Pages/LabourOverview.razor",
-            "line": 226
-          },
-          {
-            "file": "jpms/Pages/LabourOverview.razor",
-            "line": 276
-          },
-          {
-            "file": "jpms/Pages/LabourOverview.razor",
-            "line": 703
           },
           {
             "file": "jpms/Pages/ProfitSummary.razor",
@@ -4070,26 +4114,6 @@
           {
             "file": "jpms/Pages/ProfitSummary.razor",
             "line": 667
-          },
-          {
-            "file": "jpms/Pages/ProjectProgramme.razor",
-            "line": 242
-          },
-          {
-            "file": "jpms/Pages/ProjectProgramme.razor",
-            "line": 275
-          },
-          {
-            "file": "jpms/Pages/ProjectProgramme.razor",
-            "line": 278
-          },
-          {
-            "file": "jpms/Pages/ProjectProgramme.razor",
-            "line": 280
-          },
-          {
-            "file": "jpms/Pages/ProjectProgramme.razor",
-            "line": 285
           },
           {
             "file": "jpms/Pages/ProjectWorkOrderAllocation.razor",
@@ -4182,12 +4206,12 @@
             "occurrences": 58
           },
           {
-            "literal": "btn-secondary",
+            "literal": "projectId",
             "occurrences": 54
           },
           {
-            "literal": "projectId",
-            "occurrences": 53
+            "literal": "btn-secondary",
+            "occurrences": 54
           },
           {
             "literal": "noopener",
@@ -4225,7 +4249,7 @@
       "summary": {
         "longMemberChainLines": 2398,
         "deeplyIndentedLines": 2801,
-        "overlongLines": 1726,
+        "overlongLines": 1703,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4843,28 +4867,10 @@
         "pages": 92,
         "components": 131,
         "orphanComponents": 6,
-        "averagePageLines": 246
+        "averagePageLines": 231
       },
       "offenders": {
         "pages": [
-          {
-            "page": "jpms/Pages/LabourOverview.razor",
-            "lines": 785,
-            "widgets": [
-              "table",
-              "modal",
-              "loadGate",
-              "panel",
-              "export"
-            ]
-          },
-          {
-            "page": "jpms/Pages/ProjectProgramme.razor",
-            "lines": 750,
-            "widgets": [
-              "loadGate"
-            ]
-          },
           {
             "page": "jpms/Pages/ProfitSummary.razor",
             "lines": 736,
@@ -5432,6 +5438,16 @@
             ]
           },
           {
+            "page": "jpms/Pages/LabourOverview.razor",
+            "lines": 142,
+            "widgets": [
+              "modal",
+              "loadGate",
+              "panel",
+              "export"
+            ]
+          },
+          {
             "page": "jpms/Pages/SubcontractorCommunications.razor",
             "lines": 132,
             "widgets": [
@@ -5546,6 +5562,11 @@
             ]
           },
           {
+            "page": "jpms/Pages/ProjectProgramme.razor",
+            "lines": 78,
+            "widgets": []
+          },
+          {
             "page": "jpms/Pages/ProjectDrawingsAmbiguous.razor",
             "lines": 64,
             "widgets": [
@@ -5622,11 +5643,11 @@
         "componentReuse": [
           {
             "component": "jpms/Components/LoadGate.razor",
-            "reusedBy": 102
+            "reusedBy": 105
           },
           {
             "component": "jpms/Components/Modal.razor",
-            "reusedBy": 84
+            "reusedBy": 86
           },
           {
             "component": "jpms/Components/RequestAccessView.razor",
@@ -5641,16 +5662,16 @@
             "reusedBy": 37
           },
           {
+            "component": "jpms/Components/Panel.razor",
+            "reusedBy": 33
+          },
+          {
             "component": "jpms/Components/FormField.razor",
             "reusedBy": 32
           },
           {
             "component": "jpms/Components/ProjectPageShell.razor",
             "reusedBy": 29
-          },
-          {
-            "component": "jpms/Components/Panel.razor",
-            "reusedBy": 27
           },
           {
             "component": "jpms/Components/ApprovedSessionGate.razor",
@@ -6158,10 +6179,10 @@
     "duplication": {
       "name": "duplication",
       "summary": {
-        "clones": 486,
-        "duplicatedLines": 6166,
-        "totalLines": 215987,
-        "duplicatedPercentage": 2.85
+        "clones": 488,
+        "duplicatedLines": 6207,
+        "totalLines": 216128,
+        "duplicatedPercentage": 2.87
       },
       "offenders": [
         {
@@ -6205,6 +6226,10 @@
           "duplicatedLineInstances": 115
         },
         {
+          "file": "jpms/Pages/TriageQueue.Apply.cs",
+          "duplicatedLineInstances": 112
+        },
+        {
           "file": "api/Features/Directory/Commands/DeleteDirectoryUserEndpoint.cs",
           "duplicatedLineInstances": 111
         },
@@ -6218,10 +6243,6 @@
         },
         {
           "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Sections.cs",
-          "duplicatedLineInstances": 98
-        },
-        {
-          "file": "jpms/Pages/TriageQueue.Attachments.cs",
           "duplicatedLineInstances": 98
         }
       ]
