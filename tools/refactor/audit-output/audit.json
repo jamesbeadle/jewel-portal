@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-02T07:28:33+00:00",
+  "generatedAt": "2026-09-02T07:34:26+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 653,
-      "totalFiles": 3401,
-      "worstFileLines": 520
+      "filesOverLimit": 655,
+      "totalFiles": 3405,
+      "worstFileLines": 517
     },
     "functionShape": {
       "limit": 30,
@@ -19,9 +19,9 @@
       "maxLength": 40
     },
     "duplication": {
-      "clones": 491,
-      "duplicatedLines": 6227,
-      "totalLines": 216767,
+      "clones": 490,
+      "duplicatedLines": 6214,
+      "totalLines": 216780,
       "duplicatedPercentage": 2.87
     },
     "naming": {
@@ -30,7 +30,7 @@
     },
     "comments": {
       "explanatoryCommentLines": 13676,
-      "filesWithComments": 1861,
+      "filesWithComments": 1865,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -56,15 +56,11 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 653,
-        "totalFiles": 3401,
-        "worstFileLines": 520
+        "filesOverLimit": 655,
+        "totalFiles": 3405,
+        "worstFileLines": 517
       },
       "offenders": [
-        {
-          "file": "jpms/Pages/TriageQueue.Outbox.cs",
-          "lines": 520
-        },
         {
           "file": "jpms/Components/ValuationReportTable.razor",
           "lines": 517
@@ -1402,6 +1398,10 @@
           "lines": 168
         },
         {
+          "file": "jpms/Pages/TriageQueue.ListReads.cs",
+          "lines": 168
+        },
+        {
           "file": "jpms/Pages/ProjectDrawings.razor",
           "lines": 168
         },
@@ -1635,6 +1635,10 @@
         },
         {
           "file": "jpms/Features/Procurement/DraftWorkOrdersPanel.razor.cs",
+          "lines": 150
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.Views.cs",
           "lines": 150
         },
         {
@@ -2467,6 +2471,10 @@
         },
         {
           "file": "jpms/Features/Commercial/ValuationReportExportWorkbook.cs",
+          "lines": 107
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.Decisions.cs",
           "lines": 107
         },
         {
@@ -3578,7 +3586,7 @@
       "name": "comments",
       "summary": {
         "explanatoryCommentLines": 13676,
-        "filesWithComments": 1861,
+        "filesWithComments": 1865,
         "taskMarkers": 48
       },
       "offenders": [
@@ -6213,9 +6221,9 @@
     "duplication": {
       "name": "duplication",
       "summary": {
-        "clones": 491,
-        "duplicatedLines": 6227,
-        "totalLines": 216767,
+        "clones": 490,
+        "duplicatedLines": 6214,
+        "totalLines": 216780,
         "duplicatedPercentage": 2.87
       },
       "offenders": [
@@ -6260,10 +6268,6 @@
           "duplicatedLineInstances": 115
         },
         {
-          "file": "jpms/Pages/TriageQueue.Apply.cs",
-          "duplicatedLineInstances": 112
-        },
-        {
           "file": "api/Features/Directory/Commands/DeleteDirectoryUserEndpoint.cs",
           "duplicatedLineInstances": 111
         },
@@ -6277,6 +6281,10 @@
         },
         {
           "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Sections.cs",
+          "duplicatedLineInstances": 98
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.Apply.cs",
           "duplicatedLineInstances": 98
         }
       ]
