@@ -1,0 +1,47 @@
+@namespace Jewel.JPMS.Features.Xero
+
+@* The column headings follow the open tab: coding pickers on the queue and the dispute
+   workbench (where the coding both sides are converging on is edited and saved), the
+   worker on the labour section, and the outcome on the settled tabs. *@
+<thead class="bg-surface-raised border-b border-line">
+    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+        @if (Tab is XeroAllocationStatus.Unallocated or XeroAllocationStatus.Allocated)
+        {
+            <th class="@HeadingClass("w-8")">
+                <input type="checkbox" checked="@AllSelected" @onchange="e => OnToggleAll.InvokeAsync(e.Value is true)" />
+            </th>
+        }
+        <th class="@HeadingClass()">Line</th>
+        <th class="@HeadingClass("text-right")">Net</th>
+        @foreach (var column in TabColumns)
+        {
+            <th class="@HeadingClass(column.Width)">@column.Title</th>
+        }
+    </tr>
+</thead>
+
+@code {
+    [Parameter] public XeroAllocationStatus Tab { get; set; }
+    [Parameter] public bool LabourTab { get; set; }
+    /// <summary>Every row on the current page is selected — the select-all box reflects it.</summary>
+    [Parameter] public bool AllSelected { get; set; }
+    /// <summary>True to select the page's rows, false to clear the selection.</summary>
+    [Parameter] public EventCallback<bool> OnToggleAll { get; set; }
+
+    private const string Base = "sticky top-0 z-20 bg-surface-raised px-3 py-3";
+
+    private static string HeadingClass(string extra = "") => extra == "" ? Base : $"{Base} {extra}";
+
+    private IEnumerable<(string Title, string Width)> TabColumns => Tab switch
+    {
+        XeroAllocationStatus.Unallocated when LabourTab => new[] { ("Worker", "w-44"), ("", "") },
+        XeroAllocationStatus.Unallocated or XeroAllocationStatus.Disputed =>
+            new[] { ("Project", "w-44"), ("Cost centre", "w-52"), ("", "") },
+        XeroAllocationStatus.Allocated => OutcomeColumns("Allocated to"),
+        XeroAllocationStatus.Bucketed => OutcomeColumns("Bucket"),
+        _ => OutcomeColumns("Reason"),
+    };
+
+    private static (string Title, string Width)[] OutcomeColumns(string outcome) =>
+        new[] { (outcome, ""), ("By", "hidden md:table-cell"), ("", "") };
+}

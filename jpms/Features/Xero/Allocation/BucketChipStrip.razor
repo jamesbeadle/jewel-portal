@@ -1,0 +1,30 @@
+@namespace Jewel.JPMS.Features.Xero
+@using static Jewel.JPMS.Features.Xero.XeroLedgerDisplay
+
+<div class="mb-4 flex flex-wrap gap-2">
+    @foreach (var bucket in XeroBuckets.All)
+    {
+        <button class="@ChipClass(bucket)" @onclick="() => OnToggle.InvokeAsync(bucket)">
+            @bucket · @Money(Total(bucket))
+        </button>
+    }
+</div>
+
+@code {
+    /// <summary>The open tab's lines — each chip sums the bucketed ones in its own bucket.</summary>
+    [Parameter] public IReadOnlyList<XeroLedgerLine> Lines { get; set; } = Array.Empty<XeroLedgerLine>();
+    /// <summary>The bucket the tab is narrowed to, or null for all — a second press clears it.</summary>
+    [Parameter] public string? Active { get; set; }
+    [Parameter] public EventCallback<string> OnToggle { get; set; }
+
+    private decimal Total(string bucket) => Lines.Where(line => IsIn(line, bucket)).Sum(SignedNet);
+
+    private static bool IsIn(XeroLedgerLine line, string bucket) =>
+        line.AllocationStatus == XeroAllocationStatus.Bucketed && line.Bucket == bucket;
+
+    private string ChipClass(string bucket) =>
+        (Active == bucket
+            ? "bg-content text-surface border-content"
+            : "bg-surface text-content-muted border-line hover:text-content")
+        + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
+}

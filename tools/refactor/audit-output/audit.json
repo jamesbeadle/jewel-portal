@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-09-02T09:43:38+00:00",
+  "generatedAt": "2026-09-02T09:50:38+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
       "filesOverLimit": 657,
-      "totalFiles": 3434,
-      "worstFileLines": 488
+      "totalFiles": 3440,
+      "worstFileLines": 476
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 698,
-      "elseBlocks": 1169,
+      "functionsOverLimit": 697,
+      "elseBlocks": 1166,
       "measurementIsHeuristic": true
     },
     "functionNames": {
@@ -21,16 +21,16 @@
     "duplication": {
       "clones": 487,
       "duplicatedLines": 6073,
-      "totalLines": 216976,
+      "totalLines": 217063,
       "duplicatedPercentage": 2.8
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1507
+      "unprefixedBooleans": 1516
     },
     "comments": {
       "explanatoryCommentLines": 13680,
-      "filesWithComments": 1884,
+      "filesWithComments": 1885,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -48,7 +48,7 @@
       "pages": 92,
       "components": 133,
       "orphanComponents": 6,
-      "averagePageLines": 208
+      "averagePageLines": 207
     }
   },
   "details": {
@@ -57,14 +57,10 @@
       "summary": {
         "limit": 100,
         "filesOverLimit": 657,
-        "totalFiles": 3434,
-        "worstFileLines": 488
+        "totalFiles": 3440,
+        "worstFileLines": 476
       },
       "offenders": [
-        {
-          "file": "jpms/Pages/XeroAllocation.razor",
-          "lines": 488
-        },
         {
           "file": "jpms/Components/ValuationInvoicesSection.razor.cs",
           "lines": 476
@@ -152,6 +148,10 @@
         {
           "file": "jpms/Components/ValuationReportTable.razor",
           "lines": 395
+        },
+        {
+          "file": "jpms/Pages/XeroAllocation.razor",
+          "lines": 389
         },
         {
           "file": "api/Data/JpmsContext.Model.cs",
@@ -686,10 +686,6 @@
           "lines": 242
         },
         {
-          "file": "jpms/Pages/XeroAllocation.RowCoding.cs",
-          "lines": 242
-        },
-        {
           "file": "jpms/Pages/ProjectBuildingControlInspection.razor",
           "lines": 242
         },
@@ -740,6 +736,10 @@
         {
           "file": "jpms/Features/Site/Programme/RelevantEventsList.razor",
           "lines": 233
+        },
+        {
+          "file": "jpms/Pages/XeroAllocation.RowCoding.cs",
+          "lines": 232
         },
         {
           "file": "jpms/Components/CostCentreCostOfSalesModal.razor",
@@ -2695,8 +2695,8 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 698,
-        "elseBlocks": 1169,
+        "functionsOverLimit": 697,
+        "elseBlocks": 1166,
         "measurementIsHeuristic": true
       },
       "offenders": [
@@ -3131,7 +3131,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1507
+        "unprefixedBooleans": 1516
       },
       "offenders": {
         "abbreviations": [
@@ -3594,7 +3594,7 @@
       "name": "comments",
       "summary": {
         "explanatoryCommentLines": 13680,
-        "filesWithComments": 1884,
+        "filesWithComments": 1885,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4919,20 +4919,10 @@
         "pages": 92,
         "components": 133,
         "orphanComponents": 6,
-        "averagePageLines": 208
+        "averagePageLines": 207
       },
       "offenders": {
         "pages": [
-          {
-            "page": "jpms/Pages/XeroAllocation.razor",
-            "lines": 488,
-            "widgets": [
-              "table",
-              "modal",
-              "loadGate",
-              "export"
-            ]
-          },
           {
             "page": "jpms/Pages/ProjectLabour.razor",
             "lines": 472,
@@ -4976,6 +4966,16 @@
           {
             "page": "jpms/Pages/ProjectVariations.razor",
             "lines": 411,
+            "widgets": [
+              "table",
+              "modal",
+              "loadGate",
+              "export"
+            ]
+          },
+          {
+            "page": "jpms/Pages/XeroAllocation.razor",
+            "lines": 389,
             "widgets": [
               "table",
               "modal",
@@ -5700,7 +5700,7 @@
           },
           {
             "component": "jpms/Components/SearchSelect.razor",
-            "reusedBy": 47
+            "reusedBy": 48
           },
           {
             "component": "jpms/Components/ExportToExcelButton.razor",
@@ -6234,7 +6234,7 @@
       "summary": {
         "clones": 487,
         "duplicatedLines": 6073,
-        "totalLines": 216976,
+        "totalLines": 217063,
         "duplicatedPercentage": 2.8
       },
       "offenders": [

@@ -92,18 +92,8 @@ public partial class XeroAllocation
     private async Task BulkBucketAsync() =>
         await ApplyAsync(new SetXeroAllocation(selectedIds.ToList(), XeroAllocationAction.AllocateToBucket, Bucket: bulkBucket));
 
-    private decimal BucketTotal(string bucket) =>
-        Lines?.Where(line => line.AllocationStatus == XeroAllocationStatus.Bucketed && line.Bucket == bucket)
-              .Sum(SignedNet) ?? 0m;
-
     private void ToggleBucketFilter(string bucket) =>
         bucketFilter = bucketFilter == bucket ? null : bucket;
-
-    private string BucketChipClass(string bucket) =>
-        (bucketFilter == bucket
-            ? "bg-content text-surface border-content"
-            : "bg-surface text-content-muted border-line hover:text-content")
-        + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
 
     // -- selection & per-line choices ----------------------------------------
 
@@ -232,9 +222,9 @@ public partial class XeroAllocation
         }
     }
 
-    private void ToggleSelectAll(ChangeEventArgs args)
+    private void ToggleSelectAll(bool selectAll)
     {
-        if (args.Value is true)
+        if (selectAll)
             foreach (var line in Paged) selectedIds.Add(line.XeroLedgerLineId);
         else
             selectedIds.Clear();
