@@ -1,0 +1,43 @@
+@namespace Jewel.JPMS.Features.Labour
+
+<table class="w-full text-sm max-w-3xl">
+    <thead>
+        <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+            <th class="py-2 pr-3">Supplier</th><th class="py-2 pr-3">Date</th>
+            <th class="py-2 pr-3">Description</th><th class="py-2 pr-3 text-right">Net £</th>
+            <th class="py-2 pr-3">Settles timesheets of</th><th class="py-2"></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var line in Lines)
+        {
+            <tr class="border-b border-line/60">
+                <td class="py-1.5 pr-3 text-content">@line.ContactName</td>
+                <td class="py-1.5 pr-3 text-content-subtle">@(line.Date?.ToString("dd MMM yy") ?? "—")</td>
+                <td class="py-1.5 pr-3 text-content-subtle truncate max-w-xs" title="@line.Description">@line.Description</td>
+                <td class="py-1.5 pr-3 text-right tabular-nums">@line.Net.ToString("N2")</td>
+                <td class="py-1.5 pr-3">
+                    <select class="field" @onchange="@(args => OnSettlesPicked.InvokeAsync((line.XeroLedgerLineId, (string)args.Value!)))">
+                        <option value="">Subcontractor…</option>
+                        @foreach (var subcontractor in Subcontractors)
+                        {
+                            <option value="@subcontractor.Id">@subcontractor.Name</option>
+                        }
+                    </select>
+                </td>
+                <td class="py-1.5 text-right">
+                    <button type="button" class="btn-secondary" @onclick="() => OnMarkCovered.InvokeAsync(line)">Mark covered</button>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@code {
+    [Parameter] public IReadOnlyList<XeroLedgerLine> Lines { get; set; } = Array.Empty<XeroLedgerLine>();
+    /// <summary>The subcontractor companies behind the project's workers — the "settles" choices.</summary>
+    [Parameter] public IReadOnlyList<(string Id, string Name)> Subcontractors { get; set; } = Array.Empty<(string, string)>();
+    /// <summary>A line's "settles timesheets of" pick: the line id and the chosen subcontractor id.</summary>
+    [Parameter] public EventCallback<(string LineId, string SubcontractorId)> OnSettlesPicked { get; set; }
+    [Parameter] public EventCallback<XeroLedgerLine> OnMarkCovered { get; set; }
+}

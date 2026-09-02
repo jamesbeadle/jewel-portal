@@ -1,0 +1,34 @@
+@namespace Jewel.JPMS.Features.Xero
+
+<header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
+    <div>
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Financials · Xero</p>
+        <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cost allocation</h1>
+        <p class="text-sm text-content-muted mt-2">
+            Reconcile the accounts system with the projects: every Xero cost-of-sales purchase line
+            (nominal accounts starting 3) is allocated to a project and master cost centre — or split
+            across several centres. Suggestions come from the line's Xero tracking — you confirm.
+            Once every line of a draft bill (published from Dext) is allocated, its Sites and Cost Code
+            tracking are confirmed back to Xero and the bill is approved automatically.
+        </p>
+    </div>
+    <div class="flex items-center gap-4 whitespace-nowrap">
+        <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
+                disabled="@Busy" @onclick="() => OnRecheck.InvokeAsync()">
+            @(Rechecking ? "Re-checking…" : "Re-check matches")
+        </button>
+        <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
+                disabled="@Busy" @onclick="() => OnSync.InvokeAsync()">
+            @(Syncing ? "Syncing…" : "Sync from Xero")
+        </button>
+    </div>
+</header>
+
+@code {
+    /// <summary>Any page work in flight — both buttons wait for it.</summary>
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool Rechecking { get; set; }
+    [Parameter] public bool Syncing { get; set; }
+    [Parameter] public EventCallback OnRecheck { get; set; }
+    [Parameter] public EventCallback OnSync { get; set; }
+}

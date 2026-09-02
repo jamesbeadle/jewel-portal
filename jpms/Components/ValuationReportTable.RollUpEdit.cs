@@ -1,11 +1,12 @@
+using static Jewel.JPMS.Features.Commercial.ValuationReportDisplay;
 
 namespace Jewel.JPMS.Components;
 
 public partial class ValuationReportTable
 {
     // ---- Consolidated % edit ---------------------------------------------------
-    // Shares the single-cell editor's state (editValue / editError / editSaving / editInput) so
-    // exactly one editor is ever open. Enter or the tick saves, Esc or the cross discards, and
+    // Shares the single-cell editor's state (editValue / editError / editSaving) so exactly one
+    // editor is ever open. Enter or the tick saves, Esc or the cross discards, and
     // clicking away saves a changed, valid value — the same stance as a line's % editor.
     private void StartRollUpEdit(VariationRollUp<ValuationLineItem> rollUp)
     {
@@ -14,7 +15,6 @@ public partial class ValuationReportTable
         editingRollUpKey = rollUp.Key;
         editValue = PercentText(RollUpPercent(rollUp));
         editError = false;
-        focusPending = true;
     }
 
     private void CancelRollUpEdit()

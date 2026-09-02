@@ -1,0 +1,47 @@
+@namespace Jewel.JPMS.Features.Commercial
+@using static Jewel.JPMS.Features.Commercial.ValuationReportDisplay
+
+@* A bill section's accordion header: the chevron, the title, the line count, and the section's
+   claimed / this-period / total figures — the claim pair only while a claim is selected. *@
+<button type="button" @onclick="OnToggle" aria-expanded="@IsOpen"
+        class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
+    <svg class="@(IsOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 6l6 6-6 6" />
+    </svg>
+    <span class="font-semibold text-content whitespace-nowrap">@Title</span>
+    <span class="text-xs text-content-subtle whitespace-nowrap">
+        @LineCount @(LineCount == 1 ? "line" : "lines")
+    </span>
+    <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
+        @if (ShowClaim)
+        {
+            <span class="text-sm">
+                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
+                <span class="text-content-muted">@Money(Claimed) (@Pct(ClaimedPercent))</span>
+            </span>
+            <span class="text-sm">
+                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">This period</span>
+                <span class="text-content-muted">@Money(Period)</span>
+            </span>
+        }
+        <span class="text-sm">
+            <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Total</span>
+            <span class="text-content font-medium">@Money(Amount)</span>
+        </span>
+    </span>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public string Title { get; set; } = "";
+    [Parameter] public int LineCount { get; set; }
+    [Parameter] public decimal Amount { get; set; }
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback OnToggle { get; set; }
+    /// <summary>A claim is selected — the claimed and this-period figures read beside the total.</summary>
+    [Parameter] public bool ShowClaim { get; set; }
+    [Parameter] public decimal Claimed { get; set; }
+    [Parameter] public decimal ClaimedPercent { get; set; }
+    [Parameter] public decimal Period { get; set; }
+}

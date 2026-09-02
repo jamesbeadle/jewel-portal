@@ -32,29 +32,8 @@ else
        the columns the reclaimed space. *@
     <section class="w-full px-6 py-8 md:py-12">
         <WorkspaceSectionNav />
-        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
-            <div>
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Financials · Xero</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cost allocation</h1>
-                <p class="text-sm text-content-muted mt-2">
-                    Reconcile the accounts system with the projects: every Xero cost-of-sales purchase line
-                    (nominal accounts starting 3) is allocated to a project and master cost centre — or split
-                    across several centres. Suggestions come from the line's Xero tracking — you confirm.
-                    Once every line of a draft bill (published from Dext) is allocated, its Sites and Cost Code
-                    tracking are confirmed back to Xero and the bill is approved automatically.
-                </p>
-            </div>
-            <div class="flex items-center gap-4 whitespace-nowrap">
-                <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
-                        disabled="@isBusy" @onclick="RecheckMatchesAsync">
-                    @(isRechecking ? "Re-checking…" : "Re-check matches")
-                </button>
-                <button class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4 disabled:opacity-50"
-                        disabled="@isBusy" @onclick="SyncAsync">
-                    @(isSyncing ? "Syncing…" : "Sync from Xero")
-                </button>
-            </div>
-        </header>
+        <AllocationPageHeader Busy="isBusy" Rechecking="isRechecking" Syncing="isSyncing"
+                              OnRecheck="RecheckMatchesAsync" OnSync="SyncAsync" />
 
         @if (syncMessage is not null)
         {
@@ -134,56 +113,24 @@ else
 
             @if (activeTab == XeroAllocationStatus.Unallocated && labourTab && selectedIds.Count > 0)
             {
-                <BulkSelectionBar Count="selectedIds.Count" OnClear="() => selectedIds.Clear()">
-                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
-                            title="Mark every selected line as settlement of its worker's month — lines without a linked subcontractor company or a bill date are skipped and reported"
-                            disabled="@isBusy" @onclick="BulkMarkCoverAsync">Mark selected as settlement</button>
-                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
-                            disabled="@isBusy" @onclick="BulkUnmarkCoverAsync">Un-mark selected</button>
-                </BulkSelectionBar>
+                <LabourBulkActions Count="selectedIds.Count" Busy="isBusy" OnClear="() => selectedIds.Clear()"
+                                   OnMarkCover="BulkMarkCoverAsync" OnUnmarkCover="BulkUnmarkCoverAsync" />
             }
 
             @if (activeTab == XeroAllocationStatus.Unallocated && !labourTab && selectedIds.Count > 0)
             {
-                <BulkSelectionBar Count="selectedIds.Count" OnClear="() => selectedIds.Clear()">
-                    <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
-                                  @bind-Value="bulkProjectId" />
-                    <SearchSelect Options="@CostCenterOptions" WidthClass="w-52" Placeholder="Cost centre…"
-                                  @bind-Value="bulkCostCenterCode" />
-                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
-                            disabled="@(isBusy || string.IsNullOrEmpty(bulkProjectId) || string.IsNullOrEmpty(bulkCostCenterCode))"
-                            @onclick="BulkAllocateAsync">Allocate selected</button>
-                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
-                            title="Save the project and set its Xero site on every selected line — moves them to that project's tab, cost centres to follow"
-                            disabled="@(isBusy || string.IsNullOrEmpty(bulkProjectId))"
-                            @onclick="BulkSetProjectAsync">Set selected</button>
-                    <span class="text-content-subtle">·</span>
-                    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm" @bind="bulkBucket">
-                        <option value="">Bucket…</option>
-                        @foreach (var bucket in XeroBuckets.All)
-                        {
-                            <option value="@bucket">@bucket</option>
-                        }
-                    </select>
-                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
-                            disabled="@(isBusy || string.IsNullOrEmpty(bulkBucket))" @onclick="BulkBucketAsync">Bucket selected</button>
-                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
-                            disabled="@isBusy" @onclick="BulkIgnoreAsync">Ignore selected</button>
-                </BulkSelectionBar>
+                <QueueBulkActions Count="selectedIds.Count" Busy="isBusy" OnClear="() => selectedIds.Clear()"
+                                  ProjectOptions="@ProjectOptions" CostCenterOptions="@CostCenterOptions"
+                                  @bind-ProjectId="bulkProjectId" @bind-CostCenterCode="bulkCostCenterCode" @bind-Bucket="bulkBucket"
+                                  OnAllocate="BulkAllocateAsync" OnSetProject="BulkSetProjectAsync"
+                                  OnBucket="BulkBucketAsync" OnIgnore="BulkIgnoreAsync" />
             }
 
             @if (activeTab == XeroAllocationStatus.Allocated && selectedIds.Count > 0)
             {
-                <BulkSelectionBar Count="selectedIds.Count" OnClear="() => selectedIds.Clear()">
-                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
-                            disabled="@isBusy" @onclick="OpenSendToCostCentre">Send to cost centre…</button>
-                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
-                            title="Move the selected lines to another project — each keeps its cost centre, and the Xero site is rewritten"
-                            disabled="@isBusy" @onclick="OpenSendToProject">Send to project…</button>
-                    <button class="text-sm font-medium rounded-lg px-3 py-1.5 border border-line text-content-muted hover:text-content disabled:opacity-50"
-                            title="Return the selected lines to the unallocated queue"
-                            disabled="@isBusy" @onclick="BulkUndoAsync">Undo selected</button>
-                </BulkSelectionBar>
+                <AllocatedBulkActions Count="selectedIds.Count" Busy="isBusy" OnClear="() => selectedIds.Clear()"
+                                      OnSendToCostCentre="OpenSendToCostCentre" OnSendToProject="OpenSendToProject"
+                                      OnUndo="BulkUndoAsync" />
             }
 
             @* One panel: the bucket totals, the rows and the footer's line count and net are all
@@ -191,14 +138,7 @@ else
             <LoadGate IsLoading="@(!QueueReady)" Prominent="true" Label="Loading lines">
             @if (activeTab == XeroAllocationStatus.Bucketed)
             {
-                <div class="mb-4 flex flex-wrap gap-2">
-                    @foreach (var bucket in XeroBuckets.All)
-                    {
-                        <button class="@BucketChipClass(bucket)" @onclick="() => ToggleBucketFilter(bucket)">
-                            @bucket · @Money(BucketTotal(bucket))
-                        </button>
-                    }
-                </div>
+                <BucketChipStrip Lines="@(Lines ?? Array.Empty<XeroLedgerLine>())" Active="@bucketFilter" OnToggle="ToggleBucketFilter" />
             }
 
             @* The table used to run 82rem wide — date, supplier and description each had a
@@ -212,47 +152,8 @@ else
                entries would be clipped at the container's edge. *@
             <div class="rounded-xl border border-line bg-surface @(IsRowMenuOpen ? "" : "overflow-x-auto overflow-y-auto max-h-[85vh]")">
                 <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            @if (activeTab is XeroAllocationStatus.Unallocated or XeroAllocationStatus.Allocated)
-                            {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-8">
-                                    <input type="checkbox" checked="@AllVisibleSelected" @onchange="ToggleSelectAll" />
-                                </th>
-                            }
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">Line</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right">Net</th>
-                            @if (activeTab == XeroAllocationStatus.Unallocated && labourTab)
-                            {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-44">Worker</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
-                            }
-                            else if (activeTab == XeroAllocationStatus.Unallocated)
-                            {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-44">Project</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-52">Cost centre</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
-                            }
-                            else if (activeTab == XeroAllocationStatus.Disputed)
-                            {
-                                @* The dispute workbench: the coding both sides are converging on is
-                                   edited and SAVED here (visible to the other party), the thread is a
-                                   click away, and either side returns the line to allocation. *@
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-44">Project</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-52">Cost centre</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
-                            }
-                            else
-                            {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3">
-                                    @(activeTab == XeroAllocationStatus.Allocated ? "Allocated to"
-                                      : activeTab == XeroAllocationStatus.Bucketed ? "Bucket" : "Reason")
-                                </th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 hidden md:table-cell">By</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3"></th>
-                            }
-                        </tr>
-                    </thead>
+                    <AllocationTableHeader Tab="activeTab" LabourTab="labourTab"
+                                           AllSelected="AllVisibleSelected" OnToggleAll="ToggleSelectAll" />
                     <tbody class="divide-y divide-line">
                         @foreach (var line in Paged)
                         {

@@ -1,0 +1,51 @@
+@namespace Jewel.JPMS.Features.DocumentControl
+@using static Jewel.JPMS.Features.DocumentControl.DocumentControlDisplay
+
+@* The source email, for context. Read live from the mailbox while the message exists; the
+   snapshot taken at send time is the fallback, so the context never goes blank. *@
+<div class="rounded-lg bg-surface-raised border border-line p-3 space-y-2">
+    <div class="flex items-center justify-between gap-3">
+        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Source email</p>
+        <button type="button" class="text-xs text-accent hover:underline"
+                @onclick="() => OnToggle.InvokeAsync()">@(Open ? "Hide" : "Show")</button>
+    </div>
+    <p class="text-sm text-content">
+        <span class="font-medium">@DisplaySender(Item)</span>
+        <span class="text-content-subtle"> — @Date(Item.ReceivedAt)</span>
+    </p>
+    @if (!string.IsNullOrWhiteSpace(Item.Subject))
+    {
+        <p class="text-sm text-content">@Item.Subject</p>
+    }
+    @if (Open)
+    {
+        @if (Loading)
+        {
+            <p class="text-sm text-content-subtle italic">Loading message…</p>
+        }
+        else if (Email is { } detail && !string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
+        {
+            <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto max-h-[24rem] overflow-y-auto">@((MarkupString)detail.BodyHtml)</div>
+        }
+        else if (Email is { } plain && !string.IsNullOrWhiteSpace(plain.BodyHtml))
+        {
+            <p class="text-sm text-content whitespace-pre-wrap max-h-[24rem] overflow-y-auto">@plain.BodyHtml</p>
+        }
+        else
+        {
+            <p class="text-sm text-content-subtle italic">
+                The email couldn't be read from the mailbox (it may have been moved or deleted) —
+                the sender, date and subject above were captured when the document was sent here.
+            </p>
+        }
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public DocumentControlItem Item { get; set; } = default!;
+    [Parameter] public bool Open { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    /// <summary>The live message, once read; null falls back to the snapshotted envelope above.</summary>
+    [Parameter] public MailboxMessageDetail? Email { get; set; }
+    [Parameter] public EventCallback OnToggle { get; set; }
+}

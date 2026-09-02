@@ -1,4 +1,5 @@
 using Jewel.JPMS.Commercial;
+using static Jewel.JPMS.Features.Commercial.ValuationReportDisplay;
 
 namespace Jewel.JPMS.Components;
 

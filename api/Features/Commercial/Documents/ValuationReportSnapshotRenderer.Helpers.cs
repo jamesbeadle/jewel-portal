@@ -1,10 +1,5 @@
-using System.Globalization;
-using Jewel.JPMS.Api.Features.Requests.Documents;
-using Jewel.JPMS.Contracts.Commercial;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
-using MigraDoc.Rendering;
-using PdfSharp.Fonts;
 
 using static Jewel.JPMS.Api.Features.Documents.JewelDocumentStyle;
 
@@ -12,8 +7,6 @@ namespace Jewel.JPMS.Api.Features.Commercial.Documents;
 
 public static partial class ValuationReportSnapshotRenderer
 {
-    // ---- Helpers ------------------------------------------------------------------------------
-
     private static void SectionHeading(Section section, string text)
     {
         var p = section.AddParagraph(text);
@@ -74,31 +67,7 @@ public static partial class ValuationReportSnapshotRenderer
         ValueCell(row.Cells[3], v2);
     }
 
-    private static void LabelCell(Cell cell, string text)
-    {
-        cell.Shading.Color = Panel;
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
-        var p = cell.AddParagraph(text);
-        p.Format.Font.Size = 8;
-        p.Format.Font.Bold = true;
-        p.Format.Font.Color = Muted;
-    }
-
-    private static void ValueCell(Cell cell, string text)
-    {
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
-        var p = cell.AddParagraph(string.IsNullOrWhiteSpace(text) ? "—" : text);
-        p.Format.Font.Size = 9;
-        p.Format.Font.Color = Ink;
-    }
-
-
-    private static void SpaceBefore(Paragraph p, double mm) => p.Format.SpaceBefore = Unit.FromMillimeter(mm);
-    private static void SpaceAfter(Paragraph p, double mm) => p.Format.SpaceAfter = Unit.FromMillimeter(mm);
-
-
     private static string Money(decimal value) => value.ToString("£#,##0.00;-£#,##0.00", Uk);
     private static string Num(decimal value) => value.ToString("0.##", Uk);
     private static string Pct(decimal value) => value.ToString("0.##", Uk) + "%";
-    private static string DateTime(DateTimeOffset value) => value.ToString("dd MMM yyyy HH:mm", Uk);
 }

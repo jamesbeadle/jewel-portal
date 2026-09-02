@@ -1,7 +1,23 @@
+using Jewel.JPMS.Features.Triage.Queue;
+
 namespace Jewel.JPMS.Pages;
 
 public partial class TriageQueue
 {
+    private int? InboxTotal => view switch
+    {
+        QueueView.Active => queueArrived ? total : null,
+        QueueView.Discarded => discardedArrived ? discardedTotal : null,
+        _ => taggedArrived ? taggedTotal : null,
+    };
+
+    private string SelectPrompt => view switch
+    {
+        QueueView.Active => "Select an email to process it.",
+        QueueView.Discarded => "Select a discarded email to view it.",
+        _ => "Select a tagged email to manage its tags.",
+    };
+
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();

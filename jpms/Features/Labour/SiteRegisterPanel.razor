@@ -1,0 +1,49 @@
+@namespace Jewel.JPMS.Features.Labour
+
+<Panel Title="Site register" BodyClass="p-0" IsLoading="@Loading" LoadingLabel="Loading the site register">
+    @if (LoadFailed)
+    {
+        <p class="p-5 text-sm text-negative">Couldn't load the site register — reload to try again.</p>
+    }
+    else if (Rows.Count == 0)
+    {
+        <p class="p-5 text-sm text-content-subtle italic">No attendance recorded yet.</p>
+    }
+    else
+    {
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                    <th class="px-5 py-3">Date</th><th class="px-2 py-3">Worker</th>
+                    <th class="px-2 py-3">In</th><th class="px-5 py-3">Out</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Rows)
+                {
+                    <tr class="border-b border-line/60">
+                        <td class="px-5 py-1.5 whitespace-nowrap">@row.WorkDate.ToString("ddd dd MMM")</td>
+                        <td class="px-2 py-1.5 text-content whitespace-nowrap">@row.WorkerName</td>
+                        <td class="px-2 py-1.5 text-content-subtle tabular-nums">@row.SignedInAt.ToLocalTime().ToString("HH:mm")</td>
+                        <td class="px-5 py-1.5">
+                            @if (row.SignedOutAt is { } signedOut)
+                            {
+                                <span class="text-content-subtle tabular-nums">@signedOut.ToLocalTime().ToString("HH:mm")</span>
+                            }
+                            else
+                            {
+                                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">no sign-out</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</Panel>
+
+@code {
+    [Parameter] public IReadOnlyList<SiteAttendance> Rows { get; set; } = Array.Empty<SiteAttendance>();
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public bool LoadFailed { get; set; }
+}

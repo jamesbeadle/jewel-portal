@@ -57,8 +57,8 @@ public static partial class ValuationReportSnapshotRenderer
         SpaceAfter(stamp, 2);
 
         var date = row.Cells[1].AddParagraph(document.IsDraft
-            ? $"Prepared  {DateTime(snapshot.TakenAt)}"
-            : $"Snapshot taken  {DateTime(snapshot.TakenAt)}");
+            ? $"Prepared  {DateAndTime(snapshot.TakenAt)}"
+            : $"Snapshot taken  {DateAndTime(snapshot.TakenAt)}");
         date.Format.Font.Size = 8;
         date.Format.Font.Color = Gold;
 
@@ -97,7 +97,7 @@ public static partial class ValuationReportSnapshotRenderer
             "Client", document.ClientName);
         AddGridRow(table,
             "Statement", snapshot.Label,
-            document.IsDraft ? "Prepared" : "Snapshot taken", DateTime(snapshot.TakenAt));
+            document.IsDraft ? "Prepared" : "Snapshot taken", DateAndTime(snapshot.TakenAt));
         AddGridRow(table,
             "Revised contract sum", Money(snapshot.RevisedContractSum),
             "Total works complete", Money(snapshot.TotalWorksComplete));
@@ -393,8 +393,8 @@ public static partial class ValuationReportSnapshotRenderer
         footer.AddTab();
         footer.AddFormattedText(
             document.IsDraft
-                ? $"Prepared {DateTime(snapshot.TakenAt)} · working copy of the live report"
-                : $"Snapshot taken {DateTime(snapshot.TakenAt)} · immutable record from the JPMS register",
+                ? $"Prepared {DateAndTime(snapshot.TakenAt)} · working copy of the live report"
+                : $"Snapshot taken {DateAndTime(snapshot.TakenAt)} · immutable record from the JPMS register",
             new Font { Color = Muted, Size = 7 });
 
         footer.Format.TabStops.AddTabStop(Unit.FromCentimeter(18.3), TabAlignment.Right);

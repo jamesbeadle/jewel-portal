@@ -1,0 +1,49 @@
+@namespace Jewel.JPMS.Features.Triage.Queue
+
+<header>
+    <p class="text-xs uppercase tracking-wider text-content-subtle font-medium">JPMS · projects@@jewelbb.co.uk</p>
+    @* Each strapline is a count, not a description, so it waits for its own list — it
+       simply does not render until the count is known (see the loading-states notes). *@
+    @if (Strapline is { } strapline)
+    {
+        <p class="text-sm text-content-muted mt-1">@strapline</p>
+    }
+</header>
+
+@* Sticky, so the pane's navigation stays in reach however far the list is scrolled
+   (bg-canvas so rows vanish behind it). *@
+<div class="sticky top-0 z-10 bg-canvas flex items-center gap-2 border-b border-line">
+    <button type="button" class="@TabClass(QueueView.Active)" @onclick="() => OnSwitchView.InvokeAsync(QueueView.Active)">Queue</button>
+    <button type="button" class="@TabClass(QueueView.Tagged)" @onclick="() => OnSwitchView.InvokeAsync(QueueView.Tagged)">Tagged</button>
+</div>
+
+@if (LoadError is not null)
+{
+    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@LoadError</p>
+}
+
+@code {
+    [Parameter] public QueueView View { get; set; }
+    /// <summary>The open view's count, or null while its list has not arrived.</summary>
+    [Parameter] public int? Total { get; set; }
+    [Parameter] public string? LoadError { get; set; }
+    [Parameter] public EventCallback<QueueView> OnSwitchView { get; set; }
+
+    private string? Strapline => (View, Total) switch
+    {
+        (QueueView.Active, { } total) => $"{total} email{Plural(total)} in the inbox waiting to be assigned to a request.",
+        (QueueView.Discarded, { } total) => $"{total} discarded email{Plural(total)} — restore one to put it back in the queue.",
+        (QueueView.Tagged, { } total) => $"{total} tagged email{Plural(total)} — add or remove tags to manage which processes use them.",
+        _ => null,
+    };
+
+    private static string Plural(int count) => count == 1 ? "" : "s";
+
+    private string TabClass(QueueView tab)
+    {
+        var baseClass = "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition";
+        return View == tab
+            ? $"{baseClass} border-accent text-content"
+            : $"{baseClass} border-transparent text-content-muted hover:text-content";
+    }
+}
