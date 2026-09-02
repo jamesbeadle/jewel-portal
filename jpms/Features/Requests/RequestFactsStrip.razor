@@ -1,0 +1,38 @@
+@namespace Jewel.JPMS.Features.Requests
+@using static Jewel.JPMS.Features.Requests.RequestDisplay
+
+@* At-a-glance facts run across the top rather than down a rail, so the columns below are
+   left for the substance: the request itself on the left, actions on the right. *@
+<div class="panel px-5 py-4 mb-5">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3 text-sm">
+        <MetaCell Label="Raised by" Value="@Record.RaisedByEmail" />
+        @* Issued is the official date the correspondent was notified. Rows predating the
+           IssuedAt backfill fall back to the internal created-on stamp rather than a dash. *@
+        <MetaCell Label="Issued" Value="@Date(Record.IssuedAt ?? Record.RaisedAt)" />
+        <MetaCell Label="Response due" Value="@Date(Record.ResponseDue)" />
+        <div>
+            <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle mb-0.5">Days outstanding</p>
+            <p class="@(Record.IsOverdue ? "text-negative font-semibold" : "text-content")">@(Record.DaysOutstanding is int d ? d.ToString() : "—")</p>
+        </div>
+        @* A closed record always shows its Closed fact — a legacy close with no recorded
+           date surfaces as a dash rather than hiding, so the gap is visible and fixable
+           (Edit facts requires a date on a closed record). *@
+        @if (Record.Status is RequestStatus.Closed || Record.ClosedAt is not null)
+        {
+            <MetaCell Label="Closed" Value="@Date(Record.ClosedAt)" />
+        }
+        <MetaCell Label="Drawing / detail" Value="@Dash(Record.DrawingRef)" />
+        <MetaCell Label="Related drawing / spec" Value="@Dash(Record.RelatedDrawingSpec)" />
+        @if (Record.Kind is not RequestType.Rfi)
+        {
+            <MetaCell Label="Value" Value="@(Record.Value is null ? "—" : Money(Record.Value.Value))" />
+        }
+        @* The system's own stamp, distinct from the official Issued date — when this record
+           was created in the register. Not editable; Issued is the date that is. *@
+        <MetaCell Label="Created" Value="@Date(Record.RaisedAt)" />
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Request Record { get; set; } = default!;
+}

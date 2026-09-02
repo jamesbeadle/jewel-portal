@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-02T14:01:33+00:00",
+  "generatedAt": "2026-09-02T14:06:51+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
       "filesOverLimit": 667,
-      "totalFiles": 3488,
+      "totalFiles": 3495,
       "worstFileLines": 475
     },
     "functionShape": {
@@ -21,16 +21,16 @@
     "duplication": {
       "clones": 478,
       "duplicatedLines": 5893,
-      "totalLines": 217963,
+      "totalLines": 218047,
       "duplicatedPercentage": 2.7
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1539
+      "unprefixedBooleans": 1544
     },
     "comments": {
       "explanatoryCommentLines": 13671,
-      "filesWithComments": 1906,
+      "filesWithComments": 1911,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -41,14 +41,14 @@
     "prose": {
       "longMemberChainLines": 2365,
       "deeplyIndentedLines": 2656,
-      "overlongLines": 1660,
+      "overlongLines": 1659,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 133,
       "orphanComponents": 6,
-      "averagePageLines": 203
+      "averagePageLines": 201
     }
   },
   "details": {
@@ -57,17 +57,13 @@
       "summary": {
         "limit": 100,
         "filesOverLimit": 667,
-        "totalFiles": 3488,
+        "totalFiles": 3495,
         "worstFileLines": 475
       },
       "offenders": [
         {
           "file": "worker/MailboxIntake/Graph/GraphMailClient.cs",
           "lines": 475
-        },
-        {
-          "file": "jpms/Pages/ProjectRequestDetail.razor",
-          "lines": 434
         },
         {
           "file": "api/Features/Registers/RegistersSlices.cs",
@@ -346,12 +342,12 @@
           "lines": 303
         },
         {
-          "file": "jpms/Pages/AdminSystem.razor",
+          "file": "jpms/Pages/ProjectRequestDetail.Menus.cs",
           "lines": 302
         },
         {
-          "file": "jpms/Pages/ProjectRequestDetail.Menus.cs",
-          "lines": 301
+          "file": "jpms/Pages/AdminSystem.razor",
+          "lines": 302
         },
         {
           "file": "jpms/Pages/ProjectValuation.razor.cs",
@@ -390,10 +386,6 @@
           "lines": 296
         },
         {
-          "file": "jpms/Pages/ProjectRequestDetail.DraftVariation.cs",
-          "lines": 295
-        },
-        {
           "file": "jpms/Components/ApprovedUserRow.razor",
           "lines": 295
         },
@@ -412,6 +404,10 @@
         {
           "file": "jpms/Pages/ProjectProgress.razor",
           "lines": 294
+        },
+        {
+          "file": "jpms/Pages/ProjectRequestDetail.DraftVariation.cs",
+          "lines": 292
         },
         {
           "file": "api/Features/Ai/Tools/AiRecordTools.Correspondence.cs",
@@ -534,6 +530,10 @@
           "lines": 262
         },
         {
+          "file": "jpms/Pages/ProjectRequestDetail.razor",
+          "lines": 262
+        },
+        {
           "file": "jpms/Pages/Workers.razor",
           "lines": 262
         },
@@ -575,10 +575,6 @@
         },
         {
           "file": "api/Features/Procurement/ProcurementFeatureRegistration.cs",
-          "lines": 255
-        },
-        {
-          "file": "jpms/Pages/ProjectRequestDetail.razor.cs",
           "lines": 255
         },
         {
@@ -647,6 +643,10 @@
         },
         {
           "file": "api/Features/Xero/Ledger/XeroLedgerEndpoints.cs",
+          "lines": 243
+        },
+        {
+          "file": "jpms/Pages/ProjectRequestDetail.razor.cs",
           "lines": 243
         },
         {
@@ -3082,7 +3082,7 @@
         },
         {
           "file": "jpms/Pages/ProjectRequestDetail.DraftVariation.cs",
-          "line": 139,
+          "line": 136,
           "name": "OnDraftLineCostCodeChanged"
         },
         {
@@ -3171,7 +3171,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1539
+        "unprefixedBooleans": 1544
       },
       "offenders": {
         "abbreviations": [
@@ -3634,7 +3634,7 @@
       "name": "comments",
       "summary": {
         "explanatoryCommentLines": 13671,
-        "filesWithComments": 1906,
+        "filesWithComments": 1911,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4341,7 +4341,7 @@
       "summary": {
         "longMemberChainLines": 2365,
         "deeplyIndentedLines": 2656,
-        "overlongLines": 1660,
+        "overlongLines": 1659,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4959,21 +4959,10 @@
         "pages": 92,
         "components": 133,
         "orphanComponents": 6,
-        "averagePageLines": 203
+        "averagePageLines": 201
       },
       "offenders": {
         "pages": [
-          {
-            "page": "jpms/Pages/ProjectRequestDetail.razor",
-            "lines": 434,
-            "widgets": [
-              "modal",
-              "form",
-              "loadGate",
-              "dropdown",
-              "panel"
-            ]
-          },
           {
             "page": "jpms/Pages/ProjectVariations.razor",
             "lines": 411,
@@ -5272,6 +5261,16 @@
               "form",
               "loadGate",
               "toast"
+            ]
+          },
+          {
+            "page": "jpms/Pages/ProjectRequestDetail.razor",
+            "lines": 262,
+            "widgets": [
+              "modal",
+              "form",
+              "loadGate",
+              "panel"
             ]
           },
           {
@@ -5732,7 +5731,7 @@
           },
           {
             "component": "jpms/Components/Modal.razor",
-            "reusedBy": 89
+            "reusedBy": 90
           },
           {
             "component": "jpms/Components/RequestAccessView.razor",
@@ -5747,12 +5746,12 @@
             "reusedBy": 37
           },
           {
-            "component": "jpms/Components/Panel.razor",
+            "component": "jpms/Components/FormField.razor",
             "reusedBy": 34
           },
           {
-            "component": "jpms/Components/FormField.razor",
-            "reusedBy": 33
+            "component": "jpms/Components/Panel.razor",
+            "reusedBy": 34
           },
           {
             "component": "jpms/Components/ProjectPageShell.razor",
@@ -6274,7 +6273,7 @@
       "summary": {
         "clones": 478,
         "duplicatedLines": 5893,
-        "totalLines": 217963,
+        "totalLines": 218047,
         "duplicatedPercentage": 2.7
       },
       "offenders": [

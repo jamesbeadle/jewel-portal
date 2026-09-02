@@ -1,0 +1,15 @@
+@namespace Jewel.JPMS.Features.Requests
+@using static Jewel.JPMS.Features.Requests.RequestDisplay
+
+<div class="panel p-5">
+    <h3 class="eyebrow mb-2">Response</h3>
+    <p class="text-sm text-content whitespace-pre-wrap">@Record.ResponseText</p>
+    @if (!string.IsNullOrWhiteSpace(Record.RespondedByEmail))
+    {
+        <p class="text-xs text-content-subtle mt-2">@Record.RespondedByEmail · @Date(Record.RespondedAt)</p>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Request Record { get; set; } = default!;
+}

@@ -1,27 +1,26 @@
 # Refactor audit
 
-Generated 2026-09-02 14:01 UTC.
+Generated 2026-09-02 14:06 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 667, totalFiles: 3488, worstFileLines: 475 |
+| fileLength | limit: 100, filesOverLimit: 667, totalFiles: 3495, worstFileLines: 475 |
 | functionShape | limit: 30, functionsOverLimit: 692, elseBlocks: 1153, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 478, duplicatedLines: 5893, totalLines: 217963, duplicatedPercentage: 2.7 |
-| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1539 |
-| comments | explanatoryCommentLines: 13671, filesWithComments: 1906, taskMarkers: 48 |
+| duplication | clones: 478, duplicatedLines: 5893, totalLines: 218047, duplicatedPercentage: 2.7 |
+| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1544 |
+| comments | explanatoryCommentLines: 13671, filesWithComments: 1911, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2365, deeplyIndentedLines: 2656, overlongLines: 1660, measurementIsHeuristic: True |
-| inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 203 |
+| prose | longMemberChainLines: 2365, deeplyIndentedLines: 2656, overlongLines: 1659, measurementIsHeuristic: True |
+| inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 201 |
 
 ## Worst files by length
 
 | File | Lines |
 | --- | --- |
 | worker/MailboxIntake/Graph/GraphMailClient.cs | 475 |
-| jpms/Pages/ProjectRequestDetail.razor | 434 |
 | api/Features/Registers/RegistersSlices.cs | 433 |
 | api/Features/Ai/Sources/AiFiledDocuments.cs | 428 |
 | jpms/Components/ManualWorkOrderModal.razor.cs | 428 |
@@ -40,5 +39,6 @@ Generated 2026-09-02 14:01 UTC.
 | jpms/Pages/ProjectValuation.razor | 377 |
 | api/Features/Requests/RequestContextAssembler.cs | 375 |
 | api/Features/Requests/Documents/RequestDocumentRenderer.Sections.cs | 373 |
+| api/Features/Xero/XeroClient.Http.cs | 373 |
 
 Full detail, including every offender list, is in `audit.json`.

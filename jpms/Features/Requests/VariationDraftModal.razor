@@ -1,0 +1,94 @@
+@namespace Jewel.JPMS.Features.Requests
+@using Jewel.JPMS.Contracts.Variations
+@using Jewel.JPMS.Features.CostCenters
+@inject CostCentersReadModel CostCenters
+
+@* The backdrop does not dismiss — a stray click must not throw away a drafted variation.
+   The X and Cancel still close it, and both keep the draft for reopening. *@
+<Modal IsOpen="IsOpen"
+       Title="Create Variation Order Quote"
+       ConfirmLabel="@(Busy ? "Raising…" : "Raise variation")"
+       ConfirmDisabled="@Busy"
+       DismissOnOverlayClick="false"
+       OnCancel="OnCancel"
+       OnConfirm="OnConfirm"
+       Class="max-w-2xl">
+    <div class="space-y-4">
+        @if (Error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+        }
+
+        <div class="">
+            <FormField Label="Title" Value="@Title" OnChange="TitleChanged" Required="true" />
+        </div>
+
+        <div class="">
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope description</label>
+            <textarea class="field" rows="6" value="@Description" @oninput="e => DescriptionChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"></textarea>
+        </div>
+
+        <div class="">
+            <FormField Label="Estimated value (£, optional)" Value="@Value" OnChange="ValueChanged" />
+        </div>
+
+        @if (Lines.Count > 0)
+        {
+            <div class="">
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suggested scope lines</label>
+                <p class="text-xs text-content-subtle mb-2">
+                    Ticked lines become the variation's scope, held as a draft bid package (@PackageTrade)@(HasRfq ? " ready to send to subcontractors" : " — send it out to subcontractors later, or price it yourselves"). Every ticked line needs a cost centre — that's the cost code its committed value lands on. Untick any line you don't want; untick them all to raise the variation on its own.
+                </p>
+                <ul class="space-y-1.5">
+                    @foreach (var (row, index) in Lines.Select((r, i) => (r, i)))
+                    {
+                        var i = index;
+                        <li>
+                            <label class="flex items-start gap-2 text-sm text-content">
+                                <input type="checkbox" class="mt-0.5" checked="@row.Accepted"
+                                       @onchange="e => OnLineAccepted.InvokeAsync((i, e.Value is true))" />
+                                <span>@row.Line.Description <span class="text-content-subtle">— @row.Line.Quantity @row.Line.Unit · @row.Line.Trade</span></span>
+                            </label>
+                            @if (row.Accepted)
+                            {
+                                @* A control, not a region: it renders disabled with a "Loading…"
+                                   placeholder rather than behind a gate, so the layout holds
+                                   still and a wrong choice cannot be made (CLAUDE.md). *@
+                                <select class="field mt-1 ml-6 min-w-[14rem] text-sm" value="@row.CostCode"
+                                        disabled="@(!CostCenters.IsLoaded)"
+                                        @onchange="e => OnLineCostCode.InvokeAsync((i, e.Value?.ToString() ?? string.Empty))">
+                                    <option value="">@(CostCenters.IsLoaded ? "Cost centre…" : "Loading…")</option>
+                                    @foreach (var centre in CostCenters.Alphabetical)
+                                    {
+                                        <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
+                                    }
+                                </select>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public string? Error { get; set; }
+    /// <summary>The draft is page-owned — the raise reads it — so every field binds back.</summary>
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public EventCallback<string> TitleChanged { get; set; }
+    [Parameter] public string Description { get; set; } = "";
+    [Parameter] public EventCallback<string> DescriptionChanged { get; set; }
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public IReadOnlyList<VariationDraftLine> Lines { get; set; } = Array.Empty<VariationDraftLine>();
+    /// <summary>The draft bid package's trade, as the page resolves it.</summary>
+    [Parameter] public string PackageTrade { get; set; } = "";
+    [Parameter] public bool HasRfq { get; set; }
+    [Parameter] public EventCallback<(int Index, bool Accepted)> OnLineAccepted { get; set; }
+    [Parameter] public EventCallback<(int Index, string CostCode)> OnLineCostCode { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+    [Parameter] public EventCallback OnConfirm { get; set; }
+}

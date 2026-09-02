@@ -75,18 +75,6 @@ public partial class ProjectRequestDetail
 
     private string VariationHref => variation is null ? "" : $"/projects/{ProjectId}/variations/{variation.VariationOrderId}";
 
-    // The reference the page leads with: once promoted, the official instrument number (RFI-014) —
-    // the number correspondents know it by — with the REQ container number as secondary context.
-    // A General request leads with its REQ-#### container number.
-    private string PrimaryReference =>
-        record is null ? "" :
-        record.Kind != RequestType.General && !string.IsNullOrWhiteSpace(record.Reference)
-            ? record.Reference
-            : string.IsNullOrEmpty(record.DisplayNumber) ? record.Reference : record.DisplayNumber;
-
-    private bool ShowContainerNumber =>
-        record is not null && !string.IsNullOrEmpty(record.DisplayNumber) && record.DisplayNumber != PrimaryReference;
-
     private string RegisterHref => $"/projects/{ProjectId}/requests";
 
     // Streams the official PDF from the api, regenerated from SQL on every download.
