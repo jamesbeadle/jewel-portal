@@ -1,0 +1,12 @@
+@namespace Jewel.JPMS.Features.Cvr
+
+@* The muted memo line under a money figure ("+£205,958 variations", "£78,195 retention held").
+   Null renders nothing — same rule as MarginLine. *@
+@if (Text is not null)
+{
+    <span class="block text-[11px] font-normal text-content-subtle">@Text</span>
+}
+
+@code {
+    [Parameter] public string? Text { get; set; }
+}

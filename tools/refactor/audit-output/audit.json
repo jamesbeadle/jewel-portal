@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-02T05:46:53+00:00",
+  "generatedAt": "2026-09-02T06:30:17+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
       "filesOverLimit": 644,
-      "totalFiles": 3333,
-      "worstFileLines": 736
+      "totalFiles": 3339,
+      "worstFileLines": 665
     },
     "functionShape": {
       "limit": 30,
@@ -21,16 +21,16 @@
     "duplication": {
       "clones": 488,
       "duplicatedLines": 6207,
-      "totalLines": 216128,
+      "totalLines": 216161,
       "duplicatedPercentage": 2.87
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1474
+      "unprefixedBooleans": 1475
     },
     "comments": {
-      "explanatoryCommentLines": 13726,
-      "filesWithComments": 1811,
+      "explanatoryCommentLines": 13724,
+      "filesWithComments": 1817,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -39,16 +39,16 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 2398,
+      "longMemberChainLines": 2397,
       "deeplyIndentedLines": 2801,
-      "overlongLines": 1703,
+      "overlongLines": 1699,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 131,
       "orphanComponents": 6,
-      "averagePageLines": 231
+      "averagePageLines": 229
     }
   },
   "details": {
@@ -57,14 +57,10 @@
       "summary": {
         "limit": 100,
         "filesOverLimit": 644,
-        "totalFiles": 3333,
-        "worstFileLines": 736
+        "totalFiles": 3339,
+        "worstFileLines": 665
       },
       "offenders": [
-        {
-          "file": "jpms/Pages/ProfitSummary.razor",
-          "lines": 736
-        },
         {
           "file": "jpms/Pages/CashForecast.razor",
           "lines": 665
@@ -84,6 +80,10 @@
         {
           "file": "jpms/Pages/ProjectWorkOrders.razor",
           "lines": 548
+        },
+        {
+          "file": "jpms/Pages/ProfitSummary.razor",
+          "lines": 546
         },
         {
           "file": "jpms/Pages/TriageQueue.Outbox.cs",
@@ -770,10 +770,6 @@
           "lines": 237
         },
         {
-          "file": "jpms/Pages/ProfitSummary.Figures.cs",
-          "lines": 237
-        },
-        {
           "file": "api/Features/Places/LocalBusinessSearch.cs",
           "lines": 236
         },
@@ -1202,6 +1198,10 @@
           "lines": 189
         },
         {
+          "file": "jpms/Pages/ProfitSummary.Figures.cs",
+          "lines": 189
+        },
+        {
           "file": "api/Features/Procurement/Queries/ResolveBidPackageTradeHandler.cs",
           "lines": 188
         },
@@ -1308,6 +1308,10 @@
         {
           "file": "jpms/Pages/WeeklyCashflow.razor.cs",
           "lines": 178
+        },
+        {
+          "file": "jpms/Pages/ProfitSummary.razor.cs",
+          "lines": 177
         },
         {
           "file": "jpms/Services/HttpProgressStore.cs",
@@ -1476,10 +1480,6 @@
         {
           "file": "jpms/Pages/Subcontractors.Consolidation.cs",
           "lines": 164
-        },
-        {
-          "file": "jpms/Pages/ProfitSummary.razor.cs",
-          "lines": 163
         },
         {
           "file": "jpms/Components/ProgressUpdateForm.razor",
@@ -1994,6 +1994,10 @@
           "lines": 127
         },
         {
+          "file": "jpms/Pages/ProfitSummary.Cumulative.cs",
+          "lines": 127
+        },
+        {
           "file": "jpms/Services/HttpProcurementStore.cs",
           "lines": 127
         },
@@ -2023,10 +2027,6 @@
         },
         {
           "file": "jpms/Features/Triage/Panels/Actions/SystemActionKind.cs",
-          "lines": 125
-        },
-        {
-          "file": "jpms/Pages/ProfitSummary.Cumulative.cs",
           "lines": 125
         },
         {
@@ -3079,7 +3079,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1474
+        "unprefixedBooleans": 1475
       },
       "offenders": {
         "abbreviations": [
@@ -3541,8 +3541,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13726,
-        "filesWithComments": 1811,
+        "explanatoryCommentLines": 13724,
+        "filesWithComments": 1817,
         "taskMarkers": 48
       },
       "offenders": [
@@ -3919,7 +3919,7 @@
           },
           {
             "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 542
+            "line": 378
           }
         ],
         "inlineStyles": [
@@ -3970,6 +3970,10 @@
           {
             "file": "jpms/Components/SearchSelect.razor",
             "line": 30
+          },
+          {
+            "file": "jpms/Features/Cvr/ProfitTableRow.razor",
+            "line": 21
           },
           {
             "file": "jpms/Features/Cvr/RunningProfitTable.razor",
@@ -4089,31 +4093,27 @@
           },
           {
             "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 386
+            "line": 384
           },
           {
             "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 548
+            "line": 421
           },
           {
             "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 585
+            "line": 422
           },
           {
             "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 586
+            "line": 494
           },
           {
             "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 658
+            "line": 496
           },
           {
             "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 660
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 667
+            "line": 503
           },
           {
             "file": "jpms/Pages/ProjectWorkOrderAllocation.razor",
@@ -4247,9 +4247,9 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 2398,
+        "longMemberChainLines": 2397,
         "deeplyIndentedLines": 2801,
-        "overlongLines": 1703,
+        "overlongLines": 1699,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4867,19 +4867,10 @@
         "pages": 92,
         "components": 131,
         "orphanComponents": 6,
-        "averagePageLines": 231
+        "averagePageLines": 229
       },
       "offenders": {
         "pages": [
-          {
-            "page": "jpms/Pages/ProfitSummary.razor",
-            "lines": 736,
-            "widgets": [
-              "table",
-              "loadGate",
-              "export"
-            ]
-          },
           {
             "page": "jpms/Pages/CashForecast.razor",
             "lines": 665,
@@ -4911,6 +4902,14 @@
               "loadGate",
               "toast",
               "dropdown",
+              "export"
+            ]
+          },
+          {
+            "page": "jpms/Pages/ProfitSummary.razor",
+            "lines": 546,
+            "widgets": [
+              "loadGate",
               "export"
             ]
           },
@@ -6181,7 +6180,7 @@
       "summary": {
         "clones": 488,
         "duplicatedLines": 6207,
-        "totalLines": 216128,
+        "totalLines": 216161,
         "duplicatedPercentage": 2.87
       },
       "offenders": [

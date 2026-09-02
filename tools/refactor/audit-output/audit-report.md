@@ -1,31 +1,31 @@
 # Refactor audit
 
-Generated 2026-09-02 05:46 UTC.
+Generated 2026-09-02 06:30 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 644, totalFiles: 3333, worstFileLines: 736 |
+| fileLength | limit: 100, filesOverLimit: 644, totalFiles: 3339, worstFileLines: 665 |
 | functionShape | limit: 30, functionsOverLimit: 698, elseBlocks: 1182, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 488, duplicatedLines: 6207, totalLines: 216128, duplicatedPercentage: 2.87 |
-| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1474 |
-| comments | explanatoryCommentLines: 13726, filesWithComments: 1811, taskMarkers: 48 |
+| duplication | clones: 488, duplicatedLines: 6207, totalLines: 216161, duplicatedPercentage: 2.87 |
+| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1475 |
+| comments | explanatoryCommentLines: 13724, filesWithComments: 1817, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2398, deeplyIndentedLines: 2801, overlongLines: 1703, measurementIsHeuristic: True |
-| inventory | pages: 92, components: 131, orphanComponents: 6, averagePageLines: 231 |
+| prose | longMemberChainLines: 2397, deeplyIndentedLines: 2801, overlongLines: 1699, measurementIsHeuristic: True |
+| inventory | pages: 92, components: 131, orphanComponents: 6, averagePageLines: 229 |
 
 ## Worst files by length
 
 | File | Lines |
 | --- | --- |
-| jpms/Pages/ProfitSummary.razor | 736 |
 | jpms/Pages/CashForecast.razor | 665 |
 | jpms/Pages/WeeklyCashflow.razor | 604 |
 | jpms/Services/Excel/ExcelWorkbookWriter.cs | 589 |
 | api/Features/Ai/Tools/AiCommercialTools.cs | 560 |
 | jpms/Pages/ProjectWorkOrders.razor | 548 |
+| jpms/Pages/ProfitSummary.razor | 546 |
 | jpms/Pages/TriageQueue.Outbox.cs | 520 |
 | api/Features/Ai/Sources/AiSourceReader.cs | 518 |
 | jpms/Components/ValuationReportTable.razor | 517 |

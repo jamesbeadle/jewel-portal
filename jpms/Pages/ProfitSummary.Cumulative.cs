@@ -1,3 +1,5 @@
+using Jewel.JPMS.Features.Cvr;
+using static Jewel.JPMS.Features.Cvr.ProfitDisplay;
 using Jewel.JPMS.Commercial;
 using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Features.Procurement;

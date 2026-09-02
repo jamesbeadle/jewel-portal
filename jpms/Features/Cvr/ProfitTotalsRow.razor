@@ -1,0 +1,44 @@
+@namespace Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+
+@* The table's footer: the selection summed, band by band, with the same margin and memo lines
+   as a project row and the cost movement against target as the final cost's memo. *@
+<tr class="font-semibold">
+    <td class="px-4 py-3 align-top text-content">@ProjectCount projects</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top border-l border-line @ProfitClass(Total.BudgetedProfit)">
+        @Money(Total.BudgetedProfit)
+        <MarginLine Value="Total.BudgetedMargin" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
+        @Money(Total.CertifiedToDate)
+        <MemoLine Text="@(Total.RetentionOutstanding > 0m ? $"{Money(Total.RetentionOutstanding)} retention held" : null)" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(Total.ActualCostOfSales)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(Total.CurrentProfit)">
+        @Money(Total.CurrentProfit)
+        <MarginLine Value="Total.CurrentMargin" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">@Money(Total.LeftToCertify)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(Total.CostToComplete)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(Total.ToFinishProfit)">
+        @Money(Total.ToFinishProfit)
+        <MarginLine Value="Total.ToFinishMargin" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
+        @Money(Total.ContractValue)
+        <MemoLine Text="@(Total.NetVariations == 0m ? null : $"{SignedMoney(Total.NetVariations)} variations")" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">
+        @Money(Total.ForecastCostOfSales)
+        <MemoLine Text="@(Total.CostMovement < 0m ? $"{SignedMoney(-Total.CostMovement)} vs target" : null)" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top @ProfitClass(Total.ForecastedProfit)">
+        @Money(Total.ForecastedProfit)
+        <MarginLine Value="Total.ForecastedMargin" />
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public ProfitRow Total { get; set; } = default!;
+    [Parameter] public int ProjectCount { get; set; }
+}

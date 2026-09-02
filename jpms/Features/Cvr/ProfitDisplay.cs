@@ -1,11 +1,23 @@
+using System.Globalization;
+
 namespace Jewel.JPMS.Features.Cvr;
 
-/// <summary>How the profit figures read on screen — shared by the Profit Summary page and the
-/// running-profit grid, defined once so the two can never round differently.</summary>
+/// <summary>How the profit figures read on screen — shared by the Profit Summary page, its
+/// panels and the running-profit grid, defined once so none of them can round differently.</summary>
 public static class ProfitDisplay
 {
     public static string ProfitClass(decimal value) =>
         value == 0m ? "text-content-muted" : value > 0m ? "text-positive" : "text-negative";
+
+    /// <summary>A signed whole-pound figure ("+£205,958", "-£12,400"); zero reads as a dash.</summary>
+    public static string SignedMoney(decimal value) =>
+        value == 0m ? "—" : value > 0m ? $"+£{value:N0}" : $"-£{Math.Abs(value):N0}";
+
+    /// <summary>A margin fraction read as a percentage with one decimal ("9.1%").</summary>
+    public static string Pct(decimal fraction) => $"{fraction * 100m:0.0}%";
+
+    /// <summary>An inline-style percentage, culture-invariant — a comma decimal separator would silently break the CSS.</summary>
+    public static string Pc(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 
     public static string MoneyCompact(decimal value)
     {
@@ -38,7 +50,7 @@ public static class ProfitDisplay
     {
         if (shadeMax <= 0m) return "background:#12151c";
         var alpha = (0.10m + 0.55m * Math.Min(Math.Abs(movementPp), shadeMax) / shadeMax)
-            .ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            .ToString("0.00", CultureInfo.InvariantCulture);
         return movementPp < 0m
             ? $"background:rgba(194,85,85,{alpha})"
             : $"background:rgba(46,160,101,{alpha})";

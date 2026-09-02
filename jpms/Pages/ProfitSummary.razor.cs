@@ -160,4 +160,18 @@ public partial class ProfitSummary
         packagesByProject[projectId] = await Queries.AskAsync(new ListPackageReconciliation(projectId), CancellationToken.None);
     }
 
+    public void Dispose()
+    {
+        Projects.OnChanged -= StateHasChanged;
+        Summary.OnChanged -= StateHasChanged;
+        WorkOrders.OnChanged -= StateHasChanged;
+        Lines.OnChanged -= StateHasChanged;
+        Claims.OnChanged -= StateHasChanged;
+        ClaimEntries.OnChanged -= StateHasChanged;
+        SitePnl.OnChanged -= StateHasChanged;
+        // The throttle is deliberately NOT disposed: a load still in flight when the user
+        // navigates away would Release() a disposed semaphore and fault the abandoned task.
+        // An undisposed SemaphoreSlim (no wait-handle use) holds nothing worth reclaiming.
+    }
+
 }
