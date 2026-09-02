@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-02T13:48:39+00:00",
+  "generatedAt": "2026-09-02T13:55:11+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 666,
-      "totalFiles": 3485,
+      "filesOverLimit": 668,
+      "totalFiles": 3488,
       "worstFileLines": 475
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 693,
+      "functionsOverLimit": 692,
       "elseBlocks": 1153,
       "measurementIsHeuristic": true
     },
@@ -21,16 +21,16 @@
     "duplication": {
       "clones": 480,
       "duplicatedLines": 5923,
-      "totalLines": 217989,
+      "totalLines": 218022,
       "duplicatedPercentage": 2.72
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1537
+      "unprefixedBooleans": 1539
     },
     "comments": {
       "explanatoryCommentLines": 13717,
-      "filesWithComments": 1909,
+      "filesWithComments": 1912,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -39,7 +39,7 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 2390,
+      "longMemberChainLines": 2389,
       "deeplyIndentedLines": 2656,
       "overlongLines": 1660,
       "measurementIsHeuristic": true
@@ -56,18 +56,14 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 666,
-        "totalFiles": 3485,
+        "filesOverLimit": 668,
+        "totalFiles": 3488,
         "worstFileLines": 475
       },
       "offenders": [
         {
           "file": "worker/MailboxIntake/Graph/GraphMailClient.cs",
           "lines": 475
-        },
-        {
-          "file": "jpms/Pages/TriageQueue.Apply.cs",
-          "lines": 441
         },
         {
           "file": "jpms/Pages/ProjectRequestDetail.razor",
@@ -1678,6 +1674,10 @@
           "lines": 147
         },
         {
+          "file": "jpms/Pages/TriageQueue.ApplyFiling.cs",
+          "lines": 147
+        },
+        {
           "file": "jpms/Pages/TenderEnquiries.razor",
           "lines": 147
         },
@@ -1935,6 +1935,10 @@
         },
         {
           "file": "jpms/Features/Triage/RecordLinkVocabulary.cs",
+          "lines": 132
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.ApplyPlan.cs",
           "lines": 132
         },
         {
@@ -2307,6 +2311,10 @@
         },
         {
           "file": "contracts/Models/VariationOrder.cs",
+          "lines": 114
+        },
+        {
+          "file": "jpms/Pages/TriageQueue.ApplySends.cs",
           "lines": 114
         },
         {
@@ -2731,7 +2739,7 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 693,
+        "functionsOverLimit": 692,
         "elseBlocks": 1153,
         "measurementIsHeuristic": true
       },
@@ -3167,7 +3175,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1537
+        "unprefixedBooleans": 1539
       },
       "offenders": {
         "abbreviations": [
@@ -3630,7 +3638,7 @@
       "name": "comments",
       "summary": {
         "explanatoryCommentLines": 13717,
-        "filesWithComments": 1909,
+        "filesWithComments": 1912,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4335,7 +4343,7 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 2390,
+        "longMemberChainLines": 2389,
         "deeplyIndentedLines": 2656,
         "overlongLines": 1660,
         "measurementIsHeuristic": true
@@ -6270,7 +6278,7 @@
       "summary": {
         "clones": 480,
         "duplicatedLines": 5923,
-        "totalLines": 217989,
+        "totalLines": 218022,
         "duplicatedPercentage": 2.72
       },
       "offenders": [

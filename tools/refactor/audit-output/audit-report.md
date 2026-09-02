@@ -1,19 +1,19 @@
 # Refactor audit
 
-Generated 2026-09-02 13:48 UTC.
+Generated 2026-09-02 13:55 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 666, totalFiles: 3485, worstFileLines: 475 |
-| functionShape | limit: 30, functionsOverLimit: 693, elseBlocks: 1153, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 668, totalFiles: 3488, worstFileLines: 475 |
+| functionShape | limit: 30, functionsOverLimit: 692, elseBlocks: 1153, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 480, duplicatedLines: 5923, totalLines: 217989, duplicatedPercentage: 2.72 |
-| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1537 |
-| comments | explanatoryCommentLines: 13717, filesWithComments: 1909, taskMarkers: 48 |
+| duplication | clones: 480, duplicatedLines: 5923, totalLines: 218022, duplicatedPercentage: 2.72 |
+| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1539 |
+| comments | explanatoryCommentLines: 13717, filesWithComments: 1912, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2390, deeplyIndentedLines: 2656, overlongLines: 1660, measurementIsHeuristic: True |
+| prose | longMemberChainLines: 2389, deeplyIndentedLines: 2656, overlongLines: 1660, measurementIsHeuristic: True |
 | inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 203 |
 
 ## Worst files by length
@@ -21,7 +21,6 @@ Generated 2026-09-02 13:48 UTC.
 | File | Lines |
 | --- | --- |
 | worker/MailboxIntake/Graph/GraphMailClient.cs | 475 |
-| jpms/Pages/TriageQueue.Apply.cs | 441 |
 | jpms/Pages/ProjectRequestDetail.razor | 434 |
 | api/Features/Registers/RegistersSlices.cs | 433 |
 | api/Features/Ai/Sources/AiFiledDocuments.cs | 428 |
@@ -40,5 +39,6 @@ Generated 2026-09-02 13:48 UTC.
 | api/Features/Subcontractors/Documents/SubcontractorStatementRenderer.cs | 378 |
 | jpms/Pages/ProjectValuation.razor | 377 |
 | api/Features/Requests/Documents/RequestDocumentRenderer.Sections.cs | 375 |
+| api/Features/Requests/RequestContextAssembler.cs | 375 |
 
 Full detail, including every offender list, is in `audit.json`.
