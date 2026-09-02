@@ -1,0 +1,60 @@
+@namespace Jewel.JPMS.Features.Labour
+@using static Jewel.JPMS.Features.Labour.LabourDisplay
+
+@* By site: each site's recorded days and cost, with the visits opened up on select. *@
+<Panel Title="By site" Class="mb-6" BodyClass="p-0" IsLoading="@Loading" LoadingLabel="Loading sites">
+    @if (Snapshot is null)
+    {
+        <p class="p-5 text-sm text-negative">Couldn't load the overview — refresh to try again.</p>
+    }
+    else if (Snapshot.Sites.Count == 0)
+    {
+        <p class="p-5 text-sm text-content-subtle italic">No labour recorded on any site this month yet.</p>
+    }
+    else
+    {
+        var maxSiteCost = Snapshot.Sites.Max(site => site.CostRecorded);
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                    <th class="px-5 py-3">Site</th>
+                    <th class="px-2 py-3 w-1/3"></th>
+                    <th class="px-2 py-3 text-right">Days</th>
+                    <th class="px-5 py-3 text-right">Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var site in Snapshot.Sites)
+                {
+                    <tr class="border-b border-line/60 hover:bg-surface-raised/40 cursor-pointer"
+                        @onclick="() => openProjectId = openProjectId == site.ProjectId ? null : site.ProjectId">
+                        <td class="px-5 py-2.5 font-medium text-content">
+                            <span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:@ColourOf(site.ProjectId)"></span>@site.ProjectName
+                        </td>
+                        <td class="px-2 py-2.5">
+                            <div class="h-1.5 rounded-full bg-surface-field overflow-hidden">
+                                <div class="h-full bg-accent/70" style="width:@BarWidth(site.CostRecorded, maxSiteCost)"></div>
+                            </div>
+                        </td>
+                        <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@Days(site.DaysRecorded)</td>
+                        <td class="px-5 py-2.5 text-right tabular-nums font-semibold text-content">@Pounds(site.CostRecorded)</td>
+                    </tr>
+                    @if (openProjectId == site.ProjectId)
+                    {
+                        <tr class="border-b border-line/60 bg-surface-raised/30">
+                            <td colspan="4" class="px-5 py-4"><SiteVisitsDetail Snapshot="Snapshot" Site="site" /></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+</Panel>
+
+@code {
+    [Parameter] public LabourOverviewSnapshot? Snapshot { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter, EditorRequired] public Func<string, string> ColourOf { get; set; } = default!;
+
+    private string? openProjectId;
+}

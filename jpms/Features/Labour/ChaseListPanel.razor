@@ -1,0 +1,105 @@
+@namespace Jewel.JPMS.Features.Labour
+@inject ILabourStore Labour
+
+@* Chase list: the days that need an answer — a sign-in never signed out, or a weekday with no
+   timesheet and no absence. A dismissal is a recorded judgement (audited), not a swipe-away,
+   so the reason is asked inline, where the decision is being made. *@
+<Panel Title="@($"Chase list ({Items.Count})")" Class="mb-6" BodyClass="p-0">
+    <table class="w-full text-sm">
+        <thead>
+            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                <th class="px-5 py-3">Name</th>
+                <th class="px-2 py-3">Date</th>
+                <th class="px-2 py-3">Why</th>
+                <th class="px-5 py-3 text-right"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Items.Take(showAll ? int.MaxValue : 8))
+            {
+                <tr class="border-b border-line/60">
+                    <td class="px-5 py-2 font-medium text-content whitespace-nowrap">@item.WorkerName</td>
+                    <td class="px-2 py-2 text-content-muted whitespace-nowrap">@item.Date.ToString("ddd dd MMM")</td>
+                    <td class="px-2 py-2 text-content-muted">
+                        @(item.Reason == LabourChaseReason.OpenAttendance
+                            ? $"Signed in at {item.ProjectName} — never signed out"
+                            : "No timesheet and no recorded absence")
+                    </td>
+                    <td class="px-5 py-2 text-right whitespace-nowrap">
+                        @if (dismissingKey == KeyOf(item))
+                        {
+                            <input class="field w-56 mr-1 text-xs" placeholder="Why does this day need nothing?"
+                                   @bind="dismissReason" @bind:event="oninput" />
+                            <button type="button" class="btn-secondary mr-1" disabled="@(busy || string.IsNullOrWhiteSpace(dismissReason))"
+                                    @onclick="() => ConfirmDismissAsync(item)">Dismiss</button>
+                            <button type="button" class="btn-ghost" @onclick="() => dismissingKey = null">Cancel</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="text-xs text-content-subtle hover:text-content underline mr-3"
+                                    @onclick="() => OnRecordAbsence.InvokeAsync((item.WorkerId, item.WorkerName, item.Date))">Record absence</button>
+                            <button type="button" class="text-xs text-content-subtle hover:text-content underline"
+                                    title="The day was reviewed and needs no timesheet and no absence — dismissed with a reason, audited; it leaves the list and the unconfirmed figures together"
+                                    @onclick="() => StartDismiss(item)">Dismiss</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    @if (error is not null)
+    {
+        <p class="px-5 py-2 text-sm text-negative">@error</p>
+    }
+    @if (Items.Count > 8 && !showAll)
+    {
+        <button type="button" class="px-5 py-3 text-xs text-content-subtle hover:text-content underline"
+                @onclick="() => showAll = true">Show all @Items.Count</button>
+    }
+    @if (DismissedThisMonth > 0)
+    {
+        <p class="px-5 py-2 text-xs text-content-subtle border-t border-line/60">
+            @DismissedThisMonth day@(DismissedThisMonth == 1 ? "" : "s") dismissed this month —
+            the audit trail holds who and why.
+        </p>
+    }
+</Panel>
+
+@code {
+    [Parameter] public IReadOnlyList<LabourChaseItem> Items { get; set; } = Array.Empty<LabourChaseItem>();
+    [Parameter] public int DismissedThisMonth { get; set; }
+    /// <summary>A day was dismissed (audited) — the page re-reads the month.</summary>
+    [Parameter] public EventCallback OnDismissed { get; set; }
+    [Parameter] public EventCallback<(string WorkerId, string WorkerName, DateTimeOffset Date)> OnRecordAbsence { get; set; }
+
+    private bool showAll;
+    private string? dismissingKey;
+    private string dismissReason = "";
+    private bool busy;
+    private string? error;
+
+    private static string KeyOf(LabourChaseItem item) => $"{item.WorkerId}|{item.Date:yyyy-MM-dd}";
+
+    private void StartDismiss(LabourChaseItem item)
+    {
+        dismissingKey = KeyOf(item);
+        dismissReason = "";
+        error = null;
+    }
+
+    private async Task ConfirmDismissAsync(LabourChaseItem item)
+    {
+        if (busy || string.IsNullOrWhiteSpace(dismissReason)) return;
+        busy = true; error = null;
+        try
+        {
+            await Labour.DismissChaseDayAsync(item.WorkerId, item.Date, dismissReason.Trim());
+            dismissingKey = null;
+            dismissReason = "";
+            await OnDismissed.InvokeAsync();
+        }
+        catch (CommandFailedException failure) { error = failure.Message; }
+        catch (Exception) { error = "Could not dismiss the day — try again."; }
+        finally { busy = false; }
+    }
+}

@@ -1,3 +1,4 @@
+using static Jewel.JPMS.Features.Labour.LabourDisplay;
 using Jewel.JPMS.Contracts.Labour;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.Projects;
@@ -20,40 +21,6 @@ public partial class LabourOverview
         ("settlement", "Settlement"),
     };
 
-    private string? expandedWorkerId;
-    private string? siteDetailProjectId;
-    private bool chaseShowAll;
-
-    // ---- Chase dismissal (2026-08-31): inline reason, audited server-side. ---------------------
-    private string? dismissingKey;
-    private string dismissReason = "";
-    private bool chaseBusy;
-    private string? chaseError;
-
-    private static string ChaseKey(LabourChaseItem item) => $"{item.WorkerId}|{item.Date:yyyy-MM-dd}";
-
-    private void StartDismiss(LabourChaseItem item)
-    {
-        dismissingKey = ChaseKey(item);
-        dismissReason = "";
-        chaseError = null;
-    }
-
-    private async Task ConfirmDismissAsync(LabourChaseItem item)
-    {
-        if (chaseBusy || string.IsNullOrWhiteSpace(dismissReason)) return;
-        chaseBusy = true; chaseError = null;
-        try
-        {
-            await Labour.DismissChaseDayAsync(item.WorkerId, item.Date, dismissReason.Trim());
-            dismissingKey = null;
-            dismissReason = "";
-            await RefreshAsync();
-        }
-        catch (CommandFailedException failure) { chaseError = failure.Message; }
-        catch (Exception) { chaseError = "Could not dismiss the day — try again."; }
-        finally { chaseBusy = false; }
-    }
 
     // Absence modal state.
     private bool absenceOpen;
@@ -65,22 +32,10 @@ public partial class LabourOverview
     private AbsenceKind absenceKind = AbsenceKind.Holiday;
     private string absenceNote = "";
 
-    // Contract editing (inside the worker detail row). The CIS select binds a STRING: the rate
-    // arrives from the API as a decimal whose scale follows the stored value ("20.00"), and a
-    // <select @bind> matches its options by string — bound to the decimal, "20.00" matched no
-    // option, the select rendered blank, and picking "20" then compared numerically equal to the
-    // current value, so Save sent nothing. loaded* keep what the panel opened with so Save knows
-    // what genuinely changed.
-    private decimal editContractedDays;
-    private string editCisRate = "20";
-    private decimal loadedContractedDays;
-    private decimal loadedCisRate;
-    private bool planSaving;
-    private bool planSaved;
-    private string? planError;
-
     private bool Loading => !Labour.OverviewLoadedFor(year, month) && !dataFailed;
     private string MonthLabel => new DateTime(year, month, 1).ToString("MMMM yyyy");
+    // Keys the month's panes: moving month recreates them, so an opened row or "show all" resets.
+    private string MonthKey => $"{year}-{month}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -125,7 +80,6 @@ public partial class LabourOverview
     {
         var moved = new DateTime(year, month, 1).AddMonths(delta);
         year = moved.Year; month = moved.Month;
-        expandedWorkerId = null; siteDetailProjectId = null; chaseShowAll = false;
         dataFailed = false;
         if (!Labour.OverviewLoadedFor(year, month))
         {
@@ -140,18 +94,6 @@ public partial class LabourOverview
         try { await Labour.RefreshOverviewAsync(year, month); }
         catch { dataFailed = true; }
         finally { refreshing = false; }
-    }
-
-    private void ToggleWorker(string workerId)
-    {
-        if (expandedWorkerId == workerId) { expandedWorkerId = null; return; }
-        expandedWorkerId = workerId;
-        var worker = Labour.Overview(year, month)?.Workers.FirstOrDefault(row => row.WorkerId == workerId);
-        loadedContractedDays = worker?.ContractedDays ?? 0m;
-        loadedCisRate = worker?.CisRatePercent ?? 20m;
-        editContractedDays = loadedContractedDays;
-        editCisRate = loadedCisRate.ToString("0");
-        planSaved = false; planError = null;
     }
 
     private void OpenAbsence(string workerId, string workerName, DateTimeOffset date)
@@ -184,35 +126,6 @@ public partial class LabourOverview
         finally { absenceSaving = false; }
     }
 
-    private async Task SavePlanAsync(LabourOverviewWorker worker)
-    {
-        planSaving = true; planSaved = false; planError = null; actionError = null;
-        try
-        {
-            var cisRate = decimal.TryParse(editCisRate, out var parsed) ? parsed : loadedCisRate;
-            var changed = false;
-            if (editContractedDays != loadedContractedDays)
-            {
-                await Labour.SetWorkerContractAsync(year, month, worker.WorkerId, editContractedDays);
-                changed = true;
-            }
-            if (cisRate != loadedCisRate)
-            {
-                await Labour.SetWorkerCisStatusAsync(year, month, worker.WorkerId, cisRate, "");
-                changed = true;
-            }
-            // Show the saved values back from the server — without this, a successful save
-            // changed nothing on screen and read as "it does nothing".
-            if (changed) await Labour.RefreshOverviewAsync(year, month);
-            loadedContractedDays = editContractedDays;
-            loadedCisRate = cisRate;
-            planSaved = true;
-        }
-        catch (CommandFailedException failure) { planError = failure.Message; }
-        catch (Exception) { planError = "Could not save the contract settings — try again."; }
-        finally { planSaving = false; }
-    }
-
     private async Task SignOffAsync(string workerId, DateTime weekStart)
     {
         actionError = null;
@@ -238,14 +151,4 @@ public partial class LabourOverview
 
     private IEnumerable<DateTime> MonthWeeks() =>
         MonthWeekdays().Select(ForecastRules.WeekStartOf).Distinct().OrderBy(date => date);
-
-
-    private static string CodingOutcomeLabel(XeroCodingOutcome outcome) => outcome switch
-    {
-        XeroCodingOutcome.BillRecoded => "bill recoded",
-        XeroCodingOutcome.DraftStaged => "draft staged",
-        XeroCodingOutcome.Skipped => "skipped",
-        _ => "failed",
-    };
-
 }

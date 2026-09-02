@@ -1,0 +1,107 @@
+@namespace Jewel.JPMS.Features.Labour
+@using static Jewel.JPMS.Features.Labour.LabourDisplay
+
+@* Settlement: the per-worker monthly schedule, its verdict, and the §6a run. Each worker's
+   signed-off month, split by site × cost code × nature — the exact totals the covering bill is
+   coded to in Dext. The run writes DRAFT bills only: it recodes the covered bill (or stages one
+   if none has arrived), and approval stays with the accountant in Xero. *@
+<Panel Title="Settlement schedules" Class="mb-6" BodyClass="p-0" IsLoading="@Loading" LoadingLabel="Loading schedules">
+    @if (Schedules is null)
+    {
+        <p class="p-5 text-sm text-negative">Couldn't load the schedules — refresh to try again.</p>
+    }
+    else
+    {
+        <div class="flex flex-wrap items-center gap-3 px-5 py-3 border-b border-line">
+            @if (Schedules.InvoicesToChase > 0)
+            {
+                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">Invoices to chase: @Schedules.InvoicesToChase</span>
+            }
+            @if (Schedules.WorkersToReconcile > 0)
+            {
+                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle">To reconcile: @Schedules.WorkersToReconcile</span>
+            }
+            <span class="flex-1"></span>
+            <button type="button" class="btn-primary" disabled="@RunningCoding"
+                    @onclick="() => OnRunCoding.InvokeAsync()">@(RunningCoding ? "Coding into Xero…" : "Code month into Xero")</button>
+        </div>
+        <p class="px-5 pt-3 text-xs text-content-subtle">
+            Each worker's signed-off month, split by site × cost code × nature — the exact
+            totals the covering bill is coded to in Dext. The run writes DRAFT bills only:
+            it recodes the covered bill (or stages one if none has arrived), and approval
+            stays with the accountant in Xero. Anything unsigned, unmapped or in variance
+            is skipped and reported, never guessed.
+        </p>
+        @if (CodingResults is not null)
+        {
+            <div class="mx-5 mt-3 rounded-lg border border-line bg-surface-raised p-3 text-sm">
+                <p class="font-medium text-content mb-1">Coding run finished:</p>
+                @foreach (var result in CodingResults)
+                {
+                    <p class="text-content-muted">· <span class="font-medium text-content">@result.WorkerName</span> — @CodingOutcomeLabel(result.Outcome): @result.Detail</p>
+                }
+            </div>
+        }
+        @if (Schedules.Workers.Count == 0)
+        {
+            <p class="p-5 text-sm text-content-subtle italic">No approved time or settlement lines this month yet.</p>
+        }
+        else
+        {
+            <table class="w-full text-sm mt-3">
+                <thead>
+                    <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                        <th class="px-5 py-3">Worker</th>
+                        <th class="px-2 py-3 text-right">Gross</th>
+                        <th class="px-2 py-3 text-right">CIS</th>
+                        <th class="px-2 py-3 text-right">Net payable</th>
+                        <th class="px-2 py-3 text-right">Covered bill</th>
+                        <th class="px-2 py-3">Verdict</th>
+                        <th class="px-5 py-3">Coding</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var schedule in Schedules.Workers)
+                    {
+                        <tr class="border-b border-line/60 hover:bg-surface-raised/40 cursor-pointer"
+                            @onclick="() => expandedWorkerId = expandedWorkerId == schedule.WorkerId ? null : schedule.WorkerId">
+                            <td class="px-5 py-2.5 font-medium text-content whitespace-nowrap">
+                                @schedule.WorkerName
+                                @if (!schedule.FullySignedOff)
+                                {
+                                    <span class="ml-2 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle" title="Weeks with approved time are not all signed off">not signed off</span>
+                                }
+                            </td>
+                            <td class="px-2 py-2.5 text-right tabular-nums text-content">@schedule.GrossTotal.ToString("N2")</td>
+                            <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">− @schedule.CisDeduction.ToString("N2")</td>
+                            <td class="px-2 py-2.5 text-right tabular-nums font-semibold text-content">@schedule.NetPayable.ToString("N2")</td>
+                            <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@(schedule.CoveredBillTotal == 0m ? "—" : schedule.CoveredBillTotal.ToString("N2"))</td>
+                            <td class="px-2 py-2.5"><SettlementVerdictPill Schedule="schedule" /></td>
+                            <td class="px-5 py-2.5 text-content-subtle text-xs whitespace-nowrap">
+                                @(schedule.LastCodingOutcome == "" ? "—" : $"{schedule.LastCodingOutcome} · {schedule.LastCodedAt:dd MMM HH:mm}")
+                            </td>
+                        </tr>
+                        @if (expandedWorkerId == schedule.WorkerId)
+                        {
+                            <tr class="border-b border-line/60 bg-surface-raised/30">
+                                <td colspan="7" class="px-5 py-4"><SettlementScheduleDetail Schedule="schedule" OnAddLine="OnAddLine" OnRemoveLine="OnRemoveLine" /></td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        }
+    }
+</Panel>
+
+@code {
+    [Parameter] public SettlementScheduleSnapshot? Schedules { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public bool RunningCoding { get; set; }
+    [Parameter] public IReadOnlyList<XeroCodingRunResult>? CodingResults { get; set; }
+    [Parameter] public EventCallback OnRunCoding { get; set; }
+    [Parameter] public EventCallback<WorkerSettlementSchedule> OnAddLine { get; set; }
+    [Parameter] public EventCallback<string> OnRemoveLine { get; set; }
+
+    private string? expandedWorkerId;
+}
