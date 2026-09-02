@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-02T07:25:12+00:00",
+  "generatedAt": "2026-09-02T07:28:33+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 652,
-      "totalFiles": 3398,
+      "filesOverLimit": 653,
+      "totalFiles": 3401,
       "worstFileLines": 520
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 698,
+      "functionsOverLimit": 697,
       "elseBlocks": 1170,
       "measurementIsHeuristic": true
     },
@@ -21,7 +21,7 @@
     "duplication": {
       "clones": 491,
       "duplicatedLines": 6227,
-      "totalLines": 216740,
+      "totalLines": 216767,
       "duplicatedPercentage": 2.87
     },
     "naming": {
@@ -30,7 +30,7 @@
     },
     "comments": {
       "explanatoryCommentLines": 13676,
-      "filesWithComments": 1858,
+      "filesWithComments": 1861,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -56,8 +56,8 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 652,
-        "totalFiles": 3398,
+        "filesOverLimit": 653,
+        "totalFiles": 3401,
         "worstFileLines": 520
       },
       "offenders": [
@@ -160,10 +160,6 @@
         {
           "file": "jpms/Pages/ProjectVariations.razor",
           "lines": 411
-        },
-        {
-          "file": "jpms/Pages/ProjectWorkOrders.razor.cs",
-          "lines": 409
         },
         {
           "file": "api/Features/Ai/Tools/AiRegisterTools.cs",
@@ -1538,6 +1534,10 @@
           "lines": 157
         },
         {
+          "file": "jpms/Pages/ProjectWorkOrders.razor.cs",
+          "lines": 157
+        },
+        {
           "file": "jpms/Components/ProjectPageShell.razor",
           "lines": 157
         },
@@ -1867,6 +1867,10 @@
         },
         {
           "file": "api/Features/Requests/Commands/ReplyInThreadFromMessageHandler.cs",
+          "lines": 135
+        },
+        {
+          "file": "jpms/Pages/ProjectWorkOrders.Rows.cs",
           "lines": 135
         },
         {
@@ -2675,7 +2679,7 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 698,
+        "functionsOverLimit": 697,
         "elseBlocks": 1170,
         "measurementIsHeuristic": true
       },
@@ -3574,7 +3578,7 @@
       "name": "comments",
       "summary": {
         "explanatoryCommentLines": 13676,
-        "filesWithComments": 1858,
+        "filesWithComments": 1861,
         "taskMarkers": 48
       },
       "offenders": [
@@ -6211,7 +6215,7 @@
       "summary": {
         "clones": 491,
         "duplicatedLines": 6227,
-        "totalLines": 216740,
+        "totalLines": 216767,
         "duplicatedPercentage": 2.87
       },
       "offenders": [

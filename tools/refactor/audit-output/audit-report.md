@@ -1,17 +1,17 @@
 # Refactor audit
 
-Generated 2026-09-02 07:25 UTC.
+Generated 2026-09-02 07:28 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 652, totalFiles: 3398, worstFileLines: 520 |
-| functionShape | limit: 30, functionsOverLimit: 698, elseBlocks: 1170, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 653, totalFiles: 3401, worstFileLines: 520 |
+| functionShape | limit: 30, functionsOverLimit: 697, elseBlocks: 1170, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 491, duplicatedLines: 6227, totalLines: 216740, duplicatedPercentage: 2.87 |
+| duplication | clones: 491, duplicatedLines: 6227, totalLines: 216767, duplicatedPercentage: 2.87 |
 | naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1496 |
-| comments | explanatoryCommentLines: 13676, filesWithComments: 1858, taskMarkers: 48 |
+| comments | explanatoryCommentLines: 13676, filesWithComments: 1861, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
 | prose | longMemberChainLines: 2395, deeplyIndentedLines: 2800, overlongLines: 1667, measurementIsHeuristic: True |
 | inventory | pages: 92, components: 132, orphanComponents: 6, averagePageLines: 212 |
