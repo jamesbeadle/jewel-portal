@@ -1,17 +1,17 @@
 # Refactor audit
 
-Generated 2026-09-02 09:16 UTC.
+Generated 2026-09-02 09:33 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 656, totalFiles: 3420, worstFileLines: 509 |
-| functionShape | limit: 30, functionsOverLimit: 697, elseBlocks: 1170, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 655, totalFiles: 3425, worstFileLines: 507 |
+| functionShape | limit: 30, functionsOverLimit: 696, elseBlocks: 1170, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 490, duplicatedLines: 6215, totalLines: 216954, duplicatedPercentage: 2.86 |
+| duplication | clones: 487, duplicatedLines: 6073, totalLines: 216911, duplicatedPercentage: 2.8 |
 | naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1507 |
-| comments | explanatoryCommentLines: 13693, filesWithComments: 1878, taskMarkers: 48 |
+| comments | explanatoryCommentLines: 13690, filesWithComments: 1879, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
 | prose | longMemberChainLines: 2394, deeplyIndentedLines: 2800, overlongLines: 1661, measurementIsHeuristic: True |
 | inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 208 |
@@ -20,7 +20,6 @@ Generated 2026-09-02 09:16 UTC.
 
 | File | Lines |
 | --- | --- |
-| api/Features/Commercial/Documents/CostCentreReconciliationRenderer.cs | 509 |
 | jpms/Components/WorkOrderForm.razor.cs | 507 |
 | api/Features/Ai/Tools/Actions/RequestsActions.cs | 492 |
 | jpms/Pages/XeroAllocation.razor | 488 |
@@ -40,5 +39,6 @@ Generated 2026-09-02 09:16 UTC.
 | api/Features/Ai/Sources/AiFiledDocuments.cs | 428 |
 | jpms/Components/ManualWorkOrderModal.razor.cs | 428 |
 | api/Features/Xero/Ledger/SetXeroAllocationHandler.cs | 422 |
+| jpms/Services/Navigation/SidebarFolders.cs | 415 |
 
 Full detail, including every offender list, is in `audit.json`.
