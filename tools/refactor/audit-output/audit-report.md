@@ -1,26 +1,25 @@
 # Refactor audit
 
-Generated 2026-09-02 06:55 UTC.
+Generated 2026-09-02 06:58 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 647, totalFiles: 3369, worstFileLines: 589 |
+| fileLength | limit: 100, filesOverLimit: 648, totalFiles: 3374, worstFileLines: 560 |
 | functionShape | limit: 30, functionsOverLimit: 696, elseBlocks: 1170, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 490, duplicatedLines: 6220, totalLines: 216409, duplicatedPercentage: 2.87 |
+| duplication | clones: 490, duplicatedLines: 6220, totalLines: 216433, duplicatedPercentage: 2.87 |
 | naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1485 |
-| comments | explanatoryCommentLines: 13708, filesWithComments: 1839, taskMarkers: 48 |
+| comments | explanatoryCommentLines: 13704, filesWithComments: 1843, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2397, deeplyIndentedLines: 2801, overlongLines: 1678, measurementIsHeuristic: True |
+| prose | longMemberChainLines: 2397, deeplyIndentedLines: 2800, overlongLines: 1678, measurementIsHeuristic: True |
 | inventory | pages: 92, components: 132, orphanComponents: 6, averagePageLines: 216 |
 
 ## Worst files by length
 
 | File | Lines |
 | --- | --- |
-| jpms/Services/Excel/ExcelWorkbookWriter.cs | 589 |
 | api/Features/Ai/Tools/AiCommercialTools.cs | 560 |
 | jpms/Pages/ProjectWorkOrders.razor | 548 |
 | jpms/Pages/TriageQueue.Outbox.cs | 520 |
@@ -40,5 +39,6 @@ Generated 2026-09-02 06:55 UTC.
 | api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs | 453 |
 | jpms/Pages/ProjectWorkOrders.razor.cs | 451 |
 | api/Features/Procurement/Documents/WorkOrderPoRenderer.Sections.cs | 448 |
+| api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.Labour.cs | 445 |
 
 Full detail, including every offender list, is in `audit.json`.

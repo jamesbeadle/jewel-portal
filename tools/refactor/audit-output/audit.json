@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-02T06:55:23+00:00",
+  "generatedAt": "2026-09-02T06:58:50+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 647,
-      "totalFiles": 3369,
-      "worstFileLines": 589
+      "filesOverLimit": 648,
+      "totalFiles": 3374,
+      "worstFileLines": 560
     },
     "functionShape": {
       "limit": 30,
@@ -21,7 +21,7 @@
     "duplication": {
       "clones": 490,
       "duplicatedLines": 6220,
-      "totalLines": 216409,
+      "totalLines": 216433,
       "duplicatedPercentage": 2.87
     },
     "naming": {
@@ -29,8 +29,8 @@
       "unprefixedBooleans": 1485
     },
     "comments": {
-      "explanatoryCommentLines": 13708,
-      "filesWithComments": 1839,
+      "explanatoryCommentLines": 13704,
+      "filesWithComments": 1843,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -40,7 +40,7 @@
     },
     "prose": {
       "longMemberChainLines": 2397,
-      "deeplyIndentedLines": 2801,
+      "deeplyIndentedLines": 2800,
       "overlongLines": 1678,
       "measurementIsHeuristic": true
     },
@@ -56,15 +56,11 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 647,
-        "totalFiles": 3369,
-        "worstFileLines": 589
+        "filesOverLimit": 648,
+        "totalFiles": 3374,
+        "worstFileLines": 560
       },
       "offenders": [
-        {
-          "file": "jpms/Services/Excel/ExcelWorkbookWriter.cs",
-          "lines": 589
-        },
         {
           "file": "api/Features/Ai/Tools/AiCommercialTools.cs",
           "lines": 560
@@ -963,6 +959,10 @@
         },
         {
           "file": "jpms/Services/AuthService.cs",
+          "lines": 215
+        },
+        {
+          "file": "jpms/Services/Excel/ExcelStyleRegistry.cs",
           "lines": 215
         },
         {
@@ -2067,6 +2067,10 @@
         },
         {
           "file": "api/Features/ProjectContracts/Storage/AzureBlobProjectContractStore.cs",
+          "lines": 123
+        },
+        {
+          "file": "jpms/Services/Excel/ExcelWorkbookWriter.Worksheet.cs",
           "lines": 123
         },
         {
@@ -3553,8 +3557,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13708,
-        "filesWithComments": 1839,
+        "explanatoryCommentLines": 13704,
+        "filesWithComments": 1843,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4260,7 +4264,7 @@
       "name": "prose",
       "summary": {
         "longMemberChainLines": 2397,
-        "deeplyIndentedLines": 2801,
+        "deeplyIndentedLines": 2800,
         "overlongLines": 1678,
         "measurementIsHeuristic": true
       },
@@ -6193,7 +6197,7 @@
       "summary": {
         "clones": 490,
         "duplicatedLines": 6220,
-        "totalLines": 216409,
+        "totalLines": 216433,
         "duplicatedPercentage": 2.87
       },
       "offenders": [
