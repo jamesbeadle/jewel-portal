@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-09-02T09:50:38+00:00",
+  "generatedAt": "2026-09-02T09:56:59+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 657,
-      "totalFiles": 3440,
-      "worstFileLines": 476
+      "filesOverLimit": 658,
+      "totalFiles": 3445,
+      "worstFileLines": 475
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 697,
-      "elseBlocks": 1166,
+      "functionsOverLimit": 695,
+      "elseBlocks": 1161,
       "measurementIsHeuristic": true
     },
     "functionNames": {
@@ -21,16 +21,16 @@
     "duplication": {
       "clones": 487,
       "duplicatedLines": 6073,
-      "totalLines": 217063,
+      "totalLines": 217080,
       "duplicatedPercentage": 2.8
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1516
+      "unprefixedBooleans": 1521
     },
     "comments": {
-      "explanatoryCommentLines": 13680,
-      "filesWithComments": 1885,
+      "explanatoryCommentLines": 13679,
+      "filesWithComments": 1889,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -39,9 +39,9 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 2390,
+      "longMemberChainLines": 2384,
       "deeplyIndentedLines": 2798,
-      "overlongLines": 1661,
+      "overlongLines": 1659,
       "measurementIsHeuristic": true
     },
     "inventory": {
@@ -56,15 +56,11 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 657,
-        "totalFiles": 3440,
-        "worstFileLines": 476
+        "filesOverLimit": 658,
+        "totalFiles": 3445,
+        "worstFileLines": 475
       },
       "offenders": [
-        {
-          "file": "jpms/Components/ValuationInvoicesSection.razor.cs",
-          "lines": 476
-        },
         {
           "file": "worker/MailboxIntake/Graph/GraphMailClient.cs",
           "lines": 475
@@ -371,7 +367,7 @@
         },
         {
           "file": "jpms/Components/ValuationInvoicesSection.razor",
-          "lines": 302
+          "lines": 303
         },
         {
           "file": "jpms/Pages/AdminSystem.razor",
@@ -2022,6 +2018,10 @@
           "lines": 126
         },
         {
+          "file": "jpms/Components/ValuationInvoicesSection.Forms.cs",
+          "lines": 126
+        },
+        {
           "file": "jpms/Cqrs/HttpCommandSender.cs",
           "lines": 126
         },
@@ -2267,6 +2267,10 @@
         },
         {
           "file": "api/Features/MailboxIntake/Graph/TriageCategories.cs",
+          "lines": 115
+        },
+        {
+          "file": "jpms/Components/ValuationInvoicesSection.Commands.cs",
           "lines": 115
         },
         {
@@ -2695,8 +2699,8 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 697,
-        "elseBlocks": 1166,
+        "functionsOverLimit": 695,
+        "elseBlocks": 1161,
         "measurementIsHeuristic": true
       },
       "offenders": [
@@ -3131,7 +3135,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1516
+        "unprefixedBooleans": 1521
       },
       "offenders": {
         "abbreviations": [
@@ -3593,8 +3597,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13680,
-        "filesWithComments": 1885,
+        "explanatoryCommentLines": 13679,
+        "filesWithComments": 1889,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4299,9 +4303,9 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 2390,
+        "longMemberChainLines": 2384,
         "deeplyIndentedLines": 2798,
-        "overlongLines": 1661,
+        "overlongLines": 1659,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -6234,7 +6238,7 @@
       "summary": {
         "clones": 487,
         "duplicatedLines": 6073,
-        "totalLines": 217063,
+        "totalLines": 217080,
         "duplicatedPercentage": 2.8
       },
       "offenders": [

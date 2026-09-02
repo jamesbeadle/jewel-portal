@@ -1,26 +1,25 @@
 # Refactor audit
 
-Generated 2026-09-02 09:50 UTC.
+Generated 2026-09-02 09:56 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 657, totalFiles: 3440, worstFileLines: 476 |
-| functionShape | limit: 30, functionsOverLimit: 697, elseBlocks: 1166, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 658, totalFiles: 3445, worstFileLines: 475 |
+| functionShape | limit: 30, functionsOverLimit: 695, elseBlocks: 1161, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 487, duplicatedLines: 6073, totalLines: 217063, duplicatedPercentage: 2.8 |
-| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1516 |
-| comments | explanatoryCommentLines: 13680, filesWithComments: 1885, taskMarkers: 48 |
+| duplication | clones: 487, duplicatedLines: 6073, totalLines: 217080, duplicatedPercentage: 2.8 |
+| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1521 |
+| comments | explanatoryCommentLines: 13679, filesWithComments: 1889, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2390, deeplyIndentedLines: 2798, overlongLines: 1661, measurementIsHeuristic: True |
+| prose | longMemberChainLines: 2384, deeplyIndentedLines: 2798, overlongLines: 1659, measurementIsHeuristic: True |
 | inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 207 |
 
 ## Worst files by length
 
 | File | Lines |
 | --- | --- |
-| jpms/Components/ValuationInvoicesSection.razor.cs | 476 |
 | worker/MailboxIntake/Graph/GraphMailClient.cs | 475 |
 | jpms/Pages/ProjectLabour.razor | 472 |
 | jpms/Pages/TriageQueue.razor | 470 |
@@ -40,5 +39,6 @@ Generated 2026-09-02 09:50 UTC.
 | jpms/Pages/ProjectVariations.razor | 411 |
 | api/Features/Ai/Tools/AiRegisterTools.cs | 405 |
 | api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Sections.cs | 402 |
+| jpms/Services/HttpLabourStore.cs | 395 |
 
 Full detail, including every offender list, is in `audit.json`.
