@@ -10,8 +10,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProfitSummary
 {
-    // ---- Figures ------------------------------------------------------------
-
     private ValuationClaim? LatestClaimFor(string projectId) =>
         Claims.Current(projectId)
             .OrderByDescending(claim => claim.ClaimNumber)
@@ -118,18 +116,6 @@ public partial class ProfitSummary
             .ThenBy(entry => entry.Project.Reference, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
-
-    private static ProfitRow TotalsOf(IReadOnlyList<(Project Project, ProfitRow Row)> rows) =>
-        new(
-            rows.Sum(entry => entry.Row.InitialContractSum),
-            rows.Sum(entry => entry.Row.InitialContractCosts),
-            rows.Sum(entry => entry.Row.NetVariations),
-            rows.Sum(entry => entry.Row.CertifiedToDate),
-            rows.Sum(entry => entry.Row.ActualCostOfSales),
-            rows.Sum(entry => entry.Row.ContractValue),
-            rows.Sum(entry => entry.Row.ForecastCostOfSales),
-            rows.Sum(entry => entry.Row.WorksComplete),
-            rows.Sum(entry => entry.Row.RetentionOutstanding));
 
     // ---- Labour accrual overlay (the basis switch) --------------------------
     // OFF (default): every Xero panel reads the stored Xero months only — the auditable

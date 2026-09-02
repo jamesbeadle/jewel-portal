@@ -1,0 +1,32 @@
+@*
+    A finance page's KPI tile — the stat-tile pattern of the loading-states convention. The label
+    stays while the figure behind it is still coming, so the strip keeps its shape; nothing stands
+    in for the figure but the pulsing jewel, because a reader believes the first number they see.
+    Once the figure is known the caller renders it, with its caption, as the tile's body.
+*@
+
+<div class="rounded-xl border border-line bg-surface px-5 py-4" title="@Title">
+    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">@Label</p>
+    @if (IsLoading)
+    {
+        <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+            <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
+            <span class="sr-only">@(LoadingLabel ?? $"Loading {Label.ToLowerInvariant()}")</span>
+        </p>
+    }
+    else
+    {
+        @ChildContent
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    /// <summary>The tile's hover text — what the figure is, for the reader who asks.</summary>
+    [Parameter] public string? Title { get; set; }
+    /// <summary>True until every store the figure reads has landed.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+    /// <summary>The screen reader's line while loading; "Loading &lt;label&gt;" when not given.</summary>
+    [Parameter] public string? LoadingLabel { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

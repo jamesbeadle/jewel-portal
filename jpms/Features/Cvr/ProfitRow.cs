@@ -48,4 +48,17 @@ public sealed record ProfitRow(
 
     private static decimal? MarginOn(decimal profit, decimal revenue) =>
         revenue == 0m ? null : profit / revenue;
+
+    /// <summary>The selection summed: every input added up, every derived figure following.</summary>
+    public static ProfitRow TotalOf(IReadOnlyList<(Project Project, ProfitRow Row)> rows) =>
+        new(
+            rows.Sum(entry => entry.Row.InitialContractSum),
+            rows.Sum(entry => entry.Row.InitialContractCosts),
+            rows.Sum(entry => entry.Row.NetVariations),
+            rows.Sum(entry => entry.Row.CertifiedToDate),
+            rows.Sum(entry => entry.Row.ActualCostOfSales),
+            rows.Sum(entry => entry.Row.ContractValue),
+            rows.Sum(entry => entry.Row.ForecastCostOfSales),
+            rows.Sum(entry => entry.Row.WorksComplete),
+            rows.Sum(entry => entry.Row.RetentionOutstanding));
 }

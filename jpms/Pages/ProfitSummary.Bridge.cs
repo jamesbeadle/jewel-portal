@@ -11,8 +11,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProfitSummary
 {
-    // ---- Bridge -------------------------------------------------------------
-
     private BridgeModel? BridgeFor(IReadOnlyList<(Project Project, ProfitRow Row)> rows, ProfitRow total)
     {
         var budgeted = total.BudgetedProfit;

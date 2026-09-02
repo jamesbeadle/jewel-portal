@@ -136,73 +136,9 @@
                                     AccrualToDateFor="AccrualToDateFor" />
             }
 
-            @* ── Summary strip. Stat-tile pattern (the loading-states convention): each tile keeps
-               its label and pulses until every selected project has landed, because every figure
-               here is a total over the whole selection. The strip is a conditional region: once
-               the selection is seeded it only exists while something is selected, so an empty
-               selection never shows tiles pulsing for figures that are not coming. ── *@
             @if (!selectionInitialised || SelectedProjects.Count > 0)
             {
-                var stats = TableReady && SelectedProjects.Count > 0 ? LoadedRows() : null;
-                var statTotal = stats is not null ? TotalsOf(stats) : null;
-                var swing = stats?.OrderByDescending(entry => Math.Abs(entry.Row.ForecastSwing)).First();
-
-                <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 mb-4">
-                    <div class="rounded-xl border border-line bg-surface px-5 py-4"
-                         title="The deal as signed: every selected project's initial contract sum less its target cost.">
-                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Budgeted profit</p>
-                        @if (statTotal is null)
-                        {
-                            <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
-                                <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
-                                <span class="sr-only">Loading budgeted profit</span>
-                            </p>
-                        }
-                        else
-                        {
-                            <p class="text-2xl font-semibold @ProfitClass(statTotal.BudgetedProfit)">@Money(statTotal.BudgetedProfit)</p>
-                            <p class="text-xs text-content-subtle mt-1">
-                                @(statTotal.BudgetedMargin is decimal bm ? $"{Pct(bm)} on " : "")@MoneyCompact(statTotal.InitialContractSum) as signed
-                            </p>
-                        }
-                    </div>
-                    <div class="rounded-xl border border-line bg-surface px-5 py-4"
-                         title="Where the selected jobs land: revised contract sums against forecasted cost of sales.">
-                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Forecast profit</p>
-                        @if (statTotal is null)
-                        {
-                            <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
-                                <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
-                                <span class="sr-only">Loading forecast profit</span>
-                            </p>
-                        }
-                        else
-                        {
-                            <p class="text-2xl font-semibold @ProfitClass(statTotal.ForecastedProfit)">@Money(statTotal.ForecastedProfit)</p>
-                            <p class="text-xs text-content-subtle mt-1">
-                                @(statTotal.ForecastedMargin is decimal fm ? $"{Pct(fm)} on " : "")@MoneyCompact(statTotal.ContractValue) incl. variations
-                            </p>
-                        }
-                    </div>
-                    <div class="rounded-xl border border-line bg-surface px-5 py-4"
-                         title="The project whose forecast profit sits furthest from its budgeted profit — the number to ask about first.">
-                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Biggest swing vs the deal</p>
-                        @if (swing is null)
-                        {
-                            <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
-                                <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
-                                <span class="sr-only">Loading biggest swing</span>
-                            </p>
-                        }
-                        else
-                        {
-                            <p class="text-2xl font-semibold @ProfitClass(swing.Value.Row.ForecastSwing)">@swing.Value.Project.Name</p>
-                            <p class="text-xs mt-1 @(swing.Value.Row.ForecastSwing < 0m ? "text-negative" : "text-positive")">
-                                @(swing.Value.Row.ForecastSwing < 0m ? "▼" : "▲") @MoneyCompact(Math.Abs(swing.Value.Row.ForecastSwing)) forecast vs budgeted profit
-                            </p>
-                        }
-                    </div>
-                </div>
+                <ProfitSummaryStrip Rows="@(TableReady && SelectedProjects.Count > 0 ? LoadedRows() : null)" />
             }
 
             @* One gate for the bridge and the table together: every bar, row and total is the same
@@ -218,7 +154,7 @@
             else
             {
                 var rows = LoadedRows();
-                var total = TotalsOf(rows);
+                var total = ProfitRow.TotalOf(rows);
                 var bridge = BridgeFor(rows, total);
 
                 @if (FailedSelectedProjects.Count > 0)

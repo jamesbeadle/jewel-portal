@@ -66,7 +66,7 @@ public partial class ProfitSummary
             AddRow(project.Name, project.Stage.DisplayName(), row, row.PercentComplete);
 
         if (rows.Count > 1)
-            AddRow("All projects", "", TotalsOf(rows), null);
+            AddRow("All projects", "", ProfitRow.TotalOf(rows), null);
 
         return workbook;
     }

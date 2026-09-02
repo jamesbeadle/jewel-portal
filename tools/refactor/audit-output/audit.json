@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-09-02T06:35:50+00:00",
+  "generatedAt": "2026-09-02T06:40:15+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
       "filesOverLimit": 644,
-      "totalFiles": 3347,
+      "totalFiles": 3349,
       "worstFileLines": 665
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 698,
-      "elseBlocks": 1182,
+      "functionsOverLimit": 697,
+      "elseBlocks": 1180,
       "measurementIsHeuristic": true
     },
     "functionNames": {
@@ -20,8 +20,8 @@
     },
     "duplication": {
       "clones": 487,
-      "duplicatedLines": 6195,
-      "totalLines": 216215,
+      "duplicatedLines": 6196,
+      "totalLines": 216220,
       "duplicatedPercentage": 2.87
     },
     "naming": {
@@ -29,8 +29,8 @@
       "unprefixedBooleans": 1478
     },
     "comments": {
-      "explanatoryCommentLines": 13721,
-      "filesWithComments": 1823,
+      "explanatoryCommentLines": 13720,
+      "filesWithComments": 1825,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -41,14 +41,14 @@
     "prose": {
       "longMemberChainLines": 2397,
       "deeplyIndentedLines": 2801,
-      "overlongLines": 1694,
+      "overlongLines": 1693,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
-      "components": 131,
+      "components": 132,
       "orphanComponents": 6,
-      "averagePageLines": 226
+      "averagePageLines": 225
     }
   },
   "details": {
@@ -57,7 +57,7 @@
       "summary": {
         "limit": 100,
         "filesOverLimit": 644,
-        "totalFiles": 3347,
+        "totalFiles": 3349,
         "worstFileLines": 665
       },
       "offenders": [
@@ -642,10 +642,6 @@
           "lines": 259
         },
         {
-          "file": "jpms/Pages/ProfitSummary.razor",
-          "lines": 259
-        },
-        {
           "file": "jpms/Components/MyTodosPanel.razor",
           "lines": 258
         },
@@ -1154,6 +1150,10 @@
           "lines": 195
         },
         {
+          "file": "jpms/Pages/ProfitSummary.razor",
+          "lines": 195
+        },
+        {
           "file": "jpms/Pages/ProfitSummary.razor.cs",
           "lines": 194
         },
@@ -1199,10 +1199,6 @@
         },
         {
           "file": "jpms/Features/Procurement/TenderInviteComposerModal.razor.cs",
-          "lines": 189
-        },
-        {
-          "file": "jpms/Pages/ProfitSummary.Figures.cs",
           "lines": 189
         },
         {
@@ -1335,6 +1331,10 @@
         },
         {
           "file": "jpms/Components/ValuationReportTable.VariationEdits.cs",
+          "lines": 175
+        },
+        {
+          "file": "jpms/Pages/ProfitSummary.Figures.cs",
           "lines": 175
         },
         {
@@ -2643,8 +2643,8 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 698,
-        "elseBlocks": 1182,
+        "functionsOverLimit": 697,
+        "elseBlocks": 1180,
         "measurementIsHeuristic": true
       },
       "offenders": [
@@ -3541,8 +3541,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13721,
-        "filesWithComments": 1823,
+        "explanatoryCommentLines": 13720,
+        "filesWithComments": 1825,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4249,7 +4249,7 @@
       "summary": {
         "longMemberChainLines": 2397,
         "deeplyIndentedLines": 2801,
-        "overlongLines": 1694,
+        "overlongLines": 1693,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4865,9 +4865,9 @@
       "name": "inventory",
       "summary": {
         "pages": 92,
-        "components": 131,
+        "components": 132,
         "orphanComponents": 6,
-        "averagePageLines": 226
+        "averagePageLines": 225
       },
       "offenders": {
         "pages": [
@@ -5256,15 +5256,6 @@
             ]
           },
           {
-            "page": "jpms/Pages/ProfitSummary.razor",
-            "lines": 259,
-            "widgets": [
-              "loadGate",
-              "panel",
-              "export"
-            ]
-          },
-          {
             "page": "jpms/Pages/ProjectBidPackageInvites.razor",
             "lines": 253,
             "widgets": [
@@ -5339,6 +5330,15 @@
             "widgets": [
               "table",
               "loadGate"
+            ]
+          },
+          {
+            "page": "jpms/Pages/ProfitSummary.razor",
+            "lines": 195,
+            "widgets": [
+              "loadGate",
+              "panel",
+              "export"
             ]
           },
           {
@@ -5942,6 +5942,10 @@
             "reusedBy": 1
           },
           {
+            "component": "jpms/Components/FigureTile.razor",
+            "reusedBy": 1
+          },
+          {
             "component": "jpms/Components/FinancialsTable.razor",
             "reusedBy": 1
           },
@@ -6180,8 +6184,8 @@
       "name": "duplication",
       "summary": {
         "clones": 487,
-        "duplicatedLines": 6195,
-        "totalLines": 216215,
+        "duplicatedLines": 6196,
+        "totalLines": 216220,
         "duplicatedPercentage": 2.87
       },
       "offenders": [
