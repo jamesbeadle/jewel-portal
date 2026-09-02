@@ -1,3 +1,4 @@
+using Jewel.JPMS.Features.Site;
 using Jewel.JPMS.Contracts.Lads;
 using Jewel.JPMS.Contracts.Site;
 
@@ -10,8 +11,8 @@ public partial class ProjectProgramme
     private enum SubView { Programme, Claims, CriticalRfis, RelevantEvents }
     private SubView view = SubView.Programme;
 
-    private enum ClaimForm { None, Nod, Eot, Lad }
-    private ClaimForm openForm = ClaimForm.None;
+    // The Claims workbench owns its forms; the page prefills the NOD from a delay event.
+    private ProgrammeClaimsWorkbench? claims;
 
     // Session checked and the user is signed in — not "the data is here". The heading and the
     // sub-tabs show straight away; each view holds its own panels until their sources land.
@@ -26,29 +27,9 @@ public partial class ProjectProgramme
     // *fetch* means the empty list is not an answer.
     private bool ladsFailed;
     private string? claimsError;
-    private bool claimsBusy;
     private IReadOnlyList<LadClaim> lads = Array.Empty<LadClaim>();
 
     // Raise-NOD form.
-    private string nodTitle = "";
-    private string nodDescription = "";
-
-    // Raise-EOT form.
-    private string eotTitle = "";
-    private string eotDescription = "";
-    private string eotRelatedNodId = "";
-
-    // Record-LADs form.
-    private string ladTitle = "";
-    private string ladDescription = "";
-    private DateTime? ladPeriodFrom;
-    private DateTime? ladPeriodTo;
-    private int ladDaysClaimed;
-    private decimal ladRatePerWeek;
-    private decimal ladAmount;
-
-    // The register backs the NODs, the EOTs and the critical-path RFIs alike: until it has landed
-    // an empty list is indistinguishable from a project with no claims at all.
     private bool RequestsReady => RequestRegister.LoadedFor(ProjectId);
 
     private IReadOnlyList<Request> Nods => RequestRegister.ForProject(ProjectId, RequestType.NoticeOfDelay);
@@ -89,24 +70,27 @@ public partial class ProjectProgramme
 
     private void SwitchView(SubView next) => view = next;
 
-    private void ToggleForm(ClaimForm form)
-    {
-        openForm = openForm == form ? ClaimForm.None : form;
-        claimsError = null;
-    }
-
     // Pre-fills the Notice of Delay form from a detected delay event and jumps to the Claims view —
     // the human still reviews and raises it (the notice itself is never issued automatically).
-    private void RaiseNodFromDelay(ProgrammeDelayEvent delayEvent)
+    private async Task RaiseNodFromDelay(ProgrammeDelayEvent delayEvent)
     {
-        nodTitle = $"Delay to {delayEvent.Title} — programme impact {delayEvent.SlipDays} day(s)";
-        nodDescription =
+        view = SubView.Claims;
+        // The workbench mounts on the next render; the prefill lands once it exists.
+        await InvokeAsync(StateHasChanged);
+        await Task.Yield();
+        claims?.PrefillNod(
+            $"Delay to {delayEvent.Title} — programme impact {delayEvent.SlipDays} day(s)",
             $"The programme task \"{delayEvent.Title}\" has moved against the baselined programme: " +
             $"planned completion {delayEvent.BaselineEnd.LocalDateTime:d MMM yyyy} now forecast {delayEvent.PlannedEnd.LocalDateTime:d MMM yyyy} " +
             $"({delayEvent.SlipDays} day(s) slippage{(delayEvent.DrivesCompletion ? ", driving overall project completion" : "")}). " +
-            "Cause of delay and works affected: [complete before issuing].";
-        view = SubView.Claims;
-        openForm = ClaimForm.Nod;
+            "Cause of delay and works affected: [complete before issuing].");
     }
 
+    private string SubTabClass(SubView tab)
+    {
+        var baseClass = "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition inline-flex items-center";
+        return view == tab
+            ? $"{baseClass} border-accent text-content"
+            : $"{baseClass} border-transparent text-content-muted hover:text-content";
+    }
 }

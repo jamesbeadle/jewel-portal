@@ -1,0 +1,233 @@
+@namespace Jewel.JPMS.Features.Site
+@using Jewel.JPMS.Contracts.Site
+@inject IQueryClient Queries
+@inject ICommandSender Commands
+@inject SessionService Session
+
+@* Relevant Events: every email tagged to this project's scheduling bucket, live from the
+   mailbox. Emails render their short preview by default; expanding fetches the FULL body (with
+   the quoted thread + attachment names) live, cached per message for the list's life. Replying
+   creates a reply-all draft in the projects mailbox — nothing is sent from here. *@
+@if (Error is not null)
+{
+    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@Error</p>
+}
+
+<LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="Loading programme emails">
+@if (Emails.Count == 0)
+{
+    @* Only when the mailbox actually answered "none" — a failure says so above. *@
+    @if (Error is null)
+    {
+    <div class="panel p-8 text-center">
+        <p class="text-sm text-content">No relevant events yet.</p>
+        <p class="text-xs text-content-subtle mt-1">
+            Tick <span class="font-medium text-content">Relevant Event for Programme</span> on an email in the Control Centre and it will appear here.
+        </p>
+    </div>
+    }
+}
+else
+{
+    <ul class="space-y-2">
+        @foreach (var email in Emails)
+        {
+            <li class="rounded-lg border border-line bg-surface px-4 py-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
+                    <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                </div>
+                <p class="text-sm text-content mt-0.5">
+                    @email.Subject
+                    @if (email.HasAttachments)
+                    {
+                        <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                    }
+                </p>
+                @if (expanded.Contains(email.Id))
+                {
+                    @* The listed BodyPreview is only Graph's short snippet, so long emails and
+                       their history only appear here. HTML is sanitised server-side. *@
+                    <div class="mt-2 rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
+                        @if (!details.TryGetValue(email.Id, out var detail) || detail is null)
+                        {
+                            <p class="text-sm text-content-subtle italic">Loading full email…</p>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
+                        {
+                            <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto">@((MarkupString)detail.BodyHtml)</div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(detail.BodyHtml))
+                        {
+                            <p class="text-sm text-content whitespace-pre-wrap">@detail.BodyHtml</p>
+                        }
+                        else
+                        {
+                            <p class="text-sm text-content whitespace-pre-wrap">@email.BodyPreview</p>
+                        }
+                    </div>
+                    @if (details.TryGetValue(email.Id, out var loadedDetail)
+                         && loadedDetail is { Attachments.Count: > 0 })
+                    {
+                        <p class="text-xs text-content-subtle mt-1">
+                            @loadedDetail.Attachments.Count attachment@(loadedDetail.Attachments.Count == 1 ? "" : "s"):
+                            @string.Join(", ", loadedDetail.Attachments.Select(a => a.Name))
+                        </p>
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(email.BodyPreview))
+                {
+                    <p class="text-xs text-content-subtle mt-1 line-clamp-2">@email.BodyPreview</p>
+                }
+                <div class="mt-2 pt-2 border-t border-line/70 flex flex-wrap items-center gap-4">
+                    <button type="button"
+                            class="text-xs font-medium text-accent hover:underline"
+                            @onclick="() => ToggleEmailAsync(email)">
+                        @(expanded.Contains(email.Id) ? "Show summary" : "Show full email")
+                    </button>
+                    @if (CanDraftReply)
+                    {
+                        <button type="button"
+                                class="text-xs font-medium text-accent hover:underline"
+                                @onclick="() => ToggleReply(email)">
+                            @(replyForId == email.Id ? "Cancel reply" : "Reply in thread")
+                        </button>
+                    }
+                </div>
+                @if (replyForId == email.Id)
+                {
+                    <div class="mt-2 rounded-lg border border-line bg-surface-raised px-4 py-3">
+                        @if (replyError is not null)
+                        {
+                            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@replyError</p>
+                        }
+                        <textarea class="field mb-3" rows="4" value="@replyBody" @oninput='e => replyBody = e.Value?.ToString() ?? ""'
+                                  placeholder="Write your reply — in the draft it will sit above the quoted thread…"></textarea>
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <p class="text-xs text-content-subtle">
+                                Creates a reply-all draft in the projects mailbox — review and send it from Outlook; nothing is sent from here.
+                            </p>
+                            <button type="button" class="btn-primary"
+                                    disabled="@(replyBusy || string.IsNullOrWhiteSpace(replyBody))"
+                                    @onclick="() => CreateReplyDraftAsync(email)">
+                                @(replyBusy ? "Creating draft…" : "Create reply draft")
+                            </button>
+                        </div>
+                    </div>
+                }
+                @if (replyDraftForId == email.Id && replyDraft is not null)
+                {
+                    <div class="mt-2 rounded-lg bg-positive/10 border border-positive/30 px-3 py-2">
+                        <p class="text-sm font-medium text-positive">
+                            Reply draft created in the projects mailbox — in this email's thread.
+                        </p>
+                        <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", replyDraft.Recipients)</p>
+                        @if (replyDraft.Cc is { Count: > 0 } replyCc)
+                        {
+                            <p class="text-xs text-content-subtle">CC: @string.Join(", ", replyCc)</p>
+                        }
+                        <p class="text-xs text-content-subtle">
+                            Review the recipients and send it from Outlook — nothing has been sent.
+                            The sent copy keeps this thread's Programme tag, so it will appear here.
+                        </p>
+                        @if (!string.IsNullOrWhiteSpace(replyDraft.WebLink))
+                        {
+                            <a href="@replyDraft.WebLink" target="_blank" rel="noopener"
+                               class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
+                        }
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+}
+</LoadGate>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    /// <summary>The page's list — it reads it, because the tab badge counts it.</summary>
+    [Parameter] public IReadOnlyList<MailboxMessage> Emails { get; set; } = Array.Empty<MailboxMessage>();
+    [Parameter] public bool Loaded { get; set; }
+    [Parameter] public string? Error { get; set; }
+
+    private readonly HashSet<string> expanded = new();
+    private readonly Dictionary<string, MailboxMessageDetail?> details = new();
+
+    private string? replyForId;      // email whose reply composer is open
+    private string replyBody = "";
+    private bool replyBusy;
+    private string? replyError;
+    private string? replyDraftForId; // email whose staged-draft confirmation is showing
+    private ProgrammeReplyDraft? replyDraft;
+
+    // Mirrors PrepareProgrammeReplyDraftEndpoint server-side (directors, project managers, site
+    // managers; admins carry every role server-side).
+    private bool CanDraftReply => Session.AvailableRoles.Any(role =>
+        role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.SiteManager);
+
+    private async Task ToggleEmailAsync(MailboxMessage email)
+    {
+        if (!expanded.Add(email.Id))
+        {
+            expanded.Remove(email.Id);
+            return;
+        }
+
+        if (details.ContainsKey(email.Id)) return;
+
+        try
+        {
+            details[email.Id] = await Queries.AskAsync(
+                new GetProgrammeEmailDetail(ProjectId, email.Id, email.InternetMessageId), CancellationToken.None);
+        }
+        catch
+        {
+            // Fetch failed — fall back to the preview body inside the expanded pane.
+            details[email.Id] = new MailboxMessageDetail(email.Id, "", false, Array.Empty<IntakeAttachment>());
+        }
+    }
+
+    private void ToggleReply(MailboxMessage email)
+    {
+        if (replyForId == email.Id)
+        {
+            replyForId = null;
+            replyError = null;
+            return;
+        }
+        replyForId = email.Id;
+        replyBody = "";
+        replyError = null;
+        replyDraft = null;
+        replyDraftForId = null;
+    }
+
+    private async Task CreateReplyDraftAsync(MailboxMessage email)
+    {
+        if (replyBusy || string.IsNullOrWhiteSpace(replyBody)) return;
+        replyBusy = true;
+        replyError = null;
+        try
+        {
+            replyDraft = await Commands.SendAsync(new PrepareProgrammeReplyDraft(
+                ProjectId, email.Id, replyBody.Trim(), email.InternetMessageId), CancellationToken.None);
+            replyDraftForId = email.Id;
+            replyForId = null;
+            replyBody = "";
+        }
+        catch (CommandFailedException ex)
+        {
+            // Validation answers (empty reply, vanished email) come back as 400s with the server's
+            // own sentence — shown here next to the composer, per the error-reporting convention.
+            replyError = ex.Message;
+        }
+        catch
+        {
+            replyError = "Couldn't create the reply draft. Check the mailbox connection and try again.";
+        }
+        finally
+        {
+            replyBusy = false;
+        }
+    }
+}
