@@ -1,0 +1,42 @@
+@namespace Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+
+@* Budget → forecast bridge. Reconciles by construction: the two floating bars are Variations
+   and (Initial Contract Costs − Forecasted Cost of Sales), which sum exactly to
+   Forecast − Budgeted. The page skips it while every figure is zero — a chart of nothing is a
+   conditional region, not a gate. *@
+<div class="rounded-xl border border-line bg-surface p-5 mb-6">
+    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+        Budget → forecast bridge
+        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— @Bridge.Note</span>
+    </p>
+    <div class="relative h-[210px] mt-3" aria-hidden="true">
+        <div class="absolute inset-x-0 border-t border-line" style="top:@(Pc(Bridge.ZeroY))%"></div>
+        <div class="absolute inset-0 grid grid-cols-4">
+            @foreach (var bar in Bridge.Bars)
+            {
+                <div class="relative">
+                    @if (bar.ConnectorY is double connector)
+                    {
+                        <div class="absolute border-t border-dashed border-line-strong" style="top:@(Pc(connector))%;left:-25%;width:50%"></div>
+                    }
+                    <div class="absolute left-1/2 -translate-x-1/2 w-16 rounded @bar.BarClass" style="top:@(Pc(bar.Top))%;height:@(Pc(bar.Height))%"></div>
+                    <div class="absolute inset-x-0 text-center text-xs font-semibold @bar.LabelClass" style="top:calc(@(Pc(bar.Top))% - 22px)">@bar.Amount</div>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="grid grid-cols-4 mt-2">
+        @foreach (var bar in Bridge.Bars)
+        {
+            <div class="text-center">
+                <p class="text-[10px] uppercase tracking-wider text-content-muted font-medium">@bar.Label</p>
+                <p class="text-[10px] text-content-subtle">@bar.Sub</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public BridgeModel Bridge { get; set; } = default!;
+}

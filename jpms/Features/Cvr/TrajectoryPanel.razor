@@ -1,0 +1,60 @@
+@namespace Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+
+@* Trajectory by job — the running total in £ of the same Xero months the grid at the top of
+   the page shows in %, one mini-chart per job against its budgeted-profit band. Same model,
+   same row order as the grid. *@
+<div class="rounded-xl border border-line bg-surface p-5 mt-6">
+    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+        Trajectory by job
+        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— cumulative profit £, each job on its own scale · Xero site P&L, @BasisLabel</span>
+    </p>
+    <p class="text-xs text-content-muted mt-1 mb-3">
+        One mini-chart per job — shape is comparable, scale is per-job, so one big job can't squash the others flat.
+    </p>
+    <div class="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
+        @foreach (var card in Cards)
+        {
+            <div class="rounded-lg border border-line bg-surface-raised px-4 pt-3 pb-2.5">
+                <div class="flex items-baseline justify-between gap-2">
+                    <span class="text-xs font-medium text-content">@card.Project.Name</span>
+                    <span class="text-[11px] font-semibold @ProfitClass(card.SixMonthDelta)">
+                        @(Math.Abs(card.SixMonthDelta) < RunningMovement.ZeroThreshold ? "— flat" : $"{DeltaK(card.SixMonthDelta)}k / 6 mo")
+                    </span>
+                </div>
+                <div class="relative h-16 mt-2">
+                    <svg class="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                        @if (card.BudgetY is double budgetY)
+                        {
+                            <line x1="0" x2="100" y1="@Pc(budgetY)" y2="@Pc(budgetY)"
+                                  stroke="#2a3242" stroke-width="4" opacity="0.55" vector-effect="non-scaling-stroke" />
+                        }
+                        <polyline points="@card.PathPoints" fill="none" stroke="@card.LineColor" stroke-width="2"
+                                  vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+                    </svg>
+                    <div class="absolute w-1.5 h-1.5 rounded-full -translate-y-1/2 translate-x-1/2"
+                         style="background:@card.LineColor;top:@(Pc(card.EndY))%;right:0"></div>
+                </div>
+                <p class="text-[15px] font-semibold mt-1.5 @ProfitClass(card.PositionNow)">@MoneyCompact(card.PositionNow)</p>
+                <p class="text-[10px] text-content-faint mt-0.5">
+                    @(card.Budget is decimal budget ? $"budget {MoneyCompact(budget)}" : "budget not loaded")
+                    @if (card.Stale)
+                    {
+                        <span class="text-amber-400"> · ⚠ no movement 6 mo</span>
+                    }
+                </p>
+            </div>
+        }
+    </div>
+    <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
+        Grey band = budgeted profit for the job — where the deal says it should land. A line short of its
+        band late in a job is the gap still to close; a line above it is margin in hand. Cumulative Xero
+        site profit (income less cost of sales less site-tracked overheads), so young jobs sit below
+        their band by nature.
+    </p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<TrajectoryCard> Cards { get; set; } = default!;
+    [Parameter] public string BasisLabel { get; set; } = "";
+}

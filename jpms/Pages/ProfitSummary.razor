@@ -126,86 +126,14 @@
                                      BuildWorkbook="BuildExportWorkbook" />
             </div>
 
-            @* ── Running profit by month — FIRST on the page (Jeremy, 2026-08-13 pm: "an easy
-               one stop shop for what Nigel wants to see as a trend for the projects, and it
-               is live", so the trend leads and the deal/certified table follows). Jeremy's
-               running-balance format (2026-08-13): each cell's main figure is the
-               project-to-date running % at that month end (the accountant's "Running %
-               Profit"), the small print beneath is the month's movement in percentage
-               points — the trend of the whole job, so one month's spike or fall can't
-               masquerade as the position. The month's own % (the 2026-08-12 format) lives
-               in the hover. Profit includes overheads tracked to the site, so the figures
-               reconcile with his P&L exactly — Xero data only, no forecast snapshots (the
-               accountant's call, 2026-08-05). Rows follow the table's order (GridProjects)
-               — Jeremy mis-paired rows when the two disagreed (2026-08-13). A conditional
-               region: it appears once the Xero store has answered; the cumulative panel at
-               the bottom carries the group's loading gate and error states. ── *@
             @if (selectionInitialised && SelectedProjects.Count > 0
                  && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } movement)
             {
-                <div class="rounded-xl border border-line bg-surface p-5 mb-6">
-                    <div class="flex items-start justify-between gap-x-6 gap-y-1 flex-wrap">
-                        <div>
-                            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                Running profit by month
-                                <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— the whole job's % profit to date at each month end, that month's movement beneath · Xero site P&L, @BasisLabel</span>
-                            </p>
-                            <p class="text-xs text-content-muted mt-1 mb-3">
-                                The main figure is the trend of the whole project; the small print is what the month did to it, in points and in £ — spikes and falls live there, so they can't get lost. The last column is where the job stands to date.
-                            </p>
-                        </div>
-                        @* The basis switch for every Xero panel on the page (grid, trajectory, cumulative
-                           charts) — a control, so never gated. Default OFF: pure Xero, exactly what the
-                           accountant reconciles. ON overlays approved timesheet cost that no Xero-approved
-                           bill settles yet, so the current month reads the portal's live labour position. *@
-                        <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none whitespace-nowrap"
-                               title="Adds approved timesheet cost that no Xero-approved bill settles yet — the portal's live labour, marked • per cell. It drops out automatically as bills are approved in Xero, so closed months always converge back to Xero's own figures.">
-                            <input type="checkbox" class="cursor-pointer align-middle" @bind="includeLabourAccrual" />
-                            Include approved labour not yet billed
-                        </label>
-                    </div>
-                    <RunningProfitTable Movement="movement"
-                                        AccrualHover="AccrualHover"
-                                        AccrualOwnFor="AccrualOwnFor"
-                                        AccrualToDateFor="AccrualToDateFor" />
-                    <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
-                        Each cell's main figure is the whole job to that month end — cumulative profit (income less
-                        cost of sales less overheads tracked to the site, in Xero) over cumulative invoicing, exactly
-                        the accountant's "Running % Profit" row — so the row reads as the project's trend, and the
-                        last month always agrees with "Position now" (the £ beneath it is the profit it is made of).
-                        The small print is what the month did to that figure, in percentage points, followed by the
-                        month's own profit or loss in £; the month's invoicing and own % (his "Current Month %
-                        Profit") stay in the cell's hover. "6-mo Δ" is the running %
-                        now against six months ago — "—" where the job wasn't invoiced back then. "n/a" is a job with
-                        costs but no invoicing at all yet — no honest percentage exists; hover for the £. "—" is a
-                        month before anything happened. Young jobs swing wildly by nature — deposits against little
-                        cost read absurdly high — so read them by the £ in the hover, not the %. Cell shade follows
-                        the month's movement, improving green and worsening red; every cell keeps its numbers, so
-                        colour never carries the meaning alone. This grid reports the
-                        <span class="text-content-muted">invoiced</span> rung of the ladder and deducts site-tracked
-                        overheads, so its figures deliberately sit near, not on, the
-                        <span class="text-content-muted">certified</span> figures in the table below — a job with
-                        salaries tracked to its site reads lower here, and one with deposits invoiced ahead of
-                        certification reads higher.
-                        @if (includeLabourAccrual)
-                        {
-                            <text>The basis switch is ON: months marked <span class="text-amber-400">•</span> include
-                            approved labour not yet billed — approved timesheet cost from the portal that no
-                            Xero-approved bill settles yet. It is an accrual, not a Xero figure: as each labourer's
-                            bill is approved in Xero the cost enters the synced P&L and leaves the accrual in the
-                            same moment, so nothing double-counts and closed months converge back to exactly what
-                            Xero says. Switch it off before reconciling against Xero itself. </text>
-                        }
-                        @if (movement.Rows.Any(row => row.Stale))
-                        {
-                            <text>⚠ A job with no movement for six months usually means stalled or unbilled, not that nothing is happening on site. </text>
-                        }
-                        @if (movement.Excluded.Count > 0)
-                        {
-                            <text>@string.Join(", ", movement.Excluded.Select(project => project.Name)) @(movement.Excluded.Count == 1 ? "has" : "have") no Xero site data yet — see the cards below.</text>
-                        }
-                    </p>
-                </div>
+                <RunningProfitPanel Movement="movement" BasisLabel="@BasisLabel"
+                                    @bind-IncludeLabourAccrual="includeLabourAccrual"
+                                    AccrualHover="AccrualHover"
+                                    AccrualOwnFor="AccrualOwnFor"
+                                    AccrualToDateFor="AccrualToDateFor" />
             }
 
             @* ── Summary strip. Stat-tile pattern (the loading-states convention): each tile keeps
@@ -301,43 +229,9 @@
                     </p>
                 }
 
-                @* ── Budget → forecast bridge. Reconciles by construction: the two floating bars
-                   are Variations and (Initial Contract Costs − Forecasted Cost of Sales), which
-                   sum exactly to Forecast − Budgeted. Skipped while every figure is zero — a
-                   chart of nothing is a conditional region, not a gate. ── *@
                 @if (bridge is not null)
                 {
-                    <div class="rounded-xl border border-line bg-surface p-5 mb-6">
-                        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            Budget → forecast bridge
-                            <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— @bridge.Note</span>
-                        </p>
-                        <div class="relative h-[210px] mt-3" aria-hidden="true">
-                            <div class="absolute inset-x-0 border-t border-line" style="top:@(Pc(bridge.ZeroY))%"></div>
-                            <div class="absolute inset-0 grid grid-cols-4">
-                                @foreach (var bar in bridge.Bars)
-                                {
-                                    <div class="relative">
-                                        @if (bar.ConnectorY is double connector)
-                                        {
-                                            <div class="absolute border-t border-dashed border-line-strong" style="top:@(Pc(connector))%;left:-25%;width:50%"></div>
-                                        }
-                                        <div class="absolute left-1/2 -translate-x-1/2 w-16 rounded @bar.BarClass" style="top:@(Pc(bar.Top))%;height:@(Pc(bar.Height))%"></div>
-                                        <div class="absolute inset-x-0 text-center text-xs font-semibold @bar.LabelClass" style="top:calc(@(Pc(bar.Top))% - 22px)">@bar.Amount</div>
-                                    </div>
-                                }
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-4 mt-2">
-                            @foreach (var bar in bridge.Bars)
-                            {
-                                <div class="text-center">
-                                    <p class="text-[10px] uppercase tracking-wider text-content-muted font-medium">@bar.Label</p>
-                                    <p class="text-[10px] text-content-subtle">@bar.Sub</p>
-                                </div>
-                            }
-                        </div>
-                    </div>
+                    <BudgetForecastBridge Bridge="bridge" />
                 }
 
                 <ProfitTable Rows="rows" Total="total"
@@ -346,200 +240,19 @@
             }
             </LoadGate>
 
-            @* ── Trajectory by job — the running total in £ of the same Xero months the
-               grid at the top of the page shows in %, one mini-chart per job against its
-               budgeted-profit band. Same model, same row order (GridProjects). ── *@
             @if (selectionInitialised && SelectedProjects.Count > 0
                  && SitePnl.Current is { IsConfigured: true } && MovementFor(GridProjects) is { } trend)
             {
-                <div class="rounded-xl border border-line bg-surface p-5 mt-6">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                        Trajectory by job
-                        <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— cumulative profit £, each job on its own scale · Xero site P&L, @BasisLabel</span>
-                    </p>
-                    <p class="text-xs text-content-muted mt-1 mb-3">
-                        One mini-chart per job — shape is comparable, scale is per-job, so one big job can't squash the others flat.
-                    </p>
-                    <div class="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
-                        @foreach (var card in TrajectoriesFor(trend))
-                        {
-                            <div class="rounded-lg border border-line bg-surface-raised px-4 pt-3 pb-2.5">
-                                <div class="flex items-baseline justify-between gap-2">
-                                    <span class="text-xs font-medium text-content">@card.Project.Name</span>
-                                    <span class="text-[11px] font-semibold @ProfitClass(card.SixMonthDelta)">
-                                        @(Math.Abs(card.SixMonthDelta) < RunningMovement.ZeroThreshold ? "— flat" : $"{DeltaK(card.SixMonthDelta)}k / 6 mo")
-                                    </span>
-                                </div>
-                                <div class="relative h-16 mt-2">
-                                    <svg class="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                                        @if (card.BudgetY is double budgetY)
-                                        {
-                                            <line x1="0" x2="100" y1="@Pc(budgetY)" y2="@Pc(budgetY)"
-                                                  stroke="#2a3242" stroke-width="4" opacity="0.55" vector-effect="non-scaling-stroke" />
-                                        }
-                                        <polyline points="@card.PathPoints" fill="none" stroke="@card.LineColor" stroke-width="2"
-                                                  vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
-                                    </svg>
-                                    <div class="absolute w-1.5 h-1.5 rounded-full -translate-y-1/2 translate-x-1/2"
-                                         style="background:@card.LineColor;top:@(Pc(card.EndY))%;right:0"></div>
-                                </div>
-                                <p class="text-[15px] font-semibold mt-1.5 @ProfitClass(card.PositionNow)">@MoneyCompact(card.PositionNow)</p>
-                                <p class="text-[10px] text-content-faint mt-0.5">
-                                    @(card.Budget is decimal budget ? $"budget {MoneyCompact(budget)}" : "budget not loaded")
-                                    @if (card.Stale)
-                                    {
-                                        <span class="text-amber-400"> · ⚠ no movement 6 mo</span>
-                                    }
-                                </p>
-                            </div>
-                        }
-                    </div>
-                    <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
-                        Grey band = budgeted profit for the job — where the deal says it should land. A line short of its
-                        band late in a job is the gap still to close; a line above it is margin in hand. Cumulative Xero
-                        site profit (income less cost of sales less site-tracked overheads), so young jobs sit below
-                        their band by nature.
-                    </p>
-                </div>
+                <TrajectoryPanel Cards="TrajectoriesFor(trend)" BasisLabel="@BasisLabel" />
             }
 
-            @* ── Cumulative position — invoiced vs cost, job start to date, straight from
-               Xero's site P&L (the accountant's combined mock, 2026-08-04). One card per
-               selected job on its own scale; the gap between the lines is cumulative gross
-               profit. Gated on its own store, not on the table's per-project loads — the two
-               regions load in parallel and reveal independently. ── *@
             @if (selectionInitialised && SelectedProjects.Count > 0)
             {
-                <div class="rounded-xl border border-line bg-surface p-5 mt-6">
-                    <div class="flex items-start justify-between gap-x-6 gap-y-2 flex-wrap">
-                        <div>
-                            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                Cumulative position
-                                <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— invoiced vs cost, job start to date · Xero site P&L, @BasisLabel</span>
-                            </p>
-                            <div class="flex items-center gap-4 mt-2 text-[11px] text-content-muted flex-wrap">
-                                <span class="flex items-center gap-1.5"><span class="inline-block w-3.5 h-[3px] rounded-full" style="background:@InvoicedColor"></span>Cumulative invoiced</span>
-                                <span class="flex items-center gap-1.5"><span class="inline-block w-3.5 h-[3px] rounded-full" style="background:@CostColor"></span>Cumulative cost (incl. site overheads@(includeLabourAccrual ? " + accrued labour" : ""))</span>
-                                <span class="text-content-faint">· hover for month values</span>
-                            </div>
-                        </div>
-                        <Toolbar>
-                            <ToolbarButton Icon="refresh" Label="Refresh from Xero" Busy="@pnlSyncing" OnClick="RefreshSitePnlAsync" />
-                        </Toolbar>
-                    </div>
-
-                    @if (pnlSyncError is not null)
-                    {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-4">@pnlSyncError</p>
-                    }
-                    @if (pnlSyncNotice is not null)
-                    {
-                        <p class="rounded-lg bg-amber-400/10 border border-amber-400/30 px-3 py-2 text-sm text-amber-400 mt-4">@pnlSyncNotice</p>
-                    }
-
-                    <LoadGate IsLoading="@(SitePnl.Current is null && !pnlFailed)" Label="Loading Xero site figures">
-                        @if (SitePnl.Current is null)
-                        {
-                            <p class="text-sm text-negative mt-4">
-                                The Xero site figures could not be loaded. The details are in the red bar at the top — reload to try again.
-                            </p>
-                        }
-                        else if (!SitePnl.Current.IsConfigured)
-                        {
-                            <p class="text-sm text-content-muted mt-4">
-                                Xero isn't connected — add the Xero credentials to the API's app settings and this panel lights up.
-                            </p>
-                        }
-                        else
-                        {
-                            var cards = CumulativeCardsFor(GridProjects);
-
-                            @if (SitePnl.Current.LastSyncedAtUtc is null)
-                            {
-                                <p class="text-sm text-content-muted mt-4">
-                                    No site figures have been pulled from Xero yet — press "Refresh from Xero" above to run the
-                                    first sync; the nightly worker keeps it current from then on.
-                                </p>
-                            }
-
-                            <div class="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3 mt-4">
-                                @foreach (var card in cards)
-                                {
-                                    <div class="rounded-lg border border-line bg-surface-raised px-4 pt-3.5 pb-3">
-                                        @if (card.Chart is null)
-                                        {
-                                            <div class="flex items-center justify-center min-h-[170px]">
-                                                <p class="text-[11px] text-content-subtle text-center leading-relaxed max-w-[240px]">
-                                                    <span class="block text-amber-400 mb-1">@card.Project.Name ⚠</span>
-                                                    @card.Unavailable
-                                                </p>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            var chart = card.Chart!;
-                                            <div class="flex items-baseline justify-between gap-2">
-                                                <span class="text-[12.5px] font-medium text-content">@card.Project.Name</span>
-                                                <span class="text-[10px] text-content-faint whitespace-nowrap">@chart.RangeLabel</span>
-                                            </div>
-                                            <div class="relative h-[110px] mt-2">
-                                                <div class="absolute inset-x-0 bottom-0 border-t border-line"></div>
-                                                <svg class="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                                                    <polyline points="@chart.CostPoints" fill="none" stroke="@CostColor" stroke-width="2"
-                                                              vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
-                                                    <polyline points="@chart.InvoicedPoints" fill="none" stroke="@InvoicedColor" stroke-width="2"
-                                                              vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
-                                                </svg>
-                                                <div class="absolute w-1.5 h-1.5 rounded-full -translate-y-1/2 translate-x-1/2"
-                                                     style="background:@InvoicedColor;top:@(Pc(chart.InvoicedEndY))%;right:0"></div>
-                                                <div class="absolute w-1.5 h-1.5 rounded-full -translate-y-1/2 translate-x-1/2"
-                                                     style="background:@CostColor;top:@(Pc(chart.CostEndY))%;right:0"></div>
-                                                @* The hover layer the legend promises: one full-height column per month, the
-                                                   month's running figures as its tooltip. *@
-                                                @for (var index = 0; index < chart.Points.Count; index++)
-                                                {
-                                                    var point = chart.Points[index];
-                                                    <div class="absolute inset-y-0"
-                                                         style="left:@(Pc(index * 100d / chart.Points.Count))%;width:@(Pc(100d / chart.Points.Count))%"
-                                                         title="@($"{point.Month:MMM yy} — invoiced {MoneyCompact(point.Invoiced)} · cost {MoneyCompact(point.Cost)} · profit {MoneyCompact(point.Invoiced - point.Cost)}")"></div>
-                                                }
-                                            </div>
-                                            <div class="flex items-baseline justify-between gap-2 mt-2 flex-wrap">
-                                                <span class="text-sm font-semibold @ProfitClass(chart.GrossProfit)">
-                                                    @MoneyCompact(chart.GrossProfit)
-                                                    <span class="text-[10.5px] font-normal text-content-faint ml-1">cum. profit@(chart.Margin is decimal cumMargin ? $" · {Pct(cumMargin)}" : "")</span>
-                                                </span>
-                                                @if (chart.Warning is not null)
-                                                {
-                                                    <span class="text-[10px] text-amber-400">⚠ @chart.Warning</span>
-                                                }
-                                            </div>
-                                        }
-                                    </div>
-                                }
-                            </div>
-
-                            <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
-                                Gap between the lines is cumulative profit — parallel is healthy, converging is eroding,
-                                crossed is underwater, both flat is stalled or unbilled. Figures are Xero's own site P&L (sales,
-                                cost of sales and overheads tracked to each project's site), so this panel reports the
-                                <span class="text-content-muted">invoiced</span> rung of the ladder — it sits near, not on, the
-                                table's <span class="text-content-muted">certified</span> figures, and retention appears only
-                                where it is tracked to the site in Xero.
-                                @if (includeLabourAccrual)
-                                {
-                                    <text>The basis switch (top of the page) is ON, so the cost line also carries
-                                    approved labour not yet billed — portal timesheet cost that drops out as each
-                                    bill is approved in Xero. </text>
-                                }
-                                @if (SitePnl.Current.LastSyncedAtUtc is DateTimeOffset syncedAt)
-                                {
-                                    <text>Synced from Xero @syncedAt.ToLocalTime().ToString("d MMM HH:mm").</text>
-                                }
-                            </p>
-                        }
-                    </LoadGate>
-                </div>
+                <CumulativePositionPanel Snapshot="SitePnl.Current" Failed="pnlFailed"
+                                         Cards="CumulativeCardsFor(GridProjects)"
+                                         IncludeLabourAccrual="includeLabourAccrual"
+                                         BasisLabel="@BasisLabel"
+                                         OnSynced="LoadSitePnlAsync" />
             }
         }
     </section>

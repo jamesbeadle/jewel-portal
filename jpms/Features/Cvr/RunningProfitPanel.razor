@@ -1,0 +1,91 @@
+@namespace Jewel.JPMS.Features.Cvr
+
+@* Running profit by month — FIRST on the page (Jeremy, 2026-08-13 pm: "an easy one stop shop
+   for what Nigel wants to see as a trend for the projects, and it is live", so the trend leads
+   and the deal/certified table follows). Jeremy's running-balance format (2026-08-13): each
+   cell's main figure is the project-to-date running % at that month end (the accountant's
+   "Running % Profit"), the small print beneath is the month's movement in percentage points —
+   the trend of the whole job, so one month's spike or fall can't masquerade as the position.
+   The month's own % (the 2026-08-12 format) lives in the hover. Profit includes overheads
+   tracked to the site, so the figures reconcile with his P&L exactly — Xero data only, no
+   forecast snapshots (the accountant's call, 2026-08-05). The host builds the MovementModel in
+   the table's own row order and owns the labour-accrual overlay; the basis switch lives here
+   because this is the first Xero panel a reader meets, and it is bound back to the page because
+   every Xero panel reads it. *@
+<div class="rounded-xl border border-line bg-surface p-5 mb-6">
+    <div class="flex items-start justify-between gap-x-6 gap-y-1 flex-wrap">
+        <div>
+            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                Running profit by month
+                <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— the whole job's % profit to date at each month end, that month's movement beneath · Xero site P&L, @BasisLabel</span>
+            </p>
+            <p class="text-xs text-content-muted mt-1 mb-3">
+                The main figure is the trend of the whole project; the small print is what the month did to it, in points and in £ — spikes and falls live there, so they can't get lost. The last column is where the job stands to date.
+            </p>
+        </div>
+        @* The basis switch for every Xero panel on the page (grid, trajectory, cumulative
+           charts) — a control, so never gated. Default OFF: pure Xero, exactly what the
+           accountant reconciles. ON overlays approved timesheet cost that no Xero-approved
+           bill settles yet, so the current month reads the portal's live labour position. *@
+        <label class="flex w-fit items-center gap-2 text-xs text-content-subtle cursor-pointer select-none whitespace-nowrap"
+               title="Adds approved timesheet cost that no Xero-approved bill settles yet — the portal's live labour, marked • per cell. It drops out automatically as bills are approved in Xero, so closed months always converge back to Xero's own figures.">
+            <input type="checkbox" class="cursor-pointer align-middle" checked="@IncludeLabourAccrual"
+                   @onchange="args => IncludeLabourAccrualChanged.InvokeAsync(args.Value is true)" />
+            Include approved labour not yet billed
+        </label>
+    </div>
+    <RunningProfitTable Movement="Movement"
+                        AccrualHover="AccrualHover"
+                        AccrualOwnFor="AccrualOwnFor"
+                        AccrualToDateFor="AccrualToDateFor" />
+    <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
+        Each cell's main figure is the whole job to that month end — cumulative profit (income less
+        cost of sales less overheads tracked to the site, in Xero) over cumulative invoicing, exactly
+        the accountant's "Running % Profit" row — so the row reads as the project's trend, and the
+        last month always agrees with "Position now" (the £ beneath it is the profit it is made of).
+        The small print is what the month did to that figure, in percentage points, followed by the
+        month's own profit or loss in £; the month's invoicing and own % (his "Current Month %
+        Profit") stay in the cell's hover. "6-mo Δ" is the running %
+        now against six months ago — "—" where the job wasn't invoiced back then. "n/a" is a job with
+        costs but no invoicing at all yet — no honest percentage exists; hover for the £. "—" is a
+        month before anything happened. Young jobs swing wildly by nature — deposits against little
+        cost read absurdly high — so read them by the £ in the hover, not the %. Cell shade follows
+        the month's movement, improving green and worsening red; every cell keeps its numbers, so
+        colour never carries the meaning alone. This grid reports the
+        <span class="text-content-muted">invoiced</span> rung of the ladder and deducts site-tracked
+        overheads, so its figures deliberately sit near, not on, the
+        <span class="text-content-muted">certified</span> figures in the table below — a job with
+        salaries tracked to its site reads lower here, and one with deposits invoiced ahead of
+        certification reads higher.
+        @if (IncludeLabourAccrual)
+        {
+            <text>The basis switch is ON: months marked <span class="text-amber-400">•</span> include
+            approved labour not yet billed — approved timesheet cost from the portal that no
+            Xero-approved bill settles yet. It is an accrual, not a Xero figure: as each labourer's
+            bill is approved in Xero the cost enters the synced P&L and leaves the accrual in the
+            same moment, so nothing double-counts and closed months converge back to exactly what
+            Xero says. Switch it off before reconciling against Xero itself. </text>
+        }
+        @if (Movement.Rows.Any(row => row.Stale))
+        {
+            <text>⚠ A job with no movement for six months usually means stalled or unbilled, not that nothing is happening on site. </text>
+        }
+        @if (Movement.Excluded.Count > 0)
+        {
+            <text>@string.Join(", ", Movement.Excluded.Select(project => project.Name)) @(Movement.Excluded.Count == 1 ? "has" : "have") no Xero site data yet — see the cards below.</text>
+        }
+    </p>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MovementModel Movement { get; set; } = default!;
+    /// <summary>The basis tag every Xero panel's subtitle carries ("invoiced basis").</summary>
+    [Parameter] public string BasisLabel { get; set; } = "";
+    [Parameter] public bool IncludeLabourAccrual { get; set; }
+    [Parameter] public EventCallback<bool> IncludeLabourAccrualChanged { get; set; }
+
+    /// <summary>The host's labour-accrual overlay, handed on to the grid cell by cell.</summary>
+    [Parameter, EditorRequired] public Func<string, DateTime, string> AccrualHover { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<string, DateTime, decimal> AccrualOwnFor { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<string, decimal> AccrualToDateFor { get; set; } = default!;
+}

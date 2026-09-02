@@ -12,14 +12,6 @@ namespace Jewel.JPMS.Pages;
 public partial class ProfitSummary
 {
     // ---- Bridge -------------------------------------------------------------
-    // Waterfall geometry precomputed here so the markup only places rectangles. Values are
-    // mapped into a 12%–100% vertical band (the top 12% is reserved for the amount labels).
-
-    private sealed record BridgeBar(
-        string Label, string Sub, string Amount, string BarClass, string LabelClass,
-        double Top, double Height, double? ConnectorY);
-
-    private sealed record BridgeModel(string Note, double ZeroY, IReadOnlyList<BridgeBar> Bars);
 
     private BridgeModel? BridgeFor(IReadOnlyList<(Project Project, ProfitRow Row)> rows, ProfitRow total)
     {

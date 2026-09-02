@@ -19,6 +19,15 @@ public static class ProfitDisplay
     /// <summary>An inline-style percentage, culture-invariant — a comma decimal separator would silently break the CSS.</summary>
     public static string Pc(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
 
+    /// <summary>Signed £k with one decimal — the trajectory's six-month headline ("+4.7", "−12.0").</summary>
+    public static string DeltaK(decimal value) =>
+        value >= 0m ? $"+{value / 1000m:0.0}" : $"−{Math.Abs(value) / 1000m:0.0}";
+
+    /// <summary>The cumulative chart's line pair — the accountant's mock colours, validated for
+    /// CVD separation and contrast on the card surface.</summary>
+    public const string InvoicedLineColor = "#3987e5";
+    public const string CostLineColor = "#d95926";
+
     public static string MoneyCompact(decimal value)
     {
         var sign = value < 0m ? "-" : "";

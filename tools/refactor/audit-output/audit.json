@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-02T06:30:17+00:00",
+  "generatedAt": "2026-09-02T06:35:50+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
       "filesOverLimit": 644,
-      "totalFiles": 3339,
+      "totalFiles": 3347,
       "worstFileLines": 665
     },
     "functionShape": {
@@ -19,18 +19,18 @@
       "maxLength": 40
     },
     "duplication": {
-      "clones": 488,
-      "duplicatedLines": 6207,
-      "totalLines": 216161,
+      "clones": 487,
+      "duplicatedLines": 6195,
+      "totalLines": 216215,
       "duplicatedPercentage": 2.87
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1475
+      "unprefixedBooleans": 1478
     },
     "comments": {
-      "explanatoryCommentLines": 13724,
-      "filesWithComments": 1817,
+      "explanatoryCommentLines": 13721,
+      "filesWithComments": 1823,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -41,14 +41,14 @@
     "prose": {
       "longMemberChainLines": 2397,
       "deeplyIndentedLines": 2801,
-      "overlongLines": 1699,
+      "overlongLines": 1694,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 131,
       "orphanComponents": 6,
-      "averagePageLines": 229
+      "averagePageLines": 226
     }
   },
   "details": {
@@ -57,7 +57,7 @@
       "summary": {
         "limit": 100,
         "filesOverLimit": 644,
-        "totalFiles": 3339,
+        "totalFiles": 3347,
         "worstFileLines": 665
       },
       "offenders": [
@@ -80,10 +80,6 @@
         {
           "file": "jpms/Pages/ProjectWorkOrders.razor",
           "lines": 548
-        },
-        {
-          "file": "jpms/Pages/ProfitSummary.razor",
-          "lines": 546
         },
         {
           "file": "jpms/Pages/TriageQueue.Outbox.cs",
@@ -646,6 +642,10 @@
           "lines": 259
         },
         {
+          "file": "jpms/Pages/ProfitSummary.razor",
+          "lines": 259
+        },
+        {
           "file": "jpms/Components/MyTodosPanel.razor",
           "lines": 258
         },
@@ -696,10 +696,6 @@
         {
           "file": "api/Features/Variations/Commands/ApproveVariationOrderHandler.cs",
           "lines": 252
-        },
-        {
-          "file": "jpms/Pages/ProfitSummary.Running.cs",
-          "lines": 250
         },
         {
           "file": "jpms/Pages/XeroTransactions.razor",
@@ -1146,12 +1142,20 @@
           "lines": 196
         },
         {
+          "file": "jpms/Pages/ProfitSummary.Running.cs",
+          "lines": 195
+        },
+        {
           "file": "jpms/Pages/ProjectVariationDetail.Communications.cs",
           "lines": 195
         },
         {
           "file": "jpms/Components/ProjectCorrespondencePanel.razor",
           "lines": 195
+        },
+        {
+          "file": "jpms/Pages/ProfitSummary.razor.cs",
+          "lines": 194
         },
         {
           "file": "jpms/Pages/ProjectLabour.Approval.cs",
@@ -1308,10 +1312,6 @@
         {
           "file": "jpms/Pages/WeeklyCashflow.razor.cs",
           "lines": 178
-        },
-        {
-          "file": "jpms/Pages/ProfitSummary.razor.cs",
-          "lines": 177
         },
         {
           "file": "jpms/Services/HttpProgressStore.cs",
@@ -1966,6 +1966,10 @@
           "lines": 130
         },
         {
+          "file": "jpms/Features/Cvr/CumulativePositionPanel.razor",
+          "lines": 130
+        },
+        {
           "file": "worker/MailboxIntake/Graph/IGraphMailClient.cs",
           "lines": 130
         },
@@ -1991,10 +1995,6 @@
         },
         {
           "file": "jpms/Pages/LabourOverview.razor.cs",
-          "lines": 127
-        },
-        {
-          "file": "jpms/Pages/ProfitSummary.Cumulative.cs",
           "lines": 127
         },
         {
@@ -3079,7 +3079,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1475
+        "unprefixedBooleans": 1478
       },
       "offenders": {
         "abbreviations": [
@@ -3541,8 +3541,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13724,
-        "filesWithComments": 1817,
+        "explanatoryCommentLines": 13721,
+        "filesWithComments": 1823,
         "taskMarkers": 48
       },
       "offenders": [
@@ -3878,6 +3878,10 @@
             "line": 54
           },
           {
+            "file": "jpms/Features/Cvr/TrajectoryPanel.razor",
+            "line": 30
+          },
+          {
             "file": "jpms/Features/Labour/WorkerPlacementStrip.razor",
             "line": 21
           },
@@ -3916,10 +3920,6 @@
           {
             "file": "jpms/Features/Triage/RichTextEditor.razor",
             "line": 117
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 378
           }
         ],
         "inlineStyles": [
@@ -3972,6 +3972,42 @@
             "line": 30
           },
           {
+            "file": "jpms/Features/Cvr/BudgetForecastBridge.razor",
+            "line": 14
+          },
+          {
+            "file": "jpms/Features/Cvr/BudgetForecastBridge.razor",
+            "line": 21
+          },
+          {
+            "file": "jpms/Features/Cvr/BudgetForecastBridge.razor",
+            "line": 23
+          },
+          {
+            "file": "jpms/Features/Cvr/BudgetForecastBridge.razor",
+            "line": 24
+          },
+          {
+            "file": "jpms/Features/Cvr/CumulativeChartCard.razor",
+            "line": 33
+          },
+          {
+            "file": "jpms/Features/Cvr/CumulativeChartCard.razor",
+            "line": 35
+          },
+          {
+            "file": "jpms/Features/Cvr/CumulativeChartCard.razor",
+            "line": 42
+          },
+          {
+            "file": "jpms/Features/Cvr/CumulativePositionPanel.razor",
+            "line": 21
+          },
+          {
+            "file": "jpms/Features/Cvr/CumulativePositionPanel.razor",
+            "line": 22
+          },
+          {
             "file": "jpms/Features/Cvr/ProfitTableRow.razor",
             "line": 21
           },
@@ -3990,6 +4026,10 @@
           {
             "file": "jpms/Features/Cvr/RunningProfitTable.razor",
             "line": 54
+          },
+          {
+            "file": "jpms/Features/Cvr/TrajectoryPanel.razor",
+            "line": 36
           },
           {
             "file": "jpms/Features/Labour/CostCodeTable.razor",
@@ -4074,46 +4114,6 @@
           {
             "file": "jpms/Features/Triage/Workspace/PanelWorkspace.razor",
             "line": 13
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 316
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 323
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 325
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 326
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 384
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 421
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 422
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 494
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 496
-          },
-          {
-            "file": "jpms/Pages/ProfitSummary.razor",
-            "line": 503
           },
           {
             "file": "jpms/Pages/ProjectWorkOrderAllocation.razor",
@@ -4249,7 +4249,7 @@
       "summary": {
         "longMemberChainLines": 2397,
         "deeplyIndentedLines": 2801,
-        "overlongLines": 1699,
+        "overlongLines": 1694,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4867,7 +4867,7 @@
         "pages": 92,
         "components": 131,
         "orphanComponents": 6,
-        "averagePageLines": 229
+        "averagePageLines": 226
       },
       "offenders": {
         "pages": [
@@ -4902,14 +4902,6 @@
               "loadGate",
               "toast",
               "dropdown",
-              "export"
-            ]
-          },
-          {
-            "page": "jpms/Pages/ProfitSummary.razor",
-            "lines": 546,
-            "widgets": [
-              "loadGate",
               "export"
             ]
           },
@@ -5260,6 +5252,15 @@
               "modal",
               "form",
               "loadGate",
+              "export"
+            ]
+          },
+          {
+            "page": "jpms/Pages/ProfitSummary.razor",
+            "lines": 259,
+            "widgets": [
+              "loadGate",
+              "panel",
               "export"
             ]
           },
@@ -5642,7 +5643,7 @@
         "componentReuse": [
           {
             "component": "jpms/Components/LoadGate.razor",
-            "reusedBy": 105
+            "reusedBy": 106
           },
           {
             "component": "jpms/Components/Modal.razor",
@@ -6178,9 +6179,9 @@
     "duplication": {
       "name": "duplication",
       "summary": {
-        "clones": 488,
-        "duplicatedLines": 6207,
-        "totalLines": 216161,
+        "clones": 487,
+        "duplicatedLines": 6195,
+        "totalLines": 216215,
         "duplicatedPercentage": 2.87
       },
       "offenders": [

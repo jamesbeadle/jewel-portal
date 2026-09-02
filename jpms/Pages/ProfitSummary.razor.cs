@@ -160,6 +160,23 @@ public partial class ProfitSummary
         packagesByProject[projectId] = await Queries.AskAsync(new ListPackageReconciliation(projectId), CancellationToken.None);
     }
 
+    private bool pnlFailed;
+
+    private async Task LoadSitePnlAsync()
+    {
+        try
+        {
+            await SitePnl.RefreshAsync(CancellationToken.None);
+            pnlFailed = false;
+        }
+        catch
+        {
+            // HttpQueryClient has already reported this to the error toast with a reference;
+            // the flag opens the panel's gate so it says what went wrong instead of pulsing.
+            pnlFailed = true;
+        }
+    }
+
     public void Dispose()
     {
         Projects.OnChanged -= StateHasChanged;
