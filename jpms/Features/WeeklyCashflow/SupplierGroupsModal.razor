@@ -1,0 +1,102 @@
+@using Jewel.JPMS.Contracts.WeeklyCashflow
+@namespace Jewel.JPMS.Features.WeeklyCashflow
+
+@* Supplier groups — pull chosen suppliers into one line under Supplier bills. Two views in one
+   dialog: the list of groups, and the editor for one. Opened by the page with Open(); the
+   dialog owns the list, the editor's fields, the save and the delete, and applies the server's
+   answer to the plan itself. *@
+<Modal IsOpen="@open"
+       Title="@(editorOpen ? (editingGroupId is null ? "New supplier group" : "Edit supplier group") : "Supplier groups")"
+       OnCancel="Close">
+    <ChildContent>
+    @if (!editorOpen)
+    {
+        <div class="space-y-3">
+            <p class="text-sm text-content-muted">
+                A group pulls its suppliers' bills together into ONE line under Supplier bills — e.g. a
+                <span class="text-content">Materials</span> group holding Grant &amp; Stone, HSS Hire and Skip IT.
+                Totals never change, only how the rows read; the group line expands to the bills behind it,
+                and its ‹ › move a whole cell's bills at once.
+            </p>
+            @if (Plan.Current is { SupplierGroups.Count: > 0 } plan)
+            {
+                <ul class="divide-y divide-line rounded-lg border border-line">
+                    @foreach (var group in plan.SupplierGroups)
+                    {
+                        <li class="flex items-center gap-3 px-3 py-2">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm text-content font-medium">@group.Name</p>
+                                <p class="text-xs text-content-faint truncate" title="@string.Join(", ", group.ContactNames)">@string.Join(", ", group.ContactNames)</p>
+                            </div>
+                            <button type="button" class="btn-neutral" @onclick="() => OpenEditor(group.SupplierGroupId)">Edit</button>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="text-sm text-content-faint">No groups yet.</p>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="space-y-4">
+            <FormField Label="Group name" Value="@formName" OnChange="value => formName = value" Required="true" />
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suppliers in this group *</label>
+                <input type="text" placeholder="Filter suppliers…" value="@memberFilter"
+                       @oninput="args => memberFilter = (string)args.Value!"
+                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content mb-2" />
+                <div class="max-h-64 overflow-y-auto rounded-lg border border-line divide-y divide-line/50">
+                    @foreach (var supplierName in SupplierNameChoices())
+                    {
+                        if (memberFilter.Trim() is { Length: > 0 } filter
+                            && !supplierName.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                        {
+                            continue;
+                        }
+                        var holder = GroupHolding(supplierName);
+                        var name = supplierName;
+                        <label class="flex items-center gap-2 px-3 py-1.5 text-sm @(holder is null ? "text-content cursor-pointer hover:bg-surface-raised" : "text-content-faint")">
+                            <input type="checkbox" checked="@formMembers.Contains(name)" disabled="@(holder is not null)"
+                                   @onchange="() => ToggleMember(name)" />
+                            <span class="min-w-0 flex-1 truncate">@name</span>
+                            @if (holder is not null)
+                            {
+                                <span class="text-[11px] text-content-faint whitespace-nowrap">in @holder</span>
+                            }
+                        </label>
+                    }
+                </div>
+                <p class="text-[11px] text-content-faint mt-1">
+                    Every supplier with an outstanding bill, plus this group's members. A supplier lives in one group at a time.
+                </p>
+            </div>
+            @if (error is not null)
+            {
+                <p class="text-sm text-negative">@error</p>
+            }
+        </div>
+    }
+    </ChildContent>
+    <FooterContent>
+    @if (!editorOpen)
+    {
+        <button type="button" class="btn-neutral" @onclick="Close">Close</button>
+        <button type="button" class="btn-primary" @onclick="() => OpenEditor(null)">New group</button>
+    }
+    else
+    {
+        @if (editingGroupId is not null)
+        {
+            <button type="button" class="btn-neutral text-negative mr-auto" disabled="@saving" @onclick="DeleteAsync"
+                    title="Dissolve the group — its bills go back to one line per supplier. Nothing else changes.">Delete group</button>
+        }
+        <button type="button" class="btn-neutral" disabled="@saving" @onclick="() => editorOpen = false">Back</button>
+        <button type="button" class="btn-primary" disabled="@(saving || !FormLooksComplete)" @onclick="SaveAsync">
+            @(editingGroupId is null ? "Create group" : "Save changes")
+        </button>
+    }
+    </FooterContent>
+</Modal>

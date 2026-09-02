@@ -136,21 +136,6 @@ public partial class ProfitSummary
             excluded, shadeMax);
     }
 
-    /// <summary>Signed £k with one decimal — the trajectory's six-month headline ("+4.7", "−12.0").</summary>
-    private static string DeltaK(decimal value) =>
-        value >= 0m ? $"+{value / 1000m:0.0}" : $"−{Math.Abs(value) / 1000m:0.0}";
-
-    private sealed record TrajectoryCard(
-        Project Project,
-        string PathPoints,
-        double EndY,
-        double? BudgetY,
-        string LineColor,
-        decimal PositionNow,
-        decimal SixMonthDelta,
-        decimal? Budget,
-        bool Stale);
-
     private List<TrajectoryCard> TrajectoriesFor(MovementModel movement)
     {
         var all = EffectivePnlRows() ?? Array.Empty<XeroSiteMonthlyPnl>();
@@ -205,46 +190,6 @@ public partial class ProfitSummary
                 row.Stale));
         }
         return cards;
-    }
-
-    private async Task LoadSitePnlAsync()
-    {
-        try
-        {
-            await SitePnl.RefreshAsync(CancellationToken.None);
-            pnlFailed = false;
-        }
-        catch
-        {
-            // HttpQueryClient has already reported this to the error toast with a reference;
-            // the flag opens the panel's gate so it says what went wrong instead of pulsing.
-            pnlFailed = true;
-        }
-    }
-
-    // The panel's Refresh button: re-pull from Xero (SyncXeroSitePnl reads the P&L report per
-    // mapped project), then re-read the stored rows. A sync that completes but reports an
-    // error (e.g. a renamed tracking option) is shown inline — it is an answer, not a toast.
-    private async Task RefreshSitePnlAsync()
-    {
-        pnlSyncing = true;
-        pnlSyncError = null;
-        pnlSyncNotice = null;
-        try
-        {
-            var result = await Commands.SendAsync(new SyncXeroSitePnl(), CancellationToken.None);
-            if (result.Error is not null) pnlSyncError = result.Error;
-            pnlSyncNotice = result.Notice;
-            await LoadSitePnlAsync();
-        }
-        catch
-        {
-            // Command/query failures are already on the error toast with a reference.
-        }
-        finally
-        {
-            pnlSyncing = false;
-        }
     }
 
 }

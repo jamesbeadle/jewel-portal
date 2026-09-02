@@ -1,0 +1,40 @@
+@namespace Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+
+@* The summary strip: the deal, the landing, and the job to ask about first. Each tile keeps
+   its label and pulses until every selected project has landed (Rows is null until then),
+   because every figure here is a total over the whole selection. The page renders the strip
+   as a conditional region: once the selection is seeded it only exists while something is
+   selected, so an empty selection never shows tiles pulsing for figures that are not coming. *@
+@{
+    var total = Rows is null ? null : ProfitRow.TotalOf(Rows);
+    var swing = Rows?.OrderByDescending(entry => Math.Abs(entry.Row.ForecastSwing)).First();
+}
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 mb-4">
+    <FigureTile Label="Budgeted profit" IsLoading="@(total is null)"
+                Title="The deal as signed: every selected project's initial contract sum less its target cost.">
+        <p class="text-2xl font-semibold @ProfitClass(total!.BudgetedProfit)">@Money(total.BudgetedProfit)</p>
+        <p class="text-xs text-content-subtle mt-1">
+            @(total.BudgetedMargin is decimal bm ? $"{Pct(bm)} on " : "")@MoneyCompact(total.InitialContractSum) as signed
+        </p>
+    </FigureTile>
+    <FigureTile Label="Forecast profit" IsLoading="@(total is null)"
+                Title="Where the selected jobs land: revised contract sums against forecasted cost of sales.">
+        <p class="text-2xl font-semibold @ProfitClass(total!.ForecastedProfit)">@Money(total.ForecastedProfit)</p>
+        <p class="text-xs text-content-subtle mt-1">
+            @(total.ForecastedMargin is decimal fm ? $"{Pct(fm)} on " : "")@MoneyCompact(total.ContractValue) incl. variations
+        </p>
+    </FigureTile>
+    <FigureTile Label="Biggest swing vs the deal" IsLoading="@(swing is null)" LoadingLabel="Loading biggest swing"
+                Title="The project whose forecast profit sits furthest from its budgeted profit — the number to ask about first.">
+        <p class="text-2xl font-semibold @ProfitClass(swing!.Value.Row.ForecastSwing)">@swing.Value.Project.Name</p>
+        <p class="text-xs mt-1 @(swing.Value.Row.ForecastSwing < 0m ? "text-negative" : "text-positive")">
+            @(swing.Value.Row.ForecastSwing < 0m ? "▼" : "▲") @MoneyCompact(Math.Abs(swing.Value.Row.ForecastSwing)) forecast vs budgeted profit
+        </p>
+    </FigureTile>
+</div>
+
+@code {
+    /// <summary>The loaded rows — null until every selected project has landed.</summary>
+    [Parameter] public IReadOnlyList<(Project Project, ProfitRow Row)>? Rows { get; set; }
+}

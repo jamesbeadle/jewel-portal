@@ -1,0 +1,61 @@
+@namespace Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+
+@* One job's cumulative-position card: the two lines (invoiced, cost) job start to date, the
+   gap between them read as cumulative profit, and the accountant's two warnings — or, with no
+   chart to draw, the reason why. *@
+<div class="rounded-lg border border-line bg-surface-raised px-4 pt-3.5 pb-3">
+    @if (Card.Chart is null)
+    {
+        <div class="flex items-center justify-center min-h-[170px]">
+            <p class="text-[11px] text-content-subtle text-center leading-relaxed max-w-[240px]">
+                <span class="block text-amber-400 mb-1">@Card.Project.Name ⚠</span>
+                @Card.Unavailable
+            </p>
+        </div>
+    }
+    else
+    {
+        var chart = Card.Chart!;
+        <div class="flex items-baseline justify-between gap-2">
+            <span class="text-[12.5px] font-medium text-content">@Card.Project.Name</span>
+            <span class="text-[10px] text-content-faint whitespace-nowrap">@chart.RangeLabel</span>
+        </div>
+        <div class="relative h-[110px] mt-2">
+            <div class="absolute inset-x-0 bottom-0 border-t border-line"></div>
+            <svg class="absolute inset-0 w-full h-full overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="@chart.CostPoints" fill="none" stroke="@CostLineColor" stroke-width="2"
+                          vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+                <polyline points="@chart.InvoicedPoints" fill="none" stroke="@InvoicedLineColor" stroke-width="2"
+                          vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round" />
+            </svg>
+            <div class="absolute w-1.5 h-1.5 rounded-full -translate-y-1/2 translate-x-1/2"
+                 style="background:@InvoicedLineColor;top:@(Pc(chart.InvoicedEndY))%;right:0"></div>
+            <div class="absolute w-1.5 h-1.5 rounded-full -translate-y-1/2 translate-x-1/2"
+                 style="background:@CostLineColor;top:@(Pc(chart.CostEndY))%;right:0"></div>
+            @* The hover layer the legend promises: one full-height column per month, the
+               month's running figures as its tooltip. *@
+            @for (var index = 0; index < chart.Points.Count; index++)
+            {
+                var point = chart.Points[index];
+                <div class="absolute inset-y-0"
+                     style="left:@(Pc(index * 100d / chart.Points.Count))%;width:@(Pc(100d / chart.Points.Count))%"
+                     title="@($"{point.Month:MMM yy} — invoiced {MoneyCompact(point.Invoiced)} · cost {MoneyCompact(point.Cost)} · profit {MoneyCompact(point.Invoiced - point.Cost)}")"></div>
+            }
+        </div>
+        <div class="flex items-baseline justify-between gap-2 mt-2 flex-wrap">
+            <span class="text-sm font-semibold @ProfitClass(chart.GrossProfit)">
+                @MoneyCompact(chart.GrossProfit)
+                <span class="text-[10.5px] font-normal text-content-faint ml-1">cum. profit@(chart.Margin is decimal cumMargin ? $" · {Pct(cumMargin)}" : "")</span>
+            </span>
+            @if (chart.Warning is not null)
+            {
+                <span class="text-[10px] text-amber-400">⚠ @chart.Warning</span>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CumulativeCard Card { get; set; } = default!;
+}

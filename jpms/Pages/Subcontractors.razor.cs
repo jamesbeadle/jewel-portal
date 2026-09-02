@@ -1,4 +1,5 @@
 using Jewel.JPMS.Contracts.Subcontractors;
+using static Jewel.JPMS.Features.Directory.DirectoryDisplay;
 
 namespace Jewel.JPMS.Pages;
 
@@ -7,9 +8,6 @@ public partial class Subcontractors
     private bool isLoaded;
     private string search = "";
     private string categoryFilter = ""; // "" = all
-
-    private static readonly DirectoryCategory[] AllCategories =
-        (DirectoryCategory[])Enum.GetValues(typeof(DirectoryCategory));
 
     // Widened for the unified directory (2026-07-22): Admin, MD, FD and PM may browse.
     private bool CanAccess => Session.AvailableRoles.Any(r =>

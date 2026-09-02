@@ -1,0 +1,14 @@
+@namespace Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+
+@* The muted % line under a profit figure. Null (no revenue base yet) renders nothing at all —
+   not a dash, not a gate: a percentage that cannot be computed is simply not shown, the same
+   rule as any other line of text that isn't known (the loading-states convention). *@
+@if (Value is decimal margin)
+{
+    <span class="block text-[11px] font-normal text-content-subtle">@Pct(margin)</span>
+}
+
+@code {
+    [Parameter] public decimal? Value { get; set; }
+}

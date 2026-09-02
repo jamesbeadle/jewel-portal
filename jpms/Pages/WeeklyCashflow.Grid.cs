@@ -80,25 +80,6 @@ public partial class WeeklyCashflow
     private static DateTimeOffset? AsDate(DateTime? date) =>
         date is { } value ? new DateTimeOffset(DateTime.SpecifyKind(value.Date, DateTimeKind.Utc), TimeSpan.Zero) : null;
 
-    private static decimal VisibleTotal(IReadOnlyList<decimal> totals) =>
-        totals.Take(totals.Count - 1).Sum();
-
-    private IEnumerable<WeeklyCashflowEntry> EntriesFor(WeeklyCashflowView view, WeeklyCashflowBand band) =>
-        view.Entries
-            .Where(entry => entry.Band == band)
-            .OrderBy(entry => entry.WeekIndex)
-            .ThenBy(entry => entry.Label, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(entry => entry.PlacementKey, StringComparer.Ordinal);
-
-    private decimal[] BandTotals(WeeklyCashflowView view, WeeklyCashflowBand band)
-    {
-        var totals = new decimal[view.WeekStarts.Count + 1];
-        foreach (var entry in view.Entries)
-            if (entry.Band == band)
-                totals[entry.WeekIndex] += entry.Amount;
-        return totals;
-    }
-
     private void ToggleBand(WeeklyCashflowBand band)
     {
         if (!collapsedBands.Remove(band)) collapsedBands.Add(band);
@@ -133,7 +114,7 @@ public partial class WeeklyCashflow
                 groupByContact.TryAdd(contactName.Trim(), group);
 
         var members = new Dictionary<string, List<WeeklyCashflowEntry>>(StringComparer.Ordinal);
-        foreach (var entry in EntriesFor(view, WeeklyCashflowBand.SupplierBills))
+        foreach (var entry in WeeklyCashflowBands.EntriesFor(view, WeeklyCashflowBand.SupplierBills))
         {
             if (!groupByContact.TryGetValue(entry.Label, out var group)) continue;
             if (!members.TryGetValue(group.SupplierGroupId, out var list))
@@ -146,15 +127,5 @@ public partial class WeeklyCashflow
             .Select(group => new GroupSlice(group, members[group.SupplierGroupId]))
             .ToList();
     }
-
-    // ---- One band: a totals row (click to expand) plus one movable row per entry ----
-
-
-    // ---- One supplier group: a combined row — weekly totals, whole-cell moves — plus, when
-    // opened, its member bills, each still its own movable row ----
-
-
-    // ---- One movable entry row, shared by the flat bands and the opened groups ----
-
 
 }

@@ -1,0 +1,54 @@
+@namespace Jewel.JPMS.Features.Cvr
+
+@* The profit table: three bands of figures per project — the deal, the current position, to
+   finish, the forecast at completion — under sortable headers, with the totals row when more
+   than one project is selected. The page owns the sort state and the sorted rows; the table
+   only reports the clicked column. *@
+<div class="rounded-xl border border-line bg-surface overflow-x-auto">
+    <table class="w-full text-sm border-collapse">
+        <thead class="bg-surface-raised border-b border-line">
+            @* The three bands, each with where its figures come from — the
+               accountant reads the provenance before the numbers. *@
+            <tr class="text-left text-[10px] uppercase tracking-widest text-content-subtle font-semibold border-b border-line">
+                <th class="px-4 pt-3 pb-2"></th>
+                <th class="px-4 pt-3 pb-2 border-l border-line">The deal <span class="normal-case tracking-normal font-normal text-content-faint ml-1">initial contract</span></th>
+                <th class="px-4 pt-3 pb-2 border-l border-line" colspan="3">Current position <span class="normal-case tracking-normal font-normal text-content-faint ml-1">valuations + allocated Xero cost · certified basis</span></th>
+                <th class="px-4 pt-3 pb-2 border-l border-line" colspan="3">To finish <span class="normal-case tracking-normal font-normal text-content-faint ml-1">today → completion</span></th>
+                <th class="px-4 pt-3 pb-2 border-l border-line" colspan="3">Forecast at completion <span class="normal-case tracking-normal font-normal text-content-faint ml-1">contract + variations · Financials tab</span></th>
+            </tr>
+            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                <th class="px-4 py-3 min-w-[240px]"><SortableColumnHeader Column="project" Label="Project" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Initial contract sum less its target cost — the sum with the assumed markup backed out, the same rule as the Financials tab. The percentage is the margin on the initial sum."><SortableColumnHeader Column="budgeted" Label="Budgeted profit" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Issued and paid valuation invoices to date. The memo shows the retention the client still holds — earned once certified, released on the cash pages."><SortableColumnHeader Column="certified" Label="Certified" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+                <th class="px-4 py-3 text-right whitespace-nowrap" title="Allocated Xero purchase spend, net of credit notes — the Financials tab's Actual Cost of Sales."><SortableColumnHeader Column="cost" Label="Cost to date" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+                <th class="px-4 py-3 text-right whitespace-nowrap" title="Certified less cost to date; the percentage is the margin on certified."><SortableColumnHeader Column="current" Label="Current profit" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="The revised contract sum not yet certified — the revenue still to come."><SortableColumnHeader Column="left" Label="Left to certify" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+                <th class="px-4 py-3 text-right whitespace-nowrap" title="Final cost less cost to date — the spend still to come. Negative means the job has already spent past its forecast."><SortableColumnHeader Column="ctc" Label="Cost to complete" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+                <th class="px-4 py-3 text-right whitespace-nowrap" title="Left to certify less cost to complete; the percentage is the margin on what is left. Current profit plus profit to finish equals the forecast, to the penny."><SortableColumnHeader Column="tofinish" Label="Profit to finish" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Final sales — the revised contract sum: initial contract plus net approved variations (the memo line)."><SortableColumnHeader Column="contract" Label="Final sales" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+                <th class="px-4 py-3 text-right whitespace-nowrap" title="Committed cost of sales plus remaining drawdown — the Financials tab's Forecasted Cost of Sales total."><SortableColumnHeader Column="finalcost" Label="Final cost" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+                <th class="px-4 py-3 text-right whitespace-nowrap" title="Final sales less final cost; the percentage is the margin on final sales."><SortableColumnHeader Column="forecast" Label="Forecast profit" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+            @foreach (var (project, row) in Rows)
+            {
+                <ProfitTableRow Project="project" Row="row" />
+            }
+        </tbody>
+        @if (Rows.Count > 1)
+        {
+            <tfoot class="border-t border-line bg-surface-raised">
+                <ProfitTotalsRow Total="Total" ProjectCount="Rows.Count" />
+            </tfoot>
+        }
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<(Project Project, ProfitRow Row)> Rows { get; set; } = default!;
+    [Parameter, EditorRequired] public ProfitRow Total { get; set; } = default!;
+    [Parameter] public string? SortColumn { get; set; }
+    [Parameter] public bool SortDescending { get; set; }
+    [Parameter] public EventCallback<string> OnSort { get; set; }
+}

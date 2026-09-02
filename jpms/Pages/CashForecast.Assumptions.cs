@@ -73,7 +73,5 @@ public partial class CashForecast
         }
     }
 
-    private static string AddBack(decimal value) => value == 0m ? "—" : $"+ {Money(value)}";
-
 
 }

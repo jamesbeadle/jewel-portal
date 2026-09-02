@@ -1,6 +1,7 @@
 @page "/projects/{ProjectId}/work-orders"
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.Procurement
+@using static Jewel.JPMS.Features.Procurement.WorkOrderDisplay
 @using Jewel.JPMS.Features.Projects
 @using Jewel.JPMS.Features.Subcontractors
 @inject AuthService Auth
@@ -101,131 +102,22 @@
                 }
             </p>
 
-            @* ── Drafts: unnumbered, invisible to the supplier, awaiting a decision ──
-               Kept out of the table above so its arithmetic stays the truth about what
-               has actually been issued — though drafts DO count in the Financials tab's
-               committed figures (the commitment is intended). Approving mints the next
-               sequential order number and moves the draft into the table; rejecting
-               ends it. *@
             @if (DraftOrders.Count > 0)
             {
-                <h3 class="text-sm font-semibold text-content mb-2">Draft work orders</h3>
-                <p class="text-xs text-content-subtle mb-2">
-                    Awaiting approval: a draft has no order number, is invisible to the supplier
-                    and can't be invoiced or packaged — but its value already counts in the
-                    Financials tab's committed figures. It can be edited freely. Preview PO opens
-                    the purchase order exactly as the supplier will receive it, so it can be
-                    checked — or saved as a PDF — before approving. Approving mints the next order
-                    number and issues it like any other order; rejecting ends it and its value
-                    stops counting.
-                </p>
-                <ul class="text-sm divide-y divide-line rounded-xl border border-line bg-surface mb-6">
-                    @foreach (var detail in DraftOrders)
-                    {
-                        <li class="px-4 py-2 flex items-center gap-3">
-                            <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Draft</span>
-                            <span class="text-content font-medium">@detail.Order.Title</span>
-                            <span class="text-content-subtle">@detail.SubcontractorName</span>
-                            <span class="ml-auto">@Money(detail.Order.Value)</span>
-                            @if (PendingFor(detail) is { } pending)
-                            {
-                                @* The approve warning: releasing the draft emails its purchase order there and then. *@
-                                @if (pending == DraftDecision.Approve)
-                                {
-                                    <span class="text-[11px] @(SupplierEmailFor(detail) is null ? "text-amber-700" : "text-content-subtle")"
-                                          title="Approving releases the order — the purchase-order email is sent from the projects mailbox the moment the number is minted">
-                                        @(SupplierEmailFor(detail) is { } supplierEmail
-                                            ? $"PO will be emailed to {supplierEmail}"
-                                            : "No directory email — the PO won't be emailed")
-                                    </span>
-                                }
-                                <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                   title="Open the purchase order exactly as it will read once approved — print or save it as a PDF before you decide"
-                                   href="@PurchaseOrderPathFor(detail)">
-                                    Preview PO
-                                </a>
-                                <button type="button" class="text-xs font-medium @(pending == DraftDecision.Approve ? "text-accent" : "text-negative") underline underline-offset-4"
-                                        title="@(pending == DraftDecision.Approve ? "Mint the next order number, issue this order and email the purchase order to the supplier" : "End this draft — its value stops counting and there is no undo")"
-                                        disabled="@decisionBusy"
-                                        @onclick="() => DecideAsync(detail, pending)">
-                                    @(decisionBusy ? "Working…" : pending == DraftDecision.Approve ? "Confirm approve" : "Confirm reject")
-                                </button>
-                                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                        disabled="@decisionBusy"
-                                        @onclick="ClearPending">
-                                    Keep as draft
-                                </button>
-                            }
-                            else
-                            {
-                                @* One Actions menu per draft — the row grew four inline links and the
-                                   list grows drafts faster than it grows width. Approve/Reject keep
-                                   their inline confirm step (the branch above); Delete gets a modal,
-                                   because it is the only choice that leaves no record behind. *@
-                                <DropdownMenu Label="Actions" WidthClass="w-72" Disabled="@decisionBusy"
-                                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
-                                              Class="inline-block text-left"
-                                              Items="DraftMenuItems(detail)" />
-                            }
-                        </li>
-                    }
-                </ul>
-                @if (decisionError is not null)
-                {
-                    <p class="text-sm text-negative mb-4">@decisionError</p>
-                }
+                <DraftWorkOrdersPanel ProjectId="@ProjectId" Drafts="DraftOrders"
+                                      OnEdit="OpenEdit" OnDelete="detail => deleteModal.Open(detail)"
+                                      OnPoEmailNote="ShowPoEmailNote" />
             }
 
-            @* Rejected drafts stay on the page as a quiet record of the decision — they count
-               nowhere. Their one menu action is Delete, for records that shouldn't even be a
-               quiet note (raised in error, duplicated). The muted colours and struck value do
-               the quieting — an opacity on the list would dim the Actions menu with it. *@
             @if (RejectedOrders.Count > 0)
             {
-                <details class="mb-6">
-                    <summary class="text-xs font-medium text-content-subtle cursor-pointer select-none">
-                        Rejected work orders (@RejectedOrders.Count)
-                    </summary>
-                    <ul class="mt-2 text-sm divide-y divide-line rounded-xl border border-line bg-surface">
-                        @foreach (var detail in RejectedOrders)
-                        {
-                            <li class="px-4 py-2 flex items-center gap-3">
-                                <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Rejected</span>
-                                <span class="text-content-muted">@detail.Order.Title</span>
-                                <span class="text-content-subtle">@detail.SubcontractorName</span>
-                                <span class="ml-auto text-content-subtle line-through">@Money(detail.Order.Value)</span>
-                                <DropdownMenu Label="Actions" WidthClass="w-72" Disabled="@deleteBusy"
-                                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
-                                              Class="inline-block text-left"
-                                              Items="RejectedMenuItems(detail)" />
-                            </li>
-                        }
-                    </ul>
-                </details>
+                <RejectedWorkOrdersList ProjectId="@ProjectId" Orders="RejectedOrders" Busy="deleteBusy"
+                                        OnDelete="detail => deleteModal.Open(detail)" />
             }
 
-            @* Cancelled orders stay on the page as the record of a voided purchase order —
-               they keep their number (one went out under that reference) but count nowhere
-               and offer no actions. *@
             @if (CancelledOrders.Count > 0)
             {
-                <details class="mb-6">
-                    <summary class="text-xs font-medium text-content-subtle cursor-pointer select-none">
-                        Cancelled work orders (@CancelledOrders.Count)
-                    </summary>
-                    <ul class="mt-2 text-sm divide-y divide-line rounded-xl border border-line bg-surface opacity-70">
-                        @foreach (var detail in CancelledOrders)
-                        {
-                            <li class="px-4 py-2 flex items-center gap-3">
-                                <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Cancelled</span>
-                                <span class="font-mono text-[11px] text-content-subtle">@Reference(detail.Order)</span>
-                                <span class="text-content-muted">@detail.Order.Title</span>
-                                <span class="text-content-subtle">@detail.SubcontractorName</span>
-                                <span class="ml-auto text-content-subtle line-through">@Money(detail.Order.Value)</span>
-                            </li>
-                        }
-                    </ul>
-                </details>
+                <CancelledWorkOrdersList Orders="CancelledOrders" />
             }
 
             @if (Rows.Count == 0 && OrdersWithoutLines.Count == 0)
@@ -241,220 +133,20 @@
             }
             else
             {
-            @* While a row's Actions menu is open the overflow cap is lifted: the menu positions
-               absolutely inside this container, so with the overflow active its bottom entries
-               would be cut off at the container's edge (same fix as the valuation invoices table). *@
-            <div class="rounded-xl border border-line bg-surface @(openRowMenuKey is null ? "overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
-                <table class="w-full text-sm border-collapse">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            @if (groupBySupplier)
-                            {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 min-w-[240px]">Supplier</th>
-                            }
-                            else
-                            {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[110px]">Code</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 min-w-[200px]">Cost Centre</th>
-                            }
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Orders</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Committed</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Paid</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Remaining</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"
-                                title="Committed value not yet invoiced (a whole-order figure spread across its cost-centre lines by value) — see the WO Allocation tab">Left to invoice</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var row in Rows)
-                        {
-                            <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => Toggle(row.Key)">
-                                @if (groupBySupplier)
-                                {
-                                    <td class="px-4 py-3 text-content font-medium whitespace-nowrap">
-                                        <span class="inline-block w-4 text-content-subtle font-normal">@(IsExpanded(row.Key) ? "▾" : "▸")</span>@row.Name
-                                    </td>
-                                }
-                                else
-                                {
-                                    <td class="px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">
-                                        <span class="inline-block w-4 text-content-subtle">@(IsExpanded(row.Key) ? "▾" : "▸")</span>@row.Code
-                                    </td>
-                                    @if (row.InMaster)
-                                    {
-                                        <td class="px-4 py-3 text-content font-medium whitespace-nowrap">@row.Name</td>
-                                    }
-                                    else
-                                    {
-                                        <td class="px-4 py-3 text-content-subtle italic whitespace-nowrap">(not in cost-code master)</td>
-                                    }
-                                }
-                                <td class="px-4 py-3 text-right">@row.OrderCount</td>
-                                <td class="px-4 py-3 text-right">@Money(row.Committed)</td>
-                                <td class="px-4 py-3 text-right @(row.PaidKnown ? "" : "text-content-subtle")"
-                                    title="@(row.PaidKnown ? "" : UnknownPaidHint)">@(row.PaidKnown ? Money(row.Paid) : Dash)</td>
-                                <td class="px-4 py-3 text-right @(row.PaidKnown && row.KnownCommitted - row.Paid > 0 ? "text-content" : "text-content-subtle")"
-                                    title="@(!row.PaidKnown ? UnknownPaidHint : row.KnownCommitted < row.Committed ? $"Excludes {MoneyExact(row.Committed - row.KnownCommitted)} committed on orders in this group with no bill linked — nothing is known about what has been paid on them" : "")">@(row.PaidKnown ? Money(row.KnownCommitted - row.Paid) : Dash)</td>
-                                <td class="px-4 py-3 text-right @(AtPennies(row.Committed - row.Invoiced) < 0m ? "text-negative font-medium" : AtPennies(row.Committed - row.Invoiced) > 0m ? "text-content" : "text-content-subtle")"
-                                    title="@($"{MoneyExact(row.Invoiced)} invoiced of {MoneyExact(row.Committed)} committed")">@Money(AtPennies(row.Committed - row.Invoiced))</td>
-                            </tr>
-                            @if (IsExpanded(row.Key))
-                            {
-                                <tr>
-                                    <td colspan="@GroupColspan" class="px-4 pb-4 pt-1 bg-surface-raised/50">
-                                        <table class="w-full text-sm border-collapse">
-                                            <thead>
-                                                <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold border-b border-line">
-                                                    <th class="px-3 py-2 w-[90px]">Order</th>
-                                                    <th class="px-3 py-2 min-w-[180px]">@(groupBySupplier ? "Cost centre" : "Supplier")</th>
-                                                    <th class="px-3 py-2">Line</th>
-                                                    <th class="px-3 py-2 whitespace-nowrap">Status</th>
-                                                    <th class="px-3 py-2 text-right whitespace-nowrap">Total</th>
-                                                    <th class="px-3 py-2 text-right whitespace-nowrap">Paid</th>
-                                                    <th class="px-3 py-2 w-[170px]"><span class="sr-only">Actions</span></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-line">
-                                                @foreach (var line in LinesFor(row.Key))
-                                                {
-                                                    <tr>
-                                                        <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@line.Detail.Order.Title">@Reference(line.Detail.Order)</td>
-                                                        @if (groupBySupplier)
-                                                        {
-                                                            <td class="px-3 py-2 whitespace-nowrap">
-                                                                <span class="font-mono text-[11px] text-content-subtle mr-1.5">@CodeOf(line)</span>@CostCentreNameFor(CodeOf(line))
-                                                            </td>
-                                                        }
-                                                        else
-                                                        {
-                                                            <td class="px-3 py-2 whitespace-nowrap">@line.Detail.SubcontractorName</td>
-                                                        }
-                                                        <td class="px-3 py-2" title="@line.Line.Description">@line.Line.Title</td>
-                                                        <td class="px-3 py-2 whitespace-nowrap">
-                                                            <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@line.Detail.Order.Status</span>
-                                                            @if (SummariesByOrder.TryGetValue(line.Detail.Order.WorkOrderId, out var summary))
-                                                            {
-                                                                <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @InvoicingClass(summary.InvoicingStatus)"
-                                                                      title="@($"{MoneyExact(summary.InvoicedToDate)} invoiced of {MoneyExact(summary.Value)} · {MoneyExact(summary.RemainingToInvoice)} left to invoice (whole order)")">
-                                                                    @InvoicingLabel(summary.InvoicingStatus)
-                                                                </span>
-                                                                <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @PaymentClass(summary.PaymentStatus)"
-                                                                      title="@PaymentTitle(summary.PaymentStatus)">
-                                                                    @PaymentLabel(summary.PaymentStatus)
-                                                                </span>
-                                                            }
-                                                        </td>
-                                                        <td class="px-3 py-2 text-right">@Money(line.Line.LineTotal)</td>
-                                                        <td class="px-3 py-2 text-right @(PaymentKnown(line.Detail) ? "" : "text-content-subtle")"
-                                                            title="@(PaymentKnown(line.Detail) ? "" : UnknownPaidHint)">@(PaymentKnown(line.Detail) ? Money(line.Line.PaidToDate) : Dash)</td>
-                                                        <td class="px-3 py-2 text-right whitespace-nowrap" @onclick:stopPropagation>
-                                                            @if (CancelPendingFor(line.Detail))
-                                                            {
-                                                                @* Two clicks on purpose: cancelling voids an order the supplier
-                                                                   has already been sent, and there is no undo. Choosing Cancel…
-                                                                   from the menu swaps it for this inline confirm pair. *@
-                                                                <button type="button"
-                                                                        class="mr-3 text-xs font-medium text-negative underline underline-offset-4"
-                                                                        title="@($"Void {Reference(line.Detail.Order)} — it keeps its number as a record, but its value stops counting everywhere and there is no undo")"
-                                                                        disabled="@cancelBusy"
-                                                                        @onclick="() => CancelAsync(line.Detail)" @onclick:stopPropagation>
-                                                                    @(cancelBusy ? "Working…" : "Confirm cancel")
-                                                                </button>
-                                                                <button type="button"
-                                                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                                                        disabled="@cancelBusy"
-                                                                        @onclick="ClearCancelPending" @onclick:stopPropagation>
-                                                                    Keep order
-                                                                </button>
-                                                            }
-                                                            else
-                                                            {
-                                                                @* One menu per row instead of a run of text links — the row was
-                                                                   getting crowded (PO / Edit / Re-code / Cancel). Edit is offered
-                                                                   on manual orders (as before) and on ANY order for the MD, FD
-                                                                   and administrators (2026-08-21). *@
-                                                                <DropdownMenu Label="Actions" WidthClass="w-72"
-                                                                              Disabled="@cancelBusy"
-                                                                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
-                                                                              Class="inline-block text-left"
-                                                                              OnOpenChanged="open => openRowMenuKey = open ? line.Line.WorkOrderLineId : (openRowMenuKey == line.Line.WorkOrderLineId ? null : openRowMenuKey)"
-                                                                              Items="LineMenuItems(line)" />
-                                                            }
-                                                        </td>
-                                                    </tr>
-                                                }
-                                            </tbody>
-                                        </table>
-                                    </td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
-                    <tfoot class="border-t-2 border-line-strong bg-surface-raised">
-                        <tr class="font-semibold text-content">
-                            <td class="px-4 py-3" colspan="@(groupBySupplier ? 1 : 2)">@(Searching ? "Total (filtered)" : "Total")</td>
-                            <td class="px-4 py-3 text-right">@VisibleOrderCount</td>
-                            <td class="px-4 py-3 text-right">@Money(LineCommitted)</td>
-                            <td class="px-4 py-3 text-right">@Money(LinePaid)</td>
-                            <td class="px-4 py-3 text-right"
-                                title="@(UnknownCommittedOf(VisibleLines) > 0m ? $"The sum of the figures above it. {MoneyExact(UnknownCommittedOf(VisibleLines))} committed on the “{Dash}” rows is not counted — nothing is known about what has been paid on those orders" : "")">@Money(KnownRemainingOf(VisibleLines))</td>
-                            <td class="px-4 py-3 text-right">@Money(AtPennies(LineCommitted - LineInvoiced))</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            @if (cancelError is not null)
-            {
-                @* 400s are answers for the caller to show, not toasts — say what refused and why
-                   (bills still linked, money already paid, role not allowed). *@
-                <p class="text-sm text-negative mt-2">@cancelError</p>
-            }
+            <WorkOrdersTable Rows="Rows" Total="VisibleTotal" GroupBySupplier="groupBySupplier" Searching="Searching"
+                             IsExpanded="IsExpanded" OnToggle="Toggle" LinesFor="LinesFor"
+                             CodeOf="CodeOf" CostCentreNameFor="CostCentreNameFor"
+                             Summaries="SummariesByOrder" PaymentKnown="PaymentKnown"
+                             CancelPendingFor="CancelPendingFor" CancelBusy="cancelBusy" CancelError="@cancelError"
+                             OnCancel="CancelAsync" OnKeep="ClearCancelPending"
+                             LineMenuItems="LineMenuItems" />
             }
 
             @if (OrdersWithoutLines.Count > 0)
             {
-                <h3 class="text-sm font-semibold text-content mt-6 mb-2">Orders without a cost-centre breakdown</h3>
-                <p class="text-xs text-content-subtle mb-2">
-                    These orders have no priced lines yet, so their value isn't included in the
-                    @(groupBySupplier ? "supplier" : "cost-centre") table above.
-                </p>
-                <ul class="text-sm divide-y divide-line rounded-xl border border-line bg-surface">
-                    @foreach (var detail in OrdersWithoutLines)
-                    {
-                        <li class="px-4 py-2 flex items-center gap-3">
-                            <span class="font-mono text-[11px] text-content-subtle">@Reference(detail.Order)</span>
-                            <span class="text-content font-medium">@detail.Order.Title</span>
-                            <span class="text-content-subtle">@detail.SubcontractorName</span>
-                            <span class="ml-auto">@Money(detail.Order.Value)</span>
-                            @if (CancelPendingFor(detail))
-                            {
-                                <button type="button"
-                                        class="text-xs font-medium text-negative underline underline-offset-4"
-                                        title="@($"Void {Reference(detail.Order)} — it keeps its number as a record, but its value stops counting everywhere and there is no undo")"
-                                        disabled="@cancelBusy"
-                                        @onclick="() => CancelAsync(detail)">
-                                    @(cancelBusy ? "Working…" : "Confirm cancel")
-                                </button>
-                                <button type="button"
-                                        class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                        disabled="@cancelBusy"
-                                        @onclick="ClearCancelPending">
-                                    Keep order
-                                </button>
-                            }
-                            else
-                            {
-                                @* Same Actions menu as the table's rows (minus Re-code, which
-                                   needs a priced line to move). *@
-                                <DropdownMenu Label="Actions" WidthClass="w-72"
-                                              Disabled="@cancelBusy"
-                                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
-                                              Class="inline-block text-left"
-                                              Items="OrderMenuItems(detail)" />
-                            }
-                        </li>
-                    }
-                </ul>
+                <UnpricedWorkOrdersList Orders="OrdersWithoutLines" GroupBySupplier="groupBySupplier"
+                                        CancelPendingFor="CancelPendingFor" CancelBusy="cancelBusy" MenuItems="OrderMenuItems"
+                                        OnCancel="CancelAsync" OnKeep="ClearCancelPending" />
             }
 
             <p class="text-xs text-content-subtle mt-3">
@@ -495,54 +187,7 @@
                               OnSaved="HandleManualOrderSavedAsync"
                               OnPoEmailNote="ShowPoEmailNote" />
 
-        @* Deleting is the one decision that leaves no row behind (rejecting keeps a quiet
-           record), so it alone earns a modal instead of an inline confirm. Serves both lists:
-           an undecided draft and a rejected one, with the copy saying which it is. *@
-        <Modal IsOpen="@(deletingOrder is not null)"
-               Title="@(DeletingRejectedOrder ? "Delete rejected work order" : "Delete draft work order")"
-               ShowFooter="false" OnCancel="CloseDelete">
-            @if (deletingOrder is { } orderToDelete)
-            {
-                <p class="text-sm text-content mb-2">
-                    Delete <span class="font-medium">"@orderToDelete.Order.Title"</span>
-                    (@orderToDelete.SubcontractorName · @Money(orderToDelete.Order.Value)) permanently?
-                </p>
-                @if (DeletingRejectedOrder)
-                {
-                    <p class="text-sm text-content-subtle mb-2">
-                        This removes the rejected order and its priced lines and attachments outright —
-                        it already counted nowhere, so no figures change; the quiet record of the
-                        rejection simply disappears from this page. It cannot be undone.
-                    </p>
-                }
-                else
-                {
-                    <p class="text-sm text-content-subtle mb-2">
-                        This removes the draft and its priced lines and attachments outright — nothing
-                        stays on this page and its value drops out of the Financials tab's committed
-                        figures. No order number was ever minted, so no gap is left. It cannot be undone.
-                    </p>
-                    <p class="text-sm text-content-subtle">
-                        To keep a visible record of a considered "no", use Reject instead — rejected
-                        drafts stay listed below.
-                    </p>
-                }
-                @if (deleteError is not null)
-                {
-                    <p class="text-sm text-negative mt-3">@deleteError</p>
-                }
-                <div class="flex items-center justify-end gap-2 mt-4">
-                    <button type="button" class="btn-neutral" disabled="@deleteBusy"
-                            @onclick="CloseDelete">@(DeletingRejectedOrder ? "Keep record" : "Keep draft")</button>
-                    <button type="button"
-                            class="btn bg-negative-strong text-negative-ink hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                            disabled="@deleteBusy"
-                            @onclick="DeleteOrderAsync">
-                        @(deleteBusy ? "Deleting…" : DeletingRejectedOrder ? "Delete record" : "Delete draft")
-                    </button>
-                </div>
-            }
-        </Modal>
+        <DeleteWorkOrderModal @ref="deleteModal" ProjectId="@ProjectId" BusyChanged="busy => deleteBusy = busy" />
     </ProjectPageShell>
 </ApprovedSessionGate>
 

@@ -1,0 +1,67 @@
+@namespace Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+
+@* One project's row in the profit table: the identity cell (link to its Financials tab, stage,
+   progress bar, the no-certifications flag), then the three bands' figures with their margin
+   and memo lines. *@
+<tr>
+    <td class="px-4 py-3 align-top">
+        <div class="flex flex-col gap-1.5">
+            <div class="flex items-center gap-2 whitespace-nowrap">
+                <a href="@($"/projects/{Project.ProjectId}/financials")" class="hover:underline underline-offset-4">
+                    <span class="font-mono text-[11px] text-content-subtle mr-2">@Project.Reference</span>
+                    <span class="text-content font-medium">@Project.Name</span>
+                </a>
+                <ProjectStageBadge Stage="Project.Stage" />
+            </div>
+            @if (Row.PercentComplete is decimal complete)
+            {
+                <div class="flex items-center gap-2">
+                    <div class="h-1 w-32 rounded-full bg-line overflow-hidden">
+                        <div class="h-full rounded-full bg-content-faint" style="width:@(Pc(Math.Clamp((double)complete * 100d, 0d, 100d)))%"></div>
+                    </div>
+                    <span class="text-[10px] text-content-subtle">@($"{complete * 100m:0}%") complete</span>
+                </div>
+            }
+            @if (Row.CertifiedToDate == 0m && Row.ActualCostOfSales > 0m)
+            {
+                <span class="inline-flex w-fit items-center gap-1.5 rounded border border-amber-400/25 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-400">
+                    ⚠ No certifications against @MoneyCompact(Row.ActualCostOfSales) cost
+                </span>
+            }
+        </div>
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top font-medium border-l border-line @ProfitClass(Row.BudgetedProfit)">
+        @Money(Row.BudgetedProfit)
+        <MarginLine Value="Row.BudgetedMargin" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
+        @Money(Row.CertifiedToDate)
+        <MemoLine Text="@(Row.RetentionOutstanding > 0m ? $"{Money(Row.RetentionOutstanding)} retention held" : null)" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(Row.ActualCostOfSales)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top font-medium @ProfitClass(Row.CurrentProfit)">
+        @Money(Row.CurrentProfit)
+        <MarginLine Value="Row.CurrentMargin" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">@Money(Row.LeftToCertify)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(Row.CostToComplete)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top font-medium @ProfitClass(Row.ToFinishProfit)">
+        @Money(Row.ToFinishProfit)
+        <MarginLine Value="Row.ToFinishMargin" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content border-l border-line">
+        @Money(Row.ContractValue)
+        <MemoLine Text="@(Row.NetVariations == 0m ? "no variations" : $"{SignedMoney(Row.NetVariations)} variations")" />
+    </td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top text-content">@Money(Row.ForecastCostOfSales)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap align-top font-medium @ProfitClass(Row.ForecastedProfit)">
+        @Money(Row.ForecastedProfit)
+        <MarginLine Value="Row.ForecastedMargin" />
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public Project Project { get; set; } = default!;
+    [Parameter, EditorRequired] public ProfitRow Row { get; set; } = default!;
+}

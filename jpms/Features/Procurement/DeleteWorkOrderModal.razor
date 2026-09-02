@@ -1,0 +1,109 @@
+@namespace Jewel.JPMS.Features.Procurement
+@inject ICommandSender Commands
+@inject ProjectWorkOrdersReadModel WorkOrders
+
+@* Deleting is the one decision that leaves no row behind (rejecting keeps a quiet record), so
+   it alone earns a modal instead of an inline confirm. Serves both lists — an undecided draft
+   and a rejected one, with the copy saying which it is — and owns its busy and error state, so
+   a refused delete reads back inside the modal rather than under the list. *@
+<Modal IsOpen="@(deleting is not null)"
+       Title="@(DeletingRejected ? "Delete rejected work order" : "Delete draft work order")"
+       ShowFooter="false" OnCancel="Close">
+    @if (deleting is { } orderToDelete)
+    {
+        <p class="text-sm text-content mb-2">
+            Delete <span class="font-medium">"@orderToDelete.Order.Title"</span>
+            (@orderToDelete.SubcontractorName · @Money(orderToDelete.Order.Value)) permanently?
+        </p>
+        @if (DeletingRejected)
+        {
+            <p class="text-sm text-content-subtle mb-2">
+                This removes the rejected order and its priced lines and attachments outright —
+                it already counted nowhere, so no figures change; the quiet record of the
+                rejection simply disappears from this page. It cannot be undone.
+            </p>
+        }
+        else
+        {
+            <p class="text-sm text-content-subtle mb-2">
+                This removes the draft and its priced lines and attachments outright — nothing
+                stays on this page and its value drops out of the Financials tab's committed
+                figures. No order number was ever minted, so no gap is left. It cannot be undone.
+            </p>
+            <p class="text-sm text-content-subtle">
+                To keep a visible record of a considered "no", use Reject instead — rejected
+                drafts stay listed below.
+            </p>
+        }
+        @if (error is not null)
+        {
+            <p class="text-sm text-negative mt-3">@error</p>
+        }
+        <div class="flex items-center justify-end gap-2 mt-4">
+            <button type="button" class="btn-neutral" disabled="@busy"
+                    @onclick="Close">@(DeletingRejected ? "Keep record" : "Keep draft")</button>
+            <button type="button"
+                    class="btn bg-negative-strong text-negative-ink hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled="@busy"
+                    @onclick="DeleteAsync">
+                @(busy ? "Deleting…" : DeletingRejected ? "Delete record" : "Delete draft")
+            </button>
+        </div>
+    }
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+    /// <summary>Raised as a delete starts and ends — the lists' menus stand down while one is in flight.</summary>
+    [Parameter] public EventCallback<bool> BusyChanged { get; set; }
+
+    private ProjectWorkOrderDetail? deleting;
+    private bool busy;
+    private string? error;
+
+    private bool DeletingRejected => deleting?.Order.IsRejected == true;
+
+    /// <summary>Opens the confirm over an undecided or rejected draft — from either list's menu.</summary>
+    public void Open(ProjectWorkOrderDetail detail)
+    {
+        deleting = detail;
+        error = null;
+        StateHasChanged();
+    }
+
+    private void Close()
+    {
+        if (busy) return;
+        deleting = null;
+        error = null;
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (busy || deleting is not { } orderToDelete) return;
+        await SetBusyAsync(true);
+        error = null;
+        try
+        {
+            await Commands.SendAsync(new DeleteDraftWorkOrder(
+                ProjectId, orderToDelete.Order.WorkOrderId), CancellationToken.None);
+            deleting = null;
+            await WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
+        }
+        catch (CommandFailedException ex)
+        {
+            // 400s are answers for the caller to show, not toasts — say what refused and why.
+            error = $"Couldn't delete \"{orderToDelete.Order.Title}\": {ex.Message}";
+        }
+        finally
+        {
+            await SetBusyAsync(false);
+        }
+    }
+
+    private async Task SetBusyAsync(bool value)
+    {
+        busy = value;
+        await BusyChanged.InvokeAsync(value);
+    }
+}

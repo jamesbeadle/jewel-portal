@@ -1,0 +1,115 @@
+@namespace Jewel.JPMS.Features.Cashflow
+@using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
+
+@* The combined statement: the selected projects' Cashflow tabs summed into one whiteboard —
+   the same rows, the same helpers, over the table's own figures, so the statement and the
+   rows beneath it agree to the penny. With one project ticked this IS that project's
+   statement. *@
+<div class="rounded-xl border border-line bg-surface mb-8 max-w-2xl">
+    <div class="px-4 py-3 border-b-2 border-line">
+        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Combined statement</p>
+        <p class="text-sm font-semibold text-content mt-0.5">@SelectionLabel</p>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-4 px-4 py-3">
+        <div>
+            <p class="text-sm font-semibold text-content"
+               title="The valuation reports' counting lines — contract works, provisional sums, contingency and variations — summed across the selected projects">Project claim</p>
+            <p class="text-xs text-content-subtle mt-0.5">The full value of the works as currently valued</p>
+        </div>
+        <p class="text-lg font-semibold text-content whitespace-nowrap">@Money(Combined.ProjectClaim)</p>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+        <div>
+            <p class="text-sm font-semibold text-content"
+               title="Valuation invoices clients have paid, plus retention withheld on works complete (held less confirmed releases, from each project's retention terms)">Cash allocated</p>
+            <p class="text-xs text-content-subtle mt-0.5">
+                @Money(Combined.CashReceived) received from clients · @Money(Combined.RetentionOutstanding) held in retention
+            </p>
+        </div>
+        <p class="text-lg font-semibold text-content whitespace-nowrap">@Money(-Combined.CashAllocated)</p>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+        <div>
+            <p class="text-sm font-semibold text-content"
+               title="Project claim less cash allocated, less the retention that will be withheld on the works still to value — what can actually be invoiced to clients before the releases">Left to claim</p>
+            @if (Combined.RetentionStillToWithhold != 0m)
+            {
+                <p class="text-xs text-content-subtle mt-0.5"
+                   title="Valuation invoices are raised net of retention, so this slice of the remainder is never invoiceable on a valuation — it comes back through the release rows below instead">
+                    less @Money(Combined.RetentionStillToWithhold) retention to be withheld on works left to value
+                </p>
+            }
+            @if (Combined.InvoicedAwaitingPayment != 0m)
+            {
+                <p class="text-xs text-content-subtle mt-0.5">of which @Money(Combined.InvoicedAwaitingPayment) already invoiced &amp; awaiting payment</p>
+            }
+        </div>
+        <p class="text-lg font-semibold text-content whitespace-nowrap">@Money(Combined.LeftToClaim)</p>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+        <div>
+            <p class="text-sm text-content"
+               title="Each Financials tab's drawdown to the penny — every cost centre's unspent target cost, with finalised lines realised to profit / loss and reconciliation packages accounted for. Overspent centres are not netted off: the forecast spends the full drawdown and never assumes an overspend is bought back.">Cost centre drawdowns</p>
+            <p class="text-xs text-content-subtle mt-0.5">Budget still expected to be spent, on top of orders and bills</p>
+        </div>
+        <p class="text-base font-semibold text-content whitespace-nowrap">@Money(-Combined.Drawdown)</p>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+        <div>
+            <p class="text-sm text-content"
+               title="Work-order value not yet invoiced by suppliers — committed spend still to bill; see each project's WO Allocation tab">Uninvoiced work orders</p>
+            <p class="text-xs text-content-subtle mt-0.5">@Money(Combined.WoCommitted) committed · @Money(Combined.WoInvoiced) invoiced to date</p>
+        </div>
+        <p class="text-base font-semibold text-content whitespace-nowrap">@Money(-Combined.WoLeftToInvoice)</p>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+        <div>
+            <p class="text-sm text-content"
+               title="The net still owed on allocated purchase lines, part-payment aware: a bill Xero has partly settled counts only its remainder, from the bill's AmountDue as last synced">Unpaid Xero purchase invoices</p>
+        </div>
+        <p class="text-base font-semibold @(Combined.BillsUnpaid == 0m ? "text-content" : "text-negative") whitespace-nowrap">@Money(-Combined.BillsUnpaid)</p>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+        <div>
+            <p class="text-sm text-content"
+               title="The first retention releases still forecast, due at each project's practical completion. A confirmed release has moved into the claim, so it is no longer added back here.">Retention release 1</p>
+            <p class="text-xs text-content-subtle mt-0.5">Still forecast, due at practical completion</p>
+        </div>
+        <p class="text-base font-semibold text-content whitespace-nowrap">@AddBack(Combined.Release1)</p>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+        <p class="text-sm font-semibold text-content"
+           title="Left to claim, less cost centre drawdowns, uninvoiced work orders and unpaid purchase invoices, plus the first retention releases — the net cash movement between now and practical completion">Practical completion cashflow</p>
+        <p class="text-xl font-semibold @(Combined.PracticalCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(Combined.PracticalCompletionCashflow)</p>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
+        <div>
+            <p class="text-sm text-content"
+               title="The final retention releases still forecast, due after each project's defects period. A confirmed release has moved into the claim, so it is no longer added back here.">Retention release 2</p>
+            <p class="text-xs text-content-subtle mt-0.5">Still forecast, due after the defects period</p>
+        </div>
+        <p class="text-base font-semibold text-content whitespace-nowrap">@AddBack(Combined.Release2)</p>
+    </div>
+
+    <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
+        <p class="text-sm font-semibold text-content"
+           title="Practical completion cashflow plus the final retention releases — the selected projects' net cash movement to the end of their defects periods">Project completion cashflow</p>
+        <p class="text-xl font-semibold @(Combined.ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(Combined.ProjectCompletionCashflow)</p>
+    </div>
+</div>
+
+@code {
+    /// <summary>The selection summed — every row's figures added, the derived lines following.</summary>
+    [Parameter, EditorRequired] public CashRow Combined { get; set; } = default!;
+    /// <summary>What the header names — the filter's own words for the selection.</summary>
+    [Parameter] public string SelectionLabel { get; set; } = "";
+}

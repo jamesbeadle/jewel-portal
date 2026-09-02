@@ -1,94 +1,138 @@
-# Refactor audit — baseline v16, after round 15
+# Refactor audit — baseline v17, after round 16
 
-Generated 2026-09-01 from `refactor/round-15`, replacing the round-14 (v15) baseline report. The
+Generated 2026-09-02 from `refactor/round-16`, replacing the round-15 (v16) baseline report. The
 audit carries the prose and functionNames checks introduced at v2.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 644, totalFiles: 3333, worstFileLines: 736 |
-| functionShape | limit: 30, functionsOverLimit: 698, elseBlocks: 1182, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 656, totalFiles: 3415, worstFileLines: 517 |
+| functionShape | limit: 30, functionsOverLimit: 697, elseBlocks: 1170, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 488, duplicatedLines: 6207, totalLines: 216128, duplicatedPercentage: 2.87 |
-| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1474 |
-| comments | explanatoryCommentLines: 13726, filesWithComments: 1811, taskMarkers: 48 |
+| duplication | clones: 490, duplicatedLines: 6214, totalLines: 216883, duplicatedPercentage: 2.87 |
+| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1502 |
+| comments | explanatoryCommentLines: 13673, filesWithComments: 1874, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2398, deeplyIndentedLines: 2801, overlongLines: 1703, measurementIsHeuristic: True |
-| inventory | pages: 92, components: 131, orphanComponents: 6, averagePageLines: 231 |
+| prose | longMemberChainLines: 2395, deeplyIndentedLines: 2800, overlongLines: 1666, measurementIsHeuristic: True |
+| inventory | pages: 92, components: 132, orphanComponents: 6, averagePageLines: 208 |
 
-## Round 15 — labour, programme, and the one Apply
+## Round 16 — the finance trio, the work orders, the directory, and the seams
 
-The two pane-structured pages the v15 report named, then the first `.cs` at the top of the
-table:
+Every target the v16 report named, in twelve commits: the three table-heavy finance pages by
+the row-family recipe, the two pane-shaped pages by the panel recipe, and five `.cs` giants by
+the partial-at-a-seam division. The worst file is a component for the first time, and no page
+is over 500 lines.
 
-- **LabourOverview 785 → 142**: the forecast header, the four views (worker placement with
-  the worker's own detail panel, sites, cost codes, weekly sign-off), the settlement schedules
-  and the chase list — then the three dialogs (absence, settlement line, the accountant's
-  weekly entry), each owning its fields and its save. The month's panes are keyed by month, so
-  moving month resets an opened row the way the page used to by hand; the money/day/bar
-  formatters joined LabourDisplay. Two site-matching helpers with no caller anywhere in the
-  client went with the weekly entry's move.
-- **ProjectProgramme 750 → 78**: a tab bar and four panes. ProgrammeWorkbench owns the
-  programme outright — reads it, writes every change through one shape and re-reads — and
-  hands the page one thing, the delay event a Notice of Delay is raised from;
-  ProgrammeGanttChart carries the geometry and the inline task editor, whose save asks the
-  workbench whether the write took. ProgrammeClaimsWorkbench, CriticalRfiList and
-  RelevantEventsList are the other three panes.
-- **TriageQueue.Compose 742 → 311 + 445**: the reply composer and the Apply orchestrator (its
-  plan, refusal gauntlet and eleven steps) had sat in one file at one seam; the orchestrator is
-  TriageQueue.Apply.cs.
-- **Held**: comments 13,727 → 13,726, member chains 2,398 → 2,398 (three typed callbacks and a
-  split range read paid for the new `@using static` lines the heuristic counts), overlong
-  names 43, functions over 30 lines 700 → 698. **Division signature**: filesOverLimit 638 → 644
-  and duplication 2.85% → 2.87% — the new clone pair is the labour page's two bar tables
-  (sites, cost codes), which shared their shape on the page and now share it across two files.
+- **ProfitSummary 736 → 195**: the table is `ProfitTable` with `ProfitTableRow` and
+  `ProfitTotalsRow` (Features/Cvr), the `MarginLine`/`Memo` fragments in its `@code` are the
+  `MarginLine` and `MemoLine` components, and the four panels — `RunningProfitPanel` (the basis
+  switch bound back to the page, because every Xero panel reads it), `BudgetForecastBridge`,
+  `TrajectoryPanel`, `CumulativePositionPanel` with a `CumulativeChartCard` per job — stand
+  where their markup did. The cumulative panel owns its Refresh-from-Xero action and raises
+  `OnSynced`; the page keeps the initial read. `ProfitRow`, the bridge, trajectory and
+  cumulative records left the page as public types; `SignedMoney`, `Pct`, `Pc`, `DeltaK` and the
+  chart colours joined `ProfitDisplay`; the selection's total is `ProfitRow.TotalOf`. The summary
+  strip is `ProfitSummaryStrip` over the new **`FigureTile`** (Components) — the finance KPI
+  tile whose label stays while its figure pulses — which the three finance strips had each
+  hand-rolled per tile.
+- **CashForecast 665 → 220**: `CashForecastTable` with `ForecastCategoryRow` (the `CategoryRow`
+  fragment, now a component), `ForecastProjectLine` (the FD's two knobs on it),
+  `OverheadsRow` and the directors' `ClosingBalanceRow`; `ForecastKpiStrip` over `FigureTile`;
+  `CombinedStatementCard`; `ProjectCashTable` with `ProjectCashRow` and `ProjectCashTotalsRow`.
+  `ForecastView`, `ForecastRows` and `CashRow` are public records in Features/Cashflow. Every
+  state the rows read stays on the page, where the reloads and the storage live.
+- **WeeklyCashflow 604 → 175**: `WeeklyCashflowGrid` — one `CashflowBandSection` per band
+  (the `BandSection` fragment), net movement, `WeeklyClosingBalanceRow` — takes the page's state
+  and handlers once and wires every band from them; `WeeklyKpiStrip` over `FigureTile` retired
+  the `LoadingFigure` fragment; `CashflowItemModal` and `SupplierGroupsModal` own their fields,
+  their save and their store injection — the ItemDialog and GroupsDialog partials moved whole
+  into their code-behinds. `WeeklyCashflowBands` carries the band's reading rules.
+- **ProjectWorkOrders 548 → 193** (its core partial 451 → 160): `DraftWorkOrdersPanel` owns the
+  two-click decision, the commands and the purchase-order email an approval promises;
+  `RejectedWorkOrdersList`, `CancelledWorkOrdersList`, `UnpricedWorkOrdersList`;
+  `DeleteWorkOrderModal` owns the one decision that leaves no row behind; `WorkOrdersTable` with
+  `WorkOrderGroupRow` and `WorkOrderLineRow`, the footer a `WorkOrderGroup` like any row. The
+  Labels partial is `WorkOrderDisplay`, with `PurchaseOrderPath` where four places spelled the
+  URL by hand; the core divided into Rows, Menus and Dialogs partials.
+- **Subcontractors 517 → 158**: `ClientsDirectoryTable`, `ArchitectsDirectoryTable`,
+  `StaffDirectoryTable`, `CompaniesDirectoryTable` with `CompanyDirectoryRow`; `XeroImportModal`
+  and `ConsolidateRecordsModal` own their state; `DirectoryDisplay` carries the label, location,
+  dash and category list. The Consolidation partial, which also carried the export, is now
+  Selection and Export.
+- **ExcelWorkbookWriter 589 → 46** + Package/Worksheet/Cells/Helpers partials and
+  `ExcelStyleRegistry` as a type of its own. **AiCommercialTools 560 → 48**, **AiSourceTools
+  502 → 58**, **AiSourceReader 518 → 95** — a partial per tool, per concern and per format,
+  `Build()` concatenating the tool methods as `AiRecordTools` does; each partial names only the
+  usings it needs (the identical using blocks had been clone pairs). **TriageQueue.Outbox
+  520 → 69**: the file was named for its first fifty lines; the rest is Decisions, Todos, Views
+  and ListReads. The worker's hand-picked compile list carries none of the split api files.
+- **Held**: comments 13,726 → 13,673 (section headers the filenames carry, fragments whose
+  component names say it, one dangling comment), `else` blocks 1,182 → 1,170 (the tile branches
+  became `FigureTile`'s one), functions over 30 lines 698 → 697, member chains 2,398 → 2,395,
+  deep indentation 2,801 → 2,800, overlong names 43, hex colours 43, orphan components 6.
+  Duplication 2.87% → 2.87% (clones 488 → 490): the new pairs are pass-through `[Parameter]`
+  blocks — `CashflowBandSection` ↔ `WeeklyCashflowGrid`, `WorkOrdersTable` ↔
+  `WorkOrderGroupRow` — and the combined statement card's two supplier lines against the
+  project Cashflow tab's statement it mirrors by design. **Division signature**: filesOverLimit
+  644 → 656 — twelve more files over 100 where five pages and five `.cs` giants stood, the
+  largest of them the cumulative panel (130), the combined statement card (115) and the two
+  Weekly Cashflow modal code-behinds (139, 137).
 
 ## The journey so far
 
-| Figure | 22 Aug (v1) | R10 (v11) | R11 (v12) | R12 (v13) | R13 (v14) | R14 (v15) | R15 (v16) |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Worst file (lines) | 4,961 | 954 | 954 | 929 | 837 | 785 | **736** |
-| Average page length | 544 | 272 | 272 | 266 | 262 | 246 | **231** |
-| Duplication | 4.16% | 2.81% | 2.82% | 2.83% | 2.85% | 2.85% | 2.87% † |
-| `else` blocks | 1,087 | 1,182 | 1,182 | 1,182 | 1,182 | 1,182 | **1,182** |
-| Overlong function names | — | 44 | 44 | 44 | 44 | 43 | **43** |
-| Functions over 30 lines | — | 700 | 704 | 703 | 702 | 700 | **698** |
-| Files over 100 lines | 385 | 618 | 621 | 626 | 629 | 638 | 644 † |
+| Figure | 22 Aug (v1) | R10 (v11) | R11 (v12) | R12 (v13) | R13 (v14) | R14 (v15) | R15 (v16) | R16 (v17) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Worst file (lines) | 4,961 | 954 | 954 | 929 | 837 | 785 | 736 | **517** |
+| Average page length | 544 | 272 | 272 | 266 | 262 | 246 | 231 | **208** |
+| Duplication | 4.16% | 2.81% | 2.82% | 2.83% | 2.85% | 2.85% | 2.87% | **2.87%** |
+| `else` blocks | 1,087 | 1,182 | 1,182 | 1,182 | 1,182 | 1,182 | 1,182 | **1,170** |
+| Overlong function names | — | 44 | 44 | 44 | 44 | 43 | 43 | **43** |
+| Functions over 30 lines | — | 700 | 704 | 703 | 702 | 700 | 698 | **697** |
+| Files over 100 lines | 385 | 618 | 621 | 626 | 629 | 638 | 644 | 656 † |
 
-† The division signature: explicit-interface components where page markup stood. Four rounds
-of the panel recipe have taken the seven worst pages from 954/929/837/830/802/785/750 to
-470/488/302/266/435/142/78; the average page has fallen 41 lines in four rounds.
+† The division signature: explicit-interface components where page markup stood. Five rounds of
+the panel and row-family recipes have taken the twelve worst pages under 500; the worst file is
+now a component, and the average page has fallen 64 lines in five rounds. `else` blocks moved
+for the first time since round 10.
 
 ## Worst files by length
 
 | File | Lines |
 | --- | --- |
-| jpms/Pages/ProfitSummary.razor | 736 |
-| jpms/Pages/CashForecast.razor | 665 |
-| jpms/Pages/WeeklyCashflow.razor | 604 |
-| jpms/Services/Excel/ExcelWorkbookWriter.cs | 589 |
-| api/Features/Ai/Tools/AiCommercialTools.cs | 560 |
-| jpms/Pages/ProjectWorkOrders.razor | 548 |
-| jpms/Pages/TriageQueue.Outbox.cs | 520 |
-| api/Features/Ai/Sources/AiSourceReader.cs | 518 |
 | jpms/Components/ValuationReportTable.razor | 517 |
-| jpms/Pages/Subcontractors.razor | 517 |
 | api/Features/Commercial/Documents/CostCentreReconciliationRenderer.cs | 509 |
 | jpms/Components/WorkOrderForm.razor.cs | 507 |
-| api/Features/Ai/Tools/AiSourceTools.cs | 502 |
 | api/Features/Ai/Tools/Actions/RequestsActions.cs | 492 |
 | jpms/Pages/XeroAllocation.razor | 488 |
+| jpms/Components/ValuationInvoicesSection.razor.cs | 476 |
+| worker/MailboxIntake/Graph/GraphMailClient.cs | 475 |
+| jpms/Pages/ProjectLabour.razor | 472 |
+| jpms/Pages/TriageQueue.razor | 470 |
+| jpms/Pages/DocumentControl.razor | 455 |
+| api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs | 453 |
+| api/Features/Procurement/Documents/WorkOrderPoRenderer.Sections.cs | 448 |
+| api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.Labour.cs | 445 |
+| jpms/Pages/TriageQueue.Apply.cs | 445 |
+| jpms/Pages/Todos.razor.cs | 444 |
 
-## Round 16, named
+## Round 17, named
 
-The finance trio leads — ProfitSummary (736), CashForecast (665), WeeklyCashflow (604) — the
-table-heavy pages the CashflowEntryRow and RunningProfitTable families already serve in part;
-the recipe is tables-into-row-components rather than panes. ProjectWorkOrders (548) and
-Subcontractors (517) are the next pane-shaped pages. On the .cs side, ExcelWorkbookWriter
-(589), TriageQueue.Outbox (520) and the AI tool catalogues (AiCommercialTools 560,
-AiSourceTools 502, AiSourceReader 518) want the partial-at-a-seam division that Compose/Apply
-just had. The worst file is now under 750 for the first time.
+The worst file is a component now: **ValuationReportTable (517, six partials already beside
+it)** wants the row-family recipe — a row per line kind (contract works, PC sums, contingency,
+variations), the roll-up rows, and the percent editor as a component — and
+**ValuationInvoicesSection (302 + 476)** and **WorkOrderForm (205 + 507)** are the other two
+components carrying a page's worth of code-behind: partial-at-a-seam for the `.cs`, panes for
+the markup. The three remaining pages over 450 — **XeroAllocation (488, second visit)**,
+**ProjectLabour (472)** and **DocumentControl (455, with a 351-line Filing partial)** — are
+pane-shaped. On the api side, **CostCentreReconciliationRenderer (509)** and
+**RequestsActions (492)** want the Sections/Helpers and per-action divisions the renderers and
+catalogues have already had, and **GraphMailClient (475)** is the worker's one giant (the worker
+cannot be built in the cloud without `Microsoft.ApplicationInsights.WorkerService`, which the
+Mac's package cache does not hold — a split there must be verified on the Mac). Two DRY moves
+are now visible and small: the project Cashflow tab's statement and `CombinedStatementCard`
+render the same statement, and the twin closing-balance rows (monthly, weekly) share their
+shape.
 
 Full detail, including every offender list, is in `audit.json`; the gate ratchets against
 `baseline.json`, which this report accompanies.

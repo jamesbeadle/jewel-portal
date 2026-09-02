@@ -1,0 +1,50 @@
+@namespace Jewel.JPMS.Features.Directory
+
+@* The Internal staff group: the RBAC user list folded into the directory — name, email, roles. *@
+@if (Error is not null)
+{
+    <p class="text-sm text-content-subtle italic">@Error</p>
+}
+else if (Staff.Count == 0)
+{
+    <LoadGate IsLoading="@(!Loaded)" Label="Loading">
+        <p class="text-sm text-content-subtle italic">No internal staff recorded.</p>
+    </LoadGate>
+}
+else
+{
+    <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-content-subtle border-b border-line">
+                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Name</th>
+                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Email</th>
+                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Roles</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Staff)
+                {
+                    <tr class="border-b border-line last:border-0">
+                        <td class="px-4 py-3 font-medium text-content">@user.DisplayName</td>
+                        <td class="px-4 py-3 text-content-muted">@user.Email</td>
+                        <td class="px-4 py-3">
+                            <span class="flex flex-wrap gap-1">
+                                @foreach (var role in user.Roles)
+                                {
+                                    <RoleBadge Role="role" />
+                                }
+                            </span>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<DirectoryUser> Staff { get; set; } = default!;
+    [Parameter] public bool Loaded { get; set; }
+    [Parameter] public string? Error { get; set; }
+}

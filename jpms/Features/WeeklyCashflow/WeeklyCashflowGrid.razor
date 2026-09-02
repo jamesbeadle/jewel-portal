@@ -1,0 +1,100 @@
+@using Jewel.JPMS.Contracts.WeeklyCashflow
+@namespace Jewel.JPMS.Features.WeeklyCashflow
+@using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
+
+@* The weekly grid: one column per week, the two Xero bands and a band per manual category in
+   play, then the running answer — net movement, and for directors the closing bank balance.
+   The page owns the moves, the exclusions and the dialogs; every band reads the same page state
+   and reports to the same page handlers, so Band wires a section once rather than three times. *@
+<div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
+    <table class="w-full text-sm border-collapse">
+        <thead class="bg-surface-raised border-b border-line">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                <th class="px-4 py-3 min-w-[260px]"></th>
+                @for (var index = 0; index < View.WeekStarts.Count; index++)
+                {
+                    <th class="px-3 py-3 text-right whitespace-nowrap">@WeekLabel(View.WeekStarts[index], index)</th>
+                }
+                <th class="px-3 py-3 text-right whitespace-nowrap border-l border-line"
+                    title="Due beyond the visible weeks. Entries here roll into view as the weeks advance.">Later</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="border-b border-line">
+                <td colspan="@(View.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash in</td>
+            </tr>
+            @Band(WeeklyCashflowBand.ClientReceipts, "Client invoices outstanding",
+                  "one line per outstanding sales invoice in Xero, at its due week — or at the Expected date when one is set in Xero",
+                  Array.Empty<GroupSlice>())
+            <tr class="border-b border-line">
+                <td colspan="@(View.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash out</td>
+            </tr>
+            @Band(WeeklyCashflowBand.SupplierBills, "Supplier bills",
+                  "one line per outstanding bill in Xero — drafts included, as Aged Payables counts them; a Planned date set in Xero picks the week",
+                  SupplierGroups)
+            @foreach (var category in WeeklyCashflowCategories.All)
+            {
+                var band = WeeklyCashflowMaths.BandFor(category);
+                if (View.Entries.Any(entry => entry.Band == band))
+                {
+                    @Band(band, WeeklyCashflowCategories.BandLabel(category), "manual items — added on this page", Array.Empty<GroupSlice>())
+                }
+            }
+            @* ── The running answer ── *@
+            <tr class="border-t-2 border-line border-b border-line font-semibold">
+                <td class="px-4 py-3 text-content">
+                    Net movement
+                    <span class="block text-[11px] text-content-faint font-normal">cash in less cash out, per week</span>
+                </td>
+                @for (var index = 0; index < View.WeekStarts.Count; index++)
+                {
+                    var net = View.Net[index];
+                    <td class="px-3 py-3 text-right whitespace-nowrap @(net < 0m ? "text-negative" : "text-positive")">@Signed(net)</td>
+                }
+                <td class="px-3 py-3 text-right whitespace-nowrap border-l border-line @(View.Net[^1] < 0m ? "text-negative" : "text-positive")">@Signed(View.Net[^1])</td>
+            </tr>
+            @if (IsDirector && View.Closing is not null)
+            {
+                <WeeklyClosingBalanceRow View="View" />
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public WeeklyCashflowView View { get; set; } = default!;
+    /// <summary>The bank-anchored row is the directors' — mirroring the API's gate.</summary>
+    [Parameter] public bool IsDirector { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyCollection<WeeklyCashflowBand> CollapsedBands { get; set; } = default!;
+    [Parameter] public EventCallback<WeeklyCashflowBand> OnToggleBand { get; set; }
+
+    /// <summary>The supplier groups as they land on this grid — the Supplier bills band's combined rows.</summary>
+    [Parameter] public IReadOnlyList<GroupSlice> SupplierGroups { get; set; } = Array.Empty<GroupSlice>();
+    [Parameter] public IReadOnlyCollection<string> ExpandedGroups { get; set; } = Array.Empty<string>();
+    [Parameter] public IReadOnlyCollection<string> MovingGroupIds { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback<string> OnToggleGroup { get; set; }
+    [Parameter] public EventCallback<(GroupSlice Slice, int CellIndex)> OnResetGroupCell { get; set; }
+    [Parameter] public EventCallback<(GroupSlice Slice, int FromWeek, int ToWeek)> OnMoveGroupCell { get; set; }
+
+    [Parameter] public IReadOnlyList<WeeklyCashflowSeed> ExcludedSeeds { get; set; } = Array.Empty<WeeklyCashflowSeed>();
+    [Parameter, EditorRequired] public Func<string, string?> ExcludedByFor { get; set; } = default!;
+    [Parameter] public IReadOnlyCollection<string> MovingKeys { get; set; } = Array.Empty<string>();
+    [Parameter] public IReadOnlyCollection<string> ExcludingKeys { get; set; } = Array.Empty<string>();
+
+    [Parameter] public EventCallback<string> OnEdit { get; set; }
+    [Parameter] public EventCallback<WeeklyCashflowEntry> OnExclude { get; set; }
+    [Parameter] public EventCallback<string> OnRestore { get; set; }
+    [Parameter] public EventCallback<WeeklyCashflowEntry> OnReset { get; set; }
+    [Parameter] public EventCallback<(WeeklyCashflowEntry Entry, int ToWeek)> OnMove { get; set; }
+
+    private RenderFragment Band(WeeklyCashflowBand band, string label, string sub, IReadOnlyList<GroupSlice> groups) => __builder =>
+    {
+        <CashflowBandSection View="View" Band="band" Label="@label" Sub="@sub"
+                             Expanded="@(!CollapsedBands.Contains(band))" OnToggle="OnToggleBand"
+                             Groups="groups" ExpandedGroups="ExpandedGroups" MovingGroupIds="MovingGroupIds"
+                             OnToggleGroup="OnToggleGroup" OnResetGroupCell="OnResetGroupCell" OnMoveGroupCell="OnMoveGroupCell"
+                             ExcludedSeeds="ExcludedSeeds" ExcludedByFor="ExcludedByFor"
+                             MovingKeys="MovingKeys" ExcludingKeys="ExcludingKeys"
+                             OnEdit="OnEdit" OnExclude="OnExclude" OnRestore="OnRestore" OnReset="OnReset" OnMove="OnMove" />
+    };
+}

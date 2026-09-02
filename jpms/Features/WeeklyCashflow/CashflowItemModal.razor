@@ -1,0 +1,94 @@
+@using Jewel.JPMS.Contracts.WeeklyCashflow
+@namespace Jewel.JPMS.Features.WeeklyCashflow
+
+@* Add / edit a manual item — subcontractors, staff, subscriptions, anything Xero can't see
+   coming. Opened by the page with OpenAdd() or OpenEdit(itemId); the dialog owns its fields,
+   the save and the archive, and applies the server's answer to the plan itself. *@
+<Modal IsOpen="@open"
+       Title="@(editingItemId is null ? "Add item" : "Edit item")"
+       OnCancel="Close">
+    <ChildContent>
+    <div class="space-y-4">
+        <FormField Label="Name" Value="@formName" OnChange="value => formName = value" Required="true" />
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Category</label>
+                <select class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"
+                        value="@((int)formCategory)"
+                        @onchange="args => formCategory = (WeeklyCashflowCategory)int.Parse((string)args.Value!)">
+                    @foreach (var category in WeeklyCashflowCategories.All)
+                    {
+                        <option value="@((int)category)">@WeeklyCashflowCategories.Label(category)</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount (£) *</label>
+                <input type="number" min="0" step="0.01" value="@formAmount"
+                       @oninput="args => formAmount = (string)args.Value!"
+                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
+            </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Repeats</label>
+                <select class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"
+                        value="@((int)formRecurrence)"
+                        @onchange="args => formRecurrence = (WeeklyCashflowRecurrence)int.Parse((string)args.Value!)">
+                    @foreach (var recurrence in WeeklyCashflowRecurrences.All)
+                    {
+                        <option value="@((int)recurrence)">@WeeklyCashflowRecurrences.Label(recurrence)</option>
+                    }
+                </select>
+                <p class="text-[11px] text-content-faint mt-1">
+                    @(formRecurrence switch
+                    {
+                        WeeklyCashflowRecurrence.Weekly => "Every week on the first date's weekday.",
+                        WeeklyCashflowRecurrence.Monthly => "Every month on the first date's day (shorter months clamp).",
+                        _ => "A single payment."
+                    })
+                </p>
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
+                    @(formRecurrence == WeeklyCashflowRecurrence.OneOff ? "Due on *" : "First due on *")
+                </label>
+                <input type="date" value="@formFirstDue"
+                       @onchange="args => formFirstDue = (string)args.Value!"
+                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
+            </div>
+        </div>
+        @if (formRecurrence != WeeklyCashflowRecurrence.OneOff)
+        {
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Last payment on</label>
+                <input type="date" value="@formLastDue"
+                       @onchange="args => formLastDue = (string)args.Value!"
+                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
+                <p class="text-[11px] text-content-faint mt-1">Leave empty for open-ended.</p>
+            </div>
+        }
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+            <textarea rows="2" value="@formNotes"
+                      @oninput="args => formNotes = (string)args.Value!"
+                      class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"></textarea>
+        </div>
+        @if (error is not null)
+        {
+            <p class="text-sm text-negative">@error</p>
+        }
+    </div>
+    </ChildContent>
+    <FooterContent>
+        @if (editingItemId is not null)
+        {
+            <button type="button" class="btn-neutral text-negative mr-auto" disabled="@saving" @onclick="ArchiveAsync"
+                    title="Remove the item from the grid. Its history is kept.">Archive</button>
+        }
+        <button type="button" class="btn-neutral" disabled="@saving" @onclick="Close">Cancel</button>
+        <button type="button" class="btn-primary" disabled="@(saving || !FormLooksComplete)" @onclick="SaveAsync">
+            @(editingItemId is null ? "Add item" : "Save changes")
+        </button>
+    </FooterContent>
+</Modal>

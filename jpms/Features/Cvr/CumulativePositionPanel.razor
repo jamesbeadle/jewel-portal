@@ -1,0 +1,130 @@
+@namespace Jewel.JPMS.Features.Cvr
+@using static Jewel.JPMS.Features.Cvr.ProfitDisplay
+@inject ICommandSender Commands
+
+@* Cumulative position — invoiced vs cost, job start to date, straight from Xero's site P&L
+   (the accountant's combined mock, 2026-08-04). One card per selected job on its own scale;
+   the gap between the lines is cumulative gross profit. Gated on its own store, not on the
+   table's per-project loads — the two regions load in parallel and reveal independently. The
+   panel owns the Refresh button — re-pull from Xero (SyncXeroSitePnl reads the P&L report per
+   mapped project), then ask the page to re-read the stored rows; a sync that completes but
+   reports an error (e.g. a renamed tracking option) is shown inline — it is an answer, not a
+   toast. *@
+<div class="rounded-xl border border-line bg-surface p-5 mt-6">
+    <div class="flex items-start justify-between gap-x-6 gap-y-2 flex-wrap">
+        <div>
+            <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                Cumulative position
+                <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— invoiced vs cost, job start to date · Xero site P&L, @BasisLabel</span>
+            </p>
+            <div class="flex items-center gap-4 mt-2 text-[11px] text-content-muted flex-wrap">
+                <span class="flex items-center gap-1.5"><span class="inline-block w-3.5 h-[3px] rounded-full" style="background:@InvoicedLineColor"></span>Cumulative invoiced</span>
+                <span class="flex items-center gap-1.5"><span class="inline-block w-3.5 h-[3px] rounded-full" style="background:@CostLineColor"></span>Cumulative cost (incl. site overheads@(IncludeLabourAccrual ? " + accrued labour" : ""))</span>
+                <span class="text-content-faint">· hover for month values</span>
+            </div>
+        </div>
+        <Toolbar>
+            <ToolbarButton Icon="refresh" Label="Refresh from Xero" Busy="@syncing" OnClick="RefreshFromXeroAsync" />
+        </Toolbar>
+    </div>
+
+    @if (syncError is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-4">@syncError</p>
+    }
+    @if (syncNotice is not null)
+    {
+        <p class="rounded-lg bg-amber-400/10 border border-amber-400/30 px-3 py-2 text-sm text-amber-400 mt-4">@syncNotice</p>
+    }
+
+    <LoadGate IsLoading="@(Snapshot is null && !Failed)" Label="Loading Xero site figures">
+        @if (Snapshot is null)
+        {
+            <p class="text-sm text-negative mt-4">
+                The Xero site figures could not be loaded. The details are in the red bar at the top — reload to try again.
+            </p>
+        }
+        else if (!Snapshot.IsConfigured)
+        {
+            <p class="text-sm text-content-muted mt-4">
+                Xero isn't connected — add the Xero credentials to the API's app settings and this panel lights up.
+            </p>
+        }
+        else
+        {
+            @if (Snapshot.LastSyncedAtUtc is null)
+            {
+                <p class="text-sm text-content-muted mt-4">
+                    No site figures have been pulled from Xero yet — press "Refresh from Xero" above to run the
+                    first sync; the nightly worker keeps it current from then on.
+                </p>
+            }
+
+            <div class="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3 mt-4">
+                @foreach (var card in Cards)
+                {
+                    <CumulativeChartCard Card="card" />
+                }
+            </div>
+
+            <p class="text-[11px] text-content-subtle mt-3 max-w-3xl">
+                Gap between the lines is cumulative profit — parallel is healthy, converging is eroding,
+                crossed is underwater, both flat is stalled or unbilled. Figures are Xero's own site P&L (sales,
+                cost of sales and overheads tracked to each project's site), so this panel reports the
+                <span class="text-content-muted">invoiced</span> rung of the ladder — it sits near, not on, the
+                table's <span class="text-content-muted">certified</span> figures, and retention appears only
+                where it is tracked to the site in Xero.
+                @if (IncludeLabourAccrual)
+                {
+                    <text>The basis switch (top of the page) is ON, so the cost line also carries
+                    approved labour not yet billed — portal timesheet cost that drops out as each
+                    bill is approved in Xero. </text>
+                }
+                @if (Snapshot.LastSyncedAtUtc is DateTimeOffset syncedAt)
+                {
+                    <text>Synced from Xero @syncedAt.ToLocalTime().ToString("d MMM HH:mm").</text>
+                }
+            </p>
+        }
+    </LoadGate>
+</div>
+
+@code {
+    /// <summary>The stored Xero site P&L — null until the page's read lands (or fails).</summary>
+    [Parameter] public XeroSitePnlSnapshot? Snapshot { get; set; }
+    /// <summary>The page's read threw — opens the gate to say so instead of pulsing forever.</summary>
+    [Parameter] public bool Failed { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<CumulativeCard> Cards { get; set; } = default!;
+    [Parameter] public bool IncludeLabourAccrual { get; set; }
+    [Parameter] public string BasisLabel { get; set; } = "";
+    /// <summary>Raised after a sync — the page re-reads the stored rows every Xero panel shares.</summary>
+    [Parameter] public EventCallback OnSynced { get; set; }
+
+    private bool syncing;
+    private string? syncError;
+    // The sync's "finished cleanly but parked some projects for the next press" message —
+    // amber, because it is progress to act on, not a failure to worry about.
+    private string? syncNotice;
+
+    private async Task RefreshFromXeroAsync()
+    {
+        syncing = true;
+        syncError = null;
+        syncNotice = null;
+        try
+        {
+            var result = await Commands.SendAsync(new SyncXeroSitePnl(), CancellationToken.None);
+            if (result.Error is not null) syncError = result.Error;
+            syncNotice = result.Notice;
+            await OnSynced.InvokeAsync();
+        }
+        catch
+        {
+            // Command/query failures are already on the error toast with a reference.
+        }
+        finally
+        {
+            syncing = false;
+        }
+    }
+}

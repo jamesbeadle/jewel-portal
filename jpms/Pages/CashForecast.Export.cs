@@ -1,5 +1,6 @@
 using static Jewel.JPMS.Features.Cashflow.CashflowDisplay;
 using Jewel.JPMS.Commercial;
+using Jewel.JPMS.Features.Cashflow;
 using Jewel.JPMS.Contracts.Projects;
 using Jewel.JPMS.Contracts.Retention;
 using Jewel.JPMS.Features.Commercial;
@@ -40,8 +41,8 @@ public partial class CashForecast
                 sheet.AddRow(values.ToArray());
             }
 
-            foreach (var row in InRows) AddCategoryRow(row.Label, row.Category, cashIn: true);
-            foreach (var row in OutRows) AddCategoryRow(row.Label, row.Category, cashIn: false);
+            foreach (var row in ForecastRows.In) AddCategoryRow(row.Label, row.Category, cashIn: true);
+            foreach (var row in ForecastRows.Out) AddCategoryRow(row.Label, row.Category, cashIn: false);
 
             var movement = new List<object> { "Project movement" };
             movement.AddRange(forecast.ProjectNet.Select(value => (object)value));

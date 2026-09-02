@@ -1,0 +1,75 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using static Jewel.JPMS.Features.Procurement.WorkOrderDisplay
+
+@* Drafts: unnumbered, invisible to the supplier, awaiting a decision. Kept out of the table so
+   its arithmetic stays the truth about what has actually been issued — though drafts DO count
+   in the Financials tab's committed figures (the commitment is intended). Approving mints the
+   next sequential order number and moves the draft into the table; rejecting ends it. The panel
+   owns the decision — two clicks on purpose either way: an approval mints a number that is
+   never taken back, and a rejection has no undo — and the purchase-order email an approval
+   promises, whose outcome it hands the page as a note. *@
+<h3 class="text-sm font-semibold text-content mb-2">Draft work orders</h3>
+<p class="text-xs text-content-subtle mb-2">
+    Awaiting approval: a draft has no order number, is invisible to the supplier
+    and can't be invoiced or packaged — but its value already counts in the
+    Financials tab's committed figures. It can be edited freely. Preview PO opens
+    the purchase order exactly as the supplier will receive it, so it can be
+    checked — or saved as a PDF — before approving. Approving mints the next order
+    number and issues it like any other order; rejecting ends it and its value
+    stops counting.
+</p>
+<ul class="text-sm divide-y divide-line rounded-xl border border-line bg-surface mb-6">
+    @foreach (var detail in Drafts)
+    {
+        <li class="px-4 py-2 flex items-center gap-3">
+            <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Draft</span>
+            <span class="text-content font-medium">@detail.Order.Title</span>
+            <span class="text-content-subtle">@detail.SubcontractorName</span>
+            <span class="ml-auto">@Money(detail.Order.Value)</span>
+            @if (PendingFor(detail) is { } pending)
+            {
+                @* The approve warning: releasing the draft emails its purchase order there and then. *@
+                @if (pending == DraftDecision.Approve)
+                {
+                    <span class="text-[11px] @(SupplierEmailFor(detail) is null ? "text-amber-700" : "text-content-subtle")"
+                          title="Approving releases the order — the purchase-order email is sent from the projects mailbox the moment the number is minted">
+                        @(SupplierEmailFor(detail) is { } supplierEmail
+                            ? $"PO will be emailed to {supplierEmail}"
+                            : "No directory email — the PO won't be emailed")
+                    </span>
+                }
+                <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                   title="Open the purchase order exactly as it will read once approved — print or save it as a PDF before you decide"
+                   href="@PurchaseOrderPath(ProjectId, detail.Order.WorkOrderId)">
+                    Preview PO
+                </a>
+                <button type="button" class="text-xs font-medium @(pending == DraftDecision.Approve ? "text-accent" : "text-negative") underline underline-offset-4"
+                        title="@(pending == DraftDecision.Approve ? "Mint the next order number, issue this order and email the purchase order to the supplier" : "End this draft — its value stops counting and there is no undo")"
+                        disabled="@decisionBusy"
+                        @onclick="() => DecideAsync(detail, pending)">
+                    @(decisionBusy ? "Working…" : pending == DraftDecision.Approve ? "Confirm approve" : "Confirm reject")
+                </button>
+                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                        disabled="@decisionBusy"
+                        @onclick="ClearPending">
+                    Keep as draft
+                </button>
+            }
+            else
+            {
+                @* One Actions menu per draft — the row grew four inline links and the
+                   list grows drafts faster than it grows width. Approve/Reject keep
+                   their inline confirm step (the branch above); Delete gets a modal,
+                   because it is the only choice that leaves no record behind. *@
+                <DropdownMenu Label="Actions" WidthClass="w-72" Disabled="@decisionBusy"
+                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                              Class="inline-block text-left"
+                              Items="MenuItems(detail)" />
+            }
+        </li>
+    }
+</ul>
+@if (decisionError is not null)
+{
+    <p class="text-sm text-negative mb-4">@decisionError</p>
+}

@@ -1,0 +1,74 @@
+@namespace Jewel.JPMS.Features.Directory
+@using static Jewel.JPMS.Features.Directory.DirectoryDisplay
+
+@* Consolidate: merge the ticked records into one master. Pick the master, then the winning
+   value for each detail; every reference is re-pointed and the other records are deleted —
+   their contact details are kept as contacts on the master. Opened by the page with
+   Open(candidates); the dialog owns the master and field choices, the save and its error, and
+   raises OnMerged so the page can clear its ticks. *@
+<Modal IsOpen="open" Title="Consolidate records" ShowFooter="true"
+       ConfirmLabel="@(consolidating ? "Consolidating…" : $"Merge {candidates.Count} records")"
+       CancelLabel="Cancel" DismissOnOverlayClick="false"
+       OnCancel="() => open = false" OnConfirm="SaveAsync" Class="max-w-2xl w-full">
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+    <div class="space-y-4">
+        <div>
+            <p class="eyebrow mb-1">Master record</p>
+            <p class="text-xs text-content-subtle mb-2">
+                The record the others merge into. It keeps its history (work orders, invites,
+                compliance documents all move here) — the others are deleted after the merge.
+            </p>
+            <div class="space-y-1">
+                @foreach (var candidate in candidates)
+                {
+                    var id = candidate.SubcontractorId;
+                    <label class="flex items-center gap-2 text-sm text-content cursor-pointer">
+                        <input type="radio" name="consolidate-master" checked="@(masterId == id)"
+                               @onchange="() => masterId = id" />
+                        <span class="font-medium">@candidate.CompanyName</span>
+                        <span class="text-xs text-content-subtle">
+                            @string.Join(" · ", new[] { Label(candidate.Category), candidate.TradesLabel, candidate.XeroLinked ? "Linked to Xero" : "" }.Where(x => !string.IsNullOrWhiteSpace(x)))
+                        </span>
+                    </label>
+                }
+            </div>
+        </div>
+
+        @if (mergeFields.Any(field => field.Options.Count > 1))
+        {
+            <div>
+                <p class="eyebrow mb-1">Choose the winning values</p>
+                <p class="text-xs text-content-subtle mb-2">
+                    Where the records disagree, pick the value the master record keeps. Contact
+                    details that lose here are kept as additional contacts on the master.
+                </p>
+                <div class="space-y-3">
+                    @foreach (var field in mergeFields.Where(field => field.Options.Count > 1))
+                    {
+                        <div>
+                            <p class="text-xs font-medium text-content-muted mb-1">@field.Fieldname</p>
+                            <div class="flex flex-wrap gap-x-4 gap-y-1">
+                                @foreach (var option in field.Options)
+                                {
+                                    <label class="flex items-center gap-1.5 text-sm text-content cursor-pointer">
+                                        <input type="radio" name="@("consolidate-" + field.Key)" checked="@(field.Chosen == option)"
+                                               @onchange="() => field.Chosen = option" />
+                                        @option
+                                    </label>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+
+        <p class="text-xs text-content-subtle">
+            Trades are combined, every contact is kept, and Xero links carry across — if any of
+            the merged records came from Xero, the master stays linked to Xero.
+        </p>
+    </div>
+</Modal>

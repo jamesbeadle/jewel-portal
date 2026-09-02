@@ -1,0 +1,21 @@
+@namespace Jewel.JPMS.Features.Cashflow
+@using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
+
+@* The position-to-completion table's footer: the selection summed, column by column. *@
+<tr class="font-semibold">
+    <td class="px-4 py-3 text-content">All projects</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(Total.ProjectClaim)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-Total.CashAllocated)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap text-content border-l border-line">@Money(Total.LeftToClaim)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-Total.Drawdown)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(-Total.WoLeftToInvoice)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap @(Total.BillsUnpaid == 0m ? "text-content" : "text-negative")">@Money(-Total.BillsUnpaid)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted">@AddBack(Total.Release1)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line @(Total.PracticalCompletionCashflow < 0m ? "text-negative" : "text-positive")">@Money(Total.PracticalCompletionCashflow)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap text-content-muted">@AddBack(Total.Release2)</td>
+    <td class="px-4 py-3 text-right whitespace-nowrap @(Total.ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive")">@Money(Total.ProjectCompletionCashflow)</td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public CashRow Total { get; set; } = default!;
+}

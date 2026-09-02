@@ -1,0 +1,54 @@
+using System.Text;
+
+namespace Jewel.JPMS.Api.Features.Ai.Sources;
+
+internal static partial class AiSourceReader
+{
+    private static AiSourceDocument LoadPdf(byte[] content)
+    {
+        UglyToad.PdfPig.PdfDocument document;
+        try
+        {
+            document = UglyToad.PdfPig.PdfDocument.Open(content);
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidDataException(
+                "That PDF could not be opened — it may be password-protected or corrupted.", ex);
+        }
+
+        using (document)
+        {
+            var parts = new List<AiSourcePart>();
+            var anyText = false;
+            foreach (var page in document.GetPages())
+            {
+                string pageText;
+                try
+                {
+                    // Reading order beats raw content-stream order — a two-column spec sheet
+                    // read stream-wise interleaves the columns into nonsense.
+                    pageText = UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor
+                        .ContentOrderTextExtractor.GetText(page);
+                }
+                catch (Exception)
+                {
+                    pageText = page.Text;
+                }
+
+                var lines = SplitLines(pageText);
+                if (lines.Count > 0) anyText = true;
+                parts.Add(new AiSourcePart($"p{page.Number}", $"Page {page.Number}", "line", lines));
+            }
+
+            if (!anyText)
+            {
+                throw new InvalidDataException(
+                    "That PDF has no selectable text — it is likely a scan. Reading scans needs "
+                    + "OCR, which is not available here; the figures have to come from the user.");
+            }
+
+            return new AiSourceDocument(AiSourceDocument.Pdf, parts);
+        }
+    }
+}

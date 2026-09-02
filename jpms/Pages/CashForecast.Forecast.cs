@@ -1,4 +1,5 @@
 using Jewel.JPMS.Commercial;
+using Jewel.JPMS.Features.Cashflow;
 using Jewel.JPMS.Contracts.Projects;
 using Jewel.JPMS.Contracts.Retention;
 using Jewel.JPMS.Features.Commercial;
@@ -9,31 +10,8 @@ namespace Jewel.JPMS.Pages;
 
 public partial class CashForecast
 {
-    // ---- The forecast --------------------------------------------------------------------
     // The engine (CashForecastPhasing, contracts) owns every phasing rule; this page only
-    // prepares its inputs from the statement figures above and renders what comes back.
-
-    private sealed record ForecastRowInfo(ForecastCategory Category, string Label, string Source);
-
-    private static readonly ForecastRowInfo[] InRows =
-    {
-        new(ForecastCategory.InvoicesOutstanding, "Valuation invoices outstanding",
-            "already issued (or awaiting approval) · lands a payment-mechanism lag after issue"),
-        new(ForecastCategory.FutureValuations, "Future valuations",
-            "left to claim — spread evenly to practical completion, or claimed at the project's expected £/month where set — each valuation paid its contract's payment terms after the valuation date"),
-        new(ForecastCategory.RetentionReleases, "Retention releases",
-            "R1 at practical completion · R2 after the defects period")
-    };
-
-    private static readonly ForecastRowInfo[] OutRows =
-    {
-        new(ForecastCategory.BillsUnpaid, "Supplier bills unpaid",
-            "part-payment aware · assumed payable this month (per-bill due dates pending)"),
-        new(ForecastCategory.WorkOrdersToInvoice, "Work orders still to invoice",
-            "committed less invoiced, spread to practical completion, paid a month later"),
-        new(ForecastCategory.DrawdownsToSpend, "Drawdowns still to spend",
-            "budget beyond orders and bills, spread to practical completion, paid a month later")
-    };
+    // prepares its inputs from the statement figures and renders what comes back.
 
     private DateTimeOffset Now => DateTimeOffset.Now;
 
@@ -97,19 +75,6 @@ public partial class CashForecast
             project.ExpectedMonthlyValuation);
     }
 
-    private sealed record ForecastView(
-        DateTime[] Axis,
-        IReadOnlyDictionary<ForecastCategory, decimal[]> Cells,
-        IReadOnlyDictionary<ForecastCategory, decimal> Later,
-        IReadOnlyDictionary<ForecastCategory, decimal> Undated,
-        IReadOnlyDictionary<ForecastCategory, List<(Project Project, PhasedCategory Phased)>> PerProject,
-        decimal[] ProjectNet,
-        decimal[] Net,
-        decimal LaterNet,
-        decimal[] Closing,
-        int MinIndex,
-        List<(Project Project, decimal Variance)> Variances);
-
     // Built ONCE per render, at the top of the markup, and threaded through — the same cost
     // profile the retired page accepted for Totals().
     private ForecastView BuildForecast()
@@ -154,12 +119,12 @@ public partial class CashForecast
         var net = new decimal[monthCount];
         for (var index = 0; index < monthCount; index++)
         {
-            var cashIn = InRows.Sum(row => cells[row.Category][index]);
-            var cashOut = OutRows.Sum(row => cells[row.Category][index]);
+            var cashIn = ForecastRows.In.Sum(row => cells[row.Category][index]);
+            var cashOut = ForecastRows.Out.Sum(row => cells[row.Category][index]);
             projectNet[index] = cashIn - cashOut;
             net[index] = projectNet[index] - OverheadsFor(axis[index]);
         }
-        var laterNet = InRows.Sum(row => later[row.Category]) - OutRows.Sum(row => later[row.Category]);
+        var laterNet = ForecastRows.In.Sum(row => later[row.Category]) - ForecastRows.Out.Sum(row => later[row.Category]);
 
         // The running balance, directors only — seeded from the bank position.
         var closing = Array.Empty<decimal>();

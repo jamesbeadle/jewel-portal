@@ -1,0 +1,42 @@
+@namespace Jewel.JPMS.Features.Cvr
+
+@* How to read the table: what each band is, and where its rung sits on the one ladder
+   (claimed → certified → invoiced → paid) against the Xero panels around it. *@
+<p class="text-xs text-content-subtle mt-3 max-w-3xl">
+    <span class="text-content-muted font-medium">The deal</span> is the budgeted
+    profit as signed: the initial contract sum less its target cost — the sum
+    with our assumed
+    @($"{FinancialSummaryAssumptions.MarkupPercent:0.#}%") markup backed out, so
+    the budgeted margin reads
+    @($"{100m - FinancialSummaryAssumptions.CostFactor * 100m:0.0}%") on value.
+    <span class="text-content-muted font-medium">Current position</span> is money
+    actually certified — issued and paid valuation invoices — against allocated
+    Xero purchase spend to date. Retention is earned once the work is certified, so
+    it stays inside profit — the memo shows what the client still holds, and it
+    lives on the cash pages until released.
+    <span class="text-content-muted font-medium">To finish</span> is what's left in
+    the job from today: the revised contract sum not yet certified, against the cost
+    still to come — current profit plus profit to finish equals the forecast, to the
+    penny, so a job sitting at 10% today and landing at 5% shows the thin margin
+    still to come.
+    <span class="text-content-muted font-medium">Forecast at completion</span> is
+    where the job lands: final sales — the revised contract sum including approved
+    variations — against the Financials tab's forecasted cost of sales (committed
+    cost plus remaining drawdown). Percentages
+    are margins on value — each profit against its own revenue column. Click a
+    project for its Financials tab.
+</p>
+<p class="text-xs text-content-subtle mt-2 max-w-3xl">
+    One ladder, one word per rung:
+    <span class="text-content-muted">claimed</span> <span class="text-content-faint mx-0.5">→</span>
+    <span class="text-content-muted">certified</span> <span class="text-content-faint mx-0.5">→</span>
+    <span class="text-content-muted">invoiced</span> <span class="text-content-faint mx-0.5">→</span>
+    <span class="text-content-muted">paid</span>.
+    This table reports the <span class="text-content-muted">certified</span> rung;
+    the Xero panels — the running grid at the top of the page, the charts below — report
+    the <span class="text-content-muted">invoiced</span> rung and deduct overheads tracked
+    to the site, so a job's % there deliberately sits near, not on, its Current profit
+    here — salaries tracked to a site pull the Xero figure lower, and deposits invoiced
+    ahead of certification push it higher. The Cash Summary reports what has actually
+    been paid.
+</p>

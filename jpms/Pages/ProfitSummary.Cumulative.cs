@@ -1,4 +1,6 @@
 using Jewel.JPMS.Commercial;
+using Jewel.JPMS.Features.Cvr;
+using static Jewel.JPMS.Features.Cvr.ProfitDisplay;
 using Jewel.JPMS.Features.Commercial;
 using Jewel.JPMS.Features.Procurement;
 using Jewel.JPMS.Features.Projects;
@@ -15,34 +17,7 @@ public partial class ProfitSummary
     // first stored month to the current month, each card on its own scale. The figures are
     // Xero's own site P&L rows (XeroSitePnlReadModel — synced nightly, re-pulled by the
     // panel's Refresh button); months with no stored row are flat segments, so a stalled or
-    // unbilled job reads as exactly that. Line colours are the accountant's mock pair,
-    // validated for CVD separation and contrast on the card surface.
-
-    private const string InvoicedColor = "#3987e5";
-    private const string CostColor = "#d95926";
-
-    private bool pnlFailed;
-    private bool pnlSyncing;
-    private string? pnlSyncError;
-    // The sync's "finished cleanly but parked some projects for the next press" message —
-    // amber, because it is progress to act on, not a failure to worry about.
-    private string? pnlSyncNotice;
-
-    private sealed record CumulativeMonthPoint(DateTime Month, decimal Invoiced, decimal Cost);
-
-    private sealed record CumulativeChart(
-        IReadOnlyList<CumulativeMonthPoint> Points,
-        string InvoicedPoints,
-        string CostPoints,
-        double InvoicedEndY,
-        double CostEndY,
-        decimal GrossProfit,
-        decimal? Margin,
-        string RangeLabel,
-        string? Warning);
-
-    // Chart null means "no line to draw" — Unavailable says why (unmapped vs no activity).
-    private sealed record CumulativeCard(Project Project, CumulativeChart? Chart, string? Unavailable);
+    // unbilled job reads as exactly that.
 
     private List<CumulativeCard> CumulativeCardsFor(IReadOnlyList<Project> projects)
     {

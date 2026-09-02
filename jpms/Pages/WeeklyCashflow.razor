@@ -60,12 +60,12 @@
                                          BuildWorkbook="BuildExportWorkbook" />
                     <ToolbarDivider />
                     <ToolbarButton Icon="folder" Label="Group suppliers"
-                                   Disabled="@(!GridReady || planFailed)" OnClick="OpenGroupsDialog" />
+                                   Disabled="@(!GridReady || planFailed)" OnClick="() => groupsModal.Open()" />
                     <ToolbarButton Icon="refresh" Label="Refresh from Xero"
                                    Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
                 </Toolbar>
                 @* A control, so never gated — disabled until the plan has landed, in its own language. *@
-                <button type="button" class="btn-primary" disabled="@(!GridReady || planFailed)" @onclick="OpenAddDialog">Add item</button>
+                <button type="button" class="btn-primary" disabled="@(!GridReady || planFailed)" @onclick="() => itemModal.OpenAdd(today)">Add item</button>
             </div>
         </header>
 
@@ -75,109 +75,8 @@
             var view = GridReady && XeroReady ? BuildView() : null;
         }
 
-        @* ── KPI strip. The movement tiles are everyone's; the bank-anchored tiles are the
-           directors', mirroring the API's gate. Tiles keep their shape while loading: label
-           stays, figure pulses. ── *@
-        <div class="grid gap-4 sm:grid-cols-2 @(IsDirector ? "lg:grid-cols-4" : "lg:grid-cols-3") mb-8">
-            @if (IsDirector)
-            {
-                <div class="rounded-xl border border-line bg-surface px-5 py-4">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Cash in bank</p>
-                    @if (BankSnapshot is null)
-                    {
-                        @LoadingFigure("Loading cash in bank")
-                    }
-                    else if (!BankReady)
-                    {
-                        <p class="text-sm text-content-muted mt-1">Needs the bank position from Xero.</p>
-                    }
-                    else
-                    {
-                        <p class="text-2xl font-semibold text-content">@Money(BankSnapshot!.TotalCash)</p>
-                        <p class="text-xs text-content-subtle mt-1">Xero, as of @FetchedText</p>
-                    }
-                </div>
-            }
-            <div class="rounded-xl border border-line bg-surface px-5 py-4"
-                 title="Cash out planned for the current week — bills and manual items placed (or due) this week.">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">To pay this week</p>
-                @if (view is null)
-                {
-                    @LoadingFigure("Loading this week's payments")
-                }
-                else
-                {
-                    <p class="text-2xl font-semibold text-content">@Money(view.CashOut[0])</p>
-                    <p class="text-xs text-content-subtle mt-1">incl. everything overdue</p>
-                }
-            </div>
-            @if (IsDirector)
-            {
-                <div class="rounded-xl border border-line bg-surface px-5 py-4"
-                     title="The running bank balance's low point across the visible weeks — the week to plan for.">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Lowest week</p>
-                    @if (view is null || BankSnapshot is null)
-                    {
-                        @LoadingFigure("Loading the lowest week")
-                    }
-                    else if (view.Closing is null)
-                    {
-                        <p class="text-sm text-content-muted mt-1">Needs the bank position from Xero.</p>
-                    }
-                    else
-                    {
-                        var low = view.Closing[view.MinClosingIndex];
-                        <p class="text-2xl font-semibold @(low < 0m ? "text-negative" : "text-content")">@Money(low)</p>
-                        <p class="text-xs text-content-subtle mt-1">@WeekLabel(view.WeekStarts[view.MinClosingIndex], view.MinClosingIndex)</p>
-                    }
-                </div>
-                <div class="rounded-xl border border-line bg-surface px-5 py-4"
-                     title="The running bank balance after the last visible week. Entries in Later are beyond the horizon and not yet counted.">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Balance at horizon end</p>
-                    @if (view is null || BankSnapshot is null)
-                    {
-                        @LoadingFigure("Loading the horizon-end balance")
-                    }
-                    else if (view.Closing is null)
-                    {
-                        <p class="text-sm text-content-muted mt-1">Needs the bank position from Xero.</p>
-                    }
-                    else
-                    {
-                        var horizonEnd = view.Closing[^1];
-                        <p class="text-2xl font-semibold @(horizonEnd < 0m ? "text-negative" : "text-content")">@Money(horizonEnd)</p>
-                        <p class="text-xs text-content-subtle mt-1">after @WeekLabel(view.WeekStarts[^1], view.WeekStarts.Count - 1)</p>
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="rounded-xl border border-line bg-surface px-5 py-4">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Cash out, @WeeklyCashflowMaths.DefaultWeekCount weeks</p>
-                    @if (view is null)
-                    {
-                        @LoadingFigure("Loading cash out")
-                    }
-                    else
-                    {
-                        <p class="text-2xl font-semibold text-content">@Money(VisibleTotal(view.CashOut))</p>
-                        <p class="text-xs text-content-subtle mt-1">bills and manual items in the visible weeks</p>
-                    }
-                </div>
-                <div class="rounded-xl border border-line bg-surface px-5 py-4">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Cash in, @WeeklyCashflowMaths.DefaultWeekCount weeks</p>
-                    @if (view is null)
-                    {
-                        @LoadingFigure("Loading cash in")
-                    }
-                    else
-                    {
-                        <p class="text-2xl font-semibold text-content">@Money(VisibleTotal(view.CashIn))</p>
-                        <p class="text-xs text-content-subtle mt-1">outstanding invoices due in the visible weeks</p>
-                    }
-                </div>
-            }
-        </div>
+        <WeeklyKpiStrip IsDirector="IsDirector" Bank="BankSnapshot" BankReady="BankReady"
+                        View="view" FetchedText="@FetchedText" />
 
         @if (moveError is not null)
         {
@@ -242,69 +141,20 @@
                     and uncounted, at the foot of its band.
                 </p>
 
-                <div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
-                    <table class="w-full text-sm border-collapse">
-                        <thead class="bg-surface-raised border-b border-line">
-                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                                <th class="px-4 py-3 min-w-[260px]"></th>
-                                @for (var index = 0; index < view.WeekStarts.Count; index++)
-                                {
-                                    <th class="px-3 py-3 text-right whitespace-nowrap">@WeekLabel(view.WeekStarts[index], index)</th>
-                                }
-                                <th class="px-3 py-3 text-right whitespace-nowrap border-l border-line"
-                                    title="Due beyond the visible weeks. Entries here roll into view as the weeks advance.">Later</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr class="border-b border-line">
-                                <td colspan="@(view.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash in</td>
-                            </tr>
-                            @BandSection((view, WeeklyCashflowBand.ClientReceipts, "Client invoices outstanding", "one line per outstanding sales invoice in Xero, at its due week — or at the Expected date when one is set in Xero"))
-                            <tr class="border-b border-line">
-                                <td colspan="@(view.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash out</td>
-                            </tr>
-                            @BandSection((view, WeeklyCashflowBand.SupplierBills, "Supplier bills", "one line per outstanding bill in Xero — drafts included, as Aged Payables counts them; a Planned date set in Xero picks the week"))
-                            @foreach (var category in WeeklyCashflowCategories.All)
-                            {
-                                var band = WeeklyCashflowMaths.BandFor(category);
-                                if (view.Entries.Any(entry => entry.Band == band))
-                                {
-                                    @BandSection((view, band, WeeklyCashflowCategories.BandLabel(category), "manual items — added on this page"))
-                                }
-                            }
-                            @* ── The running answer ── *@
-                            <tr class="border-t-2 border-line border-b border-line font-semibold">
-                                <td class="px-4 py-3 text-content">
-                                    Net movement
-                                    <span class="block text-[11px] text-content-faint font-normal">cash in less cash out, per week</span>
-                                </td>
-                                @for (var index = 0; index < view.WeekStarts.Count; index++)
-                                {
-                                    var net = view.Net[index];
-                                    <td class="px-3 py-3 text-right whitespace-nowrap @(net < 0m ? "text-negative" : "text-positive")">@Signed(net)</td>
-                                }
-                                <td class="px-3 py-3 text-right whitespace-nowrap border-l border-line @(view.Net[^1] < 0m ? "text-negative" : "text-positive")">@Signed(view.Net[^1])</td>
-                            </tr>
-                            @if (IsDirector && view.Closing is not null)
-                            {
-                                <tr class="bg-surface-raised font-semibold">
-                                    <td class="px-4 py-3 text-content">
-                                        Closing bank balance
-                                        <span class="block text-[11px] text-content-faint font-normal">directors only · seeded from Xero</span>
-                                    </td>
-                                    @for (var index = 0; index < view.WeekStarts.Count; index++)
-                                    {
-                                        var balance = view.Closing[index];
-                                        <td class="px-3 py-3 text-right whitespace-nowrap @(balance < 0m ? "text-negative" : "text-content") @(index == view.MinClosingIndex ? "ring-2 ring-inset ring-negative rounded" : "")"
-                                            title="@(index == view.MinClosingIndex ? "The low point — the week to plan for" : null)">@Money(balance)</td>
-                                    }
-                                    <td class="px-3 py-3 text-right border-l border-line text-content-faint font-normal"
-                                        title="Later entries are beyond the horizon and not in the balance until they roll into view.">—</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                <WeeklyCashflowGrid View="view" IsDirector="IsDirector"
+                                    CollapsedBands="collapsedBands" OnToggleBand="ToggleBand"
+                                    SupplierGroups="GroupSlicesFor(view)"
+                                    ExpandedGroups="expandedGroups" MovingGroupIds="movingGroupIds"
+                                    OnToggleGroup="ToggleGroup"
+                                    OnResetGroupCell="args => ResetGroupCellAsync(args.Slice, args.CellIndex)"
+                                    OnMoveGroupCell="args => MoveGroupCellAsync(args.Slice, args.FromWeek, args.ToWeek)"
+                                    ExcludedSeeds="excludedSeeds" ExcludedByFor="ExcludedByFor"
+                                    MovingKeys="movingKeys" ExcludingKeys="excludingKeys"
+                                    OnEdit="itemId => itemModal.OpenEdit(itemId)"
+                                    OnExclude="row => SetExclusionAsync(row.PlacementKey, true)"
+                                    OnRestore="key => SetExclusionAsync(key, false)"
+                                    OnReset="ResetEntryAsync"
+                                    OnMove="args => MoveEntryAsync(args.Entry, args.ToWeek)" />
 
                 <p class="text-xs text-content-subtle mb-10 max-w-4xl">
                     Every figure is an outstanding Xero document or an item added on this page — nothing is
@@ -320,285 +170,6 @@
         </LoadGate>
     </section>
 
-    @* ── Add / edit a manual item ── *@
-    <Modal IsOpen="@itemDialogOpen"
-           Title="@(editingItemId is null ? "Add item" : "Edit item")"
-           OnCancel="CloseItemDialog">
-        <ChildContent>
-        <div class="space-y-4">
-            <FormField Label="Name" Value="@formName" OnChange="value => formName = value" Required="true" />
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Category</label>
-                    <select class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"
-                            value="@((int)formCategory)"
-                            @onchange="args => formCategory = (WeeklyCashflowCategory)int.Parse((string)args.Value!)">
-                        @foreach (var category in WeeklyCashflowCategories.All)
-                        {
-                            <option value="@((int)category)">@WeeklyCashflowCategories.Label(category)</option>
-                        }
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount (£) *</label>
-                    <input type="number" min="0" step="0.01" value="@formAmount"
-                           @oninput="args => formAmount = (string)args.Value!"
-                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
-                </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Repeats</label>
-                    <select class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"
-                            value="@((int)formRecurrence)"
-                            @onchange="args => formRecurrence = (WeeklyCashflowRecurrence)int.Parse((string)args.Value!)">
-                        @foreach (var recurrence in WeeklyCashflowRecurrences.All)
-                        {
-                            <option value="@((int)recurrence)">@WeeklyCashflowRecurrences.Label(recurrence)</option>
-                        }
-                    </select>
-                    <p class="text-[11px] text-content-faint mt-1">
-                        @(formRecurrence switch
-                        {
-                            WeeklyCashflowRecurrence.Weekly => "Every week on the first date's weekday.",
-                            WeeklyCashflowRecurrence.Monthly => "Every month on the first date's day (shorter months clamp).",
-                            _ => "A single payment."
-                        })
-                    </p>
-                </div>
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
-                        @(formRecurrence == WeeklyCashflowRecurrence.OneOff ? "Due on *" : "First due on *")
-                    </label>
-                    <input type="date" value="@formFirstDue"
-                           @onchange="args => formFirstDue = (string)args.Value!"
-                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
-                </div>
-            </div>
-            @if (formRecurrence != WeeklyCashflowRecurrence.OneOff)
-            {
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Last payment on</label>
-                    <input type="date" value="@formLastDue"
-                           @onchange="args => formLastDue = (string)args.Value!"
-                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content" />
-                    <p class="text-[11px] text-content-faint mt-1">Leave empty for open-ended.</p>
-                </div>
-            }
-            <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
-                <textarea rows="2" value="@formNotes"
-                          @oninput="args => formNotes = (string)args.Value!"
-                          class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content"></textarea>
-            </div>
-            @if (dialogError is not null)
-            {
-                <p class="text-sm text-negative">@dialogError</p>
-            }
-        </div>
-        </ChildContent>
-        <FooterContent>
-            @if (editingItemId is not null)
-            {
-                <button type="button" class="btn-neutral text-negative mr-auto" disabled="@isSavingItem" @onclick="ArchiveItemAsync"
-                        title="Remove the item from the grid. Its history is kept.">Archive</button>
-            }
-            <button type="button" class="btn-neutral" disabled="@isSavingItem" @onclick="CloseItemDialog">Cancel</button>
-            <button type="button" class="btn-primary" disabled="@(isSavingItem || !FormLooksComplete)" @onclick="SaveItemAsync">
-                @(editingItemId is null ? "Add item" : "Save changes")
-            </button>
-        </FooterContent>
-    </Modal>
-
-    @* ── Supplier groups — pull chosen suppliers into one line under Supplier bills ── *@
-    <Modal IsOpen="@groupsDialogOpen"
-           Title="@(groupEditorOpen ? (editingGroupId is null ? "New supplier group" : "Edit supplier group") : "Supplier groups")"
-           OnCancel="CloseGroupsDialog">
-        <ChildContent>
-        @if (!groupEditorOpen)
-        {
-            <div class="space-y-3">
-                <p class="text-sm text-content-muted">
-                    A group pulls its suppliers' bills together into ONE line under Supplier bills — e.g. a
-                    <span class="text-content">Materials</span> group holding Grant &amp; Stone, HSS Hire and Skip IT.
-                    Totals never change, only how the rows read; the group line expands to the bills behind it,
-                    and its ‹ › move a whole cell's bills at once.
-                </p>
-                @if (Plan.Current is { SupplierGroups.Count: > 0 } plan)
-                {
-                    <ul class="divide-y divide-line rounded-lg border border-line">
-                        @foreach (var group in plan.SupplierGroups)
-                        {
-                            <li class="flex items-center gap-3 px-3 py-2">
-                                <div class="min-w-0 flex-1">
-                                    <p class="text-sm text-content font-medium">@group.Name</p>
-                                    <p class="text-xs text-content-faint truncate" title="@string.Join(", ", group.ContactNames)">@string.Join(", ", group.ContactNames)</p>
-                                </div>
-                                <button type="button" class="btn-neutral" @onclick="() => OpenGroupEditor(group.SupplierGroupId)">Edit</button>
-                            </li>
-                        }
-                    </ul>
-                }
-                else
-                {
-                    <p class="text-sm text-content-faint">No groups yet.</p>
-                }
-            </div>
-        }
-        else
-        {
-            <div class="space-y-4">
-                <FormField Label="Group name" Value="@groupFormName" OnChange="value => groupFormName = value" Required="true" />
-                <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suppliers in this group *</label>
-                    <input type="text" placeholder="Filter suppliers…" value="@groupMemberFilter"
-                           @oninput="args => groupMemberFilter = (string)args.Value!"
-                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content mb-2" />
-                    <div class="max-h-64 overflow-y-auto rounded-lg border border-line divide-y divide-line/50">
-                        @foreach (var supplierName in SupplierNameChoices())
-                        {
-                            if (groupMemberFilter.Trim() is { Length: > 0 } filter
-                                && !supplierName.Contains(filter, StringComparison.OrdinalIgnoreCase))
-                            {
-                                continue;
-                            }
-                            var holder = GroupHolding(supplierName);
-                            var name = supplierName;
-                            <label class="flex items-center gap-2 px-3 py-1.5 text-sm @(holder is null ? "text-content cursor-pointer hover:bg-surface-raised" : "text-content-faint")">
-                                <input type="checkbox" checked="@groupFormMembers.Contains(name)" disabled="@(holder is not null)"
-                                       @onchange="() => ToggleGroupMember(name)" />
-                                <span class="min-w-0 flex-1 truncate">@name</span>
-                                @if (holder is not null)
-                                {
-                                    <span class="text-[11px] text-content-faint whitespace-nowrap">in @holder</span>
-                                }
-                            </label>
-                        }
-                    </div>
-                    <p class="text-[11px] text-content-faint mt-1">
-                        Every supplier with an outstanding bill, plus this group's members. A supplier lives in one group at a time.
-                    </p>
-                </div>
-                @if (groupsDialogError is not null)
-                {
-                    <p class="text-sm text-negative">@groupsDialogError</p>
-                }
-            </div>
-        }
-        </ChildContent>
-        <FooterContent>
-        @if (!groupEditorOpen)
-        {
-            <button type="button" class="btn-neutral" @onclick="CloseGroupsDialog">Close</button>
-            <button type="button" class="btn-primary" @onclick="() => OpenGroupEditor(null)">New group</button>
-        }
-        else
-        {
-            @if (editingGroupId is not null)
-            {
-                <button type="button" class="btn-neutral text-negative mr-auto" disabled="@isSavingGroup" @onclick="DeleteGroupAsync"
-                        title="Dissolve the group — its bills go back to one line per supplier. Nothing else changes.">Delete group</button>
-            }
-            <button type="button" class="btn-neutral" disabled="@isSavingGroup" @onclick="() => groupEditorOpen = false">Back</button>
-            <button type="button" class="btn-primary" disabled="@(isSavingGroup || !GroupFormLooksComplete)" @onclick="SaveGroupAsync">
-                @(editingGroupId is null ? "Create group" : "Save changes")
-            </button>
-        }
-        </FooterContent>
-    </Modal>
+    <CashflowItemModal @ref="itemModal" />
+    <SupplierGroupsModal @ref="groupsModal" />
 </ApprovedSessionGate>
-
-@code {
-    private RenderFragment BandSection((WeeklyCashflowView View, WeeklyCashflowBand Band, string Label, string Sub) args) => __builder =>
-    {
-        var (view, band, label, sub) = args;
-        var totals = BandTotals(view, band);
-        var expanded = !collapsedBands.Contains(band);
-        var entryCount = view.Entries.Count(entry => entry.Band == band);
-        <tr class="border-b border-line">
-            <td class="px-4 py-2.5">
-                <button type="button" class="flex items-start gap-1.5 text-left w-full" @onclick="() => ToggleBand(band)"
-                        title="@(expanded ? "Collapse to the totals row" : $"Expand to the {entryCount} entries behind these totals")">
-                    <span class="text-content-subtle mt-0.5 text-xs">@(expanded ? "▾" : "▸")</span>
-                    <span>
-                        <span class="text-content font-medium">@label</span>
-                        <span class="block text-[11px] text-content-faint font-normal">@sub</span>
-                    </span>
-                </button>
-            </td>
-            @for (var index = 0; index <= view.WeekStarts.Count; index++)
-            {
-                <td class="px-3 py-2.5 text-right whitespace-nowrap @(index == view.WeekStarts.Count ? "border-l border-line" : "") @(expanded ? "text-content-subtle" : "text-content")">
-                    @CellAmount(totals[index])
-                </td>
-            }
-        </tr>
-        @if (expanded)
-        {
-            // Supplier groups pull their bills out of the flat list and into one combined row
-            // each; everything ungrouped renders exactly as before. Excluded entries close the
-            // band, struck through and uncounted.
-            IReadOnlyList<GroupSlice> grouped = band == WeeklyCashflowBand.SupplierBills
-                ? GroupSlicesFor(view)
-                : Array.Empty<GroupSlice>();
-            var groupedKeys = grouped.SelectMany(slice => slice.Entries)
-                .Select(row => row.PlacementKey)
-                .ToHashSet(StringComparer.Ordinal);
-            @foreach (var slice in grouped)
-            {
-                <CashflowGroupRow View="view" Slice="slice"
-                                  Open="expandedGroups.Contains(slice.Group.SupplierGroupId)"
-                                  GroupBusy="movingGroupIds.Contains(slice.Group.SupplierGroupId)"
-                                  MovingKeys="movingKeys"
-                                  OnToggle="ToggleGroup"
-                                  OnResetCell="args => ResetGroupCellAsync(args.Slice, args.CellIndex)"
-                                  OnMoveCell="args => MoveGroupCellAsync(args.Slice, args.FromWeek, args.ToWeek)">
-                    <EntryRow Context="member">
-                        <CashflowEntryRow View="view" Entry="member" InGroup="true"
-                                          Busy="movingKeys.Contains(member.PlacementKey)"
-                                          Excluding="excludingKeys.Contains(member.PlacementKey)"
-                                          OnEdit="OpenEditDialog"
-                                          OnExclude="row => SetExclusionAsync(row.PlacementKey, true)"
-                                          OnReset="ResetEntryAsync"
-                                          OnMove="args => MoveEntryAsync(args.Entry, args.ToWeek)" />
-                    </EntryRow>
-                </CashflowGroupRow>
-            }
-            @foreach (var entry in EntriesFor(view, band).Where(row => !groupedKeys.Contains(row.PlacementKey)))
-            {
-                <CashflowEntryRow View="view" Entry="entry"
-                                  Busy="movingKeys.Contains(entry.PlacementKey)"
-                                  Excluding="excludingKeys.Contains(entry.PlacementKey)"
-                                  OnEdit="OpenEditDialog"
-                                  OnExclude="row => SetExclusionAsync(row.PlacementKey, true)"
-                                  OnReset="ResetEntryAsync"
-                                  OnMove="args => MoveEntryAsync(args.Entry, args.ToWeek)" />
-            }
-            @foreach (var excluded in excludedSeeds.Where(seed => seed.Band == band))
-            {
-                var restoring = excludingKeys.Contains(excluded.PlacementKey);
-                <tr class="border-b border-line/50 text-[13px]">
-                    <td class="pl-9 pr-4 py-1.5">
-                        <span class="text-content-faint line-through">@excluded.Label</span>
-                        <span class="block text-[11px] text-content-faint">
-                            @excluded.Detail · excluded — not counted@(ExcludedByFor(excluded.PlacementKey) is { } who ? $" · {who}" : "")
-                        </span>
-                    </td>
-                    <td colspan="@(view.WeekStarts.Count + 1)" class="px-3 py-1.5 text-right whitespace-nowrap text-content-faint">
-                        <span class="line-through mr-2">@CellAmount(excluded.Amount)</span>
-                        <button type="button" class="text-content-subtle hover:text-content underline underline-offset-2 disabled:opacity-30"
-                                title="Count this entry in the plan again" disabled="@restoring"
-                                @onclick="() => SetExclusionAsync(excluded.PlacementKey, false)">Count again</button>
-                    </td>
-                </tr>
-            }
-        }
-    };
-    private static RenderFragment LoadingFigure(string label) => __builder =>
-    {
-        <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
-            <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
-            <span class="sr-only">@label</span>
-        </p>
-    };
-}

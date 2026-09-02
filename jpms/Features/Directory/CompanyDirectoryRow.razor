@@ -1,0 +1,63 @@
+@namespace Jewel.JPMS.Features.Directory
+@using Jewel.JPMS.Features.Subcontractors
+@using static Jewel.JPMS.Features.Directory.DirectoryDisplay
+
+@* One company in the directory: the consolidation tick (managers only), the name with its Xero
+   link mark, type, trades, primary contact, location, and the compliance pill. Clicking the row
+   opens the company; the tick stops the click. *@
+<tr class="hover:bg-surface-raised cursor-pointer transition" @onclick="() => OnOpen.InvokeAsync(Company.SubcontractorId)">
+    @if (CanManage)
+    {
+        <td class="pl-4 pr-1 py-3" @onclick:stopPropagation="true">
+            <input type="checkbox" class="cursor-pointer"
+                   checked="@Selected"
+                   @onchange="args => OnSelectedChanged.InvokeAsync(args.Value is bool ticked && ticked)" />
+        </td>
+    }
+    <td class="px-4 py-3 text-content font-medium">
+        <span class="inline-flex items-center gap-1.5">
+            @Company.CompanyName
+            @if (Company.XeroLinked)
+            {
+                <svg class="w-3.5 h-3.5 text-content-subtle shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Linked to Xero"><title>Linked to Xero</title><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+            }
+        </span>
+    </td>
+    <td class="px-4 py-3">
+        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@Label(Company.Category)</span>
+    </td>
+    <td class="px-4 py-3 hidden sm:table-cell">
+        <span class="flex flex-wrap gap-1">
+            @foreach (var trade in Company.Trades)
+            {
+                <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@trade.Name</span>
+            }
+        </span>
+    </td>
+    <td class="px-4 py-3 text-content-muted hidden md:table-cell">
+        @Company.ContactName
+        @if (!string.IsNullOrWhiteSpace(Company.ContactEmail))
+        {
+            <span class="block text-xs text-content-subtle">@Company.ContactEmail</span>
+        }
+    </td>
+    <td class="px-4 py-3 text-content-subtle hidden lg:table-cell">@Location(Company)</td>
+    <td class="px-4 py-3">
+        @* The pill renders only once the whole-company read has landed — a blank
+           cell is the honest "not fetched yet"; no gate on a single cell. *@
+        @if (Compliance.Current is not null)
+        {
+            <ComplianceStatusPill Status="@Compliance.WorstStatusFor(Company.SubcontractorId)" />
+        }
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public Subcontractor Company { get; set; } = default!;
+    [Parameter, EditorRequired] public ComplianceOverviewReadModel Compliance { get; set; } = default!;
+    [Parameter] public bool CanManage { get; set; }
+    [Parameter] public bool Selected { get; set; }
+    [Parameter] public EventCallback<bool> OnSelectedChanged { get; set; }
+    [Parameter] public EventCallback<string> OnOpen { get; set; }
+}

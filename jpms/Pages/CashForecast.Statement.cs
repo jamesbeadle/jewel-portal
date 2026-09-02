@@ -1,4 +1,5 @@
 using Jewel.JPMS.Commercial;
+using Jewel.JPMS.Features.Cashflow;
 using Jewel.JPMS.Contracts.Projects;
 using Jewel.JPMS.Contracts.Retention;
 using Jewel.JPMS.Features.Commercial;
@@ -9,34 +10,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class CashForecast
 {
-    // ---- The statement figures (unchanged from the retired Cash Summary) --------------------
-    // One line per project, computed exactly as the project's Cashflow tab computes its
-    // statement — same sources, same helpers — so the two can never disagree.
-
-    private sealed record CashRow(
-        decimal ProjectClaim,
-        decimal CashReceived,
-        decimal RetentionOutstanding,
-        decimal InvoicedAwaitingPayment,
-        decimal RetentionStillToWithhold,
-        decimal LeftToClaim,
-        decimal Drawdown,
-        decimal WoCommitted,
-        decimal WoInvoiced,
-        decimal BillsUnpaid,
-        decimal Release1,
-        decimal Release2)
-    {
-        public decimal CashAllocated => CashReceived + RetentionOutstanding;
-
-        public decimal WoLeftToInvoice => WoCommitted - WoInvoiced;
-
-        public decimal PracticalCompletionCashflow =>
-            LeftToClaim - Drawdown - WoLeftToInvoice - BillsUnpaid + Release1;
-
-        public decimal ProjectCompletionCashflow => PracticalCompletionCashflow + Release2;
-    }
-
     private ValuationClaim? LatestClaimFor(string projectId) =>
         Claims.Current(projectId)
             .OrderByDescending(claim => claim.ClaimNumber)

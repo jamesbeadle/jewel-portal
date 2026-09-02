@@ -1,40 +1,55 @@
 using Jewel.JPMS.Contracts.WeeklyCashflow;
-using Jewel.JPMS.Features.WeeklyCashflow;
 
-namespace Jewel.JPMS.Pages;
+namespace Jewel.JPMS.Features.WeeklyCashflow;
 
-public partial class WeeklyCashflow
+public partial class SupplierGroupsModal
 {
-    // ---- The supplier groups dialog -----------------------------------------
+    [Inject] private ICommandSender Commands { get; set; } = default!;
+    [Inject] private WeeklyCashflowPlanReadModel Plan { get; set; } = default!;
+    [Inject] private IXeroAgedPayablesStore Payables { get; set; } = default!;
 
-    private void OpenGroupsDialog()
+    private bool open;
+    private bool editorOpen;
+    private string? editingGroupId;
+    private bool saving;
+    private string? error;
+    private string formName = "";
+    private string memberFilter = "";
+    private readonly HashSet<string> formMembers = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool FormLooksComplete =>
+        !string.IsNullOrWhiteSpace(formName) && formMembers.Count > 0;
+
+    /// <summary>Opens the dialog on its list of groups — from the toolbar.</summary>
+    public void Open()
     {
-        groupEditorOpen = false;
-        groupsDialogError = null;
-        groupsDialogOpen = true;
+        editorOpen = false;
+        error = null;
+        open = true;
+        StateHasChanged();
     }
 
-    private void CloseGroupsDialog() => groupsDialogOpen = false;
+    private void Close() => open = false;
 
-    private void OpenGroupEditor(string? supplierGroupId)
+    private void OpenEditor(string? supplierGroupId)
     {
         editingGroupId = supplierGroupId;
-        groupFormName = "";
-        groupFormMembers.Clear();
-        groupMemberFilter = "";
-        groupsDialogError = null;
+        formName = "";
+        formMembers.Clear();
+        memberFilter = "";
+        error = null;
         if (supplierGroupId is not null
             && Plan.Current?.SupplierGroups.FirstOrDefault(group => group.SupplierGroupId == supplierGroupId) is { } group)
         {
-            groupFormName = group.Name;
-            foreach (var contactName in group.ContactNames) groupFormMembers.Add(contactName);
+            formName = group.Name;
+            foreach (var contactName in group.ContactNames) formMembers.Add(contactName);
         }
-        groupEditorOpen = true;
+        editorOpen = true;
     }
 
-    private void ToggleGroupMember(string supplierName)
+    private void ToggleMember(string supplierName)
     {
-        if (!groupFormMembers.Remove(supplierName)) groupFormMembers.Add(supplierName);
+        if (!formMembers.Remove(supplierName)) formMembers.Add(supplierName);
     }
 
     /// <summary>Every supplier with an outstanding bill right now, plus the editing group's own
@@ -43,11 +58,11 @@ public partial class WeeklyCashflow
     private IReadOnlyList<string> SupplierNameChoices()
     {
         var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (PayablesSnapshot is { } payables)
+        if (Payables.Snapshot() is { } payables)
             foreach (var bill in payables.Bills)
                 if (!string.IsNullOrWhiteSpace(bill.ContactName))
                     names.Add(bill.ContactName!.Trim());
-        foreach (var member in groupFormMembers) names.Add(member);
+        foreach (var member in formMembers) names.Add(member);
         return names.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
@@ -65,59 +80,58 @@ public partial class WeeklyCashflow
         return null;
     }
 
-    private async Task SaveGroupAsync()
+    private async Task SaveAsync()
     {
-        isSavingGroup = true;
-        groupsDialogError = null;
+        saving = true;
+        error = null;
         try
         {
             var saved = await Commands.SendAsync(
                 new SaveWeeklyCashflowSupplierGroup(
                     editingGroupId,
-                    groupFormName.Trim(),
-                    groupFormMembers.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList()),
+                    formName.Trim(),
+                    formMembers.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList()),
                 CancellationToken.None);
             Plan.Apply(saved);
-            groupEditorOpen = false;
+            editorOpen = false;
         }
         catch (CommandFailedException failure)
         {
-            groupsDialogError = failure.Message;
+            error = failure.Message;
         }
         catch
         {
-            groupsDialogError = "Something went wrong saving the group — the red bar at the top has the detail.";
+            error = "Something went wrong saving the group — the red bar at the top has the detail.";
         }
         finally
         {
-            isSavingGroup = false;
+            saving = false;
         }
     }
 
-    private async Task DeleteGroupAsync()
+    private async Task DeleteAsync()
     {
         if (editingGroupId is not { } supplierGroupId) return;
-        isSavingGroup = true;
-        groupsDialogError = null;
+        saving = true;
+        error = null;
         try
         {
             var deleted = await Commands.SendAsync(
                 new DeleteWeeklyCashflowSupplierGroup(supplierGroupId), CancellationToken.None);
             Plan.RemoveGroup(deleted.SupplierGroupId);
-            groupEditorOpen = false;
+            editorOpen = false;
         }
         catch (CommandFailedException failure)
         {
-            groupsDialogError = failure.Message;
+            error = failure.Message;
         }
         catch
         {
-            groupsDialogError = "Something went wrong deleting the group — the red bar at the top has the detail.";
+            error = "Something went wrong deleting the group — the red bar at the top has the detail.";
         }
         finally
         {
-            isSavingGroup = false;
+            saving = false;
         }
     }
-
 }

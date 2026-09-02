@@ -1,0 +1,49 @@
+@namespace Jewel.JPMS.Features.Cashflow
+@using Jewel.JPMS.Commercial
+@using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
+
+@* One project's line under an expanded forecast category: its phased months, and — on the
+   Future valuations row — the FD's two knobs (2026-08-13), inline like the overheads input:
+   controls, so never gated. Stored on the project via their own commands; the API gate
+   (Director/FD/PM) is the authority, and a refusal lands on the error toast like any failed
+   command. *@
+<tr class="border-b border-line">
+    <td class="px-4 pl-7 py-2 whitespace-nowrap">
+        <a href="@($"/projects/{Project.ProjectId}/cashflow")" class="text-xs text-content-muted hover:text-content hover:underline underline-offset-4"
+           title="This project's full statement — the figures this line is spread from">
+            <span class="font-mono text-[10px] text-content-subtle mr-1.5">@Project.Reference</span>@Project.Name
+        </a>
+        @if (Category == ForecastCategory.FutureValuations)
+        {
+            <span class="block mt-1 text-[10px] text-content-faint whitespace-nowrap">
+                next valuation
+                <input type="date" value="@(Project.NextExpectedValuationDate?.ToString("yyyy-MM-dd"))"
+                       @onchange="args => OnNextValuationChanged.InvokeAsync((Project, args))"
+                       title="The full date matters: each valuation is paid the contract's payment terms after this day of the month, so cash lands on payment dates"
+                       class="rounded border border-line-strong bg-surface-field px-1 py-0.5 text-[10px] text-content mx-1" />
+                · expects
+                <input type="number" min="0" step="1000" placeholder="even"
+                       value="@(Project.ExpectedMonthlyValuation?.ToString("0"))"
+                       @onchange="args => OnMonthlyValuationChanged.InvokeAsync((Project, args))"
+                       class="w-20 rounded border border-line-strong bg-surface-field px-1 py-0.5 text-[10px] text-content mx-1" />
+                £/month · blank = spread evenly to practical completion
+            </span>
+        }
+    </td>
+    @for (var index = 0; index < MonthCount; index++)
+    {
+        <td class="px-3 py-2 text-right whitespace-nowrap text-xs text-content-muted">@CellAmount(Phased.Months[index])</td>
+    }
+    <td class="px-3 py-2 text-right whitespace-nowrap border-l border-line text-xs text-content-muted">@CellAmount(Phased.Later)</td>
+    <td class="px-3 py-2 text-right whitespace-nowrap border-l border-line text-xs text-content-subtle">@CellAmount(Phased.Undated)</td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public Project Project { get; set; } = default!;
+    [Parameter, EditorRequired] public PhasedCategory Phased { get; set; } = default!;
+    [Parameter] public ForecastCategory Category { get; set; }
+    /// <summary>How many months the table shows — the line's cells follow the table's axis.</summary>
+    [Parameter] public int MonthCount { get; set; }
+    [Parameter] public EventCallback<(Project Project, ChangeEventArgs Args)> OnNextValuationChanged { get; set; }
+    [Parameter] public EventCallback<(Project Project, ChangeEventArgs Args)> OnMonthlyValuationChanged { get; set; }
+}

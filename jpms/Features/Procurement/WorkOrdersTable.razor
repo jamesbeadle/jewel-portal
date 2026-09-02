@@ -1,0 +1,86 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using static Jewel.JPMS.Features.Procurement.WorkOrderDisplay
+
+@* The issued orders rolled up by cost centre or by supplier: one WorkOrderGroupRow per group,
+   each opening to its priced lines, and the footer summing the visible lines. While a line's
+   Actions menu is open the overflow cap is lifted: the menu positions absolutely inside this
+   container, so with the overflow active its bottom entries would be cut off at the
+   container's edge (same fix as the valuation invoices table). *@
+<div class="rounded-xl border border-line bg-surface @(openRowMenuKey is null ? "overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
+    <table class="w-full text-sm border-collapse">
+        <thead class="bg-surface-raised border-b border-line">
+            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                @if (GroupBySupplier)
+                {
+                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 min-w-[240px]">Supplier</th>
+                }
+                else
+                {
+                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[110px]">Code</th>
+                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 min-w-[200px]">Cost Centre</th>
+                }
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Orders</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Committed</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Paid</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Remaining</th>
+                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"
+                    title="Committed value not yet invoiced (a whole-order figure spread across its cost-centre lines by value) — see the WO Allocation tab">Left to invoice</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-line">
+            @foreach (var group in Rows)
+            {
+                <WorkOrderGroupRow Group="group" GroupBySupplier="GroupBySupplier"
+                                   Expanded="IsExpanded(group.Key)" OnToggle="OnToggle"
+                                   Lines="LinesFor(group.Key)" CodeOf="CodeOf" CostCentreNameFor="CostCentreNameFor"
+                                   Summaries="Summaries" PaymentKnown="PaymentKnown"
+                                   CancelPendingFor="CancelPendingFor" CancelBusy="CancelBusy"
+                                   OnCancel="OnCancel" OnKeep="OnKeep"
+                                   LineMenuItems="LineMenuItems"
+                                   OnMenuOpenChanged="args => openRowMenuKey = args.Open ? args.LineId : (openRowMenuKey == args.LineId ? null : openRowMenuKey)" />
+            }
+        </tbody>
+        <tfoot class="border-t-2 border-line-strong bg-surface-raised">
+            <tr class="font-semibold text-content">
+                <td class="px-4 py-3" colspan="@(GroupBySupplier ? 1 : 2)">@(Searching ? "Total (filtered)" : "Total")</td>
+                <td class="px-4 py-3 text-right">@Total.OrderCount</td>
+                <td class="px-4 py-3 text-right">@Money(Total.Committed)</td>
+                <td class="px-4 py-3 text-right">@Money(Total.Paid)</td>
+                <td class="px-4 py-3 text-right"
+                    title="@(Total.UnknownCommitted > 0m ? $"The sum of the figures above it. {MoneyExact(Total.UnknownCommitted)} committed on the “{Dash}” rows is not counted — nothing is known about what has been paid on those orders" : "")">@Money(Total.Remaining)</td>
+                <td class="px-4 py-3 text-right">@Money(AtPennies(Total.Committed - Total.Invoiced))</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+@if (CancelError is not null)
+{
+    @* 400s are answers for the caller to show, not toasts — say what refused and why
+       (bills still linked, money already paid, role not allowed). *@
+    <p class="text-sm text-negative mt-2">@CancelError</p>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<WorkOrderGroup> Rows { get; set; } = default!;
+    /// <summary>The visible lines summed — the footer, in the same shape as a row.</summary>
+    [Parameter, EditorRequired] public WorkOrderGroup Total { get; set; } = default!;
+    [Parameter] public bool GroupBySupplier { get; set; }
+    /// <summary>A supplier search is narrowing the rows — the footer says so.</summary>
+    [Parameter] public bool Searching { get; set; }
+    [Parameter, EditorRequired] public Func<string, bool> IsExpanded { get; set; } = default!;
+    [Parameter] public EventCallback<string> OnToggle { get; set; }
+    [Parameter, EditorRequired] public Func<string, IReadOnlyList<WorkOrderLineEntry>> LinesFor { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<WorkOrderLineEntry, string> CodeOf { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<string, string> CostCentreNameFor { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyDictionary<string, WorkOrderInvoiceSummary> Summaries { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<ProjectWorkOrderDetail, bool> PaymentKnown { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<ProjectWorkOrderDetail, bool> CancelPendingFor { get; set; } = default!;
+    [Parameter] public bool CancelBusy { get; set; }
+    [Parameter] public string? CancelError { get; set; }
+    [Parameter] public EventCallback<ProjectWorkOrderDetail> OnCancel { get; set; }
+    [Parameter] public EventCallback OnKeep { get; set; }
+    [Parameter, EditorRequired] public Func<WorkOrderLineEntry, IReadOnlyList<DropdownMenu.Item>> LineMenuItems { get; set; } = default!;
+
+    // The line whose Actions menu is open — while set, the container's overflow cap is lifted.
+    private string? openRowMenuKey;
+}
