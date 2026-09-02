@@ -1,17 +1,17 @@
 # Refactor audit
 
-Generated 2026-09-02 13:44 UTC.
+Generated 2026-09-02 13:48 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 665, totalFiles: 3482, worstFileLines: 475 |
-| functionShape | limit: 30, functionsOverLimit: 694, elseBlocks: 1153, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 666, totalFiles: 3485, worstFileLines: 475 |
+| functionShape | limit: 30, functionsOverLimit: 693, elseBlocks: 1153, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 480, duplicatedLines: 5923, totalLines: 217964, duplicatedPercentage: 2.72 |
+| duplication | clones: 480, duplicatedLines: 5923, totalLines: 217989, duplicatedPercentage: 2.72 |
 | naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1537 |
-| comments | explanatoryCommentLines: 13719, filesWithComments: 1906, taskMarkers: 48 |
+| comments | explanatoryCommentLines: 13717, filesWithComments: 1909, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
 | prose | longMemberChainLines: 2390, deeplyIndentedLines: 2656, overlongLines: 1660, measurementIsHeuristic: True |
 | inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 203 |
@@ -21,7 +21,6 @@ Generated 2026-09-02 13:44 UTC.
 | File | Lines |
 | --- | --- |
 | worker/MailboxIntake/Graph/GraphMailClient.cs | 475 |
-| jpms/Pages/Todos.razor.cs | 444 |
 | jpms/Pages/TriageQueue.Apply.cs | 441 |
 | jpms/Pages/ProjectRequestDetail.razor | 434 |
 | api/Features/Registers/RegistersSlices.cs | 433 |
@@ -40,5 +39,6 @@ Generated 2026-09-02 13:44 UTC.
 | api/Features/Procurement/Commands/ExtractTenderFromMessageHandler.cs | 381 |
 | api/Features/Subcontractors/Documents/SubcontractorStatementRenderer.cs | 378 |
 | jpms/Pages/ProjectValuation.razor | 377 |
+| api/Features/Requests/Documents/RequestDocumentRenderer.Sections.cs | 375 |
 
 Full detail, including every offender list, is in `audit.json`.
