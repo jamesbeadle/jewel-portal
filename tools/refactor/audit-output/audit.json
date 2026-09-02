@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-09-02T13:30:43+00:00",
+  "generatedAt": "2026-09-02T13:37:31+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 664,
-      "totalFiles": 3472,
+      "filesOverLimit": 666,
+      "totalFiles": 3475,
       "worstFileLines": 475
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 700,
-      "elseBlocks": 1156,
+      "functionsOverLimit": 695,
+      "elseBlocks": 1153,
       "measurementIsHeuristic": true
     },
     "functionNames": {
@@ -20,17 +20,17 @@
     },
     "duplication": {
       "clones": 480,
-      "duplicatedLines": 5951,
-      "totalLines": 217880,
-      "duplicatedPercentage": 2.73
+      "duplicatedLines": 5929,
+      "totalLines": 217893,
+      "duplicatedPercentage": 2.72
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1536
+      "unprefixedBooleans": 1537
     },
     "comments": {
-      "explanatoryCommentLines": 13720,
-      "filesWithComments": 1903,
+      "explanatoryCommentLines": 13719,
+      "filesWithComments": 1906,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -39,7 +39,7 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 2391,
+      "longMemberChainLines": 2390,
       "deeplyIndentedLines": 2866,
       "overlongLines": 1660,
       "measurementIsHeuristic": true
@@ -56,18 +56,14 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 664,
-        "totalFiles": 3472,
+        "filesOverLimit": 666,
+        "totalFiles": 3475,
         "worstFileLines": 475
       },
       "offenders": [
         {
           "file": "worker/MailboxIntake/Graph/GraphMailClient.cs",
           "lines": 475
-        },
-        {
-          "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Sections.cs",
-          "lines": 448
         },
         {
           "file": "jpms/Pages/Todos.razor.cs",
@@ -1690,6 +1686,10 @@
           "lines": 147
         },
         {
+          "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Header.cs",
+          "lines": 146
+        },
+        {
           "file": "api/Features/RecordLinks/Queries/ListProjectCommunicationsHandler.cs",
           "lines": 146
         },
@@ -2458,6 +2458,10 @@
           "lines": 108
         },
         {
+          "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Scope.cs",
+          "lines": 108
+        },
+        {
           "file": "api/Features/Variations/Commands/ReviseVariationOrderValueHandler.cs",
           "lines": 108
         },
@@ -2559,6 +2563,10 @@
         },
         {
           "file": "api/Features/Ai/Tools/AiToolCatalogue.RequestContext.cs",
+          "lines": 105
+        },
+        {
+          "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Lines.cs",
           "lines": 105
         },
         {
@@ -2723,8 +2731,8 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 700,
-        "elseBlocks": 1156,
+        "functionsOverLimit": 695,
+        "elseBlocks": 1153,
         "measurementIsHeuristic": true
       },
       "offenders": [
@@ -3159,7 +3167,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1536
+        "unprefixedBooleans": 1537
       },
       "offenders": {
         "abbreviations": [
@@ -3621,8 +3629,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13720,
-        "filesWithComments": 1903,
+        "explanatoryCommentLines": 13719,
+        "filesWithComments": 1906,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4327,7 +4335,7 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 2391,
+        "longMemberChainLines": 2390,
         "deeplyIndentedLines": 2866,
         "overlongLines": 1660,
         "measurementIsHeuristic": true
@@ -6261,34 +6269,26 @@
       "name": "duplication",
       "summary": {
         "clones": 480,
-        "duplicatedLines": 5951,
-        "totalLines": 217880,
-        "duplicatedPercentage": 2.73
+        "duplicatedLines": 5929,
+        "totalLines": 217893,
+        "duplicatedPercentage": 2.72
       },
       "offenders": [
+        {
+          "file": "api/Features/Progress/Documents/ProgressReportRenderer.cs",
+          "duplicatedLineInstances": 378
+        },
         {
           "file": "api/Features/Boq/Commands/AddBoqLineEndpoint.cs",
           "duplicatedLineInstances": 336
         },
         {
-          "file": "api/Features/Progress/Documents/ProgressReportRenderer.cs",
-          "duplicatedLineInstances": 295
-        },
-        {
-          "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Sections.cs",
+          "file": "api/Features/Subcontractors/Documents/SubcontractorStatementRenderer.cs",
           "duplicatedLineInstances": 147
         },
         {
           "file": "api/Features/Ai/Tools/Actions/ProjectsAndTendersActions.ArchitectInstructions.cs",
           "duplicatedLineInstances": 140
-        },
-        {
-          "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Helpers.cs",
-          "duplicatedLineInstances": 136
-        },
-        {
-          "file": "api/Features/Subcontractors/Documents/SubcontractorStatementRenderer.cs",
-          "duplicatedLineInstances": 126
         },
         {
           "file": "jpms/Pages/AgedPayables.razor",
@@ -6311,20 +6311,28 @@
           "duplicatedLineInstances": 105
         },
         {
-          "file": "api/Features/Commercial/Documents/CostCentreReconciliationRenderer.Header.cs",
+          "file": "jpms/Pages/AgedReceivables.razor",
           "duplicatedLineInstances": 101
         },
         {
-          "file": "jpms/Pages/AgedReceivables.razor",
-          "duplicatedLineInstances": 101
+          "file": "api/Features/Commercial/Documents/CostCentreReconciliationRenderer.Helpers.cs",
+          "duplicatedLineInstances": 100
         },
         {
           "file": "api/Features/Leads/Commands/BookSiteVisitEndpoint.cs",
           "duplicatedLineInstances": 97
         },
         {
+          "file": "api/Features/Commercial/Documents/CostCentreReconciliationRenderer.Header.cs",
+          "duplicatedLineInstances": 96
+        },
+        {
           "file": "jpms/Services/UserInviteService.cs",
           "duplicatedLineInstances": 96
+        },
+        {
+          "file": "api/Features/Requests/Documents/RequestDocumentRenderer.Sections.cs",
+          "duplicatedLineInstances": 92
         }
       ]
     }

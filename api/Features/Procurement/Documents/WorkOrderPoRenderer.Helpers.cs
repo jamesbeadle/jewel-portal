@@ -1,9 +1,5 @@
-using System.Globalization;
-using Jewel.JPMS.Api.Features.Requests.Documents;
 using MigraDoc.DocumentObjectModel;
 using MigraDoc.DocumentObjectModel.Tables;
-using MigraDoc.Rendering;
-using PdfSharp.Fonts;
 
 using static Jewel.JPMS.Api.Features.Documents.JewelDocumentStyle;
 
@@ -11,8 +7,6 @@ namespace Jewel.JPMS.Api.Features.Procurement.Documents;
 
 public static partial class WorkOrderPoRenderer
 {
-    // ---- Helpers ------------------------------------------------------------------------------
-
     private static void SectionHeading(Section section, string text)
     {
         var p = section.AddParagraph(text);
@@ -77,6 +71,35 @@ public static partial class WorkOrderPoRenderer
             .Select(line => line.TrimEnd())
             .Where(line => !string.IsNullOrWhiteSpace(line));
 
+    /// <summary>A bordered table with the panel-shaded heading row that repeats over a page break;
+    /// columns marked Right are the figures.</summary>
+    private static Table AddLinedTable(Section section, params (double WidthCm, string Heading, bool Right)[] columns)
+    {
+        var table = section.AddTable();
+        table.Borders.Color = Hair;
+        table.Borders.Width = 0.5;
+        foreach (var column in columns)
+        {
+            var added = table.AddColumn(Unit.FromCentimeter(column.WidthCm));
+            if (column.Right) added.Format.Alignment = ParagraphAlignment.Right;
+        }
+        var header = table.AddRow();
+        header.Shading.Color = Panel;
+        header.TopPadding = Unit.FromMillimeter(1.2);
+        header.BottomPadding = Unit.FromMillimeter(1.2);
+        header.HeadingFormat = true;
+        for (var index = 0; index < columns.Length; index++) HeaderCell(header.Cells[index], columns[index].Heading);
+        return table;
+    }
+
+    private static Row AddPaddedRow(Table table, double millimetres)
+    {
+        var row = table.AddRow();
+        row.TopPadding = Unit.FromMillimeter(millimetres);
+        row.BottomPadding = Unit.FromMillimeter(millimetres);
+        return row;
+    }
+
     private static void HeaderCell(Cell cell, string text)
     {
         cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
@@ -105,29 +128,6 @@ public static partial class WorkOrderPoRenderer
         LabelCell(row.Cells[2], l2);
         ValueCell(row.Cells[3], v2);
     }
-
-    private static void LabelCell(Cell cell, string text)
-    {
-        cell.Shading.Color = Panel;
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
-        var p = cell.AddParagraph(text);
-        p.Format.Font.Size = 8;
-        p.Format.Font.Bold = true;
-        p.Format.Font.Color = Muted;
-    }
-
-    private static void ValueCell(Cell cell, string text)
-    {
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
-        var p = cell.AddParagraph(string.IsNullOrWhiteSpace(text) ? "—" : text);
-        p.Format.Font.Size = 9;
-        p.Format.Font.Color = Ink;
-    }
-
-
-    private static void SpaceBefore(Paragraph p, double mm) => p.Format.SpaceBefore = Unit.FromMillimeter(mm);
-    private static void SpaceAfter(Paragraph p, double mm) => p.Format.SpaceAfter = Unit.FromMillimeter(mm);
-
 
     // U+2212 MINUS SIGN, not the hyphen-minus: MigraDoc breaks a line after a hyphen that is not
     // followed by a digit, so "-£1,000.00" could print as a bare "-" with the figure on the next
