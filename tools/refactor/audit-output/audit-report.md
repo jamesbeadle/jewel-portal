@@ -1,17 +1,17 @@
 # Refactor audit
 
-Generated 2026-09-02 14:06 UTC.
+Generated 2026-09-02 14:08 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 667, totalFiles: 3495, worstFileLines: 475 |
+| fileLength | limit: 100, filesOverLimit: 668, totalFiles: 3498, worstFileLines: 475 |
 | functionShape | limit: 30, functionsOverLimit: 692, elseBlocks: 1153, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 478, duplicatedLines: 5893, totalLines: 218047, duplicatedPercentage: 2.7 |
+| duplication | clones: 478, duplicatedLines: 5893, totalLines: 218054, duplicatedPercentage: 2.7 |
 | naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1544 |
-| comments | explanatoryCommentLines: 13671, filesWithComments: 1911, taskMarkers: 48 |
+| comments | explanatoryCommentLines: 13669, filesWithComments: 1912, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
 | prose | longMemberChainLines: 2365, deeplyIndentedLines: 2656, overlongLines: 1659, measurementIsHeuristic: True |
 | inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 201 |
@@ -21,7 +21,6 @@ Generated 2026-09-02 14:06 UTC.
 | File | Lines |
 | --- | --- |
 | worker/MailboxIntake/Graph/GraphMailClient.cs | 475 |
-| api/Features/Registers/RegistersSlices.cs | 433 |
 | api/Features/Ai/Sources/AiFiledDocuments.cs | 428 |
 | jpms/Components/ManualWorkOrderModal.razor.cs | 428 |
 | api/Features/Xero/Ledger/SetXeroAllocationHandler.cs | 422 |
@@ -40,5 +39,6 @@ Generated 2026-09-02 14:06 UTC.
 | api/Features/Requests/RequestContextAssembler.cs | 375 |
 | api/Features/Requests/Documents/RequestDocumentRenderer.Sections.cs | 373 |
 | api/Features/Xero/XeroClient.Http.cs | 373 |
+| api/Features/Xero/XeroClient.Reads.cs | 372 |
 
 Full detail, including every offender list, is in `audit.json`.

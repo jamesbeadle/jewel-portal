@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-02T14:06:51+00:00",
+  "generatedAt": "2026-09-02T14:08:58+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 667,
-      "totalFiles": 3495,
+      "filesOverLimit": 668,
+      "totalFiles": 3498,
       "worstFileLines": 475
     },
     "functionShape": {
@@ -21,7 +21,7 @@
     "duplication": {
       "clones": 478,
       "duplicatedLines": 5893,
-      "totalLines": 218047,
+      "totalLines": 218054,
       "duplicatedPercentage": 2.7
     },
     "naming": {
@@ -29,8 +29,8 @@
       "unprefixedBooleans": 1544
     },
     "comments": {
-      "explanatoryCommentLines": 13671,
-      "filesWithComments": 1911,
+      "explanatoryCommentLines": 13669,
+      "filesWithComments": 1912,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -56,18 +56,14 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 667,
-        "totalFiles": 3495,
+        "filesOverLimit": 668,
+        "totalFiles": 3498,
         "worstFileLines": 475
       },
       "offenders": [
         {
           "file": "worker/MailboxIntake/Graph/GraphMailClient.cs",
           "lines": 475
-        },
-        {
-          "file": "api/Features/Registers/RegistersSlices.cs",
-          "lines": 433
         },
         {
           "file": "api/Features/Ai/Sources/AiFiledDocuments.cs",
@@ -1522,6 +1518,10 @@
           "lines": 156
         },
         {
+          "file": "api/Features/Registers/PolicyDocumentSlices.cs",
+          "lines": 156
+        },
+        {
           "file": "api/Features/Requests/RequestsFeatureRegistration.cs",
           "lines": 156
         },
@@ -1923,6 +1923,10 @@
         },
         {
           "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.Compose.cs",
+          "lines": 132
+        },
+        {
+          "file": "api/Features/Registers/RegisterItemSlices.cs",
           "lines": 132
         },
         {
@@ -3633,8 +3637,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13671,
-        "filesWithComments": 1911,
+        "explanatoryCommentLines": 13669,
+        "filesWithComments": 1912,
         "taskMarkers": 48
       },
       "offenders": [
@@ -6273,7 +6277,7 @@
       "summary": {
         "clones": 478,
         "duplicatedLines": 5893,
-        "totalLines": 218047,
+        "totalLines": 218054,
         "duplicatedPercentage": 2.7
       },
       "offenders": [
