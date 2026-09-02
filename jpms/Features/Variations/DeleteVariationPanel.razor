@@ -1,0 +1,35 @@
+@namespace Jewel.JPMS.Features.Variations
+
+@* Wrong variation? Pre-approval only: nothing is on the Valuation Report yet, so no commercial
+   records change — but it can't be undone, so it arms before it deletes. *@
+<div class="panel p-5">
+    @if (!armed)
+    {
+        <button type="button" class="w-full text-xs text-content-subtle hover:text-negative underline underline-offset-2"
+                disabled="@Busy" @onclick="() => armed = true">
+            Wrong variation? Delete it…
+        </button>
+    }
+    else
+    {
+        <p class="text-xs text-content-subtle mb-2">
+            Permanently deletes <span class="font-mono">@Reference</span>. Bid packages are their own
+            records and are not deleted with it. Nothing is on the Valuation Report yet, so no commercial
+            records change — but this can't be undone.
+        </p>
+        <div class="flex gap-2">
+            <button type="button" class="btn-neutral w-full text-negative" disabled="@Busy" @onclick="() => OnDelete.InvokeAsync()">
+                @(Busy ? "Deleting…" : "Confirm — delete variation")
+            </button>
+            <button type="button" class="btn-neutral" disabled="@Busy" @onclick="() => armed = false">Keep</button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string Reference { get; set; } = "";
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    private bool armed;
+}

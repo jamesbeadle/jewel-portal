@@ -1,0 +1,70 @@
+@namespace Jewel.JPMS.Features.Requests
+
+@* Edit detail — the Detail panel's text. Seeded from the record each time it opens; the page
+   sends the command and says whether it took. *@
+<Modal IsOpen="IsOpen"
+       Title="Edit detail"
+       ConfirmLabel="@(Busy ? "Saving…" : "Save changes")"
+       OnCancel="() => IsOpenChanged.InvokeAsync(false)"
+       OnConfirm="SaveAsync"
+       Class="max-w-2xl">
+    <div class="space-y-4">
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+            <textarea class="field" rows="6" value="@description" @oninput="e => description = e.Value?.ToString() ?? string.Empty"></textarea>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public Request Record { get; set; } = default!;
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>Bound: the page's Actions menu opens it.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    /// <summary>Sends the edit; true means it took and the dialog closes, false keeps it open with the server's words.</summary>
+    [Parameter, EditorRequired] public Func<UpdateRequestDetails, Task<(bool Saved, string? Error)>> Send { get; set; } = default!;
+
+    private bool wasOpen;
+    private string description = "";
+    private string? error;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen)
+        {
+            description = Record.Description ?? "";
+            error = null;
+        }
+        wasOpen = IsOpen;
+    }
+
+    private async Task SaveAsync()
+    {
+        error = null;
+        var command = new UpdateRequestDetails(
+            Record.RequestId,
+            Record.Reference,
+            Record.Title,
+            description.Trim(),
+            Record.Status,
+            Record.Value,
+            Record.ResponseText,
+            Record.RespondedByEmail,
+            Record.ImpliesVariation,
+            Record.DrawingRef,
+            Record.ResponseDue,
+            Record.RelatedDrawingSpec,
+            Record.InternalNotes,
+            Record.ClientNotes);
+
+        var (saved, refusal) = await Send(command);
+        if (saved) await IsOpenChanged.InvokeAsync(false);
+        else error = refusal;
+    }
+}

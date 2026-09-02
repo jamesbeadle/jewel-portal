@@ -142,28 +142,12 @@ public partial class ProjectRequestDetail
         draftVariationLines[index] = draftVariationLines[index] with { CostCode = costCode };
     }
 
-    private async Task OnPartyChanged(ChangeEventArgs e)
+    private async Task LinkPartyAsync(PartyKind partyKind, string? partyId)
     {
         if (record is null || busy) return;
         ladderError = null;
-
-        var selection = e.Value?.ToString() ?? "";
-        var partyKind = PartyKind.Client;
-        string? partyId = null;
-        string? onBehalfOfClientId = null;
-
-        if (selection.StartsWith(ArchitectPrefix, StringComparison.Ordinal))
-        {
-            partyKind = PartyKind.Architect;
-            partyId = selection[ArchitectPrefix.Length..];
-            // Keep the recorded on-behalf-of client when switching between architects.
-            onBehalfOfClientId = record.OnBehalfOfClientId;
-        }
-        else if (selection.StartsWith(ClientPrefix, StringComparison.Ordinal))
-        {
-            partyId = selection[ClientPrefix.Length..];
-        }
-
+        // Keep the recorded on-behalf-of client when switching between architects.
+        var onBehalfOfClientId = partyKind == PartyKind.Architect ? record.OnBehalfOfClientId : null;
         try
         {
             busy = true;
@@ -180,12 +164,10 @@ public partial class ProjectRequestDetail
         }
     }
 
-    private async Task OnOnBehalfOfClientChanged(ChangeEventArgs e)
+    private async Task SetOnBehalfClientAsync(string? clientId)
     {
         if (record is null || busy || string.IsNullOrEmpty(record.PartyId)) return;
         ladderError = null;
-        var clientId = e.Value?.ToString();
-        if (string.IsNullOrWhiteSpace(clientId)) clientId = null;
         try
         {
             busy = true;

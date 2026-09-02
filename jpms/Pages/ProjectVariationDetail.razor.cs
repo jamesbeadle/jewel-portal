@@ -22,24 +22,12 @@ public partial class ProjectVariationDetail
     private Request? request; // originating request, for the lineage bar
 
 
-    private bool revisingValue;
-    private string reviseValue = "";
-
     // ---- Retitle -------------------------------------------------------------------------------
     // Editing the title in place, at any stage. Held apart from the approve/revise flows on purpose:
     // this moves the wording and nothing else, so it can never be the thing that quietly shifted a
     // figure. Cancelling simply drops the draft — the record is untouched until Save.
     private bool renamingOrder;
 
-    // ---- Official document pane: the PDF's own link and the narrative-sections editor ----------
-    // The narratives' error is held apart from the page's `error` so it renders inside the pane
-    // being edited, next to the fields it is about.
-    private string DocumentHref => $"/api/variation-orders/{VariationOrderId}/document";
-    private bool editingNarratives;
-    private string narrativeCommercialBasis = "";
-    private string narrativeProgrammeImpact = "";
-    private string narrativeExclusions = "";
-    private string? narrativesError;
     private string renameTitle = "";
 
     // The Architect's Instructions that cover this variation — the evidence behind its figures, and
@@ -50,7 +38,6 @@ public partial class ProjectVariationDetail
     private bool returningToQuoting;
     private bool rejectingOrder;   // post-approval reject (reverses commercial writes) — inline panel
     private bool decliningOrder;   // pre-approval decline (plain status move) — confirm modal
-    private bool deletingOrder;
     private bool editLinesModalOpen;
 
     // The approved variation's current lines, shaped for the edit panel to seed its rows.
@@ -73,13 +60,8 @@ public partial class ProjectVariationDetail
         VariationOrderStatus.Approved, VariationOrderStatus.Rejected
     };
 
-    private string selSubId = "";
-    private string selValue = "";
 
-    // ---- Originating-request repair (the register's old inline Link… UI now lives here) ----
-    private string linkTargetRequestId = "";
-    private bool linkBusy;
-    private string? linkError;
+    // ---- Originating-request repair: the candidates the panel offers ----
     private IReadOnlyList<VariationOrder> projectQuotes = Array.Empty<VariationOrder>();
 
 }

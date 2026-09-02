@@ -176,46 +176,19 @@ public partial class ProjectVariationDetail
         finally { busy = false; }
     }
 
-    private void StartReviseValue()
+    // Answers whether the revision took — the panel keeps its editor open on a refusal.
+    private async Task<bool> ReviseVoValue(decimal value)
     {
-        reviseValue = order?.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "";
-        revisingValue = true;
+        if (busy || order is null) return false;
         error = null;
-    }
-
-    private async Task ReviseVoValue()
-    {
-        if (busy || order is null) return;
-        error = null;
-        if (!decimal.TryParse(reviseValue, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var value))
-        {
-            error = "Enter a valid revised value.";
-            return;
-        }
         try
         {
             busy = true;
             order = await Variations.ReviseVariationOrderValueAsync(VariationOrderId, value);
-            revisingValue = false;
             await ReloadAsync();
+            return true;
         }
-        catch { error = "Couldn't revise the variation order value. Please try again."; }
-        finally { busy = false; }
-    }
-
-    private async Task SelectTender()
-    {
-        if (busy) return;
-        error = null;
-        if (string.IsNullOrWhiteSpace(selSubId)) { error = "Choose a subcontractor."; return; }
-        decimal? value = decimal.TryParse(selValue, out var parsed) ? parsed : null;
-        try
-        {
-            busy = true;
-            order = await Variations.SelectTenderAsync(VariationOrderId, selSubId, value);
-            await ReloadAsync();
-        }
-        catch { error = "Couldn't record the agreed tender. Please try again."; }
+        catch { error = "Couldn't revise the variation order value. Please try again."; return false; }
         finally { busy = false; }
     }
 
@@ -224,16 +197,4 @@ public partial class ProjectVariationDetail
         if (order?.SelectedSubcontractorId is null) return "—";
         return Subcontractors.Find(order.SelectedSubcontractorId)?.CompanyName ?? order.SelectedSubcontractorId;
     }
-
-
-
-    private VariationApprovePanel? editLinesPanel;
-    private VariationApprovePanel? buildUpPanel;
-    private bool buildUpModalOpen;
-    private bool buildUpNarrativesOpen;
-    private string? buildUpError;
-    private string buildUpCommercialBasis = "";
-    private string buildUpProgrammeImpact = "";
-    private string buildUpExclusions = "";
-
 }

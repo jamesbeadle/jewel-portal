@@ -15,12 +15,8 @@ public partial class ProjectBidPackageInviteDetail
 
     private bool showDrawingsModal;
     private IReadOnlyList<Drawing> projectDrawings = Array.Empty<Drawing>();
-    private readonly HashSet<string> selectedDrawingIds = new(StringComparer.OrdinalIgnoreCase);
-
     private async Task OpenDrawingsModal()
     {
-        selectedDrawingIds.Clear();
-        foreach (var drawing in packageDrawings) selectedDrawingIds.Add(drawing.DrawingId);
         showDrawingsModal = true;
         try { projectDrawings = await Queries.AskAsync(new ListDrawingsForProject(ProjectId), CancellationToken.None); }
         catch { projectDrawings = Array.Empty<Drawing>(); }
@@ -28,13 +24,7 @@ public partial class ProjectBidPackageInviteDetail
 
     private void CloseDrawingsModal() => showDrawingsModal = false;
 
-    private void ToggleDrawing(string drawingId, ChangeEventArgs e)
-    {
-        if (e.Value is true) selectedDrawingIds.Add(drawingId);
-        else selectedDrawingIds.Remove(drawingId);
-    }
-
-    private async Task ConfirmDrawings()
+    private async Task ConfirmDrawings(IReadOnlyList<string> drawingIds)
     {
         if (busy || !CanEdit) return;
         error = null;
@@ -42,7 +32,7 @@ public partial class ProjectBidPackageInviteDetail
         {
             busy = true;
             fetchedPackageDrawings = await Commands.SendAsync(
-                new SetBidPackageDrawings(BidPackageId, selectedDrawingIds.ToList()), CancellationToken.None);
+                new SetBidPackageDrawings(BidPackageId, drawingIds.ToList()), CancellationToken.None);
             showDrawingsModal = false;
         }
         catch { error = "Couldn't update the linked drawings. Please try again."; }
@@ -78,12 +68,4 @@ public partial class ProjectBidPackageInviteDetail
         catch { error = "Couldn't remove the attachment. Please try again."; }
         finally { busy = false; }
     }
-
-    private static string FormatFileSize(long bytes) => bytes switch
-    {
-        >= 1024 * 1024 => $"{bytes / (1024d * 1024d):0.#} MB",
-        >= 1024 => $"{bytes / 1024d:0.#} KB",
-        _ => $"{bytes} B"
-    };
-
 }

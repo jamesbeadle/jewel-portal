@@ -1,0 +1,44 @@
+@namespace Jewel.JPMS.Features.Requests
+
+@* Any RFI can raise a variation order quote — an architect answering "yes, do it" is the
+   ordinary way one starts, with no subcontractor tender involved. The RFQ flag is not the
+   gate; it only decides whether bid packages hang off the variation afterwards. *@
+<div class="panel p-5 space-y-3">
+    <h3 class="eyebrow">Variation</h3>
+    @if (Variation is not null)
+    {
+        <p class="text-sm text-content">
+            <span class="font-mono font-semibold">@Variation.DisplayNumber</span>
+            <span class="text-content-subtle ml-2">@Variation.Status.DisplayName()</span>
+        </p>
+        <a href="@VariationHref" class="btn-secondary w-full inline-flex justify-center">Open variation</a>
+    }
+    else
+    {
+        @if (Error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+        }
+        <p class="text-xs text-content-subtle">
+            @(HasRfq
+                ? "This RFI carries an RFQ, so bid packages can go out to subcontractors under the variation."
+                : "Price the work this RFI has led to.")
+            You decide the title, the value and which lines to keep. It stays in Quoting until the
+            client approves it.
+        </p>
+        @if (CanRaise)
+        {
+            <button type="button" class="btn-primary w-full" disabled="@Busy" @onclick="() => OnRaise.InvokeAsync()">Create Variation Order Quote</button>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public VariationOrder? Variation { get; set; }
+    [Parameter] public string VariationHref { get; set; } = "";
+    [Parameter] public bool HasRfq { get; set; }
+    [Parameter] public string? Error { get; set; }
+    [Parameter] public bool CanRaise { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnRaise { get; set; }
+}

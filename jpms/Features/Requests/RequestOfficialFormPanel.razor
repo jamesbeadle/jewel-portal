@@ -1,0 +1,254 @@
+@namespace Jewel.JPMS.Features.Requests
+@inject IRequestRegister RequestRegister
+
+@* Official-document pane: the form (the itemised queries and narrative sections rendered on the
+   issued document), and the document's own actions — get it out (PDF, email). The editor's
+   draft rows are the panel's own; opening is bound, because the page's Actions menu opens it
+   (and lands the user on this pane first). *@
+<div class="panel p-5">
+    <div class="flex items-start justify-between gap-3 mb-3">
+        <div>
+            <h3 class="eyebrow">@(Record.Kind.IsEmailable() ? $"Official {Record.Kind.DisplayName()} form" : "Official form")</h3>
+            <p class="text-xs text-content-subtle mt-0.5">@(Record.Kind.IsEmailable()
+                ? "The itemised queries and sections rendered on the issued document."
+                : "Prepared ahead: these sections are carried onto the official document when the request is promoted to an RFI.")</p>
+        </div>
+        @if (Record.Kind.IsEmailable())
+        {
+            <Toolbar>
+                <ToolbarButton Icon="download" Label="@($"Download the {Record.Kind.DisplayName()} PDF")"
+                               Href="@DocumentHref" Download="true" />
+                @if (CanDraftEmail)
+                {
+                    <ToolbarButton Icon="email" Label="@($"Email this {Record.Kind.DisplayName()}")"
+                                   OnClick="OnEmail" Disabled="@Busy" Busy="@PreparingDraft" />
+                }
+            </Toolbar>
+        }
+    </div>
+
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+
+    @if (!Editing)
+    {
+        @if (Record.ItemList.Count == 0
+            && string.IsNullOrWhiteSpace(Record.BasisOfQueries)
+            && string.IsNullOrWhiteSpace(Record.ResponseActionRequired)
+            && string.IsNullOrWhiteSpace(Record.ImpactIfLate))
+        {
+            <p class="text-sm text-content-subtle italic">No itemised queries yet. The issued document carries the detail above only.</p>
+        }
+        else
+        {
+            @if (Record.ItemList.Count > 0)
+            {
+                <div class="overflow-x-auto -mx-1 px-1">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-content-subtle border-b border-line">
+                                <th class="py-2 pr-3 font-medium w-10">Item</th>
+                                <th class="py-2 pr-3 font-medium">Drawing ref</th>
+                                <th class="py-2 pr-3 font-medium">Member / area</th>
+                                <th class="py-2 pr-3 font-medium">Query</th>
+                                <th class="py-2 font-medium">Response</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Record.ItemList)
+                            {
+                                <tr class="border-b border-line last:border-0 align-top">
+                                    <td class="py-2 pr-3 font-mono text-content-muted">@item.Position</td>
+                                    <td class="py-2 pr-3 text-content-muted whitespace-pre-wrap">@Dash(item.DrawingRef)</td>
+                                    <td class="py-2 pr-3 text-content whitespace-pre-wrap">@Dash(item.MemberArea)</td>
+                                    <td class="py-2 pr-3 text-content whitespace-pre-wrap">@Dash(item.Query)</td>
+                                    <td class="py-2 text-content-muted whitespace-pre-wrap">@Dash(item.Response)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Record.BasisOfQueries))
+            {
+                <div class="mt-3">
+                    <h4 class="eyebrow mb-1">Basis of queries</h4>
+                    <p class="text-sm text-content-muted whitespace-pre-wrap">@Record.BasisOfQueries</p>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Record.ResponseActionRequired))
+            {
+                <div class="mt-3">
+                    <h4 class="eyebrow mb-1">Response / action required</h4>
+                    <p class="text-sm text-content whitespace-pre-wrap">@Record.ResponseActionRequired</p>
+                </div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Record.ImpactIfLate))
+            {
+                <div class="mt-3">
+                    <h4 class="eyebrow mb-1">Impact if not received by the required date</h4>
+                    <p class="text-sm text-content-muted whitespace-pre-wrap">@Record.ImpactIfLate</p>
+                </div>
+            }
+        }
+    }
+    else
+    {
+        <div class="space-y-4">
+            <div>
+                <label class="eyebrow block mb-2">Itemised queries</label>
+                @if (items.Count == 0)
+                {
+                    <p class="text-sm text-content-subtle italic mb-2">No items — add the first numbered query below.</p>
+                }
+                <div class="space-y-3">
+                    @{ var itemNumber = 0; }
+                    @foreach (var row in items)
+                    {
+                        itemNumber++;
+                        <div class="rounded-lg border border-line p-3 space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="font-mono text-xs font-semibold text-content-muted">Item @itemNumber</span>
+                                <button type="button" class="text-xs text-negative hover:underline underline-offset-2" @onclick="() => items.Remove(row)">Remove</button>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing ref</label>
+                                    <textarea class="field" rows="2" value="@row.DrawingRef" @oninput="e => row.DrawingRef = e.Value?.ToString() ?? string.Empty"
+                                              placeholder="Dwg 1986_111 Rev D&#10;SD8, SD3"></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Member / area</label>
+                                    <textarea class="field" rows="2" value="@row.MemberArea" @oninput="e => row.MemberArea = e.Value?.ToString() ?? string.Empty"
+                                              placeholder="West Elevation — lead valley gutter"></textarea>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Query</label>
+                                <textarea class="field" rows="3" value="@row.Query" @oninput="e => row.Query = e.Value?.ToString() ?? string.Empty"
+                                          placeholder="Please confirm…"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Response (when received)</label>
+                                <textarea class="field" rows="2" value="@row.Response" @oninput="e => row.Response = e.Value?.ToString() ?? string.Empty"></textarea>
+                            </div>
+                        </div>
+                    }
+                </div>
+                <button type="button" class="btn-secondary mt-2" @onclick="() => items.Add(new ItemRow())">Add item</button>
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Basis of queries</label>
+                <textarea class="field" rows="2" value="@basis" @oninput="e => basis = e.Value?.ToString() ?? string.Empty"
+                          placeholder="Architect's email ref…, site inspection observations, drawings…"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Response / action required</label>
+                <textarea class="field" rows="3" value="@responseAction" @oninput="e => responseAction = e.Value?.ToString() ?? string.Empty"
+                          placeholder="Please provide written confirmation / instruction on the items above…"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Impact if not received by the required date</label>
+                <textarea class="field" rows="2" value="@impact" @oninput="e => impact = e.Value?.ToString() ?? string.Empty"
+                          placeholder="Works cannot proceed, risking programme delay while scaffold remains in place…"></textarea>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <button type="button" class="btn-primary" disabled="@(Busy || saving)" @onclick="SaveAsync">@(saving ? "Saving…" : "Save form")</button>
+                <button type="button" class="btn-neutral" disabled="@(Busy || saving)" @onclick="Cancel">Cancel</button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Request Record { get; set; } = default!;
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool CanDraftEmail { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool PreparingDraft { get; set; }
+    [Parameter] public string DocumentHref { get; set; } = "";
+    [Parameter] public EventCallback OnEmail { get; set; }
+    /// <summary>Bound: the page's Actions menu opens the editor.</summary>
+    [Parameter] public bool Editing { get; set; }
+    [Parameter] public EventCallback<bool> EditingChanged { get; set; }
+    /// <summary>The record as the server returned it after a save — the page swaps its copy.</summary>
+    [Parameter] public EventCallback<Request> OnSaved { get; set; }
+
+    /// <summary>A mutable editor row for one itemised query; positions are re-minted on save.</summary>
+    private sealed class ItemRow
+    {
+        public string DrawingRef { get; set; } = "";
+        public string MemberArea { get; set; } = "";
+        public string Query { get; set; } = "";
+        public string Response { get; set; } = "";
+    }
+
+    private bool wasEditing;
+    private bool saving;
+    private string? error;
+    private List<ItemRow> items = new();
+    private string basis = "";
+    private string responseAction = "";
+    private string impact = "";
+
+    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
+    private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    // Each opening seeds the draft from the record — a cancelled edit leaves nothing behind.
+    protected override void OnParametersSet()
+    {
+        if (Editing && !wasEditing) Seed();
+        wasEditing = Editing;
+    }
+
+    private void Seed()
+    {
+        items = Record.ItemList
+            .OrderBy(item => item.Position)
+            .Select(item => new ItemRow
+            {
+                DrawingRef = item.DrawingRef,
+                MemberArea = item.MemberArea,
+                Query = item.Query,
+                Response = item.Response ?? ""
+            })
+            .ToList();
+        if (items.Count == 0) items.Add(new ItemRow());
+        basis = Record.BasisOfQueries ?? "";
+        responseAction = Record.ResponseActionRequired ?? "";
+        impact = Record.ImpactIfLate ?? "";
+        error = null;
+    }
+
+    private async Task Cancel()
+    {
+        error = null;
+        await EditingChanged.InvokeAsync(false);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (saving || !CanEdit) return;
+        error = null;
+        var drafts = items
+            .Select(row => new RequestItemDraft(row.DrawingRef.Trim(), row.MemberArea.Trim(), row.Query.Trim(), NullIfBlank(row.Response)))
+            .ToList();
+        var command = new UpdateRequestForm(
+            Record.RequestId, NullIfBlank(basis), NullIfBlank(responseAction), NullIfBlank(impact), drafts);
+        try
+        {
+            saving = true;
+            var saved = await RequestRegister.SaveFormAsync(command);
+            await EditingChanged.InvokeAsync(false);
+            await OnSaved.InvokeAsync(saved);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        catch { error = "Couldn't save the form. Please try again."; }
+        finally { saving = false; }
+    }
+}

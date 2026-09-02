@@ -1,0 +1,115 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.MailboxCompose
+@using Jewel.JPMS.Features.Triage
+@inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
+
+@* A record's correspondence — the mail behind it, read live by tag — with the consistent Reply
+   widget: replying from a record page SENDS there and then from the projects mailbox (the
+   Control Centre is where replies queue), and the sent copy inherits the thread's tags, so it
+   files straight back into this list. The page owns the list (records read it by their own
+   tags, sometimes merging two); the compose state — who is being answered, the confirmation
+   left behind — is the panel's own. *@
+<div class="flex items-center justify-between mb-3">
+    <h3 class="eyebrow">@Title</h3>
+    <div class="flex items-center gap-3">
+        @if (Loaded && Emails.Count > 0)
+        {
+            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@Emails.Count</span>
+        }
+        @* Search the whole mailbox and tag what belongs here — the list AND the
+           assistant's read_record_emails both get richer with each tag. *@
+        <EmailFinder Type="Type" RecordId="@RecordId"
+                     RecordReference="@RecordReference" ExcludeTag="@OwnTag"
+                     OnLinked="OnReload" />
+    </div>
+</div>
+
+@if (Error is not null)
+{
+    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@Error</p>
+}
+
+<LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="@LoadingLabel">
+@if (sentNote is not null)
+{
+    <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+        <p class="text-sm text-content">@sentNote</p>
+        <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
+                @onclick="() => sentNote = null">✕</button>
+    </div>
+}
+@if (replyingTo is { } anchor)
+{
+    <div class="mb-3 space-y-2">
+        <p class="text-sm text-content-muted">
+            @(isForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(anchor.FromName) ? anchor.FromEmail : anchor.FromName)</span> —
+            <span class="italic">@anchor.Subject</span>
+        </p>
+        <MailReplyComposer @key="@($"{anchor.Id}:{isForward}")" ReplyTo="anchor" Forward="isForward"
+                           Projects="@(ProjectList.Current ?? Array.Empty<Project>())" ProjectId="@ProjectId"
+                           FooterNote="@(isForward
+                               ? "The forward sends now from the projects mailbox and files itself back into this list."
+                               : "The reply sends now from the projects mailbox and files itself back into this list.")"
+                           OnSent="OnSent" OnCancel="() => replyingTo = null" />
+    </div>
+}
+@if (Emails.Count == 0)
+{
+    @* Only when the mailbox actually answered "none" — a failure says so above. *@
+    @if (Error is null)
+    {
+        <p class="text-sm text-content-subtle italic">@EmptyMessage</p>
+    }
+}
+else
+{
+    <CorrespondenceThreadList Emails="Emails" ExcludeTag="@OwnTag"
+                              OnReply="email => StartCompose(email, forward: false)"
+                              OnForward="email => StartCompose(email, forward: true)"
+                              OnUntagged="_ => OnReload.InvokeAsync()" />
+}
+</LoadGate>
+
+@code {
+    /// <summary>The record whose tag the list is read by — also what the finder tags to.</summary>
+    [Parameter, EditorRequired] public RecordType Type { get; set; }
+    [Parameter, EditorRequired] public string RecordId { get; set; } = "";
+    [Parameter, EditorRequired] public string RecordReference { get; set; } = "";
+    [Parameter, EditorRequired] public string ProjectId { get; set; } = "";
+
+    [Parameter] public string Title { get; set; } = "Communications";
+    [Parameter] public string LoadingLabel { get; set; } = "Loading emails";
+    /// <summary>What to say when the mailbox answered "none" — how to tag mail here.</summary>
+    [Parameter] public RenderFragment? EmptyMessage { get; set; }
+
+    /// <summary>The page's list, its arrival, and its failure.</summary>
+    [Parameter] public IReadOnlyList<MailboxMessage> Emails { get; set; } = Array.Empty<MailboxMessage>();
+    [Parameter] public bool Loaded { get; set; }
+    [Parameter] public string? Error { get; set; }
+    /// <summary>Re-read the list — after a tag, an untag, or a send that self-files by tag.</summary>
+    [Parameter] public EventCallback OnReload { get; set; }
+
+    private MailboxMessage? replyingTo;
+    private bool isForward;
+    private string? sentNote;
+
+    private string OwnTag => $"JPMS/{RecordReference}";
+
+    private void StartCompose(MailboxMessage email, bool forward)
+    {
+        replyingTo = email;
+        isForward = forward;
+    }
+
+    private async Task OnSent(ComposeOutcome outcome)
+    {
+        var wasForward = isForward;
+        replyingTo = null;
+        isForward = false;
+        sentNote = outcome.Sent
+            ? $"{(wasForward ? "Forward" : "Reply")} sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
+            : $"The {(wasForward ? "forward" : "reply")} was saved to the mailbox's Drafts — review and send it from Outlook.";
+        // The sent copy self-files by tag; re-read so it appears in the list straight away.
+        await OnReload.InvokeAsync();
+    }
+}

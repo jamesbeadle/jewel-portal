@@ -6,6 +6,7 @@ using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.Triage;
 using Jewel.JPMS.Features.Triage.Panels;
+using Jewel.JPMS.Features.Procurement;
 
 namespace Jewel.JPMS.Pages;
 
@@ -13,11 +14,7 @@ public partial class ProjectBidPackageInviteDetail
 {
     // ---- Line-item coverage (link to a cost centre or a variation order) ----
 
-    private bool showCoverageModal;
     private BidPackageLineItem? linkingLine;
-    private BidPackageLineCoverage coverageChoice = BidPackageLineCoverage.Unassigned;
-    private string? coverageCostCode;
-    private string? coverageVariationId;
 
     private string CoverageLabel(BidPackageLineItem item)
     {
@@ -39,34 +36,20 @@ public partial class ProjectBidPackageInviteDetail
         }
     }
 
-    private void OpenCoverageModal(BidPackageLineItem item)
-    {
-        linkingLine = item;
-        coverageChoice = item.Coverage;
-        coverageCostCode = item.CostCode;
-        coverageVariationId = item.VariationOrderId;
-        showCoverageModal = true;
-    }
+    private void OpenCoverageModal(BidPackageLineItem item) => linkingLine = item;
 
-    private void CloseCoverageModal()
-    {
-        showCoverageModal = false;
-        linkingLine = null;
-    }
+    private void CloseCoverageModal() => linkingLine = null;
 
-    private async Task ConfirmCoverage()
+    private async Task ConfirmCoverage(LineCoverageModal.Pick pick)
     {
         if (busy || linkingLine is null || !CanEdit) return;
         error = null;
         try
         {
             busy = true;
-            var costCode = coverageChoice == BidPackageLineCoverage.ContractLine && !string.IsNullOrWhiteSpace(coverageCostCode) ? coverageCostCode : null;
-            var variationId = coverageChoice == BidPackageLineCoverage.Variation && !string.IsNullOrWhiteSpace(coverageVariationId) ? coverageVariationId : null;
             fetchedLineItems = await Commands.SendAsync(
-                new SetBidPackageLineItemCoverage(linkingLine.LineItemId, coverageChoice,
-                    BoqLineItemId: null, VariationOrderId: variationId, CostCode: costCode), CancellationToken.None);
-            showCoverageModal = false;
+                new SetBidPackageLineItemCoverage(linkingLine.LineItemId, pick.Coverage,
+                    BoqLineItemId: null, VariationOrderId: pick.VariationOrderId, CostCode: pick.CostCode), CancellationToken.None);
             linkingLine = null;
         }
         catch { error = "Couldn't update coverage. Make sure a cost centre or variation order is selected, then try again."; }

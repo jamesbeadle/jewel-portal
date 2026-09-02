@@ -1,0 +1,136 @@
+@namespace Jewel.JPMS.Features.Procurement
+
+@* The Details tab: the specification summary (the "what this package covers" bullets printed
+   at the top of the pricing schedule that travels with the invite) and the line items grouped
+   by trade — one Edit for the whole tab, and "Select line items" as the fast path: tick the
+   valuation report's priced rows and they arrive carrying their cost code, so every
+   cost-centre home put out to tender is one that exists on the sale side. *@
+<section class="mb-8">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="eyebrow">Specification summary</h3>
+        @if (CanEdit)
+        {
+            <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy" @onclick="() => OnEditDetails.InvokeAsync()">Edit details</button>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(SpecificationSummary))
+    {
+        <ul class="space-y-1">
+            @foreach (var line in SpecificationSummary.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                <li class="text-sm text-content-muted">• @line.Trim().TrimStart('•', '-', ' ')</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="text-sm text-content-subtle italic">
+            No summary yet. One line per point — it prints at the top of the pricing schedule
+            each tenderer receives, so say what the package covers and to what standard.
+        </p>
+    }
+</section>
+
+<section class="mb-8">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="eyebrow">Line items</h3>
+        @if (CanEdit)
+        {
+            <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy"
+                    title="Tick lines from the valuation report — each becomes a line item on this package, carrying its cost code."
+                    @onclick="() => OnSelectLineItems.InvokeAsync()">Select line items</button>
+        }
+    </div>
+
+    <LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="Loading line items">
+    @if (LineItems.Count == 0)
+    {
+        @* Only once the fetch has answered — the page's banner carries a failure. *@
+        @if (Fetched)
+        {
+            <p class="text-sm text-content-subtle italic">No line items on this package yet.</p>
+        }
+    }
+    else
+    {
+        @foreach (var group in LineItems.GroupBy(item => item.Trade).OrderBy(g => g.Key))
+        {
+            <div class="mb-4">
+                <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">@(string.IsNullOrWhiteSpace(group.Key) ? "Unspecified" : group.Key)</p>
+                <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
+                    <table class="w-full text-sm">
+                        <thead class="bg-surface-raised border-b border-line">
+                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Description</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 hidden sm:table-cell">Unit</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Qty</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Cost code</th>
+                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Covered by</th>
+                                @if (CanEdit)
+                                {
+                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2"></th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-line">
+                            @foreach (var item in group)
+                            {
+                                <tr>
+                                    <td class="px-4 py-2 text-content">@item.Description</td>
+                                    <td class="px-4 py-2 text-content-muted hidden sm:table-cell">@item.Unit</td>
+                                    <td class="px-4 py-2 text-content-muted">@item.Quantity</td>
+                                    <td class="px-4 py-2">
+                                        @if (string.IsNullOrWhiteSpace(item.CostCode))
+                                        {
+                                            <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                                                  title="This line predates the cost-code rule — edit the line items to set one.">No cost code</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-content-muted" title="@CostCentreLabel(item.CostCode)">@item.CostCode</span>
+                                        }
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        @if (item.Coverage == BidPackageLineCoverage.Unassigned)
+                                        {
+                                            <span class="text-xs text-content-subtle italic">Not linked</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium @(item.Coverage == BidPackageLineCoverage.Variation ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted")">@CoverageLabel(item)</span>
+                                        }
+                                    </td>
+                                    @if (CanEdit)
+                                    {
+                                        <td class="px-4 py-2 text-right">
+                                            <button type="button" class="text-xs text-accent hover:underline" disabled="@Busy" @onclick="() => OnLinkCoverage.InvokeAsync(item)">@(item.Coverage == BidPackageLineCoverage.Unassigned ? "Link" : "Change")</button>
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+    </LoadGate>
+</section>
+
+@code {
+    [Parameter] public string SpecificationSummary { get; set; } = "";
+    [Parameter] public IReadOnlyList<BidPackageLineItem> LineItems { get; set; } = Array.Empty<BidPackageLineItem>();
+    /// <summary>The gate lifts on Loaded; the empty line waits for Fetched (a failed read lifts one, not the other).</summary>
+    [Parameter] public bool Loaded { get; set; }
+    [Parameter] public bool Fetched { get; set; }
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>Names from the masters the page holds — the cost-centre label and what covers a line.</summary>
+    [Parameter, EditorRequired] public Func<string, string> CostCentreLabel { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<BidPackageLineItem, string> CoverageLabel { get; set; } = default!;
+
+    [Parameter] public EventCallback OnEditDetails { get; set; }
+    [Parameter] public EventCallback OnSelectLineItems { get; set; }
+    [Parameter] public EventCallback<BidPackageLineItem> OnLinkCoverage { get; set; }
+}

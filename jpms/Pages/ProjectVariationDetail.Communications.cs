@@ -11,31 +11,6 @@ public partial class ProjectVariationDetail
     private bool emailsLoaded;
     private string? emailsError;
     private IReadOnlyList<MailboxMessage> emails = Array.Empty<MailboxMessage>();
-    // The email a Reply or Forward was pressed on (the shared composer opens above the list;
-    // sending from a record page sends immediately), which of the two it was, and the
-    // confirmation left behind by the last send.
-    private MailboxMessage? commsReplyTo;
-    private bool commsComposeIsForward;
-    private string? commsReplySent;
-
-    private void StartCommsCompose(MailboxMessage message, bool forward)
-    {
-        commsReplyTo = message;
-        commsComposeIsForward = forward;
-    }
-
-    private async Task OnCommsReplySent(Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome outcome)
-    {
-        var wasForward = commsComposeIsForward;
-        commsReplyTo = null;
-        commsComposeIsForward = false;
-        commsReplySent = outcome.Sent
-            ? $"{(wasForward ? "Forward" : "Reply")} sent to {string.Join("; ", outcome.To)} — it joins the thread and files back into this list."
-            : $"The {(wasForward ? "forward" : "reply")} was saved to the mailbox's Drafts — review and send it from Outlook.";
-        // The sent copy self-files by tag; re-read so it appears in the list straight away.
-        await LoadEmailsAsync();
-    }
-
     // The record only carries commercial figures (V-ref, value, cost code) once approved — this is
     // the "VO" the old two-record model kept separately; here it's just the current record, or null.
     private VariationOrder? ApprovedOrder => order is { Status: VariationOrderStatus.Approved } ? order : null;
@@ -73,7 +48,6 @@ public partial class ProjectVariationDetail
     private bool CanManage => Session.AvailableRoles.Any(role =>
         role is Role.Admin or Role.ManagingDirector or Role.ProjectManager or Role.QuantitySurveyor);
 
-    private IReadOnlyList<Subcontractor> Subs => Subcontractors.All();
 
     // The approved variation's build-up lives on the valuation report; until its lines land,
     // ApprovedCostCentres falls back to the order's single primary code.
@@ -113,7 +87,6 @@ public partial class ProjectVariationDetail
         {
             orderLoaded = false;
             editLinesModalOpen = false;
-            buildUpModalOpen = false;
             await ReloadAsync();
         }
     }

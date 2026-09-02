@@ -1,0 +1,136 @@
+@namespace Jewel.JPMS.Features.Requests
+@using static Jewel.JPMS.Features.Requests.RequestEditParsing
+
+@* Edit request facts — the at-a-glance strip's own editor (dates, drawing refs, value). The
+   draft is the dialog's own, seeded from the record each time it opens; the page sends the
+   command and says whether it took. *@
+<Modal IsOpen="IsOpen"
+       Title="Edit request facts"
+       ConfirmLabel="@(Busy ? "Saving…" : "Save changes")"
+       OnCancel="() => IsOpenChanged.InvokeAsync(false)"
+       OnConfirm="SaveAsync"
+       Class="max-w-2xl">
+    <div class="space-y-4">
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField Label="Date issued" Value="@issuedAt" OnChange="v => issuedAt = v" InputType="date" />
+            <FormField Label="Response due" Value="@responseDue" OnChange="v => responseDue = v" InputType="date" />
+            @* Offered on every closed record — including legacy closes that predate the close
+               date and so have none recorded yet. Required while closed: the date is what the
+               frozen Days-out count is computed from. *@
+            @if (IsClosed)
+            {
+                <FormField Label="Date closed" Value="@closedAt" OnChange="v => closedAt = v" InputType="date" Required="true" />
+            }
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <FormField Label="Drawing / detail ref" Value="@drawingRef" OnChange="v => drawingRef = v" />
+        </div>
+
+        <FormField Label="Related drawing / spec" Value="@relatedSpec" OnChange="v => relatedSpec = v" />
+
+        @if (Record.Kind is not RequestType.Rfi)
+        {
+            <FormField Label="Value (£, optional)" Value="@valueText" OnChange="v => valueText = v" />
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public Request Record { get; set; } = default!;
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>Bound: the page's Actions menu opens it.</summary>
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    /// <summary>Sends the edit; true means it took and the dialog closes, false keeps it open with the server's words.</summary>
+    [Parameter, EditorRequired] public Func<UpdateRequestDetails, Task<(bool Saved, string? Error)>> Send { get; set; } = default!;
+
+    private bool wasOpen;
+    private string issuedAt = "";
+    private string responseDue = "";
+    private string closedAt = "";
+    private string drawingRef = "";
+    private string relatedSpec = "";
+    private string valueText = "";
+    private string? error;
+
+    private bool IsClosed => Record.Status is RequestStatus.Closed || Record.ClosedAt is not null;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen && !wasOpen)
+        {
+            // The one visible date; rows predating the backfill show the created-on stamp.
+            issuedAt = (Record.IssuedAt ?? Record.RaisedAt).LocalDateTime.ToString("yyyy-MM-dd");
+            responseDue = Record.ResponseDue?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
+            closedAt = Record.ClosedAt?.LocalDateTime.ToString("yyyy-MM-dd") ?? "";
+            drawingRef = Record.DrawingRef ?? "";
+            relatedSpec = Record.RelatedDrawingSpec ?? "";
+            valueText = Record.Value?.ToString("0.##") ?? "";
+            error = null;
+        }
+        wasOpen = IsOpen;
+    }
+
+    private async Task SaveAsync()
+    {
+        error = null;
+
+        // The issue date records when the document actually went out — today or earlier.
+        var issued = ParseDate(issuedAt);
+        if (issued is { } issuedDate && issuedDate.Date > DateTime.Today) { error = "The issued date cannot be in the future."; return; }
+
+        // The close date is offered on every closed record — the way to backfill legacy closes
+        // that predate the field. Required while closed: a blank sent to the server would silently
+        // stamp today, misdating the close and skewing the frozen Days-out count. Never a future one.
+        var closed = Record.Status is RequestStatus.Closed ? ParseDate(closedAt) : null;
+        if (Record.Status is RequestStatus.Closed && closed is null) { error = "A closed date is required — the days-out count is fixed from it."; return; }
+        if (closed is { } closedDate && closedDate.Date > DateTime.Today) { error = "The closed date cannot be in the future."; return; }
+
+        var value = Record.Value;
+        if (Record.Kind is not RequestType.Rfi)
+        {
+            if (string.IsNullOrWhiteSpace(valueText))
+            {
+                value = null;
+            }
+            else
+            {
+                var raw = valueText.Replace("£", "").Replace(",", "").Trim();
+                if (!decimal.TryParse(raw, out var parsedValue) || parsedValue < 0)
+                {
+                    error = "Value must be a number.";
+                    return;
+                }
+                value = parsedValue;
+            }
+        }
+
+        var command = new UpdateRequestDetails(
+            Record.RequestId,
+            Record.Reference,
+            Record.Title,
+            Record.Description,
+            Record.Status,
+            value,
+            Record.ResponseText,
+            Record.RespondedByEmail,
+            Record.ImpliesVariation,
+            NullIfBlank(drawingRef),
+            ParseDate(responseDue),
+            NullIfBlank(relatedSpec),
+            Record.InternalNotes,
+            Record.ClientNotes,
+            ClosedAt: closed,
+            IssuedAt: issued);
+
+        var (saved, refusal) = await Send(command);
+        if (saved) await IsOpenChanged.InvokeAsync(false);
+        else error = refusal;
+    }
+}

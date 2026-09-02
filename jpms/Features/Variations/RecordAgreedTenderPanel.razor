@@ -1,0 +1,54 @@
+@namespace Jewel.JPMS.Features.Variations
+@inject IVariationStore Variations
+@inject ISubcontractorStore Subcontractors
+
+@* The agreed tender: who the works will be instructed to if the variation is approved, and the
+   value they agreed. Tendering itself happens on the project's bid packages (separate records
+   since 2026-08-12) — this simply records the outcome on the sales-side document. *@
+<div class="panel p-5 space-y-3">
+    <h3 class="eyebrow">Record agreed tender</h3>
+    @if (error is not null)
+    {
+        <p class="text-xs text-negative">@error</p>
+    }
+    <div>
+        <label class="eyebrow block mb-1">Subcontractor</label>
+        <select class="field" value="@subcontractorId" @onchange="e => subcontractorId = e.Value?.ToString() ?? string.Empty">
+            <option value="">— Choose —</option>
+            @foreach (var sub in Subcontractors.All())
+            {
+                <option value="@sub.SubcontractorId">@sub.CompanyName</option>
+            }
+        </select>
+    </div>
+    <FormField Label="Agreed value (£)" Value="@valueText" OnChange="v => valueText = v" InputType="number" />
+    <button type="button" class="btn-primary w-full" disabled="@(Busy || recording)" @onclick="RecordAsync">Record agreed tender</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string VariationOrderId { get; set; } = "";
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>The record as the server returned it — the page swaps its copy and reloads.</summary>
+    [Parameter] public EventCallback<VariationOrder> OnRecorded { get; set; }
+
+    private string subcontractorId = "";
+    private string valueText = "";
+    private bool recording;
+    private string? error;
+
+    private async Task RecordAsync()
+    {
+        if (recording) return;
+        error = null;
+        if (string.IsNullOrWhiteSpace(subcontractorId)) { error = "Choose a subcontractor."; return; }
+        decimal? value = decimal.TryParse(valueText, out var parsed) ? parsed : null;
+        try
+        {
+            recording = true;
+            var recorded = await Variations.SelectTenderAsync(VariationOrderId, subcontractorId, value);
+            await OnRecorded.InvokeAsync(recorded);
+        }
+        catch { error = "Couldn't record the agreed tender. Please try again."; }
+        finally { recording = false; }
+    }
+}

@@ -1,0 +1,188 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using Jewel.JPMS.Contracts.Subcontractors
+@inject ISubcontractorStore Subs
+
+@* The tender list: who has been asked to price the package, with the invite-email door and
+   the per-row acts. Adding a subcontractor only builds the list — nothing is emailed until the
+   invite is composed and sent. *@
+<section class="mb-8">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="eyebrow">Invited to tender</h3>
+        @if (CanEdit)
+        {
+            <div class="flex items-center gap-4">
+                @if (Recipients.Count > 0)
+                {
+                    <button type="button" class="text-xs text-accent hover:underline" @onclick="() => OnComposeInvite.InvokeAsync()">Invite email</button>
+                }
+                @if (ReadyForInvites)
+                {
+                    <button type="button" class="text-xs text-accent hover:underline" @onclick="() => OnFindSubcontractors.InvokeAsync()">Find subcontractors</button>
+                    <button type="button" class="text-xs text-accent hover:underline" @onclick="() => OnAddSubcontractor.InvokeAsync()">+ Add subcontractor</button>
+                }
+                else
+                {
+                    @* Inviting is gated on the package saying what it is: the details are what
+                       the invite, the pricing schedule and the trade match all work from. *@
+                    <span class="text-xs text-content-subtle italic"
+                          title="A title plus a specification summary or line items — set under Details — are what the invite email, the pricing schedule and the trade match all work from.">
+                        Add the package's details to invite subcontractors
+                    </span>
+                }
+            </div>
+        }
+    </div>
+
+    @if (SendNote is not null)
+    {
+        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
+            @SendNote
+            @if (DraftWebLink is not null)
+            {
+                <a class="text-accent underline ml-1" href="@DraftWebLink" target="_blank" rel="noopener">Open it in Outlook on the web</a>
+            }
+        </p>
+    }
+
+    <LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="Loading invited subcontractors">
+    @if (Recipients.Count == 0)
+    {
+        @* Only once the fetch has answered — the page's banner carries a failure. *@
+        @if (Fetched)
+        {
+            <p class="text-sm text-content-subtle italic">No subcontractors invited yet.</p>
+        }
+    }
+    else
+    {
+        <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
+            <table class="w-full text-sm">
+                <thead class="bg-surface-raised border-b border-line">
+                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Subcontractor</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Added</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
+                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-line">
+                    @foreach (var recipient in Recipients)
+                    {
+                        var sub = Subs.Find(recipient.SubcontractorId);
+                        <tr>
+                            <td class="px-4 py-3">
+                                <span class="text-content font-medium">@(sub?.CompanyName ?? recipient.SubcontractorId)</span>
+                                @if (sub is { IsProspect: true })
+                                {
+                                    @* Tender-only prospect: on this list but deliberately NOT in the
+                                       Directory — promotion happens from their submitted tender. *@
+                                    <span class="ml-2 inline-flex items-center rounded-full bg-surface border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle"
+                                          title="Only on tender lists — not in the Directory. Add them from their submitted tender if they're worth keeping.">Not in directory</span>
+                                }
+                                @if (sub is not null && string.IsNullOrWhiteSpace(sub.ContactEmail))
+                                {
+                                    <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No email address</span>
+                                }
+                                else if (sub is not null)
+                                {
+                                    <span class="block text-xs text-content-subtle">@sub.ContactEmail</span>
+                                }
+                                @if (sub is not null && !string.IsNullOrWhiteSpace(sub.Website))
+                                {
+                                    @* Their site in a new tab — the quickest sanity-check on who a
+                                       search-found company actually is before the invite drafts. *@
+                                    <a class="block text-xs text-accent hover:underline truncate max-w-xs"
+                                       href="@WebsiteHref(sub.Website)" target="_blank" rel="noopener">@WebsiteLabel(sub.Website)</a>
+                                }
+                            </td>
+                            <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.TradesLabel ?? "")</td>
+                            <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
+                            @* "Invited" as a word implies an email went out, which the system can't know
+                               (sends happen in Outlook) — "On list" says exactly what is true. The other
+                               statuses read fine as-is. *@
+                            <td class="px-4 py-3 @(recipient.Status == BidPackageRecipientStatus.Declined ? "text-content-subtle" : "text-content-muted")">@(recipient.Status == BidPackageRecipientStatus.Invited ? "On list" : recipient.Status.ToString())</td>
+                            <td class="px-4 py-3 text-right">
+                                @if (CanEdit)
+                                {
+                                    @* Row actions follow the button colour rule: acts are green
+                                       (btn-secondary), the destructive one warns (btn-neutral +
+                                       negative text/border) — compact paddings for a table row. *@
+                                    <span class="inline-flex items-center gap-2">
+                                        @if (recipient.Status == BidPackageRecipientStatus.Responded
+                                            && sub is { IsProspect: true } && CanAddToDirectory)
+                                        {
+                                            <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy"
+                                                    title="Their tender is in and this company isn't in the Directory yet — add it if they're worth keeping for future work."
+                                                    @onclick="() => OnAddToDirectory.InvokeAsync(sub!.SubcontractorId)">Add to directory</button>
+                                        }
+                                        @if (recipient.Status == BidPackageRecipientStatus.Declined)
+                                        {
+                                            <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy"
+                                                    title="Put them back in the running — restores Responded if they have a tender in, otherwise back on the list."
+                                                    @onclick="() => OnSetDeclined.InvokeAsync((recipient, false))">Undo decline</button>
+                                        }
+                                        else if (recipient.Status != BidPackageRecipientStatus.Won)
+                                        {
+                                            <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy"
+                                                    title="Record that they've declined to tender (e.g. told you by phone). Keeps them on the list for the record."
+                                                    @onclick="() => OnSetDeclined.InvokeAsync((recipient, true))">Mark declined</button>
+                                        }
+                                        <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40" disabled="@Busy"
+                                                @onclick="() => OnRemove.InvokeAsync(recipient)">Remove</button>
+                                    </span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="text-xs text-content-subtle mt-2">
+            Adding a subcontractor only builds the invite list — nothing is emailed until you
+            compose the “Invite email” above and press Send there. It sends from the projects
+            mailbox, with everyone in BCC; a half-written invite is saved on the package.
+        </p>
+    }
+    </LoadGate>
+</section>
+
+@code {
+    [Parameter] public IReadOnlyList<BidPackageRecipient> Recipients { get; set; } = Array.Empty<BidPackageRecipient>();
+    /// <summary>The gate lifts on Loaded; the empty line waits for Fetched (a failed read lifts one, not the other).</summary>
+    [Parameter] public bool Loaded { get; set; }
+    [Parameter] public bool Fetched { get; set; }
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool CanAddToDirectory { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    /// <summary>The package says what it is (title plus summary or lines) — inviting is gated on it.</summary>
+    [Parameter] public bool ReadyForInvites { get; set; }
+    /// <summary>The last send's confirmation, and the draft it may have left in Outlook.</summary>
+    [Parameter] public string? SendNote { get; set; }
+    [Parameter] public string? DraftWebLink { get; set; }
+
+    [Parameter] public EventCallback OnComposeInvite { get; set; }
+    [Parameter] public EventCallback OnFindSubcontractors { get; set; }
+    [Parameter] public EventCallback OnAddSubcontractor { get; set; }
+    [Parameter] public EventCallback<string> OnAddToDirectory { get; set; }
+    [Parameter] public EventCallback<(BidPackageRecipient Recipient, bool Declined)> OnSetDeclined { get; set; }
+    [Parameter] public EventCallback<BidPackageRecipient> OnRemove { get; set; }
+
+    // Directory websites arrive as the search stored them — sometimes bare domains. A missing
+    // scheme would make the browser treat the href as a relative path, so add one.
+    private static string WebsiteHref(string website)
+    {
+        var trimmed = website.Trim();
+        return trimmed.Contains("://") ? trimmed : $"https://{trimmed}";
+    }
+
+    // The label is the tidy form: no scheme, no www., no trailing slash — "fence-masters.co.uk".
+    private static string WebsiteLabel(string website)
+    {
+        var label = website.Trim();
+        var schemeAt = label.IndexOf("://", StringComparison.Ordinal);
+        if (schemeAt >= 0) label = label[(schemeAt + 3)..];
+        if (label.StartsWith("www.", StringComparison.OrdinalIgnoreCase)) label = label[4..];
+        return label.TrimEnd('/');
+    }
+}
