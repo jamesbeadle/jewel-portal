@@ -1,0 +1,70 @@
+@namespace Jewel.JPMS.Features.Labour
+
+<tr class="border-b border-line/60 align-middle hover:bg-surface-raised/40">
+    <td class="px-5 py-2.5">
+        @if (Timesheet.Status == TimesheetStatus.Submitted)
+        {
+            <input type="checkbox" checked="@Selected"
+                   @onchange="@(args => OnSelectedChanged.InvokeAsync((bool)args.Value!))" />
+        }
+    </td>
+    <td class="px-2 py-2.5 text-content font-medium whitespace-nowrap">@Timesheet.WorkerName</td>
+    <td class="px-2 py-2.5 text-content-subtle whitespace-nowrap">@Timesheet.WorkedOn.ToString("ddd dd MMM")</td>
+    <td class="px-2 py-2.5">
+        @if (IsEditing)
+        {
+            <SearchSelect Options="@CostCodeOptions" WidthClass="w-56" Placeholder="Cost code…"
+                          Value="@EditCostCode" ValueChanged="EditCostCodeChanged" />
+        }
+        else if (Timesheet.CostCode == "")
+        {
+            @* Weekly entries arrive uncoded on purpose — the approver codes the day via Adjust. *@
+            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle"
+                  title="Entered without a cost code — Adjust the row to code it before approving.">uncoded</span>
+        }
+        else { <span class="tabular-nums">@Timesheet.CostCode</span> }
+    </td>
+    <td class="px-2 py-2.5 text-right tabular-nums">
+        @if (IsEditing)
+        {
+            <input class="field w-20" type="number" step="0.5" min="0.5" @bind:get="EditHours" @bind:set="value => EditHoursChanged.InvokeAsync(value)" />
+        }
+        else { @Timesheet.Hours }
+    </td>
+    <td class="px-2 py-2.5 text-right tabular-nums text-content-subtle">
+        @(Timesheet.Status == TimesheetStatus.Approved ? Timesheet.CostAmount.ToString("N2") : "—")
+    </td>
+    <td class="px-2 py-2.5">
+        <span title="@(Timesheet.Status == TimesheetStatus.Rejected ? Timesheet.RejectionReason : null)"><StatusPill Status="@Timesheet.Status" /></span>
+    </td>
+    <td class="px-5 py-2.5 text-right whitespace-nowrap">
+        @if (Timesheet.Status == TimesheetStatus.Submitted && IsEditing)
+        {
+            <button type="button" class="btn-secondary mr-1" @onclick="() => OnSave.InvokeAsync()">Save</button>
+            <button type="button" class="btn-neutral" @onclick="() => OnCancelEdit.InvokeAsync()">Cancel</button>
+        }
+        else if (Timesheet.Status == TimesheetStatus.Submitted)
+        {
+            <button type="button" class="btn-secondary mr-1" @onclick="() => OnAdjust.InvokeAsync()">Adjust</button>
+            <button type="button" class="btn-secondary" @onclick="() => OnReject.InvokeAsync()">Reject</button>
+        }
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public TimesheetDetail Timesheet { get; set; } = default!;
+    [Parameter] public bool Selected { get; set; }
+    [Parameter] public EventCallback<bool> OnSelectedChanged { get; set; }
+    /// <summary>This row is the one open for adjustment; the edit fields below are page-owned
+    /// so Save can read them.</summary>
+    [Parameter] public bool IsEditing { get; set; }
+    [Parameter] public IReadOnlyList<SearchSelect.Option> CostCodeOptions { get; set; } = Array.Empty<SearchSelect.Option>();
+    [Parameter] public string EditCostCode { get; set; } = "";
+    [Parameter] public EventCallback<string> EditCostCodeChanged { get; set; }
+    [Parameter] public decimal EditHours { get; set; }
+    [Parameter] public EventCallback<decimal> EditHoursChanged { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancelEdit { get; set; }
+    [Parameter] public EventCallback OnAdjust { get; set; }
+    [Parameter] public EventCallback OnReject { get; set; }
+}

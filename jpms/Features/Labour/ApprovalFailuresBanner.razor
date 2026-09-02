@@ -1,0 +1,27 @@
+@namespace Jewel.JPMS.Features.Labour
+
+<div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+    <p class="font-medium mb-1">Some timesheets could not be approved:</p>
+    @foreach (var failure in Failures)
+    {
+        <p>· @failure.Reason</p>
+    }
+    @if (BudgetBlocked.Count > 0 && CanOverrideBudget)
+    {
+        @* The MD/FD follow-up on exactly the budget-blocked rows (server re-checks the
+           role and requires the reason) — a deliberate, audited overspend, never a quiet one. *@
+        <button type="button" class="btn-secondary mt-2"
+                @onclick="() => OnApproveOverBudget.InvokeAsync(BudgetBlocked)">
+            Approve over budget (@BudgetBlocked.Count)…
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<LabourApprovalFailure> Failures { get; set; } = Array.Empty<LabourApprovalFailure>();
+    [Parameter] public bool CanOverrideBudget { get; set; }
+    /// <summary>Carries just the budget-blocked failures — the rows the override applies to.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<LabourApprovalFailure>> OnApproveOverBudget { get; set; }
+
+    private IReadOnlyList<LabourApprovalFailure> BudgetBlocked => Failures.Where(failure => failure.BudgetBlocked).ToList();
+}

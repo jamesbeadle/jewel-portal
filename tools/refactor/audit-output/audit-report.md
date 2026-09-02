@@ -1,27 +1,26 @@
 # Refactor audit
 
-Generated 2026-09-02 09:56 UTC.
+Generated 2026-09-02 10:02 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 658, totalFiles: 3445, worstFileLines: 475 |
-| functionShape | limit: 30, functionsOverLimit: 695, elseBlocks: 1161, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 658, totalFiles: 3451, worstFileLines: 475 |
+| functionShape | limit: 30, functionsOverLimit: 695, elseBlocks: 1160, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 487, duplicatedLines: 6073, totalLines: 217080, duplicatedPercentage: 2.8 |
-| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1521 |
-| comments | explanatoryCommentLines: 13679, filesWithComments: 1889, taskMarkers: 48 |
+| duplication | clones: 487, duplicatedLines: 6073, totalLines: 217157, duplicatedPercentage: 2.8 |
+| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1524 |
+| comments | explanatoryCommentLines: 13678, filesWithComments: 1892, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2384, deeplyIndentedLines: 2798, overlongLines: 1659, measurementIsHeuristic: True |
-| inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 207 |
+| prose | longMemberChainLines: 2384, deeplyIndentedLines: 2798, overlongLines: 1657, measurementIsHeuristic: True |
+| inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 205 |
 
 ## Worst files by length
 
 | File | Lines |
 | --- | --- |
 | worker/MailboxIntake/Graph/GraphMailClient.cs | 475 |
-| jpms/Pages/ProjectLabour.razor | 472 |
 | jpms/Pages/TriageQueue.razor | 470 |
 | jpms/Pages/DocumentControl.razor | 455 |
 | api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs | 453 |
@@ -40,5 +39,6 @@ Generated 2026-09-02 09:56 UTC.
 | api/Features/Ai/Tools/AiRegisterTools.cs | 405 |
 | api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Sections.cs | 402 |
 | jpms/Services/HttpLabourStore.cs | 395 |
+| jpms/Components/ValuationReportTable.razor | 395 |
 
 Full detail, including every offender list, is in `audit.json`.

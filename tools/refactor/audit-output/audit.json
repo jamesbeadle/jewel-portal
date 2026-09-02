@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-09-02T09:56:59+00:00",
+  "generatedAt": "2026-09-02T10:02:26+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
       "filesOverLimit": 658,
-      "totalFiles": 3445,
+      "totalFiles": 3451,
       "worstFileLines": 475
     },
     "functionShape": {
       "limit": 30,
       "functionsOverLimit": 695,
-      "elseBlocks": 1161,
+      "elseBlocks": 1160,
       "measurementIsHeuristic": true
     },
     "functionNames": {
@@ -21,16 +21,16 @@
     "duplication": {
       "clones": 487,
       "duplicatedLines": 6073,
-      "totalLines": 217080,
+      "totalLines": 217157,
       "duplicatedPercentage": 2.8
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1521
+      "unprefixedBooleans": 1524
     },
     "comments": {
-      "explanatoryCommentLines": 13679,
-      "filesWithComments": 1889,
+      "explanatoryCommentLines": 13678,
+      "filesWithComments": 1892,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -41,14 +41,14 @@
     "prose": {
       "longMemberChainLines": 2384,
       "deeplyIndentedLines": 2798,
-      "overlongLines": 1659,
+      "overlongLines": 1657,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 133,
       "orphanComponents": 6,
-      "averagePageLines": 207
+      "averagePageLines": 205
     }
   },
   "details": {
@@ -57,17 +57,13 @@
       "summary": {
         "limit": 100,
         "filesOverLimit": 658,
-        "totalFiles": 3445,
+        "totalFiles": 3451,
         "worstFileLines": 475
       },
       "offenders": [
         {
           "file": "worker/MailboxIntake/Graph/GraphMailClient.cs",
           "lines": 475
-        },
-        {
-          "file": "jpms/Pages/ProjectLabour.razor",
-          "lines": 472
         },
         {
           "file": "jpms/Pages/TriageQueue.razor",
@@ -403,6 +399,10 @@
         },
         {
           "file": "jpms/Pages/TriageQueue.razor.cs",
+          "lines": 298
+        },
+        {
+          "file": "jpms/Pages/ProjectLabour.razor",
           "lines": 298
         },
         {
@@ -2700,7 +2700,7 @@
       "summary": {
         "limit": 30,
         "functionsOverLimit": 695,
-        "elseBlocks": 1161,
+        "elseBlocks": 1160,
         "measurementIsHeuristic": true
       },
       "offenders": [
@@ -3135,7 +3135,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1521
+        "unprefixedBooleans": 1524
       },
       "offenders": {
         "abbreviations": [
@@ -3597,8 +3597,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13679,
-        "filesWithComments": 1889,
+        "explanatoryCommentLines": 13678,
+        "filesWithComments": 1892,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4305,7 +4305,7 @@
       "summary": {
         "longMemberChainLines": 2384,
         "deeplyIndentedLines": 2798,
-        "overlongLines": 1659,
+        "overlongLines": 1657,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4923,21 +4923,10 @@
         "pages": 92,
         "components": 133,
         "orphanComponents": 6,
-        "averagePageLines": 207
+        "averagePageLines": 205
       },
       "offenders": {
         "pages": [
-          {
-            "page": "jpms/Pages/ProjectLabour.razor",
-            "lines": 472,
-            "widgets": [
-              "table",
-              "modal",
-              "loadGate",
-              "panel",
-              "export"
-            ]
-          },
           {
             "page": "jpms/Pages/TriageQueue.razor",
             "lines": 470,
@@ -5144,6 +5133,17 @@
             "widgets": [
               "modal",
               "loadGate"
+            ]
+          },
+          {
+            "page": "jpms/Pages/ProjectLabour.razor",
+            "lines": 298,
+            "widgets": [
+              "table",
+              "modal",
+              "loadGate",
+              "panel",
+              "export"
             ]
           },
           {
@@ -5704,18 +5704,18 @@
           },
           {
             "component": "jpms/Components/SearchSelect.razor",
-            "reusedBy": 48
+            "reusedBy": 50
           },
           {
             "component": "jpms/Components/ExportToExcelButton.razor",
             "reusedBy": 37
           },
           {
-            "component": "jpms/Components/FormField.razor",
-            "reusedBy": 33
+            "component": "jpms/Components/Panel.razor",
+            "reusedBy": 34
           },
           {
-            "component": "jpms/Components/Panel.razor",
+            "component": "jpms/Components/FormField.razor",
             "reusedBy": 33
           },
           {
@@ -6238,7 +6238,7 @@
       "summary": {
         "clones": 487,
         "duplicatedLines": 6073,
-        "totalLines": 217080,
+        "totalLines": 217157,
         "duplicatedPercentage": 2.8
       },
       "offenders": [

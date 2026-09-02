@@ -1,5 +1,6 @@
 @page "/projects/{ProjectId}/labour"
 @using Jewel.JPMS.Features.CostCenters
+@using Jewel.JPMS.Features.Labour
 @inject AuthService Auth
 @inject SessionService Session
 @inject ILabourStore Labour
@@ -30,23 +31,8 @@
         }
         @if (approvalFailures.Count > 0)
         {
-            var budgetBlocked = approvalFailures.Where(failure => failure.BudgetBlocked).ToList();
-            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
-                <p class="font-medium mb-1">Some timesheets could not be approved:</p>
-                @foreach (var failure in approvalFailures)
-                {
-                    <p>· @failure.Reason</p>
-                }
-                @if (budgetBlocked.Count > 0 && CanOverrideBudget)
-                {
-                    @* The MD/FD follow-up on exactly the budget-blocked rows (server re-checks the
-                       role and requires the reason) — a deliberate, audited overspend, never a quiet one. *@
-                    <button type="button" class="btn-secondary mt-2"
-                            @onclick="() => OpenOverBudget(budgetBlocked)">
-                        Approve over budget (@budgetBlocked.Count)…
-                    </button>
-                }
-            </div>
+            <ApprovalFailuresBanner Failures="approvalFailures" CanOverrideBudget="CanOverrideBudget"
+                                    OnApproveOverBudget="OpenOverBudget" />
         }
 
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -119,86 +105,21 @@
                         <tbody>
                             @foreach (var timesheet in week)
                             {
-                                var isEditing = editingId == timesheet.TimesheetId;
-                                <tr class="border-b border-line/60 align-middle hover:bg-surface-raised/40">
-                                    <td class="px-5 py-2.5">
-                                        @if (timesheet.Status == TimesheetStatus.Submitted)
-                                        {
-                                            <input type="checkbox" checked="@selectedIds.Contains(timesheet.TimesheetId)"
-                                                   @onchange="@(args => ToggleSelected(timesheet.TimesheetId, (bool)args.Value!))" />
-                                        }
-                                    </td>
-                                    <td class="px-2 py-2.5 text-content font-medium whitespace-nowrap">@timesheet.WorkerName</td>
-                                    <td class="px-2 py-2.5 text-content-subtle whitespace-nowrap">@timesheet.WorkedOn.ToString("ddd dd MMM")</td>
-                                    <td class="px-2 py-2.5">
-                                        @if (isEditing)
-                                        {
-                                            <SearchSelect Options="@CostCodeOptions" WidthClass="w-56" Placeholder="Cost code…"
-                                                          @bind-Value="editCostCode" />
-                                        }
-                                        else if (timesheet.CostCode == "")
-                                        {
-                                            @* Weekly entries arrive uncoded on purpose — the approver codes the day via Adjust. *@
-                                            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle"
-                                                  title="Entered without a cost code — Adjust the row to code it before approving.">uncoded</span>
-                                        }
-                                        else { <span class="tabular-nums">@timesheet.CostCode</span> }
-                                    </td>
-                                    <td class="px-2 py-2.5 text-right tabular-nums">
-                                        @if (isEditing)
-                                        {
-                                            <input class="field w-20" type="number" step="0.5" min="0.5" @bind="editHours" />
-                                        }
-                                        else { @timesheet.Hours }
-                                    </td>
-                                    <td class="px-2 py-2.5 text-right tabular-nums text-content-subtle">
-                                        @(timesheet.Status == TimesheetStatus.Approved ? timesheet.CostAmount.ToString("N2") : "—")
-                                    </td>
-                                    <td class="px-2 py-2.5">
-                                        @if (timesheet.Status == TimesheetStatus.Rejected)
-                                        {
-                                            <span title="@timesheet.RejectionReason"><StatusPill Status="@timesheet.Status" /></span>
-                                        }
-                                        else
-                                        {
-                                            <StatusPill Status="@timesheet.Status" />
-                                        }
-                                    </td>
-                                    <td class="px-5 py-2.5 text-right whitespace-nowrap">
-                                        @if (timesheet.Status == TimesheetStatus.Submitted)
-                                        {
-                                            @if (isEditing)
-                                            {
-                                                <button type="button" class="btn-secondary mr-1" @onclick="SaveEditAsync">Save</button>
-                                                <button type="button" class="btn-neutral" @onclick="() => editingId = null">Cancel</button>
-                                            }
-                                            else
-                                            {
-                                                <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(timesheet)">Adjust</button>
-                                                <button type="button" class="btn-secondary" @onclick="() => StartReject(timesheet)">Reject</button>
-                                            }
-                                        }
-                                    </td>
-                                </tr>
+                                <TimesheetRow Timesheet="timesheet"
+                                              Selected="@selectedIds.Contains(timesheet.TimesheetId)"
+                                              OnSelectedChanged="selected => ToggleSelected(timesheet.TimesheetId, selected)"
+                                              IsEditing="@(editingId == timesheet.TimesheetId)"
+                                              CostCodeOptions="@CostCodeOptions"
+                                              @bind-EditCostCode="editCostCode" @bind-EditHours="editHours"
+                                              OnSave="SaveEditAsync" OnCancelEdit="() => editingId = null"
+                                              OnAdjust="() => StartEdit(timesheet)" OnReject="() => StartReject(timesheet)" />
                             }
                         </tbody>
                     </table>
                 </div>
-                <div class="flex flex-wrap items-center gap-3 px-5 py-3 border-t border-line">
-                    @* Coding is the step before approval — uncoded rows hard-block. Code the whole
-                       selection in one go, then approve; the selection survives the coding pass. *@
-                    <div class="flex items-center gap-2">
-                        <SearchSelect Options="@CostCodeOptions" WidthClass="w-56" Placeholder="Cost code…"
-                                      @bind-Value="bulkCostCode" />
-                        <button type="button" class="btn-secondary" disabled="@(selectedIds.Count == 0 || isBulkCoding || isApproving)" @onclick="CodeSelectedAsync">
-                            @(isBulkCoding ? "Coding…" : $"Code {(selectedIds.Count > 0 ? $"{selectedIds.Count} " : "")}selected")
-                        </button>
-                    </div>
-                    <button type="button" class="btn-primary" disabled="@(selectedIds.Count == 0 || isApproving || isBulkCoding)" @onclick="ApproveSelectedAsync">
-                        Approve @(selectedIds.Count > 0 ? $"{selectedIds.Count} " : "")selected
-                    </button>
-                    <span class="text-xs text-content-subtle">Uncoded rows? Pick a cost code and Code selected first, then approve. Only approved time posts to Financials as cost. Budget hard-block applies per cost code.</span>
-                </div>
+                <TimesheetApprovalFooter SelectedCount="selectedIds.Count" CostCodeOptions="@CostCodeOptions"
+                                         @bind-BulkCostCode="bulkCostCode" IsCoding="isBulkCoding" IsApproving="isApproving"
+                                         OnCode="CodeSelectedAsync" OnApprove="ApproveSelectedAsync" />
                 }
             }
         </Panel>
@@ -246,50 +167,8 @@
                 }
             </Panel>
 
-            @* ---- Site register ---- *@
-            <Panel Title="Site register" BodyClass="p-0"
-                   IsLoading="@(!RegisterReady && !dataFailed)" LoadingLabel="Loading the site register">
-                @{ var register = Labour.AttendanceFor(ProjectId).Take(60).ToList(); }
-                @if (dataFailed)
-                {
-                    <p class="p-5 text-sm text-negative">Couldn't load the site register — reload to try again.</p>
-                }
-                else if (register.Count == 0)
-                {
-                    <p class="p-5 text-sm text-content-subtle italic">No attendance recorded yet.</p>
-                }
-                else
-                {
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                                <th class="px-5 py-3">Date</th><th class="px-2 py-3">Worker</th>
-                                <th class="px-2 py-3">In</th><th class="px-5 py-3">Out</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var row in register)
-                            {
-                                <tr class="border-b border-line/60">
-                                    <td class="px-5 py-1.5 whitespace-nowrap">@row.WorkDate.ToString("ddd dd MMM")</td>
-                                    <td class="px-2 py-1.5 text-content whitespace-nowrap">@row.WorkerName</td>
-                                    <td class="px-2 py-1.5 text-content-subtle tabular-nums">@row.SignedInAt.ToLocalTime().ToString("HH:mm")</td>
-                                    <td class="px-5 py-1.5">
-                                        @if (row.SignedOutAt is { } signedOut)
-                                        {
-                                            <span class="text-content-subtle tabular-nums">@signedOut.ToLocalTime().ToString("HH:mm")</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">no sign-out</span>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-            </Panel>
+            <SiteRegisterPanel Rows="@Labour.AttendanceFor(ProjectId).Take(60).ToList()"
+                               Loading="@(!RegisterReady && !dataFailed)" LoadFailed="dataFailed" />
         </div>
 
         @* ---- Subcontractor settlement ---- *@
@@ -312,31 +191,7 @@
             }
             else
             {
-                <table class="w-full text-sm max-w-3xl">
-                    <thead>
-                        <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                            <th class="py-2 pr-3">Subcontractor</th>
-                            <th class="py-2 pr-3 text-right">Approved £</th>
-                            <th class="py-2 pr-3 text-right">Covered invoices £</th>
-                            <th class="py-2 pr-3 text-right">Posted variances £</th>
-                            <th class="py-2 text-right">Unresolved £</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var row in settlement)
-                        {
-                            <tr class="border-b border-line/60">
-                                <td class="py-1.5 pr-3 text-content">@row.SubcontractorName</td>
-                                <td class="py-1.5 pr-3 text-right tabular-nums">@row.ApprovedCost.ToString("N2")</td>
-                                <td class="py-1.5 pr-3 text-right tabular-nums">@row.CoveredInvoiceTotal.ToString("N2")</td>
-                                <td class="py-1.5 pr-3 text-right tabular-nums">@row.PostedVarianceTotal.ToString("N2")</td>
-                                <td class="py-1.5 text-right tabular-nums @(row.UnresolvedVariance == 0m ? "text-positive" : "text-negative font-medium")">
-                                    @row.UnresolvedVariance.ToString("N2")
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <SettlementSummaryTable Rows="settlement" />
             }
 
             <div class="mt-4">
@@ -358,38 +213,9 @@
                     }
                     else
                     {
-                        <table class="w-full text-sm max-w-3xl">
-                            <thead>
-                                <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
-                                    <th class="py-2 pr-3">Supplier</th><th class="py-2 pr-3">Date</th>
-                                    <th class="py-2 pr-3">Description</th><th class="py-2 pr-3 text-right">Net £</th>
-                                    <th class="py-2 pr-3">Settles timesheets of</th><th class="py-2"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var line in ProjectLedgerLines())
-                                {
-                                    <tr class="border-b border-line/60">
-                                        <td class="py-1.5 pr-3 text-content">@line.ContactName</td>
-                                        <td class="py-1.5 pr-3 text-content-subtle">@(line.Date?.ToString("dd MMM yy") ?? "—")</td>
-                                        <td class="py-1.5 pr-3 text-content-subtle truncate max-w-xs" title="@line.Description">@line.Description</td>
-                                        <td class="py-1.5 pr-3 text-right tabular-nums">@line.Net.ToString("N2")</td>
-                                        <td class="py-1.5 pr-3">
-                                            <select class="field" @onchange="@(args => coverSubcontractorByLine[line.XeroLedgerLineId] = (string)args.Value!)">
-                                                <option value="">Subcontractor…</option>
-                                                @foreach (var subcontractor in WorkerSubcontractors())
-                                                {
-                                                    <option value="@subcontractor.Id">@subcontractor.Name</option>
-                                                }
-                                            </select>
-                                        </td>
-                                        <td class="py-1.5 text-right">
-                                            <button type="button" class="btn-secondary" @onclick="() => MarkCoveredAsync(line)">Mark covered</button>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
+                        <CoverInvoiceLinesTable Lines="ProjectLedgerLines()" Subcontractors="WorkerSubcontractors()"
+                                                OnSettlesPicked="pick => coverSubcontractorByLine[pick.LineId] = pick.SubcontractorId"
+                                                OnMarkCovered="MarkCoveredAsync" />
                     }
                 }
             </div>
