@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-02T10:14:07+00:00",
+  "generatedAt": "2026-09-02T13:13:53+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 658,
-      "totalFiles": 3458,
+      "filesOverLimit": 661,
+      "totalFiles": 3467,
       "worstFileLines": 475
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 694,
+      "functionsOverLimit": 701,
       "elseBlocks": 1156,
       "measurementIsHeuristic": true
     },
@@ -19,18 +19,18 @@
       "maxLength": 40
     },
     "duplication": {
-      "clones": 485,
-      "duplicatedLines": 6042,
-      "totalLines": 217198,
-      "duplicatedPercentage": 2.78
+      "clones": 483,
+      "duplicatedLines": 5994,
+      "totalLines": 217749,
+      "duplicatedPercentage": 2.75
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1528
+      "unprefixedBooleans": 1531
     },
     "comments": {
-      "explanatoryCommentLines": 13672,
-      "filesWithComments": 1894,
+      "explanatoryCommentLines": 13738,
+      "filesWithComments": 1898,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -39,9 +39,9 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 2384,
-      "deeplyIndentedLines": 2798,
-      "overlongLines": 1655,
+      "longMemberChainLines": 2390,
+      "deeplyIndentedLines": 2869,
+      "overlongLines": 1659,
       "measurementIsHeuristic": true
     },
     "inventory": {
@@ -56,8 +56,8 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 658,
-        "totalFiles": 3458,
+        "filesOverLimit": 661,
+        "totalFiles": 3467,
         "worstFileLines": 475
       },
       "offenders": [
@@ -72,10 +72,6 @@
         {
           "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Sections.cs",
           "lines": 448
-        },
-        {
-          "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.Labour.cs",
-          "lines": 445
         },
         {
           "file": "jpms/Pages/Todos.razor.cs",
@@ -131,7 +127,7 @@
         },
         {
           "file": "jpms/Services/HttpLabourStore.cs",
-          "lines": 395
+          "lines": 400
         },
         {
           "file": "jpms/Components/ValuationReportTable.razor",
@@ -150,6 +146,10 @@
           "lines": 381
         },
         {
+          "file": "api/Features/Subcontractors/Documents/SubcontractorStatementRenderer.cs",
+          "lines": 378
+        },
+        {
           "file": "jpms/Pages/ProjectValuation.razor",
           "lines": 377
         },
@@ -160,10 +160,6 @@
         {
           "file": "api/Features/Requests/RequestContextAssembler.cs",
           "lines": 375
-        },
-        {
-          "file": "api/Features/Subcontractors/Documents/SubcontractorStatementRenderer.cs",
-          "lines": 374
         },
         {
           "file": "api/Features/Xero/XeroClient.Http.cs",
@@ -210,6 +206,10 @@
           "lines": 352
         },
         {
+          "file": "api/Features/Ai/Tools/AiLabourMonthEndTools.cs",
+          "lines": 351
+        },
+        {
           "file": "jpms/Pages/DocumentControl.Filing.cs",
           "lines": 351
         },
@@ -240,10 +240,6 @@
         {
           "file": "api/Features/ArchitectInstructions/ArchitectInstructionHandlers.cs",
           "lines": 340
-        },
-        {
-          "file": "api/Features/Ai/Tools/AiLabourMonthEndTools.cs",
-          "lines": 339
         },
         {
           "file": "api/Features/Ai/Tools/AiWriteTools.cs",
@@ -304,6 +300,10 @@
         {
           "file": "jpms/Features/Triage/Panels/Actions/StagedRecordActionEditor.razor",
           "lines": 325
+        },
+        {
+          "file": "api/Features/Ai/Tools/AiValuationInvoiceTools.cs",
+          "lines": 323
         },
         {
           "file": "jpms/Pages/TriageQueue.Parking.cs",
@@ -534,10 +534,6 @@
           "lines": 265
         },
         {
-          "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.BackOffice.cs",
-          "lines": 264
-        },
-        {
           "file": "jpms/Layout/SideNav.razor",
           "lines": 264
         },
@@ -590,6 +586,10 @@
           "lines": 258
         },
         {
+          "file": "api/Features/Labour/Queries/GetLabourOverviewSlice.cs",
+          "lines": 256
+        },
+        {
           "file": "api/Features/Xero/XeroClient.ReadsSuppliers.cs",
           "lines": 256
         },
@@ -608,10 +608,6 @@
         {
           "file": "jpms/Components/RequestTable.razor",
           "lines": 255
-        },
-        {
-          "file": "api/Features/Labour/Queries/GetLabourOverviewSlice.cs",
-          "lines": 254
         },
         {
           "file": "jpms/Features/Requests/RequestOfficialFormPanel.razor",
@@ -740,10 +736,6 @@
         {
           "file": "jpms/Components/CostCentreCostOfSalesModal.razor",
           "lines": 232
-        },
-        {
-          "file": "jpms/Components/ValuationSnapshotViewer.razor.cs",
-          "lines": 231
         },
         {
           "file": "jpms/Pages/ProjectValuation.Export.cs",
@@ -914,11 +906,11 @@
           "lines": 215
         },
         {
-          "file": "jpms/Services/AuthService.cs",
+          "file": "contracts/Documents/Excel/ExcelStyleRegistry.cs",
           "lines": 215
         },
         {
-          "file": "jpms/Services/Excel/ExcelStyleRegistry.cs",
+          "file": "jpms/Services/AuthService.cs",
           "lines": 215
         },
         {
@@ -1146,10 +1138,6 @@
           "lines": 191
         },
         {
-          "file": "api/Features/Ai/Tools/AiValuationInvoiceTools.cs",
-          "lines": 190
-        },
-        {
           "file": "jpms/Components/ValuationLineForm.razor",
           "lines": 190
         },
@@ -1186,7 +1174,15 @@
           "lines": 187
         },
         {
+          "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.MonthEnd.cs",
+          "lines": 186
+        },
+        {
           "file": "api/Features/Projects/Commands/DeleteProjectHandler.cs",
+          "lines": 186
+        },
+        {
+          "file": "contracts/Commercial/Export/ValuationExportPendingSheet.cs",
           "lines": 186
         },
         {
@@ -1219,10 +1215,6 @@
         },
         {
           "file": "jpms/Components/PackageReconciliationSection.razor.cs",
-          "lines": 183
-        },
-        {
-          "file": "jpms/Features/Commercial/ValuationExportPendingSheet.cs",
           "lines": 183
         },
         {
@@ -1478,6 +1470,10 @@
           "lines": 160
         },
         {
+          "file": "api/Features/Labour/Commands/WeekSignOffSlices.cs",
+          "lines": 160
+        },
+        {
           "file": "jpms/Components/RecordAuditHistory.razor",
           "lines": 160
         },
@@ -1518,6 +1514,10 @@
           "lines": 157
         },
         {
+          "file": "contracts/Labour/ForecastRules.cs",
+          "lines": 157
+        },
+        {
           "file": "jpms/Pages/ProjectVariations.StatusChanges.cs",
           "lines": 157
         },
@@ -1546,7 +1546,7 @@
           "lines": 156
         },
         {
-          "file": "jpms/Services/Excel/ExcelWorkbook.cs",
+          "file": "contracts/Documents/Excel/ExcelWorkbook.cs",
           "lines": 155
         },
         {
@@ -1554,11 +1554,23 @@
           "lines": 155
         },
         {
+          "file": "api/Data/Entities/LabourPlanningEntities.cs",
+          "lines": 154
+        },
+        {
+          "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.Timesheets.cs",
+          "lines": 154
+        },
+        {
           "file": "api/Features/Procurement/Commands/UpdateManualWorkOrderHandler.cs",
           "lines": 154
         },
         {
           "file": "jpms/Components/ProjectRetentionPanel.razor.cs",
+          "lines": 154
+        },
+        {
+          "file": "jpms/Components/ValuationSnapshotViewer.razor.cs",
           "lines": 154
         },
         {
@@ -1580,6 +1592,10 @@
         {
           "file": "jpms/Pages/AiConnections.razor",
           "lines": 153
+        },
+        {
+          "file": "api/Features/Commercial/Documents/ValuationReportSnapshotPdfBuilder.cs",
+          "lines": 152
         },
         {
           "file": "api/Features/DocumentControl/Commands/DocumentControlItemCommandEndpoints.cs",
@@ -1606,6 +1622,10 @@
           "lines": 152
         },
         {
+          "file": "api/Features/Labour/Commands/MonthEndByNameSlices.cs",
+          "lines": 151
+        },
+        {
           "file": "contracts/Models/Labour.cs",
           "lines": 151
         },
@@ -1626,14 +1646,6 @@
           "lines": 150
         },
         {
-          "file": "api/Data/Entities/LabourPlanningEntities.cs",
-          "lines": 149
-        },
-        {
-          "file": "api/Features/Labour/Commands/MonthEndByNameSlices.cs",
-          "lines": 149
-        },
-        {
           "file": "api/Features/RecordLinks/RecordThreadTagger.cs",
           "lines": 149
         },
@@ -1648,6 +1660,10 @@
         {
           "file": "jpms/Components/ValuationReportTable.PercentEditing.cs",
           "lines": 149
+        },
+        {
+          "file": "api/Features/Commercial/CommercialFeatureRegistration.cs",
+          "lines": 148
         },
         {
           "file": "jpms/Features/Triage/Panels/PathwayPane.razor.cs",
@@ -1698,11 +1714,11 @@
           "lines": 146
         },
         {
-          "file": "api/Features/Commercial/CommercialFeatureRegistration.cs",
+          "file": "api/Features/Connect/TokenEndpoint.cs",
           "lines": 145
         },
         {
-          "file": "api/Features/Connect/TokenEndpoint.cs",
+          "file": "contracts/Commercial/Export/ValuationSnapshotExport.cs",
           "lines": 145
         },
         {
@@ -1742,11 +1758,15 @@
           "lines": 143
         },
         {
+          "file": "jpms/Pages/LabourOverview.razor",
+          "lines": 143
+        },
+        {
           "file": "api/Features/Ai/AnthropicOptions.cs",
           "lines": 142
         },
         {
-          "file": "jpms/Pages/LabourOverview.razor",
+          "file": "jpms/Pages/LabourOverview.razor.cs",
           "lines": 142
         },
         {
@@ -1770,6 +1790,10 @@
           "lines": 140
         },
         {
+          "file": "api/Features/Labour/SettlementScheduleBuilder.cs",
+          "lines": 140
+        },
+        {
           "file": "api/Features/RecordLinks/Commands/LinkMessageToRecordHandler.cs",
           "lines": 140
         },
@@ -1779,6 +1803,10 @@
         },
         {
           "file": "api/Features/Ai/Tools/Actions/ProcurementActions.BidPackages.cs",
+          "lines": 139
+        },
+        {
+          "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Helpers.cs",
           "lines": 139
         },
         {
@@ -1834,10 +1862,6 @@
           "lines": 137
         },
         {
-          "file": "api/Features/Labour/SettlementScheduleBuilder.cs",
-          "lines": 136
-        },
-        {
           "file": "jpms/Features/Triage/Panels/NewEmailComposerPane.razor.cs",
           "lines": 136
         },
@@ -1851,10 +1875,6 @@
         },
         {
           "file": "api/Features/Ai/Tools/AiToolCatalogue.Masters.cs",
-          "lines": 135
-        },
-        {
-          "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Helpers.cs",
           "lines": 135
         },
         {
@@ -1906,11 +1926,19 @@
           "lines": 132
         },
         {
+          "file": "api/Features/Commercial/Documents/CostCentreReconciliationRenderer.Helpers.cs",
+          "lines": 132
+        },
+        {
           "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.Attachments.cs",
           "lines": 132
         },
         {
           "file": "api/Features/Xero/Ledger/XeroLedgerReads.cs",
+          "lines": 132
+        },
+        {
+          "file": "contracts/Models/LabourPlanning.cs",
           "lines": 132
         },
         {
@@ -1978,16 +2006,8 @@
           "lines": 129
         },
         {
-          "file": "jpms/Pages/LabourOverview.razor.cs",
-          "lines": 129
-        },
-        {
           "file": "jpms/Features/Variations/StagedBuildUpPanel.razor",
           "lines": 129
-        },
-        {
-          "file": "api/Features/Commercial/Documents/CostCentreReconciliationRenderer.Helpers.cs",
-          "lines": 128
         },
         {
           "file": "api/Features/Progress/Commands/CreateProgressUpdateEndpoint.cs",
@@ -2034,10 +2054,6 @@
           "lines": 125
         },
         {
-          "file": "contracts/Models/LabourPlanning.cs",
-          "lines": 125
-        },
-        {
           "file": "jpms/Features/Triage/Panels/Actions/SystemActionKind.cs",
           "lines": 125
         },
@@ -2062,15 +2078,7 @@
           "lines": 124
         },
         {
-          "file": "api/Features/Commercial/Documents/ValuationReportSnapshotPdfBuilder.cs",
-          "lines": 123
-        },
-        {
           "file": "api/Features/Labour/Commands/SettlementCommandGates.cs",
-          "lines": 123
-        },
-        {
-          "file": "api/Features/Labour/Commands/WeekSignOffSlices.cs",
           "lines": 123
         },
         {
@@ -2082,7 +2090,7 @@
           "lines": 123
         },
         {
-          "file": "jpms/Services/Excel/ExcelWorkbookWriter.Worksheet.cs",
+          "file": "contracts/Documents/Excel/ExcelWorkbookWriter.Worksheet.cs",
           "lines": 123
         },
         {
@@ -2306,6 +2314,10 @@
           "lines": 114
         },
         {
+          "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.WorkerLinks.cs",
+          "lines": 113
+        },
+        {
           "file": "api/Features/Bluebeam/Extraction/DrawingExtractionResultWriter.cs",
           "lines": 113
         },
@@ -2398,6 +2410,10 @@
           "lines": 110
         },
         {
+          "file": "contracts/Commercial/Export/ValuationReportExportWorkbook.cs",
+          "lines": 110
+        },
+        {
           "file": "jpms/Pages/ProjectBidPackageInviteDetail.Award.cs",
           "lines": 110
         },
@@ -2422,15 +2438,15 @@
           "lines": 109
         },
         {
+          "file": "jpms/Features/Labour/WeeklySignOffTable.razor",
+          "lines": 109
+        },
+        {
           "file": "jpms/Features/Procurement/DeleteWorkOrderModal.razor",
           "lines": 109
         },
         {
           "file": "api/Data/Entities/ConnectEntities.cs",
-          "lines": 108
-        },
-        {
-          "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.cs",
           "lines": 108
         },
         {
@@ -2479,10 +2495,6 @@
         },
         {
           "file": "contracts/Models/ValuationInvoice.cs",
-          "lines": 107
-        },
-        {
-          "file": "jpms/Features/Commercial/ValuationReportExportWorkbook.cs",
           "lines": 107
         },
         {
@@ -2598,10 +2610,6 @@
           "lines": 103
         },
         {
-          "file": "contracts/Labour/ForecastRules.cs",
-          "lines": 103
-        },
-        {
           "file": "jpms/Components/CostCentreWorkOrdersModal.razor",
           "lines": 103
         },
@@ -2682,6 +2690,10 @@
           "lines": 101
         },
         {
+          "file": "contracts/Commercial/Export/ValuationExportStatementSheet.cs",
+          "lines": 101
+        },
+        {
           "file": "contracts/Commercial/ListWorkOrderInvoiceSummaries.cs",
           "lines": 101
         },
@@ -2699,15 +2711,11 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 694,
+        "functionsOverLimit": 701,
         "elseBlocks": 1156,
         "measurementIsHeuristic": true
       },
       "offenders": [
-        {
-          "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.Labour.cs",
-          "lines": 421
-        },
         {
           "file": "api/Features/Ai/Tools/AiDeliveryTools.cs",
           "lines": 398
@@ -2729,12 +2737,16 @@
           "lines": 344
         },
         {
+          "file": "api/Features/Ai/Tools/AiLabourMonthEndTools.cs",
+          "lines": 328
+        },
+        {
           "file": "api/Features/Commercial/Queries/GetProjectFinancialSummaryHandler.cs",
           "lines": 326
         },
         {
-          "file": "api/Features/Ai/Tools/AiLabourMonthEndTools.cs",
-          "lines": 316
+          "file": "api/Features/Ai/Tools/AiValuationInvoiceTools.cs",
+          "lines": 298
         },
         {
           "file": "api/Features/Xero/Ledger/SetXeroAllocationHandler.cs",
@@ -2769,10 +2781,6 @@
           "lines": 247
         },
         {
-          "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.BackOffice.cs",
-          "lines": 240
-        },
-        {
           "file": "api/Features/Ai/Tools/Actions/CommercialActions.ClaimsAndValuations.cs",
           "lines": 239
         },
@@ -2786,7 +2794,7 @@
         },
         {
           "file": "api/Features/Labour/Queries/GetLabourOverviewSlice.cs",
-          "lines": 217
+          "lines": 219
         },
         {
           "file": "api/Features/Ai/Tools/Actions/SiteAndProgressActions.ProgressProgramme.cs",
@@ -2849,12 +2857,12 @@
           "lines": 175
         },
         {
-          "file": "api/Features/Ai/Tools/Actions/RequestsActions.Requests.cs",
-          "lines": 172
+          "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.MonthEnd.cs",
+          "lines": 174
         },
         {
-          "file": "api/Features/Ai/Tools/AiValuationInvoiceTools.cs",
-          "lines": 170
+          "file": "api/Features/Ai/Tools/Actions/RequestsActions.Requests.cs",
+          "lines": 172
         },
         {
           "file": "api/Features/Ai/Tools/AiToolCatalogue.Records.cs",
@@ -2903,6 +2911,10 @@
         {
           "file": "api/Features/Labour/LabourFeatureRegistration.cs",
           "lines": 151
+        },
+        {
+          "file": "api/Features/Ai/Sources/AiFiledDocuments.cs",
+          "lines": 150
         }
       ]
     },
@@ -3086,12 +3098,12 @@
         },
         {
           "file": "jpms/Services/HttpLabourStore.cs",
-          "line": 346,
+          "line": 351,
           "name": "SetCostCodeXeroMappingAsync"
         },
         {
           "file": "jpms/Services/HttpLabourStore.cs",
-          "line": 380,
+          "line": 385,
           "name": "SetTimesheetCoverForMonthAsync"
         },
         {
@@ -3135,7 +3147,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1528
+        "unprefixedBooleans": 1531
       },
       "offenders": {
         "abbreviations": [
@@ -3193,11 +3205,11 @@
           },
           {
             "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Helpers.cs",
-            "line": 46
+            "line": 52
           },
           {
             "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Helpers.cs",
-            "line": 71
+            "line": 84
           },
           {
             "file": "api/Features/MailboxIntake/Graph/IMailboxGraphClient.cs",
@@ -3553,7 +3565,7 @@
           },
           {
             "file": "api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Helpers.cs",
-            "line": 34,
+            "line": 40,
             "name": "bold"
           },
           {
@@ -3597,8 +3609,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13672,
-        "filesWithComments": 1894,
+        "explanatoryCommentLines": 13738,
+        "filesWithComments": 1898,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4183,7 +4195,7 @@
           },
           {
             "literal": "string",
-            "occurrences": 188
+            "occurrences": 191
           },
           {
             "literal": "text-xs text-content-subtle",
@@ -4263,7 +4275,7 @@
           },
           {
             "literal": "projectId",
-            "occurrences": 54
+            "occurrences": 55
           },
           {
             "literal": "btn-secondary",
@@ -4303,9 +4315,9 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 2384,
-        "deeplyIndentedLines": 2798,
-        "overlongLines": 1655,
+        "longMemberChainLines": 2390,
+        "deeplyIndentedLines": 2869,
+        "overlongLines": 1659,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4791,6 +4803,14 @@
             "line": 73
           },
           {
+            "file": "api/Features/Ai/Tools/AiValuationInvoiceTools.cs",
+            "line": 208
+          },
+          {
+            "file": "api/Features/Ai/Tools/AiValuationInvoiceTools.cs",
+            "line": 209
+          },
+          {
             "file": "api/Features/Ai/Tools/AiWriteTools.cs",
             "line": 90
           },
@@ -4905,14 +4925,6 @@
           {
             "file": "api/Features/Commercial/Commands/ConfirmValuationClaimEndpoint.cs",
             "line": 10
-          },
-          {
-            "file": "api/Features/Commercial/Commands/ConfirmValuationClaimEndpoint.cs",
-            "line": 14
-          },
-          {
-            "file": "api/Features/Commercial/Commands/DeleteValuationClaimEndpoint.cs",
-            "line": 11
           }
         ]
       }
@@ -5488,7 +5500,7 @@
           },
           {
             "page": "jpms/Pages/LabourOverview.razor",
-            "lines": 142,
+            "lines": 143,
             "widgets": [
               "modal",
               "loadGate",
@@ -6236,10 +6248,10 @@
     "duplication": {
       "name": "duplication",
       "summary": {
-        "clones": 485,
-        "duplicatedLines": 6042,
-        "totalLines": 217198,
-        "duplicatedPercentage": 2.78
+        "clones": 483,
+        "duplicatedLines": 5994,
+        "totalLines": 217749,
+        "duplicatedPercentage": 2.75
       },
       "offenders": [
         {
@@ -6260,11 +6272,11 @@
         },
         {
           "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Helpers.cs",
-          "duplicatedLineInstances": 139
+          "duplicatedLineInstances": 136
         },
         {
           "file": "api/Features/Subcontractors/Documents/SubcontractorStatementRenderer.cs",
-          "duplicatedLineInstances": 123
+          "duplicatedLineInstances": 126
         },
         {
           "file": "jpms/Pages/AgedPayables.razor",

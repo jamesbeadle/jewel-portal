@@ -1,19 +1,19 @@
 # Refactor audit
 
-Generated 2026-09-02 10:14 UTC.
+Generated 2026-09-02 13:13 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 658, totalFiles: 3458, worstFileLines: 475 |
-| functionShape | limit: 30, functionsOverLimit: 694, elseBlocks: 1156, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 661, totalFiles: 3467, worstFileLines: 475 |
+| functionShape | limit: 30, functionsOverLimit: 701, elseBlocks: 1156, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 485, duplicatedLines: 6042, totalLines: 217198, duplicatedPercentage: 2.78 |
-| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1528 |
-| comments | explanatoryCommentLines: 13672, filesWithComments: 1894, taskMarkers: 48 |
+| duplication | clones: 483, duplicatedLines: 5994, totalLines: 217749, duplicatedPercentage: 2.75 |
+| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1531 |
+| comments | explanatoryCommentLines: 13738, filesWithComments: 1898, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2384, deeplyIndentedLines: 2798, overlongLines: 1655, measurementIsHeuristic: True |
+| prose | longMemberChainLines: 2390, deeplyIndentedLines: 2869, overlongLines: 1659, measurementIsHeuristic: True |
 | inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 203 |
 
 ## Worst files by length
@@ -23,7 +23,6 @@ Generated 2026-09-02 10:14 UTC.
 | worker/MailboxIntake/Graph/GraphMailClient.cs | 475 |
 | api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs | 453 |
 | api/Features/Procurement/Documents/WorkOrderPoRenderer.Sections.cs | 448 |
-| api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.Labour.cs | 445 |
 | jpms/Pages/Todos.razor.cs | 444 |
 | jpms/Pages/TriageQueue.Apply.cs | 441 |
 | api/Features/Ai/Tools/AiDeliveryTools.cs | 440 |
@@ -37,8 +36,9 @@ Generated 2026-09-02 10:14 UTC.
 | jpms/Pages/TriageQueue.razor | 409 |
 | api/Features/Ai/Tools/AiRegisterTools.cs | 405 |
 | api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Sections.cs | 402 |
-| jpms/Services/HttpLabourStore.cs | 395 |
+| jpms/Services/HttpLabourStore.cs | 400 |
 | jpms/Components/ValuationReportTable.razor | 395 |
 | jpms/Pages/XeroAllocation.razor | 389 |
+| api/Data/JpmsContext.Model.cs | 386 |
 
 Full detail, including every offender list, is in `audit.json`.
