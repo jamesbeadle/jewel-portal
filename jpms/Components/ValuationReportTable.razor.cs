@@ -1,4 +1,6 @@
 using Jewel.JPMS.Commercial;
+using Jewel.JPMS.Features.Commercial;
+using static Jewel.JPMS.Features.Commercial.ValuationReportDisplay;
 
 namespace Jewel.JPMS.Components;
 
@@ -17,8 +19,6 @@ public partial class ValuationReportTable
     // credits) and the deposit credits alone — both fed by the page's invoice list.
     [Parameter] public decimal CertifiedToDate { get; set; }
     [Parameter] public decimal DepositCreditedToDate { get; set; }
-
-    private static readonly System.Globalization.CultureInfo Gb = System.Globalization.CultureInfo.GetCultureInfo("en-GB");
 
     private IReadOnlyList<ValuationLineItem> lines = Array.Empty<ValuationLineItem>();
     private IReadOnlyList<ClaimLine> entries = Array.Empty<ClaimLine>();
@@ -41,11 +41,10 @@ public partial class ValuationReportTable
     // but bill edits are always allowed since they only affect future claims; keep simple: allow unless viewing a locked claim).
     private bool CanEditLines => SelectedClaim is null or { Status: ValuationClaimStatus.Draft };
 
-    // Summary figures.
-    private decimal contractSum, netVariations, revisedContractSum, totalWorksComplete;
-    private decimal retentionHeld, retentionReleased, certifiedToDate, paymentDueExVat;
-    private decimal retentionPercent, retentionReleasePercent;
-    private decimal depositPercent, depositReceived, depositReleased, paymentDueBeforeDeposit;
+    // The summary's figures — shared with the Cashflow tab (ValuationSummaryFigures) so the two
+    // tabs can't drift.
+    private ValuationSummaryFigures figures = ValuationSummaryFigures.For(
+        Array.Empty<ValuationLineItem>(), Array.Empty<ClaimLine>(), null, 0m, 0m);
 
     protected override void OnInitialized()
     {
@@ -79,25 +78,8 @@ public partial class ValuationReportTable
         Recompute();
     }
 
-    private void Recompute()
-    {
-        // Shared with the Cashflow tab (ValuationSummaryFigures) so the two tabs can't drift.
-        var figures = ValuationSummaryFigures.For(lines, entries, SelectedClaim, CertifiedToDate, DepositCreditedToDate);
-        contractSum = figures.ContractSum;
-        netVariations = figures.NetVariations;
-        revisedContractSum = figures.RevisedContractSum;
-        totalWorksComplete = figures.TotalWorksComplete;
-        retentionPercent = figures.RetentionPercent;
-        retentionHeld = figures.RetentionHeld;
-        retentionReleasePercent = figures.RetentionReleasePercent;
-        retentionReleased = figures.RetentionReleased;
-        depositPercent = figures.DepositPercent;
-        depositReceived = figures.DepositReceived;
-        depositReleased = figures.DepositReleased;
-        paymentDueBeforeDeposit = figures.PaymentDueBeforeDepositExVat;
-        certifiedToDate = figures.CertifiedToDate;
-        paymentDueExVat = figures.PaymentDueExVat;
-    }
+    private void Recompute() =>
+        figures = ValuationSummaryFigures.For(lines, entries, SelectedClaim, CertifiedToDate, DepositCreditedToDate);
 
     private record Section(ValuationElementType Type, string Title, List<ValuationLineItem> Lines)
     {
@@ -183,6 +165,4 @@ public partial class ValuationReportTable
 
     private decimal ClaimedFor(ValuationLineItem line) =>
         ValuationCalculations.CumulativeClaimed(PercentFor(line), line.LineAmount);
-
-    private static string SignedPct(decimal v) => (v > 0m ? "+" : "") + v.ToString("0.##", Gb) + "%";
 }

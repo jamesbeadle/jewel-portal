@@ -1,4 +1,6 @@
 @using Jewel.JPMS.Commercial
+@using Jewel.JPMS.Features.Commercial
+@using static Jewel.JPMS.Features.Commercial.ValuationReportDisplay
 @inject IValuationReportStore Store
 @inject ICostCenterStore CostCenters
 @inject IVariationStore Variations
@@ -13,72 +15,21 @@
 }
 else
 {
-    @* Bulk % entry on a Draft claim: every counting line's % becomes an input, one Save
-       records the lot. Built for entering an opening position when joining a project
-       mid-way (200+ lines), but just as useful for a heavy-update month. *@
     @if (CanEditEntries)
     {
-        <div class="flex items-center justify-end gap-2 mb-2 flex-wrap">
-            @if (bulkError is not null)
-            {
-                <span class="text-xs text-negative">@bulkError</span>
-            }
-            @if (!bulkEditing)
-            {
-                <button type="button" @onclick="StartBulkEdit"
-                        title="Edit every line's % complete at once — for opening positions and heavy months"
-                        class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
-                    Bulk edit %
-                </button>
-            }
-            else
-            {
-                <span class="text-xs text-content-subtle">@BulkChangedCount changed — totals update on save</span>
-                <button type="button" @onclick="SaveBulkAsync" disabled="@bulkSaving"
-                        class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
-                    @(bulkSaving ? "Saving…" : "Save all")
-                </button>
-                <button type="button" @onclick="CancelBulkEdit" disabled="@bulkSaving"
-                        class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
-                    Cancel
-                </button>
-            }
-        </div>
+        <BulkPercentToolbar Editing="bulkEditing" Saving="bulkSaving" Error="@bulkError" ChangedCount="BulkChangedCount"
+                            OnStart="StartBulkEdit" OnSave="SaveBulkAsync" OnCancel="CancelBulkEdit" />
     }
     <div class="space-y-3">
         @foreach (var valuationSection in Sections)
         {
             var isOpen = IsExpanded(valuationSection.Type);
             <div class="rounded-xl border border-line bg-surface overflow-hidden">
-                <button type="button" @onclick="@(() => Toggle(valuationSection.Type))" aria-expanded="@isOpen"
-                        class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
-                    <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
-                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M9 6l6 6-6 6" />
-                    </svg>
-                    <span class="font-semibold text-content whitespace-nowrap">@valuationSection.Title</span>
-                    <span class="text-xs text-content-subtle whitespace-nowrap">
-                        @valuationSection.Lines.Count @(valuationSection.Lines.Count == 1 ? "line" : "lines")
-                    </span>
-                    <span class="ml-auto flex items-baseline gap-6 whitespace-nowrap">
-                        @if (SelectedClaim is not null)
-                        {
-                            <span class="text-sm">
-                                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
-                                <span class="text-content-muted">@Money(ClaimedTotalFor(valuationSection)) (@Pct(PercentTotalFor(valuationSection)))</span>
-                            </span>
-                            <span class="text-sm">
-                                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">This period</span>
-                                <span class="text-content-muted">@Money(PeriodTotalFor(valuationSection))</span>
-                            </span>
-                        }
-                        <span class="text-sm">
-                            <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Total</span>
-                            <span class="text-content font-medium">@Money(valuationSection.Amount)</span>
-                        </span>
-                    </span>
-                </button>
+                <ValuationSectionHeader Title="@valuationSection.Title" LineCount="valuationSection.Lines.Count" Amount="valuationSection.Amount"
+                                        IsOpen="isOpen" OnToggle="() => Toggle(valuationSection.Type)"
+                                        ShowClaim="SelectedClaim is not null"
+                                        Claimed="ClaimedTotalFor(valuationSection)" ClaimedPercent="PercentTotalFor(valuationSection)"
+                                        Period="PeriodTotalFor(valuationSection)" />
 
                 @if (isOpen)
                 {
@@ -166,30 +117,13 @@ else
                                                     {
                                                         @if (editingRollUpKey == rollUp.Key)
                                                         {
-                                                            <span class="inline-flex items-center gap-1">
-                                                                <input @ref="editInput" type="text" inputmode="decimal"
-                                                                       value="@editValue"
-                                                                       onfocus="this.select()"
-                                                                       @oninput="@(e => { editValue = e.Value?.ToString() ?? ""; editError = false; })"
-                                                                       @onkeydown="@(e => OnRollUpEditKeyDownAsync(e, rollUp))"
-                                                                       @onblur="@(() => OnRollUpEditBlurAsync(rollUp))"
-                                                                       aria-label="Percent complete for every line in this row"
-                                                                       class="field w-16 text-right px-2 py-1 focus:outline-none focus:ring-2 @(editError ? "ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
-                                                                <button type="button" title="Save (Enter)" aria-label="Save percent complete"
-                                                                        @onmousedown:preventDefault
-                                                                        @onclick="() => CommitRollUpEditAsync(rollUp)"
-                                                                        class="inline-flex items-center justify-center w-6 h-6 rounded-md text-positive hover:bg-surface-raised">
-                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                                                                         stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-                                                                </button>
-                                                                <button type="button" title="Cancel (Esc)" aria-label="Cancel edit"
-                                                                        @onmousedown:preventDefault
-                                                                        @onclick="CancelRollUpEdit"
-                                                                        class="inline-flex items-center justify-center w-6 h-6 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
-                                                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                                                                         stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                                                                </button>
-                                                            </span>
+                                                            <InlineValueEditor Value="@editValue" ValueChanged="value => { editValue = value; editError = false; }"
+                                                                               Error="editError" SelectOnFocus="true" PreventBlur="true"
+                                                                               AriaLabel="Percent complete for every line in this row" SaveLabel="Save percent complete" CancelLabel="Cancel edit"
+                                                                               OnKeyDown="e => OnRollUpEditKeyDownAsync(e, rollUp)"
+                                                                               OnBlur="() => OnRollUpEditBlurAsync(rollUp)"
+                                                                               OnSave="() => CommitRollUpEditAsync(rollUp)"
+                                                                               OnCancel="CancelRollUpEdit" />
                                                         }
                                                         else
                                                         {
@@ -305,26 +239,12 @@ else
                                                         @* Explicit commit only: Enter / tick saves, Esc / cross discards. Deliberately NOT
                                                            the % editor's save-on-blur — re-pricing a VO moves the CVR and committed budget,
                                                            so it only ever happens on a deliberate commit; a click away leaves the editor open. *@
-                                                        <span class="inline-flex items-center gap-1">
-                                                            <input @ref="reviseInput" type="text" inputmode="decimal"
-                                                                   value="@reviseValue" disabled="@reviseSaving"
-                                                                   @oninput="@(e => { reviseValue = e.Value?.ToString() ?? ""; reviseError = false; })"
-                                                                   @onkeydown="@(e => OnVoReviseKeyDownAsync(e, line))"
-                                                                   aria-label="Variation value"
-                                                                   class="field w-28 text-right px-2 py-1 focus:outline-none focus:ring-2 @(reviseError ? "ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
-                                                            <button type="button" title="Save (Enter)" aria-label="Save variation value"
-                                                                    disabled="@reviseSaving" @onclick="() => CommitVoReviseAsync(line)"
-                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-md text-positive hover:bg-surface-raised">
-                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-                                                            </button>
-                                                            <button type="button" title="Cancel (Esc)" aria-label="Cancel revise"
-                                                                    disabled="@reviseSaving" @onclick="CancelVoRevise"
-                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
-                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                                                            </button>
-                                                        </span>
+                                                        <InlineValueEditor Value="@reviseValue" ValueChanged="value => { reviseValue = value; reviseError = false; }"
+                                                                           Error="reviseError" Disabled="reviseSaving" WidthClass="w-28"
+                                                                           AriaLabel="Variation value" SaveLabel="Save variation value" CancelLabel="Cancel revise"
+                                                                           OnKeyDown="e => OnVoReviseKeyDownAsync(e, line)"
+                                                                           OnSave="() => CommitVoReviseAsync(line)"
+                                                                           OnCancel="CancelVoRevise" />
                                                         @if (reviseFailure is not null)
                                                         {
                                                             <div class="text-[11px] text-negative mt-1">@reviseFailure</div>
@@ -377,28 +297,13 @@ else
                                                                 @* Old percentage stays visible while editing so it's clear what's being changed from. *@
                                                                 <span class="text-[11px] text-content-subtle mr-1 whitespace-nowrap">was @Pct(PreviousPercentFor(line))</span>
                                                             }
-                                                            <input @ref="editInput" type="text" inputmode="decimal"
-                                                                   value="@editValue"
-                                                                   onfocus="this.select()"
-                                                                   @oninput="@(e => { editValue = e.Value?.ToString() ?? ""; editError = false; })"
-                                                                   @onkeydown="@(e => OnEditKeyDownAsync(e, line))"
-                                                                   @onblur="@(() => OnEditBlurAsync(line))"
-                                                                   aria-label="Percent complete"
-                                                                   class="field w-16 text-right px-2 py-1 focus:outline-none focus:ring-2 @(editError ? "ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
-                                                            <button type="button" title="Save (Enter)" aria-label="Save percent complete"
-                                                                    @onmousedown:preventDefault
-                                                                    @onclick="() => CommitEditAsync(line)"
-                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-md text-positive hover:bg-surface-raised">
-                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7" /></svg>
-                                                            </button>
-                                                            <button type="button" title="Cancel (Esc)" aria-label="Cancel edit"
-                                                                    @onmousedown:preventDefault
-                                                                    @onclick="CancelEdit"
-                                                                    class="inline-flex items-center justify-center w-6 h-6 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
-                                                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                                                                     stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                                                            </button>
+                                                            <InlineValueEditor Value="@editValue" ValueChanged="value => { editValue = value; editError = false; }"
+                                                                               Error="editError" SelectOnFocus="true" PreventBlur="true"
+                                                                               AriaLabel="Percent complete" SaveLabel="Save percent complete" CancelLabel="Cancel edit"
+                                                                               OnKeyDown="e => OnEditKeyDownAsync(e, line)"
+                                                                               OnBlur="() => OnEditBlurAsync(line)"
+                                                                               OnSave="() => CommitEditAsync(line)"
+                                                                               OnCancel="CancelEdit" />
                                                         </span>
                                                     }
                                                     else
@@ -484,34 +389,7 @@ else
 
 @if (lines.Count > 0)
 {
-    <div class="mt-4 rounded-xl border border-line bg-surface-raised p-5">
-        <h3 class="text-sm font-semibold text-content mb-3">Valuation summary@(SelectedClaim is null ? "" : $" — {SelectedClaim.DisplayName}")</h3>
-        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm max-w-2xl">
-            <SummaryRow Label="Original contract sum" Value="@Money(contractSum)" />
-            <SummaryRow Label="Net variations" Value="@Money(netVariations)" />
-            <SummaryRow Label="Revised contract sum" Value="@Money(revisedContractSum)" Strong="true" />
-            <SummaryRow Label="Total works complete" Value="@Money(totalWorksComplete)" />
-            @if (SelectedClaim is not null)
-            {
-                <SummaryRow Label="Works claimed this period" Value="@Money(PeriodClaimedTotal)" />
-            }
-            <SummaryRow Label=@($"Retention held ({Pct(retentionPercent)})") Value="@Money(retentionHeld)" />
-            <SummaryRow Label=@($"Retention released ({Pct(retentionReleasePercent)})") Value="@Money(retentionReleased)" />
-            @* Cash-up-front deposit — only projects with one show the block, so everyone
-               else's summary keeps its familiar By France shape. Mirrors the workbook:
-               total payable, less the deposit released, equals the amount invoiced. *@
-            @if (depositPercent > 0m || depositReleased != 0m)
-            {
-                <SummaryRow Label=@($"Deposit received ({Pct(depositPercent)})") Value="@Money(depositReceived)" />
-            }
-            <SummaryRow Label="Certified to date" Value="@Money(certifiedToDate)" />
-            @if (depositPercent > 0m || depositReleased != 0m)
-            {
-                <SummaryRow Label="Payment due before deposit (ex VAT)" Value="@Money(paymentDueBeforeDeposit)" />
-                <SummaryRow Label=@($"Less deposit released ({Pct(depositPercent)})") Value="@Money(depositReleased)" />
-            }
-            <SummaryRow Label="Payment due (ex VAT)" Value="@Money(paymentDueExVat)" Strong="true" />
-        </dl>
-    </div>
+    <ValuationSummaryPanel Figures="figures" ClaimName="@SelectedClaim?.DisplayName"
+                           PeriodClaimed="@(SelectedClaim is null ? null : PeriodClaimedTotal)" />
 }
 

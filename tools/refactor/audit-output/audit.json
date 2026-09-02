@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-09-02T07:40:25+00:00",
+  "generatedAt": "2026-09-02T09:16:25+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
       "filesOverLimit": 656,
-      "totalFiles": 3415,
-      "worstFileLines": 517
+      "totalFiles": 3420,
+      "worstFileLines": 509
     },
     "functionShape": {
       "limit": 30,
@@ -20,17 +20,17 @@
     },
     "duplication": {
       "clones": 490,
-      "duplicatedLines": 6214,
-      "totalLines": 216883,
-      "duplicatedPercentage": 2.87
+      "duplicatedLines": 6215,
+      "totalLines": 216954,
+      "duplicatedPercentage": 2.86
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1502
+      "unprefixedBooleans": 1507
     },
     "comments": {
-      "explanatoryCommentLines": 13673,
-      "filesWithComments": 1874,
+      "explanatoryCommentLines": 13693,
+      "filesWithComments": 1878,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -39,14 +39,14 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 2395,
+      "longMemberChainLines": 2394,
       "deeplyIndentedLines": 2800,
-      "overlongLines": 1666,
+      "overlongLines": 1661,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
-      "components": 132,
+      "components": 133,
       "orphanComponents": 6,
       "averagePageLines": 208
     }
@@ -57,14 +57,10 @@
       "summary": {
         "limit": 100,
         "filesOverLimit": 656,
-        "totalFiles": 3415,
-        "worstFileLines": 517
+        "totalFiles": 3420,
+        "worstFileLines": 509
       },
       "offenders": [
-        {
-          "file": "jpms/Components/ValuationReportTable.razor",
-          "lines": 517
-        },
         {
           "file": "api/Features/Commercial/Documents/CostCentreReconciliationRenderer.cs",
           "lines": 509
@@ -166,6 +162,14 @@
           "lines": 395
         },
         {
+          "file": "jpms/Components/ValuationReportTable.razor",
+          "lines": 395
+        },
+        {
+          "file": "api/Data/JpmsContext.Model.cs",
+          "lines": 386
+        },
+        {
           "file": "api/Features/Procurement/Commands/ExtractTenderFromMessageHandler.cs",
           "lines": 381
         },
@@ -192,10 +196,6 @@
         {
           "file": "api/Features/Xero/XeroClient.Reads.cs",
           "lines": 372
-        },
-        {
-          "file": "api/Data/JpmsContext.Model.cs",
-          "lines": 370
         },
         {
           "file": "api/Features/MailboxIntake/Graph/MailboxGraphClient.Drafts.cs",
@@ -838,6 +838,10 @@
           "lines": 225
         },
         {
+          "file": "jpms/Components/ClaimProgressDialog.razor",
+          "lines": 224
+        },
+        {
           "file": "jpms/Features/Commercial/CommercialRouteRegistration.cs",
           "lines": 223
         },
@@ -895,10 +899,6 @@
         },
         {
           "file": "contracts/Models/BuildingControl.cs",
-          "lines": 219
-        },
-        {
-          "file": "jpms/Components/ClaimProgressDialog.razor",
           "lines": 219
         },
         {
@@ -1178,10 +1178,6 @@
           "lines": 188
         },
         {
-          "file": "jpms/Components/ValuationReportTable.razor.cs",
-          "lines": 188
-        },
-        {
           "file": "jpms/Features/Procurement/InvitedSubcontractorsSection.razor",
           "lines": 188
         },
@@ -1298,10 +1294,6 @@
           "lines": 175
         },
         {
-          "file": "jpms/Components/ValuationReportTable.VariationEdits.cs",
-          "lines": 175
-        },
-        {
           "file": "jpms/Pages/ProfitSummary.Figures.cs",
           "lines": 175
         },
@@ -1378,6 +1370,10 @@
           "lines": 169
         },
         {
+          "file": "jpms/Components/ValuationReportTable.VariationEdits.cs",
+          "lines": 169
+        },
+        {
           "file": "jpms/Pages/SubcontractorCommunications.razor.cs",
           "lines": 169
         },
@@ -1387,6 +1383,10 @@
         },
         {
           "file": "api/Features/MailboxIntake/Sharing/AzureBlobEmailFileShareStore.cs",
+          "lines": 168
+        },
+        {
+          "file": "jpms/Components/ValuationReportTable.razor.cs",
           "lines": 168
         },
         {
@@ -1423,10 +1423,6 @@
         },
         {
           "file": "jpms/Components/ProjectContractTermsDialog.razor.cs",
-          "lines": 165
-        },
-        {
-          "file": "jpms/Components/ValuationReportTable.PercentEditing.cs",
           "lines": 165
         },
         {
@@ -1655,6 +1651,10 @@
         },
         {
           "file": "contracts/Ai/ModalCatalog.Mail.cs",
+          "lines": 149
+        },
+        {
+          "file": "jpms/Components/ValuationReportTable.PercentEditing.cs",
           "lines": 149
         },
         {
@@ -1986,6 +1986,10 @@
           "lines": 129
         },
         {
+          "file": "jpms/Pages/LabourOverview.razor.cs",
+          "lines": 129
+        },
+        {
           "file": "jpms/Features/Variations/StagedBuildUpPanel.razor",
           "lines": 129
         },
@@ -2003,10 +2007,6 @@
         },
         {
           "file": "contracts/Commercial/ValuationSummaryFigures.cs",
-          "lines": 127
-        },
-        {
-          "file": "jpms/Pages/LabourOverview.razor.cs",
           "lines": 127
         },
         {
@@ -2226,10 +2226,6 @@
           "lines": 116
         },
         {
-          "file": "jpms/Components/ValuationReportTable.BulkPercent.cs",
-          "lines": 116
-        },
-        {
           "file": "jpms/Services/CurrentProjectService.cs",
           "lines": 116
         },
@@ -2271,6 +2267,10 @@
         },
         {
           "file": "api/Features/MailboxIntake/Graph/TriageCategories.cs",
+          "lines": 115
+        },
+        {
+          "file": "jpms/Components/ValuationReportTable.BulkPercent.cs",
           "lines": 115
         },
         {
@@ -2717,12 +2717,12 @@
           "lines": 372
         },
         {
-          "file": "api/Features/Ai/Tools/AiRegisterTools.cs",
+          "file": "api/Data/JpmsContext.Model.cs",
           "lines": 365
         },
         {
-          "file": "api/Data/JpmsContext.Model.cs",
-          "lines": 350
+          "file": "api/Features/Ai/Tools/AiRegisterTools.cs",
+          "lines": 365
         },
         {
           "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs",
@@ -3023,7 +3023,7 @@
         },
         {
           "file": "jpms/Components/ValuationReportTable.VariationEdits.cs",
-          "line": 51,
+          "line": 49,
           "name": "OnVoReviseKeyDownAsync"
         },
         {
@@ -3127,7 +3127,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1502
+        "unprefixedBooleans": 1507
       },
       "offenders": {
         "abbreviations": [
@@ -3589,8 +3589,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13673,
-        "filesWithComments": 1874,
+        "explanatoryCommentLines": 13693,
+        "filesWithComments": 1878,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4171,7 +4171,7 @@
         "repeatedLiterals": [
           {
             "literal": "button",
-            "occurrences": 767
+            "occurrences": 763
           },
           {
             "literal": "string",
@@ -4295,9 +4295,9 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 2395,
+        "longMemberChainLines": 2394,
         "deeplyIndentedLines": 2800,
-        "overlongLines": 1666,
+        "overlongLines": 1661,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4913,7 +4913,7 @@
       "name": "inventory",
       "summary": {
         "pages": 92,
-        "components": 132,
+        "components": 133,
         "orphanComponents": 6,
         "averagePageLines": 208
       },
@@ -5991,6 +5991,10 @@
             "reusedBy": 1
           },
           {
+            "component": "jpms/Components/InlineValueEditor.razor",
+            "reusedBy": 1
+          },
+          {
             "component": "jpms/Components/InviteUserForm.razor",
             "reusedBy": 1
           },
@@ -6225,9 +6229,9 @@
       "name": "duplication",
       "summary": {
         "clones": 490,
-        "duplicatedLines": 6214,
-        "totalLines": 216883,
-        "duplicatedPercentage": 2.87
+        "duplicatedLines": 6215,
+        "totalLines": 216954,
+        "duplicatedPercentage": 2.86
       },
       "offenders": [
         {

@@ -1,4 +1,5 @@
 using Jewel.JPMS.Commercial;
+using static Jewel.JPMS.Features.Commercial.ValuationReportDisplay;
 
 namespace Jewel.JPMS.Components;
 
@@ -19,8 +20,6 @@ public partial class ValuationReportTable
     private bool reviseError;         // parse failure on the typed value
     private string? reviseFailure;    // API failure on save
     private bool reviseSaving;
-    private bool reviseFocusPending;
-    private ElementReference reviseInput;
 
     // Only an approved variation carries live figures, so only its line is revisable; a line whose
     // ref matches no approved VO (e.g. a declined placeholder) stays locked.
@@ -38,7 +37,6 @@ public partial class ValuationReportTable
         reviseValue = vo.Value.ToString("0.##", Gb);
         reviseError = false;
         reviseFailure = null;
-        reviseFocusPending = true;
     }
 
     private void CancelVoRevise()
@@ -168,13 +166,4 @@ public partial class ValuationReportTable
         var centre = CostCenters.All().FirstOrDefault(c => string.Equals(c.Code, code, StringComparison.OrdinalIgnoreCase));
         return centre is null ? code : $"{code} — {centre.Name}";
     }
-
-    private static string Num(decimal v) => v.ToString("0.##", Gb);
-    private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
-    // Signed for the "what changed" delta: "+20%", "-5%" (negatives already carry their sign).
-    // (SignedPct lives in ValuationReportTable.razor.cs.)
-    // The value an editor is seeded with: every decimal place that is stored, trailing zeros
-    // trimmed. Seeding with the 2dp display figure was what silently rounded a 33.3333% line to
-    // 33.33% the moment anyone clicked away from its editor.
-    private static string PercentText(decimal v) => v.ToString("0.############################", Gb);
 }

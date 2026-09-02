@@ -1,0 +1,43 @@
+@namespace Jewel.JPMS.Features.Commercial
+
+@* Bulk % entry on a Draft claim: every counting line's % becomes an input, one Save records
+   the lot. Built for entering an opening position when joining a project mid-way (200+ lines),
+   but just as useful for a heavy-update month. The table owns the values and the save; this is
+   the bar that starts, saves and cancels it. *@
+<div class="flex items-center justify-end gap-2 mb-2 flex-wrap">
+    @if (Error is not null)
+    {
+        <span class="text-xs text-negative">@Error</span>
+    }
+    @if (!Editing)
+    {
+        <button type="button" @onclick="OnStart"
+                title="Edit every line's % complete at once — for opening positions and heavy months"
+                class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
+            Bulk edit %
+        </button>
+    }
+    else
+    {
+        <span class="text-xs text-content-subtle">@ChangedCount changed — totals update on save</span>
+        <button type="button" @onclick="OnSave" disabled="@Saving"
+                class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover disabled:bg-surface-field transition">
+            @(Saving ? "Saving…" : "Save all")
+        </button>
+        <button type="button" @onclick="OnCancel" disabled="@Saving"
+                class="rounded-lg border border-line bg-surface text-content-muted font-medium text-sm px-3 py-2 hover:border-line-strong transition">
+            Cancel
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public bool Editing { get; set; }
+    [Parameter] public bool Saving { get; set; }
+    [Parameter] public string? Error { get; set; }
+    /// <summary>How many lines differ from what the claim holds — the promise beside Save all.</summary>
+    [Parameter] public int ChangedCount { get; set; }
+    [Parameter] public EventCallback OnStart { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+}

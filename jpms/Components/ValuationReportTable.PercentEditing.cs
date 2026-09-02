@@ -1,4 +1,5 @@
 using Jewel.JPMS.Commercial;
+using static Jewel.JPMS.Features.Commercial.ValuationReportDisplay;
 
 namespace Jewel.JPMS.Components;
 
@@ -17,8 +18,6 @@ public partial class ValuationReportTable
     private string editValue = "";
     private bool editError;
     private bool editSaving;
-    private bool focusPending;
-    private ElementReference editInput;
 
     private void StartEdit(ValuationLineItem line)
     {
@@ -27,7 +26,6 @@ public partial class ValuationReportTable
         editingLineId = line.ValuationLineItemId;
         editValue = PercentText(PercentFor(line));
         editError = false;
-        focusPending = true;
     }
 
     private void CancelEdit()
@@ -140,20 +138,6 @@ public partial class ValuationReportTable
         var next = ordered[index + 1];
         expanded.Add(next.ElementType);
         StartEdit(next);
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (focusPending && (editingLineId is not null || editingRollUpKey is not null))
-        {
-            focusPending = false;
-            await editInput.FocusAsync();
-        }
-        if (reviseFocusPending && revisingVoLineId is not null)
-        {
-            reviseFocusPending = false;
-            await reviseInput.FocusAsync();
-        }
     }
 
     private async Task RemoveLineAsync(ValuationLineItem line)

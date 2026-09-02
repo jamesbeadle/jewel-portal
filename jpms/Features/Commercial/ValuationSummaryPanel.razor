@@ -1,0 +1,46 @@
+@namespace Jewel.JPMS.Features.Commercial
+@using Jewel.JPMS.Commercial
+@using static Jewel.JPMS.Features.Commercial.ValuationReportDisplay
+
+@* The valuation summary under the bill: the contract sums, works complete, retention, the
+   deposit block for projects that carry one, and the payment due — the same figures the
+   Cashflow tab reads (ValuationSummaryFigures), so the two can never drift. *@
+<div class="mt-4 rounded-xl border border-line bg-surface-raised p-5">
+    <h3 class="text-sm font-semibold text-content mb-3">Valuation summary@(ClaimName is null ? "" : $" — {ClaimName}")</h3>
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm max-w-2xl">
+        <SummaryRow Label="Original contract sum" Value="@Money(Figures.ContractSum)" />
+        <SummaryRow Label="Net variations" Value="@Money(Figures.NetVariations)" />
+        <SummaryRow Label="Revised contract sum" Value="@Money(Figures.RevisedContractSum)" Strong="true" />
+        <SummaryRow Label="Total works complete" Value="@Money(Figures.TotalWorksComplete)" />
+        @if (PeriodClaimed is decimal periodClaimed)
+        {
+            <SummaryRow Label="Works claimed this period" Value="@Money(periodClaimed)" />
+        }
+        <SummaryRow Label=@($"Retention held ({Pct(Figures.RetentionPercent)})") Value="@Money(Figures.RetentionHeld)" />
+        <SummaryRow Label=@($"Retention released ({Pct(Figures.RetentionReleasePercent)})") Value="@Money(Figures.RetentionReleased)" />
+        @* Cash-up-front deposit — only projects with one show the block, so everyone
+           else's summary keeps its familiar By France shape. Mirrors the workbook:
+           total payable, less the deposit released, equals the amount invoiced. *@
+        @if (HasDeposit)
+        {
+            <SummaryRow Label=@($"Deposit received ({Pct(Figures.DepositPercent)})") Value="@Money(Figures.DepositReceived)" />
+        }
+        <SummaryRow Label="Certified to date" Value="@Money(Figures.CertifiedToDate)" />
+        @if (HasDeposit)
+        {
+            <SummaryRow Label="Payment due before deposit (ex VAT)" Value="@Money(Figures.PaymentDueBeforeDepositExVat)" />
+            <SummaryRow Label=@($"Less deposit released ({Pct(Figures.DepositPercent)})") Value="@Money(Figures.DepositReleased)" />
+        }
+        <SummaryRow Label="Payment due (ex VAT)" Value="@Money(Figures.PaymentDueExVat)" Strong="true" />
+    </dl>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ValuationSummaryFigures Figures { get; set; } = default!;
+    /// <summary>The selected claim's name for the heading — null when no claim is selected.</summary>
+    [Parameter] public string? ClaimName { get; set; }
+    /// <summary>Works claimed this period — shown only while a claim is selected.</summary>
+    [Parameter] public decimal? PeriodClaimed { get; set; }
+
+    private bool HasDeposit => Figures.DepositPercent > 0m || Figures.DepositReleased != 0m;
+}

@@ -1,0 +1,59 @@
+@*
+    One value edited in place: the input with the tick and cross beside it. Enter and the tick
+    save, Esc and the cross discard, and the host decides what a blur does. The editor exists
+    only while its cell is being edited, so appearing IS the moment to take the keyboard: it
+    focuses itself on first render and, with SelectOnFocus, selects the value ready to overtype.
+    With PreventBlur the buttons swallow their mousedown so the input doesn't blur before the
+    click lands — the cross stays an explicit discard.
+*@
+
+<span class="inline-flex items-center gap-1">
+    <input @ref="input" type="text" inputmode="decimal"
+           value="@Value" disabled="@Disabled"
+           onfocus="@(SelectOnFocus ? "this.select()" : null)"
+           @oninput="args => ValueChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty)"
+           @onkeydown="OnKeyDown"
+           @onblur="OnBlur"
+           aria-label="@AriaLabel"
+           class="field @WidthClass text-right px-2 py-1 focus:outline-none focus:ring-2 @(Error ? "ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
+    <button type="button" title="Save (Enter)" aria-label="@SaveLabel" disabled="@Disabled"
+            @onmousedown:preventDefault="PreventBlur"
+            @onclick="OnSave"
+            class="inline-flex items-center justify-center w-6 h-6 rounded-md text-positive hover:bg-surface-raised">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7" /></svg>
+    </button>
+    <button type="button" title="Cancel (Esc)" aria-label="@CancelLabel" disabled="@Disabled"
+            @onmousedown:preventDefault="PreventBlur"
+            @onclick="OnCancel"
+            class="inline-flex items-center justify-center w-6 h-6 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+    </button>
+</span>
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    /// <summary>The typed value didn't parse or didn't save — the ring turns red until it changes.</summary>
+    [Parameter] public bool Error { get; set; }
+    /// <summary>A save is in flight — the input and both buttons stand down.</summary>
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool SelectOnFocus { get; set; }
+    [Parameter] public bool PreventBlur { get; set; }
+    [Parameter] public string WidthClass { get; set; } = "w-16";
+    [Parameter] public string AriaLabel { get; set; } = "";
+    [Parameter] public string SaveLabel { get; set; } = "Save";
+    [Parameter] public string CancelLabel { get; set; } = "Cancel";
+    [Parameter] public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
+    [Parameter] public EventCallback OnBlur { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private ElementReference input;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await input.FocusAsync();
+    }
+}
