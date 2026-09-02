@@ -1,4 +1,5 @@
 using Jewel.JPMS.Api.Data.Entities;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jewel.JPMS.Api.Data;
 
