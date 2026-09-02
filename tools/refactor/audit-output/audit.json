@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-02T09:39:06+00:00",
+  "generatedAt": "2026-09-02T09:43:38+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
       "filesOverLimit": 657,
-      "totalFiles": 3429,
-      "worstFileLines": 492
+      "totalFiles": 3434,
+      "worstFileLines": 488
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 694,
+      "functionsOverLimit": 698,
       "elseBlocks": 1169,
       "measurementIsHeuristic": true
     },
@@ -21,7 +21,7 @@
     "duplication": {
       "clones": 487,
       "duplicatedLines": 6073,
-      "totalLines": 216934,
+      "totalLines": 216976,
       "duplicatedPercentage": 2.8
     },
     "naming": {
@@ -29,8 +29,8 @@
       "unprefixedBooleans": 1507
     },
     "comments": {
-      "explanatoryCommentLines": 13684,
-      "filesWithComments": 1883,
+      "explanatoryCommentLines": 13680,
+      "filesWithComments": 1884,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -57,14 +57,10 @@
       "summary": {
         "limit": 100,
         "filesOverLimit": 657,
-        "totalFiles": 3429,
-        "worstFileLines": 492
+        "totalFiles": 3434,
+        "worstFileLines": 488
       },
       "offenders": [
-        {
-          "file": "api/Features/Ai/Tools/Actions/RequestsActions.cs",
-          "lines": 492
-        },
         {
           "file": "jpms/Pages/XeroAllocation.razor",
           "lines": 488
@@ -1240,6 +1236,10 @@
         {
           "file": "jpms/Pages/TenderEnquiryDetail.razor",
           "lines": 182
+        },
+        {
+          "file": "api/Features/Ai/Tools/Actions/RequestsActions.Requests.cs",
+          "lines": 181
         },
         {
           "file": "api/Features/Ai/Tools/Actions/WeeklyCashflowAndInventoryActions.cs",
@@ -2695,15 +2695,11 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 694,
+        "functionsOverLimit": 698,
         "elseBlocks": 1169,
         "measurementIsHeuristic": true
       },
       "offenders": [
-        {
-          "file": "api/Features/Ai/Tools/Actions/RequestsActions.cs",
-          "lines": 456
-        },
         {
           "file": "api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.Labour.cs",
           "lines": 421
@@ -2847,6 +2843,10 @@
         {
           "file": "api/Features/Variations/Commands/ReviseVariationOrderLinesHandler.cs",
           "lines": 175
+        },
+        {
+          "file": "api/Features/Ai/Tools/Actions/RequestsActions.Requests.cs",
+          "lines": 172
         },
         {
           "file": "api/Features/Ai/Tools/AiValuationInvoiceTools.cs",
@@ -3148,12 +3148,12 @@
             "line": 354
           },
           {
-            "file": "api/Features/Ai/Tools/Actions/RequestsActions.cs",
-            "line": 59
+            "file": "api/Features/Ai/Tools/Actions/RequestsActions.Requests.cs",
+            "line": 46
           },
           {
-            "file": "api/Features/Ai/Tools/Actions/RequestsActions.cs",
-            "line": 474
+            "file": "api/Features/Ai/Tools/Actions/RequestsActions.Triage.cs",
+            "line": 67
           },
           {
             "file": "api/Features/Ai/Tools/Actions/VariationsAndValuationsActions.Variations.cs",
@@ -3593,8 +3593,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13684,
-        "filesWithComments": 1883,
+        "explanatoryCommentLines": 13680,
+        "filesWithComments": 1884,
         "taskMarkers": 48
       },
       "offenders": [
@@ -6234,7 +6234,7 @@
       "summary": {
         "clones": 487,
         "duplicatedLines": 6073,
-        "totalLines": 216934,
+        "totalLines": 216976,
         "duplicatedPercentage": 2.8
       },
       "offenders": [
