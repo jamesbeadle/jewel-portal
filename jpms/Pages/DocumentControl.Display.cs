@@ -4,8 +4,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class DocumentControl
 {
-    // ---- Display helpers ----
-
     private string? DestinationHref(DocumentControlItem item) => item.FiledAs switch
     {
         DocumentFiledAs.Drawing when item.FiledRecordId is not null =>
@@ -24,22 +22,6 @@ public partial class DocumentControl
     private string? ProjectNameFor(string? projectId) =>
         string.IsNullOrWhiteSpace(projectId) ? null : ProjectList.Find(projectId)?.Name;
 
-    private static string DisplaySender(DocumentControlItem item) =>
-        !string.IsNullOrWhiteSpace(item.FromName) ? item.FromName
-        : !string.IsNullOrWhiteSpace(item.FromEmail) ? item.FromEmail
-        : "Unknown sender";
-
-    private static bool IsPdf(DocumentControlItem item) =>
-        (item.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase)
-        || item.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsImage(DocumentControlItem item) =>
-        (item.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-
-    private static bool IsZip(DocumentControlItem item) =>
-        item.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
-        || (item.ContentType ?? "").Contains("zip", StringComparison.OrdinalIgnoreCase);
-
     private string ViewTabClass(DocView tab) =>
         "px-3 py-2 text-sm border-b-2 -mb-px transition "
         + (view == tab
@@ -51,19 +33,6 @@ public partial class DocumentControl
         + (destination == tab
             ? "bg-accent text-accent-ink font-medium"
             : "text-content-muted hover:bg-surface-raised");
-
-
-    private static string Date(DateTimeOffset value) => value.LocalDateTime.ToString("d MMM yyyy, HH:mm");
-
-    private static string ListDate(DateTimeOffset value)
-    {
-        var local = value.LocalDateTime;
-        var today = DateTime.Today;
-        if (local.Date == today) return local.ToString("HH:mm");
-        if (local.Date == today.AddDays(-1)) return $"Yesterday {local:HH:mm}";
-        if (local.Date > today.AddDays(-6)) return local.ToString("ddd HH:mm");
-        return local.ToString("d MMM yyyy");
-    }
 
     public void Dispose()
     {

@@ -1,0 +1,35 @@
+@namespace Jewel.JPMS.Features.DocumentControl
+@using static Jewel.JPMS.Features.DocumentControl.DocumentControlDisplay
+
+<button type="button" @onclick="() => OnSelect.InvokeAsync()"
+        class="w-full text-left rounded-lg border px-3 py-2.5 transition @(IsOpen ? "border-accent bg-accent/5" : "border-line bg-surface hover:bg-surface-raised")">
+    <div class="flex items-baseline justify-between gap-3">
+        <span class="text-sm font-medium text-content truncate">@Item.FileName</span>
+        <span class="text-xs text-content-subtle shrink-0">@ListDate(Item.ReceivedAt)</span>
+    </div>
+    <p class="text-xs text-content-subtle truncate mt-0.5">
+        @DisplaySender(Item)@(string.IsNullOrWhiteSpace(Item.Subject) ? "" : $" — {Item.Subject}")
+    </p>
+    <div class="flex flex-wrap items-center gap-1.5 mt-1">
+        @if (Item.FileSizeBytes > 0)
+        {
+            <span class="text-[10px] text-content-subtle">@FormatSize(Item.FileSizeBytes)</span>
+        }
+        @if (ProjectHint is not null)
+        {
+            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@ProjectHint</span>
+        }
+        @if (Item.Status == DocumentControlStatus.Filed)
+        {
+            <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-medium px-2 py-0.5">@Item.FiledLabel</span>
+        }
+    </div>
+</button>
+
+@code {
+    [Parameter, EditorRequired] public DocumentControlItem Item { get; set; } = default!;
+    [Parameter] public bool IsOpen { get; set; }
+    /// <summary>The name of the project the sender's email hinted at, when the master knows it.</summary>
+    [Parameter] public string? ProjectHint { get; set; }
+    [Parameter] public EventCallback OnSelect { get; set; }
+}

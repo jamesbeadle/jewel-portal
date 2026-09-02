@@ -1,6 +1,8 @@
 @page "/document-triage"
 @* The old route stays routable so pre-rename bookmarks still land. *@
 @page "/document-control"
+@using Jewel.JPMS.Features.DocumentControl
+@using static Jewel.JPMS.Features.DocumentControl.DocumentControlDisplay
 @inject AuthService Auth
 @inject SessionService Session
 @inject NavigationManager Nav
@@ -79,32 +81,10 @@
                         <div class="space-y-1.5">
                             @foreach (var item in VisibleItems)
                             {
-                                var isOpen = item.DocumentControlItemId == selectedId;
-                                <button type="button" @key="item.DocumentControlItemId"
-                                        @onclick="() => Select(item.DocumentControlItemId)"
-                                        class="w-full text-left rounded-lg border px-3 py-2.5 transition @(isOpen ? "border-accent bg-accent/5" : "border-line bg-surface hover:bg-surface-raised")">
-                                    <div class="flex items-baseline justify-between gap-3">
-                                        <span class="text-sm font-medium text-content truncate">@item.FileName</span>
-                                        <span class="text-xs text-content-subtle shrink-0">@ListDate(item.ReceivedAt)</span>
-                                    </div>
-                                    <p class="text-xs text-content-subtle truncate mt-0.5">
-                                        @DisplaySender(item)@(string.IsNullOrWhiteSpace(item.Subject) ? "" : $" — {item.Subject}")
-                                    </p>
-                                    <div class="flex flex-wrap items-center gap-1.5 mt-1">
-                                        @if (item.FileSizeBytes > 0)
-                                        {
-                                            <span class="text-[10px] text-content-subtle">@FormatSize(item.FileSizeBytes)</span>
-                                        }
-                                        @if (ProjectNameFor(item.ProjectIdHint) is { } hintName)
-                                        {
-                                            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@hintName</span>
-                                        }
-                                        @if (item.Status == DocumentControlStatus.Filed)
-                                        {
-                                            <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-medium px-2 py-0.5">@item.FiledLabel</span>
-                                        }
-                                    </div>
-                                </button>
+                                <DocumentListItem @key="item.DocumentControlItemId" Item="item"
+                                                  IsOpen="@(item.DocumentControlItemId == selectedId)"
+                                                  ProjectHint="@ProjectNameFor(item.ProjectIdHint)"
+                                                  OnSelect="() => Select(item.DocumentControlItemId)" />
                             }
                         </div>
                     }
@@ -148,104 +128,14 @@
                             <p class="rounded-lg bg-positive/10 border border-positive/30 px-3 py-2 text-sm text-content">@fileNote</p>
                         }
 
-                        @if (item.Status == DocumentControlStatus.Filed)
-                        {
-                            <div class="rounded-lg border border-positive/30 bg-positive/5 p-3 space-y-1">
-                                <p class="text-[11px] uppercase tracking-wider text-positive font-semibold">Filed</p>
-                                <p class="text-sm text-content">
-                                    @item.FiledLabel — by @item.ResolvedBy, @(item.ResolvedAt is { } filedAt ? Date(filedAt) : "")
-                                </p>
-                                @if (DestinationHref(item) is { } destination)
-                                {
-                                    <a class="text-xs text-accent hover:underline underline-offset-2" href="@destination">Open the destination record</a>
-                                }
-                            </div>
-                        }
-                        else if (item.Status == DocumentControlStatus.Discarded)
-                        {
-                            <div class="rounded-lg border border-line bg-surface-raised p-3 space-y-2">
-                                <p class="text-sm text-content-muted">
-                                    Discarded by @item.ResolvedBy, @(item.ResolvedAt is { } discardedAt ? Date(discardedAt) : "") —
-                                    the file and its email context are kept. Restore it to file it after all.
-                                </p>
-                                <button type="button" class="btn-primary" disabled="@busy" @onclick="DoRestore">Restore to queue</button>
-                            </div>
-                        }
+                        <DocumentOutcomeCard Item="item" DestinationHref="@DestinationHref(item)" Busy="busy" OnRestore="DoRestore" />
 
-                        @* ---- Preview: same previewable set as the Control Centre — PDFs and
-                              images; Excel and everything else are Download-only. ---- *@
-                        @if (IsPdf(item))
-                        {
-                            <PdfViewer FileUrl="@Store.FileUrl(item.DocumentControlItemId, inline: true)"
-                                       DownloadUrl="@Store.FileUrl(item.DocumentControlItemId)"
-                                       Caption="@item.FileName" HeightClass="h-[50vh]" />
-                        }
-                        else if (IsImage(item))
-                        {
-                            <div class="rounded-xl border border-line bg-surface overflow-hidden">
-                                <img src="@Store.FileUrl(item.DocumentControlItemId, inline: true)" alt="@item.FileName"
-                                     class="max-h-[50vh] w-auto mx-auto" />
-                            </div>
-                        }
-                        else if (IsZip(item) && item.Status == DocumentControlStatus.Pending)
-                        {
-                            <div class="rounded-xl border border-line bg-surface-raised p-4 space-y-2">
-                                <p class="text-sm text-content">
-                                    This is a zip archive. Extract it to split its contents into separate
-                                    queue items — each file can then be previewed and filed on its own.
-                                </p>
-                                <button type="button" class="btn-primary" disabled="@busy" @onclick="DoExtractArchive">
-                                    @(busy ? "Extracting…" : "Extract archive")
-                                </button>
-                            </div>
-                        }
-                        else
-                        {
-                            <p class="text-xs text-content-subtle italic">
-                                No inline preview for this file type — use Download to open it.
-                            </p>
-                        }
+                        <DocumentPreview Item="item" InlineUrl="@Store.FileUrl(item.DocumentControlItemId, inline: true)"
+                                         DownloadUrl="@Store.FileUrl(item.DocumentControlItemId)"
+                                         Busy="busy" OnExtractArchive="DoExtractArchive" />
 
-                        @* ---- The source email, for context. Read live from the mailbox while the
-                              message exists; the snapshot taken at send time is the fallback, so
-                              the context never goes blank. ---- *@
-                        <div class="rounded-lg bg-surface-raised border border-line p-3 space-y-2">
-                            <div class="flex items-center justify-between gap-3">
-                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Source email</p>
-                                <button type="button" class="text-xs text-accent hover:underline"
-                                        @onclick="ToggleSourceEmail">@(sourceEmailOpen ? "Hide" : "Show")</button>
-                            </div>
-                            <p class="text-sm text-content">
-                                <span class="font-medium">@DisplaySender(item)</span>
-                                <span class="text-content-subtle"> — @Date(item.ReceivedAt)</span>
-                            </p>
-                            @if (!string.IsNullOrWhiteSpace(item.Subject))
-                            {
-                                <p class="text-sm text-content">@item.Subject</p>
-                            }
-                            @if (sourceEmailOpen)
-                            {
-                                @if (sourceEmailLoading)
-                                {
-                                    <p class="text-sm text-content-subtle italic">Loading message…</p>
-                                }
-                                else if (sourceEmail is { } detail && !string.IsNullOrWhiteSpace(detail.BodyHtml) && detail.BodyIsHtml)
-                                {
-                                    <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto max-h-[24rem] overflow-y-auto">@((MarkupString)detail.BodyHtml)</div>
-                                }
-                                else if (sourceEmail is { } plain && !string.IsNullOrWhiteSpace(plain.BodyHtml))
-                                {
-                                    <p class="text-sm text-content whitespace-pre-wrap max-h-[24rem] overflow-y-auto">@plain.BodyHtml</p>
-                                }
-                                else
-                                {
-                                    <p class="text-sm text-content-subtle italic">
-                                        The email couldn't be read from the mailbox (it may have been moved or deleted) —
-                                        the sender, date and subject above were captured when the document was sent here.
-                                    </p>
-                                }
-                            }
-                        </div>
+                        <SourceEmailCard Item="item" Open="sourceEmailOpen" Loading="sourceEmailLoading" Email="sourceEmail"
+                                         OnToggle="ToggleSourceEmail" />
 
                         @* ---- Filing: pending documents only — one destination, its own fields. ---- *@
                         @if (item.Status == DocumentControlStatus.Pending)

@@ -2,8 +2,6 @@ namespace Jewel.JPMS.Components;
 
 public partial class ValuationInvoicesSection
 {
-    // The row's Actions menu: the stage's own moves first, then amending/withdrawing, then the
-    // record (history, delete). Same gates and hover text as the old inline links, one list.
     private List<DropdownMenu.Item> InvoiceMenuItems(ValuationInvoice invoice) =>
         LifecycleItems(invoice).Concat(AmendItems(invoice)).Concat(RecordItems(invoice)).ToList();
 

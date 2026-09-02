@@ -1,6 +1,5 @@
 namespace Jewel.JPMS.Components;
 
-// Field plumbing: every edit raises OnChanged, which keeps the modal's packaging totals live.
 public partial class WorkOrderForm
 {
     private IEnumerable<Subcontractor> SortedSubcontractors =>
@@ -45,7 +44,6 @@ public partial class WorkOrderForm
     private void SetLineUnitCost(LineRow line, string? value) { line.UnitCostText = value ?? ""; RecalculateAmount(line); _ = OnChanged.InvokeAsync(); }
     private void SetDepositPercent(string? value) { depositPercentText = value ?? ""; _ = OnChanged.InvokeAsync(); }
 
-    // Cost-centre picker options: typed-to-find, cached against the master list.
     private IReadOnlyList<SearchSelect.Option>? costCentreOptionsCache;
     private object? costCentreOptionsCacheKey;
 

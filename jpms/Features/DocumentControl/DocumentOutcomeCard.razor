@@ -1,0 +1,34 @@
+@namespace Jewel.JPMS.Features.DocumentControl
+@using static Jewel.JPMS.Features.DocumentControl.DocumentControlDisplay
+
+@if (Item.Status == DocumentControlStatus.Filed)
+{
+    <div class="rounded-lg border border-positive/30 bg-positive/5 p-3 space-y-1">
+        <p class="text-[11px] uppercase tracking-wider text-positive font-semibold">Filed</p>
+        <p class="text-sm text-content">
+            @Item.FiledLabel — by @Item.ResolvedBy, @(Item.ResolvedAt is { } filedAt ? Date(filedAt) : "")
+        </p>
+        @if (DestinationHref is not null)
+        {
+            <a class="text-xs text-accent hover:underline underline-offset-2" href="@DestinationHref">Open the destination record</a>
+        }
+    </div>
+}
+else if (Item.Status == DocumentControlStatus.Discarded)
+{
+    <div class="rounded-lg border border-line bg-surface-raised p-3 space-y-2">
+        <p class="text-sm text-content-muted">
+            Discarded by @Item.ResolvedBy, @(Item.ResolvedAt is { } discardedAt ? Date(discardedAt) : "") —
+            the file and its email context are kept. Restore it to file it after all.
+        </p>
+        <button type="button" class="btn-primary" disabled="@Busy" @onclick="() => OnRestore.InvokeAsync()">Restore to queue</button>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public DocumentControlItem Item { get; set; } = default!;
+    /// <summary>The filed record's page, when the destination has one.</summary>
+    [Parameter] public string? DestinationHref { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnRestore { get; set; }
+}

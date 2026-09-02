@@ -1,0 +1,41 @@
+@namespace Jewel.JPMS.Features.DocumentControl
+@using static Jewel.JPMS.Features.DocumentControl.DocumentControlDisplay
+
+@* Same previewable set as the Control Centre — PDFs and images; a pending zip offers
+   extraction; Excel and everything else are Download-only. *@
+@if (IsPdf(Item))
+{
+    <PdfViewer FileUrl="@InlineUrl" DownloadUrl="@DownloadUrl" Caption="@Item.FileName" HeightClass="h-[50vh]" />
+}
+else if (IsImage(Item))
+{
+    <div class="rounded-xl border border-line bg-surface overflow-hidden">
+        <img src="@InlineUrl" alt="@Item.FileName" class="max-h-[50vh] w-auto mx-auto" />
+    </div>
+}
+else if (IsZip(Item) && Item.Status == DocumentControlStatus.Pending)
+{
+    <div class="rounded-xl border border-line bg-surface-raised p-4 space-y-2">
+        <p class="text-sm text-content">
+            This is a zip archive. Extract it to split its contents into separate
+            queue items — each file can then be previewed and filed on its own.
+        </p>
+        <button type="button" class="btn-primary" disabled="@Busy" @onclick="() => OnExtractArchive.InvokeAsync()">
+            @(Busy ? "Extracting…" : "Extract archive")
+        </button>
+    </div>
+}
+else
+{
+    <p class="text-xs text-content-subtle italic">
+        No inline preview for this file type — use Download to open it.
+    </p>
+}
+
+@code {
+    [Parameter, EditorRequired] public DocumentControlItem Item { get; set; } = default!;
+    [Parameter] public string InlineUrl { get; set; } = "";
+    [Parameter] public string DownloadUrl { get; set; } = "";
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public EventCallback OnExtractArchive { get; set; }
+}

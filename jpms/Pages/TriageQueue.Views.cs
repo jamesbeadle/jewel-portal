@@ -4,7 +4,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class TriageQueue
 {
-    // The open view's count once its list has arrived — the inbox pane's strapline waits for it.
     private int? InboxTotal => view switch
     {
         QueueView.Active => queueArrived ? total : null,
