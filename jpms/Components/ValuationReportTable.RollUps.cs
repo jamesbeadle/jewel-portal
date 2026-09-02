@@ -53,7 +53,6 @@ public partial class ValuationReportTable
         openRollUps.Add(VariationRollUps.KeyFor(line.VariationRef, line.CostCode));
     }
 
-    // ---- Consolidated figures ------------------------------------------------
     private decimal RollUpClaimed(VariationRollUp<ValuationLineItem> rollUp) => rollUp.CountingLines.Sum(ClaimedFor);
 
     private decimal RollUpPercent(VariationRollUp<ValuationLineItem> rollUp) =>

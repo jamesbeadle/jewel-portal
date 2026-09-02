@@ -10,8 +10,6 @@ namespace Jewel.JPMS.Api.Features.Requests.Documents;
 
 public static partial class RequestDocumentRenderer
 {
-    // ---- Helpers ------------------------------------------------------------------------------
-
     private static void SectionHeading(Section section, string text)
     {
         var p = section.AddParagraph(text);

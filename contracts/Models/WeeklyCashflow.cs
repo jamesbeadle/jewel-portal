@@ -1,6 +1,5 @@
 namespace Jewel.JPMS.Models;
 
-// ============================================================================
 // The Weekly Cashflow — the accountant's live payment plan (Financial Reports).
 //
 // The Cash Forecast next door answers "does the company stay above water,
@@ -20,7 +19,6 @@ namespace Jewel.JPMS.Models;
 //     colleague and every reload.
 // The arithmetic that turns these plus the Xero snapshots into the weekly
 // grid is WeeklyCashflowMaths (contracts/WeeklyCashflow) — pure, unit-tested.
-// ============================================================================
 
 /// <summary>What kind of manual outgoing an item is — drives the band it renders under.
 /// Persisted as its integer value (WeeklyCashflowItems.Category), so new members are APPENDED

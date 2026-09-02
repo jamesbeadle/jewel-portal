@@ -1,0 +1,83 @@
+@namespace Jewel.JPMS.Features.Requests
+@using static Jewel.JPMS.Features.Requests.RequestDisplay
+
+@* Everything that acts on this request is up here with the record it acts on: the identity and
+   status on the left, one primary action plus a single Actions menu on the right. No panel below
+   carries an action on the request — the page used to scatter them down the column, so finding
+   one meant scanning the whole page. *@
+<header class="panel px-5 py-4 mb-5">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2.5 mb-1.5">
+                @* Lead with the official instrument number (RFI-014) once promoted; the REQ
+                   container number is secondary context (it names the request's folder in
+                   the projects mailbox). *@
+                <span class="font-mono text-base font-semibold text-content" title="@Record.Kind.LongName()">@PrimaryReference(Record)</span>
+                @if (ShowsContainerNumber(Record))
+                {
+                    <span class="font-mono text-sm text-content-muted" title="Container number — the request's folder in the projects mailbox">@Record.DisplayNumber</span>
+                }
+                <span class="text-content-subtle text-xs uppercase tracking-wide" title="@Record.Kind.LongName()">@Record.Kind.DisplayName()</span>
+
+                <span class="h-4 w-px bg-line" aria-hidden="true"></span>
+
+                @if (CanEdit)
+                {
+                    @* The status pill doubles as the status control: click it, pick the new
+                       status. Closed routes through its existing flow (close confirm with
+                       date + agent gate) — everything else applies directly. *@
+                    <DropdownMenu AlignLeft="true" WidthClass="w-48" Disabled="@Busy"
+                                  ToggleTitle="Change status"
+                                  ToggleClass="@($"inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium {StatusClass(Record.Status)}")"
+                                  Items="StatusMenuItems">
+                        <ToggleContent><span>@Record.Status.DisplayName()</span></ToggleContent>
+                    </DropdownMenu>
+                }
+                else
+                {
+                    <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(Record.Status)">@Record.Status.DisplayName()</span>
+                }
+                @if (Record.ImpliesVariation)
+                {
+                    <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
+                }
+                @if (Record.CriticalPath)
+                {
+                    <span class="inline-flex items-center rounded bg-negative/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-negative"
+                          title="Programme-related — the answer gates work on the programme's critical path">Critical path</span>
+                }
+            </div>
+            <h2 class="text-xl font-semibold text-content leading-snug">@Record.Title</h2>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+            @if (Record.Kind.IsEmailable() && CanDraftEmail)
+            {
+                <button type="button" class="btn-primary" disabled="@(Busy || PreparingDraft)" @onclick="() => OnEmail.InvokeAsync()">
+                    Email @Record.Kind.DisplayName()
+                </button>
+            }
+            else if (CanEdit && Record.Kind is not RequestType.Rfi)
+            {
+                @* Nothing to email yet — promoting is the action that unblocks everything
+                   else, so it takes the primary slot until it has been done. *@
+                <button type="button" class="btn-primary" disabled="@Busy" @onclick="() => OnPromote.InvokeAsync()">Promote to RFI</button>
+            }
+            <DropdownMenu Label="Actions" WidthClass="w-72" Items="ActionMenuItems" />
+        </div>
+    </div>
+</header>
+
+@code {
+    [Parameter, EditorRequired] public Request Record { get; set; } = default!;
+    [Parameter] public bool CanEdit { get; set; }
+    [Parameter] public bool CanDraftEmail { get; set; }
+    [Parameter] public bool Busy { get; set; }
+    [Parameter] public bool PreparingDraft { get; set; }
+    /// <summary>The status pill's choices and the Actions menu — built by the page, which owns
+    /// the commands they fire.</summary>
+    [Parameter] public List<DropdownMenu.Item> StatusMenuItems { get; set; } = new();
+    [Parameter] public List<DropdownMenu.Item> ActionMenuItems { get; set; } = new();
+    [Parameter] public EventCallback OnEmail { get; set; }
+    [Parameter] public EventCallback OnPromote { get; set; }
+}

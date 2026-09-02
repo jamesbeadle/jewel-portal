@@ -5,8 +5,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class WeeklyCashflow
 {
-    // ---- The grid -----------------------------------------------------------
-
     private WeeklyCashflowView BuildView()
     {
         var seeds = new List<WeeklyCashflowSeed>();

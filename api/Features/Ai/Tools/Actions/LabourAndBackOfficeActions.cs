@@ -1,22 +1,3 @@
-using Jewel.JPMS.Api.Features.AccessRequests.Commands;
-using Jewel.JPMS.Api.Features.Ai.Skills;
-using Jewel.JPMS.Api.Features.CostCenters.Commands;
-using Jewel.JPMS.Api.Features.Hs.Commands;
-using Jewel.JPMS.Api.Features.Labour;
-using Jewel.JPMS.Api.Features.Labour.Commands;
-using Jewel.JPMS.Api.Features.Platform.Commands;
-using Jewel.JPMS.Api.Features.Rates.Commands;
-using Jewel.JPMS.Api.Features.UsefulInformation;
-using Jewel.JPMS.Api.Features.UsefulInformation.Commands;
-using Jewel.JPMS.Contracts.AccessRequests;
-using Jewel.JPMS.Contracts.Ai;
-using Jewel.JPMS.Contracts.CostCenters;
-using Jewel.JPMS.Contracts.Hs;
-using Jewel.JPMS.Contracts.Labour;
-using Jewel.JPMS.Contracts.Platform;
-using Jewel.JPMS.Contracts.Rates;
-using Jewel.JPMS.Contracts.UsefulInformation;
-
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 
 /// <summary>Labour and back-office commands as connector actions. Mirrors the command endpoints
@@ -67,8 +48,15 @@ internal sealed partial class LabourAndBackOfficeActions : IAiActionSource
             JpmsRoles.Accounts);
 
     public IEnumerable<AiAction> Build() =>
-        LabourActions()
-            .Concat(BackOfficeActions());
+        TimesheetActions()
+            .Concat(WorkerLinkActions())
+            .Concat(MonthEndActions())
+            .Concat(CostCentreActions())
+            .Concat(RateActions())
+            .Concat(HealthAndSafetyActions())
+            .Concat(UsefulInformationActions())
+            .Concat(PlatformActions())
+            .Concat(AccessRequestActions());
 
     // (AddLabourSettlementVariance is no longer skipped — gate classes added 2026-08-31 (SettlementCommandGates.cs), action add_labour_settlement_variance above; the command gained a CreatedByEmail stamp parameter the interface HandleAsync now carries, so the gateway path stamps the same actor the endpoint's overload does.)
     // (AddWorker is no longer skipped — gate classes added 2026-08-28, action add_worker above.)

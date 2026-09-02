@@ -7,8 +7,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectRequestDetail
 {
-    // ---- Email draft staging --------------------------------------------------------------------
-
     // Opens the email modal with a clean slate; the tagged chains load in while it's open
     // (the fresh-email option is available immediately).
     private async Task OpenEmailModal()
@@ -61,24 +59,11 @@ public partial class ProjectRequestDetail
         }
     }
 
-    private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
-
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static DateTimeOffset? ParseDate(string value) =>
         DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
 
-    private static string Date(DateTimeOffset? value) =>
-        value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
 
 
-
-    private static string StatusClass(RequestStatus status) => status switch
-    {
-        RequestStatus.NeedsAction    => "bg-amber-500/10 text-amber-600",
-        RequestStatus.Open           => "bg-blue-500/10 text-blue-600",
-        RequestStatus.NeedsVariation => "bg-violet-500/10 text-violet-600",
-        RequestStatus.Closed         => "bg-surface-raised border border-line text-content-muted",
-        _                            => "bg-surface-raised border border-line text-content-muted"
-    };
 }

@@ -228,8 +228,6 @@ public partial class ProjectTodoList
 
     private static string RequestStatusLabel(RequestStatus status) => status.DisplayName();
 
-    // --------------------------------------------------------------------------------------------
-
     // The role filter's option pool: the roles that actually have items on this project.
     private IReadOnlyList<Role> RolesOnList =>
         items.Where(item => item.AssigneeRole is not null)

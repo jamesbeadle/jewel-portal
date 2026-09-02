@@ -1,6 +1,7 @@
 using Jewel.JPMS.Contracts.Variations;
 using Jewel.JPMS.Features.CostCenters;
 using Jewel.JPMS.Features.RecordLinks;
+using Jewel.JPMS.Features.Requests;
 
 namespace Jewel.JPMS.Pages;
 
@@ -289,7 +290,7 @@ public partial class ProjectRequestDetail
     private string draftVariationDescription = "";
     private string draftVariationValue = "";
     private string draftVariationTrade = "";
-    private List<DraftLineRow> draftVariationLines = new();
+    private List<VariationDraftLine> draftVariationLines = new();
 
     // Which fields the assistant changed on its last pass, so they pulse rather than silently
     // differing from what the user last read. Cleared on a timer.

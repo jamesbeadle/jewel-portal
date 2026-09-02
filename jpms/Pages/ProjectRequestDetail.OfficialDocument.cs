@@ -6,7 +6,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectRequestDetail
 {
-    // ---- Official document form ----------------------------------------------------------------
     // The editor itself (rows, sections, save) is RequestOfficialFormPanel's; opening it from the
     // Actions menu must land the user in front of it rather than editing a panel on the tab they
     // are not looking at.

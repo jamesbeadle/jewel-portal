@@ -6,8 +6,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectRequestDetail
 {
-    private sealed record DraftLineRow(VoqDraftLine Line, bool Accepted, string CostCode = "");
-
     // The trade for the draft bid package. An explicitly-set trade wins: the assistant is told the
     // field IS the package's trade, so honouring it is both what the schema promises and what makes
     // it round-trip — set Electrical, read Electrical back next turn. Falls back to the first
@@ -125,8 +123,7 @@ public partial class ProjectRequestDetail
 
     private void OnDraftTitleChanged(string value) => draftVariationTitle = value;
 
-    private void OnDraftDescriptionInput(ChangeEventArgs e) =>
-        draftVariationDescription = e.Value?.ToString() ?? string.Empty;
+    private void OnDraftDescriptionChanged(string value) => draftVariationDescription = value;
 
     private void OnDraftValueChanged(string value) => draftVariationValue = value;
 

@@ -40,12 +40,12 @@ public static partial class CostCentreReconciliationRenderer
         row.TopPadding = Unit.FromMillimeter(1.2);
         row.BottomPadding = Unit.FromMillimeter(1.2);
         var p = row.Cells[0].AddParagraph(label);
-        p.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        p.Format.LeftIndent = CellIndent;
         p.Format.Font.Size = strong ? 9 : 8.5;
         p.Format.Font.Bold = strong;
         p.Format.Font.Color = strong ? Navy : Muted;
         var v = row.Cells[1].AddParagraph(amountText);
-        v.Format.RightIndent = Unit.FromMillimeter(1.5);
+        v.Format.RightIndent = CellIndent;
         v.Format.Font.Size = strong ? 9 : 8.5;
         v.Format.Font.Bold = strong;
         v.Format.Font.Color = negative ? Negative : strong ? Navy : Ink;

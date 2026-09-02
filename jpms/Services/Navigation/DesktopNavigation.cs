@@ -41,14 +41,12 @@ public static class DesktopNavigation
             .Append(Role.Subcontractor)
             .ToArray();
 
-    // ---------------------------------------------------------------------------------------
     // NAV CLAMP (decision 2026-08-11): every sidebar row is currently gated DirectorRoles —
     // only the MD, FD and administrators use the system, so every other role sees Home alone
     // until its own nav is designed. The per-duty sets below are deliberately KEPT: they still
     // mirror the API's authorisation sets (untouched by the clamp) and they are what the future
     // per-role nav will be rebuilt from. Do not delete them for being unreferenced by
     // SidebarFolders.
-    // ---------------------------------------------------------------------------------------
 
     // The internal office/management roles that can open projects. Internal (not public):
     // SidebarFolders is the only outside consumer, and it lives in this assembly.

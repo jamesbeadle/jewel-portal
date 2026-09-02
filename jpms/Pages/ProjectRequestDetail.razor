@@ -4,6 +4,7 @@
 @using Jewel.JPMS.Features.CostCenters
 @using Jewel.JPMS.Features.RecordLinks
 @using Jewel.JPMS.Features.Requests
+@using static Jewel.JPMS.Features.Requests.RequestDisplay
 @implements IDisposable
 @inject AuthService Auth
 @inject ICommandSender Commands
@@ -53,74 +54,10 @@ else
             &larr; Request register
         </a>
 
-        @* Title bar. Everything that acts on this request is up here with the record it acts on:
-           the identity and status on the left, one primary action plus a single Actions menu on the
-           right. No panel below carries an action on the request any more — the page used to
-           scatter them down the column (four separate "Edit" links, the promote button), so finding
-           one meant scanning the whole page. The only buttons left in the body belong to a
-           different record (the variation card) or to an open editor (the form's Save / Cancel). *@
-        <header class="panel px-5 py-4 mb-5">
-            <div class="flex flex-wrap items-start justify-between gap-4">
-                <div class="min-w-0">
-                    <div class="flex flex-wrap items-center gap-2.5 mb-1.5">
-                        @* Lead with the official instrument number (RFI-014) once promoted; the REQ
-                           container number is secondary context (it names the request's folder in
-                           the projects mailbox). *@
-                        <span class="font-mono text-base font-semibold text-content" title="@record.Kind.LongName()">@PrimaryReference</span>
-                        @if (ShowContainerNumber)
-                        {
-                            <span class="font-mono text-sm text-content-muted" title="Container number — the request's folder in the projects mailbox">@record.DisplayNumber</span>
-                        }
-                        <span class="text-content-subtle text-xs uppercase tracking-wide" title="@record.Kind.LongName()">@record.Kind.DisplayName()</span>
-
-                        <span class="h-4 w-px bg-line" aria-hidden="true"></span>
-
-                        @if (CanEditDetails)
-                        {
-                            @* The status pill doubles as the status control: click it, pick the new
-                               status. Closed routes through its existing flow (close confirm with
-                               date + agent gate) — everything else applies directly. *@
-                            <DropdownMenu AlignLeft="true" WidthClass="w-48" Disabled="@busy"
-                                          ToggleTitle="Change status"
-                                          ToggleClass="@($"inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium {StatusClass(record.Status)}")"
-                                          Items="StatusMenuItems">
-                                <ToggleContent><span>@record.Status.DisplayName()</span></ToggleContent>
-                            </DropdownMenu>
-                        }
-                        else
-                        {
-                            <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">@record.Status.DisplayName()</span>
-                        }
-                        @if (record.ImpliesVariation)
-                        {
-                            <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
-                        }
-                        @if (record.CriticalPath)
-                        {
-                            <span class="inline-flex items-center rounded bg-negative/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-negative"
-                                  title="Programme-related — the answer gates work on the programme's critical path">Critical path</span>
-                        }
-                    </div>
-                    <h2 class="text-xl font-semibold text-content leading-snug">@record.Title</h2>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2 shrink-0">
-                    @if (record.Kind.IsEmailable() && CanDraftEmail)
-                    {
-                        <button type="button" class="btn-primary" disabled="@(busy || preparingDraft)" @onclick="OpenEmailModal">
-                            Email @record.Kind.DisplayName()
-                        </button>
-                    }
-                    else if (CanEditDetails && record.Kind is not RequestType.Rfi)
-                    {
-                        @* Nothing to email yet — promoting is the action that unblocks everything
-                           else, so it takes the primary slot until it has been done. *@
-                        <button type="button" class="btn-primary" disabled="@busy" @onclick="PromoteToRfi">Promote to RFI</button>
-                    }
-                    <DropdownMenu Label="Actions" WidthClass="w-72" Items="ActionMenuItems" />
-                </div>
-            </div>
-        </header>
+        <RequestHeaderBar Record="record" CanEdit="CanEditDetails" CanDraftEmail="CanDraftEmail"
+                          Busy="busy" PreparingDraft="preparingDraft"
+                          StatusMenuItems="StatusMenuItems" ActionMenuItems="ActionMenuItems"
+                          OnEmail="OpenEmailModal" OnPromote="PromoteToRfi" />
 
         @* The request is the containing object; its related documents sit behind tabs. Request and
            the official stage are panes of THIS page; the variation and bid package tabs carry on
@@ -130,37 +67,7 @@ else
                       LocalRequestTabs="true" OnSelect="SetActiveTab"
                       ActivityFor="TabActivity" />
 
-        @* At-a-glance facts run across the top rather than down a rail, so the columns below are
-           left for the substance: the request itself on the left, actions on the right. *@
-        <div class="panel px-5 py-4 mb-5">
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-6 gap-y-3 text-sm">
-                <MetaCell Label="Raised by" Value="@record.RaisedByEmail" />
-                @* Issued is the official date the correspondent was notified. Rows predating the
-                   IssuedAt backfill fall back to the internal created-on stamp rather than a dash. *@
-                <MetaCell Label="Issued" Value="@Date(record.IssuedAt ?? record.RaisedAt)" />
-                <MetaCell Label="Response due" Value="@Date(record.ResponseDue)" />
-                <div>
-                    <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle mb-0.5">Days outstanding</p>
-                    <p class="@(record.IsOverdue ? "text-negative font-semibold" : "text-content")">@(record.DaysOutstanding is int d ? d.ToString() : "—")</p>
-                </div>
-                @* A closed record always shows its Closed fact — a legacy close with no recorded
-                   date surfaces as a dash rather than hiding, so the gap is visible and fixable
-                   (Edit facts requires a date on a closed record). *@
-                @if (record.Status is RequestStatus.Closed || record.ClosedAt is not null)
-                {
-                    <MetaCell Label="Closed" Value="@Date(record.ClosedAt)" />
-                }
-                <MetaCell Label="Drawing / detail" Value="@Dash(record.DrawingRef)" />
-                <MetaCell Label="Related drawing / spec" Value="@Dash(record.RelatedDrawingSpec)" />
-                @if (record.Kind is not RequestType.Rfi)
-                {
-                    <MetaCell Label="Value" Value="@(record.Value is null ? "—" : Money(record.Value.Value))" />
-                }
-                @* The system's own stamp, distinct from the official Issued date — when this record
-                   was created in the register. Not editable; Issued is the date that is. *@
-                <MetaCell Label="Created" Value="@Date(record.RaisedAt)" />
-            </div>
-        </div>
+        <RequestFactsStrip Record="record" />
 
         @* Outcomes of header actions (close/reopen/response/triage/delete) surface here, under the
            facts strip, now that the Manage panel is gone. *@
@@ -168,21 +75,9 @@ else
         {
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-5">@actionError</p>
         }
-        @* The two-week critical-path nudge: an RFI still outstanding after a fortnight is usually
-           gating programme work. Yes tags it (same command as the Actions-menu toggle); No records
-           the decision on the request so the banner never re-asks anyone about this RFI. *@
         @if (ShowCriticalPathNudge)
         {
-            <div class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <div>
-                    <p class="text-sm font-medium text-amber-700">RFI 2 weeks old — tag as critical path?</p>
-                    <p class="text-xs text-content-subtle">Outstanding @record.DaysOutstanding days. Critical path RFIs surface in the Programme tab, where their answers gate the programme.</p>
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                    <button type="button" class="btn-primary text-xs" disabled="@busy" @onclick="() => AnswerCriticalPathNudge(true)">Yes — tag as critical path</button>
-                    <button type="button" class="btn-neutral text-xs" disabled="@busy" @onclick="() => AnswerCriticalPathNudge(false)" title="Hides this prompt for this RFI, for everyone — the tag can still be set from the Actions menu">No</button>
-                </div>
-            </div>
+            <CriticalPathNudge DaysOutstanding="record.DaysOutstanding" Busy="busy" OnAnswer="AnswerCriticalPathNudge" />
         }
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -208,14 +103,7 @@ else
 
                 @if (!string.IsNullOrWhiteSpace(record.ResponseText))
                 {
-                    <div class="panel p-5">
-                        <h3 class="eyebrow mb-2">Response</h3>
-                        <p class="text-sm text-content whitespace-pre-wrap">@record.ResponseText</p>
-                        @if (!string.IsNullOrWhiteSpace(record.RespondedByEmail))
-                        {
-                            <p class="text-xs text-content-subtle mt-2">@record.RespondedByEmail · @Date(record.RespondedAt)</p>
-                        }
-                    </div>
+                    <RequestResponsePanel Record="record" />
                 }
                 }
 
@@ -362,73 +250,13 @@ else
     <RequestFactsEditModal Record="record" Busy="busy" @bind-IsOpen="editingFacts" Send="SendEdit" />
     <RequestDetailEditModal Record="record" Busy="busy" @bind-IsOpen="editingDetail" Send="SendEdit" />
 
-    @* The backdrop does not dismiss — a stray click must not throw away a drafted variation.
-       The X and Cancel still close it, and both keep the draft for reopening. *@
-    <Modal IsOpen="variationDraftOpen"
-           Title="Create Variation Order Quote"
-           ConfirmLabel="@(busy ? "Raising…" : "Raise variation")"
-           ConfirmDisabled="@busy"
-           DismissOnOverlayClick="false"
-           OnCancel="CancelVariationDraft"
-           OnConfirm="ConfirmVariationDraft"
-           Class="max-w-2xl">
-        <div class="space-y-4">
-            @if (variationDraftError is not null)
-            {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@variationDraftError</p>
-            }
-
-            <div class="">
-                <FormField Label="Title" Value="@draftVariationTitle" OnChange="OnDraftTitleChanged" Required="true" />
-            </div>
-
-            <div class="">
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope description</label>
-                <textarea class="field" rows="6" value="@draftVariationDescription" @oninput="OnDraftDescriptionInput"></textarea>
-            </div>
-
-            <div class="">
-                <FormField Label="Estimated value (£, optional)" Value="@draftVariationValue" OnChange="OnDraftValueChanged" />
-            </div>
-
-            @if (draftVariationLines.Count > 0)
-            {
-                <div class="">
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suggested scope lines</label>
-                    <p class="text-xs text-content-subtle mb-2">
-                        Ticked lines become the variation's scope, held as a draft bid package (@DraftPackageTrade)@(record?.HasRfq == true ? " ready to send to subcontractors" : " — send it out to subcontractors later, or price it yourselves"). Every ticked line needs a cost centre — that's the cost code its committed value lands on. Untick any line you don't want; untick them all to raise the variation on its own.
-                    </p>
-                    <ul class="space-y-1.5">
-                        @foreach (var (row, index) in draftVariationLines.Select((r, i) => (r, i)))
-                        {
-                            var i = index;
-                            <li>
-                                <label class="flex items-start gap-2 text-sm text-content">
-                                    <input type="checkbox" class="mt-0.5" checked="@row.Accepted"
-                                           @onchange="e => OnDraftLineAcceptedChanged(i, e.Value is true)" />
-                                    <span>@row.Line.Description <span class="text-content-subtle">— @row.Line.Quantity @row.Line.Unit · @row.Line.Trade</span></span>
-                                </label>
-                                @if (row.Accepted)
-                                {
-                                    @* A control, not a region: it renders disabled with a "Loading…"
-                                       placeholder rather than behind a gate, so the layout holds
-                                       still and a wrong choice cannot be made (CLAUDE.md). *@
-                                    <select class="field mt-1 ml-6 min-w-[14rem] text-sm" value="@row.CostCode"
-                                            disabled="@(!CostCenters.IsLoaded)"
-                                            @onchange="e => OnDraftLineCostCodeChanged(i, e.Value?.ToString() ?? string.Empty)">
-                                        <option value="">@(CostCenters.IsLoaded ? "Cost centre…" : "Loading…")</option>
-                                        @foreach (var centre in CostCenters.Alphabetical)
-                                        {
-                                            <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
-                                        }
-                                    </select>
-                                }
-                            </li>
-                        }
-                    </ul>
-                </div>
-            }
-        </div>
-    </Modal>
+    <VariationDraftModal IsOpen="variationDraftOpen" Busy="busy" Error="@variationDraftError"
+                         Title="@draftVariationTitle" TitleChanged="OnDraftTitleChanged"
+                         Description="@draftVariationDescription" DescriptionChanged="OnDraftDescriptionChanged"
+                         Value="@draftVariationValue" ValueChanged="OnDraftValueChanged"
+                         Lines="draftVariationLines" PackageTrade="@DraftPackageTrade" HasRfq="@(record?.HasRfq == true)"
+                         OnLineAccepted="change => OnDraftLineAcceptedChanged(change.Index, change.Accepted)"
+                         OnLineCostCode="change => OnDraftLineCostCodeChanged(change.Index, change.CostCode)"
+                         OnCancel="CancelVariationDraft" OnConfirm="ConfirmVariationDraft" />
 }
 

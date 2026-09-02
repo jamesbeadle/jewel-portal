@@ -1,34 +1,26 @@
 # Refactor audit
 
-Generated 2026-09-02 10:14 UTC.
+Generated 2026-09-02 14:08 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 658, totalFiles: 3458, worstFileLines: 475 |
-| functionShape | limit: 30, functionsOverLimit: 694, elseBlocks: 1156, measurementIsHeuristic: True |
+| fileLength | limit: 100, filesOverLimit: 668, totalFiles: 3498, worstFileLines: 475 |
+| functionShape | limit: 30, functionsOverLimit: 692, elseBlocks: 1153, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 485, duplicatedLines: 6042, totalLines: 217198, duplicatedPercentage: 2.78 |
-| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1528 |
-| comments | explanatoryCommentLines: 13672, filesWithComments: 1894, taskMarkers: 48 |
+| duplication | clones: 478, duplicatedLines: 5893, totalLines: 218054, duplicatedPercentage: 2.7 |
+| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1544 |
+| comments | explanatoryCommentLines: 13669, filesWithComments: 1912, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2384, deeplyIndentedLines: 2798, overlongLines: 1655, measurementIsHeuristic: True |
-| inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 203 |
+| prose | longMemberChainLines: 2365, deeplyIndentedLines: 2656, overlongLines: 1659, measurementIsHeuristic: True |
+| inventory | pages: 92, components: 133, orphanComponents: 6, averagePageLines: 201 |
 
 ## Worst files by length
 
 | File | Lines |
 | --- | --- |
 | worker/MailboxIntake/Graph/GraphMailClient.cs | 475 |
-| api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs | 453 |
-| api/Features/Procurement/Documents/WorkOrderPoRenderer.Sections.cs | 448 |
-| api/Features/Ai/Tools/Actions/LabourAndBackOfficeActions.Labour.cs | 445 |
-| jpms/Pages/Todos.razor.cs | 444 |
-| jpms/Pages/TriageQueue.Apply.cs | 441 |
-| api/Features/Ai/Tools/AiDeliveryTools.cs | 440 |
-| jpms/Pages/ProjectRequestDetail.razor | 434 |
-| api/Features/Registers/RegistersSlices.cs | 433 |
 | api/Features/Ai/Sources/AiFiledDocuments.cs | 428 |
 | jpms/Components/ManualWorkOrderModal.razor.cs | 428 |
 | api/Features/Xero/Ledger/SetXeroAllocationHandler.cs | 422 |
@@ -37,8 +29,16 @@ Generated 2026-09-02 10:14 UTC.
 | jpms/Pages/TriageQueue.razor | 409 |
 | api/Features/Ai/Tools/AiRegisterTools.cs | 405 |
 | api/Features/Commercial/Documents/ValuationReportSnapshotRenderer.Sections.cs | 402 |
-| jpms/Services/HttpLabourStore.cs | 395 |
+| jpms/Services/HttpLabourStore.cs | 400 |
 | jpms/Components/ValuationReportTable.razor | 395 |
 | jpms/Pages/XeroAllocation.razor | 389 |
+| api/Data/JpmsContext.Model.cs | 386 |
+| api/Features/Procurement/Commands/ExtractTenderFromMessageHandler.cs | 381 |
+| api/Features/Subcontractors/Documents/SubcontractorStatementRenderer.cs | 378 |
+| jpms/Pages/ProjectValuation.razor | 377 |
+| api/Features/Requests/RequestContextAssembler.cs | 375 |
+| api/Features/Requests/Documents/RequestDocumentRenderer.Sections.cs | 373 |
+| api/Features/Xero/XeroClient.Http.cs | 373 |
+| api/Features/Xero/XeroClient.Reads.cs | 372 |
 
 Full detail, including every offender list, is in `audit.json`.

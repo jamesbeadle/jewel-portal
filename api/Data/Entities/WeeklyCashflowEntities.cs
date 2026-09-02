@@ -2,13 +2,11 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Jewel.JPMS.Api.Data.Entities;
 
-// ============================================================================
 // The Weekly Cashflow's stored halves (docs/00-business-context — the
 // accountant's live 13-week payment plan, Financial Reports). Everything else
 // on that grid is read live from Xero (aged payables / receivables / the cash
 // summary) and never stored here — same rule as the aged views themselves.
 // Company-wide: no project scope on either table.
-// ============================================================================
 
 /// <summary>A manual outgoing — a subcontractor's payments, wages, a subscription: money leaving
 /// that Xero doesn't yet hold a bill for. Category and Recurrence persist enum integer values
