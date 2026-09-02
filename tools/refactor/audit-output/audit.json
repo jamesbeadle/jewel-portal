@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-09-02T09:33:55+00:00",
+  "generatedAt": "2026-09-02T09:39:06+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 655,
-      "totalFiles": 3425,
-      "worstFileLines": 507
+      "filesOverLimit": 657,
+      "totalFiles": 3429,
+      "worstFileLines": 492
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 696,
-      "elseBlocks": 1170,
+      "functionsOverLimit": 694,
+      "elseBlocks": 1169,
       "measurementIsHeuristic": true
     },
     "functionNames": {
@@ -21,7 +21,7 @@
     "duplication": {
       "clones": 487,
       "duplicatedLines": 6073,
-      "totalLines": 216911,
+      "totalLines": 216934,
       "duplicatedPercentage": 2.8
     },
     "naming": {
@@ -29,8 +29,8 @@
       "unprefixedBooleans": 1507
     },
     "comments": {
-      "explanatoryCommentLines": 13690,
-      "filesWithComments": 1879,
+      "explanatoryCommentLines": 13684,
+      "filesWithComments": 1883,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -39,8 +39,8 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 2394,
-      "deeplyIndentedLines": 2800,
+      "longMemberChainLines": 2390,
+      "deeplyIndentedLines": 2798,
       "overlongLines": 1661,
       "measurementIsHeuristic": true
     },
@@ -56,15 +56,11 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 655,
-        "totalFiles": 3425,
-        "worstFileLines": 507
+        "filesOverLimit": 657,
+        "totalFiles": 3429,
+        "worstFileLines": 492
       },
       "offenders": [
-        {
-          "file": "jpms/Components/WorkOrderForm.razor.cs",
-          "lines": 507
-        },
         {
           "file": "api/Features/Ai/Tools/Actions/RequestsActions.cs",
           "lines": 492
@@ -1450,6 +1446,10 @@
           "lines": 164
         },
         {
+          "file": "jpms/Components/WorkOrderForm.Assistant.cs",
+          "lines": 163
+        },
+        {
           "file": "jpms/Components/ProgressUpdateForm.razor",
           "lines": 163
         },
@@ -2338,6 +2338,10 @@
           "lines": 112
         },
         {
+          "file": "jpms/Components/WorkOrderForm.razor.cs",
+          "lines": 112
+        },
+        {
           "file": "jpms/Features/Directory/XeroImportModal.razor",
           "lines": 112
         },
@@ -2562,6 +2566,10 @@
           "lines": 104
         },
         {
+          "file": "jpms/Components/WorkOrderForm.Draft.cs",
+          "lines": 104
+        },
+        {
           "file": "jpms/Features/Drawings/DrawingsRouteRegistration.cs",
           "lines": 104
         },
@@ -2687,8 +2695,8 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 696,
-        "elseBlocks": 1170,
+        "functionsOverLimit": 694,
+        "elseBlocks": 1169,
         "measurementIsHeuristic": true
       },
       "offenders": [
@@ -3585,8 +3593,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13690,
-        "filesWithComments": 1879,
+        "explanatoryCommentLines": 13684,
+        "filesWithComments": 1883,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4291,8 +4299,8 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 2394,
-        "deeplyIndentedLines": 2800,
+        "longMemberChainLines": 2390,
+        "deeplyIndentedLines": 2798,
         "overlongLines": 1661,
         "measurementIsHeuristic": true
       },
@@ -6226,7 +6234,7 @@
       "summary": {
         "clones": 487,
         "duplicatedLines": 6073,
-        "totalLines": 216911,
+        "totalLines": 216934,
         "duplicatedPercentage": 2.8
       },
       "offenders": [
