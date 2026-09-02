@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-02T13:37:31+00:00",
+  "generatedAt": "2026-09-02T13:44:05+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 666,
-      "totalFiles": 3475,
+      "filesOverLimit": 665,
+      "totalFiles": 3482,
       "worstFileLines": 475
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 695,
+      "functionsOverLimit": 694,
       "elseBlocks": 1153,
       "measurementIsHeuristic": true
     },
@@ -20,8 +20,8 @@
     },
     "duplication": {
       "clones": 480,
-      "duplicatedLines": 5929,
-      "totalLines": 217893,
+      "duplicatedLines": 5923,
+      "totalLines": 217964,
       "duplicatedPercentage": 2.72
     },
     "naming": {
@@ -40,7 +40,7 @@
     },
     "prose": {
       "longMemberChainLines": 2390,
-      "deeplyIndentedLines": 2866,
+      "deeplyIndentedLines": 2656,
       "overlongLines": 1660,
       "measurementIsHeuristic": true
     },
@@ -56,8 +56,8 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 666,
-        "totalFiles": 3475,
+        "filesOverLimit": 665,
+        "totalFiles": 3482,
         "worstFileLines": 475
       },
       "offenders": [
@@ -72,10 +72,6 @@
         {
           "file": "jpms/Pages/TriageQueue.Apply.cs",
           "lines": 441
-        },
-        {
-          "file": "api/Features/Ai/Tools/AiDeliveryTools.cs",
-          "lines": 440
         },
         {
           "file": "jpms/Pages/ProjectRequestDetail.razor",
@@ -2731,15 +2727,11 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 695,
+        "functionsOverLimit": 694,
         "elseBlocks": 1153,
         "measurementIsHeuristic": true
       },
       "offenders": [
-        {
-          "file": "api/Features/Ai/Tools/AiDeliveryTools.cs",
-          "lines": 398
-        },
         {
           "file": "jpms/Services/Navigation/SidebarFolders.cs",
           "lines": 372
@@ -2935,6 +2927,10 @@
         {
           "file": "api/Features/Ai/Tools/Actions/SiteAndProgressActions.Drawings.cs",
           "lines": 150
+        },
+        {
+          "file": "api/Features/Ai/Tools/AiFinanceTools.cs",
+          "lines": 149
         }
       ]
     },
@@ -4336,7 +4332,7 @@
       "name": "prose",
       "summary": {
         "longMemberChainLines": 2390,
-        "deeplyIndentedLines": 2866,
+        "deeplyIndentedLines": 2656,
         "overlongLines": 1660,
         "measurementIsHeuristic": true
       },
@@ -6269,8 +6265,8 @@
       "name": "duplication",
       "summary": {
         "clones": 480,
-        "duplicatedLines": 5929,
-        "totalLines": 217893,
+        "duplicatedLines": 5923,
+        "totalLines": 217964,
         "duplicatedPercentage": 2.72
       },
       "offenders": [
