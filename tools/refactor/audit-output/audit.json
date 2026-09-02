@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-02T06:58:50+00:00",
+  "generatedAt": "2026-09-02T07:13:25+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 648,
-      "totalFiles": 3374,
-      "worstFileLines": 560
+      "filesOverLimit": 651,
+      "totalFiles": 3388,
+      "worstFileLines": 548
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 696,
+      "functionsOverLimit": 699,
       "elseBlocks": 1170,
       "measurementIsHeuristic": true
     },
@@ -21,7 +21,7 @@
     "duplication": {
       "clones": 490,
       "duplicatedLines": 6220,
-      "totalLines": 216433,
+      "totalLines": 216540,
       "duplicatedPercentage": 2.87
     },
     "naming": {
@@ -29,8 +29,8 @@
       "unprefixedBooleans": 1485
     },
     "comments": {
-      "explanatoryCommentLines": 13704,
-      "filesWithComments": 1843,
+      "explanatoryCommentLines": 13698,
+      "filesWithComments": 1850,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -56,15 +56,11 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 648,
-        "totalFiles": 3374,
-        "worstFileLines": 560
+        "filesOverLimit": 651,
+        "totalFiles": 3388,
+        "worstFileLines": 548
       },
       "offenders": [
-        {
-          "file": "api/Features/Ai/Tools/AiCommercialTools.cs",
-          "lines": 560
-        },
         {
           "file": "jpms/Pages/ProjectWorkOrders.razor",
           "lines": 548
@@ -72,10 +68,6 @@
         {
           "file": "jpms/Pages/TriageQueue.Outbox.cs",
           "lines": 520
-        },
-        {
-          "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-          "lines": 518
         },
         {
           "file": "jpms/Components/ValuationReportTable.razor",
@@ -92,10 +84,6 @@
         {
           "file": "jpms/Components/WorkOrderForm.razor.cs",
           "lines": 507
-        },
-        {
-          "file": "api/Features/Ai/Tools/AiSourceTools.cs",
-          "lines": 502
         },
         {
           "file": "api/Features/Ai/Tools/Actions/RequestsActions.cs",
@@ -918,6 +906,10 @@
           "lines": 220
         },
         {
+          "file": "api/Features/Ai/Tools/AiCommercialTools.Variation.cs",
+          "lines": 219
+        },
+        {
           "file": "api/Features/Commercial/ValuationReportSnapshotCapture.cs",
           "lines": 219
         },
@@ -1088,6 +1080,10 @@
         {
           "file": "jpms/Pages/ProjectArchitectInstructions.razor.cs",
           "lines": 202
+        },
+        {
+          "file": "api/Features/Ai/Tools/AiCommercialTools.Valuation.cs",
+          "lines": 200
         },
         {
           "file": "api/Features/Xero/XeroClient.LineItems.cs",
@@ -1814,6 +1810,10 @@
           "lines": 139
         },
         {
+          "file": "api/Features/Ai/Tools/AiSourceTools.ListSources.cs",
+          "lines": 138
+        },
+        {
           "file": "api/Features/Commercial/Documents/ValuationReportBillRows.cs",
           "lines": 138
         },
@@ -1978,6 +1978,10 @@
           "lines": 130
         },
         {
+          "file": "api/Features/Ai/Tools/AiCommercialTools.CostCodes.cs",
+          "lines": 129
+        },
+        {
           "file": "jpms/Features/Variations/StagedBuildUpPanel.razor",
           "lines": 129
         },
@@ -2036,6 +2040,10 @@
         {
           "file": "jpms/Services/ArchitectInstructionStore.cs",
           "lines": 125
+        },
+        {
+          "file": "api/Features/Ai/Sources/AiSourceReader.Reading.cs",
+          "lines": 124
         },
         {
           "file": "contracts/Models/CalendarEvent.cs",
@@ -2244,6 +2252,10 @@
         {
           "file": "jpms/Layout/MainLayout.razor",
           "lines": 116
+        },
+        {
+          "file": "api/Features/Ai/Tools/AiSourceTools.ReadSource.cs",
+          "lines": 115
         },
         {
           "file": "api/Features/BuildingControl/Commands/BuildingControlInspectionEndpoints.cs",
@@ -2659,15 +2671,11 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 696,
+        "functionsOverLimit": 699,
         "elseBlocks": 1170,
         "measurementIsHeuristic": true
       },
       "offenders": [
-        {
-          "file": "api/Features/Ai/Tools/AiCommercialTools.cs",
-          "lines": 496
-        },
         {
           "file": "api/Features/Commercial/Documents/CostCentreReconciliationRenderer.cs",
           "lines": 463
@@ -2761,16 +2769,16 @@
           "lines": 217
         },
         {
-          "file": "api/Features/Ai/Tools/AiSourceTools.cs",
-          "lines": 216
-        },
-        {
           "file": "api/Features/Ai/Tools/Actions/SiteAndProgressActions.ProgressProgramme.cs",
           "lines": 206
         },
         {
           "file": "api/Features/Ai/Tools/AiRecordTools.Contexts.cs",
           "lines": 205
+        },
+        {
+          "file": "api/Features/Ai/Tools/AiCommercialTools.Variation.cs",
+          "lines": 204
         },
         {
           "file": "api/Features/Ai/Tools/Actions/CommercialActions.Financials.cs",
@@ -2807,6 +2815,10 @@
         {
           "file": "api/Features/Variations/Commands/ApproveVariationOrderHandler.cs",
           "lines": 182
+        },
+        {
+          "file": "api/Features/Ai/Tools/AiCommercialTools.Valuation.cs",
+          "lines": 180
         },
         {
           "file": "api/Features/Procurement/PricingScheduleWorkbook.cs",
@@ -3393,7 +3405,7 @@
           },
           {
             "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-            "line": 513,
+            "line": 90,
             "name": "LooksLikeHtml"
           },
           {
@@ -3557,8 +3569,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13704,
-        "filesWithComments": 1843,
+        "explanatoryCommentLines": 13698,
+        "filesWithComments": 1850,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4415,16 +4427,16 @@
             "line": 70
           },
           {
-            "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-            "line": 331
+            "file": "api/Features/Ai/Sources/AiSourceReader.Reading.cs",
+            "line": 44
           },
           {
-            "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-            "line": 336
+            "file": "api/Features/Ai/Sources/AiSourceReader.Reading.cs",
+            "line": 49
           },
           {
-            "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-            "line": 427
+            "file": "api/Features/Ai/Sources/AiSourceReader.Search.cs",
+            "line": 20
           },
           {
             "file": "api/Features/Ai/Tools/Actions/AiActionExecutor.cs",
@@ -4533,24 +4545,24 @@
             "line": 410
           },
           {
-            "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-            "line": 122
+            "file": "api/Features/Ai/Sources/AiSourceReader.Pdf.cs",
+            "line": 32
           },
           {
-            "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-            "line": 161
+            "file": "api/Features/Ai/Sources/AiSourceReader.Search.cs",
+            "line": 19
           },
           {
-            "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-            "line": 426
+            "file": "api/Features/Ai/Sources/AiSourceReader.Search.cs",
+            "line": 35
           },
           {
-            "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-            "line": 442
+            "file": "api/Features/Ai/Sources/AiSourceReader.Search.cs",
+            "line": 36
           },
           {
-            "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-            "line": 443
+            "file": "api/Features/Ai/Sources/AiSourceReader.Workbook.cs",
+            "line": 47
           },
           {
             "file": "api/Features/Ai/Tools/Actions/AiActionExecutor.cs",
@@ -4711,40 +4723,40 @@
             "line": 393
           },
           {
-            "file": "api/Features/Ai/Sources/AiSourceReader.cs",
-            "line": 360
+            "file": "api/Features/Ai/Sources/AiSourceReader.Reading.cs",
+            "line": 73
           },
           {
-            "file": "api/Features/Ai/Tools/AiCommercialTools.cs",
-            "line": 390
+            "file": "api/Features/Ai/Tools/AiCommercialTools.CostCodes.cs",
+            "line": 113
           },
           {
-            "file": "api/Features/Ai/Tools/AiCommercialTools.cs",
-            "line": 407
+            "file": "api/Features/Ai/Tools/AiCommercialTools.Valuation.cs",
+            "line": 175
           },
           {
-            "file": "api/Features/Ai/Tools/AiCommercialTools.cs",
-            "line": 408
+            "file": "api/Features/Ai/Tools/AiCommercialTools.Valuation.cs",
+            "line": 192
           },
           {
-            "file": "api/Features/Ai/Tools/AiCommercialTools.cs",
-            "line": 410
+            "file": "api/Features/Ai/Tools/AiCommercialTools.Valuation.cs",
+            "line": 193
           },
           {
-            "file": "api/Features/Ai/Tools/AiCommercialTools.cs",
-            "line": 516
+            "file": "api/Features/Ai/Tools/AiCommercialTools.Valuation.cs",
+            "line": 195
           },
           {
-            "file": "api/Features/Ai/Tools/AiSourceTools.cs",
-            "line": 150
+            "file": "api/Features/Ai/Tools/AiSourceTools.FindInSource.cs",
+            "line": 61
           },
           {
-            "file": "api/Features/Ai/Tools/AiSourceTools.cs",
-            "line": 218
+            "file": "api/Features/Ai/Tools/AiSourceTools.ListSources.cs",
+            "line": 104
           },
           {
-            "file": "api/Features/Ai/Tools/AiSourceTools.cs",
-            "line": 364
+            "file": "api/Features/Ai/Tools/AiSourceTools.Opening.cs",
+            "line": 18
           },
           {
             "file": "api/Features/Ai/Tools/AiTenderEnquiryTools.cs",
@@ -6197,7 +6209,7 @@
       "summary": {
         "clones": 490,
         "duplicatedLines": 6220,
-        "totalLines": 216433,
+        "totalLines": 216540,
         "duplicatedPercentage": 2.87
       },
       "offenders": [
