@@ -134,7 +134,7 @@
         Pending.Add(new PendingEntry
         {
             ValuationLineItemId = lineId,
-            PercentText = CurrentPercentFor(lineId).ToString(System.Globalization.CultureInfo.InvariantCulture)
+            PercentText = EditText(CurrentPercentFor(lineId))
         });
         Publish();
     }
@@ -161,8 +161,14 @@
     private static string FormatPercent(decimal value) =>
         value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
 
-    private static (decimal Min, decimal Max) BoundsFor(ValuationLineItem line) =>
-        line.ElementType == ValuationElementType.Variation ? (-100000m, 100000m) : (0m, 100m);
+    // Every stored decimal place, trailing zeros trimmed — the seed for the input, so a saved
+    // 33.3333% is not re-saved as the 33.33% the display shows.
+    private static string EditText(decimal value) =>
+        value.ToString("0.############################", System.Globalization.CultureInfo.InvariantCulture);
+
+    // Any number, any decimals, positive or negative, on every kind of line; +/-100000 is only a
+    // sanity rail against typos (the API applies the same one).
+    private const decimal PercentRail = 100000m;
 
     private async Task Cancel() => await OnClose.InvokeAsync();
 
@@ -185,10 +191,9 @@
                 error = $"\"{LabelFor(line)}\" needs a number for its new %.";
                 return;
             }
-            var (min, max) = BoundsFor(line);
-            if (percent < min || percent > max)
+            if (percent < -PercentRail || percent > PercentRail)
             {
-                error = $"\"{LabelFor(line)}\": {FormatPercent(percent)} is outside {FormatPercent(min)}–{FormatPercent(max)}.";
+                error = $"\"{LabelFor(line)}\": {FormatPercent(percent)} is outside {FormatPercent(-PercentRail)}–{FormatPercent(PercentRail)}.";
                 return;
             }
             entries.Add(new ClaimEntryInput(line.ValuationLineItemId, percent));

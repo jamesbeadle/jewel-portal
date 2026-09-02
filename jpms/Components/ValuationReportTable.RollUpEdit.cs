@@ -12,7 +12,7 @@ public partial class ValuationReportTable
         CancelEdit();
         CancelVoRevise();
         editingRollUpKey = rollUp.Key;
-        editValue = RollUpPercent(rollUp).ToString("0.##", Gb);
+        editValue = PercentText(RollUpPercent(rollUp));
         editError = false;
         focusPending = true;
     }
@@ -42,7 +42,7 @@ public partial class ValuationReportTable
     {
         if (editSaving) return;
         if (SelectedClaim is null) { CancelRollUpEdit(); return; }
-        if (!TryParsePercent(editValue, out var percent) || !WithinBounds(rollUp.Lines[0], percent))
+        if (!TryParsePercent(editValue, out var percent) || !WithinBounds(percent))
         {
             editError = true;
             return;

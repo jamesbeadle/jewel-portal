@@ -19,12 +19,11 @@ public sealed class RecordClaimEntryHandler : ICommandHandler<RecordClaimEntry, 
         var lineItem = await context.ValuationLineItems.FindAsync(new object?[] { command.ValuationLineItemId }, cancellationToken)
             ?? throw new KeyNotFoundException($"Valuation line item {command.ValuationLineItemId} was not found.");
 
-        // Physical-completion lines stay 0-100; variation lines may go outside (a VO's
-        // omits can be claimed while its additions aren't, so the weighted % of the net
-        // value is legitimately negative or >100 -- % x net reproduces the claimed value).
-        if (lineItem.ElementType != (int)ValuationElementType.Variation
-            && (command.PercentComplete < 0m || command.PercentComplete > 100m))
-            throw new InvalidOperationException("Percent complete must be 0-100% on non-variation lines.");
+        // No per-line range rule: the % is whatever reproduces the claimed value (% x line
+        // amount), which is legitimately negative or >100 on a VO whose omits are claimed ahead
+        // of its additions, and is stored to 20 decimal places so a claimed amount worked back
+        // to a % of a large line comes back to the penny. The validation's +/-100000 rail is
+        // the only bound.
 
         var cumulativeClaimed = ValuationCalculations.CumulativeClaimed(command.PercentComplete, lineItem.LineAmount);
 

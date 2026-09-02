@@ -1088,8 +1088,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("PercentComplete")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasPrecision(28, 20)
+                        .HasColumnType("decimal(28,20)");
 
                     b.Property<decimal>("PeriodIncrement")
                         .HasPrecision(18, 4)
@@ -6282,8 +6282,8 @@ namespace Jewel.JPMS.Api.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("PercentComplete")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
+                        .HasPrecision(28, 20)
+                        .HasColumnType("decimal(28,20)");
 
                     b.Property<decimal>("PeriodIncrement")
                         .HasPrecision(18, 4)

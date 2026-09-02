@@ -48,11 +48,8 @@ public sealed class RecordClaimEntriesHandler : ICommandHandler<RecordClaimEntri
             if (!linesById.TryGetValue(input.ValuationLineItemId, out var lineInfo))
                 throw new KeyNotFoundException($"Valuation line item {input.ValuationLineItemId} was not found on this project.");
 
-            // Same rule as the single-entry handler: 0-100 for physical-completion lines,
-            // out-of-range allowed on variation lines (weighted % of a net VO).
-            if (lineInfo.ElementType != (int)ValuationElementType.Variation
-                && (input.PercentComplete < 0m || input.PercentComplete > 100m))
-                throw new InvalidOperationException("Percent complete must be 0-100% on non-variation lines.");
+            // Same stance as the single-entry handler: no per-line range rule beyond the
+            // validation's +/-100000 rail (see RecordClaimEntryHandler).
 
             var cumulativeClaimed = ValuationCalculations.CumulativeClaimed(input.PercentComplete, lineInfo.LineAmount);
             var previousCumulative = baselineByLine.TryGetValue(input.ValuationLineItemId, out var confirmed) ? confirmed : 0m;

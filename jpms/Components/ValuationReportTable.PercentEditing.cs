@@ -25,7 +25,7 @@ public partial class ValuationReportTable
         CancelRollUpEdit();
         RevealRollUpFor(line); // a line inside a collapsed consolidated row must be visible to edit
         editingLineId = line.ValuationLineItemId;
-        editValue = PercentFor(line).ToString("0.##", Gb);
+        editValue = PercentText(PercentFor(line));
         editError = false;
         focusPending = true;
     }
@@ -48,7 +48,7 @@ public partial class ValuationReportTable
         if (editSaving) return; // a second Enter while the save is in flight must not double-post
         if (SelectedClaim is null) { CancelEdit(); return; }
         if (!decimal.TryParse(editValue.Trim().TrimEnd('%'), System.Globalization.NumberStyles.Number, Gb, out var percent)
-            || !WithinBounds(line, percent))
+            || !WithinBounds(percent))
         {
             editError = true;
             return;
@@ -89,7 +89,7 @@ public partial class ValuationReportTable
     {
         if (editSaving || editingLineId != line.ValuationLineItemId) return;
         if (SelectedClaim is null) { CancelEdit(); return; }
-        if (!TryParsePercent(editValue, out var percent) || !WithinBounds(line, percent))
+        if (!TryParsePercent(editValue, out var percent) || !WithinBounds(percent))
         {
             // Nothing safe to save — keep the editor open showing the error ring. If the
             // user has clicked another cell's %, that editor opens and this text is

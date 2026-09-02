@@ -25,7 +25,7 @@ public partial class ValuationReportTable
         bulkErrorLines.Clear();
         bulkValues.Clear();
         foreach (var line in lines.Where(l => l.CountsTowardTotals))
-            bulkValues[line.ValuationLineItemId] = PercentFor(line).ToString("0.##", Gb);
+            bulkValues[line.ValuationLineItemId] = PercentText(PercentFor(line));
         foreach (ValuationElementType type in Enum.GetValues<ValuationElementType>())
             expanded.Add(type);
         OpenEveryRollUp(); // every line's % is typed individually, so the consolidated rows must show them
@@ -57,18 +57,16 @@ public partial class ValuationReportTable
     private static bool TryParsePercent(string raw, out decimal percent) =>
         decimal.TryParse((raw ?? "").Trim().TrimEnd('%'), System.Globalization.NumberStyles.Number, Gb, out percent);
 
-    // Physical-completion lines stay 0-100. Variation lines may go OUTSIDE that range:
-    // a VO's omits can be fully claimed while its additions aren't, so the weighted %
-    // of the net VO value is legitimately negative or >100 (% x net must reproduce the
-    // claimed value). +/-100000 is just a sanity rail against typos.
-    private static (decimal Min, decimal Max) BoundsFor(ValuationLineItem line) =>
-        line.ElementType == ValuationElementType.Variation ? (-100000m, 100000m) : (0m, 100m);
+    // Any number, any number of decimal places, positive or negative, on every kind of line.
+    // The % is whatever reproduces the claimed value (% x line amount), and that is legitimately
+    // negative or >100 on a VO whose omits are claimed ahead of its additions, and needs more
+    // than two decimal places wherever a claimed amount has been worked back to a % of a large
+    // line — clipping the decimals is exactly what put the pennies out on the valuation report.
+    // +/-100000 is just a sanity rail against typos (the API applies the same one).
+    private const decimal PercentRail = 100000m;
 
-    private static bool WithinBounds(ValuationLineItem line, decimal percent)
-    {
-        var (min, max) = BoundsFor(line);
-        return percent >= min && percent <= max;
-    }
+    private static bool WithinBounds(decimal percent) =>
+        percent >= -PercentRail && percent <= PercentRail;
 
     private async Task SaveBulkAsync()
     {
@@ -80,7 +78,7 @@ public partial class ValuationReportTable
         foreach (var line in lines.Where(l => l.CountsTowardTotals))
         {
             if (!bulkValues.TryGetValue(line.ValuationLineItemId, out var raw)) continue;
-            if (!TryParsePercent(raw, out var percent) || !WithinBounds(line, percent))
+            if (!TryParsePercent(raw, out var percent) || !WithinBounds(percent))
             {
                 bulkErrorLines.Add(line.ValuationLineItemId);
                 continue;
@@ -90,7 +88,7 @@ public partial class ValuationReportTable
         }
         if (bulkErrorLines.Count > 0)
         {
-            bulkError = $"{bulkErrorLines.Count} value(s) aren't valid percentages — fix the highlighted cells (0-100; variation lines may go outside).";
+            bulkError = $"{bulkErrorLines.Count} value(s) aren't valid percentages — fix the highlighted cells (a number between -100000 and 100000).";
             return;
         }
         if (entries.Count == 0) { CancelBulkEdit(); return; }

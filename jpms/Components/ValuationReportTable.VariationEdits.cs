@@ -172,4 +172,9 @@ public partial class ValuationReportTable
     private static string Num(decimal v) => v.ToString("0.##", Gb);
     private static string Pct(decimal v) => v.ToString("0.##", Gb) + "%";
     // Signed for the "what changed" delta: "+20%", "-5%" (negatives already carry their sign).
+    // (SignedPct lives in ValuationReportTable.razor.cs.)
+    // The value an editor is seeded with: every decimal place that is stored, trailing zeros
+    // trimmed. Seeding with the 2dp display figure was what silently rounded a 33.3333% line to
+    // 33.33% the moment anyone clicked away from its editor.
+    private static string PercentText(decimal v) => v.ToString("0.############################", Gb);
 }
