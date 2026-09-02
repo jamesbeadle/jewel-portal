@@ -1,17 +1,5 @@
-using Jewel.JPMS.Api.Features.Audit;
-using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
-using Jewel.JPMS.Api.Features.MailboxIntake.Sharing;
-using Jewel.JPMS.Api.Features.Progress.Storage;
-using Jewel.JPMS.Api.Features.RecordLinks;
-using Jewel.JPMS.Api.Features.Requests;
-using Jewel.JPMS.Api.Features.Requests.Documents;
-using Jewel.JPMS.Api.Features.TenderEnquiries.Documents;
-using Jewel.JPMS.Api.Features.Todos;
-using Jewel.JPMS.Api.Features.Variations.Documents;
 using Jewel.JPMS.Contracts.MailboxCompose;
-using Jewel.JPMS.Contracts.RecordLinks;
-using Jewel.JPMS.Contracts.Requests;
 
 namespace Jewel.JPMS.Api.Features.MailboxIntake.Compose;
 

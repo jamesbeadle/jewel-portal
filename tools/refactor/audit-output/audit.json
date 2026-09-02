@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-09-02T13:13:53+00:00",
+  "generatedAt": "2026-09-02T13:30:43+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 661,
-      "totalFiles": 3467,
+      "filesOverLimit": 664,
+      "totalFiles": 3472,
       "worstFileLines": 475
     },
     "functionShape": {
       "limit": 30,
-      "functionsOverLimit": 701,
+      "functionsOverLimit": 700,
       "elseBlocks": 1156,
       "measurementIsHeuristic": true
     },
@@ -19,18 +19,18 @@
       "maxLength": 40
     },
     "duplication": {
-      "clones": 483,
-      "duplicatedLines": 5994,
-      "totalLines": 217749,
-      "duplicatedPercentage": 2.75
+      "clones": 480,
+      "duplicatedLines": 5951,
+      "totalLines": 217880,
+      "duplicatedPercentage": 2.73
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1531
+      "unprefixedBooleans": 1536
     },
     "comments": {
-      "explanatoryCommentLines": 13738,
-      "filesWithComments": 1898,
+      "explanatoryCommentLines": 13720,
+      "filesWithComments": 1903,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -39,9 +39,9 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 2390,
-      "deeplyIndentedLines": 2869,
-      "overlongLines": 1659,
+      "longMemberChainLines": 2391,
+      "deeplyIndentedLines": 2866,
+      "overlongLines": 1660,
       "measurementIsHeuristic": true
     },
     "inventory": {
@@ -56,18 +56,14 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 661,
-        "totalFiles": 3467,
+        "filesOverLimit": 664,
+        "totalFiles": 3472,
         "worstFileLines": 475
       },
       "offenders": [
         {
           "file": "worker/MailboxIntake/Graph/GraphMailClient.cs",
           "lines": 475
-        },
-        {
-          "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs",
-          "lines": 453
         },
         {
           "file": "api/Features/Procurement/Documents/WorkOrderPoRenderer.Sections.cs",
@@ -1930,7 +1926,7 @@
           "lines": 132
         },
         {
-          "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.Attachments.cs",
+          "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.Compose.cs",
           "lines": 132
         },
         {
@@ -2083,6 +2079,10 @@
         },
         {
           "file": "api/Features/Labour/Queries/GetMyLabourDaySlice.cs",
+          "lines": 123
+        },
+        {
+          "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.Attachments.cs",
           "lines": 123
         },
         {
@@ -2406,6 +2406,14 @@
           "lines": 110
         },
         {
+          "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.Draft.cs",
+          "lines": 110
+        },
+        {
+          "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs",
+          "lines": 110
+        },
+        {
           "file": "api/Features/Requests/Documents/RequestDocumentRenderer.Helpers.cs",
           "lines": 110
         },
@@ -2670,6 +2678,10 @@
           "lines": 101
         },
         {
+          "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.Outcome.cs",
+          "lines": 101
+        },
+        {
           "file": "api/Features/Procurement/Commands/SendBidPackageInviteHandler.cs",
           "lines": 101
         },
@@ -2711,7 +2723,7 @@
       "name": "functionShape",
       "summary": {
         "limit": 30,
-        "functionsOverLimit": 701,
+        "functionsOverLimit": 700,
         "elseBlocks": 1156,
         "measurementIsHeuristic": true
       },
@@ -2731,10 +2743,6 @@
         {
           "file": "api/Features/Ai/Tools/AiRegisterTools.cs",
           "lines": 365
-        },
-        {
-          "file": "api/Features/MailboxIntake/Compose/SendMailboxEmailHandler.cs",
-          "lines": 344
         },
         {
           "file": "api/Features/Ai/Tools/AiLabourMonthEndTools.cs",
@@ -2914,6 +2922,10 @@
         },
         {
           "file": "api/Features/Ai/Sources/AiFiledDocuments.cs",
+          "lines": 150
+        },
+        {
+          "file": "api/Features/Ai/Tools/Actions/SiteAndProgressActions.Drawings.cs",
           "lines": 150
         }
       ]
@@ -3147,7 +3159,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1531
+        "unprefixedBooleans": 1536
       },
       "offenders": {
         "abbreviations": [
@@ -3609,8 +3621,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13738,
-        "filesWithComments": 1898,
+        "explanatoryCommentLines": 13720,
+        "filesWithComments": 1903,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4315,9 +4327,9 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 2390,
-        "deeplyIndentedLines": 2869,
-        "overlongLines": 1659,
+        "longMemberChainLines": 2391,
+        "deeplyIndentedLines": 2866,
+        "overlongLines": 1660,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -6248,10 +6260,10 @@
     "duplication": {
       "name": "duplication",
       "summary": {
-        "clones": 483,
-        "duplicatedLines": 5994,
-        "totalLines": 217749,
-        "duplicatedPercentage": 2.75
+        "clones": 480,
+        "duplicatedLines": 5951,
+        "totalLines": 217880,
+        "duplicatedPercentage": 2.73
       },
       "offenders": [
         {
