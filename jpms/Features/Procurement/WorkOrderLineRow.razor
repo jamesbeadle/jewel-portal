@@ -1,0 +1,89 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using static Jewel.JPMS.Features.Procurement.WorkOrderDisplay
+
+@* One priced line inside an expanded group: the order it belongs to, its cost centre or
+   supplier (whichever the group isn't), its status and invoicing/payment badges, its money,
+   and its Actions menu — or, once Cancel… has been chosen, the inline confirm pair. *@
+<tr>
+    <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@Entry.Detail.Order.Title">@Entry.Detail.Order.Reference</td>
+    @if (GroupBySupplier)
+    {
+        <td class="px-3 py-2 whitespace-nowrap">
+            <span class="font-mono text-[11px] text-content-subtle mr-1.5">@CostCode</span>@CostCentreName
+        </td>
+    }
+    else
+    {
+        <td class="px-3 py-2 whitespace-nowrap">@Entry.Detail.SubcontractorName</td>
+    }
+    <td class="px-3 py-2" title="@Entry.Line.Description">@Entry.Line.Title</td>
+    <td class="px-3 py-2 whitespace-nowrap">
+        <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@Entry.Detail.Order.Status</span>
+        @if (Summary is { } summary)
+        {
+            <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @InvoicingClass(summary.InvoicingStatus)"
+                  title="@($"{MoneyExact(summary.InvoicedToDate)} invoiced of {MoneyExact(summary.Value)} · {MoneyExact(summary.RemainingToInvoice)} left to invoice (whole order)")">
+                @InvoicingLabel(summary.InvoicingStatus)
+            </span>
+            <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @PaymentClass(summary.PaymentStatus)"
+                  title="@PaymentTitle(summary.PaymentStatus)">
+                @PaymentLabel(summary.PaymentStatus)
+            </span>
+        }
+    </td>
+    <td class="px-3 py-2 text-right">@Money(Entry.Line.LineTotal)</td>
+    <td class="px-3 py-2 text-right @(PaymentKnown ? "" : "text-content-subtle")"
+        title="@(PaymentKnown ? "" : UnknownPaidHint)">@(PaymentKnown ? Money(Entry.Line.PaidToDate) : Dash)</td>
+    <td class="px-3 py-2 text-right whitespace-nowrap" @onclick:stopPropagation>
+        @if (CancelPending)
+        {
+            @* Two clicks on purpose: cancelling voids an order the supplier
+               has already been sent, and there is no undo. Choosing Cancel…
+               from the menu swaps it for this inline confirm pair. *@
+            <button type="button"
+                    class="mr-3 text-xs font-medium text-negative underline underline-offset-4"
+                    title="@($"Void {Entry.Detail.Order.Reference} — it keeps its number as a record, but its value stops counting everywhere and there is no undo")"
+                    disabled="@CancelBusy"
+                    @onclick="() => OnCancel.InvokeAsync(Entry.Detail)" @onclick:stopPropagation>
+                @(CancelBusy ? "Working…" : "Confirm cancel")
+            </button>
+            <button type="button"
+                    class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                    disabled="@CancelBusy"
+                    @onclick="() => OnKeep.InvokeAsync()" @onclick:stopPropagation>
+                Keep order
+            </button>
+        }
+        else
+        {
+            @* One menu per row instead of a run of text links — the row was
+               getting crowded (PO / Edit / Re-code / Cancel). Edit is offered
+               on manual orders (as before) and on ANY order for the MD, FD
+               and administrators (2026-08-21). *@
+            <DropdownMenu Label="Actions" WidthClass="w-72"
+                          Disabled="@CancelBusy"
+                          ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                          Class="inline-block text-left"
+                          OnOpenChanged="OnMenuOpenChanged"
+                          Items="MenuItems" />
+        }
+    </td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public WorkOrderLineEntry Entry { get; set; } = default!;
+    [Parameter] public bool GroupBySupplier { get; set; }
+    /// <summary>The line's code and master name — shown when the group is a supplier.</summary>
+    [Parameter] public string CostCode { get; set; } = "";
+    [Parameter] public string CostCentreName { get; set; } = "";
+    /// <summary>The order's invoiced balance from the WO Allocation tab, when one is linked.</summary>
+    [Parameter] public WorkOrderInvoiceSummary? Summary { get; set; }
+    [Parameter] public bool PaymentKnown { get; set; }
+    [Parameter] public bool CancelPending { get; set; }
+    [Parameter] public bool CancelBusy { get; set; }
+    [Parameter] public EventCallback<ProjectWorkOrderDetail> OnCancel { get; set; }
+    [Parameter] public EventCallback OnKeep { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<DropdownMenu.Item> MenuItems { get; set; } = default!;
+    /// <summary>The menu opened or closed — the table lifts its overflow cap while one is open.</summary>
+    [Parameter] public EventCallback<bool> OnMenuOpenChanged { get; set; }
+}

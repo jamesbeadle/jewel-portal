@@ -1,0 +1,88 @@
+@namespace Jewel.JPMS.Features.Procurement
+@using static Jewel.JPMS.Features.Procurement.WorkOrderDisplay
+
+@* One group of the work-orders table — a cost centre or a supplier — with its rolled-up figures,
+   and, when opened, the priced lines behind it as a nested table. *@
+<tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => OnToggle.InvokeAsync(Group.Key)">
+    @if (GroupBySupplier)
+    {
+        <td class="px-4 py-3 text-content font-medium whitespace-nowrap">
+            <span class="inline-block w-4 text-content-subtle font-normal">@(Expanded ? "▾" : "▸")</span>@Group.Name
+        </td>
+    }
+    else
+    {
+        <td class="px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+            <span class="inline-block w-4 text-content-subtle">@(Expanded ? "▾" : "▸")</span>@Group.Code
+        </td>
+        @if (Group.InMaster)
+        {
+            <td class="px-4 py-3 text-content font-medium whitespace-nowrap">@Group.Name</td>
+        }
+        else
+        {
+            <td class="px-4 py-3 text-content-subtle italic whitespace-nowrap">(not in cost-code master)</td>
+        }
+    }
+    <td class="px-4 py-3 text-right">@Group.OrderCount</td>
+    <td class="px-4 py-3 text-right">@Money(Group.Committed)</td>
+    <td class="px-4 py-3 text-right @(Group.PaidKnown ? "" : "text-content-subtle")"
+        title="@(Group.PaidKnown ? "" : UnknownPaidHint)">@(Group.PaidKnown ? Money(Group.Paid) : Dash)</td>
+    <td class="px-4 py-3 text-right @(Group.PaidKnown && Group.Remaining > 0 ? "text-content" : "text-content-subtle")"
+        title="@(!Group.PaidKnown ? UnknownPaidHint : Group.KnownCommitted < Group.Committed ? $"Excludes {MoneyExact(Group.UnknownCommitted)} committed on orders in this group with no bill linked — nothing is known about what has been paid on them" : "")">@(Group.PaidKnown ? Money(Group.Remaining) : Dash)</td>
+    <td class="px-4 py-3 text-right @(AtPennies(Group.Committed - Group.Invoiced) < 0m ? "text-negative font-medium" : AtPennies(Group.Committed - Group.Invoiced) > 0m ? "text-content" : "text-content-subtle")"
+        title="@($"{MoneyExact(Group.Invoiced)} invoiced of {MoneyExact(Group.Committed)} committed")">@Money(AtPennies(Group.Committed - Group.Invoiced))</td>
+</tr>
+@if (Expanded)
+{
+    <tr>
+        <td colspan="@(GroupBySupplier ? 6 : 7)" class="px-4 pb-4 pt-1 bg-surface-raised/50">
+            <table class="w-full text-sm border-collapse">
+                <thead>
+                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold border-b border-line">
+                        <th class="px-3 py-2 w-[90px]">Order</th>
+                        <th class="px-3 py-2 min-w-[180px]">@(GroupBySupplier ? "Cost centre" : "Supplier")</th>
+                        <th class="px-3 py-2">Line</th>
+                        <th class="px-3 py-2 whitespace-nowrap">Status</th>
+                        <th class="px-3 py-2 text-right whitespace-nowrap">Total</th>
+                        <th class="px-3 py-2 text-right whitespace-nowrap">Paid</th>
+                        <th class="px-3 py-2 w-[170px]"><span class="sr-only">Actions</span></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-line">
+                    @foreach (var entry in Lines)
+                    {
+                        <WorkOrderLineRow Entry="entry" GroupBySupplier="GroupBySupplier"
+                                          CostCode="@CodeOf(entry)" CostCentreName="@CostCentreNameFor(CodeOf(entry))"
+                                          Summary="@(Summaries.TryGetValue(entry.Detail.Order.WorkOrderId, out var summary) ? summary : null)"
+                                          PaymentKnown="PaymentKnown(entry.Detail)"
+                                          CancelPending="CancelPendingFor(entry.Detail)" CancelBusy="CancelBusy"
+                                          OnCancel="OnCancel" OnKeep="OnKeep"
+                                          MenuItems="LineMenuItems(entry)"
+                                          OnMenuOpenChanged="open => OnMenuOpenChanged.InvokeAsync((entry.Line.WorkOrderLineId, open))" />
+                    }
+                </tbody>
+            </table>
+        </td>
+    </tr>
+}
+
+@code {
+    [Parameter, EditorRequired] public WorkOrderGroup Group { get; set; } = default!;
+    [Parameter] public bool GroupBySupplier { get; set; }
+    [Parameter] public bool Expanded { get; set; }
+    [Parameter] public EventCallback<string> OnToggle { get; set; }
+    /// <summary>The group's lines in order — the page slices them, because the search and the grouping are its.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<WorkOrderLineEntry> Lines { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<WorkOrderLineEntry, string> CodeOf { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<string, string> CostCentreNameFor { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyDictionary<string, WorkOrderInvoiceSummary> Summaries { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<ProjectWorkOrderDetail, bool> PaymentKnown { get; set; } = default!;
+    [Parameter, EditorRequired] public Func<ProjectWorkOrderDetail, bool> CancelPendingFor { get; set; } = default!;
+    [Parameter] public bool CancelBusy { get; set; }
+    [Parameter] public EventCallback<ProjectWorkOrderDetail> OnCancel { get; set; }
+    [Parameter] public EventCallback OnKeep { get; set; }
+    [Parameter, EditorRequired] public Func<WorkOrderLineEntry, IReadOnlyList<DropdownMenu.Item>> LineMenuItems { get; set; } = default!;
+    /// <summary>A line's menu opened or closed, by line id — the table lifts its overflow cap while one is open.</summary>
+    [Parameter] public EventCallback<(string LineId, bool Open)> OnMenuOpenChanged { get; set; }
+}

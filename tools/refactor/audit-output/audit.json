@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-02T07:21:00+00:00",
+  "generatedAt": "2026-09-02T07:25:12+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
       "filesOverLimit": 652,
-      "totalFiles": 3394,
+      "totalFiles": 3398,
       "worstFileLines": 520
     },
     "functionShape": {
@@ -19,18 +19,18 @@
       "maxLength": 40
     },
     "duplication": {
-      "clones": 490,
-      "duplicatedLines": 6220,
-      "totalLines": 216620,
+      "clones": 491,
+      "duplicatedLines": 6227,
+      "totalLines": 216740,
       "duplicatedPercentage": 2.87
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1489
+      "unprefixedBooleans": 1496
     },
     "comments": {
-      "explanatoryCommentLines": 13682,
-      "filesWithComments": 1855,
+      "explanatoryCommentLines": 13676,
+      "filesWithComments": 1858,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -39,16 +39,16 @@
       "repeatedStringLiterals": 30
     },
     "prose": {
-      "longMemberChainLines": 2396,
+      "longMemberChainLines": 2395,
       "deeplyIndentedLines": 2800,
-      "overlongLines": 1677,
+      "overlongLines": 1667,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 132,
       "orphanComponents": 6,
-      "averagePageLines": 214
+      "averagePageLines": 212
     }
   },
   "details": {
@@ -57,7 +57,7 @@
       "summary": {
         "limit": 100,
         "filesOverLimit": 652,
-        "totalFiles": 3394,
+        "totalFiles": 3398,
         "worstFileLines": 520
       },
       "offenders": [
@@ -154,16 +154,16 @@
           "lines": 422
         },
         {
-          "file": "jpms/Pages/ProjectWorkOrders.razor.cs",
-          "lines": 419
-        },
-        {
           "file": "jpms/Services/Navigation/SidebarFolders.cs",
           "lines": 415
         },
         {
           "file": "jpms/Pages/ProjectVariations.razor",
           "lines": 411
+        },
+        {
+          "file": "jpms/Pages/ProjectWorkOrders.razor.cs",
+          "lines": 409
         },
         {
           "file": "api/Features/Ai/Tools/AiRegisterTools.cs",
@@ -239,10 +239,6 @@
         },
         {
           "file": "jpms/Pages/TriageQueue.StagedCreate.cs",
-          "lines": 354
-        },
-        {
-          "file": "jpms/Pages/ProjectWorkOrders.razor",
           "lines": 354
         },
         {
@@ -1147,6 +1143,10 @@
         },
         {
           "file": "jpms/Components/DrawingUploadForm.razor",
+          "lines": 193
+        },
+        {
+          "file": "jpms/Pages/ProjectWorkOrders.razor",
           "lines": 193
         },
         {
@@ -3111,7 +3111,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1489
+        "unprefixedBooleans": 1496
       },
       "offenders": {
         "abbreviations": [
@@ -3573,8 +3573,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13682,
-        "filesWithComments": 1855,
+        "explanatoryCommentLines": 13676,
+        "filesWithComments": 1858,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4279,9 +4279,9 @@
     "prose": {
       "name": "prose",
       "summary": {
-        "longMemberChainLines": 2396,
+        "longMemberChainLines": 2395,
         "deeplyIndentedLines": 2800,
-        "overlongLines": 1677,
+        "overlongLines": 1667,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4899,7 +4899,7 @@
         "pages": 92,
         "components": 132,
         "orphanComponents": 6,
-        "averagePageLines": 214
+        "averagePageLines": 212
       },
       "offenders": {
         "pages": [
@@ -5000,19 +5000,6 @@
             "lines": 364,
             "widgets": [
               "loadGate"
-            ]
-          },
-          {
-            "page": "jpms/Pages/ProjectWorkOrders.razor",
-            "lines": 354,
-            "widgets": [
-              "table",
-              "modal",
-              "loadGate",
-              "toast",
-              "dropdown",
-              "panel",
-              "export"
             ]
           },
           {
@@ -5355,6 +5342,16 @@
             "page": "jpms/Pages/ProfitSummary.razor",
             "lines": 195,
             "widgets": [
+              "loadGate",
+              "panel",
+              "export"
+            ]
+          },
+          {
+            "page": "jpms/Pages/ProjectWorkOrders.razor",
+            "lines": 193,
+            "widgets": [
+              "modal",
               "loadGate",
               "panel",
               "export"
@@ -5708,7 +5705,7 @@
           },
           {
             "component": "jpms/Components/DropdownMenu.razor",
-            "reusedBy": 21
+            "reusedBy": 23
           },
           {
             "component": "jpms/Components/JewelSpinner.razor",
@@ -6212,9 +6209,9 @@
     "duplication": {
       "name": "duplication",
       "summary": {
-        "clones": 490,
-        "duplicatedLines": 6220,
-        "totalLines": 216620,
+        "clones": 491,
+        "duplicatedLines": 6227,
+        "totalLines": 216740,
         "duplicatedPercentage": 2.87
       },
       "offenders": [

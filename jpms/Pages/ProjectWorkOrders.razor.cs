@@ -35,16 +35,6 @@ public partial class ProjectWorkOrders
 
     private const string UnassignedCode = "(unassigned)";
 
-    // PaidKnown: at least one order behind this row has a payment position JPMS can stand
-    // behind (a linked bill, a migrated opening balance, or a net-credit order on which no
-    // bill is ever due, so £0.00 paid is a fact). When no order in the row does,
-    // the row's Paid is not zero — it is unknown — and the table says so with an em dash.
-    // KnownCommitted is the committed value on just those known orders: Remaining is
-    // KnownCommitted less Paid, so an unlinked order's value is never passed off as
-    // wholly unpaid — and the Remaining column always sums to its footer total.
-    private sealed record GroupRow(string Key, string Code, string Name, bool InMaster, int OrderCount, decimal Committed, decimal KnownCommitted, decimal Paid, decimal Invoiced, bool PaidKnown);
-    private sealed record OrderLine(ProjectWorkOrderDetail Detail, WorkOrderLine Line);
-
     private IReadOnlyList<ProjectWorkOrderDetail> Orders => WorkOrders.Current(ProjectId);
 
     // The table, its totals and the export are the truth about what has been ISSUED and still
@@ -62,14 +52,12 @@ public partial class ProjectWorkOrders
     private List<ProjectWorkOrderDetail> CancelledOrders =>
         Orders.Where(detail => detail.Order.IsCancelled && MatchesSearch(detail)).ToList();
 
-    private List<OrderLine> AllLines =>
-        LiveOrders.SelectMany(detail => detail.Lines.Select(line => new OrderLine(detail, line))).ToList();
+    private List<WorkOrderLineEntry> AllLines =>
+        LiveOrders.SelectMany(detail => detail.Lines.Select(line => new WorkOrderLineEntry(detail, line))).ToList();
 
     // Grouping toggle: by cost centre (the QS view, default) or by supplier (how the
     // accountant records costs). The choice is remembered per user, per browser.
     private bool groupBySupplier;
-
-    private int GroupColspan => groupBySupplier ? 6 : 7;
 
     private async Task SetGroupingAsync(bool bySupplier)
     {
@@ -91,7 +79,7 @@ public partial class ProjectWorkOrders
     private bool MatchesSearch(ProjectWorkOrderDetail detail) =>
         !Searching || detail.SubcontractorName.Contains(supplierSearch.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    private List<OrderLine> VisibleLines =>
+    private List<WorkOrderLineEntry> VisibleLines =>
         AllLines.Where(entry => MatchesSearch(entry.Detail)).ToList();
 
     private int VisibleOrderCount =>
@@ -126,11 +114,17 @@ public partial class ProjectWorkOrders
     private bool PaymentKnown(ProjectWorkOrderDetail detail) =>
         PaymentStatusOf(detail) != WorkOrderPaymentStatus.NotLinked;
 
-    // Table footer totals — over the visible (search-filtered) lines, so a supplier
-    // search reads as that supplier's committed / paid position.
-    private decimal LineCommitted => VisibleLines.Sum(entry => entry.Line.LineTotal);
-    private decimal LinePaid => VisibleLines.Sum(entry => entry.Line.PaidToDate);
-    private decimal LineInvoiced => VisibleLines.Sum(entry => InvoicedShare(entry));
+    // The table's footer — over the visible (search-filtered) lines, so a supplier search
+    // reads as that supplier's committed / paid position — in the same shape as a row.
+    private WorkOrderGroup VisibleTotal => TotalOf(VisibleLines, VisibleOrderCount);
+
+    private WorkOrderGroup TotalOf(List<WorkOrderLineEntry> lines, int orderCount) =>
+        new("", "", "", true, orderCount,
+            lines.Sum(entry => entry.Line.LineTotal),
+            lines.Where(entry => PaymentKnown(entry.Detail)).Sum(entry => entry.Line.LineTotal),
+            lines.Sum(entry => entry.Line.PaidToDate),
+            lines.Sum(entry => InvoicedShare(entry)),
+            true);
 
     // Remaining is only an answer where the payment position is known. An unlinked order
     // carries PaidToDate = 0 — not because £0 has been paid but because nothing is known —
@@ -138,23 +132,23 @@ public partial class ProjectWorkOrders
     // while its row shows “–”: the total wouldn't match the column above it (which is
     // exactly how this was found). Remaining therefore sums known orders only, and the
     // committed value still unknown is said out loud next to the figures it is missing from.
-    private decimal KnownRemainingOf(List<OrderLine> lines) =>
+    private decimal KnownRemainingOf(List<WorkOrderLineEntry> lines) =>
         lines.Where(entry => PaymentKnown(entry.Detail))
              .Sum(entry => entry.Line.LineTotal - entry.Line.PaidToDate);
 
-    private decimal UnknownCommittedOf(List<OrderLine> lines) =>
+    private decimal UnknownCommittedOf(List<WorkOrderLineEntry> lines) =>
         lines.Where(entry => !PaymentKnown(entry.Detail)).Sum(entry => entry.Line.LineTotal);
 
-    private List<GroupRow> Rows => RowsFrom(VisibleLines);
+    private List<WorkOrderGroup> Rows => RowsFrom(VisibleLines);
 
     // The export can be asked to ignore the supplier search — the same grouping pipeline
     // runs over either the search-narrowed lines (the table's view) or every line.
-    private List<GroupRow> RowsFrom(List<OrderLine> lines) =>
+    private List<WorkOrderGroup> RowsFrom(List<WorkOrderLineEntry> lines) =>
         groupBySupplier ? SupplierRowsFrom(lines) : CostCentreRowsFrom(lines);
 
     // Master cost centres in master order first, then codes not in the active master (legacy /
     // retired), then lines with no code at all — shown rather than silently swallowed.
-    private List<GroupRow> CostCentreRowsFrom(List<OrderLine> lines)
+    private List<WorkOrderGroup> CostCentreRowsFrom(List<WorkOrderLineEntry> lines)
     {
         var masterOrder = CostCenters.Current
             .Select((centre, index) => (centre.Code, index))
@@ -163,7 +157,7 @@ public partial class ProjectWorkOrders
 
         return lines
             .GroupBy(entry => CodeOf(entry), StringComparer.OrdinalIgnoreCase)
-            .Select(group => new GroupRow(
+            .Select(group => new WorkOrderGroup(
                 group.Key,
                 group.Key,
                 namesByCode.TryGetValue(group.Key, out var name) ? name : "",
@@ -182,10 +176,10 @@ public partial class ProjectWorkOrders
 
     // Supplier roll-up: the same lines and totals, grouped by who the order is with
     // rather than where the cost sits — how the accountant records them.
-    private List<GroupRow> SupplierRowsFrom(List<OrderLine> lines) =>
+    private List<WorkOrderGroup> SupplierRowsFrom(List<WorkOrderLineEntry> lines) =>
         lines
             .GroupBy(entry => entry.Detail.SubcontractorName, StringComparer.OrdinalIgnoreCase)
-            .Select(group => new GroupRow(
+            .Select(group => new WorkOrderGroup(
                 group.Key,
                 "",
                 group.Key,
@@ -199,7 +193,7 @@ public partial class ProjectWorkOrders
             .OrderBy(row => row.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-    private static string CodeOf(OrderLine entry) =>
+    private static string CodeOf(WorkOrderLineEntry entry) =>
         string.IsNullOrWhiteSpace(entry.Line.CostCode) ? UnassignedCode : entry.Line.CostCode;
 
     // "Left to invoice" is a whole-order figure (its value less what's been invoiced), but
@@ -209,7 +203,7 @@ public partial class ProjectWorkOrders
     // summed over a whole order it collapses back to the order's invoiced total — so the
     // footer's committed-less-invoiced matches the "left to invoice" figure in the summary
     // line above and on the WO Allocation tab.
-    private decimal InvoicedShare(OrderLine entry)
+    private decimal InvoicedShare(WorkOrderLineEntry entry)
     {
         if (!SummariesByOrder.TryGetValue(entry.Detail.Order.WorkOrderId, out var summary))
             return 0m;
@@ -223,9 +217,9 @@ public partial class ProjectWorkOrders
         CostCenters.Current.FirstOrDefault(centre =>
             string.Equals(centre.Code, code, StringComparison.OrdinalIgnoreCase))?.Name ?? "";
 
-    private List<OrderLine> LinesFor(string key) => LinesFrom(VisibleLines, key);
+    private IReadOnlyList<WorkOrderLineEntry> LinesFor(string key) => LinesFrom(VisibleLines, key);
 
-    private List<OrderLine> LinesFrom(List<OrderLine> lines, string key) =>
+    private List<WorkOrderLineEntry> LinesFrom(List<WorkOrderLineEntry> lines, string key) =>
         lines
             .Where(entry => groupBySupplier
                 ? string.Equals(entry.Detail.SubcontractorName, key, StringComparison.OrdinalIgnoreCase)
@@ -239,9 +233,9 @@ public partial class ProjectWorkOrders
     private bool IsExpanded(string key) => Searching || expandedKeys.Contains(key);
 
     // The line being re-coded across cost centres, if the modal is open.
-    private OrderLine? recoding;
+    private WorkOrderLineEntry? recoding;
 
-    private void OpenRecode(OrderLine line) => recoding = line;
+    private void OpenRecode(WorkOrderLineEntry line) => recoding = line;
 
     private void CloseRecode() => recoding = null;
 
@@ -311,11 +305,7 @@ public partial class ProjectWorkOrders
 
     private bool CanEditOrder(WorkOrder order) => order.IsManual || CanEditAllOrders;
 
-    // The table row whose Actions menu is open — while set, the table container's overflow cap
-    // is lifted so the menu isn't clipped (see the container's comment).
-    private string? openRowMenuKey;
-
-    private IReadOnlyList<DropdownMenu.Item> LineMenuItems(OrderLine line)
+    private IReadOnlyList<DropdownMenu.Item> LineMenuItems(WorkOrderLineEntry line)
     {
         var items = new List<DropdownMenu.Item>
         {
