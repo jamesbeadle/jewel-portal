@@ -118,9 +118,10 @@ public sealed class ValuationSnapshotExportTests
         Assert.Equal("Summary", names[0]);
         Assert.Contains("V17", names);
         Assert.Contains("Pending variations", names);
-        // The Summary tab carries the statement label and the seven-figure line.
+        // The Summary tab carries the statement label (the title band upper-cases it) and the
+        // seven-figure line.
         var summaryCells = opened.Worksheet("Summary").CellsUsed().Select(cell => cell.GetFormattedString()).ToList();
-        Assert.Contains(summaryCells, text => text.Contains("August 2026 — working copy"));
+        Assert.Contains(summaryCells, text => text.Contains("August 2026 — working copy", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(summaryCells, text => text == "Main works");
         Assert.Contains(opened.Worksheet("Summary").CellsUsed().Select(cell => cell.Value), value => value.IsNumber && value.GetNumber() == 1_234_567.89);
     }
