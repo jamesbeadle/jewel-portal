@@ -1,27 +1,26 @@
 # Refactor audit
 
-Generated 2026-09-02 07:34 UTC.
+Generated 2026-09-02 07:40 UTC.
 
 ## Summary
 
 | Check | Key figures |
 | --- | --- |
-| fileLength | limit: 100, filesOverLimit: 655, totalFiles: 3405, worstFileLines: 517 |
+| fileLength | limit: 100, filesOverLimit: 656, totalFiles: 3415, worstFileLines: 517 |
 | functionShape | limit: 30, functionsOverLimit: 697, elseBlocks: 1170, measurementIsHeuristic: True |
 | functionNames | overlongFunctionNames: 43, maxWords: 5, maxLength: 40 |
-| duplication | clones: 490, duplicatedLines: 6214, totalLines: 216780, duplicatedPercentage: 2.87 |
-| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1496 |
-| comments | explanatoryCommentLines: 13676, filesWithComments: 1865, taskMarkers: 48 |
+| duplication | clones: 490, duplicatedLines: 6214, totalLines: 216883, duplicatedPercentage: 2.87 |
+| naming | bannedAbbreviationHits: 468, unprefixedBooleans: 1502 |
+| comments | explanatoryCommentLines: 13673, filesWithComments: 1874, taskMarkers: 48 |
 | magicValues | inlineHexColours: 43, inlineStyleAttributes: 49, repeatedStringLiterals: 30 |
-| prose | longMemberChainLines: 2395, deeplyIndentedLines: 2800, overlongLines: 1667, measurementIsHeuristic: True |
-| inventory | pages: 92, components: 132, orphanComponents: 6, averagePageLines: 212 |
+| prose | longMemberChainLines: 2395, deeplyIndentedLines: 2800, overlongLines: 1666, measurementIsHeuristic: True |
+| inventory | pages: 92, components: 132, orphanComponents: 6, averagePageLines: 208 |
 
 ## Worst files by length
 
 | File | Lines |
 | --- | --- |
 | jpms/Components/ValuationReportTable.razor | 517 |
-| jpms/Pages/Subcontractors.razor | 517 |
 | api/Features/Commercial/Documents/CostCentreReconciliationRenderer.cs | 509 |
 | jpms/Components/WorkOrderForm.razor.cs | 507 |
 | api/Features/Ai/Tools/Actions/RequestsActions.cs | 492 |
@@ -40,5 +39,6 @@ Generated 2026-09-02 07:34 UTC.
 | jpms/Pages/ProjectRequestDetail.razor | 434 |
 | api/Features/Registers/RegistersSlices.cs | 433 |
 | api/Features/Ai/Sources/AiFiledDocuments.cs | 428 |
+| jpms/Components/ManualWorkOrderModal.razor.cs | 428 |
 
 Full detail, including every offender list, is in `audit.json`.

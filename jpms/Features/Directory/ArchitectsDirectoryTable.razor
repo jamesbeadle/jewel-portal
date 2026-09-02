@@ -1,0 +1,49 @@
+@namespace Jewel.JPMS.Features.Directory
+@using static Jewel.JPMS.Features.Directory.DirectoryDisplay
+
+@* The Architects group: first-class architect practices, read-only here — creating, editing
+   and the contacts live on their own page, which the note beneath links to. *@
+@if (Error is not null)
+{
+    <p class="text-sm text-content-subtle italic">@Error</p>
+}
+else if (Architects.Count == 0)
+{
+    <LoadGate IsLoading="@(!Loaded)" Label="Loading">
+        <p class="text-sm text-content-subtle italic">No architect practices yet.</p>
+    </LoadGate>
+}
+else
+{
+    <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="text-left text-content-subtle border-b border-line">
+                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Practice</th>
+                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact</th>
+                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact email</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var architect in Architects)
+                {
+                    <tr class="border-b border-line last:border-0">
+                        <td class="px-4 py-3 font-medium text-content">@architect.Name</td>
+                        <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactName)</td>
+                        <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactEmail)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+<p class="text-xs text-content-subtle mt-3">
+    Create, edit and manage contacts on the
+    <a class="underline hover:text-content" href="/architects">Architects</a> page.
+</p>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Architect> Architects { get; set; } = default!;
+    [Parameter] public bool Loaded { get; set; }
+    [Parameter] public string? Error { get; set; }
+}

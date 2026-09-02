@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-09-02T07:34:26+00:00",
+  "generatedAt": "2026-09-02T07:40:25+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 655,
-      "totalFiles": 3405,
+      "filesOverLimit": 656,
+      "totalFiles": 3415,
       "worstFileLines": 517
     },
     "functionShape": {
@@ -21,16 +21,16 @@
     "duplication": {
       "clones": 490,
       "duplicatedLines": 6214,
-      "totalLines": 216780,
+      "totalLines": 216883,
       "duplicatedPercentage": 2.87
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1496
+      "unprefixedBooleans": 1502
     },
     "comments": {
-      "explanatoryCommentLines": 13676,
-      "filesWithComments": 1865,
+      "explanatoryCommentLines": 13673,
+      "filesWithComments": 1874,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -41,14 +41,14 @@
     "prose": {
       "longMemberChainLines": 2395,
       "deeplyIndentedLines": 2800,
-      "overlongLines": 1667,
+      "overlongLines": 1666,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 132,
       "orphanComponents": 6,
-      "averagePageLines": 212
+      "averagePageLines": 208
     }
   },
   "details": {
@@ -56,17 +56,13 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 655,
-        "totalFiles": 3405,
+        "filesOverLimit": 656,
+        "totalFiles": 3415,
         "worstFileLines": 517
       },
       "offenders": [
         {
           "file": "jpms/Components/ValuationReportTable.razor",
-          "lines": 517
-        },
-        {
-          "file": "jpms/Pages/Subcontractors.razor",
           "lines": 517
         },
         {
@@ -770,10 +766,6 @@
           "lines": 231
         },
         {
-          "file": "jpms/Pages/Subcontractors.razor.cs",
-          "lines": 231
-        },
-        {
           "file": "jpms/Features/Triage/Panels/PathwayPane.razor",
           "lines": 231
         },
@@ -791,6 +783,10 @@
         },
         {
           "file": "jpms/Pages/ProjectFinancials.razor.cs",
+          "lines": 229
+        },
+        {
+          "file": "jpms/Pages/Subcontractors.razor.cs",
           "lines": 229
         },
         {
@@ -1462,10 +1458,6 @@
           "lines": 164
         },
         {
-          "file": "jpms/Pages/Subcontractors.Consolidation.cs",
-          "lines": 164
-        },
-        {
           "file": "jpms/Components/ProgressUpdateForm.razor",
           "lines": 163
         },
@@ -1523,6 +1515,10 @@
         },
         {
           "file": "jpms/Pages/Projects.razor",
+          "lines": 158
+        },
+        {
+          "file": "jpms/Pages/Subcontractors.razor",
           "lines": 158
         },
         {
@@ -2342,6 +2338,10 @@
           "lines": 112
         },
         {
+          "file": "jpms/Features/Directory/XeroImportModal.razor",
+          "lines": 112
+        },
+        {
           "file": "jpms/Features/Triage/Panels/Actions/StageTenderResponseAction.razor",
           "lines": 112
         },
@@ -2507,6 +2507,10 @@
         },
         {
           "file": "jpms/Cqrs/HttpQueryClient.cs",
+          "lines": 106
+        },
+        {
+          "file": "jpms/Features/Directory/ConsolidateRecordsModal.razor.cs",
           "lines": 106
         },
         {
@@ -3123,7 +3127,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1496
+        "unprefixedBooleans": 1502
       },
       "offenders": {
         "abbreviations": [
@@ -3585,8 +3589,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13676,
-        "filesWithComments": 1865,
+        "explanatoryCommentLines": 13673,
+        "filesWithComments": 1874,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4293,7 +4297,7 @@
       "summary": {
         "longMemberChainLines": 2395,
         "deeplyIndentedLines": 2800,
-        "overlongLines": 1667,
+        "overlongLines": 1666,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4911,20 +4915,10 @@
         "pages": 92,
         "components": 132,
         "orphanComponents": 6,
-        "averagePageLines": 212
+        "averagePageLines": 208
       },
       "offenders": {
         "pages": [
-          {
-            "page": "jpms/Pages/Subcontractors.razor",
-            "lines": 517,
-            "widgets": [
-              "table",
-              "modal",
-              "loadGate",
-              "export"
-            ]
-          },
           {
             "page": "jpms/Pages/XeroAllocation.razor",
             "lines": 488,
@@ -5460,6 +5454,15 @@
             ]
           },
           {
+            "page": "jpms/Pages/Subcontractors.razor",
+            "lines": 158,
+            "widgets": [
+              "modal",
+              "loadGate",
+              "export"
+            ]
+          },
+          {
             "page": "jpms/Pages/AiConnections.razor",
             "lines": 153,
             "widgets": [
@@ -5681,11 +5684,11 @@
         "componentReuse": [
           {
             "component": "jpms/Components/LoadGate.razor",
-            "reusedBy": 106
+            "reusedBy": 110
           },
           {
             "component": "jpms/Components/Modal.razor",
-            "reusedBy": 87
+            "reusedBy": 89
           },
           {
             "component": "jpms/Components/RequestAccessView.razor",
@@ -6223,7 +6226,7 @@
       "summary": {
         "clones": 490,
         "duplicatedLines": 6214,
-        "totalLines": 216780,
+        "totalLines": 216883,
         "duplicatedPercentage": 2.87
       },
       "offenders": [

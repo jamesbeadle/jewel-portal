@@ -1,5 +1,7 @@
 @page "/directory"
 @using Jewel.JPMS.Contracts.Subcontractors
+@using Jewel.JPMS.Features.Directory
+@using static Jewel.JPMS.Features.Directory.DirectoryDisplay
 @inject AuthService Auth
 @inject SessionService Session
 @inject ISubcontractorStore SubcontractorStore
@@ -77,129 +79,15 @@ else
 
         @if (group == DirectoryGroup.Clients)
         {
-            @if (clientsError is not null)
-            {
-                <p class="text-sm text-content-subtle italic">@clientsError</p>
-            }
-            else if (clients.Count == 0)
-            {
-                <LoadGate IsLoading="@(!clientsLoaded)" Label="Loading">
-                    <p class="text-sm text-content-subtle italic">No client accounts yet.</p>
-                </LoadGate>
-            }
-            else
-            {
-                <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="text-left text-content-subtle border-b border-line">
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Client</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Primary contact</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact email</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var client in clients)
-                            {
-                                <tr class="border-b border-line last:border-0">
-                                    <td class="px-4 py-3 font-medium text-content">@client.Name</td>
-                                    <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactName)</td>
-                                    <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactEmail)</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            <p class="text-xs text-content-subtle mt-3">
-                Create, edit and manage contacts on the
-                <a class="underline hover:text-content" href="/clients">Client accounts</a> page.
-            </p>
+            <ClientsDirectoryTable Clients="clients" Loaded="clientsLoaded" Error="@clientsError" />
         }
         else if (group == DirectoryGroup.Architects)
         {
-            @if (architectsError is not null)
-            {
-                <p class="text-sm text-content-subtle italic">@architectsError</p>
-            }
-            else if (architects.Count == 0)
-            {
-                <LoadGate IsLoading="@(!architectsLoaded)" Label="Loading">
-                    <p class="text-sm text-content-subtle italic">No architect practices yet.</p>
-                </LoadGate>
-            }
-            else
-            {
-                <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="text-left text-content-subtle border-b border-line">
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Practice</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact email</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var architect in architects)
-                            {
-                                <tr class="border-b border-line last:border-0">
-                                    <td class="px-4 py-3 font-medium text-content">@architect.Name</td>
-                                    <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactName)</td>
-                                    <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactEmail)</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            <p class="text-xs text-content-subtle mt-3">
-                Create, edit and manage contacts on the
-                <a class="underline hover:text-content" href="/architects">Architects</a> page.
-            </p>
+            <ArchitectsDirectoryTable Architects="architects" Loaded="architectsLoaded" Error="@architectsError" />
         }
         else if (group == DirectoryGroup.Staff)
         {
-            @if (staffError is not null)
-            {
-                <p class="text-sm text-content-subtle italic">@staffError</p>
-            }
-            else if (StaffUsers.Count == 0)
-            {
-                <LoadGate IsLoading="@(!staffLoaded)" Label="Loading">
-                    <p class="text-sm text-content-subtle italic">No internal staff recorded.</p>
-                </LoadGate>
-            }
-            else
-            {
-                <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="text-left text-content-subtle border-b border-line">
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Name</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Email</th>
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Roles</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var user in StaffUsers)
-                            {
-                                <tr class="border-b border-line last:border-0">
-                                    <td class="px-4 py-3 font-medium text-content">@user.DisplayName</td>
-                                    <td class="px-4 py-3 text-content-muted">@user.Email</td>
-                                    <td class="px-4 py-3">
-                                        <span class="flex flex-wrap gap-1">
-                                            @foreach (var role in user.Roles)
-                                            {
-                                                <RoleBadge Role="role" />
-                                            }
-                                        </span>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
+            <StaffDirectoryTable Staff="StaffUsers" Loaded="staffLoaded" Error="@staffError" />
         }
         else
         {
@@ -230,7 +118,7 @@ else
                 <div class="flex items-center gap-2">
                     <button type="button" class="btn-secondary inline-flex items-center gap-1.5"
                             title="Copy supplier records from Xero into the directory"
-                            @onclick="OpenImportModal">
+                            @onclick="() => importModal.Open(search)">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
                         Import from Xero
@@ -239,7 +127,7 @@ else
                     {
                         <button type="button" class="btn-primary"
                                 title="Merge the ticked records into one master record"
-                                @onclick="OpenConsolidateModal">
+                                @onclick="() => consolidateModal.Open(SelectedForConsolidation())">
                             Consolidate (@SelectedForConsolidation().Count)
                         </button>
                     }
@@ -247,83 +135,10 @@ else
             }
         </div>
 
-        @if (Filtered().Count == 0)
-        {
-            <p class="text-sm text-content-subtle italic">No companies match.</p>
-        }
-        else
-        {
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
-                            @if (CanManage)
-                            {
-                                <th class="sticky top-0 z-20 bg-surface-raised pl-4 pr-1 py-3 w-8" title="Tick records to consolidate"></th>
-                            }
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Company</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Type</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Primary contact</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Location</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Compliance</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var sub in Filtered())
-                        {
-                            <tr class="hover:bg-surface-raised cursor-pointer transition" @onclick="() => Open(sub.SubcontractorId)">
-                                @if (CanManage)
-                                {
-                                    <td class="pl-4 pr-1 py-3" @onclick:stopPropagation="true">
-                                        <input type="checkbox" class="cursor-pointer"
-                                               checked="@selectedIds.Contains(sub.SubcontractorId)"
-                                               @onchange="e => ToggleSelected(sub.SubcontractorId, e)" />
-                                    </td>
-                                }
-                                <td class="px-4 py-3 text-content font-medium">
-                                    <span class="inline-flex items-center gap-1.5">
-                                        @sub.CompanyName
-                                        @if (sub.XeroLinked)
-                                        {
-                                            <svg class="w-3.5 h-3.5 text-content-subtle shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                 stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Linked to Xero"><title>Linked to Xero</title><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
-                                        }
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@Label(sub.Category)</span>
-                                </td>
-                                <td class="px-4 py-3 hidden sm:table-cell">
-                                    <span class="flex flex-wrap gap-1">
-                                        @foreach (var trade in sub.Trades)
-                                        {
-                                            <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@trade.Name</span>
-                                        }
-                                    </span>
-                                </td>
-                                <td class="px-4 py-3 text-content-muted hidden md:table-cell">
-                                    @sub.ContactName
-                                    @if (!string.IsNullOrWhiteSpace(sub.ContactEmail))
-                                    {
-                                        <span class="block text-xs text-content-subtle">@sub.ContactEmail</span>
-                                    }
-                                </td>
-                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell">@Location(sub)</td>
-                                <td class="px-4 py-3">
-                                    @* The pill renders only once the whole-company read has landed — a blank
-                                       cell is the honest "not fetched yet"; no gate on a single cell. *@
-                                    @if (Compliance.Current is not null)
-                                    {
-                                        <ComplianceStatusPill Status="@Compliance.WorstStatusFor(sub.SubcontractorId)" />
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        }
+        <CompaniesDirectoryTable Companies="Filtered()" Compliance="Compliance" CanManage="CanManage"
+                                 SelectedIds="selectedIds"
+                                 OnSelectedChanged="args => SetSelected(args.SubcontractorId, args.Ticked)"
+                                 OnOpen="Open" />
         }
     </section>
 
@@ -336,182 +151,8 @@ else
         <DirectoryContactForm @ref="addForm" OnSubmit="SendCompanyAsync" />
     </Modal>
 
-    @* ---- Import from Xero: the supplier list straight out of the accounts system. Each import
-       creates a NEW linked record; duplicates are then resolved with Consolidate, so there is one
-       consistent flow for all duplicates. ---- *@
-    <Modal IsOpen="importOpen" Title="Import from Xero" ShowFooter="false"
-           OnCancel="CloseImportModal" Class="max-w-2xl w-full">
-        @if (importError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@importError</p>
-        }
-        <div class="flex flex-wrap items-end gap-3 mb-4">
-            <div class="grow min-w-[14rem]">
-                <label class="eyebrow block mb-1">Search</label>
-                <input class="field" placeholder="Supplier name, email, town…" value="@importSearch"
-                       @oninput="OnImportSearchInput" />
-            </div>
-            <button type="button" class="btn-secondary shrink-0" disabled="@importLoading"
-                    title="Re-read the contact list from Xero"
-                    @onclick="() => LoadSuppliersAsync(force: true)">
-                @(importLoading ? "Refreshing…" : "Refresh")
-            </button>
-        </div>
-        <label class="flex items-center gap-2 text-xs text-content-muted mb-3 cursor-pointer">
-            <input type="checkbox" checked="@importIncludeCustomers"
-                   @onchange="e => importIncludeCustomers = e.Value is bool ticked && ticked" />
-            Include Xero customers (clients) — hidden by default so the list stays supplier-shaped
-        </label>
+    <XeroImportModal @ref="importModal" />
 
-        @if (importSnapshot is null)
-        {
-            @* A failed fetch must open the gate — the error paragraph above says what went wrong. *@
-            @if (importError is null)
-            {
-                <LoadGate IsLoading="true" Prominent="true" Label="Reading Xero" />
-            }
-        }
-        else if (!importSnapshot.IsConfigured)
-        {
-            <p class="text-sm text-content-subtle italic">
-                Xero isn't connected — the Xero__ClientId / Xero__ClientSecret app settings are missing.
-            </p>
-        }
-        else if (importSnapshot.Error is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@importSnapshot.Error</p>
-        }
-        else if (FilteredSuppliers().Count == 0)
-        {
-            <p class="text-sm text-content-subtle italic">
-                No Xero contacts match@(importIncludeCustomers ? "" : " — tick \"Include Xero customers\" if the contact is flagged as a customer, or Refresh if it was just created in Xero").
-            </p>
-        }
-        else
-        {
-            <div class="rounded-xl border border-line overflow-y-auto max-h-[50vh]">
-                <table class="w-full text-sm">
-                    <tbody class="divide-y divide-line">
-                        @foreach (var supplier in FilteredSuppliers())
-                        {
-                            <tr>
-                                <td class="px-4 py-3">
-                                    <p class="text-content font-medium inline-flex items-center gap-1.5">
-                                        @supplier.Name
-                                        @if (supplier.IsCustomer && !supplier.IsSupplier)
-                                        {
-                                            <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">Customer</span>
-                                        }
-                                        else if (!supplier.IsSupplier)
-                                        {
-                                            <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle" title="No bills in Xero yet">New contact</span>
-                                        }
-                                    </p>
-                                    <p class="text-xs text-content-subtle">
-                                        @string.Join(" · ", new[] { supplier.EmailAddress, supplier.Town }.Where(x => !string.IsNullOrWhiteSpace(x)))
-                                    </p>
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    @if (supplier.AlreadyImported)
-                                    {
-                                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">Imported</span>
-                                    }
-                                    else
-                                    {
-                                        <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
-                                                disabled="@(importingContactId is not null)"
-                                                @onclick="() => ImportSupplierAsync(supplier.ContactId)">
-                                            @(importingContactId == supplier.ContactId ? "Importing…" : "Import")
-                                        </button>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            @if (importSnapshot.Truncated)
-            {
-                <p class="text-xs text-content-subtle mt-2">
-                    Xero holds more suppliers than the page cap allows — the list is incomplete (raise Xero__MaxPages).
-                </p>
-            }
-        }
-        <p class="text-xs text-content-subtle mt-3">
-            Importing copies the supplier into the directory as a new record marked with the
-            Xero link symbol. If it duplicates an existing record, tick both in the directory
-            and use Consolidate to merge them into one master record.
-        </p>
-    </Modal>
-
-    @* ---- Consolidate: merge the ticked records into one master. Pick the master, then the
-       winning value for each detail; every reference is re-pointed and the other records are
-       deleted — their contact details are kept as contacts on the master. ---- *@
-    <Modal IsOpen="consolidateOpen" Title="Consolidate records" ShowFooter="true"
-           ConfirmLabel="@(consolidating ? "Consolidating…" : $"Merge {consolidateCandidates.Count} records")"
-           CancelLabel="Cancel" DismissOnOverlayClick="false"
-           OnCancel="CloseConsolidateModal" OnConfirm="SaveConsolidationAsync" Class="max-w-2xl w-full">
-        @if (consolidateError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@consolidateError</p>
-        }
-        <div class="space-y-4">
-            <div>
-                <p class="eyebrow mb-1">Master record</p>
-                <p class="text-xs text-content-subtle mb-2">
-                    The record the others merge into. It keeps its history (work orders, invites,
-                    compliance documents all move here) — the others are deleted after the merge.
-                </p>
-                <div class="space-y-1">
-                    @foreach (var candidate in consolidateCandidates)
-                    {
-                        var id = candidate.SubcontractorId;
-                        <label class="flex items-center gap-2 text-sm text-content cursor-pointer">
-                            <input type="radio" name="consolidate-master" checked="@(masterId == id)"
-                                   @onchange="() => masterId = id" />
-                            <span class="font-medium">@candidate.CompanyName</span>
-                            <span class="text-xs text-content-subtle">
-                                @string.Join(" · ", new[] { Label(candidate.Category), candidate.TradesLabel, candidate.XeroLinked ? "Linked to Xero" : "" }.Where(x => !string.IsNullOrWhiteSpace(x)))
-                            </span>
-                        </label>
-                    }
-                </div>
-            </div>
-
-            @if (mergeFields.Any(field => field.Options.Count > 1))
-            {
-                <div>
-                    <p class="eyebrow mb-1">Choose the winning values</p>
-                    <p class="text-xs text-content-subtle mb-2">
-                        Where the records disagree, pick the value the master record keeps. Contact
-                        details that lose here are kept as additional contacts on the master.
-                    </p>
-                    <div class="space-y-3">
-                        @foreach (var field in mergeFields.Where(field => field.Options.Count > 1))
-                        {
-                            <div>
-                                <p class="text-xs font-medium text-content-muted mb-1">@field.Fieldname</p>
-                                <div class="flex flex-wrap gap-x-4 gap-y-1">
-                                    @foreach (var option in field.Options)
-                                    {
-                                        <label class="flex items-center gap-1.5 text-sm text-content cursor-pointer">
-                                            <input type="radio" name="@("consolidate-" + field.Key)" checked="@(field.Chosen == option)"
-                                                   @onchange="() => field.Chosen = option" />
-                                            @option
-                                        </label>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-
-            <p class="text-xs text-content-subtle">
-                Trades are combined, every contact is kept, and Xero links carry across — if any of
-                the merged records came from Xero, the master stays linked to Xero.
-            </p>
-        </div>
-    </Modal>
+    <ConsolidateRecordsModal @ref="consolidateModal" OnMerged="() => selectedIds.Clear()" />
 }
 

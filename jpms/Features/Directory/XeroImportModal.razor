@@ -1,0 +1,112 @@
+@namespace Jewel.JPMS.Features.Directory
+@inject ISubcontractorStore SubcontractorStore
+
+@* Import from Xero: the supplier list straight out of the accounts system. Each import creates
+   a NEW linked record; duplicates are then resolved with Consolidate, so there is one
+   consistent flow for all duplicates. Opened by the page with Open(search) — its search box
+   starts from whatever is in the directory search box, so "sear" over the directory carries
+   straight into the Xero list — and it owns the read, the filter and the import. *@
+<Modal IsOpen="open" Title="Import from Xero" ShowFooter="false"
+       OnCancel="() => open = false" Class="max-w-2xl w-full">
+    @if (error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+    }
+    <div class="flex flex-wrap items-end gap-3 mb-4">
+        <div class="grow min-w-[14rem]">
+            <label class="eyebrow block mb-1">Search</label>
+            <input class="field" placeholder="Supplier name, email, town…" value="@search"
+                   @oninput="args => search = args.Value?.ToString() ?? string.Empty" />
+        </div>
+        <button type="button" class="btn-secondary shrink-0" disabled="@loading"
+                title="Re-read the contact list from Xero"
+                @onclick="() => LoadSuppliersAsync(force: true)">
+            @(loading ? "Refreshing…" : "Refresh")
+        </button>
+    </div>
+    <label class="flex items-center gap-2 text-xs text-content-muted mb-3 cursor-pointer">
+        <input type="checkbox" checked="@includeCustomers"
+               @onchange="e => includeCustomers = e.Value is bool ticked && ticked" />
+        Include Xero customers (clients) — hidden by default so the list stays supplier-shaped
+    </label>
+
+    @if (snapshot is null)
+    {
+        @* A failed fetch must open the gate — the error paragraph above says what went wrong. *@
+        @if (error is null)
+        {
+            <LoadGate IsLoading="true" Prominent="true" Label="Reading Xero" />
+        }
+    }
+    else if (!snapshot.IsConfigured)
+    {
+        <p class="text-sm text-content-subtle italic">
+            Xero isn't connected — the Xero__ClientId / Xero__ClientSecret app settings are missing.
+        </p>
+    }
+    else if (snapshot.Error is not null)
+    {
+        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@snapshot.Error</p>
+    }
+    else if (FilteredSuppliers().Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic">
+            No Xero contacts match@(includeCustomers ? "" : " — tick \"Include Xero customers\" if the contact is flagged as a customer, or Refresh if it was just created in Xero").
+        </p>
+    }
+    else
+    {
+        <div class="rounded-xl border border-line overflow-y-auto max-h-[50vh]">
+            <table class="w-full text-sm">
+                <tbody class="divide-y divide-line">
+                    @foreach (var supplier in FilteredSuppliers())
+                    {
+                        <tr>
+                            <td class="px-4 py-3">
+                                <p class="text-content font-medium inline-flex items-center gap-1.5">
+                                    @supplier.Name
+                                    @if (supplier.IsCustomer && !supplier.IsSupplier)
+                                    {
+                                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">Customer</span>
+                                    }
+                                    else if (!supplier.IsSupplier)
+                                    {
+                                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle" title="No bills in Xero yet">New contact</span>
+                                    }
+                                </p>
+                                <p class="text-xs text-content-subtle">
+                                    @string.Join(" · ", new[] { supplier.EmailAddress, supplier.Town }.Where(x => !string.IsNullOrWhiteSpace(x)))
+                                </p>
+                            </td>
+                            <td class="px-4 py-3 text-right">
+                                @if (supplier.AlreadyImported)
+                                {
+                                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">Imported</span>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
+                                            disabled="@(importingContactId is not null)"
+                                            @onclick="() => ImportSupplierAsync(supplier.ContactId)">
+                                        @(importingContactId == supplier.ContactId ? "Importing…" : "Import")
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        @if (snapshot.Truncated)
+        {
+            <p class="text-xs text-content-subtle mt-2">
+                Xero holds more suppliers than the page cap allows — the list is incomplete (raise Xero__MaxPages).
+            </p>
+        }
+    }
+    <p class="text-xs text-content-subtle mt-3">
+        Importing copies the supplier into the directory as a new record marked with the
+        Xero link symbol. If it duplicates an existing record, tick both in the directory
+        and use Consolidate to merge them into one master record.
+    </p>
+</Modal>
