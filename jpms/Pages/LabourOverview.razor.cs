@@ -32,6 +32,8 @@ public partial class LabourOverview
     private bool Loading => !Labour.OverviewLoadedFor(year, month) && !dataFailed;
     private string MonthLabel => new DateTime(year, month, 1).ToString("MMMM yyyy");
     // Keys the month's panes: moving month recreates them, so an opened row or "show all" resets.
+    // Each pane prefixes it — the open pane and the chase list are siblings, and Blazor refuses
+    // two siblings with the same key (JPMS-683BE8).
     private string MonthKey => $"{year}-{month}";
 
     protected override async Task OnInitializedAsync()
