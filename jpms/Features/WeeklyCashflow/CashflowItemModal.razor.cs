@@ -1,13 +1,31 @@
 using Jewel.JPMS.Contracts.WeeklyCashflow;
-using Jewel.JPMS.Features.WeeklyCashflow;
 
-namespace Jewel.JPMS.Pages;
+namespace Jewel.JPMS.Features.WeeklyCashflow;
 
-public partial class WeeklyCashflow
+public partial class CashflowItemModal
 {
-    // ---- The item dialog ----------------------------------------------------
+    [Inject] private ICommandSender Commands { get; set; } = default!;
+    [Inject] private WeeklyCashflowPlanReadModel Plan { get; set; } = default!;
 
-    private void OpenAddDialog()
+    private bool open;
+    private string? editingItemId;
+    private bool saving;
+    private string? error;
+    private string formName = "";
+    private WeeklyCashflowCategory formCategory = WeeklyCashflowCategory.Subcontractor;
+    private string formAmount = "";
+    private WeeklyCashflowRecurrence formRecurrence = WeeklyCashflowRecurrence.OneOff;
+    private string formFirstDue = "";
+    private string formLastDue = "";
+    private string formNotes = "";
+
+    private bool FormLooksComplete =>
+        !string.IsNullOrWhiteSpace(formName)
+        && decimal.TryParse(formAmount, out var amount) && amount > 0m
+        && DateTime.TryParse(formFirstDue, out _);
+
+    /// <summary>Opens the dialog empty, the first due date seeded to the page's "as of" day.</summary>
+    public void OpenAdd(DateTimeOffset today)
     {
         editingItemId = null;
         formName = "";
@@ -17,11 +35,13 @@ public partial class WeeklyCashflow
         formFirstDue = today.UtcDateTime.ToString("yyyy-MM-dd");
         formLastDue = "";
         formNotes = "";
-        dialogError = null;
-        itemDialogOpen = true;
+        error = null;
+        open = true;
+        StateHasChanged();
     }
 
-    private void OpenEditDialog(string itemId)
+    /// <summary>Opens the dialog over an existing item — from its row in the grid.</summary>
+    public void OpenEdit(string itemId)
     {
         var item = Plan.Current?.Items.FirstOrDefault(row => row.WeeklyCashflowItemId == itemId);
         if (item is null) return;
@@ -33,11 +53,12 @@ public partial class WeeklyCashflow
         formFirstDue = item.FirstDueOn.UtcDateTime.ToString("yyyy-MM-dd");
         formLastDue = item.LastDueOn?.UtcDateTime.ToString("yyyy-MM-dd") ?? "";
         formNotes = item.Notes ?? "";
-        dialogError = null;
-        itemDialogOpen = true;
+        error = null;
+        open = true;
+        StateHasChanged();
     }
 
-    private void CloseItemDialog() => itemDialogOpen = false;
+    private void Close() => open = false;
 
     private WeeklyCashflowItemDetails? ReadForm()
     {
@@ -60,61 +81,59 @@ public partial class WeeklyCashflow
             string.IsNullOrWhiteSpace(formNotes) ? null : formNotes.Trim());
     }
 
-    private async Task SaveItemAsync()
+    private async Task SaveAsync()
     {
         if (ReadForm() is not { } details)
         {
-            dialogError = "Check the amount and dates — one of them doesn't parse.";
+            error = "Check the amount and dates — one of them doesn't parse.";
             return;
         }
-        isSavingItem = true;
-        dialogError = null;
+        saving = true;
+        error = null;
         try
         {
             var saved = editingItemId is { } itemId
                 ? await Commands.SendAsync(new UpdateWeeklyCashflowItem(itemId, details), CancellationToken.None)
                 : await Commands.SendAsync(new CreateWeeklyCashflowItem(details), CancellationToken.None);
             Plan.Apply(saved);
-            itemDialogOpen = false;
+            open = false;
         }
         catch (CommandFailedException failure)
         {
-            dialogError = failure.Message;
+            error = failure.Message;
         }
         catch
         {
-            dialogError = "Something went wrong saving the item — the red bar at the top has the detail.";
+            error = "Something went wrong saving the item — the red bar at the top has the detail.";
         }
         finally
         {
-            isSavingItem = false;
+            saving = false;
         }
     }
 
-    private async Task ArchiveItemAsync()
+    private async Task ArchiveAsync()
     {
         if (editingItemId is not { } itemId) return;
-        isSavingItem = true;
-        dialogError = null;
+        saving = true;
+        error = null;
         try
         {
             var archived = await Commands.SendAsync(new ArchiveWeeklyCashflowItem(itemId), CancellationToken.None);
             Plan.Apply(archived);
-            itemDialogOpen = false;
+            open = false;
         }
         catch (CommandFailedException failure)
         {
-            dialogError = failure.Message;
+            error = failure.Message;
         }
         catch
         {
-            dialogError = "Something went wrong archiving the item — the red bar at the top has the detail.";
+            error = "Something went wrong archiving the item — the red bar at the top has the detail.";
         }
         finally
         {
-            isSavingItem = false;
+            saving = false;
         }
     }
-
-    // ---- Export -------------------------------------------------------------
 }

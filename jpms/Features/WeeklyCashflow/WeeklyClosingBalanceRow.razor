@@ -1,0 +1,24 @@
+@using Jewel.JPMS.Contracts.WeeklyCashflow
+@namespace Jewel.JPMS.Features.WeeklyCashflow
+
+@* The closing bank balance row, directors only: the running balance after each week seeded
+   from Xero, the low point ringed; Later is beyond the horizon and not in the balance. *@
+<tr class="bg-surface-raised font-semibold">
+    <td class="px-4 py-3 text-content">
+        Closing bank balance
+        <span class="block text-[11px] text-content-faint font-normal">directors only · seeded from Xero</span>
+    </td>
+    @for (var index = 0; index < View.WeekStarts.Count; index++)
+    {
+        var balance = View.Closing![index];
+        <td class="px-3 py-3 text-right whitespace-nowrap @(balance < 0m ? "text-negative" : "text-content") @(index == View.MinClosingIndex ? "ring-2 ring-inset ring-negative rounded" : "")"
+            title="@(index == View.MinClosingIndex ? "The low point — the week to plan for" : null)">@Money(balance)</td>
+    }
+    <td class="px-3 py-3 text-right border-l border-line text-content-faint font-normal"
+        title="Later entries are beyond the horizon and not in the balance until they roll into view.">—</td>
+</tr>
+
+@code {
+    /// <summary>The grid, with its Closing balances present — the host renders this row only then.</summary>
+    [Parameter, EditorRequired] public WeeklyCashflowView View { get; set; } = default!;
+}

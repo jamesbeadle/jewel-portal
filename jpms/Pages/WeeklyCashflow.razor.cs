@@ -45,38 +45,8 @@ public partial class WeeklyCashflow
     // at the foot of their band instead of entering the maths.
     private readonly List<WeeklyCashflowSeed> excludedSeeds = new();
 
-    // ---- Dialog state -------------------------------------------------------
-
-    private bool itemDialogOpen;
-    private string? editingItemId;
-    private bool isSavingItem;
-    private string? dialogError;
-    private string formName = "";
-    private WeeklyCashflowCategory formCategory = WeeklyCashflowCategory.Subcontractor;
-    private string formAmount = "";
-    private WeeklyCashflowRecurrence formRecurrence = WeeklyCashflowRecurrence.OneOff;
-    private string formFirstDue = "";
-    private string formLastDue = "";
-    private string formNotes = "";
-
-    private bool FormLooksComplete =>
-        !string.IsNullOrWhiteSpace(formName)
-        && decimal.TryParse(formAmount, out var amount) && amount > 0m
-        && DateTime.TryParse(formFirstDue, out _);
-
-    // ---- Supplier groups dialog state ------------------------------------
-
-    private bool groupsDialogOpen;
-    private bool groupEditorOpen;
-    private string? editingGroupId;
-    private bool isSavingGroup;
-    private string? groupsDialogError;
-    private string groupFormName = "";
-    private string groupMemberFilter = "";
-    private readonly HashSet<string> groupFormMembers = new(StringComparer.OrdinalIgnoreCase);
-
-    private bool GroupFormLooksComplete =>
-        !string.IsNullOrWhiteSpace(groupFormName) && groupFormMembers.Count > 0;
+    private CashflowItemModal itemModal = default!;
+    private SupplierGroupsModal groupsModal = default!;
 
     // ---- Sources ------------------------------------------------------------
 
@@ -109,11 +79,6 @@ public partial class WeeklyCashflow
         PayablesSnapshot is { IsConfigured: true, Error: null }
         && ReceivablesSnapshot is { IsConfigured: true, Error: null }
         && Plan.Current is not null;
-
-    // ---- Formatting ---------------------------------------------------------
-
-
-
 
     // ---- Loading ------------------------------------------------------------
 

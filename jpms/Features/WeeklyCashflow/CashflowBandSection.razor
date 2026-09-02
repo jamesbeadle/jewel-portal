@@ -1,0 +1,115 @@
+@using Jewel.JPMS.Contracts.WeeklyCashflow
+@namespace Jewel.JPMS.Features.WeeklyCashflow
+@using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
+@using static Jewel.JPMS.Features.WeeklyCashflow.WeeklyCashflowBands
+
+@* One band of the weekly grid: a totals row (click to expand) plus one movable row per entry.
+   Supplier groups pull their bills out of the flat list and into one combined row each;
+   everything ungrouped renders exactly as before. Excluded entries close the band, struck
+   through and uncounted. The page owns every move, exclusion and dialog — the band only
+   reports what was clicked. *@
+@{
+    var totals = TotalsFor(View, Band);
+    var entryCount = View.Entries.Count(entry => entry.Band == Band);
+}
+<tr class="border-b border-line">
+    <td class="px-4 py-2.5">
+        <button type="button" class="flex items-start gap-1.5 text-left w-full" @onclick="() => OnToggle.InvokeAsync(Band)"
+                title="@(Expanded ? "Collapse to the totals row" : $"Expand to the {entryCount} entries behind these totals")">
+            <span class="text-content-subtle mt-0.5 text-xs">@(Expanded ? "▾" : "▸")</span>
+            <span>
+                <span class="text-content font-medium">@Label</span>
+                <span class="block text-[11px] text-content-faint font-normal">@Sub</span>
+            </span>
+        </button>
+    </td>
+    @for (var index = 0; index <= View.WeekStarts.Count; index++)
+    {
+        <td class="px-3 py-2.5 text-right whitespace-nowrap @(index == View.WeekStarts.Count ? "border-l border-line" : "") @(Expanded ? "text-content-subtle" : "text-content")">
+            @CellAmount(totals[index])
+        </td>
+    }
+</tr>
+@if (Expanded)
+{
+    var groupedKeys = Groups.SelectMany(slice => slice.Entries)
+        .Select(row => row.PlacementKey)
+        .ToHashSet(StringComparer.Ordinal);
+    @foreach (var slice in Groups)
+    {
+        <CashflowGroupRow View="View" Slice="slice"
+                          Open="ExpandedGroups.Contains(slice.Group.SupplierGroupId)"
+                          GroupBusy="MovingGroupIds.Contains(slice.Group.SupplierGroupId)"
+                          MovingKeys="MovingKeys"
+                          OnToggle="OnToggleGroup"
+                          OnResetCell="OnResetGroupCell"
+                          OnMoveCell="OnMoveGroupCell">
+            <EntryRow Context="member">
+                <CashflowEntryRow View="View" Entry="member" InGroup="true"
+                                  Busy="MovingKeys.Contains(member.PlacementKey)"
+                                  Excluding="ExcludingKeys.Contains(member.PlacementKey)"
+                                  OnEdit="OnEdit"
+                                  OnExclude="OnExclude"
+                                  OnReset="OnReset"
+                                  OnMove="OnMove" />
+            </EntryRow>
+        </CashflowGroupRow>
+    }
+    @foreach (var entry in EntriesFor(View, Band).Where(row => !groupedKeys.Contains(row.PlacementKey)))
+    {
+        <CashflowEntryRow View="View" Entry="entry"
+                          Busy="MovingKeys.Contains(entry.PlacementKey)"
+                          Excluding="ExcludingKeys.Contains(entry.PlacementKey)"
+                          OnEdit="OnEdit"
+                          OnExclude="OnExclude"
+                          OnReset="OnReset"
+                          OnMove="OnMove" />
+    }
+    @foreach (var excluded in ExcludedSeeds.Where(seed => seed.Band == Band))
+    {
+        var restoring = ExcludingKeys.Contains(excluded.PlacementKey);
+        <tr class="border-b border-line/50 text-[13px]">
+            <td class="pl-9 pr-4 py-1.5">
+                <span class="text-content-faint line-through">@excluded.Label</span>
+                <span class="block text-[11px] text-content-faint">
+                    @excluded.Detail · excluded — not counted@(ExcludedByFor(excluded.PlacementKey) is { } who ? $" · {who}" : "")
+                </span>
+            </td>
+            <td colspan="@(View.WeekStarts.Count + 1)" class="px-3 py-1.5 text-right whitespace-nowrap text-content-faint">
+                <span class="line-through mr-2">@CellAmount(excluded.Amount)</span>
+                <button type="button" class="text-content-subtle hover:text-content underline underline-offset-2 disabled:opacity-30"
+                        title="Count this entry in the plan again" disabled="@restoring"
+                        @onclick="() => OnRestore.InvokeAsync(excluded.PlacementKey)">Count again</button>
+            </td>
+        </tr>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public WeeklyCashflowView View { get; set; } = default!;
+    [Parameter] public WeeklyCashflowBand Band { get; set; }
+    [Parameter, EditorRequired] public string Label { get; set; } = "";
+    [Parameter] public string Sub { get; set; } = "";
+    [Parameter] public bool Expanded { get; set; }
+    [Parameter] public EventCallback<WeeklyCashflowBand> OnToggle { get; set; }
+
+    /// <summary>The supplier groups landing on this band — only Supplier bills has any.</summary>
+    [Parameter] public IReadOnlyList<GroupSlice> Groups { get; set; } = Array.Empty<GroupSlice>();
+    [Parameter] public IReadOnlyCollection<string> ExpandedGroups { get; set; } = Array.Empty<string>();
+    [Parameter] public IReadOnlyCollection<string> MovingGroupIds { get; set; } = Array.Empty<string>();
+    [Parameter] public EventCallback<string> OnToggleGroup { get; set; }
+    [Parameter] public EventCallback<(GroupSlice Slice, int CellIndex)> OnResetGroupCell { get; set; }
+    [Parameter] public EventCallback<(GroupSlice Slice, int FromWeek, int ToWeek)> OnMoveGroupCell { get; set; }
+
+    /// <summary>The Xero seeds parked by an exclusion — drawn struck-through at the foot of their band.</summary>
+    [Parameter] public IReadOnlyList<WeeklyCashflowSeed> ExcludedSeeds { get; set; } = Array.Empty<WeeklyCashflowSeed>();
+    [Parameter, EditorRequired] public Func<string, string?> ExcludedByFor { get; set; } = default!;
+    [Parameter] public IReadOnlyCollection<string> MovingKeys { get; set; } = Array.Empty<string>();
+    [Parameter] public IReadOnlyCollection<string> ExcludingKeys { get; set; } = Array.Empty<string>();
+
+    [Parameter] public EventCallback<string> OnEdit { get; set; }
+    [Parameter] public EventCallback<WeeklyCashflowEntry> OnExclude { get; set; }
+    [Parameter] public EventCallback<string> OnRestore { get; set; }
+    [Parameter] public EventCallback<WeeklyCashflowEntry> OnReset { get; set; }
+    [Parameter] public EventCallback<(WeeklyCashflowEntry Entry, int ToWeek)> OnMove { get; set; }
+}
