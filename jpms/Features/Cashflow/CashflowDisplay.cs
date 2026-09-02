@@ -18,4 +18,7 @@ public static class CashflowDisplay
 
     public static string MonthLabel(DateTime month) =>
         month.ToString("MMM yy", System.Globalization.CultureInfo.GetCultureInfo("en-GB"));
+
+    /// <summary>A retention release still forecast reads as an add-back ("+ £12,000"); nothing to add reads as a dash.</summary>
+    public static string AddBack(decimal value) => value == 0m ? "—" : $"+ {Money(value)}";
 }

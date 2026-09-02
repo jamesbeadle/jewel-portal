@@ -1,0 +1,39 @@
+@namespace Jewel.JPMS.Features.Cashflow
+
+@* Company overheads — the interim page-level figure (see the amber notice). The inputs are
+   controls: never gated, editable in place. The default fills every month; a month's own cell
+   can be edited to override just that month (FD, 2026-08-17) — clear it to fall back. *@
+<tr class="border-b border-line">
+    <td class="px-4 py-2.5">
+        <span class="text-content font-medium">Company overheads</span>
+        <span class="block text-[11px] text-content-faint">
+            default ·
+            <input type="number" min="0" step="500" value="@Default"
+                   @onchange="args => OnDefaultChanged.InvokeAsync(args)"
+                   class="w-24 rounded border border-line-strong bg-surface-field px-1.5 py-0.5 text-xs text-content" />
+            £/month — edit a month's cell to change just that month · remembered in this browser, not yet a system setting
+        </span>
+    </td>
+    @foreach (var month in Axis)
+    {
+        var overheadsMonth = month;
+        var isOverridden = Overrides.TryGetValue(overheadsMonth, out var overridden);
+        <td class="px-3 py-2.5 text-right whitespace-nowrap">
+            <input type="number" min="0" step="500" value="@(isOverridden ? overridden : Default)"
+                   @onchange="args => OnMonthChanged.InvokeAsync((overheadsMonth, args))"
+                   title="@(isOverridden ? "Edited for this month — clear it to return to the default" : "The default — edit to override this month only")"
+                   class="w-20 rounded border bg-surface-field px-1.5 py-0.5 text-xs text-content text-right @(isOverridden ? "border-accent" : "border-line-strong")" />
+        </td>
+    }
+    <td class="px-3 py-2.5 text-right border-l border-line text-content-faint">—</td>
+    <td class="px-3 py-2.5 text-right border-l border-line text-content-faint">—</td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public DateTime[] Axis { get; set; } = default!;
+    /// <summary>The £/month every month follows unless it carries its own figure.</summary>
+    [Parameter] public decimal Default { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyDictionary<DateTime, decimal> Overrides { get; set; } = default!;
+    [Parameter] public EventCallback<ChangeEventArgs> OnDefaultChanged { get; set; }
+    [Parameter] public EventCallback<(DateTime Month, ChangeEventArgs Args)> OnMonthChanged { get; set; }
+}

@@ -1,0 +1,48 @@
+@namespace Jewel.JPMS.Features.Cashflow
+@using Jewel.JPMS.Commercial
+@using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
+
+@* One forecast category's row plus, when expanded, its per-project lines — the same rendering
+   for both bands, so cash in and cash out can never drift apart in shape. *@
+<tr class="border-b border-line">
+    <td class="px-4 py-2.5">
+        <button type="button" class="text-left" @onclick="() => OnToggle.InvokeAsync(Row.Category)"
+                title="@(Expanded ? "Collapse the per-project lines" : "Expand to one line per project")">
+            <span class="inline-block w-3 text-content-subtle transition-transform @(Expanded ? "rotate-90" : "")">▸</span>
+            <span class="text-content font-medium hover:text-accent">@Row.Label</span>
+        </button>
+        <span class="block pl-3 text-[11px] text-content-faint">@Row.Source</span>
+    </td>
+    @for (var index = 0; index < Forecast.Axis.Length; index++)
+    {
+        <td class="px-3 py-2.5 text-right whitespace-nowrap text-content">@CellAmount(Forecast.Cells[Row.Category][index])</td>
+    }
+    <td class="px-3 py-2.5 text-right whitespace-nowrap border-l border-line text-content-muted">@CellAmount(Forecast.Later[Row.Category])</td>
+    <td class="px-3 py-2.5 text-right whitespace-nowrap border-l border-line text-content-subtle">@CellAmount(Forecast.Undated[Row.Category])</td>
+</tr>
+@if (Expanded)
+{
+    var contributors = Forecast.PerProject[Row.Category];
+    @if (contributors.Count == 0)
+    {
+        <tr class="border-b border-line">
+            <td colspan="@(Forecast.Axis.Length + 3)" class="px-4 pl-7 py-2 text-xs text-content-subtle italic">Nothing forecast in this category for the selected projects.</td>
+        </tr>
+    }
+    @foreach (var (project, phased) in contributors)
+    {
+        <ForecastProjectLine Project="project" Phased="phased" Category="Row.Category"
+                             MonthCount="Forecast.Axis.Length"
+                             OnNextValuationChanged="OnNextValuationChanged"
+                             OnMonthlyValuationChanged="OnMonthlyValuationChanged" />
+    }
+}
+
+@code {
+    [Parameter, EditorRequired] public ForecastView Forecast { get; set; } = default!;
+    [Parameter, EditorRequired] public ForecastRowInfo Row { get; set; } = default!;
+    [Parameter] public bool Expanded { get; set; }
+    [Parameter] public EventCallback<ForecastCategory> OnToggle { get; set; }
+    [Parameter] public EventCallback<(Project Project, ChangeEventArgs Args)> OnNextValuationChanged { get; set; }
+    [Parameter] public EventCallback<(Project Project, ChangeEventArgs Args)> OnMonthlyValuationChanged { get; set; }
+}

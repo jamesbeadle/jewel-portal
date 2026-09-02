@@ -1,16 +1,16 @@
 {
-  "generatedAt": "2026-09-02T06:40:15+00:00",
+  "generatedAt": "2026-09-02T06:48:30+00:00",
   "summaries": {
     "fileLength": {
       "limit": 100,
-      "filesOverLimit": 644,
-      "totalFiles": 3349,
-      "worstFileLines": 665
+      "filesOverLimit": 645,
+      "totalFiles": 3362,
+      "worstFileLines": 604
     },
     "functionShape": {
       "limit": 30,
       "functionsOverLimit": 697,
-      "elseBlocks": 1180,
+      "elseBlocks": 1176,
       "measurementIsHeuristic": true
     },
     "functionNames": {
@@ -19,18 +19,18 @@
       "maxLength": 40
     },
     "duplication": {
-      "clones": 487,
-      "duplicatedLines": 6196,
-      "totalLines": 216220,
+      "clones": 488,
+      "duplicatedLines": 6206,
+      "totalLines": 216329,
       "duplicatedPercentage": 2.87
     },
     "naming": {
       "bannedAbbreviationHits": 468,
-      "unprefixedBooleans": 1478
+      "unprefixedBooleans": 1481
     },
     "comments": {
-      "explanatoryCommentLines": 13720,
-      "filesWithComments": 1825,
+      "explanatoryCommentLines": 13718,
+      "filesWithComments": 1835,
       "taskMarkers": 48
     },
     "magicValues": {
@@ -41,14 +41,14 @@
     "prose": {
       "longMemberChainLines": 2397,
       "deeplyIndentedLines": 2801,
-      "overlongLines": 1693,
+      "overlongLines": 1682,
       "measurementIsHeuristic": true
     },
     "inventory": {
       "pages": 92,
       "components": 132,
       "orphanComponents": 6,
-      "averagePageLines": 225
+      "averagePageLines": 221
     }
   },
   "details": {
@@ -56,15 +56,11 @@
       "name": "fileLength",
       "summary": {
         "limit": 100,
-        "filesOverLimit": 644,
-        "totalFiles": 3349,
-        "worstFileLines": 665
+        "filesOverLimit": 645,
+        "totalFiles": 3362,
+        "worstFileLines": 604
       },
       "offenders": [
-        {
-          "file": "jpms/Pages/CashForecast.razor",
-          "lines": 665
-        },
         {
           "file": "jpms/Pages/WeeklyCashflow.razor",
           "lines": 604
@@ -926,6 +922,10 @@
           "lines": 220
         },
         {
+          "file": "jpms/Pages/CashForecast.razor",
+          "lines": 220
+        },
+        {
           "file": "api/Features/Commercial/ValuationReportSnapshotCapture.cs",
           "lines": 219
         },
@@ -1071,10 +1071,6 @@
         },
         {
           "file": "api/Features/Labour/Commands/RunXeroCodingSlice.cs",
-          "lines": 205
-        },
-        {
-          "file": "jpms/Pages/CashForecast.Forecast.cs",
           "lines": 205
         },
         {
@@ -1383,6 +1379,10 @@
         },
         {
           "file": "contracts/Xero/GetXeroAgedReceivables.cs",
+          "lines": 170
+        },
+        {
+          "file": "jpms/Pages/CashForecast.Forecast.cs",
           "lines": 170
         },
         {
@@ -1790,10 +1790,6 @@
           "lines": 140
         },
         {
-          "file": "jpms/Pages/CashForecast.Statement.cs",
-          "lines": 140
-        },
-        {
           "file": "jpms/Features/Triage/Panels/Actions/StageVariationDecisionAction.razor",
           "lines": 140
         },
@@ -1826,6 +1822,10 @@
           "lines": 138
         },
         {
+          "file": "jpms/Pages/CashForecast.Export.cs",
+          "lines": 138
+        },
+        {
           "file": "jpms/Services/UserInviteService.cs",
           "lines": 138
         },
@@ -1835,10 +1835,6 @@
         },
         {
           "file": "jpms/Features/Procurement/ValuationLinePickerModal.razor.cs",
-          "lines": 137
-        },
-        {
-          "file": "jpms/Pages/CashForecast.Export.cs",
           "lines": 137
         },
         {
@@ -2258,6 +2254,10 @@
           "lines": 115
         },
         {
+          "file": "jpms/Features/Cashflow/CombinedStatementCard.razor",
+          "lines": 115
+        },
+        {
           "file": "jpms/Features/Procurement/TenderSubmissionModal.razor",
           "lines": 115
         },
@@ -2291,6 +2291,10 @@
         },
         {
           "file": "api/Features/ValuationInvoices/Commands/CreateValuationInvoiceHandler.cs",
+          "lines": 113
+        },
+        {
+          "file": "jpms/Pages/CashForecast.Statement.cs",
           "lines": 113
         },
         {
@@ -2644,7 +2648,7 @@
       "summary": {
         "limit": 30,
         "functionsOverLimit": 697,
-        "elseBlocks": 1180,
+        "elseBlocks": 1176,
         "measurementIsHeuristic": true
       },
       "offenders": [
@@ -3079,7 +3083,7 @@
       "name": "naming",
       "summary": {
         "bannedAbbreviationHits": 468,
-        "unprefixedBooleans": 1478
+        "unprefixedBooleans": 1481
       },
       "offenders": {
         "abbreviations": [
@@ -3541,8 +3545,8 @@
     "comments": {
       "name": "comments",
       "summary": {
-        "explanatoryCommentLines": 13720,
-        "filesWithComments": 1825,
+        "explanatoryCommentLines": 13718,
+        "filesWithComments": 1835,
         "taskMarkers": 48
       },
       "offenders": [
@@ -4249,7 +4253,7 @@
       "summary": {
         "longMemberChainLines": 2397,
         "deeplyIndentedLines": 2801,
-        "overlongLines": 1693,
+        "overlongLines": 1682,
         "measurementIsHeuristic": true
       },
       "offenders": {
@@ -4867,20 +4871,10 @@
         "pages": 92,
         "components": 132,
         "orphanComponents": 6,
-        "averagePageLines": 225
+        "averagePageLines": 221
       },
       "offenders": {
         "pages": [
-          {
-            "page": "jpms/Pages/CashForecast.razor",
-            "lines": 665,
-            "widgets": [
-              "table",
-              "loadGate",
-              "toast",
-              "export"
-            ]
-          },
           {
             "page": "jpms/Pages/WeeklyCashflow.razor",
             "lines": 604,
@@ -5325,6 +5319,14 @@
             ]
           },
           {
+            "page": "jpms/Pages/CashForecast.razor",
+            "lines": 220,
+            "widgets": [
+              "loadGate",
+              "export"
+            ]
+          },
+          {
             "page": "jpms/Pages/ProjectReconciliationAudit.razor",
             "lines": 203,
             "widgets": [
@@ -5695,7 +5697,7 @@
           },
           {
             "component": "jpms/Components/Icons/JewelIcon.razor",
-            "reusedBy": 15
+            "reusedBy": 14
           },
           {
             "component": "jpms/Components/WorkspaceSectionNav.razor",
@@ -5775,6 +5777,10 @@
           },
           {
             "component": "jpms/Components/ErrorToast.razor",
+            "reusedBy": 2
+          },
+          {
+            "component": "jpms/Components/FigureTile.razor",
             "reusedBy": 2
           },
           {
@@ -5939,10 +5945,6 @@
           },
           {
             "component": "jpms/Components/ExpiringDocumentsPanel.razor",
-            "reusedBy": 1
-          },
-          {
-            "component": "jpms/Components/FigureTile.razor",
             "reusedBy": 1
           },
           {
@@ -6183,9 +6185,9 @@
     "duplication": {
       "name": "duplication",
       "summary": {
-        "clones": 487,
-        "duplicatedLines": 6196,
-        "totalLines": 216220,
+        "clones": 488,
+        "duplicatedLines": 6206,
+        "totalLines": 216329,
         "duplicatedPercentage": 2.87
       },
       "offenders": [

@@ -1,0 +1,23 @@
+@namespace Jewel.JPMS.Features.Cashflow
+@using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
+
+@* The closing bank balance row, directors only: the running balance after each month seeded
+   from Xero, the low point ringed, then the balance after the dated flows beyond the horizon. *@
+<tr class="bg-surface-raised font-semibold">
+    <td class="px-4 py-3 text-content">
+        Closing bank balance
+        <span class="block text-[11px] text-content-faint font-normal">directors only · seeded from Xero</span>
+    </td>
+    @for (var index = 0; index < Forecast.Axis.Length; index++)
+    {
+        var balance = Forecast.Closing[index];
+        <td class="px-3 py-3 text-right whitespace-nowrap @(balance < 0m ? "text-negative" : "text-content") @(index == Forecast.MinIndex ? "ring-2 ring-inset ring-negative rounded" : "")"
+            title="@(index == Forecast.MinIndex ? "The low point — the month to plan for" : null)">@Money(balance)</td>
+    }
+    <td class="px-3 py-3 text-right whitespace-nowrap border-l border-line">@Money(Forecast.Closing[^1] + Forecast.LaterNet)</td>
+    <td class="px-3 py-3 text-right border-l border-line text-content-faint font-normal">—</td>
+</tr>
+
+@code {
+    [Parameter, EditorRequired] public ForecastView Forecast { get; set; } = default!;
+}
