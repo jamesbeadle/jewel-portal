@@ -9,7 +9,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProfitSummary
 {
-    // ---- Excel export -------------------------------------------------------
     // Same rows the table renders — memo columns broken out so the workbook reconciles without
     // the on-screen memo lines — plus the total row when there's more than one project.
     private ExcelWorkbook? BuildExportWorkbook(bool _)

@@ -4,8 +4,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectVariations
 {
-    // ---- Subcontractor variation requests ----
-
     private IReadOnlyList<SubcontractorVariationRequest> variationRequests = Array.Empty<SubcontractorVariationRequest>();
     private bool requestBusy;
     private string? requestError;

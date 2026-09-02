@@ -25,6 +25,8 @@ internal static class JewelDocumentStyle
 
     public const string FontFamily = "JPMS Sans";
     public static readonly CultureInfo Uk = CultureInfo.GetCultureInfo("en-GB");
+    /// <summary>The text inset every table cell shares, so columns line up across documents.</summary>
+    public static readonly Unit CellIndent = Unit.FromMillimeter(1.5);
 
     private static readonly object FontGate = new();
     private static bool _fontsReady;
@@ -73,7 +75,7 @@ internal static class JewelDocumentStyle
     public static void LabelCell(Cell cell, string text)
     {
         cell.Shading.Color = Panel;
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        cell.Format.LeftIndent = CellIndent;
         var paragraph = cell.AddParagraph(text);
         paragraph.Format.Font.Size = 8;
         paragraph.Format.Font.Bold = true;
@@ -82,7 +84,7 @@ internal static class JewelDocumentStyle
 
     public static void ValueCell(Cell cell, string text)
     {
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        cell.Format.LeftIndent = CellIndent;
         var paragraph = cell.AddParagraph(string.IsNullOrWhiteSpace(text) ? "—" : text);
         paragraph.Format.Font.Size = 9;
         paragraph.Format.Font.Color = Ink;
@@ -90,7 +92,7 @@ internal static class JewelDocumentStyle
 
     public static void HeaderCell(Cell cell, string text)
     {
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        cell.Format.LeftIndent = CellIndent;
         var paragraph = cell.AddParagraph(text);
         // MigraDoc cell padding lives on the Row; emulate vertical padding via paragraph spacing.
         paragraph.Format.SpaceBefore = Unit.FromMillimeter(1);
@@ -102,7 +104,7 @@ internal static class JewelDocumentStyle
 
     public static void BodyCell(Cell cell, string text)
     {
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        cell.Format.LeftIndent = CellIndent;
         var paragraph = cell.AddParagraph(string.IsNullOrWhiteSpace(text) ? "—" : text);
         paragraph.Format.SpaceBefore = Unit.FromMillimeter(0.8);
         paragraph.Format.SpaceAfter = Unit.FromMillimeter(0.8);

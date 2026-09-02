@@ -2,7 +2,6 @@ using Jewel.JPMS.Contracts.Cqrs;
 
 namespace Jewel.JPMS.Contracts.Xero;
 
-// ============================================================================
 // Xero ledger allocation — reconciling accounts (Xero) with projects (JPMS).
 // Purchase invoice LINES pulled from Xero are stored in JPMS with an
 // allocation status; each line is allocated to a JPMS project + master cost
@@ -17,7 +16,6 @@ namespace Jewel.JPMS.Contracts.Xero;
 // Xero — Sites + Cost Code tracking per line, splitting Xero lines where the
 // allocation is split — and approves the invoice (DRAFT → AUTHORISED). Bills
 // already approved outside JPMS are still allocated portal-side only.
-// ============================================================================
 
 // Disputed (2026-08-14): a cost the director contests, parked in its own bucket while he and the
 // accountant talk it through on the allocation page — a message thread per line, coding settable

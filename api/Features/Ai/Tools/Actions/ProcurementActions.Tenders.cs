@@ -7,8 +7,6 @@ internal sealed partial class ProcurementActions
 {
     private static IEnumerable<AiAction> TendersActions() => new AiAction[]
     {
-        // ---- Tenders and quotes -------------------------------------------------------------
-
         new AiAction(
             Name: "extract_tender_from_message",
             Area: "Procurement",

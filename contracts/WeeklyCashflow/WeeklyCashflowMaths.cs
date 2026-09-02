@@ -2,7 +2,6 @@ using Jewel.JPMS.Models;
 
 namespace Jewel.JPMS.Contracts.WeeklyCashflow;
 
-// ============================================================================
 // The Weekly Cashflow's arithmetic — pure maths, no EF/HTTP, unit-tested
 // directly (WeeklyCashflowMathsTests). It takes the Xero-fed entries (each
 // outstanding bill and sales invoice, as the aged views already read them),
@@ -24,7 +23,6 @@ namespace Jewel.JPMS.Contracts.WeeklyCashflow;
 //     it exists precisely because the money is still to be paid.
 //   * Nothing is netted away: every entry that goes in comes out in exactly
 //     one bucket, so the grid's totals always explain the inputs.
-// ============================================================================
 
 /// <summary>The grid's row bands, in render order — the first is cash in, the rest cash out.
 /// Xero seeds the first two; the manual categories fill the rest.</summary>

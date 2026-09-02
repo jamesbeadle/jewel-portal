@@ -53,7 +53,7 @@ public static partial class WorkOrderPoRenderer
         if (lines.Count == 0)
         {
             var dash = cell.AddParagraph("—");
-            dash.Format.LeftIndent = Unit.FromMillimeter(1.5);
+            dash.Format.LeftIndent = CellIndent;
             dash.Format.Font.Size = 8;
             dash.Format.Font.Color = Muted;
             return;
@@ -61,7 +61,7 @@ public static partial class WorkOrderPoRenderer
         foreach (var line in lines)
         {
             var p = cell.AddParagraph(line);
-            p.Format.LeftIndent = Unit.FromMillimeter(1.5);
+            p.Format.LeftIndent = CellIndent;
             p.Format.Font.Size = 8;
         }
     }
@@ -102,7 +102,7 @@ public static partial class WorkOrderPoRenderer
 
     private static void HeaderCell(Cell cell, string text)
     {
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        cell.Format.LeftIndent = CellIndent;
         var p = cell.AddParagraph(text);
         p.Format.Font.Size = 7.5;
         p.Format.Font.Bold = true;
@@ -111,7 +111,7 @@ public static partial class WorkOrderPoRenderer
 
     private static void MoneyCell(Cell cell, decimal amount, bool bold = false)
     {
-        cell.Format.RightIndent = Unit.FromMillimeter(1.5);
+        cell.Format.RightIndent = CellIndent;
         var p = cell.AddParagraph(Money(amount));
         p.Format.Font.Size = 8.5;
         p.Format.Font.Bold = bold;

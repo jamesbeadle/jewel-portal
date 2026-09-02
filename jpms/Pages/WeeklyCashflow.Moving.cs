@@ -5,8 +5,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class WeeklyCashflow
 {
-    // ---- Moving -------------------------------------------------------------
-
     private async Task MoveEntryAsync(WeeklyCashflowEntry entry, int targetIndex)
     {
         var view = BuildView();

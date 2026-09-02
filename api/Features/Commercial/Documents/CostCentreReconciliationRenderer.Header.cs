@@ -32,8 +32,6 @@ public static partial class CostCentreReconciliationRenderer
 
     private static void AddHeaderTitle(Cell cell, CostCentreReconciliationDocument document)
     {
-        // The official Jewel Bespoke Build logo leads the band — the gold/orange registered
-        // artwork reads directly on the navy ground (embedded once in DocumentBranding).
         DocumentBranding.AddLogo(cell, Unit.FromCentimeter(3.4), Unit.FromMillimeter(1.5));
 
         var heading = cell.AddParagraph("COST CENTRE RECONCILIATION");

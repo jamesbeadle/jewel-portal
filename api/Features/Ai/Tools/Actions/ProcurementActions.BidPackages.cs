@@ -7,8 +7,6 @@ internal sealed partial class ProcurementActions
 {
     private static IEnumerable<AiAction> BidPackagesActions() => new AiAction[]
     {
-        // ---- Bid packages -------------------------------------------------------------------
-
         new AiAction(
             Name: "create_bid_package",
             Area: "Procurement",

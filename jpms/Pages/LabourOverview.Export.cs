@@ -7,8 +7,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class LabourOverview
 {
-    // ---- Export --------------------------------------------------------------------------------
-
     private ExcelWorkbook? BuildExportWorkbook(bool includeAll)
     {
         var snapshot = Labour.Overview(year, month);

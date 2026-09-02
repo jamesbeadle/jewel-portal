@@ -10,8 +10,6 @@ namespace Jewel.JPMS.Api.Features.Requests.Documents;
 
 public static partial class RequestDocumentRenderer
 {
-    // ---- Sections -----------------------------------------------------------------------------
-
     private static void AddHeaderBand(Section section, RequestDocumentModel model)
     {
         var table = section.AddTable();

@@ -45,7 +45,7 @@ public static partial class CostCentreReconciliationRenderer
         row.BottomPadding = Unit.FromMillimeter(1.2);
         row.Cells[0].MergeRight = columns - 1;
         var p = row.Cells[0].AddParagraph(message);
-        p.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        p.Format.LeftIndent = CellIndent;
         p.Format.Font.Size = 8;
         p.Format.Font.Italic = true;
         p.Format.Font.Color = Muted;
@@ -59,7 +59,7 @@ public static partial class CostCentreReconciliationRenderer
         row.BottomPadding = Unit.FromMillimeter(1.2);
         row.Cells[0].MergeRight = labelSpan - 1;
         var p = row.Cells[0].AddParagraph(label);
-        p.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        p.Format.LeftIndent = CellIndent;
         p.Format.Font.Size = 8.5;
         p.Format.Font.Bold = true;
         p.Format.Font.Color = Navy;
@@ -68,8 +68,8 @@ public static partial class CostCentreReconciliationRenderer
 
     private static void TextCell(Cell cell, string text, bool mutedMono = false)
     {
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
-        cell.Format.RightIndent = Unit.FromMillimeter(1.5);
+        cell.Format.LeftIndent = CellIndent;
+        cell.Format.RightIndent = CellIndent;
         var p = cell.AddParagraph(string.IsNullOrWhiteSpace(text) ? "" : text);
         p.Format.Font.Size = mutedMono ? 8 : 8.5;
         p.Format.Font.Color = mutedMono ? Muted : Ink;
@@ -94,8 +94,8 @@ public static partial class CostCentreReconciliationRenderer
     /// <summary>Muted small caps for a lines table, unlike the shared white-on-navy header cell.</summary>
     private static void HeaderCell(Cell cell, string text)
     {
-        cell.Format.LeftIndent = Unit.FromMillimeter(1.5);
-        cell.Format.RightIndent = Unit.FromMillimeter(1.5);
+        cell.Format.LeftIndent = CellIndent;
+        cell.Format.RightIndent = CellIndent;
         var p = cell.AddParagraph(text);
         p.Format.Font.Size = 7.5;
         p.Format.Font.Bold = true;
@@ -104,7 +104,7 @@ public static partial class CostCentreReconciliationRenderer
 
     private static void MoneyCell(Cell cell, decimal amount, bool bold = false, Color? colour = null)
     {
-        cell.Format.RightIndent = Unit.FromMillimeter(1.5);
+        cell.Format.RightIndent = CellIndent;
         var p = cell.AddParagraph(Money(amount));
         p.Format.Font.Size = 8.5;
         p.Format.Font.Bold = bold;

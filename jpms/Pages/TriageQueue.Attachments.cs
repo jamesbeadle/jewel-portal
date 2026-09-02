@@ -31,7 +31,6 @@ public partial class TriageQueue
             anchor: PanelKind.Email);
     }
 
-    // ---- Send attachments to Document Triage ----
     // Ticked per attachment on the open email and staged like every other triage draft — the
     // email's Apply copies the files mailbox → Document Triage server-side. Like the
     // save-to-drawings form this replaced (2026-08-12), it does NOT consume the email: the

@@ -2,7 +2,6 @@ using Jewel.JPMS.Contracts.Cqrs;
 
 namespace Jewel.JPMS.Contracts.Xero;
 
-// ============================================================================
 // Aged receivables — what clients owe the company, aged as Xero's own report
 // ages it, but INCLUDING draft sales invoices still being prepared. The mirror
 // of the aged payables read (finance meeting 2026-08-03): one row per client,
@@ -10,7 +9,6 @@ namespace Jewel.JPMS.Contracts.Xero;
 // netting off. Live passthrough: nothing is stored in JPMS, and the read
 // deliberately has NO date floor (unlike the ledger's reporting window) so an
 // ancient unpaid invoice still ages into "Older" instead of vanishing.
-// ============================================================================
 
 /// <summary>
 /// Asks the API for every outstanding sales invoice and credit note as Xero holds it right now —

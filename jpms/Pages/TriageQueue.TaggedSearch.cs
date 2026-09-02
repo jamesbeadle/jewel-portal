@@ -12,8 +12,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class TriageQueue
 {
-    // ---- Tagged tab search ---------------------------------------------------------------------
-
     private void OnTaggedSearchInput(ChangeEventArgs e)
     {
         taggedSearch = e.Value?.ToString() ?? "";
@@ -111,8 +109,6 @@ public partial class TriageQueue
             }
         }
     }
-
-    // --------------------------------------------------------------------------------------------
 
     // Tick/untick a tag in the multi-select filter, then re-read the (OR-filtered) list from page one.
     // Using the tag filter drops any active pathway chip — the two can't be intersected server-side.

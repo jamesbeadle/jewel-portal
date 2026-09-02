@@ -2,12 +2,10 @@ using Jewel.JPMS.Contracts.Xero;
 
 namespace Jewel.JPMS.Api.Features.Xero;
 
-// ============================================================================
 // Server-side shapes for the Xero write-back: confirming an allocated draft
 // bill's Sites / Cost Code tracking back onto the Xero invoice and approving
 // it (DRAFT → AUTHORISED). Kept out of the shared contracts project — the
 // front end only ever sees the outcome stamped on the ledger lines.
-// ============================================================================
 
 /// <summary>
 /// Everything the Xero client needs to confirm and approve one invoice.

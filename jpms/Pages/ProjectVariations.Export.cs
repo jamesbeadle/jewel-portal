@@ -4,7 +4,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectVariations
 {
-    // ---- Excel export ----------------------------------------------------------------------
     // One Variations sheet — the current view (following the search); "Include entire register"
     // from the export menu overrides the search and takes every row.
 

@@ -2,13 +2,11 @@ using Jewel.JPMS.Contracts.Xero;
 
 namespace Jewel.JPMS.Api.Features.Xero.Ledger;
 
-// ============================================================================
 // The supplier's actual document, viewed from the allocation page. Xero holds
 // the attachment Dext published with each bill; these endpoints list and stream
 // it live from Xero — nothing is stored in JPMS. Both are gated to the same
 // finance-facing roles as the rest of the allocation queue. Requires the Xero
 // custom connection's accounting.attachments scope.
-// ============================================================================
 
 /// <summary>
 /// GET /api/xero/invoice/attachments?id={invoiceId}&amp;credit=1 — lists the attachments Xero

@@ -2,7 +2,6 @@ using Jewel.JPMS.Contracts.Cqrs;
 
 namespace Jewel.JPMS.Contracts.Xero;
 
-// ============================================================================
 // Xero site P&L — the accounts' own monthly income and cost per job.
 //
 // Xero holds a "Sites" tracking category whose options map one-to-one onto
@@ -19,7 +18,6 @@ namespace Jewel.JPMS.Contracts.Xero;
 // invoiced → paid), not the certified rung the Profit Summary table reports —
 // they will not reconcile to the penny with certified value, and retention is
 // only present where it is tracked to the site in Xero.
-// ============================================================================
 
 /// <summary>The stored monthly site P&L for every project, oldest month first per project.</summary>
 public sealed record GetXeroSitePnl : IQuery<XeroSitePnlSnapshot>;

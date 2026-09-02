@@ -7,8 +7,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectRequestDetail
 {
-    // ---- Email draft staging --------------------------------------------------------------------
-
     // Opens the email modal with a clean slate; the tagged chains load in while it's open
     // (the fresh-email option is available immediately).
     private async Task OpenEmailModal()

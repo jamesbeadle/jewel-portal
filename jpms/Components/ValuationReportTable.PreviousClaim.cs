@@ -4,7 +4,6 @@ namespace Jewel.JPMS.Components;
 
 public partial class ValuationReportTable
 {
-    // ---- Previous claim comparison -----------------------------------------
     // "Prev. %" is the cumulative % complete this line carried on the claim before the selected
     // one; the delta beside the current % is how much is being claimed this period.
     private bool HasPreviousClaim => PreviousClaim is not null;

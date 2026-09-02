@@ -8,8 +8,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class ProjectVariationDetail
 {
-    // ---- Status pill dropdown ---------------------------------------------------------------
-
     private string PillOptionLabel(VariationOrderStatus status)
     {
         var needsConfirm = status == VariationOrderStatus.Approved

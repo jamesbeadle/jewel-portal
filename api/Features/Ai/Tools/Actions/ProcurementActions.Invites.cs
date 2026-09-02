@@ -7,8 +7,6 @@ internal sealed partial class ProcurementActions
 {
     private static IEnumerable<AiAction> InvitesActions() => new AiAction[]
     {
-        // ---- Tender recipients and invites --------------------------------------------------
-
         new AiAction(
             Name: "invite_subcontractors_to_bid_package",
             Area: "Procurement",

@@ -1,6 +1,5 @@
 namespace Jewel.JPMS.Commercial;
 
-// ============================================================================
 // The Cash Forecast's phasing engine — pure maths, no EF/HTTP, unit-tested
 // directly (CashForecastPhasingTests). It takes the figures the statements
 // already compute (CashflowMaths / ProjectDrawdown / RetentionSchedule) and
@@ -17,7 +16,6 @@ namespace Jewel.JPMS.Commercial;
 //   * Every category's phased cells sum EXACTLY to the figure that went in
 //     (penny remainders fold into the final slice), so the forecast can never
 //     disagree with the statements it is spread from.
-// ============================================================================
 
 /// <summary>The forecast's row categories, in statement order. The first three are cash in,
 /// the last three cash out. Company overheads are deliberately absent — they are a company-level

@@ -14,11 +14,11 @@ public static partial class WorkOrderPoRenderer
 
         var row = AddPaddedRow(table, 1.4);
         var title = row.Cells[0].AddParagraph(TitleOrSupplier(model));
-        title.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        title.Format.LeftIndent = CellIndent;
         title.Format.Font.Size = 9;
         title.Format.Font.Bold = true;
         var when = row.Cells[1].AddParagraph(CompletionOrDash(model));
-        when.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        when.Format.LeftIndent = CellIndent;
         when.Format.Font.Size = 9;
         MoneyCell(row.Cells[2], model.Order.Value, bold: true);
         SpaceAfterTable(section);
@@ -46,14 +46,14 @@ public static partial class WorkOrderPoRenderer
         var row = AddPaddedRow(table, 1.2);
 
         var item = row.Cells[0].AddParagraph();
-        item.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        item.Format.LeftIndent = CellIndent;
         item.Format.Font.Size = 8.5;
         item.AddFormattedText(line.Title, new Font { Bold = true });
         if (!string.IsNullOrWhiteSpace(line.CostCode))
             item.AddFormattedText($"  · {line.CostCode}", new Font { Color = Muted, Size = 7.5 });
 
         var type = row.Cells[1].AddParagraph(string.IsNullOrWhiteSpace(line.CostType) ? "—" : line.CostType);
-        type.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        type.Format.LeftIndent = CellIndent;
         type.Format.Font.Size = 8;
         type.Format.Font.Color = Muted;
 
@@ -61,7 +61,7 @@ public static partial class WorkOrderPoRenderer
         PrewrapCell(row.Cells[2], line.Description);
 
         var quantity = row.Cells[3].AddParagraph($"{line.Quantity.ToString("0.##", Uk)} {line.Unit}".Trim());
-        quantity.Format.RightIndent = Unit.FromMillimeter(1.5);
+        quantity.Format.RightIndent = CellIndent;
         quantity.Format.Font.Size = 8.5;
 
         MoneyCell(row.Cells[4], line.UnitCost);
@@ -74,7 +74,7 @@ public static partial class WorkOrderPoRenderer
     {
         if (paid != 0m) { MoneyCell(cell, paid); return; }
         var dash = cell.AddParagraph("–");
-        dash.Format.RightIndent = Unit.FromMillimeter(1.5);
+        dash.Format.RightIndent = CellIndent;
         dash.Format.Font.Size = 8.5;
         dash.Format.Font.Color = Muted;
     }
@@ -84,7 +84,7 @@ public static partial class WorkOrderPoRenderer
         var totals = AddPaddedRow(table, 1.4);
         totals.Shading.Color = Panel;
         var label = totals.Cells[2].AddParagraph("Totals");
-        label.Format.LeftIndent = Unit.FromMillimeter(1.5);
+        label.Format.LeftIndent = CellIndent;
         label.Format.Font.Size = 8.5;
         label.Format.Font.Bold = true;
         label.Format.Font.Color = Navy;

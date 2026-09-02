@@ -11,7 +11,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class CashForecast
 {
-    // ---- Excel export -------------------------------------------------------
     // Sheet 1: the forecast as rendered — category rows per month plus Later/Undated, net
     // movement, and (directors, bank connected) the closing balance. Sheet 2: the statement
     // rows, signed the way the statement reads. Sheet 3: bank accounts, directors only.

@@ -7,8 +7,6 @@ internal sealed partial class ProcurementActions
 {
     private static IEnumerable<AiAction> WorkOrdersActions() => new AiAction[]
     {
-        // ---- Work orders --------------------------------------------------------------------
-
         new AiAction(
             Name: "create_manual_work_order",
             Area: "Procurement",

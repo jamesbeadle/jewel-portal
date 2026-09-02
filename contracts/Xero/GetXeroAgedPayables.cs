@@ -2,7 +2,6 @@ using Jewel.JPMS.Contracts.Cqrs;
 
 namespace Jewel.JPMS.Contracts.Xero;
 
-// ============================================================================
 // Aged payables — what the company owes suppliers, aged as Xero's own report
 // ages it, but INCLUDING draft bills. The accounting procedure leaves purchase
 // invoices in DRAFT until they are coded through the portal, and Xero's aged
@@ -11,7 +10,6 @@ namespace Jewel.JPMS.Contracts.Xero;
 // passthrough: nothing is stored in JPMS, and the read deliberately has NO
 // date floor (unlike the ledger's reporting window) so an ancient unpaid bill
 // still ages into "Older" instead of vanishing.
-// ============================================================================
 
 /// <summary>
 /// Asks the API for every outstanding supplier bill and credit note as Xero holds it right now —
