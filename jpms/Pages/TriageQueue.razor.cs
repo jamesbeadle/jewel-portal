@@ -1,12 +1,9 @@
 using static Jewel.JPMS.Features.Triage.RecordLinkVocabulary;
 using Jewel.JPMS.Contracts.Audit;
-using Jewel.JPMS.Contracts.DocumentControl;
 using Jewel.JPMS.Contracts.MailboxCompose;
-using Jewel.JPMS.Contracts.Todos;
-using Jewel.JPMS.Features.Procurement;
-using Jewel.JPMS.Features.Todos;
 using Jewel.JPMS.Features.Triage;
 using Jewel.JPMS.Features.Triage.Panels;
+using Jewel.JPMS.Features.Triage.Queue;
 using Jewel.JPMS.Features.Triage.Workspace;
 
 namespace Jewel.JPMS.Pages;
@@ -34,7 +31,6 @@ public partial class TriageQueue
 
     // The page shows the live queue (untagged Inbox), the discarded pile, or every tagged email (the
     // management surface for adding/removing workflow tags). The detail pane is shared.
-    private enum QueueView { Active, Discarded, Tagged }
     private QueueView view = QueueView.Active;
 
     private IReadOnlyList<RecordType> QueueLinkTypeOptions => pathway switch

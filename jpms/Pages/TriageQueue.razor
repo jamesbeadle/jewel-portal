@@ -48,41 +48,7 @@
     *@
 
     RenderFragment InboxPaneContent =@<div class="space-y-4 lg:pr-1">
-        <header>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium">JPMS · projects@@jewelbb.co.uk</p>
-            @* Each strapline is a count, not a description, so it waits for its own list — it
-               simply does not render until the count is known (see the loading-states notes). *@
-            @if (view == QueueView.Active && queueArrived)
-            {
-                <p class="text-sm text-content-muted mt-1">
-                    @total email@(total == 1 ? "" : "s") in the inbox waiting to be assigned to a request.
-                </p>
-            }
-            else if (view == QueueView.Discarded && discardedArrived)
-            {
-                <p class="text-sm text-content-muted mt-1">
-                    @discardedTotal discarded email@(discardedTotal == 1 ? "" : "s") — restore one to put it back in the queue.
-                </p>
-            }
-            else if (view == QueueView.Tagged && taggedArrived)
-            {
-                <p class="text-sm text-content-muted mt-1">
-                    @taggedTotal tagged email@(taggedTotal == 1 ? "" : "s") — add or remove tags to manage which processes use them.
-                </p>
-            }
-        </header>
-
-        @* Sticky, so the pane's navigation stays in reach however far the list is scrolled
-           (bg-canvas so rows vanish behind it). *@
-        <div class="sticky top-0 z-10 bg-canvas flex items-center gap-2 border-b border-line">
-            <button type="button" class="@ViewTabClass(QueueView.Active)" @onclick="() => SwitchView(QueueView.Active)">Queue</button>
-            <button type="button" class="@ViewTabClass(QueueView.Tagged)" @onclick="() => SwitchView(QueueView.Tagged)">Tagged</button>
-        </div>
-
-        @if (loadError is not null)
-        {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
-        }
+        <InboxPaneHeader View="view" Total="InboxTotal" LoadError="@loadError" OnSwitchView="SwitchView" />
 
         @if (view == QueueView.Active)
         {
@@ -158,9 +124,9 @@
     </div>;
 
     RenderFragment EmailPaneContent =@<div>
-        @if (view == QueueView.Active)
+        @if (selected is null)
         {
-            @if (selected is null)
+            @if (view == QueueView.Active)
             {
                 <TriageNoticesStack ComposeOutcome="composeOutcome"
                                     OnDismissComposeOutcome="() => composeOutcome = null"
@@ -171,105 +137,87 @@
                                     OnDismissPoEmailNote="() => poEmailNote = null"
                                     OutboxNote="@outboxNote"
                                     OnDismissOutboxNote="() => outboxNote = null" />
-                <div class="panel p-8 text-center text-sm text-content-subtle">
-                    Select an email to process it.
-                </div>
             }
-            else
-            {
-                <QueueEmailReadingPane Selected="selected"
-                                       Detail="detail"
-                                       DetailLoading="detailLoading"
-                                       Thread="thread"
-                                       ThreadLoading="threadLoading"
-                                       ThreadError="@threadError"
-                                       ThreadMatchedBySubject="threadMatchedBySubject"
-                                       StagedDocumentControlIds="stagedDocControlIds"
-                                       Busy="busy"
-                                       OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
-                                       OnSelectMessage="message => Select(message)"
-                                       OnRetryThread="() => LoadThreadAsync(selected!)"
-                                       OnPreviewAttachment="OpenEmailAttachmentPreview"
-                                       ComposerOpen="replyOpen"
-                                       OnOpenComposer="forward => OpenReplyComposer(forward)">
-                    <ReplyComposerForm IsForward="replyIsForward"
-                                       To="@replyToField" ToChanged="OnReplyToInput"
-                                       Cc="@replyCcField" CcChanged="OnReplyCcInput"
-                                       Bcc="@replyBccField" BccChanged="OnReplyBccInput"
-                                       ShowBcc="replyShowBcc" ShowBccChanged="shown => replyShowBcc = shown"
-                                       Subject="@replySubject" SubjectChanged="OnReplySubjectInput"
-                                       Body="@replyBody" BodyChanged="html => replyBody = html"
-                                       Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
-                                       Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
-                                       OriginalAttachments="@detail?.Attachments" OriginalMessageId="@selected?.Id"
-                                       OnDiscard="DiscardReplyDraft" />
-                </QueueEmailReadingPane>
-            }
+            <div class="panel p-8 text-center text-sm text-content-subtle">
+                @SelectPrompt
+            </div>
+        }
+        else if (view == QueueView.Active)
+        {
+            <QueueEmailReadingPane Selected="selected"
+                                   Detail="detail"
+                                   DetailLoading="detailLoading"
+                                   Thread="thread"
+                                   ThreadLoading="threadLoading"
+                                   ThreadError="@threadError"
+                                   ThreadMatchedBySubject="threadMatchedBySubject"
+                                   StagedDocumentControlIds="stagedDocControlIds"
+                                   Busy="busy"
+                                   OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
+                                   OnSelectMessage="message => Select(message)"
+                                   OnRetryThread="() => LoadThreadAsync(selected!)"
+                                   OnPreviewAttachment="OpenEmailAttachmentPreview"
+                                   ComposerOpen="replyOpen"
+                                   OnOpenComposer="forward => OpenReplyComposer(forward)">
+                <ReplyComposerForm IsForward="replyIsForward"
+                                   To="@replyToField" ToChanged="OnReplyToInput"
+                                   Cc="@replyCcField" CcChanged="OnReplyCcInput"
+                                   Bcc="@replyBccField" BccChanged="OnReplyBccInput"
+                                   ShowBcc="replyShowBcc" ShowBccChanged="shown => replyShowBcc = shown"
+                                   Subject="@replySubject" SubjectChanged="OnReplySubjectInput"
+                                   Body="@replyBody" BodyChanged="html => replyBody = html"
+                                   Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
+                                   Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
+                                   OriginalAttachments="@detail?.Attachments" OriginalMessageId="@selected?.Id"
+                                   OnDiscard="DiscardReplyDraft" />
+            </QueueEmailReadingPane>
         }
         else if (view == QueueView.Discarded)
         {
-            @if (selected is null)
-            {
-                <div class="panel p-8 text-center text-sm text-content-subtle">
-                    Select a discarded email to view it.
-                </div>
-            }
-            else
-            {
-                <DiscardedEmailPanel Selected="selected"
-                                     Detail="detail"
-                                     DetailLoading="detailLoading"
-                                     Thread="thread"
-                                     ThreadLoading="threadLoading"
-                                     ThreadError="@threadError"
-                                     ThreadMatchedBySubject="threadMatchedBySubject"
-                                     StagedDocumentControlIds="stagedDocControlIds"
-                                     Busy="busy"
-                                     ActionError="@actionError"
-                                     OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
-                                     OnSelectMessage="message => Select(message)"
-                                     OnRetryThread="() => LoadThreadAsync(selected!)"
-                                     OnPreviewAttachment="OpenEmailAttachmentPreview"
-                                     OnRestore="DoRestore" />
-            }
+            <DiscardedEmailPanel Selected="selected"
+                                 Detail="detail"
+                                 DetailLoading="detailLoading"
+                                 Thread="thread"
+                                 ThreadLoading="threadLoading"
+                                 ThreadError="@threadError"
+                                 ThreadMatchedBySubject="threadMatchedBySubject"
+                                 StagedDocumentControlIds="stagedDocControlIds"
+                                 Busy="busy"
+                                 ActionError="@actionError"
+                                 OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
+                                 OnSelectMessage="message => Select(message)"
+                                 OnRetryThread="() => LoadThreadAsync(selected!)"
+                                 OnPreviewAttachment="OpenEmailAttachmentPreview"
+                                 OnRestore="DoRestore" />
         }
         else
         {
-            @if (selected is null)
-            {
-                <div class="panel p-8 text-center text-sm text-content-subtle">
-                    Select a tagged email to manage its tags.
-                </div>
-            }
-            else
-            {
-                <TaggedEmailManagePanel Selected="selected"
-                                        Detail="detail"
-                                        DetailLoading="detailLoading"
-                                        Thread="thread"
-                                        ThreadLoading="threadLoading"
-                                        ThreadError="@threadError"
-                                        ThreadMatchedBySubject="threadMatchedBySubject"
-                                        StagedDocumentControlIds="stagedDocControlIds"
-                                        Busy="busy"
-                                        ActionError="@actionError"
-                                        OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
-                                        OnSelectMessage="message => Select(message)"
-                                        OnRetryThread="() => LoadThreadAsync(selected!)"
-                                        OnPreviewAttachment="OpenEmailAttachmentPreview"
-                                        OnRemoveTag="DoRemoveTag"
-                                        LinkRecordType="linkRecordType"
-                                        LinkTypeOptions="TaggedLinkTypeOptions"
-                                        OnLinkTypeChanged="OnLinkRecordTypeChanged"
-                                        ProjectId="@triageProjectId"
-                                        ProjectOptions="ProjectOptionsFor(triageProjectId)"
-                                        OnProjectChanged="OnTriageProjectChanged"
-                                        RecordsLoading="linkRecordsLoading"
-                                        LinkRecordId="@linkRecordId"
-                                        Records="ProjectRecords()"
-                                        OnRecordChanged="OnTaggedRecordChanged"
-                                        OnAddLink="DoAddTagLink" />
-            }
+            <TaggedEmailManagePanel Selected="selected"
+                                    Detail="detail"
+                                    DetailLoading="detailLoading"
+                                    Thread="thread"
+                                    ThreadLoading="threadLoading"
+                                    ThreadError="@threadError"
+                                    ThreadMatchedBySubject="threadMatchedBySubject"
+                                    StagedDocumentControlIds="stagedDocControlIds"
+                                    Busy="busy"
+                                    ActionError="@actionError"
+                                    OnToggleDocumentTriage="tick => ToggleDocControl(tick.AttachmentId, tick.Ticked)"
+                                    OnSelectMessage="message => Select(message)"
+                                    OnRetryThread="() => LoadThreadAsync(selected!)"
+                                    OnPreviewAttachment="OpenEmailAttachmentPreview"
+                                    OnRemoveTag="DoRemoveTag"
+                                    LinkRecordType="linkRecordType"
+                                    LinkTypeOptions="TaggedLinkTypeOptions"
+                                    OnLinkTypeChanged="OnLinkRecordTypeChanged"
+                                    ProjectId="@triageProjectId"
+                                    ProjectOptions="ProjectOptionsFor(triageProjectId)"
+                                    OnProjectChanged="OnTriageProjectChanged"
+                                    RecordsLoading="linkRecordsLoading"
+                                    LinkRecordId="@linkRecordId"
+                                    Records="ProjectRecords()"
+                                    OnRecordChanged="OnTaggedRecordChanged"
+                                    OnAddLink="DoAddTagLink" />
         }
     </div>;
 
@@ -416,15 +364,6 @@ else
         </div>
     </section>
 
-    @* Recently processed — the audit register's latest link/create decisions, newest first, so the
-       triager can jump straight to the document an email was just filed against. Its own section
-       beneath the whole workspace (reached by scrolling past it), full width — not squeezed into
-       the inbox pane under the queue. Closed by default — a native <details> fold, the same
-       pattern as the rejected-work-orders pile: it is a reference list, not live work, so the
-       header line with its count is enough until the triager actually wants to look. Same no-gate
-       pattern as the unassigned panel: it renders if and when there is something to show. (The
-       register records client-pathway triage today; subcontractor/internal rows appear here
-       automatically once the audit scope widens.) *@
     @if (RecentTriage.Count > 0)
     {
         <RecentTriageFold Entries="RecentTriage" Projects="AllProjects" />

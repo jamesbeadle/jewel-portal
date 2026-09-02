@@ -221,13 +221,6 @@ public partial class TriageQueue
             .ToHashSet();
 
 
-    private string ViewTabClass(QueueView tab)
-    {
-        var baseClass = "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition";
-        return view == tab
-            ? $"{baseClass} border-accent text-content"
-            : $"{baseClass} border-transparent text-content-muted hover:text-content";
-    }
 
 
 

@@ -1,6 +1,7 @@
 using Jewel.JPMS.Features.Triage;
 using Jewel.JPMS.Features.Triage.Panels;
 
+using Jewel.JPMS.Features.Triage.Queue;
 namespace Jewel.JPMS.Pages;
 
 public partial class TriageQueue
