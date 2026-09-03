@@ -26,11 +26,12 @@ internal sealed partial class RequestsActions
                 + "request id. projectIdHint is only a filing hint and can be overridden when filing."),
 
         new AiAction(
-            Name: "file_document_as_drawing",
+            Name: "file_document_to_project_documents",
             Area: "Document control",
-            Description: "Files a pending Document Control item into a project's drawing register as a "
-                + "drawing revision — the item leaves the pending queue and the file becomes a "
-                + "versioned drawing the project team sees. No email is sent.",
+            Description: "Files a pending Document Control item into a project's Documents register "
+                + "(the former drawing register — drawings, awards, letters, reports) as a document "
+                + "revision — the item leaves the pending queue and the file becomes a versioned "
+                + "document the project team sees. No email is sent.",
             CommandType: typeof(FileDocumentAsDrawing),
             ResultType: typeof(DocumentControlItem),
             AuthorisationType: typeof(FileDocumentAsDrawingAuthorisation),
@@ -38,9 +39,9 @@ internal sealed partial class RequestsActions
             VisibleTo: DocumentControlRoles.AllowedToManage,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "documentControlItemId comes from the Document Control queue. Pass drawingId to "
-                + "add a revision to an existing drawing, or leave it null to create a new one with "
-                + "the given drawingCode/title."),
+            Notes: "documentControlItemId comes from the Document Control queue. Pass drawingId "
+                + "(the parameter keeps the register's old name) to add a revision to an existing "
+                + "document, or leave it null to create a new one with the given drawingCode/title."),
 
         new AiAction(
             Name: "file_document_as_payment_certificate",

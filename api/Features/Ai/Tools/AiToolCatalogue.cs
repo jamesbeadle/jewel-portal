@@ -71,8 +71,13 @@ public static partial class AiToolCatalogue
     public static IReadOnlyList<AiTool> ForConnector(SignedInUser user) =>
         All.Where(tool => tool.VisibleTo.IncludesAny(user.Roles)).ToList();
 
-    public static AiTool? Find(string name) =>
-        All.FirstOrDefault(tool => string.Equals(tool.Name, name, StringComparison.OrdinalIgnoreCase));
+    /// <summary>By current name, or by a name the tool used to have (AiLegacyNames — the 2026-09-03
+    /// Drawings → Documents rename), so a saved skill or an old habit still lands.</summary>
+    public static AiTool? Find(string name)
+    {
+        var current = AiLegacyNames.Current(name);
+        return All.FirstOrDefault(tool => string.Equals(tool.Name, current, StringComparison.OrdinalIgnoreCase));
+    }
 
     private static string Serialise(object value) => JsonSerializer.Serialize(value, Json);
 

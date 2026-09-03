@@ -225,7 +225,7 @@ public partial class DocumentControl
         {
             // The revision joins the picked drawing by id — its code may be blank.
             var target = DrawingOptions.FirstOrDefault(d => d.DrawingId == drawingId);
-            if (target is null) { actionError = "Select the drawing this revision belongs to."; return; }
+            if (target is null) { actionError = "Select the document this revision belongs to."; return; }
             targetDrawingId = target.DrawingId;
             code = target.DrawingCode;
             title = target.Title;
@@ -235,7 +235,7 @@ public partial class DocumentControl
             actionError = folderProblem;
             return;
         }
-        await RunFiling("Filing to drawings", async () =>
+        await RunFiling("Filing to project documents", async () =>
         {
             // The folder resolves first (creating it if asked), then the file lands inside it.
             var folderId = drawingIsRevision || drawingFolderPicker is null

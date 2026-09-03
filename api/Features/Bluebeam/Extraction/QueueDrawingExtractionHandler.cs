@@ -26,14 +26,14 @@ public sealed class QueueDrawingExtractionHandler : ICommandHandler<QueueDrawing
             .FirstOrDefaultAsync(row => row.DrawingRevisionId == command.DrawingRevisionId, cancellationToken)
             ?? throw new InvalidOperationException("That revision no longer exists.");
         if (revision.DrawingId != command.DrawingId)
-            throw new InvalidOperationException("That revision belongs to a different drawing.");
+            throw new InvalidOperationException("That revision belongs to a different document.");
         // The extraction row denormalises ProjectId for the register's bulk reads and the audit
         // trail — it comes from the drawing itself, never from the caller.
         var drawing = await context.Drawings
             .FirstOrDefaultAsync(row => row.DrawingId == command.DrawingId, cancellationToken)
-            ?? throw new InvalidOperationException("That drawing no longer exists.");
+            ?? throw new InvalidOperationException("That document no longer exists.");
         if (drawing.ProjectId != command.ProjectId)
-            throw new InvalidOperationException("That drawing belongs to a different project.");
+            throw new InvalidOperationException("That document belongs to a different project.");
         if (string.IsNullOrWhiteSpace(revision.BlobRef))
             throw new InvalidOperationException("That revision has no stored file to extract from.");
         var isPdf = (revision.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase)

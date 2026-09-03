@@ -1,4 +1,4 @@
-@page "/projects/{ProjectId}/drawings/{DrawingId}"
+@page "/projects/{ProjectId}/documents/{DrawingId}"
 @inject AuthService Auth
 @inject SessionService Session
 @inject IDrawingStore DrawingStore
@@ -7,32 +7,32 @@
 @implements IDisposable
 @using Jewel.JPMS.Features.Drawings
 
-<PageTitle>Drawing · JPMS</PageTitle>
+<PageTitle>Document · JPMS</PageTitle>
 
 <ApprovedSessionGate>
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="drawings">
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="documents">
         @* Register fetch still in flight — don't flash "not found" before it lands. A FAILED
            fetch opens the gate too (loading-states rule): without that the page pulsed forever. *@
-        <LoadGate IsLoading="@(!DrawingStore.DrawingsLoadedFor(ProjectId) && !DrawingStore.DrawingsFailedFor(ProjectId))" Prominent="true" Label="Loading drawing">
+        <LoadGate IsLoading="@(!DrawingStore.DrawingsLoadedFor(ProjectId) && !DrawingStore.DrawingsFailedFor(ProjectId))" Prominent="true" Label="Loading document">
         @if (drawing is null)
         {
             @if (DrawingStore.DrawingsFailedFor(ProjectId))
             {
                 <div class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex flex-wrap items-center justify-between gap-3">
-                    <span>The drawing register couldn't be loaded just then.</span>
+                    <span>The document register couldn't be loaded just then.</span>
                     <button type="button" class="rounded-lg border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-100 transition"
                             @onclick="() => DrawingStore.RetryDrawings(ProjectId)">Try again</button>
                 </div>
             }
             else
             {
-                <p class="text-sm text-content-subtle italic">Drawing not found.</p>
+                <p class="text-sm text-content-subtle italic">Document not found.</p>
             }
         }
         else
         {
             <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-                <a href="@($"/projects/{ProjectId}/drawings")"
+                <a href="@($"/projects/{ProjectId}/documents")"
                    class="text-sm text-content-subtle hover:text-content underline underline-offset-4">← Back to register</a>
                 <div class="flex items-center gap-2">
                     @if (PreviousDrawing is not null)
@@ -153,8 +153,8 @@
             }
 
             <Modal IsOpen="confirmingDelete"
-                   Title="Delete drawing?"
-                   ConfirmLabel="@(deleteBusy ? "Deleting…" : "Delete drawing")"
+                   Title="Delete document?"
+                   ConfirmLabel="@(deleteBusy ? "Deleting…" : "Delete document")"
                    OnCancel="() => confirmingDelete = false"
                    OnConfirm="DeleteDrawingAsync">
                 <p class="text-sm text-content-muted">
@@ -213,7 +213,7 @@
                                 <a href="@FileUrl(PreviewRevision, inline: false)" target="_blank" rel="noopener"
                                    class="text-xs text-accent hover:underline underline-offset-2 shrink-0">Open / download</a>
                             </header>
-                            <img src="@FileUrl(PreviewRevision, inline: true)" alt="Drawing preview"
+                            <img src="@FileUrl(PreviewRevision, inline: true)" alt="Document preview"
                                  class="w-full max-h-[70vh] object-contain bg-surface-raised" />
                         </div>
                     }

@@ -92,7 +92,7 @@ public static class SidebarFolders
                 // actually sent, frozen.
                 new SidebarRow(new NavigationItem("Valuation Report Snapshots", "/projects/{project}/valuation-snapshots"),
                     DesktopNavigation.DirectorRoles),
-                new SidebarRow(new NavigationItem("Drawings", "/projects/{project}/drawings"),
+                new SidebarRow(new NavigationItem("Documents", "/projects/{project}/documents"),
                     DesktopNavigation.DirectorRoles),
                 new SidebarRow(new NavigationItem("Programme", "/projects/{project}/programme"),
                     DesktopNavigation.DirectorRoles),

@@ -1,4 +1,4 @@
-@page "/projects/{ProjectId}/drawings/ambiguous"
+@page "/projects/{ProjectId}/documents/ambiguous"
 @inject AuthService Auth
 @inject SessionService Session
 @inject IDrawingStore DrawingStore
@@ -19,9 +19,9 @@ else if (!Session.IsApproved)
 }
 else
 {
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="drawings">
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="documents">
         <nav class="mb-4 text-sm">
-            <a href="@($"/projects/{ProjectId}/drawings")" class="text-content-subtle hover:text-content underline underline-offset-4">Drawings</a>
+            <a href="@($"/projects/{ProjectId}/documents")" class="text-content-subtle hover:text-content underline underline-offset-4">Documents</a>
             <span class="text-content-subtle mx-2">/</span>
             <span class="text-content-muted font-medium">Ambiguous queue</span>
         </nav>

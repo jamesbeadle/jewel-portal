@@ -7,7 +7,7 @@ public partial class DocumentControl
     private string? DestinationHref(DocumentControlItem item) => item.FiledAs switch
     {
         DocumentFiledAs.Drawing when item.FiledRecordId is not null =>
-            ProjectFor(item) is { } drawingProject ? $"/projects/{drawingProject}/drawings/{item.FiledRecordId}" : null,
+            ProjectFor(item) is { } drawingProject ? $"/projects/{drawingProject}/documents/{item.FiledRecordId}" : null,
         DocumentFiledAs.PaymentCertificate => "/finance/payment-certificates",
         DocumentFiledAs.SubcontractorDocument => null, // the compliance row's home is the subcontractor record —
                                                        // but the record id is the document, so no deep link yet.

@@ -10,7 +10,7 @@ public sealed class RegisterDrawingValidation
         var errors = new List<string>();
         if (string.IsNullOrWhiteSpace(command.ProjectId)) errors.Add("ProjectId is required.");
         if (command.DrawingCode?.Trim().Length > DrawingFieldLimits.DrawingCodeMaxLength)
-            errors.Add($"Drawing code must be {DrawingFieldLimits.DrawingCodeMaxLength} characters or fewer.");
+            errors.Add($"Document code must be {DrawingFieldLimits.DrawingCodeMaxLength} characters or fewer.");
         if (command.Title?.Trim().Length > DrawingFieldLimits.TitleMaxLength)
             errors.Add($"Title must be {DrawingFieldLimits.TitleMaxLength} characters or fewer.");
         if (errors.Count == 0) return ValidationOutcome.Passed;

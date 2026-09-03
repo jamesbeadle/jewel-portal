@@ -3,19 +3,19 @@
 
 @* Link project drawings to the package (the tender documents). The ticks are the dialog's own,
    seeded from what is already linked each time it opens; the page saves the confirmed set. *@
-<Modal IsOpen="IsOpen" Title="Link drawings" ShowFooter="true"
+<Modal IsOpen="IsOpen" Title="Link project documents" ShowFooter="true"
        ConfirmLabel="@(Busy ? "Saving…" : $"Link {selected.Count}")" CancelLabel="Cancel"
        OnCancel="OnCancel" OnConfirm="() => OnConfirm.InvokeAsync(selected.ToList())" Class="max-w-lg w-full">
     @if (ProjectDrawings.Count == 0)
     {
         <p class="text-sm text-content-subtle italic">
-            No drawings on this project yet. Upload them in the Drawings tab, or send an email's
-            attachment to Document Triage and file it to drawings from there.
+            No documents on this project yet. Upload them in the Documents tab, or send an email's
+            attachment to Document Triage and file it to project documents from there.
         </p>
     }
     else
     {
-        <p class="text-xs text-content-subtle mb-3">Linked drawings are attached to the invite email (latest approved revision, or the newest upload when none is approved). Files that would push the email over the 25&nbsp;MB limit are sent as download links that expire after 7 days.</p>
+        <p class="text-xs text-content-subtle mb-3">Linked documents are attached to the invite email (latest approved revision, or the newest upload when none is approved). Files that would push the email over the 25&nbsp;MB limit are sent as download links that expire after 7 days.</p>
         <div class="space-y-1 max-h-80 overflow-y-auto">
             @foreach (var drawing in ProjectDrawings)
             {

@@ -97,21 +97,21 @@ BEGIN
     INSERT INTO [dbo].[Skills]
         ([SkillKey], [AgentKey], [DisplayName], [Description], [Body], [Pinned], [IsActive], [Version], [UpdatedByEmail], [UpdatedAt])
     VALUES
-        (N'jpms-document-filing', N'shared', N'JPMS — Document Filing', N'How documents move from email to their registers — Document Triage and the drawing register''s conventions. Load before filing attachments to Drawings, Payment Certificates or subcontractor compliance, registering drawings, or reasoning about revisions. Encodes revision inheritance, folder-first filing, the current-revision rule, date-only UTC certificate dates, and discard-never-delete.',
+        (N'jpms-document-filing', N'shared', N'JPMS — Document Filing', N'How documents move from email to their registers — Document Triage and the project Documents register''s conventions (the register was called Drawings until 2026-09-03 — it holds drawings, party-wall awards, building-control letters and reports). Load before filing attachments to a project''s Documents, Payment Certificates or subcontractor compliance, registering documents, or reasoning about revisions. Encodes revision inheritance, folder-first filing, the current-revision rule, date-only UTC certificate dates, and discard-never-delete.',
          N'---
 name: jpms-document-filing
-description: "How documents move from email to their registers — Document Triage and the drawing register''s conventions. Load before filing attachments to Drawings, Payment Certificates or subcontractor compliance, registering drawings, or reasoning about revisions. Encodes revision inheritance, folder-first filing, the current-revision rule, date-only UTC certificate dates, and discard-never-delete."
+description: "How documents move from email to their registers — Document Triage and the project Documents register''s conventions (the register was called Drawings until 2026-09-03 — it holds drawings, party-wall awards, building-control letters and reports). Load before filing attachments to a project''s Documents, Payment Certificates or subcontractor compliance, registering documents, or reasoning about revisions. Encodes revision inheritance, folder-first filing, the current-revision rule, date-only UTC certificate dates, and discard-never-delete."
 ---
 
 # JPMS — Document filing
 
 ## Document Triage
 
-- Every item is ONE email attachment copy, waiting to be filed to exactly one home: a drawing
-  (file_document_as_drawing), a payment certificate (file_document_as_payment_certificate), or a
+- Every item is ONE email attachment copy, waiting to be filed to exactly one home: a project document
+  (file_document_to_project_documents — the Documents register, drawings included), a payment certificate (file_document_as_payment_certificate), or a
   subcontractor''s compliance documents (file_document_to_subcontractor).
-- Filing as a drawing REVISION inherits code and title from the target drawing — the item''s own
-  name may be junk; the register''s identity wins. Filing as a NEW drawing resolves (or creates)
+- Filing as a document REVISION inherits code and title from the target document — the item''s own
+  name may be junk; the register''s identity wins. Filing as a NEW document resolves (or creates)
   its folder FIRST, then files into it.
 - Certificate dates and compliance expiry dates are date-only, pinned to UTC — the stored day
   must never drift with anyone''s timezone. Send plain yyyy-MM-dd.
@@ -119,16 +119,20 @@ description: "How documents move from email to their registers — Document Tria
   is ever deleted. When unsure where something files, leave it Pending and ask; a wrongly filed
   certificate misstates what the client certified.
 
-## The drawing register
+## The project Documents register (formerly Drawings)
 
-- A drawing''s CURRENT revision is its approved one, else its newest — trust the register''s
+- A document''s CURRENT revision is its approved one, else its newest — trust the register''s
   hasApprovedRevision flag, not label text.
-- Registering a drawing (metadata) and adding a revision (the file) are separate acts; revision
+- Registering a document (metadata — register_document) and adding a revision (the file) are separate acts; revision
   files only arrive by upload or from Document Triage, never invented.
 - Approval is evidential — it records who approved and supersedes the previous approved revision.
   Never mark approval on anyone''s behalf without their explicit say-so in this conversation.
-- Deleting a REVISION and deleting the DRAWING are different destructive acts; both need the
-  user''s confirmed intent, named by drawing code.
+- Deleting a REVISION and deleting the DOCUMENT are different destructive acts; both need the
+  user''s confirmed intent, named by document code.
+- "Extract data" (Bluebeam markups + text layer) runs on ANY PDF revision in the register — a
+  report or an award as much as a drawing; it is never automatic on upload.
+- The tool/action parameters still say drawingId / drawingFolderId / drawingCode — the
+  register''s old name — and list_documents returns rows under `drawings`. Same records, new label.
 ',
          0, 1, 1, @by, SYSDATETIMEOFFSET());
 END;
@@ -425,7 +429,7 @@ FROM (VALUES
     (N'Correspondence', N'jpms-email-triage'),
     (N'Requests & RFIs', N'jpms-email-triage'),
     (N'Document control', N'jpms-document-filing'),
-    (N'Drawings', N'jpms-document-filing'),
+    (N'Documents', N'jpms-document-filing'),
     (N'Commercial', N'jpms-valuation-cycle'),
     (N'Valuation invoices', N'jpms-valuation-cycle'),
     (N'Architect instructions', N'jpms-variation-lifecycle'),

@@ -126,7 +126,7 @@ public static class AgentCatalogue
         "bid-packages",
         "Bid Packages",
         "Scoping and tendering work packages: grouping scope into trades, drafting line items from "
-        + "the correspondence and drawing register, finding candidate subcontractors, drafting the "
+        + "the correspondence and the project Documents register, finding candidate subcontractors, drafting the "
         + "invite. It cannot take quantities off drawings yet (no measurement integration) and says "
         + "so rather than guessing.",
         Triggers: new[] { "bid package", "scope this out", "tender this", "invite subcontractors", "get quotes" },
@@ -136,7 +136,7 @@ public static class AgentCatalogue
         RoutePrefixes: new[] { "/bid-packages" },
         PromptFragment:
             "You are currently the BID PACKAGES agent. Scope from what was actually written in the "
-            + "correspondence and the drawing register's metadata — never from measurement you do "
+            + "correspondence and the project Documents register's metadata — never from measurement you do "
             + "not have. Group by trade, itemise only what the record supports, and leave a cost "
             + "code off a line rather than guessing one.",
         DoneMeans: "Package scoped, candidates identified, invite drafted — award stays human.");

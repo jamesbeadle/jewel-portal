@@ -322,7 +322,7 @@ internal static class AiFiledDocuments
 
         if (sourceId.StartsWith(DrawingPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            if (!JpmsRoleSets.DrawingReaders.IncludesAny(roles)) return Refuse("drawings");
+            if (!JpmsRoleSets.DrawingReaders.IncludesAny(roles)) return Refuse("project documents");
             var id = sourceId[DrawingPrefix.Length..];
             var revision = await db.DrawingRevisions.AsNoTracking().FirstOrDefaultAsync(row => row.DrawingRevisionId == id, ct);
             if (revision is null) return new Opened(null, null, null, $"No drawing revision exists with id \"{id}\".");

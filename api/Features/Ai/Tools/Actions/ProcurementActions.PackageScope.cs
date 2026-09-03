@@ -7,7 +7,7 @@ internal sealed partial class ProcurementActions
 {
     private static IEnumerable<AiAction> PackageScopeActions() => new AiAction[]
     {
-        // ---- Package scope: line items, coverage, drawings ----------------------------------
+        // ---- Package scope: line items, coverage, linked project documents ----------------------------------
 
         new AiAction(
             Name: "set_bid_package_line_items",
@@ -62,11 +62,12 @@ internal sealed partial class ProcurementActions
                 + "boqLineItemId is legacy only — new contract-side links carry a cost centre."),
 
         new AiAction(
-            Name: "set_bid_package_drawings",
+            Name: "set_bid_package_documents",
             Area: "Procurement",
-            Description: "REPLACES the set of project drawings linked to a bid package (the tender "
-                + "documents the invite email attaches) with the supplied list — send the full "
-                + "desired set. Returns the linked drawings, newest first.",
+            Description: "REPLACES the set of project documents (from the project's Documents "
+                + "register — drawings, specifications, anything registered there) linked to a bid "
+                + "package as the tender documents the invite email attaches, with the supplied "
+                + "list — send the full desired set. Returns the linked documents, newest first.",
             CommandType: typeof(SetBidPackageDrawings),
             ResultType: typeof(IReadOnlyList<Drawing>),
             AuthorisationType: typeof(SetBidPackageDrawingsAuthorisation),
@@ -75,7 +76,8 @@ internal sealed partial class ProcurementActions
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             Notes: "bidPackageId comes from list_bid_packages. Wholesale replacement: omitting a "
-                + "currently linked drawing unlinks it, so read the current set first."),
+                + "currently linked document unlinks it, so read the current set first "
+                + "(get_bid_package_context). drawingIds keeps the register's old parameter name."),
 
     };
 }

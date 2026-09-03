@@ -22,7 +22,7 @@
       class="rounded-2xl border border-line bg-surface p-5 space-y-3">
 
     <div>
-        <h3 class="text-sm font-semibold text-content">Add drawings to the register</h3>
+        <h3 class="text-sm font-semibold text-content">Add documents to the register</h3>
         <p class="text-xs text-content-subtle mt-0.5">
             Choose where they go, drop the files in, then press the upload button below — nothing
             is saved to the register until it is pressed.
@@ -32,12 +32,12 @@
     <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
         <button type="button" @onclick="() => SetMode(isRevision: false)"
                 class="rounded-md text-sm px-3 py-1.5 transition @(!isRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
-            New drawing
+            New document
         </button>
         <button type="button" @onclick="() => SetMode(isRevision: true)" disabled="@(ExistingDrawings.Count == 0 || IsBulk)"
-                title="@(IsBulk ? "A revision is one file into one drawing — reduce the selection to one file first." : null)"
+                title="@(IsBulk ? "A revision is one file into one document — reduce the selection to one file first." : null)"
                 class="rounded-md text-sm px-3 py-1.5 transition disabled:opacity-50 @(isRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
-            Revision of existing drawing
+            Revision of existing document
         </button>
     </div>
 
@@ -50,10 +50,10 @@
     @if (isRevision)
     {
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing drawing *</label>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing document *</label>
             <select @bind="selectedDrawingId"
                     class="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
-                <option value="">Select a drawing…</option>
+                <option value="">Select a document…</option>
                 @foreach (var drawing in ExistingDrawings)
                 {
                     <option value="@drawing.DrawingId">@DrawingNaming.Label(drawing)</option>
@@ -64,7 +64,7 @@
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
-            @(isRevision ? "Drawing file *" : "Drawing files *")
+            @(isRevision ? "Document file *" : "Document files *")
         </label>
         @* Drag highlight is a DEPTH COUNTER, not a boolean: dragging across the zone's children
            fires dragenter on the child BEFORE dragleave on the zone, so a boolean flips to false
@@ -92,7 +92,7 @@
                     : isRevision
                         ? "Drag the revised file here, or click to choose it."
                         : selectedFiles.Count == 0
-                            ? "Drag drawing files here, or click to choose — select as many as needed. A zip is unpacked into its files."
+                            ? "Drag files here, or click to choose — drawings, reports, letters, anything for the project; select as many as needed. A zip is unpacked into its files."
                             : "Drop or choose more files to add them to the selection.")
             </p>
         </div>
@@ -139,7 +139,7 @@
     @if (!isRevision && !IsBulk)
     {
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Drawing code</label>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Document code</label>
             <input type="text" @bind="drawingCode" placeholder="A-100 (optional)"
                    class="field" />
         </div>
@@ -195,7 +195,7 @@
     }
     else
     {
-        <p class="text-xs text-content-subtle">New uploads are saved as <span class="font-medium">Unapproved</span>. They become the latest drawing only once approved.</p>
+        <p class="text-xs text-content-subtle">New uploads are saved as <span class="font-medium">Unapproved</span>. They become the latest version of the document only once approved.</p>
     }
 
     <button type="submit" disabled="@(busy || unpacking is not null)"

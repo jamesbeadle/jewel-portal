@@ -76,8 +76,8 @@ else
                     else if (!status.Connected)
                     {
                         <p class="text-sm text-content">
-                            Not connected. Connecting signs a shared Bluebeam Studio account in — drawing
-                            data extraction runs through it for every project.
+                            Not connected. Connecting signs a shared Bluebeam Studio account in — document
+                            data extraction (drawings and any other PDF) runs through it for every project.
                         </p>
                         <div class="mt-4">
                             <button type="button" class="btn-primary" disabled="@busy" @onclick="ConnectAsync">
@@ -118,7 +118,7 @@ else
                             else
                             {
                                 <p class="text-sm text-content mb-3">
-                                    Disconnect Bluebeam? Drawing data extraction stops working until someone connects again.
+                                    Disconnect Bluebeam? Document data extraction stops working until someone connects again.
                                     Nothing already extracted is affected.
                                 </p>
                                 <div class="flex items-center gap-2">

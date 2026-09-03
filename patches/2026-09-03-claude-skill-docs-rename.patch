@@ -1,0 +1,82 @@
+diff --git a/.claude/skills/jpms-operator/SKILL.md b/.claude/skills/jpms-operator/SKILL.md
+index 8299bda..f6629f6 100644
+--- a/.claude/skills/jpms-operator/SKILL.md
++++ b/.claude/skills/jpms-operator/SKILL.md
+@@ -15,7 +15,7 @@ description: >-
+ 
+ JPMS is the project management system for Jewel Bespoke Build, a super-prime
+ residential contractor. It runs each project's full record chain — correspondence
+-intake, RFIs, variations, bid packages, work orders, labour, drawings, defects —
++intake, RFIs, variations, bid packages, work orders, labour, project documents (drawings and the rest), defects —
+ and produces the money outputs: the live Valuation Report per project (the
+ flagship), the cash forecast, and the profit summary, reconciled against Xero.
+ Today only the directors (MD, FD) and administrators use it; every other role
+@@ -46,7 +46,7 @@ picked project. Folders (in rail order):
+ 
+ | Folder | Rows |
+ |---|---|
+-| **Project** | RFIs (`/projects/{p}/requests`) · Variation Orders (`…/variations`) · Architect's Instructions · Valuation Report Snapshots · Drawings · Programme · To-do · Progress · Defects · Communications · Useful Information · Project Settings |
++| **Project** | RFIs (`/projects/{p}/requests`) · Variation Orders (`…/variations`) · Architect's Instructions · Valuation Report Snapshots · Documents (`…/documents`, was Drawings) · Programme · To-do · Progress · Defects · Communications · Useful Information · Project Settings |
+ | **Subcontractor** | Bid Package Invites · Work Orders · Communications (`/subcontractors/communications`) |
+ | **Internal** | Todo (`/todos`) · Directory · Registers · Policies |
+ | **Time** | Labour overview · Labour (per project) · Workers · Xero mapping |
+@@ -70,7 +70,7 @@ specific tab. Full page-by-page detail: `references/site-map.md`.
+ | The job | Where it's done |
+ |---|---|
+ | Triage an email (project, tags, to-dos, reply) | Control Centre — everything staged against the selected email, one **Apply** lands it all |
+-| File an attachment (drawing / payment cert / sub document) | Tick "Send to document triage" in Control Centre → file it at `/document-triage` |
++| File an attachment (project document / payment cert / sub document) | Tick "Send to document triage" in Control Centre → file it at `/document-triage` |
+ | Raise an RFI | Usually from an email in the Control Centre; manual "Raise RFI" on the project's RFI register |
+ | Work / respond / close an RFI | Request detail page (`…/requests/view/{id}`) — status pill, Email button (Outlook draft, PDF attached), Actions menu |
+ | Draft a variation from an RFI | Request detail page → Create Variation Order Quote (`variation_draft` dialog) |
+diff --git a/.claude/skills/jpms-operator/references/site-map.md b/.claude/skills/jpms-operator/references/site-map.md
+index 14e5dd1..355c1a9 100644
+--- a/.claude/skills/jpms-operator/references/site-map.md
++++ b/.claude/skills/jpms-operator/references/site-map.md
+@@ -25,13 +25,14 @@ triage" tick copies files to `/document-triage`.
+ The attachment triage queue for all projects: each item is a point-in-time copy
+ of one email attachment ticked over from the Control Centre. Left: Queue /
+ Filed / Discarded tabs. Right: preview (PDF/images inline), collapsible source
+-email, and the filing form with three destinations — **Drawings** (new drawing
+-or revision, code/revision/title prefilled from the filename, lands as an
++email, and the filing form with three destinations — **Project documents** (a
++new document or a revision in the project's Documents register — drawings and
++anything else; code/revision/title prefilled from the filename, lands as an
+ unapproved revision), **Payment certificate** (project, optional valuation
+ claim, number, amount, issued date), **Subcontractor document** (subcontractor,
+ kind, expiry). Discard is restorable, never a delete. Emails themselves are
+-triaged in the Control Centre; a filed drawing's approval follows the normal
+-drawings workflow.
++triaged in the Control Centre; a filed document's approval follows the normal
++documents workflow.
+ 
+ ### Xero Cost Allocation — `/finance/allocation`
+ The workbench reconciling Xero with the projects: every cost-of-sales purchase
+@@ -115,14 +116,20 @@ muted. Row click opens the frozen report; branded PDF download; Email button
+ — nothing sends from this page. Managing invoices/snapshots is done on the
+ Valuation Report tab.
+ 
+-### Drawings — `/projects/{project}/drawings`
+-Drawing register with revisions: each row a drawing with latest approved
++### Documents — `/projects/{project}/documents` (was Drawings at `…/drawings` until 2026-09-03; old URLs redirect)
++The project's document register with revisions — drawings, party-wall awards,
++building-control letters, reports. Each row a document with latest approved
+ revision, pending/archived counts, pipeline status, "ambiguous" badge for
+-uploads that couldn't auto-classify (`…/drawings/ambiguous` is the queue,
+-reached by URL). Approved-only toggle; "+ Upload drawing" (Admin/MD/PM); Excel
+-export. Incoming drawing files from correspondence are filed here from Document
+-Triage, not uploaded here. Detail page (`…/drawings/{drawingId}`): revision
+-history + inline viewer, "+ Upload new version", Delete drawing (permanent).
++uploads that couldn't auto-classify (`…/documents/ambiguous` is the queue,
++reached by URL). Approved-only toggle; "+ Add documents" (Admin/MD/PM; a zip is
++unpacked); "Extract all" (queues every unprocessed PDF through Bluebeam + the
++text-layer reader — any PDF, not only drawings); Excel export. Incoming files
++from correspondence are filed here from Document Triage, not uploaded here.
++Detail page (`…/documents/{drawingId}`): revision history + inline viewer,
++"Extract data" (any PDF revision), "+ Upload new version", Delete document
++(permanent). Connector: `list_documents`, actions in the **Documents** area
++(register_document, approve_document_revision, …); parameters keep the old
++`drawingId` / `drawingFolderId` names.
+ 
+ ### Programme — `/projects/{project}/programme`
+ Four sub-tabs: **Programme** (Gantt against latest baseline, movement banner

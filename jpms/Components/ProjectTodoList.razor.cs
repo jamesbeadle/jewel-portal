@@ -224,7 +224,7 @@ public partial class ProjectTodoList
         Nav.NavigateTo($"/projects/{ProjectId}/variations/{variationId}");
 
     private void OpenDrawing(Drawing drawing) =>
-        Nav.NavigateTo($"/projects/{ProjectId}/drawings/{drawing.DrawingId}");
+        Nav.NavigateTo($"/projects/{ProjectId}/documents/{drawing.DrawingId}");
 
     private static string RequestStatusLabel(RequestStatus status) => status.DisplayName();
 

@@ -35,7 +35,7 @@
             📎 Attach files
             <InputFile OnChange="OnFilesPicked" multiple class="hidden" />
         </label>
-        <button type="button" class="@SourceButtonClass(Panel.Drawings)" @onclick="() => TogglePanel(Panel.Drawings)">📐 Project drawings</button>
+        <button type="button" class="@SourceButtonClass(Panel.Drawings)" @onclick="() => TogglePanel(Panel.Drawings)">📄 Project documents</button>
         <button type="button" class="@SourceButtonClass(Panel.Photos)" @onclick="() => TogglePanel(Panel.Photos)">📷 Progress photos</button>
         <button type="button" class="@SourceButtonClass(Panel.Records)" @onclick="() => TogglePanel(Panel.Records)">📄 System documents</button>
         @if (OriginalAttachments is { Count: > 0 })
@@ -69,19 +69,19 @@
             {
                 @if (string.IsNullOrEmpty(panelProjectId))
                 {
-                    <p class="text-xs text-content-subtle">Choose a project to list its drawing register.</p>
+                    <p class="text-xs text-content-subtle">Choose a project to list its document register.</p>
                 }
                 else if (!Drawings.DrawingsLoadedFor(panelProjectId) || !Drawings.FoldersLoadedFor(panelProjectId))
                 {
-                    <p class="text-xs text-content-subtle">Loading drawings…</p>
+                    <p class="text-xs text-content-subtle">Loading documents…</p>
                 }
                 else if (Drawings.DrawingsFor(panelProjectId).Count == 0)
                 {
-                    <p class="text-xs text-content-subtle">No drawings on this project yet.</p>
+                    <p class="text-xs text-content-subtle">No documents on this project yet.</p>
                 }
                 else
                 {
-                    <input class="field w-full" type="text" placeholder="Search drawings — code, title, file name or folder…"
+                    <input class="field w-full" type="text" placeholder="Search documents — code, title, file name or folder…"
                            value="@drawingSearch" @oninput="e => drawingSearch = e.Value?.ToString() ?? string.Empty" />
 
                     <div class="max-h-64 overflow-y-auto divide-y divide-line">
@@ -89,7 +89,7 @@
                         {
                             @if (DrawingSearchResults.Count == 0)
                             {
-                                <p class="text-xs text-content-subtle py-1.5">No drawings match — try a code, title, file name or folder name.</p>
+                                <p class="text-xs text-content-subtle py-1.5">No documents match — try a code, title, file name or folder name.</p>
                             }
                             else
                             {
@@ -108,13 +108,13 @@
                                     {
                                         <div class="flex items-center gap-2 py-1.5" style="@IndentStyle(folderGroup.Depth)">
                                             <input type="checkbox" checked="@FolderFullySelected(folderGroup)"
-                                                   title="Tick every drawing in this folder, sub-folders included"
+                                                   title="Tick every document in this folder, sub-folders included"
                                                    @onchange="() => ToggleFolderSelection(folderGroup)" />
                                             <button type="button" class="flex-1 min-w-0 text-left text-xs text-content font-semibold hover:text-accent flex items-center gap-1.5"
                                                     @onclick="() => ToggleFolderCollapse(folderGroup.Key)">
                                                 <span class="text-content-faint">@(IsFolderCollapsed(folderGroup.Key) ? "▸" : "▾")</span>
                                                 <span class="truncate">@(folderGroup.Folder?.Name ?? "Ungrouped")</span>
-                                                <span class="text-content-faint font-normal tabular-nums" title="Drawings in this folder, sub-folders included">@FolderSubtreeCount(folderGroup)</span>
+                                                <span class="text-content-faint font-normal tabular-nums" title="Documents in this folder, sub-folders included">@FolderSubtreeCount(folderGroup)</span>
                                             </button>
                                         </div>
                                     }
@@ -146,7 +146,7 @@
                         }
                     </div>
                     <p class="text-[11px] text-content-faint">
-                        Tick drawings (or a whole folder) and press Attach — each drawing's approved file is used, or its latest upload when nothing is approved.
+                        Tick documents (or a whole folder) and press Attach — each document's approved file is used, or its latest upload when nothing is approved.
                         Expand a drawing to tick a specific revision instead.
                     </p>
                 }
@@ -277,7 +277,7 @@
                    title="Tick to attach this drawing's file"
                    @onchange="() => ToggleDrawingSelection(drawing.DrawingId)" />
             <button type="button" class="flex-1 min-w-0 text-left text-xs text-content hover:text-accent flex items-center gap-2"
-                    title="Show this drawing's revisions" @onclick="() => ToggleDrawing(drawing.DrawingId)">
+                    title="Show this document's revisions" @onclick="() => ToggleDrawing(drawing.DrawingId)">
                 <span class="font-mono">@DrawingNaming.Code(drawing)</span>
                 <span class="truncate flex-1">@DrawingNaming.Name(drawing)</span>
                 @if (showPath && FolderPathFor(drawing) is { Length: > 0 } path)

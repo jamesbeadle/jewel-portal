@@ -16,11 +16,11 @@ public sealed class SetDrawingRevisionLabelHandler
     public async Task<DrawingRevision> HandleAsync(SetDrawingRevisionLabel command, CancellationToken cancellationToken)
     {
         var drawing = await context.Drawings.FindAsync(new object[] { command.DrawingId }, cancellationToken);
-        if (drawing is null) throw new InvalidOperationException($"Drawing {command.DrawingId} not found.");
+        if (drawing is null) throw new InvalidOperationException($"Document {command.DrawingId} not found.");
 
         var revision = await context.DrawingRevisions.FindAsync(new object[] { command.DrawingRevisionId }, cancellationToken);
         if (revision is null || revision.DrawingId != drawing.DrawingId)
-            throw new InvalidOperationException($"Revision {command.DrawingRevisionId} not found on drawing {command.DrawingId}.");
+            throw new InvalidOperationException($"Revision {command.DrawingRevisionId} not found on document {command.DrawingId}.");
 
         var label = (command.RevisionLabel ?? "").Trim();
         revision.RevisionLabel = label;

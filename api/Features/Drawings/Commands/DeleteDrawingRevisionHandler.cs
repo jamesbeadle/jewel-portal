@@ -24,7 +24,7 @@ public sealed class DeleteDrawingRevisionHandler : ICommandHandler<DeleteDrawing
     {
         var revision = await context.DrawingRevisions.FindAsync(new object[] { command.DrawingRevisionId }, cancellationToken);
         if (revision is null || revision.DrawingId != command.DrawingId)
-            throw new InvalidOperationException($"Revision {command.DrawingRevisionId} not found on drawing {command.DrawingId}.");
+            throw new InvalidOperationException($"Revision {command.DrawingRevisionId} not found on document {command.DrawingId}.");
 
         var issueRecords = await context.DrawingIssueRecords
             .Where(record => record.DrawingRevisionId == command.DrawingRevisionId)

@@ -1,6 +1,6 @@
 namespace Jewel.JPMS.Contracts.Ai;
 
-/// <summary>Programme, labour, drawings, site records and project pages. Data only.</summary>
+/// <summary>Programme, labour, documents (the former drawings register), site records and project pages. Data only.</summary>
 public static class SitePageGuides
 {
     public static readonly IReadOnlyList<PageGuide> Guides = new PageGuide[]
@@ -68,39 +68,48 @@ public static class SitePageGuides
             + "be added to an existing update or deleted, and reports/updates deleted (two-click "
             + "confirm). You have no dialogs here; use navigate_to to bring the user to it."),
 
-        new("/projects/{project}/drawings", "Drawing register",
-            "The project's drawing register with revisions — each row is a drawing with its code, "
-            + "title, original file name, latest approved revision, pending/archived counts and "
-            + "pipeline status, plus an \"ambiguous\" count badge for older mailbox imports that "
-            + "couldn't be auto-classified (new uploads never are — a blank revision is simply "
-            + "\"no revision\"). Rows group into folders, and folders nest (sub-folders indent "
-            + "beneath their parent; drawings sit at any level; Ungrouped last). Code, title, "
-            + "revision and issuer are all optional on upload — a drawing with no title shows its "
-            + "file name. Manually: a toggle switches between all drawings and approved-only; "
-            + "\"+ Upload drawing\" (Admin/MD/PM) opens the upload form; \"+ New folder\" and each "
-            + "folder's + / pencil / bin buttons add a sub-folder, rename or delete it (contents "
-            + "move up a level); Export to Excel exports the register; opening a row goes to the "
-            + "drawing's detail page for revision history and the viewer. Incoming drawing files "
-            + "from correspondence are filed to this register from Document Triage, not uploaded "
-            + "here."),
+        new("/projects/{project}/documents", "Document register",
+            "The project's document register with revisions — drawings, party-wall awards, "
+            + "building-control letters, reports, anything issued for the project. Each row is a "
+            + "document with its code, title, original file name, latest approved revision, "
+            + "pending/archived counts and pipeline status, plus an \"ambiguous\" count badge for "
+            + "older mailbox imports that couldn't be auto-classified (new uploads never are — a "
+            + "blank revision is simply \"no revision\"). Rows group into folders, and folders nest "
+            + "(sub-folders indent beneath their parent; documents sit at any level; Ungrouped "
+            + "last). Code, title, revision and issuer are all optional on upload — a document "
+            + "with no title shows its file name. Manually: a toggle switches between all "
+            + "documents and approved-only; \"+ Add documents\" (Admin/MD/PM) opens the upload "
+            + "form (a zip is unpacked into its files); \"Extract all\" queues every unprocessed "
+            + "PDF through Bluebeam + the text-layer reader — any PDF, drawing or not; \"+ New "
+            + "folder\" and each folder's + / pencil / bin buttons add a sub-folder, rename or "
+            + "delete it (contents move up a level); Export to Excel exports the register; opening "
+            + "a row goes to the document's detail page for revision history and the viewer. "
+            + "Incoming files from correspondence are filed to this register from Document "
+            + "Triage, not uploaded here. Was \"Drawings\" at /drawings until 2026-09-03 — the "
+            + "old URL redirects.",
+            Aliases: new[] { "/projects/{project}/drawings" }),
 
-        new("/projects/{project}/drawings/{drawingId}", "Drawing detail",
-            "One drawing's page: revision history alongside an inline viewer (PDFs and images), "
+        new("/projects/{project}/documents/{drawingId}", "Document detail",
+            "One document's page: revision history alongside an inline viewer (PDFs and images), "
             + "previewing the approved revision if there is one, else the most recent revision with "
             + "a file, with Previous/Next stepping through the register. Manually (Admin/MD/PM): "
             + "the pencil by the code/title edits them in place (both optional); the folder picker "
-            + "moves the drawing to any folder or sub-folder; \"+ Upload new version\" adds a "
-            + "revision; \"Delete drawing\" (confirm modal) permanently removes the drawing, all "
-            + "its revisions and files; the revision list carries each revision's approval and "
-            + "pipeline status, and a pencil by the revision label sets it (uploads may have none). "
-            + "You have no dialogs here; "
-            + "navigate_to opens it (tools that return a drawing route are preferred)."),
+            + "moves the document to any folder or sub-folder; \"Extract data\" queues the "
+            + "previewed PDF revision through Bluebeam (markups) and the text-layer reader — it "
+            + "works on ANY PDF, not only drawings, and the Extracted data panel below shows the "
+            + "run; \"+ Upload new version\" adds a revision; \"Delete document\" (confirm modal) "
+            + "permanently removes the document, all its revisions and files; the revision list "
+            + "carries each revision's approval and pipeline status, and a pencil by the revision "
+            + "label sets it (uploads may have none). You have no dialogs here; navigate_to opens "
+            + "it (tools that return a document route are preferred).",
+            Aliases: new[] { "/projects/{project}/drawings/{drawingId}" }),
 
-        new("/projects/{project}/drawings/ambiguous", "Ambiguous drawing revisions",
-            "The queue of uploaded drawing revisions JPMS couldn't auto-classify — filenames that "
+        new("/projects/{project}/documents/ambiguous", "Ambiguous document revisions",
+            "The queue of uploaded document revisions JPMS couldn't auto-classify — filenames that "
             + "didn't match the expected revision pattern, awaiting PM action. It renders the same "
-            + "revision list as the register; a breadcrumb links back to the drawing register, "
-            + "whose header badge shows the pending count. Reached by URL, not from the sidebar."),
+            + "revision list as the register; a breadcrumb links back to the document register, "
+            + "whose header badge shows the pending count. Reached by URL, not from the sidebar.",
+            Aliases: new[] { "/projects/{project}/drawings/ambiguous" }),
 
         new("/projects/{project}/communications", "Communications",
             "The cross-cutting roll-up of ALL correspondence tagged to this project's records, read "

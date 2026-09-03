@@ -145,7 +145,7 @@
 
                                 <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
                                     <button type="button" @onclick="() => SetDestination(FileDestination.Drawing)"
-                                            class="@DestinationTabClass(FileDestination.Drawing)">Drawings</button>
+                                            class="@DestinationTabClass(FileDestination.Drawing)">Project documents</button>
                                     <button type="button" @onclick="() => SetDestination(FileDestination.PaymentCertificate)"
                                             class="@DestinationTabClass(FileDestination.PaymentCertificate)">Payment certificate</button>
                                     <button type="button" @onclick="() => SetDestination(FileDestination.Subcontractor)"
@@ -156,16 +156,16 @@
                                 {
                                     <p class="text-xs text-content-muted">
                                         The file lands as an <span class="font-medium text-content">unapproved revision</span> —
-                                        a new (or blank) code registers a new drawing, named by its file until it is given a code or title; approval follows the normal drawings workflow.
+                                        a new (or blank) code registers a new document in the project's Documents register, named by its file until it is given a code or title; approval follows the normal documents workflow.
                                     </p>
                                     <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
                                         <button type="button" @onclick="() => SetDrawingMode(isRevision: false)"
                                                 class="rounded-md text-xs px-2.5 py-1.5 transition @(!drawingIsRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
-                                            New drawing
+                                            New document
                                         </button>
                                         <button type="button" @onclick="() => SetDrawingMode(isRevision: true)"
                                                 class="rounded-md text-xs px-2.5 py-1.5 transition @(drawingIsRevision ? "bg-accent text-accent-ink font-medium" : "text-content-muted hover:bg-surface-raised")">
-                                            Revision of existing drawing
+                                            Revision of existing document
                                         </button>
                                     </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -182,7 +182,7 @@
                                         @if (drawingIsRevision)
                                         {
                                             <div>
-                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing drawing *</label>
+                                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing document *</label>
                                                 <select class="field" @bind="drawingId" disabled="@string.IsNullOrWhiteSpace(filingProjectId)">
                                                     @if (string.IsNullOrWhiteSpace(filingProjectId))
                                                     {
@@ -190,15 +190,15 @@
                                                     }
                                                     else if (!DrawingStore.DrawingsLoadedFor(filingProjectId))
                                                     {
-                                                        <option value="">Loading drawings…</option>
+                                                        <option value="">Loading documents…</option>
                                                     }
                                                     else if (DrawingOptions.Count == 0)
                                                     {
-                                                        <option value="">No drawings on this project yet</option>
+                                                        <option value="">No documents on this project yet</option>
                                                     }
                                                     else
                                                     {
-                                                        <option value="">Select a drawing…</option>
+                                                        <option value="">Select a document…</option>
                                                         @foreach (var drawing in DrawingOptions)
                                                         {
                                                             <option value="@drawing.DrawingId">@DrawingNaming.Label(drawing)</option>
@@ -209,7 +209,7 @@
                                         }
                                         else
                                         {
-                                            <FormField Label="Drawing code" Value="@drawingCode" OnChange="v => drawingCode = v" />
+                                            <FormField Label="Document code" Value="@drawingCode" OnChange="v => drawingCode = v" />
                                         }
                                     </div>
                                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -226,7 +226,7 @@
                                     <div class="flex items-center gap-3">
                                         <button type="button" class="btn-primary"
                                                 disabled="@(busy || string.IsNullOrWhiteSpace(filingProjectId) || (drawingIsRevision && string.IsNullOrWhiteSpace(drawingId)))"
-                                                @onclick="DoFileAsDrawing">@(busy ? "Filing…" : "File to drawings")</button>
+                                                @onclick="DoFileAsDrawing">@(busy ? "Filing…" : "File to project documents")</button>
                                         @DiscardControl
                                     </div>
                                 }

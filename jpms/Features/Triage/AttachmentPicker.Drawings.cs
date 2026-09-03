@@ -178,9 +178,9 @@ public partial class AttachmentPicker
             attachNote = (withoutFile, failedLoads.Count) switch
             {
                 (0, 0) => null,
-                (_, 0) => $"{withoutFile} ticked {(withoutFile == 1 ? "drawing has" : "drawings have")} no uploaded file yet — nothing to attach there.",
-                (0, _) => $"{failedLoads.Count} {(failedLoads.Count == 1 ? "drawing" : "drawings")} couldn't be checked for files — still ticked, press Attach again.",
-                _ => $"{withoutFile + failedLoads.Count} ticked drawings couldn't be attached — no file yet, or the file list couldn't be loaded (those stay ticked)."
+                (_, 0) => $"{withoutFile} ticked {(withoutFile == 1 ? "document has" : "documents have")} no uploaded file yet — nothing to attach there.",
+                (0, _) => $"{failedLoads.Count} {(failedLoads.Count == 1 ? "document" : "documents")} couldn't be checked for files — still ticked, press Attach again.",
+                _ => $"{withoutFile + failedLoads.Count} ticked documents couldn't be attached — no file yet, or the file list couldn't be loaded (those stay ticked)."
             };
         }
         finally

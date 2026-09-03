@@ -41,8 +41,8 @@ public static class PageGuideCatalogue
 
     /// <summary>The guide for a route — template or concrete — or null. Query strings ignored.
     /// The MOST LITERAL match wins, exactly as Blazor's router prefers a literal route over a
-    /// parameterised one: "/projects/x/drawings/ambiguous" belongs to the ambiguous-revisions
-    /// guide, not to "/projects/{project}/drawings/{drawingId}" swallowing "ambiguous" as an id.</summary>
+    /// parameterised one: "/projects/x/documents/ambiguous" belongs to the ambiguous-revisions
+    /// guide, not to "/projects/{project}/documents/{drawingId}" swallowing "ambiguous" as an id.</summary>
     public static PageGuide? FindForRoute(string? route)
     {
         if (string.IsNullOrWhiteSpace(route)) return null;

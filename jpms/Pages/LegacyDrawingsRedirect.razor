@@ -1,0 +1,32 @@
+@page "/projects/{ProjectId}/drawings"
+@page "/projects/{ProjectId}/drawings/ambiguous"
+@page "/projects/{ProjectId}/drawings/{DrawingId}"
+@inject NavigationManager Nav
+
+@*
+    The project register was renamed Drawings → Documents on 2026-09-03 (it holds party-wall
+    awards, building-control letters and reports as well as drawings). Every internal link now
+    points at /documents; this component keeps the OLD /drawings URLs alive — bookmarks, emails
+    sent from the portal, to-do notes — by replacing them with their /documents twin. The DB,
+    the API paths and the C# names still say Drawing; only what people (and the connector) see
+    changed.
+*@
+
+<LoadGate IsLoading="true" Prominent="true" Label="Opening documents" />
+
+@code {
+    [Parameter] public string ProjectId { get; set; } = "";
+    [Parameter] public string? DrawingId { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var path = Nav.ToBaseRelativePath(Nav.Uri);
+        var query = path.IndexOf('?') is var q and >= 0 ? path[q..] : "";
+        var target = path.Split('?')[0].TrimEnd('/').EndsWith("/drawings/ambiguous", StringComparison.OrdinalIgnoreCase)
+            ? $"/projects/{ProjectId}/documents/ambiguous"
+            : string.IsNullOrEmpty(DrawingId)
+                ? $"/projects/{ProjectId}/documents"
+                : $"/projects/{ProjectId}/documents/{DrawingId}";
+        Nav.NavigateTo(target + query, replace: true);
+    }
+}

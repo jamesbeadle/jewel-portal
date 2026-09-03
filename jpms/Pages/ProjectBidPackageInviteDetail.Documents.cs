@@ -35,7 +35,7 @@ public partial class ProjectBidPackageInviteDetail
                 new SetBidPackageDrawings(BidPackageId, drawingIds.ToList()), CancellationToken.None);
             showDrawingsModal = false;
         }
-        catch { error = "Couldn't update the linked drawings. Please try again."; }
+        catch { error = "Couldn't update the linked documents. Please try again."; }
         finally { busy = false; }
     }
 

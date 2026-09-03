@@ -59,8 +59,8 @@ public partial class DrawingUploadForm
             ? $"Unpacking {unpacking}…"
             : busy
             ? IsBulk ? $"Uploading {bulkDone} of {bulkTotal}…" : "Uploading…"
-            : IsBulk ? $"Upload {selectedFiles.Count} drawings to the register"
-            : isRevision ? "Upload revision to the register" : "Upload drawing to the register";
+            : IsBulk ? $"Upload {selectedFiles.Count} documents to the register"
+            : isRevision ? "Upload revision to the register" : "Upload document to the register";
 
     private void SetMode(bool isRevision)
     {
@@ -179,7 +179,7 @@ public partial class DrawingUploadForm
 
         if (IsBulk)
         {
-            if (isRevision) { error = "A revision is one file into one drawing — switch to “New drawing” for a bulk upload."; return; }
+            if (isRevision) { error = "A revision is one file into one document — switch to “New document” for a bulk upload."; return; }
             await HandleBulkUpload();
             return;
         }
@@ -189,7 +189,7 @@ public partial class DrawingUploadForm
         string drawingId;
         if (isRevision)
         {
-            if (string.IsNullOrEmpty(selectedDrawingId)) { error = "Select the drawing this revision belongs to."; return; }
+            if (string.IsNullOrEmpty(selectedDrawingId)) { error = "Select the document this revision belongs to."; return; }
             drawingId = selectedDrawingId;
         }
         else
@@ -198,7 +198,7 @@ public partial class DrawingUploadForm
             var duplicate = DuplicateOfCode(drawingCode.Trim());
             if (duplicate is not null)
             {
-                error = $"“{duplicate.DrawingCode}” is already in the register. Switch to “Revision of existing drawing” to add a new version of it.";
+                error = $"“{duplicate.DrawingCode}” is already in the register. Switch to “Revision of existing document” to add a new version of it.";
                 return;
             }
             drawingId = "";

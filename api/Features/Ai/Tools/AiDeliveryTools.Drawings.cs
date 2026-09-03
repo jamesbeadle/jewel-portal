@@ -7,17 +7,20 @@ internal static partial class AiDeliveryTools
     private static AiTool ListDrawings()
     {
         return new(
-            "list_drawings",
-            "A project's drawing register: the folder tree (folders nest via parent id) and "
-            + "every drawing with its current-revision standing — the approved revision label "
-            + "when one is approved (a revision can be approved with a BLANK label, so trust "
+            "list_documents",
+            "A project's Documents register (called Drawings until 2026-09-03 — it holds "
+            + "drawings AND party-wall awards, building-control letters, reports, anything issued "
+            + "for the project): the folder tree (folders nest via parent id) and every document "
+            + "with its current-revision standing — the approved revision label when one is "
+            + "approved (a revision can be approved with a BLANK label, so trust "
             + "hasApprovedRevision, not the label), else the newest revision by file name, plus "
-            + "unapproved and archived counts. Pass drawingId instead for that one drawing's "
-            + "full revision history with the approval trail (who approved what, when, and what "
-            + "was superseded).",
+            + "unapproved and archived counts. Pass drawingId (the id parameter keeps the "
+            + "register's old name) instead for that one document's full revision history with "
+            + "the approval trail (who approved what, when, and what was superseded). Rows come "
+            + "back under the drawings key; the detail page is /projects/{projectId}/documents/{drawingId}.",
             AiToolSchema.Object(
                 ("projectId", "string", "Defaults to the project in view; pass it otherwise.", false),
-                ("drawingId", "string", "One drawing's full revision history instead of the register.", false)),
+                ("drawingId", "string", "One document's full revision history instead of the register.", false)),
             AiToolKind.Read,
             DrawingReaders,
             ListDrawingsAsync);

@@ -38,7 +38,7 @@ public static class TriagePageGuides
             + "already staged — and why anything was refused — rides in "
             + "the current-context block; and find records to stage "
             + "with find_by_reference, list_requests or list_variations. Filing attachments to "
-            + "Drawings, Payment Certificates or subcontractor records is not done here — the "
+            + "the project Documents register, Payment Certificates or subcontractor records is not done here — the "
             + "\"Send to document triage\" tick copies them to /document-triage.",
             Aliases: new[] { "/requests/triage" }),
 
@@ -48,15 +48,16 @@ public static class TriagePageGuides
             + "be filed or discarded. A person works two panes — Queue, Filed and Discarded tabs on "
             + "the left; on the right the open document's preview (PDFs and images inline, everything "
             + "else Download-only), a collapsible Source email, and the filing form. Filing offers "
-            + "three destination tabs: Drawings (new drawing or revision; code/revision/title "
+            + "three destination tabs: Project documents (new document or revision in the "
+            + "project's Documents register — drawings and anything else; code/revision/title "
             + "prefilled from the file name when it carries a \"Rev X\", all optional; a Folder "
-            + "picker files a new drawing into any folder or sub-folder, or creates one inline; "
+            + "picker files a new document into any folder or sub-folder, or creates one inline; "
             + "landing as an unapproved revision), Payment certificate "
             + "(project, optional valuation claim, number, amount, issued date) and Subcontractor "
             + "document (subcontractor, kind, expiry); Discard is restorable, never a delete. You "
             + "have no page actions or dialogs here — route the user here with navigate_to. Emails "
-            + "themselves are triaged in the Control Centre, and a filed drawing's approval follows "
-            + "the normal drawings workflow.",
+            + "themselves are triaged in the Control Centre, and a filed document's approval follows "
+            + "the normal documents workflow.",
             Aliases: new[] { "/document-control" }),
     };
 }

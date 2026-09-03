@@ -24,7 +24,7 @@ The whole site map's Phase-1 internal scope is shipped as a navigable shell with
 | `/leads` + `/leads/{id}/{tab}` | 00 CRM | Lead pipeline with seven tabs (overview / qualification / site-visits / info-chase / bid-decision / proposal / outcome) |
 | `/leads/new` | 00 CRM | Capture-lead form |
 | `/projects` + `/projects/{id}` | All | Portfolio + project hub with tabbed sub-areas |
-| `/projects/{id}/drawings` (+`/{drawingId}`) | 01 Drawings | Drawing register, upload, revision history |
+| `/projects/{id}/documents` (+`/{drawingId}`) | 01 Documents (was Drawings until 2026-09-03; old URLs redirect) | Project document register — drawings, awards, letters, reports — upload, revision history, PDF data extraction |
 | `/projects/{id}/boq` | 02 BoQ | Line items, direct add, totals |
 | `/projects/{id}/procurement` | 03 Procurement | Bid packages + work orders awarded |
 | `/projects/{id}/mobilisation` | 04 Mobilisation | Site mobilisation checklist (hard gate) |

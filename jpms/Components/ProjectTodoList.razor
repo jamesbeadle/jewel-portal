@@ -198,7 +198,7 @@
                 @if (!anyRelated)
                 {
                     <p class="text-sm text-content-subtle italic">
-                        @(relatedLoading ? "Looking for related records…" : $"No requests, variations or drawings on this project match \"{search}\".")
+                        @(relatedLoading ? "Looking for related records…" : $"No requests, variations or documents on this project match \"{search}\".")
                     </p>
                 }
                 else
@@ -253,11 +253,11 @@
 
                     @if (matchedDrawings.Count > 0)
                     {
-                        <p class="text-xs text-content-subtle mb-2">Drawings (@matchedDrawings.Count)</p>
+                        <p class="text-xs text-content-subtle mb-2">Documents (@matchedDrawings.Count)</p>
                         <div class="space-y-2 mb-4">
                             @foreach (var drawing in matchedDrawings.Take(MaxRelated))
                             {
-                                <button type="button" @key="drawing.DrawingId" title="Open this drawing"
+                                <button type="button" @key="drawing.DrawingId" title="Open this document"
                                         class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                                         @onclick="() => OpenDrawing(drawing)">
                                     <p class="truncate text-sm text-content">
@@ -275,7 +275,7 @@
                         {
                             <p class="text-[11px] text-content-subtle mb-4">
                                 Showing @MaxRelated of @matchedDrawings.Count — refine the keywords, or use the
-                                <a class="underline underline-offset-2 hover:text-content-muted" href="@($"/projects/{ProjectId}/drawings")">Drawings tab</a>.
+                                <a class="underline underline-offset-2 hover:text-content-muted" href="@($"/projects/{ProjectId}/documents")">Documents tab</a>.
                             </p>
                         }
                     }

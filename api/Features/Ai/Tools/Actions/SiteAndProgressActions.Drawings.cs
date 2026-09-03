@@ -16,14 +16,19 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 
 internal sealed partial class SiteAndProgressActions
 {
+    // The project register was renamed Drawings → Documents on 2026-09-03 (it holds party-wall
+    // awards, building-control letters and reports as well as drawings). The action NAMES follow
+    // the register; the command parameters (drawingId, drawingFolderId, drawingCode) keep the
+    // contract names — AiLegacyNames maps the old action names so saved skills still resolve.
     private static IEnumerable<AiAction> DrawingsActions() => new AiAction[]
     {
         new AiAction(
-            Name: "register_drawing",
-            Area: "Drawings",
-            Description: "Registers a new drawing on a project's drawing register (code and "
-                + "title, optionally inside a folder). Revisions are uploaded separately through "
-                + "the portal.",
+            Name: "register_document",
+            Area: "Documents",
+            Description: "Registers a new document on a project's Documents register — a drawing, a "
+                + "party-wall award, a building-control letter, a report (code and title, optionally "
+                + "inside a folder). Revisions (the files) are uploaded separately through the "
+                + "portal.",
             CommandType: typeof(RegisterDrawing),
             ResultType: typeof(Drawing),
             AuthorisationType: typeof(RegisterDrawingAuthorisation),
@@ -31,13 +36,14 @@ internal sealed partial class SiteAndProgressActions
             VisibleTo: DrawingRegisterCurators,
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
-            Notes: "drawingFolderId is optional — omit it to register at the project root."),
+            Notes: "drawingFolderId (the parameter keeps the register's old name) is optional — omit "
+                + "it to register at the project root."),
 
         new AiAction(
-            Name: "update_drawing_metadata",
-            Area: "Drawings",
-            Description: "Updates a drawing's code and title on the register. Its revisions and "
-                + "files are untouched.",
+            Name: "update_document_metadata",
+            Area: "Documents",
+            Description: "Updates a document's code and title on the project's Documents register. "
+                + "Its revisions and files are untouched.",
             CommandType: typeof(UpdateDrawingMetadata),
             ResultType: typeof(Drawing),
             AuthorisationType: typeof(UpdateDrawingMetadataAuthorisation),
@@ -47,11 +53,11 @@ internal sealed partial class SiteAndProgressActions
             NameStamps: Array.Empty<string>()),
 
         new AiAction(
-            Name: "approve_drawing_revision",
-            Area: "Drawings",
-            Description: "Approves a drawing revision — it becomes the drawing's single Approved "
-                + "(latest) revision, EVERY other revision of that drawing is archived, and the "
-                + "drawing's current approved label is set. Recorded as approved by the signed-in "
+            Name: "approve_document_revision",
+            Area: "Documents",
+            Description: "Approves a document revision — it becomes the document's single Approved "
+                + "(latest) revision, EVERY other revision of that document is archived, and the "
+                + "document's current approved label is set. Recorded as approved by the signed-in "
                 + "user.",
             CommandType: typeof(ApproveDrawingRevision),
             ResultType: typeof(DrawingRevision),
@@ -60,13 +66,13 @@ internal sealed partial class SiteAndProgressActions
             VisibleTo: DrawingManagers,
             EmailStamps: new[] { "ApprovedByEmail" },
             NameStamps: Array.Empty<string>(),
-            Notes: "Confirm with the user which revision, by drawing code and revision label, "
+            Notes: "Confirm with the user which revision, by document code and revision label, "
                 + "before calling — the previous approved revision is archived."),
 
         new AiAction(
-            Name: "set_drawing_revision_label",
-            Area: "Drawings",
-            Description: "Sets or clears a drawing revision's label (e.g. \"P3\", \"C1\").",
+            Name: "set_document_revision_label",
+            Area: "Documents",
+            Description: "Sets or clears a document revision's label (e.g. \"P3\", \"C1\").",
             CommandType: typeof(SetDrawingRevisionLabel),
             ResultType: typeof(DrawingRevision),
             AuthorisationType: typeof(SetDrawingRevisionLabelAuthorisation),
@@ -77,9 +83,9 @@ internal sealed partial class SiteAndProgressActions
             Notes: "A blank revisionLabel clears the label."),
 
         new AiAction(
-            Name: "delete_drawing_revision",
-            Area: "Drawings",
-            Description: "Deletes one drawing revision permanently, including its stored file. "
+            Name: "delete_document_revision",
+            Area: "Documents",
+            Description: "Deletes one document revision permanently, including its stored file. "
                 + "There is no undo.",
             CommandType: typeof(DeleteDrawingRevision),
             ResultType: typeof(Acknowledgement),
@@ -89,13 +95,13 @@ internal sealed partial class SiteAndProgressActions
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             RequiresConfirmation: true,
-            Notes: "Confirm with the user which revision, by drawing code and label, before "
+            Notes: "Confirm with the user which revision, by document code and label, before "
                 + "calling."),
 
         new AiAction(
-            Name: "delete_drawing",
-            Area: "Drawings",
-            Description: "Deletes a drawing permanently, together with ALL of its revisions, "
+            Name: "delete_document",
+            Area: "Documents",
+            Description: "Deletes a document permanently, together with ALL of its revisions, "
                 + "their stored files and any issue records that referenced them. There is no "
                 + "undo.",
             CommandType: typeof(DeleteDrawing),
@@ -106,12 +112,12 @@ internal sealed partial class SiteAndProgressActions
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             RequiresConfirmation: true,
-            Notes: "Confirm with the user which drawing, by code and title, before calling."),
+            Notes: "Confirm with the user which document, by code and title, before calling."),
 
         new AiAction(
-            Name: "create_drawing_folder",
-            Area: "Drawings",
-            Description: "Creates a folder on a project's drawing register, optionally inside a "
+            Name: "create_document_folder",
+            Area: "Documents",
+            Description: "Creates a folder on a project's Documents register, optionally inside a "
                 + "parent folder.",
             CommandType: typeof(CreateDrawingFolder),
             ResultType: typeof(DrawingFolder),
@@ -123,9 +129,9 @@ internal sealed partial class SiteAndProgressActions
             Notes: "A duplicate name among siblings is refused."),
 
         new AiAction(
-            Name: "rename_drawing_folder",
-            Area: "Drawings",
-            Description: "Renames a drawing folder. Its contents are untouched.",
+            Name: "rename_document_folder",
+            Area: "Documents",
+            Description: "Renames a folder on the project's Documents register. Its contents are untouched.",
             CommandType: typeof(RenameDrawingFolder),
             ResultType: typeof(DrawingFolder),
             AuthorisationType: typeof(RenameDrawingFolderAuthorisation),
@@ -135,9 +141,9 @@ internal sealed partial class SiteAndProgressActions
             NameStamps: Array.Empty<string>()),
 
         new AiAction(
-            Name: "delete_drawing_folder",
-            Area: "Drawings",
-            Description: "Deletes a drawing folder from the register. Business-rule refusals "
+            Name: "delete_document_folder",
+            Area: "Documents",
+            Description: "Deletes a folder from the project's Documents register. Business-rule refusals "
                 + "(e.g. a folder that is not empty) come back as errors rather than deleting "
                 + "contents.",
             CommandType: typeof(DeleteDrawingFolder),
@@ -150,10 +156,10 @@ internal sealed partial class SiteAndProgressActions
             Notes: "Confirm with the user which folder, by name, before calling."),
 
         new AiAction(
-            Name: "move_drawing_to_folder",
-            Area: "Drawings",
-            Description: "Moves a drawing into a folder on the same project's register, or to the "
-                + "register root with a null drawingFolderId.",
+            Name: "move_document_to_folder",
+            Area: "Documents",
+            Description: "Moves a document into a folder on the same project's Documents register, or "
+                + "to the register root with a null drawingFolderId.",
             CommandType: typeof(MoveDrawingToFolder),
             ResultType: typeof(Drawing),
             AuthorisationType: typeof(MoveDrawingToFolderAuthorisation),

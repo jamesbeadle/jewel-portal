@@ -63,7 +63,7 @@ public partial class ProjectDrawings
         if (drawings.Count == 0) return null;
 
         var workbook = new ExcelWorkbook();
-        var sheet = workbook.AddSheet("Drawings",
+        var sheet = workbook.AddSheet("Documents",
             new ExcelColumn("Folder"),
             new ExcelColumn("Code"),
             new ExcelColumn("Title"),
@@ -247,8 +247,8 @@ public partial class ProjectDrawings
             var queued = await DrawingStore.QueueAllExtractionsAsync(ProjectId, CancellationToken.None);
             confirmingExtractAll = false;
             extractAllNote = queued == 0
-                ? "Nothing to queue — every drawing's latest PDF revision is already extracted (or already in the queue)."
-                : $"Queued {queued} drawing(s) for extraction. Each drawing's page shows its progress.";
+                ? "Nothing to queue — every document's latest PDF revision is already extracted (or already in the queue)."
+                : $"Queued {queued} document(s) for extraction. Each document's page shows its progress.";
         }
         catch (Jewel.JPMS.Cqrs.CommandFailedException ex) { extractAllError = ex.Message; }
         catch { extractAllError = "Queueing didn't complete. Please try again."; }

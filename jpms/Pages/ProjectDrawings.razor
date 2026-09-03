@@ -1,4 +1,4 @@
-@page "/projects/{ProjectId}/drawings"
+@page "/projects/{ProjectId}/documents"
 @inject AuthService Auth
 @inject SessionService Session
 @inject IDrawingStore DrawingStore
@@ -7,7 +7,7 @@
 @implements IDisposable
 @using Jewel.JPMS.Features.Drawings
 
-<PageTitle>Drawings · JPMS</PageTitle>
+<PageTitle>Documents · JPMS</PageTitle>
 
 @if (!isLoaded)
 {
@@ -21,12 +21,12 @@ else if (!Session.IsApproved)
 }
 else
 {
-    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="drawings">
+    <ProjectPageShell ProjectId="@ProjectId" ActiveTab="documents">
         <div class="flex flex-wrap items-end justify-between gap-3 mb-5">
             <div>
-                <h2 class="text-lg font-semibold text-content">Drawing register</h2>
+                <h2 class="text-lg font-semibold text-content">Document register</h2>
                 <p class="text-sm text-content-muted">
-                    @Drawings.Count drawings
+                    @Drawings.Count documents
                     @if (Folders.Count > 0)
                     {
                         @* Lead with the top-level count — the folder rows the register actually
@@ -48,21 +48,22 @@ else
                 </p>
             </div>
             <div class="flex items-center gap-2">
-                <ExportToExcelButton FileName="Drawing register"
+                <ExportToExcelButton FileName="Document register"
                                      Disabled="@(Drawings.Count == 0)"
                                      ShowIncludeAllRows="@approvedOnly"
                                      IncludeAllLabel="Include unapproved"
                                      BuildWorkbook="BuildExportWorkbook" />
                 <button type="button" @onclick="() => approvedOnly = !approvedOnly"
                         class="rounded-lg border text-sm px-3 py-2 transition @(approvedOnly ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "border-line-strong text-content-muted hover:bg-surface-raised")">
-                    @(approvedOnly ? "Showing approved" : "All drawings")
+                    @(approvedOnly ? "Showing approved" : "All documents")
                 </button>
                 @if (CanManage)
                 {
                     @if (Bluebeam.IsConnected)
                     {
-                        @* Queues every drawing whose latest live PDF revision has never been
-                           extracted — the Bluebeam markups + text-layer backlog in one click. *@
+                        @* Queues every document whose latest live PDF revision has never been
+                           extracted — the Bluebeam markups + text-layer backlog in one click.
+                           Extraction reads PDFs regardless of what they are — drawings or not. *@
                         <button type="button" @onclick="() => confirmingExtractAll = true"
                                 class="rounded-lg border border-line-strong text-sm px-3 py-2 text-content-muted hover:bg-surface-raised transition">
                             Extract all
@@ -72,11 +73,11 @@ else
                             class="rounded-lg border border-line-strong text-sm px-3 py-2 text-content-muted hover:bg-surface-raised transition">
                         + New folder
                     </button>
-                    @* "Add drawings" OPENS the panel; the button that actually uploads lives inside
+                    @* "Add documents" OPENS the panel; the button that actually uploads lives inside
                        it and says "…to the register" — two different acts, two different labels. *@
                     <button type="button" @onclick="ToggleUploadPanel"
                             class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition">
-                        @(isUploading ? "Close" : "+ Add drawings")
+                        @(isUploading ? "Close" : "+ Add documents")
                     </button>
                 }
             </div>
@@ -94,7 +95,7 @@ else
         @if (VisibleDrawings.Count == 0 && Folders.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">
-                @(approvedOnly ? "No approved drawings yet." : "No drawings uploaded yet.")
+                @(approvedOnly ? "No approved documents yet." : "No documents uploaded yet.")
             </p>
         }
         else
@@ -133,7 +134,7 @@ else
                OnConfirm="DeleteFolderAsync">
             <p class="text-sm text-content-muted">
                 This deletes the folder <strong>@deletingFolder?.Name</strong>. Nothing inside it is
-                deleted — its drawings and sub-folders move up a level
+                deleted — its documents and sub-folders move up a level
                 @(deletingFolder?.ParentDrawingFolderId is null ? "(to the register's top level and Ungrouped section)." : $"into “{Tree.PathOf(deletingFolder.ParentDrawingFolderId)}”.")
             </p>
             @if (folderError is not null)
@@ -143,15 +144,16 @@ else
         </Modal>
 
         <Modal IsOpen="confirmingExtractAll"
-               Title="Extract all unprocessed drawings?"
+               Title="Extract data from all unprocessed documents?"
                ConfirmLabel="@(extractAllBusy ? "Queueing…" : "Extract all")"
                ConfirmDisabled="@extractAllBusy"
                OnCancel="() => confirmingExtractAll = false"
                OnConfirm="ExtractAllAsync">
             <p class="text-sm text-content-muted">
-                Every drawing whose latest live PDF revision hasn't had its data extracted is queued
-                through Bluebeam (markups) and the text-layer reader. The runs happen in the
-                background — each drawing's page shows its own progress and results.
+                Every document whose latest live PDF revision hasn't had its data extracted is queued
+                through Bluebeam (markups) and the text-layer reader — any PDF, not only drawings.
+                The runs happen in the background — each document's page shows its own progress
+                and results.
             </p>
             @if (extractAllError is not null)
             {

@@ -13,7 +13,7 @@ public sealed class FileDocumentAsDrawingValidation
         // Code, title and revision are all optional — a blank code registers a new drawing named
         // by its file. Only the column widths are checked.
         if (command.DrawingCode?.Trim().Length > DrawingFieldLimits.DrawingCodeMaxLength)
-            errors.Add($"Drawing code must be {DrawingFieldLimits.DrawingCodeMaxLength} characters or fewer.");
+            errors.Add($"Document code must be {DrawingFieldLimits.DrawingCodeMaxLength} characters or fewer.");
         if (command.Title?.Trim().Length > DrawingFieldLimits.TitleMaxLength)
             errors.Add($"Title must be {DrawingFieldLimits.TitleMaxLength} characters or fewer.");
         if (command.RevisionLabel?.Trim().Length > DrawingFieldLimits.RevisionLabelMaxLength)

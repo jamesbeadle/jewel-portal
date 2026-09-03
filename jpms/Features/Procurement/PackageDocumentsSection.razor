@@ -14,7 +14,7 @@
                     + Add files
                     <InputFile OnChange="OnFilesSelected" multiple class="hidden" />
                 </label>
-                <button type="button" class="text-xs text-accent hover:underline" @onclick="() => OnLinkDrawings.InvokeAsync()">Link drawings</button>
+                <button type="button" class="text-xs text-accent hover:underline" @onclick="() => OnLinkDrawings.InvokeAsync()">Link project documents</button>
             </div>
         }
     </div>
@@ -46,8 +46,8 @@
         @if (Fetched)
         {
             <div class="rounded-xl border border-dashed border-line bg-surface-raised px-4 py-5 text-sm text-content-subtle">
-                No tender documents yet. Upload files with “+ Add files”, or link drawings from the
-                project's Drawings section — everything here is attached to the invite email when it's
+                No tender documents yet. Upload files with “+ Add files”, or link documents from the
+                project's Documents section — everything here is attached to the invite email when it's
                 drafted, along with the generated pricing schedule (files too large for one email go
                 out as 7-day download links instead).
             </div>
@@ -67,7 +67,7 @@
                         <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium @(drawing.HasApprovedRevision ? "border-line bg-surface-raised text-content-muted" : "border-amber-200 bg-amber-50 text-amber-800")">
                             @(DrawingNaming.ApprovedRevisionText(drawing) ?? "No approved revision")
                         </span>
-                        <a class="text-xs text-accent hover:underline" href="@($"/projects/{ProjectId}/drawings/{drawing.DrawingId}")">Open</a>
+                        <a class="text-xs text-accent hover:underline" href="@($"/projects/{ProjectId}/documents/{drawing.DrawingId}")">Open</a>
                     </div>
                 </li>
             }

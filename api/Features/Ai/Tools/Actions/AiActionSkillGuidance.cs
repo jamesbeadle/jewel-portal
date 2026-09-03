@@ -13,11 +13,15 @@ internal static class AiActionSkillGuidance
     public static async Task<IReadOnlyList<object>> LoadForAsync(
         JpmsContext db, AiAction action, CancellationToken cancellationToken)
     {
+        // Attachments written before the 2026-09-03 Drawings → Documents rename still carry the
+        // old action / area key; AiLegacyNames lists every spelling the entry has had.
+        var actionKeys = AiLegacyNames.AllNamesFor(action.Name);
+        var areaKeys = AiLegacyNames.AllNamesFor(action.Area);
         var skillKeys = await db.AiActionSkills
             .AsNoTracking()
             .Where(row =>
-                (row.TargetKind == AiActionSkillTargets.Action && row.TargetKey == action.Name)
-                || (row.TargetKind == AiActionSkillTargets.Area && row.TargetKey == action.Area))
+                (row.TargetKind == AiActionSkillTargets.Action && actionKeys.Contains(row.TargetKey))
+                || (row.TargetKind == AiActionSkillTargets.Area && areaKeys.Contains(row.TargetKey)))
             .Select(row => row.SkillKey)
             .Distinct()
             .ToListAsync(cancellationToken);
@@ -69,6 +73,7 @@ internal static class AiActionSkillGuidance
             .Select(row => row.TargetKey)
             .Distinct()
             .ToListAsync(cancellationToken);
-        return targets.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        // Keys written before a rename (AiLegacyNames) count for their current entry too.
+        return targets.Select(AiLegacyNames.Current).ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 }

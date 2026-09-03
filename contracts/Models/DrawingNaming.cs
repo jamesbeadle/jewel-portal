@@ -7,7 +7,7 @@ namespace Jewel.JPMS.Models;
 public static class DrawingNaming
 {
     public const string Blank = "—";
-    public const string UntitledDrawing = "Untitled drawing";
+    public const string UntitledDrawing = "Untitled document";
     public const string NoRevision = "No revision";
     public const string ApprovedWithoutRevision = "Approved";
 
@@ -16,7 +16,7 @@ public static class DrawingNaming
     public static string Code(Drawing drawing) =>
         string.IsNullOrWhiteSpace(drawing.DrawingCode) ? Blank : drawing.DrawingCode;
 
-    /// <summary>Title, else the original file name, else the code, else "Untitled drawing".</summary>
+    /// <summary>Title, else the original file name, else the code, else "Untitled document".</summary>
     public static string Name(Drawing drawing)
     {
         if (!string.IsNullOrWhiteSpace(drawing.Title)) return drawing.Title;

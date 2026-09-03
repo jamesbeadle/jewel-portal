@@ -17,7 +17,7 @@ public sealed class ApproveDrawingRevisionHandler
     public async Task<DrawingRevision> HandleAsync(ApproveDrawingRevision command, CancellationToken cancellationToken)
     {
         var drawing = await context.Drawings.FindAsync(new object[] { command.DrawingId }, cancellationToken);
-        if (drawing is null) throw new InvalidOperationException($"Drawing {command.DrawingId} not found.");
+        if (drawing is null) throw new InvalidOperationException($"Document {command.DrawingId} not found.");
 
         var revisions = await context.DrawingRevisions
             .Where(revision => revision.DrawingId == command.DrawingId)
@@ -25,7 +25,7 @@ public sealed class ApproveDrawingRevisionHandler
 
         var target = revisions.FirstOrDefault(revision => revision.DrawingRevisionId == command.DrawingRevisionId);
         if (target is null)
-            throw new InvalidOperationException($"Revision {command.DrawingRevisionId} not found on drawing {command.DrawingId}.");
+            throw new InvalidOperationException($"Revision {command.DrawingRevisionId} not found on document {command.DrawingId}.");
 
         var now = DateTimeOffset.UtcNow;
 

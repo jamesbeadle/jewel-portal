@@ -18,7 +18,7 @@ internal static partial class AiRecordTools
                 "Everything held ON a bid package record, in one call: title, trade, status, the "
                 + "specification summary, the current line-item schedule (with cost codes and "
                 + "coverage), who is on the tender list, and the names of its tender documents and "
-                + "linked drawings. Call this FIRST when building a package out or answering "
+                + "linked project documents (drawings and the rest of the Documents register). Call this FIRST when building a package out or answering "
                 + "questions about one; the tagged emails are separate — read_record_emails "
                 + "(record_type bid_package) has those, and read_email_attachment opens their files. "
                 + "Defaults to the bid package on the page in view.",

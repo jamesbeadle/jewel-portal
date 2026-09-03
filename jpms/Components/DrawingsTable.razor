@@ -49,11 +49,11 @@
                                 {
                                     <span class="font-medium text-content-muted italic">Ungrouped</span>
                                 }
-                                <span class="text-xs text-content-subtle tabular-nums" title="Drawings in this folder, sub-folders included">@SubtreeCount(folderSection)</span>
+                                <span class="text-xs text-content-subtle tabular-nums" title="Documents in this folder, sub-folders included">@SubtreeCount(folderSection)</span>
                                 @if (CanManage && folderSection.Folder is { } folder)
                                 {
                                     <span class="ml-auto flex items-center gap-1">
-                                        <button type="button" title="Upload drawings into this folder" aria-label="Upload drawings into this folder"
+                                        <button type="button" title="Upload documents into this folder" aria-label="Upload documents into this folder"
                                                 @onclick="() => OnUploadToFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
                                                 class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
                                             <ActionIcon Name="upload" Class="w-3.5 h-3.5" />
@@ -68,7 +68,7 @@
                                                 class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
                                             <ActionIcon Name="pencil" Class="w-3.5 h-3.5" />
                                         </button>
-                                        <button type="button" title="Delete folder (its drawings and sub-folders move up a level)" aria-label="Delete folder"
+                                        <button type="button" title="Delete folder (its documents and sub-folders move up a level)" aria-label="Delete folder"
                                                 @onclick="() => OnDeleteFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
                                                 class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-red-700 hover:bg-red-50 transition">
                                             <ActionIcon Name="trash" Class="w-3.5 h-3.5" />
@@ -83,7 +83,7 @@
                         @if (folderSection.Drawings.Count == 0 && !HasSubFolders(folderSection))
                         {
                             <tr>
-                                <td colspan="@ColumnCount" class="px-4 py-3 text-xs text-content-subtle italic" style="@IndentStyle(folderSection.Depth + 1)">No drawings in this folder yet.</td>
+                                <td colspan="@ColumnCount" class="px-4 py-3 text-xs text-content-subtle italic" style="@IndentStyle(folderSection.Depth + 1)">No documents in this folder yet.</td>
                             </tr>
                         }
                         else
@@ -178,7 +178,7 @@
     }
 
     private void OpenDrawing(Drawing drawing) =>
-        Nav.NavigateTo($"/projects/{drawing.ProjectId}/drawings/{drawing.DrawingId}");
+        Nav.NavigateTo($"/projects/{drawing.ProjectId}/documents/{drawing.DrawingId}");
 
     private RenderFragment DrawingRow(Drawing drawing, int depth) => __builder =>
     {

@@ -168,10 +168,28 @@ public sealed class AiConnectorTests
             Assert.DoesNotContain(name, subcontractor);
         }
 
-        // list_drawings deliberately mirrors JpmsRoleSets.DrawingReaders, which ADMITS
-        // subcontractors — they read revisions for their assigned work, exactly as over HTTP.
-        Assert.Contains("list_drawings", director);
-        Assert.Contains("list_drawings", subcontractor);
+        // list_documents (list_drawings until the 2026-09-03 Drawings → Documents rename)
+        // deliberately mirrors JpmsRoleSets.DrawingReaders, which ADMITS subcontractors — they
+        // read revisions for their assigned work, exactly as over HTTP.
+        Assert.Contains("list_documents", director);
+        Assert.Contains("list_documents", subcontractor);
+        Assert.DoesNotContain("list_drawings", director); // the old name is a lookup courtesy, never advertised
+    }
+
+    [Fact]
+    public void LegacyDrawingNames_resolveToDocumentEntries()
+    {
+        // 2026-09-03: the register was renamed Drawings → Documents. Saved skills and old habits
+        // still say the drawing names — Find lands them on the renamed entry, and the catalogue
+        // never lists the old spelling twice.
+        Assert.Equal("list_documents", AiToolCatalogue.Find("list_drawings")!.Name);
+        Assert.Equal("register_document", AiActionRegistry.Find("register_drawing")!.Name);
+        Assert.Equal("file_document_to_project_documents", AiActionRegistry.Find("file_document_as_drawing")!.Name);
+        Assert.Equal("set_bid_package_documents", AiActionRegistry.Find("SET_BID_PACKAGE_DRAWINGS")!.Name);
+        Assert.Equal("Documents", AiLegacyNames.Current("Drawings"));
+        Assert.Contains("delete_drawing", AiLegacyNames.AllNamesFor("delete_document"));
+        Assert.DoesNotContain(AiActionRegistry.All, action => action.Name.Contains("drawing", StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(AiToolCatalogue.All, tool => tool.Name.Contains("drawing", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]

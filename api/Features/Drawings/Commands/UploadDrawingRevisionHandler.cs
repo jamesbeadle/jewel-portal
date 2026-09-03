@@ -17,7 +17,7 @@ public sealed class UploadDrawingRevisionHandler
     public async Task<DrawingRevision> HandleAsync(UploadDrawingRevision command, CancellationToken cancellationToken)
     {
         var drawing = await context.Drawings.FindAsync(new object[] { command.DrawingId }, cancellationToken);
-        if (drawing is null) throw new InvalidOperationException($"Drawing {command.DrawingId} not found.");
+        if (drawing is null) throw new InvalidOperationException($"Document {command.DrawingId} not found.");
 
         var revision = new DrawingRevisionEntity
         {

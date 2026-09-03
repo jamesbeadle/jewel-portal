@@ -190,7 +190,7 @@ internal static class AiMailboxTools
             new(
                 "list_document_triage",
                 "The Document Triage queue — email attachments sent over from the Control Centre, "
-                + "each waiting to be filed to Drawings, Payment Certificates or a subcontractor's "
+                + "each waiting to be filed to a project's Documents register, Payment Certificates or a subcontractor's "
                 + "compliance documents, or already filed/discarded (the filed rows keep their "
                 + "where-it-went history). Filter by status: Pending (default), Filed, Discarded, "
                 + "or all.",

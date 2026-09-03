@@ -173,7 +173,7 @@ public partial class ProjectDrawingDetail
     private string FileUrl(DrawingRevision revision, bool inline) =>
         $"/api/drawings/revisions/{revision.DrawingRevisionId}/file{(inline ? "?inline=1" : "")}";
 
-    private string DrawingHref(Drawing target) => $"/projects/{ProjectId}/drawings/{target.DrawingId}";
+    private string DrawingHref(Drawing target) => $"/projects/{ProjectId}/documents/{target.DrawingId}";
 
     private async Task DeleteDrawingAsync()
     {
@@ -184,7 +184,7 @@ public partial class ProjectDrawingDetail
         {
             await DrawingStore.DeleteDrawingAsync(ProjectId, drawing.DrawingId, CancellationToken.None);
             confirmingDelete = false;
-            Nav.NavigateTo($"/projects/{ProjectId}/drawings");
+            Nav.NavigateTo($"/projects/{ProjectId}/documents");
         }
         catch (Exception ex)
         {

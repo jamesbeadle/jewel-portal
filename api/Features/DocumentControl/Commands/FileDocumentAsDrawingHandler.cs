@@ -37,7 +37,7 @@ public sealed class FileDocumentAsDrawingHandler
 
         var project = await context.Projects
             .FirstOrDefaultAsync(row => row.ProjectId == command.ProjectId, cancellationToken)
-            ?? throw new InvalidOperationException("Select the project the drawing belongs to.");
+            ?? throw new InvalidOperationException("Select the project the document belongs to.");
 
         var bytes = await ReadItemBytesAsync(item.BlobRef, cancellationToken);
 
@@ -52,7 +52,7 @@ public sealed class FileDocumentAsDrawingHandler
         item.ResolvedAt = DateTimeOffset.UtcNow;
         item.FiledAsKind = (int)DocumentFiledAs.Drawing;
         item.FiledRecordId = landed.Drawing.DrawingId;
-        item.FiledLabel = $"Drawing {FiledDrawingName(landed)} on {project.Name}";
+        item.FiledLabel = $"Document {FiledDrawingName(landed)} on {project.Name}";
 
         // One save: the drawing, its revision and the item's resolution commit together.
         await context.SaveChangesAsync(cancellationToken);

@@ -15,8 +15,13 @@ internal static class AiActionRegistry
 
     public static IReadOnlyList<AiAction> All => Cache.Value;
 
-    public static AiAction? Find(string name) =>
-        All.FirstOrDefault(action => string.Equals(action.Name, name, StringComparison.OrdinalIgnoreCase));
+    /// <summary>By current name, or by a name the action used to have (AiLegacyNames — the
+    /// 2026-09-03 Drawings → Documents rename), so a saved skill or an old habit still lands.</summary>
+    public static AiAction? Find(string name)
+    {
+        var current = AiLegacyNames.Current(name);
+        return All.FirstOrDefault(action => string.Equals(action.Name, current, StringComparison.OrdinalIgnoreCase));
+    }
 
     private static IReadOnlyList<AiAction> BuildAndAssert()
     {

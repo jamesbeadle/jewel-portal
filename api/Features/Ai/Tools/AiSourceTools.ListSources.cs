@@ -17,7 +17,8 @@ internal static partial class AiSourceTools
                 + "sizes; their manifest arrives with the first read_source); and the documents FILED in "
                 + "the portal for the project — the executed contract and its amendments, every "
                 + "Architect's Instruction, payment certificates, Document Control items and the "
-                + "drawings (current revision each; query narrows them) — plus, on a variation, the "
+                + "project Documents register (drawings, awards, letters, reports — current revision each, "
+                + "listed under kind \"drawing\"; query narrows them) — plus, on a variation, the "
                 + "instructions linked to it, and on record_type \"subcontractor\" that company's "
                 + "compliance files. Cheap — no file is opened. Call it BEFORE saying a tab, a page or a "
                 + "document is missing, cut off or was not provided, and whenever the user names a file, "
@@ -33,7 +34,7 @@ internal static partial class AiSourceTools
                         "The project whose filed documents to list. Defaults to the project in view; pass "
                         + "\"none\" to skip filed documents.", false),
                     ("query", "string",
-                        "Narrows the drawings to a code or a word from the title (\"A-101\", \"kitchen\") — "
+                        "Narrows the project documents to a code or a word from the title (\"A-101\", \"kitchen\") — "
                         + "a big job has hundreds and only the first 60 are listed otherwise.", false)),
                 AiToolKind.Read,
                 readers,
@@ -101,7 +102,7 @@ internal static partial class AiSourceTools
                     }
                     else
                     {
-                        notes.Add("No project is in view, so no filed documents were listed — pass project_id to list a project's contract, instructions, drawings and certificates.");
+                        notes.Add("No project is in view, so no filed documents were listed — pass project_id to list a project's contract, instructions, documents register and certificates.");
                     }
 
                     return Serialise(new

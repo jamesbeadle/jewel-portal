@@ -36,7 +36,7 @@ Rows marked **{project}** resolve their template against the picker; the rest ar
 | Variation Orders | `/projects/{id}/variations` | detail `/variations/{voId}`; legacy `/requests/variations`, `/voq/{id}` |
 | Architect's Instructions | `/projects/{id}/architect-instructions` | |
 | Valuation Report Snapshots | `/projects/{id}/valuation-snapshots` | |
-| Drawings | `/projects/{id}/drawings` | detail `/drawings/{drawingId}`; ambiguous `/drawings/ambiguous` |
+| Documents (was Drawings until 2026-09-03; `/drawings` URLs redirect) | `/projects/{id}/documents` | detail `/documents/{drawingId}`; ambiguous `/documents/ambiguous` |
 | Programme | `/projects/{id}/programme` | |
 | Calendar | `/projects/{id}/calendar` | |
 | To-do | `/projects/{id}/todos` | |

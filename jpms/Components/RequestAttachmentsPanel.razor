@@ -16,7 +16,7 @@
     <HeaderActions>
         @if (CanEdit)
         {
-            <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="OpenDrawingPicker">Attach drawings</button>
+            <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="OpenDrawingPicker">Attach documents</button>
             <label class="btn-secondary text-xs cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
                 @(uploading ? "Uploading…" : "Attach images")
                 @* No `capture` attribute: on mobile it forces the camera and takes away the photo
@@ -37,7 +37,7 @@
     {
         <p class="text-sm text-content-subtle">
             @(CanEdit
-                ? "Nothing attached. Link a drawing from the register, or add a photo from site."
+                ? "Nothing attached. Link a document from the project register, or add a photo from site."
                 : "Nothing attached.")
         </p>
     }
@@ -59,7 +59,7 @@
                     else
                     {
                         <div class="h-28 flex items-center justify-center text-content-subtle text-xs px-2 text-center">
-                            @(attachment.Kind == RequestAttachmentKind.Drawing ? "Drawing" : "File")
+                            @(attachment.Kind == RequestAttachmentKind.Drawing ? "Document" : "File")
                         </div>
                     }
                     <div class="px-2 py-1.5">
@@ -87,7 +87,7 @@
 
 @* The drawing picker: the project's register, with the revision each drawing is currently on. *@
 <Modal IsOpen="pickerOpen"
-       Title="Attach drawings"
+       Title="Attach documents"
        ConfirmLabel="@(busy ? "Attaching…" : "Attach selected")"
        ConfirmDisabled="@(busy || selectedRevisionIds.Count == 0)"
        OnCancel="() => pickerOpen = false"
@@ -203,7 +203,7 @@
 
     private string LinkFor(RequestAttachment attachment) =>
         attachment.Kind == RequestAttachmentKind.Drawing
-            ? $"/projects/{ProjectId}/drawings/{attachment.DrawingId}"
+            ? $"/projects/{ProjectId}/documents/{attachment.DrawingId}"
             : Attachments.FileUrl(RequestId, attachment.RequestAttachmentId);
 
     private void OpenDrawingPicker()
@@ -234,7 +234,7 @@
             await OnChanged.InvokeAsync();
         }
         catch (CommandFailedException ex) { pickerError = ex.Message; }
-        catch { pickerError = "Couldn't attach those drawings. Please try again."; }
+        catch { pickerError = "Couldn't attach those documents. Please try again."; }
         finally { busy = false; }
     }
 

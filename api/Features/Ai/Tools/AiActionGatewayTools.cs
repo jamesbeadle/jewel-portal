@@ -59,7 +59,9 @@ internal static class AiActionGatewayTools
                 AllSignedIn,
                 async (context, input, cancellationToken) =>
                 {
-                    var area = AiToolSchema.Text(input, "area");
+                    var area = AiToolSchema.Text(input, "area") is { Length: > 0 } askedArea
+                        ? AiLegacyNames.Current(askedArea) // "Drawings" still finds Documents
+                        : null;
                     var search = AiToolSchema.Text(input, "search");
                     var actions = Permitted(context);
                     if (!string.IsNullOrWhiteSpace(area))
