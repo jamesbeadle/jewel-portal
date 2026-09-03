@@ -80,6 +80,47 @@ public sealed record XeroSitePnlMonthFigures(
     decimal OperatingExpenses);
 
 /// <summary>
+/// One site's P&amp;L over a single plain date range, exactly as one column of Xero's report —
+/// the whole-job figure the accountant reconciles the grid's "Position now" against.
+/// </summary>
+public sealed record XeroSitePnlRangeFigures(
+    DateTime FromDate,
+    DateTime ToDate,
+    decimal Income,
+    decimal CostOfSales,
+    decimal OperatingExpenses)
+{
+    public decimal Profit => Income - CostOfSales - OperatingExpenses;
+}
+
+/// <summary>
+/// The sync's built-in acceptance test for one project (2026-09-03, the accountant's
+/// "Position now must equal a single-range Xero site P&amp;L from job start to today, to the
+/// pound"): the stored months summed against Xero's own whole-range report on the same pull.
+/// <see cref="Matches"/> is true when every bucket agrees to the pound; otherwise the figures
+/// are here so the difference can be stated rather than guessed at.
+/// </summary>
+public sealed record XeroSitePnlReconciliation(
+    string ProjectId,
+    string ProjectName,
+    DateTime FromDate,
+    DateTime ToDate,
+    decimal StoredIncome,
+    decimal StoredCostOfSales,
+    decimal StoredOperatingExpenses,
+    decimal XeroIncome,
+    decimal XeroCostOfSales,
+    decimal XeroOperatingExpenses)
+{
+    public decimal StoredProfit => StoredIncome - StoredCostOfSales - StoredOperatingExpenses;
+    public decimal XeroProfit => XeroIncome - XeroCostOfSales - XeroOperatingExpenses;
+    public bool Matches =>
+        Math.Abs(StoredIncome - XeroIncome) < 1m
+        && Math.Abs(StoredCostOfSales - XeroCostOfSales) < 1m
+        && Math.Abs(StoredOperatingExpenses - XeroOperatingExpenses) < 1m;
+}
+
+/// <summary>
 /// Re-reads mapped projects' site P&L from Xero (profit &amp; loss report filtered by the
 /// project's Sites tracking option, monthly columns) and upserts the stored months.
 /// <paramref name="FullHistory"/> false — the interactive default — re-reads only the last
@@ -101,4 +142,9 @@ public sealed record XeroSitePnlSyncResult(
     IReadOnlyList<string> UnmappedProjectNames,
     // Not an error: the run finished cleanly but parked the remaining projects (time
     // budget) — "synced N of M, press Refresh again". Null when everything was covered.
-    string? Notice = null);
+    string? Notice = null,
+    // One entry per project synced this run: the stored months summed vs Xero's whole-range
+    // site P&L (reporting-window start → today) read on the same pull. Empty when Xero isn't
+    // configured. Consumers show the mismatches; a run where every entry matches is the
+    // accountant's acceptance test passing.
+    IReadOnlyList<XeroSitePnlReconciliation>? Reconciliations = null);

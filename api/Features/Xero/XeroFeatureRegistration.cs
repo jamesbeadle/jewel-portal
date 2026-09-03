@@ -91,6 +91,19 @@ public static class XeroFeatureRegistration
         services.AddScoped<IQueryHandler<GetXeroSitePnl, XeroSitePnlSnapshot>, SitePnl.GetXeroSitePnlHandler>();
         services.AddScoped<ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult>, SitePnl.SyncXeroSitePnlHandler>();
 
+        // Cost Code tracking options kept in step with the portal's master (2026-09-03): the
+        // gap read, the confirmed batch create, the rename — Cost codes page + connector.
+        services.AddScoped<IQueryHandler<GetXeroCostCodeOptionGaps, XeroCostCodeOptionGaps>,
+            TrackingOptions.GetXeroCostCodeOptionGapsHandler>();
+        services.AddScoped<ICommandHandler<CreateXeroCostCodeOptions, XeroCostCodeOptionsCreateResult>,
+            TrackingOptions.CreateXeroCostCodeOptionsHandler>();
+        services.AddScoped<TrackingOptions.CreateXeroCostCodeOptionsAuthorisation>();
+        services.AddScoped<TrackingOptions.CreateXeroCostCodeOptionsValidation>();
+        services.AddScoped<ICommandHandler<RenameXeroCostCodeOption, XeroCostCodeOptionRenameResult>,
+            TrackingOptions.RenameXeroCostCodeOptionHandler>();
+        services.AddScoped<TrackingOptions.RenameXeroCostCodeOptionAuthorisation>();
+        services.AddScoped<TrackingOptions.RenameXeroCostCodeOptionValidation>();
+
         return services;
     }
 }

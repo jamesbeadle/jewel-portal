@@ -25,6 +25,13 @@ namespace Jewel.JPMS.Api.Features.Xero.SitePnl;
 /// (rate limit despite the client's retries, or a renamed tracking option) stops the run
 /// but keeps the projects that completed — each project's months are independently true —
 /// and the error names the project it stopped at.
+///
+/// Reconciliation (2026-09-03): after a project's months are upserted, the same pull reads
+/// Xero's whole-range site P&amp;L (reporting-window start → today, one plain range, no
+/// comparison periods) and compares it with the project's stored months summed — the
+/// accountant's acceptance test, "Position now = Xero P&amp;L to the pound", run on every
+/// sync and reported per project so a drift is named the day it appears rather than found
+/// in a spreadsheet weeks later. One extra Xero call per project.
 /// </summary>
 public sealed class SyncXeroSitePnlHandler : ICommandHandler<SyncXeroSitePnl, XeroSitePnlSyncResult>
 {
@@ -82,6 +89,7 @@ public sealed class SyncXeroSitePnlHandler : ICommandHandler<SyncXeroSitePnl, Xe
         var now = DateTimeOffset.UtcNow;
         var monthsStored = 0;
         var projectsSynced = 0;
+        var reconciliations = new List<XeroSitePnlReconciliation>();
         var stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
         foreach (var project in ordered)
@@ -94,7 +102,8 @@ public sealed class SyncXeroSitePnlHandler : ICommandHandler<SyncXeroSitePnl, Xe
                 await context.SaveChangesAsync(cancellationToken);
                 return new XeroSitePnlSyncResult(
                     true, null, projectsSynced, monthsStored, unmappedNames,
-                    $"Synced {projectsSynced} of {ordered.Count} projects before the time budget ran out — press Refresh again to continue.");
+                    $"Synced {projectsSynced} of {ordered.Count} projects before the time budget ran out — press Refresh again to continue.",
+                    reconciliations);
             }
 
             var hasStoredRows = storedByProject.TryGetValue(project.ProjectId, out var storedRows) && storedRows.Count > 0;
@@ -113,7 +122,8 @@ public sealed class SyncXeroSitePnlHandler : ICommandHandler<SyncXeroSitePnl, Xe
                 // or nightly) finishes the rest from Xero's current state.
                 await context.SaveChangesAsync(cancellationToken);
                 return new XeroSitePnlSyncResult(
-                    true, $"{project.Name}: {failure.Message}", projectsSynced, monthsStored, unmappedNames);
+                    true, $"{project.Name}: {failure.Message}", projectsSynced, monthsStored, unmappedNames,
+                    Reconciliations: reconciliations);
             }
 
             var stored = storedByProject.TryGetValue(project.ProjectId, out var rows)
@@ -148,17 +158,52 @@ public sealed class SyncXeroSitePnlHandler : ICommandHandler<SyncXeroSitePnl, Xe
             // Stored months inside the synced window that Xero no longer reports any
             // movement for — a recode reversed them; keep months outside the window
             // (a FromDate moved forward must not silently delete history).
+            var removed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var entity in stored)
             {
                 if (entity.Month >= fromMonth && entity.Month <= toMonth && !seenIds.Contains(entity.XeroSitePnlMonthId))
+                {
                     context.XeroSitePnlMonths.Remove(entity);
+                    removed.Add(entity.XeroSitePnlMonthId);
+                }
             }
 
             projectsSynced++;
+
+            // The acceptance test, on the same pull: what the grid will now show for this
+            // project (every stored month, whichever sync wrote it) against Xero's own
+            // whole-range figure. A failure here is Xero refusing a read, same as above.
+            try
+            {
+                var whole = await xero.GetSiteRangePnlAsync(project.XeroSiteName!, windowStart, today, cancellationToken);
+                if (whole is not null)
+                {
+                    var kept = stored.Where(row => !removed.Contains(row.XeroSitePnlMonthId)).ToList();
+                    foreach (var month in figures)
+                        if (!storedById.ContainsKey($"{project.ProjectId}:{month.Month:yyyy-MM}"))
+                            kept.Add(new XeroSitePnlMonthEntity
+                            {
+                                XeroSitePnlMonthId = $"{project.ProjectId}:{month.Month:yyyy-MM}",
+                                ProjectId = project.ProjectId, Month = month.Month,
+                                Income = month.Income, CostOfSales = month.CostOfSales, OperatingExpenses = month.OperatingExpenses
+                            });
+                    reconciliations.Add(new XeroSitePnlReconciliation(
+                        project.ProjectId, project.Name, whole.FromDate, whole.ToDate,
+                        kept.Sum(row => row.Income), kept.Sum(row => row.CostOfSales), kept.Sum(row => row.OperatingExpenses),
+                        whole.Income, whole.CostOfSales, whole.OperatingExpenses));
+                }
+            }
+            catch (XeroCallFailedException failure)
+            {
+                await context.SaveChangesAsync(cancellationToken);
+                return new XeroSitePnlSyncResult(
+                    true, $"{project.Name} (reconciliation read): {failure.Message}", projectsSynced, monthsStored, unmappedNames,
+                    Reconciliations: reconciliations);
+            }
         }
 
         await context.SaveChangesAsync(cancellationToken);
 
-        return new XeroSitePnlSyncResult(true, null, projectsSynced, monthsStored, unmappedNames);
+        return new XeroSitePnlSyncResult(true, null, projectsSynced, monthsStored, unmappedNames, Reconciliations: reconciliations);
     }
 }

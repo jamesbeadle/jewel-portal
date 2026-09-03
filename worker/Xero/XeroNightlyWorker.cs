@@ -96,5 +96,19 @@ public sealed class XeroNightlyWorker
                 pnl.UnmappedProjectNames.Count > 0
                     ? $" ({pnl.UnmappedProjectNames.Count} project(s) have no Xero site mapping)"
                     : "");
+
+        // The accountant's acceptance test, nightly: stored months vs Xero's whole-range site
+        // P&L on the same pull. A mismatch is a warning with the figures — never silent.
+        foreach (var check in pnl.Reconciliations ?? Array.Empty<XeroSitePnlReconciliation>())
+        {
+            if (check.Matches) continue;
+            logger.LogWarning(
+                "Site P&L reconciliation mismatch for {Project} ({From:yyyy-MM-dd}→{To:yyyy-MM-dd}): "
+                + "stored income {StoredIncome:0.00} / cost of sales {StoredCos:0.00} / opex {StoredOpex:0.00} "
+                + "vs Xero {XeroIncome:0.00} / {XeroCos:0.00} / {XeroOpex:0.00}.",
+                check.ProjectName, check.FromDate, check.ToDate,
+                check.StoredIncome, check.StoredCostOfSales, check.StoredOperatingExpenses,
+                check.XeroIncome, check.XeroCostOfSales, check.XeroOperatingExpenses);
+        }
     }
 }

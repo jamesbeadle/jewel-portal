@@ -3,6 +3,7 @@ using Jewel.JPMS.Api.Features.Labour; // SiteClock (view_labour_week's week arit
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph; // IIntakeMessageReader (record email reads)
 using Jewel.JPMS.Api.Features.Requests; // TriageRoles (internal, same assembly)
 using Jewel.JPMS.Contracts.Ai;
+using Jewel.JPMS.Contracts.Xero; // GetXeroCostCodeOptionGaps (get_xero_cost_code_option_gaps)
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools;
@@ -37,6 +38,45 @@ public static partial class AiToolCatalogue
                         .ToListAsync(ct);
 
                     return Serialise(new { ok = true, count = codes.Count, costCodes = codes });
+                }),
+            new(
+                "get_xero_cost_code_option_gaps",
+                "The drift between the portal's cost-code master and Xero's \"Cost Code\" tracking "
+                + "category, read fresh from Xero: which active portal codes have NO option in Xero "
+                + "(the coding run and bill approval create one lazily the first time a bill needs it, "
+                + "so a code nobody has billed against never reaches Xero), which are archived there, "
+                + "which are present, and which Xero options match no portal code (legacy numerics — "
+                + "reported, never touched). Each code resolves to the option name it codes under: "
+                + "its Xero mapping's tracking option when set, else the code itself. Also Xero's "
+                + "active/archived option counts — Xero has historically capped active options per "
+                + "category. Call this before create_xero_cost_code_options and put the missing list "
+                + "in the confirm turn.",
+                AiToolSchema.Empty(),
+                AiToolKind.Read,
+                // Mirrors GetXeroCostCodeOptionGapsEndpoint / the Cost codes page's Xero tabs.
+                RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.Estimator),
+                async (context, _, ct) =>
+                {
+                    var gaps = await context.Services
+                        .GetRequiredService<IQueryHandler<GetXeroCostCodeOptionGaps, XeroCostCodeOptionGaps>>()
+                        .HandleAsync(new GetXeroCostCodeOptionGaps(), ct);
+                    if (!gaps.IsConfigured) return NotFound("Xero isn't connected on this portal.");
+                    if (gaps.Error is not null) return NotFound(gaps.Error);
+
+                    return Serialise(new
+                    {
+                        ok = true,
+                        xeroCategory = gaps.CategoryName,
+                        activeOptionsInXero = gaps.ActiveOptionCount,
+                        archivedOptionsInXero = gaps.ArchivedOptionCount,
+                        missingCount = gaps.Missing.Count,
+                        missing = gaps.Missing.Select(gap => new { gap.Code, gap.Name, optionName = gap.OptionName }),
+                        archivedInXero = gaps.Archived.Select(gap => new { gap.Code, gap.Name, optionName = gap.OptionName }),
+                        presentCount = gaps.Present.Count,
+                        xeroOnlyOptions = gaps.XeroOnlyOptions,
+                        note = "create_xero_cost_code_options (confirm-first) creates the missing ones; it "
+                            + "never deletes or archives. Xero-only options are legacy and are left alone."
+                    });
                 }),
             new(
                 "view_labour_week",

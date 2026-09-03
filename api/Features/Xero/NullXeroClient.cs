@@ -24,6 +24,12 @@ public sealed class NullXeroClient : IXeroClient
     public Task<XeroTrackingCategoriesSnapshot> GetTrackingCategoriesSnapshotAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroTrackingCategoriesSnapshot.NotConfigured());
 
+    public Task<string> CreateCostCodeOptionAsync(string optionName, CancellationToken ct) =>
+        throw new XeroCallFailedException("Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings.");
+
+    public Task<string> RenameCostCodeOptionAsync(string trackingOptionId, string newName, CancellationToken ct) =>
+        throw new XeroCallFailedException("Xero isn't connected — add the Xero__ClientId / Xero__ClientSecret app settings.");
+
     public Task<XeroSuppliersSnapshot> GetSuppliersAsync(bool force, CancellationToken ct) =>
         Task.FromResult(XeroSuppliersSnapshot.NotConfigured());
 
@@ -58,5 +64,9 @@ public sealed class NullXeroClient : IXeroClient
     public Task<IReadOnlyList<XeroSitePnlMonthFigures>> GetSiteMonthlyPnlAsync(
         string siteOption, DateTime fromMonth, DateTime toMonth, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<XeroSitePnlMonthFigures>>(Array.Empty<XeroSitePnlMonthFigures>());
+
+    public Task<XeroSitePnlRangeFigures?> GetSiteRangePnlAsync(
+        string siteOption, DateTime fromDate, DateTime toDate, CancellationToken ct) =>
+        Task.FromResult<XeroSitePnlRangeFigures?>(null);
 }
 
