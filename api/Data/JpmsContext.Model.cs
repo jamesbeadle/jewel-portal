@@ -250,6 +250,14 @@ public sealed partial class JpmsContext
         modelBuilder.Entity<InventoryItemEntity>()
             .HasIndex(row => row.Number)
             .HasDatabaseName("IX_InventoryItems_Number");
+        // Read per project (the Site Instructions page's one view); Number resolves SI-#### tags
+        // back to their instructions.
+        modelBuilder.Entity<SiteInstructionEntity>()
+            .HasIndex(row => row.ProjectId)
+            .HasDatabaseName("IX_SiteInstructions_ProjectId");
+        modelBuilder.Entity<SiteInstructionEntity>()
+            .HasIndex(row => row.Number)
+            .HasDatabaseName("IX_SiteInstructions_Number");
 
         // ---- KPI emails --------------------------------------------------------------------------
         // People resolve by portal email (a user's KpiPerson is found, never duplicated); emails

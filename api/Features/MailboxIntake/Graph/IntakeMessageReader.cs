@@ -54,6 +54,11 @@ public interface IIntakeMessageReader
     /// (an email attached to the email) as its raw MIME named <c>{subject}.eml</c>. Null if it can't
     /// be retrieved or has no bytes (reference attachments are links, not files).</summary>
     Task<IntakeAttachmentContent?> GetAttachmentAsync(string graphMessageId, string attachmentId, CancellationToken ct);
+
+    /// <summary>The real (non-inline) attachments on a message — names, sizes and ids only, no
+    /// body, no bytes. Cheaper than <see cref="GetAsync"/> when several messages of a thread are
+    /// being surveyed for files. Null if the message can't be read.</summary>
+    Task<IReadOnlyList<IntakeMessageAttachment>?> ListAttachmentsAsync(string graphMessageId, CancellationToken ct);
 }
 
 /// <summary>No-op reader used when Graph credentials aren't configured for the API. Returns null so
@@ -64,6 +69,8 @@ public sealed class NullIntakeMessageReader : IIntakeMessageReader
         Task.FromResult<IntakeMessageContent?>(null);
     public Task<IntakeAttachmentContent?> GetAttachmentAsync(string graphMessageId, string attachmentId, CancellationToken ct) =>
         Task.FromResult<IntakeAttachmentContent?>(null);
+    public Task<IReadOnlyList<IntakeMessageAttachment>?> ListAttachmentsAsync(string graphMessageId, CancellationToken ct) =>
+        Task.FromResult<IReadOnlyList<IntakeMessageAttachment>?>(null);
 }
 
 /// <summary>Graph REST implementation (HttpClient + app-only token), matching the worker's style.</summary>
@@ -193,6 +200,58 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Intake message read errored for {GraphId}.", graphMessageId);
+            return null;
+        }
+    }
+
+    public async Task<IReadOnlyList<IntakeMessageAttachment>?> ListAttachmentsAsync(string graphMessageId, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(graphMessageId))
+            return null;
+
+        // Metadata only — the attachments collection without contentBytes (never selected, so the
+        // bytes never travel). Same select as GetAsync's $expand, minus the body.
+        var url = $"{GraphBase}/users/{Mailbox}/messages/{Uri.EscapeDataString(graphMessageId)}"
+            + "/attachments?$select=id,name,size,contentType,isInline";
+
+        try
+        {
+            var token = await _tokens.GetTokenAsync(ct);
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            using var response = await _http.SendAsync(request, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Graph attachment list failed for {GraphId}: {Status}.", graphMessageId, (int)response.StatusCode);
+                return null;
+            }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+            var root = doc.RootElement;
+
+            var attachments = new List<IntakeMessageAttachment>();
+            if (root.TryGetProperty("value", out var atts) && atts.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var att in atts.EnumerateArray())
+                {
+                    // Inline images are part of the body, not files anyone would attach onward.
+                    if (att.TryGetProperty("isInline", out var inline) && inline.ValueKind == JsonValueKind.True)
+                        continue;
+                    var name = att.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+                    if (string.IsNullOrWhiteSpace(name)) name = "(unnamed attachment)";
+                    long size = att.TryGetProperty("size", out var s) && s.TryGetInt64(out var sz) ? sz : 0;
+                    string? type = att.TryGetProperty("contentType", out var t) ? t.GetString() : null;
+                    var attachmentId = att.TryGetProperty("id", out var idEl) ? idEl.GetString() ?? "" : "";
+                    attachments.Add(new IntakeMessageAttachment(name, size, type, attachmentId));
+                }
+            }
+            return attachments;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Attachment list errored for {GraphId}.", graphMessageId);
             return null;
         }
     }

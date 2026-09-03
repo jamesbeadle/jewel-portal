@@ -74,11 +74,9 @@ public static class XeroRouteRegistration
         commands.Register<SyncXeroLedger, XeroLedgerSyncResult>(CommandRoute.Post("/api/xero/ledger/sync"));
         commands.Register<SyncXeroSitePnl, XeroSitePnlSyncResult>(CommandRoute.Post("/api/xero/site-pnl/sync"));
 
-        // Cost Code tracking options kept in step with the master (2026-09-03): gap read,
-        // confirmed batch create, rename — the Cost codes page's "Xero cost codes" tab.
+        // Cost Code tracking options vs the master (2026-09-03): the gap read behind the Cost
+        // codes page's "List for Xero" — options are created by hand in Xero, never by the portal.
         queries.Register<GetXeroCostCodeOptionGaps, XeroCostCodeOptionGaps>(QueryRoute.Static("/api/xero/tracking-options/cost-codes/gaps"));
-        commands.Register<CreateXeroCostCodeOptions, XeroCostCodeOptionsCreateResult>(CommandRoute.Post("/api/xero/tracking-options/cost-codes/create"));
-        commands.Register<RenameXeroCostCodeOption, XeroCostCodeOptionRenameResult>(CommandRoute.Post("/api/xero/tracking-options/cost-codes/rename"));
         commands.Register<SetXeroAllocation, int>(CommandRoute.Post("/api/xero/allocations"));
         commands.Register<AllocateSuggestedXeroLines, int>(CommandRoute.Post("/api/xero/allocations/suggested"));
         commands.Register<RetryXeroWriteBack, XeroWriteBackOutcome>(CommandRoute.Post("/api/xero/writeback/retry"));

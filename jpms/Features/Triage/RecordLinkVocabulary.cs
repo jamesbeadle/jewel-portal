@@ -14,7 +14,7 @@ public static class RecordLinkVocabulary
     // Variation — one record, one number, per the 2026-07-23 unification.
     public static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase, RecordType.Inventory
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase, RecordType.Inventory, RecordType.SiteInstruction
     };
 
     // What each pathway's "Link to existing" offers (the pathway filters the actions — the plan's
@@ -36,7 +36,9 @@ public static class RecordLinkVocabulary
     {
         RecordType.BidPackageInvite, RecordType.WorkOrder
     };
-    public static readonly RecordType[] InternalLinkTypes = { RecordType.Todo, RecordType.CalendarEvent };
+    // Site instructions (2026-09-03) are the Internal pathway's own project-scoped record —
+    // Jewel instructing its site, written at triage or on the project's Site Instructions page.
+    public static readonly RecordType[] InternalLinkTypes = { RecordType.Todo, RecordType.SiteInstruction, RecordType.CalendarEvent };
     // Inventory (2026-08-28) is the Supplier pathway's first linkable record type — goods for the
     // job, raised from a supplier email or on the project's Inventory tab.
     public static readonly RecordType[] SupplierLinkTypes = { RecordType.Inventory };
@@ -56,7 +58,7 @@ public static class RecordLinkVocabulary
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
         RecordType.SupplierComms or RecordType.Inventory => TriagePathway.Supplier,
-        RecordType.InternalComms => TriagePathway.Internal,
+        RecordType.InternalComms or RecordType.SiteInstruction => TriagePathway.Internal,
         _ => null
     };
 
@@ -72,6 +74,7 @@ public static class RecordLinkVocabulary
         RecordType.SupplierComms    => "Supplier",
         RecordType.Inventory        => "Supplier",
         RecordType.InternalComms    => "Internal",
+        RecordType.SiteInstruction  => "Internal",
         RecordType.CostCentre       => "Client or Subcontractor",
         RecordType.Todo             => "Neutral",
         RecordType.CalendarEvent    => "Neutral",
@@ -104,6 +107,7 @@ public static class RecordLinkVocabulary
         RecordType.SupplierComms    => "Supplier communication",
         RecordType.InternalComms    => "Internal communication",
         RecordType.Inventory        => "Inventory item",
+        RecordType.SiteInstruction  => "Site instruction",
         _                           => type.ToString()
     };
 

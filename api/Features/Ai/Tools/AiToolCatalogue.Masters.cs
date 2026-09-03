@@ -49,8 +49,10 @@ public static partial class AiToolCatalogue
                 + "reported, never touched). Each code resolves to the option name it codes under: "
                 + "its Xero mapping's tracking option when set, else the code itself. Also Xero's "
                 + "active/archived option counts — Xero has historically capped active options per "
-                + "category. Call this before create_xero_cost_code_options and put the missing list "
-                + "in the confirm turn.",
+                + "category. The portal is deliberately NOT permitted to create or rename tracking "
+                + "options in Xero (no settings write scope — a policy decision): this list is what a "
+                + "person creates by hand in Xero under Settings → Tracking categories, and bill "
+                + "approval / the coding run refuse a code whose option is missing until that is done.",
                 AiToolSchema.Empty(),
                 AiToolKind.Read,
                 // Mirrors GetXeroCostCodeOptionGapsEndpoint / the Cost codes page's Xero tabs.
@@ -74,8 +76,9 @@ public static partial class AiToolCatalogue
                         archivedInXero = gaps.Archived.Select(gap => new { gap.Code, gap.Name, optionName = gap.OptionName }),
                         presentCount = gaps.Present.Count,
                         xeroOnlyOptions = gaps.XeroOnlyOptions,
-                        note = "create_xero_cost_code_options (confirm-first) creates the missing ones; it "
-                            + "never deletes or archives. Xero-only options are legacy and are left alone."
+                        note = "Create the missing options by hand in Xero (Settings → Tracking categories → "
+                            + "the Cost Code category), spelt EXACTLY as optionName — the portal can't do it. "
+                            + "Archived ones are restored there too. Xero-only options are legacy: leave them."
                     });
                 }),
             new(

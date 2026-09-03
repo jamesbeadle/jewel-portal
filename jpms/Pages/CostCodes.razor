@@ -8,7 +8,7 @@
 @inject ProjectListReadModel Projects
 @inject NavigationManager Nav
 @inject IQueryClient Queries
-@inject ICommandSender Commands
+@inject IJSRuntime Js
 @implements IDisposable
 
 <PageTitle>Cost codes · JPMS</PageTitle>
@@ -243,10 +243,6 @@ else
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">@(sites ? "Xero site" : "Xero cost code")</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Status</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">@(sites ? "Linked project" : "System cost code")</th>
-                                @if (!sites && CanManage)
-                                {
-                                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium text-right"><span class="sr-only">Actions</span></th>
-                                }
                             </tr>
                         </thead>
                         <tbody>
@@ -294,15 +290,6 @@ else
                                             }
                                         }
                                     </td>
-                                    @if (!sites && CanManage)
-                                    {
-                                        <td class="px-4 py-3 text-right whitespace-nowrap">
-                                            @if (!option.IsArchived)
-                                            {
-                                                <button type="button" class="btn-secondary text-xs" @onclick="() => OpenRename(option)">Rename…</button>
-                                            }
-                                        </td>
-                                    }
                                 </tr>
                             }
                         </tbody>
@@ -325,32 +312,6 @@ else
                         </ul>
                     </div>
                 }
-                @if (!sites && createResult is not null)
-                {
-                    <div class="rounded-xl border @(createResult.Error is null ? "border-positive/30 bg-positive/10" : "border-negative/30 bg-negative/10") px-5 py-4 text-sm mt-4">
-                        @if (createResult.Created.Count > 0)
-                        {
-                            <p class="text-content font-medium">Created @createResult.Created.Count option@(createResult.Created.Count == 1 ? "" : "s") in Xero — @createResult.ActiveOptionCountAfter now active.</p>
-                            <p class="text-content-muted mt-1">@string.Join(" · ", createResult.Created)</p>
-                        }
-                        else if (createResult.Error is null)
-                        {
-                            <p class="text-content font-medium">Nothing to create — Xero already holds every active code.</p>
-                        }
-                        @if (createResult.Error is not null)
-                        {
-                            <p class="text-negative font-medium mt-2">Xero refused: @createResult.Error</p>
-                            @if (createResult.NotCreated.Count > 0)
-                            {
-                                <p class="text-content-muted mt-1">Not created (@createResult.NotCreated.Count): @string.Join(" · ", createResult.NotCreated)</p>
-                            }
-                        }
-                        @if (createResult.ArchivedInXero.Count > 0)
-                        {
-                            <p class="text-content-muted mt-2">Archived in Xero, not recreated — restore them in Xero if they are still in use: @string.Join(" · ", createResult.ArchivedInXero)</p>
-                        }
-                    </div>
-                }
                 @if (!sites && SystemCodesWithoutXeroOption(category) is { Count: > 0 } missing)
                 {
                     <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted mt-4">
@@ -358,14 +319,15 @@ else
                             <div>
                                 <p class="text-content font-medium mb-1">Active system codes with no Xero option yet (@missing.Count)</p>
                                 <p class="mb-2">
-                                    Bills approved or coded against these still create their option on the way in, but a code
-                                    nobody has billed against never reaches Xero — so the two lists drift. Create the missing
-                                    options in one go, or leave them; nothing here is ever deleted or archived in Xero.
+                                    The portal doesn't create tracking options in Xero (by decision — it holds no settings
+                                    write access). A bill approved or coded against one of these is refused until the option
+                                    exists, so create them in Xero under Settings → Tracking categories, spelt exactly.
+                                    "List for Xero" gives the exact names, mappings applied, ready to copy.
                                 </p>
                             </div>
                             @if (CanManage)
                             {
-                                <button type="button" class="btn-primary shrink-0" @onclick="OpenCreateMissingAsync">Create missing in Xero…</button>
+                                <button type="button" class="btn-primary shrink-0" @onclick="OpenListForXeroAsync">List for Xero…</button>
                             }
                         </div>
                         <p>@string.Join(" · ", missing.Select(c => c.Code))</p>
@@ -395,18 +357,15 @@ else
         </div>
     </Modal>
 
-    <Modal IsOpen="creatingInXero"
-           Title="Create missing cost code options in Xero"
-           ConfirmLabel="@(busy ? "Creating…" : gaps is { Missing.Count: > 0 } ? $"Create {gaps.Missing.Count} in Xero" : "Create in Xero")"
-           ConfirmDisabled="@(busy || gaps is null || gaps.Error is not null || gaps.Missing.Count == 0)"
-           OnCancel="() => creatingInXero = false"
-           OnConfirm="CreateMissingAsync"
+    <Modal IsOpen="listingForXero"
+           Title="Cost Code options to create in Xero"
+           ConfirmLabel="@(copied ? "Copied" : "Copy names")"
+           ConfirmDisabled="@(gaps is null || gaps.Error is not null || gaps.Missing.Count == 0)"
+           CancelLabel="Close"
+           OnCancel="() => listingForXero = false"
+           OnConfirm="CopyMissingNamesAsync"
            Class="max-w-2xl">
         <div class="space-y-3 text-sm">
-            @if (formError is not null)
-            {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-negative">@formError</p>
-            }
             @if (gaps is null)
             {
                 <p class="text-content-muted">Reading Xero's "Cost Code" options…</p>
@@ -420,8 +379,7 @@ else
                 <p class="text-content-muted">
                     Xero's "@gaps.CategoryName" category holds <span class="font-medium text-content">@gaps.ActiveOptionCount active</span>
                     option@(gaps.ActiveOptionCount == 1 ? "" : "s") (@gaps.ArchivedOptionCount archived).
-                    Xero has historically capped active options per category — if it refuses part-way, the
-                    refusal is shown in Xero's own words and nothing already created is undone.
+                    Xero has historically capped active options per category — if it refuses one, that is the cap, not a typo.
                 </p>
                 @if (gaps.Missing.Count == 0)
                 {
@@ -429,8 +387,12 @@ else
                 }
                 else
                 {
-                    <p class="text-content font-medium">These @gaps.Missing.Count option@(gaps.Missing.Count == 1 ? "" : "s") will be created, spelt exactly as below:</p>
-                    <div class="max-h-72 overflow-y-auto rounded-lg border border-line">
+                    <p class="text-content font-medium">
+                        Create these @gaps.Missing.Count option@(gaps.Missing.Count == 1 ? "" : "s") in Xero under
+                        Settings → Tracking categories → "@gaps.CategoryName", spelt exactly as shown (one per line, ready to paste):
+                    </p>
+                    <textarea readonly class="w-full h-48 rounded-lg border border-line bg-surface-raised p-3 font-mono text-xs text-content">@MissingNamesText(gaps)</textarea>
+                    <div class="max-h-48 overflow-y-auto rounded-lg border border-line">
                         <table class="w-full text-xs">
                             <tbody>
                                 @foreach (var gap in gaps.Missing)
@@ -447,53 +409,14 @@ else
                 @if (gaps.Archived.Count > 0)
                 {
                     <p class="text-content-muted">
-                        Archived in Xero, not recreated (restore them in Xero if still in use):
+                        Archived in Xero — restore them there if still in use:
                         @string.Join(" · ", gaps.Archived.Select(g => g.OptionName))
                     </p>
                 }
+                <p class="text-content-subtle">Once created, press "Refresh from Xero" on this tab to see them land.</p>
             }
         </div>
     </Modal>
-
-    <Modal IsOpen="renaming"
-           Title="Rename Xero cost code option"
-           ConfirmLabel="@(busy ? "Renaming…" : "Rename in Xero")"
-           ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(renameNewName) || renameNewName.Trim() == renameTarget?.Name)"
-           OnCancel="() => renaming = false"
-           OnConfirm="RenameAsync"
-           Class="max-w-lg">
-        <div class="space-y-4 text-sm">
-            @if (formError is not null)
-            {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-negative">@formError</p>
-            }
-            <p class="rounded-lg bg-amber-400/10 border border-amber-400/30 px-3 py-2 text-amber-400">
-                Xero applies renames to history: every bill line ever tracked as
-                "<span class="font-medium whitespace-pre">@renameTarget?.Name</span>" will read under the new name in every
-                Xero report from then on. The portal's own cost-code master is not changed by this.
-            </p>
-            <FormField Label="New name" Value="@renameNewName" OnChange="v => renameNewName = v" Required="true" />
-        </div>
-    </Modal>
-
-    @if (renameResult is not null)
-    {
-        <Modal IsOpen="true"
-               Title="Renamed in Xero"
-               ConfirmLabel="Done"
-               CancelLabel="Close"
-               OnCancel="() => renameResult = null"
-               OnConfirm="() => renameResult = null"
-               Class="max-w-lg">
-            <div class="space-y-2 text-sm">
-                <p class="text-content">"<span class="whitespace-pre">@renameResult.CurrentName</span>" is now "<span class="font-medium whitespace-pre">@renameResult.NewName</span>".</p>
-                @foreach (var warning in renameResult.Warnings)
-                {
-                    <p class="rounded-lg bg-amber-400/10 border border-amber-400/30 px-3 py-2 text-amber-400">@warning</p>
-                }
-            </div>
-        </Modal>
-    }
 
     <Modal IsOpen="editing"
            Title="Edit cost code"

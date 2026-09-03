@@ -91,6 +91,7 @@ public static class TriageCategories
         RecordType.SupplierComms    => Supplier,     // general supplier correspondence — the tag IS the filing
         RecordType.Inventory        => Supplier,     // the goods come from a materials/goods supplier
         RecordType.InternalComms    => Internal,     // general staff-to-staff correspondence — the tag IS the filing
+        RecordType.SiteInstruction  => Internal,     // Jewel instructing its own site — staff-side by nature (2026-09-03)
         RecordType.CostCentre       => null,     // triager picks the side, per email
         RecordType.CalendarEvent    => null,     // neutral: a site visit, a delivery or a meeting belongs to whichever side arranged it
         RecordType.Todo             => null,     // neutral: never sets or changes a pathway

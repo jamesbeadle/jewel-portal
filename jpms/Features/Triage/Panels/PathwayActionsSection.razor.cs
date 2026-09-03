@@ -51,6 +51,7 @@ public partial class PathwayActionsSection
             or SystemActionKind.CreateBidPackageInvite
             or SystemActionKind.RaiseDefect
             or SystemActionKind.AddInventoryItem
+            or SystemActionKind.RaiseSiteInstruction
             or SystemActionKind.LogTenderEnquiry
             or SystemActionKind.RaiseCalendarEvent
             or SystemActionKind.RaiseBuildingControlInspection;

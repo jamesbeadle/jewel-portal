@@ -20,6 +20,9 @@ public interface IIntakeQueue
     /// <summary>The thread an email belongs to. Pass its subject so a conversation id that has
     /// split from the rest of the chain still finds the members (the page says MatchedBySubject).</summary>
     Task<MailboxPage> ListConversationLiveAsync(string conversationId, string? subject = null, CancellationToken cancellationToken = default);
+    // Every attachment anywhere in the thread, grouped by carrying message (oldest first) — lets a
+    // reply pick up a file from an earlier message without it having been through document triage.
+    Task<IReadOnlyList<ConversationAttachmentGroup>> ListConversationAttachmentsAsync(string conversationId, string? subject = null, CancellationToken cancellationToken = default);
     Task<MailboxMessageDetail> GetMessageDetailAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);
 
     Task<Acknowledgement> DiscardMessageAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default);
@@ -99,6 +102,12 @@ public interface IIntakeQueue
     // — the email is tagged "JPMS/INV-####", so the item reads its mail back live by tag.
     Task<Jewel.JPMS.Models.InventoryItem> CreateInventoryItemFromMessageAsync(
         Jewel.JPMS.Contracts.Inventory.CreateInventoryItemFromMessage command, CancellationToken cancellationToken = default);
+
+    // Raise a site instruction from the email that prompted it (2026-09-03) — the instruction
+    // written by the triager, raised exactly as one on the project's Site Instructions page, plus
+    // the email linked to it ("JPMS/SI-####") so it reads its mail back live by tag.
+    Task<Jewel.JPMS.Models.SiteInstruction> CreateSiteInstructionFromMessageAsync(
+        Jewel.JPMS.Contracts.SiteInstructions.CreateSiteInstructionFromMessage command, CancellationToken cancellationToken = default);
 
     // Raise a building control inspection stage from the inspector's email (a booking
     // confirmation, a visit arrangement). The email is tagged "JPMS/BCI-####", so the stage reads

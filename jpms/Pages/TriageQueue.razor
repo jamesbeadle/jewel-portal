@@ -169,6 +169,7 @@
                                    Attachments="replyAttachments" AttachmentsChanged="OnReplyAttachmentsChanged"
                                    Projects="ProjectOptionsFor(ComposeContextProjectId)" ProjectId="@ComposeContextProjectId"
                                    OriginalAttachments="@detail?.Attachments" OriginalMessageId="@selected?.Id"
+                                   ThreadConversationId="@(string.IsNullOrEmpty(selected?.ConversationId) ? null : selected!.ConversationId)" ThreadSubject="@selected?.Subject"
                                    OnDiscard="DiscardReplyDraft" />
             </QueueEmailReadingPane>
         }

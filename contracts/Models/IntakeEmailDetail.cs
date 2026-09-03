@@ -10,3 +10,16 @@ public sealed record IntakeAttachment(
     // Graph attachment id — lets the triage UI act on a specific attachment (e.g. save it into a
     // project's drawings). Empty for legacy snapshots that never recorded ids.
     string Id = "");
+
+// The attachments carried by ONE message of an email thread, for the composer's "from this
+// thread" picker: a reply often needs a file that arrived two messages back and has not been
+// through document triage yet. Only messages with at least one real (non-inline) attachment are
+// listed. MessageId is the Graph id the attachment bytes are read back by at send time
+// (ComposeAttachmentSource.OriginalMessage + SourceMessageId).
+public sealed record ConversationAttachmentGroup(
+    string MessageId,
+    string FromName,
+    string FromEmail,
+    string Subject,
+    DateTimeOffset ReceivedAt,
+    IReadOnlyList<IntakeAttachment> Attachments);

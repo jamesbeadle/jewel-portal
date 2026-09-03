@@ -92,14 +92,22 @@ public sealed record PathwayPaneConfig(
 
     // Bid packages and work orders came OUT of the Internal link types in this restructure
     // (Nigel, 2026-08-27): they are subcontractor records and live on the Subcontractor pane.
+    // Site instructions (2026-09-03, James) became a real record here — like a to-do, raised
+    // with written detail in Actions and tagged to from the Tagging list — replacing the
+    // record-less "Tag as Site instruction" category tick, which said nothing about what the
+    // instruction was.
     public static PathwayPaneConfig Internal { get; } = new(
         "Internal",
         "Jewel staff — company admin",
-        new[] { RecordType.Todo, RecordType.CalendarEvent },
+        new[] { RecordType.Todo, RecordType.SiteInstruction, RecordType.CalendarEvent },
         CommunicationFamily.Internal,
         new (string, IReadOnlyList<SystemActionKind>)[]
         {
-            (SystemActionGuide.RaiseGroup, new[] { SystemActionKind.RaiseCalendarEvent }),
+            (SystemActionGuide.RaiseGroup, new[]
+            {
+                SystemActionKind.RaiseSiteInstruction,
+                SystemActionKind.RaiseCalendarEvent,
+            }),
             (SystemActionGuide.PeopleGroup, new[]
             {
                 SystemActionKind.CreateTodos,
@@ -129,6 +137,7 @@ public sealed record PathwayPaneConfig(
         RecordType.WorkOrder => "Work Order",
         RecordType.Defect => "Defect",
         RecordType.Inventory => "Inventory item",
+        RecordType.SiteInstruction => "Site instruction",
         RecordType.Todo => "To-do item",
         RecordType.CalendarEvent => "Calendar event",
         RecordType.BuildingControlInspection => "Building Control Inspection",

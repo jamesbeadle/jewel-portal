@@ -152,6 +152,11 @@
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
                                       EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
             break;
+        case SystemActionKind.RaiseSiteInstruction:
+            <StagedRecordActionEditor @key="kind" Kind="StagedRecordKind.SiteInstruction"
+                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
+                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
+            break;
         case SystemActionKind.LogTenderEnquiry:
             <StageTenderEnquiryEditor @key="kind" ProjectId="@ProjectId" Projects="@Projects"
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"

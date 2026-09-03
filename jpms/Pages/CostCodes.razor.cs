@@ -48,16 +48,12 @@ public partial class CostCodes
     private bool adding;
     private bool editing;
 
-    // Xero "Cost Code" options kept in step with the master (2026-09-03): the confirm modal
-    // reads the gap fresh from the API (mappings applied — a code can code under another name),
-    // the create runs as one confirmed batch, the outcome stays on the tab until the next action.
-    private bool creatingInXero;
+    // Xero "Cost Code" options vs the master (2026-09-03): the portal never creates options in Xero
+    // (no settings write scope, by decision) — the modal reads the gap live from the API (mappings
+    // applied — a code can code under another name) and hands over the exact names to create.
+    private bool listingForXero;
     private XeroCostCodeOptionGaps? gaps;
-    private XeroCostCodeOptionsCreateResult? createResult;
-    private bool renaming;
-    private XeroTrackingOption? renameTarget;
-    private string renameNewName = "";
-    private XeroCostCodeOptionRenameResult? renameResult;
+    private bool copied;
     private CostCenter? editTarget;
     private string formCode = "";
     private string formName = "";
@@ -151,12 +147,11 @@ public partial class CostCodes
                 string.Equals(o.Name.Trim(), c.Code.Trim(), StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
-    private async Task OpenCreateMissingAsync()
+    private async Task OpenListForXeroAsync()
     {
-        formError = null;
         gaps = null;
-        createResult = null;
-        creatingInXero = true;
+        copied = false;
+        listingForXero = true;
         try
         {
             gaps = await Queries.AskAsync(new GetXeroCostCodeOptionGaps(), CancellationToken.None);
@@ -168,53 +163,19 @@ public partial class CostCodes
         }
     }
 
-    private async Task CreateMissingAsync()
+    /// <summary>One option name per line — what gets pasted into Xero; two codes mapped to one option share a line.</summary>
+    private static string MissingNamesText(XeroCostCodeOptionGaps gap) =>
+        string.Join("\n", gap.Missing.Select(g => g.OptionName).Distinct(StringComparer.Ordinal));
+
+    private async Task CopyMissingNamesAsync()
     {
-        if (busy || gaps is null || gaps.Missing.Count == 0) return;
-        busy = true;
-        formError = null;
+        if (gaps is null || gaps.Missing.Count == 0) return;
         try
         {
-            createResult = await Commands.SendAsync(new CreateXeroCostCodeOptions(), CancellationToken.None);
-            creatingInXero = false;
-            // Xero's list changed: the tab must show it, and the "no option yet" block must shrink.
-            await XeroTracking.RefreshAsync(force: true);
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", MissingNamesText(gaps));
+            copied = true;
         }
-        catch
-        {
-            formError = "The create didn't run — the reason is in the red bar above.";
-        }
-        finally { busy = false; }
-    }
-
-    private void OpenRename(XeroTrackingOption option)
-    {
-        formError = null;
-        renameTarget = option;
-        renameNewName = option.Name;
-        renameResult = null;
-        renaming = true;
-    }
-
-    private async Task RenameAsync()
-    {
-        if (busy || renameTarget is null || string.IsNullOrWhiteSpace(renameNewName)) return;
-        busy = true;
-        formError = null;
-        try
-        {
-            var result = await Commands.SendAsync(
-                new RenameXeroCostCodeOption(renameTarget.Name, renameNewName.Trim()), CancellationToken.None);
-            if (result.Error is not null) { formError = result.Error; return; }
-            renaming = false;
-            renameResult = result;
-            await XeroTracking.RefreshAsync(force: true);
-        }
-        catch
-        {
-            formError = "The rename didn't run — the reason is in the red bar above.";
-        }
-        finally { busy = false; }
+        catch { /* clipboard may be unavailable; the textarea is there to copy from by hand */ }
     }
 
     private void OpenAdd()

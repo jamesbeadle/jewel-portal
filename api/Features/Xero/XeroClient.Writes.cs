@@ -58,24 +58,12 @@ public sealed partial class XeroClient
             if (lineItems is null)
                 return XeroApprovalResult.Failed(buildError!);
 
-            // Master cost codes are JPMS-owned; create any that Xero doesn't hold yet so
-            // the confirmation can be recorded. (Xero caps a category at 100 options — a
-            // rejection here surfaces verbatim for the finance team to resolve.)
-            var missingCodes = request.Lines.SelectMany(line => line.Shares)
-                .Select(share => share.CostCenterCode)
-                .Where(code => !categories.CostCodeOptions.Contains(code))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            foreach (var code in missingCodes)
-            {
-                var optionBody = new JsonObject { ["Name"] = code };
-                using var _ = await SendJsonAsync(HttpMethod.Put, token,
-                    $"{TrackingCategoriesUrl}/{categories.CostCodeCategoryId}/Options",
-                    optionBody, $"create Cost Code option {code}", ct);
-                // The lookup is cached (see GetTrackingCategoriesAsync); record the option we
-                // just created so an approval moments later doesn't try to create it again.
-                categories.CostCodeOptions.Add(code);
-            }
+            // A cost-code option Xero doesn't hold is refused, not created (decision 2026-09-03:
+            // the portal is deliberately not granted Xero's settings write scope). The message
+            // names the options to create by hand; the Cost codes page lists them all.
+            if (MissingCostCodeOptionsError(
+                    request.Lines.SelectMany(line => line.Shares).Select(share => share.CostCenterCode), categories) is { } missingCodes)
+                return XeroApprovalResult.Failed(missingCodes);
 
             var payload = new JsonObject
             {
@@ -115,9 +103,9 @@ public sealed partial class XeroClient
     //     a non-registered sole trader). The Note says which applied.
 
     /// <summary>
-    /// Shared validation + tracking for the §6a writes: every site option must already exist in
-    /// Xero (a missing one is a mapping fault, reported loudly), and missing cost-code options are
-    /// created (JPMS owns the master list, same as approval). Returns the tracking lookup so the
+    /// Shared validation + tracking for the §6a writes: every site option AND every cost-code
+    /// option must already exist in Xero — a missing one is reported with the fix (the portal
+    /// never creates tracking options, same as approval). Returns the tracking lookup so the
     /// caller can build the lines.
     /// </summary>
     private async Task<(TrackingCategoryLookup? Categories, string? Error)> PrepareScheduleTrackingAsync(
@@ -135,19 +123,27 @@ public sealed partial class XeroClient
                 + string.Join(", ", missingSites.Select(site => $"\"{site}\""))
                 + " — check the site's Xero mapping against Xero's tracking options.");
 
-        var missingCodes = lines.Select(line => line.CostCodeOption)
+        if (MissingCostCodeOptionsError(lines.Select(line => line.CostCodeOption), categories) is { } missingCodes)
+            return (null, missingCodes);
+        return (categories, null);
+    }
+
+    /// <summary>
+    /// The refusal for cost-code options Xero doesn't hold — null when every one exists. Until
+    /// 2026-09-03 the portal created these on the fly; it no longer holds (by decision) the Xero
+    /// settings write scope, so the fix is a person creating the option in Xero, spelt exactly.
+    /// </summary>
+    private string? MissingCostCodeOptionsError(IEnumerable<string> costCodeOptions, TrackingCategoryLookup categories)
+    {
+        var missing = costCodeOptions
             .Where(code => !categories.CostCodeOptions.Contains(code))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
-        foreach (var code in missingCodes)
-        {
-            var optionBody = new JsonObject { ["Name"] = code };
-            using var _ = await SendJsonAsync(HttpMethod.Put, token,
-                $"{TrackingCategoriesUrl}/{categories.CostCodeCategoryId}/Options",
-                optionBody, $"create Cost Code option {code}", ct);
-            categories.CostCodeOptions.Add(code);
-        }
-        return (categories, null);
+        if (missing.Count == 0) return null;
+        return $"Xero's \"{_options.CostCodeTrackingCategory}\" tracking category has no option named "
+            + string.Join(", ", missing.Select(code => $"\"{code}\""))
+            + " — create it in Xero (Settings → Tracking categories), spelt exactly like that, then retry. "
+            + "The portal doesn't create tracking options; Cost codes → Xero cost codes lists everything missing.";
     }
 
     /// <summary>One schedule line as a Xero line item: the given amounts, the tax type when known

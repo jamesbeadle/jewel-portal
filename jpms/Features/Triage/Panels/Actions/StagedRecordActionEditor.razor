@@ -262,6 +262,29 @@ else if (Kind == StagedRecordKind.WorkOrder)
         }
     </div>
 }
+else if (Kind == StagedRecordKind.SiteInstruction)
+{
+    <div class="space-y-3">
+        <p class="text-xs text-content-subtle">Write the instruction — the email alone is rarely one. It is raised (numbered SI-####) and this email is tagged to it on apply; it appears on the project's Site Instructions page, where its emails read back live.</p>
+
+        <FormField Label="Title" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Instruction *</label>
+            <textarea class="field" rows="6" maxlength="4000" placeholder="What site is to do — in your words, as the instruction should read on site"
+                      value="@Create.Description" @oninput="e => { Create.Description = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }"></textarea>
+        </div>
+        <div>
+            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Location</label>
+            <input type="text" class="field" maxlength="256" placeholder="Where on site it applies — room, area, level, elevation (optional)"
+                   value="@Create.SiteInstructionLocation" @oninput="e => { Create.SiteInstructionLocation = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }" />
+        </div>
+
+        @if (StagedCreate is not null && Create.SiteInstructionProblem is { } siteInstructionProblem)
+        {
+            <p class="text-xs text-amber-600">@siteInstructionProblem</p>
+        }
+    </div>
+}
 else if (Kind == StagedRecordKind.Inventory)
 {
     <div class="space-y-3">

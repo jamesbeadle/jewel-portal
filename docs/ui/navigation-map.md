@@ -43,6 +43,7 @@ Rows marked **{project}** resolve their template against the picker; the rest ar
 | Progress | `/projects/{id}/progress` | |
 | Defects | `/projects/{id}/defects` | |
 | Inventory | `/projects/{id}/inventory` | |
+| Site Instructions | `/projects/{id}/site-instructions` | SI-#### — written instructions to site; raised here or from the Control Centre Internal pane (2026-09-03) |
 | Building Control | `/projects/{id}/building-control` | inspection `/building-control/inspections/{id}` |
 | Communications | `/projects/{id}/communications` | |
 | Useful Information | `/projects/{id}/useful-information` | |
@@ -63,7 +64,7 @@ Communications `/suppliers/communications` · Materials `/materials` · Finishes
 
 Todo `/todos` (detail `/todos/{id}`) · Tender Enquiries `/tender-enquiries` (detail `/{id}`) ·
 Directory `/directory` (detail `/directory/{id}`) · Communications `/internal/communications` ·
-Site Instructions `/site-instruction` · Registers `/registers` · Policies `/policies`
+Registers `/registers` · Policies `/policies` (Site Instructions moved to the Project folder 2026-09-03)
 
 ## 05 · Time
 

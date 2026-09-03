@@ -22,14 +22,15 @@ public static class InternalComms
         "Internal communication",
         "General staff-to-staff correspondence not tied to a record");
 
-    public static IReadOnlyList<LinkableRecord> Categories { get; } = new[]
-    {
-        Define("internal-comms-site-instruction", "IntComms-Site", "Site instruction",
-            "An instruction to site — what to do, where, by when"),
-        // Build-up (IntComms-BuildUp) and Spec note (IntComms-Spec) retired 2026-08-27 (Nigel):
-        // too fine-grained for staff mail. Mail tagged in their week of life keeps its tags but
-        // reads back only via the Tagged view's tag search, not a register.
-    };
+    // No categories remain. Build-up (IntComms-BuildUp) and Spec note (IntComms-Spec) were
+    // retired 2026-08-27 (Nigel): too fine-grained for staff mail. Site instruction
+    // (IntComms-Site) left the family 2026-09-03 (James): a bare "Tag as Site instruction" said
+    // nothing about WHAT the instruction was — the email alone is rarely the instruction — so it
+    // is now a real, project-scoped record (RecordType.SiteInstruction, SI-####, title +
+    // instruction + location) raised from the Internal pane's Actions and tagged to from its
+    // Tagging list, like a to-do. Mail tagged in the categories' lives keeps its tags but reads
+    // back only via the Tagged view's tag search, not a register.
+    public static IReadOnlyList<LinkableRecord> Categories { get; } = Array.Empty<LinkableRecord>();
 
     public static IReadOnlyList<LinkableRecord> All { get; } = BuildAll();
 

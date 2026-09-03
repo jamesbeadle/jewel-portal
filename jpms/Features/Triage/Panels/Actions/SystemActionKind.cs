@@ -38,6 +38,12 @@ public enum SystemActionKind
     // confirmation: adds the item (product + location details) to the project's Inventory tab
     // with the email tagged to it (JPMS/INV-####).
     AddInventoryItem,
+    // An email that prompts an instruction to site (2026-09-03) — the email itself is rarely the
+    // instruction, so the triager WRITES it here (title, the instruction, where on site) and the
+    // record is raised on the project's Site Instructions page with the email tagged to it
+    // (JPMS/SI-####). Replaced the record-less "Tag as Site instruction" tick, which carried no
+    // words; an instruction already raised is tagged from the Internal pane's Tagging list.
+    RaiseSiteInstruction,
     // An email worth keeping as evidence of how someone at Jewel is performing (2026-09-03):
     // files it as a KPI under a portal user. ADMINISTRATORS ONLY — the row is offered to no
     // other role. The mark lives in the KPI register (Admin → KPI emails) alone; the email is
@@ -65,6 +71,7 @@ public static class SystemActionKinds
         SystemActionKind.FileBidPackageTender,
         SystemActionKind.RaiseDefect,
         SystemActionKind.AddInventoryItem,
+        SystemActionKind.RaiseSiteInstruction,
         SystemActionKind.RaiseCalendarEvent,
         SystemActionKind.RaiseBuildingControlInspection,
         SystemActionKind.CreateTodos,
@@ -87,6 +94,7 @@ public static class SystemActionKinds
         SystemActionKind.FileBidPackageTender => "File Bid Package Tender",
         SystemActionKind.RaiseDefect => "Raise Defect",
         SystemActionKind.AddInventoryItem => "Add Inventory Item",
+        SystemActionKind.RaiseSiteInstruction => "Raise Site Instruction",
         SystemActionKind.RaiseCalendarEvent => "Raise Calendar Event",
         SystemActionKind.RaiseBuildingControlInspection => "Raise Building Control Inspection",
         SystemActionKind.CreateTodos => "Create To-do Items",

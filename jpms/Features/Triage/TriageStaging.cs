@@ -80,6 +80,12 @@ public sealed class StagedRecordCreate
     public string InventoryLocation { get; set; } = "";
     public string InventoryLocationDetails { get; set; } = "";
 
+    // ---- Site instruction fields (Kind == SiteInstruction, 2026-09-03) — mirroring
+    // AddSiteInstruction's surface. Title is the instruction's title and Description the
+    // instruction itself, written by the triager (the email alone is rarely the instruction);
+    // where on site it applies is its own field. ----
+    public string SiteInstructionLocation { get; set; } = "";
+
     // ---- Tender enquiry (Kind == TenderEnquiry) — the enquiry's details plus the Lead project it
     //      creates; kept as its own draft so this class stays readable. ----
     public StagedTenderEnquiryDraft TenderEnquiry { get; } = new();
@@ -98,6 +104,7 @@ public sealed class StagedRecordCreate
         StagedRecordKind.WorkOrder => "new work order",
         StagedRecordKind.Defect => "new defect",
         StagedRecordKind.Inventory => "new inventory item",
+        StagedRecordKind.SiteInstruction => "new site instruction",
         StagedRecordKind.TenderEnquiry => "new tender enquiry",
         StagedRecordKind.CalendarEvent => "new calendar event",
         StagedRecordKind.BuildingControlInspection => "new building control inspection",
@@ -168,6 +175,7 @@ public sealed class StagedRecordCreate
         {
             if (Kind == StagedRecordKind.Defect) return DefectProblem;
             if (Kind == StagedRecordKind.Inventory) return InventoryProblem;
+            if (Kind == StagedRecordKind.SiteInstruction) return SiteInstructionProblem;
             // The footer can't see the triage bar; the page's own gate re-checks the project.
             if (Kind == StagedRecordKind.TenderEnquiry) return TenderEnquiry.Problem(isProjectSet: true);
             if (Kind == StagedRecordKind.CalendarEvent) return CalendarEvent.Problem;
@@ -183,6 +191,7 @@ public sealed class StagedRecordCreate
         StagedRecordKind.BidPackage => "create the bid package and tag this email to it",
         StagedRecordKind.Defect => "raise the defect and tag this email to it",
         StagedRecordKind.Inventory => "add the inventory item and tag this email to it",
+        StagedRecordKind.SiteInstruction => "raise the site instruction and tag this email to it",
         StagedRecordKind.TenderEnquiry => TenderEnquiry.Outcome,
         StagedRecordKind.CalendarEvent => CalendarEvent.Outcome,
         StagedRecordKind.BuildingControlInspection => BuildingControlInspection.Outcome,
@@ -225,6 +234,24 @@ public sealed class StagedRecordCreate
         }
     }
 
+    /// <summary>
+    /// What still stops the staged site instruction being raised — null when it is complete.
+    /// Shared by the form (inline hint) and the page's Apply (hard gate), so the wording is
+    /// decided once. Mirrors the server's own rule (AddSiteInstructionValidation: a title AND
+    /// the instruction itself are required — a site instruction with no words is the thing this
+    /// record exists to prevent).
+    /// </summary>
+    public string? SiteInstructionProblem
+    {
+        get
+        {
+            if (Kind != StagedRecordKind.SiteInstruction) return null;
+            if (string.IsNullOrWhiteSpace(Title)) return "Give the instruction a title.";
+            if (string.IsNullOrWhiteSpace(Description)) return "Write the instruction — what site is to do.";
+            return null;
+        }
+    }
+
     public static decimal? ParseDecimal(string text) =>
         decimal.TryParse(text, System.Globalization.NumberStyles.Any,
             System.Globalization.CultureInfo.InvariantCulture, out var value)
@@ -245,7 +272,7 @@ public sealed class StagedWorkOrderLine
     public decimal? Amount => StagedRecordCreate.ParseDecimal(AmountText);
 }
 
-public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect, TenderEnquiry, CalendarEvent, BuildingControlInspection, Inventory }
+public enum StagedRecordKind { Request, BidPackage, WorkOrder, Defect, TenderEnquiry, CalendarEvent, BuildingControlInspection, Inventory, SiteInstruction }
 
 /// <summary>
 /// A record ALREADY raised from the selected email — by System Actions' "Create now", or by the

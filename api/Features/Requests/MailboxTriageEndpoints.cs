@@ -16,6 +16,7 @@ public sealed class MailboxTriageEndpoints
     private readonly IQueryHandler<ListDiscardedMessages, MailboxPage> listDiscarded;
     private readonly IQueryHandler<ListTaggedMessages, MailboxPage> listTagged;
     private readonly IQueryHandler<ListConversationMessages, MailboxPage> listConversation;
+    private readonly IQueryHandler<ListConversationAttachments, IReadOnlyList<ConversationAttachmentGroup>> listConversationAttachments;
     private readonly IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail> detail;
     private readonly ICommandHandler<DiscardMessage, Acknowledgement> discard;
     private readonly ICommandHandler<RestoreMessage, Acknowledgement> restore;
@@ -31,6 +32,7 @@ public sealed class MailboxTriageEndpoints
         IQueryHandler<ListDiscardedMessages, MailboxPage> listDiscarded,
         IQueryHandler<ListTaggedMessages, MailboxPage> listTagged,
         IQueryHandler<ListConversationMessages, MailboxPage> listConversation,
+        IQueryHandler<ListConversationAttachments, IReadOnlyList<ConversationAttachmentGroup>> listConversationAttachments,
         IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail> detail,
         ICommandHandler<DiscardMessage, Acknowledgement> discard,
         ICommandHandler<RestoreMessage, Acknowledgement> restore,
@@ -45,6 +47,7 @@ public sealed class MailboxTriageEndpoints
         this.listDiscarded = listDiscarded;
         this.listTagged = listTagged;
         this.listConversation = listConversation;
+        this.listConversationAttachments = listConversationAttachments;
         this.detail = detail;
         this.discard = discard;
         this.restore = restore;
@@ -97,6 +100,18 @@ public sealed class MailboxTriageEndpoints
         var subject = request.Query["subject"].ToString();
         var query = new ListConversationMessages(id, string.IsNullOrWhiteSpace(subject) ? null : subject);
         return new OkObjectResult(await listConversation.HandleAsync(query, request.HttpContext.RequestAborted));
+    }
+
+    [Function(nameof(ListConversationAttachments))]
+    public async Task<IActionResult> ConversationAttachments(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "mailbox/conversation/attachments")] HttpRequest request)
+    {
+        if (await Gate(request) is { } deny) return deny;
+        var id = request.Query["id"].ToString();
+        if (string.IsNullOrWhiteSpace(id)) return new BadRequestObjectResult("id is required.");
+        var subject = request.Query["subject"].ToString();
+        var query = new ListConversationAttachments(id, string.IsNullOrWhiteSpace(subject) ? null : subject);
+        return new OkObjectResult(await listConversationAttachments.HandleAsync(query, request.HttpContext.RequestAborted));
     }
 
     [Function(nameof(GetMailboxMessageDetail))]

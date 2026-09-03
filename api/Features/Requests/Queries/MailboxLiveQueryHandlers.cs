@@ -95,6 +95,46 @@ public sealed class ListConversationMessagesHandler : IQueryHandler<ListConversa
     }
 }
 
+/// <summary>Every attachment in one email thread, grouped by carrying message — the composer's
+/// "from this thread" source. Members are resolved exactly as the thread panel resolves them
+/// (conversation id, subject fallback), then only those Graph says carry attachments are asked
+/// for their lists, concurrently; a member whose list can't be read is left out rather than
+/// failing the lot (the opened email's own attachments are already in the detail read).</summary>
+public sealed class ListConversationAttachmentsHandler
+    : IQueryHandler<ListConversationAttachments, IReadOnlyList<ConversationAttachmentGroup>>
+{
+    private readonly IMailboxGraphClient graph;
+    private readonly IIntakeMessageReader reader;
+    public ListConversationAttachmentsHandler(IMailboxGraphClient graph, IIntakeMessageReader reader)
+    { this.graph = graph; this.reader = reader; }
+
+    public async Task<IReadOnlyList<ConversationAttachmentGroup>> HandleAsync(
+        ListConversationAttachments query, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query.ConversationId))
+            return Array.Empty<ConversationAttachmentGroup>();
+
+        var page = await graph.ListConversationAsync(query.ConversationId, cancellationToken);
+        if (page.Items.Count <= 1)
+            page = await ConversationBySubject.FindAsync(graph, page, query.Subject, cancellationToken);
+
+        var carriers = page.Items.Where(m => m.HasAttachments).ToList();
+        var lists = await Task.WhenAll(carriers.Select(m => reader.ListAttachmentsAsync(m.Id, cancellationToken)));
+
+        var groups = new List<ConversationAttachmentGroup>();
+        for (var i = 0; i < carriers.Count; i++)
+        {
+            var listed = lists[i];
+            if (listed is null || listed.Count == 0) continue;
+            var message = carriers[i];
+            groups.Add(new ConversationAttachmentGroup(
+                message.Id, message.FromName, message.FromEmail, message.Subject, message.ReceivedAt,
+                listed.Select(a => new IntakeAttachment(a.Name, a.Size, a.ContentType, a.Id)).ToList()));
+        }
+        return groups;
+    }
+}
+
 /// <summary>
 /// Full body + attachments for one mailbox message, read live and sanitised before it leaves the
 /// server. Reuses the existing on-demand message reader; the id is fresh (the list was just rendered)

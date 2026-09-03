@@ -117,5 +117,6 @@ public static class AiRegistryDriftCheck
             [RecordType.BuildingControlCase] = RecordReach.None("GAP: building control shipped 2026-08-27, connector tool pending"),
             [RecordType.BuildingControlInspection] = RecordReach.None("GAP: building control shipped 2026-08-27, connector tool pending"),
             [RecordType.Inventory] = RecordReach.None("GAP: inventory shipped 2026-08-28, connector tool pending"),
+            [RecordType.SiteInstruction] = RecordReach.None("GAP: site instructions shipped 2026-09-03, connector tool pending"),
         };
 }

@@ -98,6 +98,7 @@ public partial class TriageQueue
                     StagedRecordKind.WorkOrder => StagedWorkOrderSummary(stagedCreate),
                     StagedRecordKind.Defect => "raise the defect from this email",
                     StagedRecordKind.Inventory => "add the inventory item from this email",
+                    StagedRecordKind.SiteInstruction => "raise the site instruction from this email",
                     StagedRecordKind.CalendarEvent => "raise the calendar event from this email",
                     StagedRecordKind.BuildingControlInspection => "raise the building control inspection from this email",
                     _ => stagedCreate.RequestKind == RequestType.Rfi

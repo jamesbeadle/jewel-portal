@@ -216,8 +216,8 @@ public partial class AttachmentPicker
     private Task AddPhotoAsync(ProgressPhoto photo) =>
         AddAsync(ComposeDraftAttachment.FromProgressPhoto(photo.ProgressPhotoId, photo.FileName, photo.FileSizeBytes));
 
-    private Task AddOriginalAsync(IntakeAttachment attachment) =>
-        AddAsync(ComposeDraftAttachment.FromOriginal(OriginalMessageId ?? "", attachment.Id, attachment.Name, attachment.Size));
+    private Task AddThreadAttachmentAsync(string messageId, IntakeAttachment attachment) =>
+        AddAsync(ComposeDraftAttachment.FromOriginal(messageId, attachment.Id, attachment.Name, attachment.Size));
 
     private Task AddRecordDocumentAsync(LinkableRecord record) =>
         AddAsync(ComposeDraftAttachment.FromRecordDocument(record));
@@ -225,7 +225,10 @@ public partial class AttachmentPicker
     private async Task AddAsync(ComposeDraftAttachment attachment)
     {
         // The same file attached twice is a mistake, not a request for two copies.
-        if (Attachments.Any(a => a.Source == attachment.Source && a.Source != ComposeAttachmentSource.Upload && a.Id == attachment.Id))
+        // (A mailbox attachment is identified by its message too — Graph attachment ids are scoped
+        // to the message that carries them.)
+        if (Attachments.Any(a => a.Source == attachment.Source && a.Source != ComposeAttachmentSource.Upload && a.Id == attachment.Id
+                && (a.Source != ComposeAttachmentSource.OriginalMessage || a.SourceMessageId == attachment.SourceMessageId)))
             return;
         await AttachmentsChanged.InvokeAsync(Attachments.Append(attachment).ToList());
     }

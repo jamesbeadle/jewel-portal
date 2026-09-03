@@ -197,6 +197,8 @@ public sealed partial class JpmsContext : DbContext
 
     // Project inventory — products held for the job and where they're kept (INV-#### tag stems).
     public DbSet<InventoryItemEntity> InventoryItems => Set<InventoryItemEntity>();
+    // Site instructions — written instructions to site (SI-#### tag stems), 2026-09-03.
+    public DbSet<SiteInstructionEntity> SiteInstructions => Set<SiteInstructionEntity>();
 
     // KPI emails — emails marked against a person (a portal user or someone added by name),
     // administrators only (2026-09-03).

@@ -46,10 +46,11 @@
 
     @* A forward carries the original email's attachments automatically (Graph's createForward
        copies them onto the draft), so the picker only offers EXTRA files — offering the originals
-       again would attach every file twice. *@
+       again would attach every file twice. Files on the thread's OTHER messages are still offered. *@
     <AttachmentPicker Attachments="Attachments" AttachmentsChanged="AttachmentsChanged"
                       Projects="@Projects" ProjectId="@ProjectId"
-                      OriginalAttachments="@(IsForward ? null : OriginalAttachments)" OriginalMessageId="@OriginalMessageId" />
+                      OriginalAttachments="@(IsForward ? null : OriginalAttachments)" OriginalMessageId="@OriginalMessageId"
+                      ThreadConversationId="@ThreadConversationId" ThreadSubject="@ThreadSubject" />
     @if (IsForward && OriginalAttachments is { Count: > 0 } forwarded)
     {
         <p class="text-xs text-content-subtle">
@@ -88,6 +89,11 @@
     /// the travels-automatically note on a forward.</summary>
     [Parameter] public IReadOnlyList<IntakeAttachment>? OriginalAttachments { get; set; }
     [Parameter] public string? OriginalMessageId { get; set; }
+
+    /// <summary>The open email's thread, so the picker can offer attachments from its earlier
+    /// messages too (files not yet through document triage). Null hides that part.</summary>
+    [Parameter] public string? ThreadConversationId { get; set; }
+    [Parameter] public string? ThreadSubject { get; set; }
 
     [Parameter] public EventCallback OnDiscard { get; set; }
 }

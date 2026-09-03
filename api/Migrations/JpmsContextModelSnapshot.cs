@@ -4795,6 +4795,49 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("SiteAttendances");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.SiteInstructionEntity", b =>
+                {
+                    b.Property<string>("SiteInstructionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Instruction")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ProjectId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("SiteInstructionId");
+
+                    b.HasIndex("Number")
+                        .HasDatabaseName("IX_SiteInstructions_Number");
+
+                    b.HasIndex("ProjectId")
+                        .HasDatabaseName("IX_SiteInstructions_ProjectId");
+
+                    b.ToTable("SiteInstructions");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.SiteReportEntity", b =>
                 {
                     b.Property<string>("SiteReportId")

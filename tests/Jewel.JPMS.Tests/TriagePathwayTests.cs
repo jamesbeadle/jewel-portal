@@ -75,10 +75,12 @@ public sealed class TriagePathwayTests
     }
 
     [Fact]
-    public void InternalCategories_areSiteInstructionOnly()
+    public void InternalCategories_areEmpty_siteInstructionIsARecordNow()
     {
-        var site = Assert.Single(InternalComms.Categories);
-        Assert.Equal("Site instruction", site.Title);
+        // Site instruction left the record-less family 2026-09-03: it is a real project record
+        // (RecordType.SiteInstruction, SI-####) with the instruction written into it.
+        Assert.Empty(InternalComms.Categories);
+        Assert.Equal(new[] { InternalComms.Record }, InternalComms.All);
     }
 
     [Fact]

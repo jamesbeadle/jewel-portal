@@ -31,6 +31,9 @@ public sealed class HttpIntakeQueue : IIntakeQueue
     public Task<MailboxPage> ListConversationLiveAsync(string conversationId, string? subject = null, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new ListConversationMessages(conversationId, subject), cancellationToken);
 
+    public Task<IReadOnlyList<ConversationAttachmentGroup>> ListConversationAttachmentsAsync(string conversationId, string? subject = null, CancellationToken cancellationToken = default) =>
+        queries.AskAsync(new ListConversationAttachments(conversationId, subject), cancellationToken);
+
     public Task<MailboxMessageDetail> GetMessageDetailAsync(string messageId, string? internetMessageId, CancellationToken cancellationToken = default) =>
         queries.AskAsync(new GetMailboxMessageDetail(messageId, internetMessageId), cancellationToken);
 
@@ -118,6 +121,10 @@ public sealed class HttpIntakeQueue : IIntakeQueue
 
     public Task<Jewel.JPMS.Models.InventoryItem> CreateInventoryItemFromMessageAsync(
         Jewel.JPMS.Contracts.Inventory.CreateInventoryItemFromMessage command, CancellationToken cancellationToken = default) =>
+        commands.SendAsync(command, cancellationToken);
+
+    public Task<Jewel.JPMS.Models.SiteInstruction> CreateSiteInstructionFromMessageAsync(
+        Jewel.JPMS.Contracts.SiteInstructions.CreateSiteInstructionFromMessage command, CancellationToken cancellationToken = default) =>
         commands.SendAsync(command, cancellationToken);
 
     public Task<Jewel.JPMS.Models.BuildingControlInspection> CreateBuildingControlInspectionFromMessageAsync(

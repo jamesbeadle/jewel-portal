@@ -93,6 +93,16 @@ public static class RequestsRouteRegistration
                     return $"/api/mailbox/conversation?id={Uri.EscapeDataString(q.ConversationId)}&subject={Uri.EscapeDataString(q.Subject ?? string.Empty)}";
                 }));
 
+        // Every attachment across that thread, grouped by the message that carried it — the
+        // composer's "from this thread" source.
+        queries.Register<ListConversationAttachments, IReadOnlyList<ConversationAttachmentGroup>>(
+            new QueryRoute("/api/mailbox/conversation/attachments",
+                query =>
+                {
+                    var q = (ListConversationAttachments)query;
+                    return $"/api/mailbox/conversation/attachments?id={Uri.EscapeDataString(q.ConversationId)}&subject={Uri.EscapeDataString(q.Subject ?? string.Empty)}";
+                }));
+
         queries.Register<GetMailboxMessageDetail, MailboxMessageDetail>(
             new QueryRoute("/api/mailbox/message/detail",
                 query =>

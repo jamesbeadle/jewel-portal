@@ -23,5 +23,6 @@ public enum RecordType
     BuildingControlCase = 15,       // the project's case with a building control body — case-level correspondence (the notice, the acknowledgement, the contact)
     BuildingControlInspection = 16, // one building control inspection stage — the inspector's booking/report thread files against it
     SupplierComms = 17,    // the record-less "supplier communication" tag family (general + categories) — supplier-side correspondence tied to no record
-    Inventory = 18         // an inventory item on a project (product + location details) — supplier-side, the Supplier pathway's first linkable record
+    Inventory = 18,        // an inventory item on a project (product + location details) — supplier-side, the Supplier pathway's first linkable record
+    SiteInstruction = 19   // a written instruction to site on a project (title + instruction + location) — internal-side; the email alone is rarely the instruction, so the record carries the words (2026-09-03)
 }

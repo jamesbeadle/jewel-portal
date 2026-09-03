@@ -79,6 +79,7 @@ public partial class TriageQueue
         StagedRecordKind.BidPackage or StagedRecordKind.WorkOrder or StagedRecordKind.Defect => "Subcontractor",
         StagedRecordKind.Inventory => "Supplier",
         StagedRecordKind.CalendarEvent => "Internal", // raised from the Internal pane, beside the Calendar
+        StagedRecordKind.SiteInstruction => "Internal", // Jewel instructing its own site (2026-09-03)
         _ => null
     };
 

@@ -121,6 +121,8 @@ public partial class TriageQueue
             return $"The staged defect isn't ready — {defectProblem} Finish it in the pathway pane's Actions, or remove it.";
         if (stagedCreate is { Kind: StagedRecordKind.Inventory } stagedInventory && stagedInventory.InventoryProblem is { } inventoryProblem)
             return $"The staged inventory item isn't ready — {inventoryProblem} Finish it in the pathway pane's Actions, or remove it.";
+        if (stagedCreate is { Kind: StagedRecordKind.SiteInstruction } stagedInstruction && stagedInstruction.SiteInstructionProblem is { } instructionProblem)
+            return $"The staged site instruction isn't ready — {instructionProblem} Finish it in the pathway pane's Actions, or remove it.";
         if (StagedTenderEnquiryProblem is { } enquiryProblem)
             return $"The staged tender enquiry isn't ready — {enquiryProblem} Finish it in the pathway pane's Actions, or remove it.";
         if (StagedCalendarEventProblem is { } calendarProblem)

@@ -102,6 +102,7 @@ public partial class ProjectCommunications
         (RecordType.VariationQuote,   "VO quotes"),
         (RecordType.Defect,           "Defects"),
         (RecordType.Inventory,        "Inventory"),
+        (RecordType.SiteInstruction,  "Site instructions"),
         (RecordType.ValuationReportSnapshot, "Valuation snapshots")
     };
 
@@ -350,6 +351,7 @@ public partial class ProjectCommunications
         RecordType.VariationQuote   => "Variation",
         RecordType.Defect           => "Defect",
         RecordType.Inventory        => "Inventory item",
+        RecordType.SiteInstruction  => "Site instruction",
         RecordType.ValuationReportSnapshot => "Valuation snapshot",
         RecordType.SubcontractorComms => "Subcontractor comms",
         RecordType.SupplierComms    => "Supplier comms",

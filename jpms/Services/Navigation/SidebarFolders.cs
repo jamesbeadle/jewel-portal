@@ -115,6 +115,12 @@ public static class SidebarFolders
                 // Control Centre; each reads its mail back live by tag.
                 new SidebarRow(new NavigationItem("Inventory", "/projects/{project}/inventory"),
                     DesktopNavigation.DirectorRoles),
+                // The site-instruction register (SI-#### references, 2026-09-03) — written
+                // instructions to site: title, the instruction, where it applies. Raised here or
+                // from an email in the Control Centre's Internal pane; each reads its mail back
+                // live by tag. Replaced the record-less Internal → Site Instructions tag register.
+                new SidebarRow(new NavigationItem("Site Instructions", "/projects/{project}/site-instructions"),
+                    DesktopNavigation.DirectorRoles),
                 // The statutory sign-off trail — the case with the building control body and its
                 // BCI-#### inspection stages (plus each inspection's own detail page).
                 new SidebarRow(new NavigationItem("Building Control", "/projects/{project}/building-control"),
@@ -202,10 +208,10 @@ public static class SidebarFolders
                 // (the Control Centre Internal pane's communication ticks), read live.
                 new SidebarRow(new NavigationItem("Communications", "/internal/communications", ExactMatch: true),
                     DesktopNavigation.DirectorRoles),
-                // The category register (2026-08-27 restructure; Build-ups and Spec Notes were
-                // retired the same day — too fine-grained for staff mail).
-                new SidebarRow(new NavigationItem("Site Instructions", "/internal/communications/site-instruction"),
-                    DesktopNavigation.DirectorRoles),
+                // The Internal category registers are gone: Build-ups and Spec Notes retired
+                // 2026-08-27 (too fine-grained), Site Instructions became a per-project record
+                // 2026-09-03 (Project folder → Site Instructions). Old category-tagged mail
+                // still reads via the Tagged view's tag search.
                 // The Monday replacement: insurances, subscriptions, vans, trade accounts.
                 new SidebarRow(new NavigationItem("Registers", "/registers"),
                     DesktopNavigation.DirectorRoles),

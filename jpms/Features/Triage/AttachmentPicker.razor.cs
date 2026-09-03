@@ -20,6 +20,13 @@ public partial class AttachmentPicker
     [Parameter] public IReadOnlyList<IntakeAttachment>? OriginalAttachments { get; set; }
     [Parameter] public string? OriginalMessageId { get; set; }
 
+    /// <summary>The email thread the composer sits in (the anchor's Graph conversation id and its
+    /// subject, for the split-id fallback). When set, the email-attachments panel also lists every
+    /// OTHER message's attachments in the thread, read live when the panel opens. Null on a new
+    /// email — there is no thread yet.</summary>
+    [Parameter] public string? ThreadConversationId { get; set; }
+    [Parameter] public string? ThreadSubject { get; set; }
+
     private const long MaxFileBytes = 25_000_000;
 
     private enum Panel { None, Drawings, Photos, Records, Original }
@@ -53,6 +60,45 @@ public partial class AttachmentPicker
     private string recordSearch = "";
     private bool recordsIncludeInactive;
     private const int RecordResultCap = 50;
+
+    // Thread-attachments panel state. Fetched once per conversation for the composer's life (a
+    // picker list, not a live view); absence from the dictionary is the honest "not fetched yet".
+    private readonly Dictionary<string, IReadOnlyList<ConversationAttachmentGroup>> threadAttachmentsByConversation = new();
+    private string? threadFailedFor;
+
+    private bool HasThread => !string.IsNullOrEmpty(ThreadConversationId);
+
+    // The other messages' attachments, newest message first — the anchor's own are shown from
+    // OriginalAttachments (or, on a forward, travel automatically and are not offered at all).
+    private IReadOnlyList<ConversationAttachmentGroup> OtherThreadGroups =>
+        HasThread && threadAttachmentsByConversation.TryGetValue(ThreadConversationId!, out var groups)
+            ? groups.Where(g => g.MessageId != OriginalMessageId).OrderByDescending(g => g.ReceivedAt).ToList()
+            : Array.Empty<ConversationAttachmentGroup>();
+
+    private static string ThreadGroupLabel(ConversationAttachmentGroup group)
+    {
+        var who = string.IsNullOrWhiteSpace(group.FromName) ? group.FromEmail : group.FromName;
+        return $"From {who} — {group.ReceivedAt.ToLocalTime():d MMM yyyy}";
+    }
+
+    private bool IsThreadAttachmentOnEmail(string messageId, IntakeAttachment attachment) =>
+        Attachments.Any(a => a.Source == ComposeAttachmentSource.OriginalMessage
+            && a.Id == attachment.Id && a.SourceMessageId == messageId);
+
+    private async Task LoadThreadAttachmentsAsync(string conversationId)
+    {
+        if (threadAttachmentsByConversation.ContainsKey(conversationId)) return;
+        try
+        {
+            var groups = await Intake.ListConversationAttachmentsAsync(conversationId, ThreadSubject);
+            threadAttachmentsByConversation[conversationId] = groups;
+        }
+        catch
+        {
+            // The query client has reported the failure; the panel says so and reopening retries.
+            threadFailedFor = conversationId;
+        }
+    }
 
     private IReadOnlyList<LinkableRecord> FilteredRecords
     {
@@ -95,6 +141,12 @@ public partial class AttachmentPicker
         oversizeNote = null;
         if (panel is Panel.Drawings) ResetDrawingPanelState(); // opening starts clean; closing drops a stale basket
         if (openPanel is Panel.Records) recordsFailedFor = null; // reopening retries a failed load
+        if (openPanel is Panel.Original)
+        {
+            threadFailedFor = null;
+            if (HasThread) await LoadThreadAttachmentsAsync(ThreadConversationId!);
+            return;
+        }
         if (string.IsNullOrEmpty(panelProjectId)) return;
         if (openPanel is Panel.Drawings) Drawings.Refresh(panelProjectId);
         if (openPanel is Panel.Photos) Progress.Refresh(panelProjectId);

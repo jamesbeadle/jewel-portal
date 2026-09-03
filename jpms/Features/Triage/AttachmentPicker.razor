@@ -8,10 +8,12 @@
 
 @* The composer's attachment tray: what's attached so far (chips with remove), plus five ways to
    add — files from this computer, drawings from a project's register, progress photos, a system
-   record's official document (an RFI's PDF, say), and the opened email's own attachments
-   (forwarding them on). Everything except uploads is attached by id and resolved server-side —
-   drawings and photos from blob storage, record documents rendered fresh at send time — so
-   nothing round-trips through the browser. *@
+   record's official document (an RFI's PDF, say), and the attachments already in the email
+   thread — the opened email's own and, when the composer knows the thread, every earlier
+   message's too, so a reply can send on a file that arrived two emails back without waiting for
+   it to reach document triage. Everything except uploads is attached by id and resolved
+   server-side — drawings and photos from blob storage, record documents rendered fresh at send
+   time, thread files read back from the mailbox — so nothing round-trips through the browser. *@
 
 <div class="space-y-2">
     @if (Attachments.Count > 0)
@@ -38,9 +40,9 @@
         <button type="button" class="@SourceButtonClass(Panel.Drawings)" @onclick="() => TogglePanel(Panel.Drawings)">📄 Project documents</button>
         <button type="button" class="@SourceButtonClass(Panel.Photos)" @onclick="() => TogglePanel(Panel.Photos)">📷 Progress photos</button>
         <button type="button" class="@SourceButtonClass(Panel.Records)" @onclick="() => TogglePanel(Panel.Records)">📄 System documents</button>
-        @if (OriginalAttachments is { Count: > 0 })
+        @if (OriginalAttachments is { Count: > 0 } || HasThread)
         {
-            <button type="button" class="@SourceButtonClass(Panel.Original)" @onclick="() => TogglePanel(Panel.Original)">✉️ This email's attachments</button>
+            <button type="button" class="@SourceButtonClass(Panel.Original)" @onclick="() => TogglePanel(Panel.Original)">@(HasThread ? "✉️ From this thread" : "✉️ This email's attachments")</button>
         }
         @if (oversizeNote is not null)
         {
@@ -248,20 +250,65 @@
                     </p>
                 }
             }
-            else if (openPanel == Panel.Original && OriginalAttachments is not null)
+            else if (openPanel == Panel.Original)
             {
-                <div class="space-y-1">
-                    @foreach (var attachment in OriginalAttachments)
+                <div class="max-h-64 overflow-y-auto space-y-2">
+                    @if (OriginalAttachments is { Count: > 0 })
                     {
-                        <button type="button" @key="attachment.Id"
-                                class="w-full text-left text-xs text-content-muted hover:text-accent flex items-center gap-2"
-                                @onclick="() => AddOriginalAsync(attachment)">
-                            <span>📎</span>
-                            <span class="truncate flex-1">@attachment.Name</span>
-                            <span class="text-content-faint">@SizeLabel(attachment.Size)</span>
-                        </button>
+                        <div>
+                            @if (HasThread)
+                            {
+                                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">This email</p>
+                            }
+                            <div class="space-y-1 pt-1">
+                                @foreach (var attachment in OriginalAttachments)
+                                {
+                                    <div @key="attachment.Id">@ThreadAttachmentRow(OriginalMessageId ?? "", attachment)</div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    @if (HasThread)
+                    {
+                        @if (threadFailedFor == ThreadConversationId)
+                        {
+                            <p class="text-xs text-negative">The rest of the thread's attachments couldn't be read — close and reopen this panel to try again.</p>
+                        }
+                        else if (!threadAttachmentsByConversation.ContainsKey(ThreadConversationId!))
+                        {
+                            <p class="text-xs text-content-subtle">Looking through the thread for attachments…</p>
+                        }
+                        else if (OtherThreadGroups.Count == 0)
+                        {
+                            <p class="text-xs text-content-subtle">
+                                @(OriginalAttachments is { Count: > 0 } ? "No attachments on any other email in this thread." : "No attachments on any email in this thread.")
+                            </p>
+                        }
+                        else
+                        {
+                            @foreach (var group in OtherThreadGroups)
+                            {
+                                <div @key="group.MessageId">
+                                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold truncate" title="@group.Subject">
+                                        @ThreadGroupLabel(group)
+                                    </p>
+                                    <div class="space-y-1 pt-1">
+                                        @foreach (var attachment in group.Attachments)
+                                        {
+                                            <div @key="attachment.Id">@ThreadAttachmentRow(group.MessageId, attachment)</div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        }
                     }
                 </div>
+                @if (HasThread)
+                {
+                    <p class="text-[11px] text-content-faint">
+                        Files from earlier emails in this thread are attached straight from the mailbox — they don't have to have been through document triage first.
+                    </p>
+                }
             }
         </div>
     }
@@ -269,6 +316,28 @@
 
 
 @code {
+    // One attachment already in the thread — press to attach; once on the email it reads as such.
+    private RenderFragment ThreadAttachmentRow(string messageId, IntakeAttachment attachment) => @<text>
+        @if (IsThreadAttachmentOnEmail(messageId, attachment))
+        {
+            <div class="w-full text-left text-xs text-content-faint flex items-center gap-2" title="Already on this email">
+                <span>✓</span>
+                <span class="truncate flex-1">@attachment.Name</span>
+                <span>@SizeLabel(attachment.Size)</span>
+            </div>
+        }
+        else
+        {
+            <button type="button" title="Attach to this email"
+                    class="w-full text-left text-xs text-content-muted hover:text-accent flex items-center gap-2"
+                    @onclick="() => AddThreadAttachmentAsync(messageId, attachment)">
+                <span>📎</span>
+                <span class="truncate flex-1">@attachment.Name</span>
+                <span class="text-content-faint">@SizeLabel(attachment.Size)</span>
+            </button>
+        }
+    </text>;
+
     // One drawing row — a tick box, the drawing's identity (with its folder path when the flat
     // search list needs it), what "its file" currently means, and the revisions expander.
     private RenderFragment DrawingRow(Drawing drawing, int depth, bool showPath) => @<text>

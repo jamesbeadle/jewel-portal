@@ -122,12 +122,7 @@ public enum AuditEventType
     // rows carry the KPI reference and nothing else — no user, no subject, no message id — and
     // the audit endpoint refuses a non-administrator's read narrowed to them. Pathway is "".
     KpiEmailMarked = 38,             // an email was marked as a KPI (KPI-####)
-    KpiEmailRemoved = 39,            // a KPI mark was taken off an email
-    // Xero "Cost Code" tracking options (written since 2026-09-03): the portal's cost-code master
-    // pushed into Xero deliberately — a batch create from the Cost codes page or the connector
-    // (confirm-first), or a rename, which Xero applies to history. Not client-facing: Pathway "".
-    XeroCostCodeOptionsCreated = 40, // missing Cost Code tracking options were created in Xero
-    XeroCostCodeOptionRenamed = 41   // a Cost Code tracking option was renamed in Xero
+    KpiEmailRemoved = 39             // a KPI mark was taken off an email
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

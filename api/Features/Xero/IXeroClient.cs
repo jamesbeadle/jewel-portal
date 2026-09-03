@@ -70,19 +70,6 @@ public interface IXeroClient
     Task<XeroTrackingCategoriesSnapshot> GetTrackingCategoriesSnapshotAsync(bool force, CancellationToken ct);
 
     /// <summary>
-    /// Creates one option in Xero's "Cost Code" tracking category and returns its id. Throws
-    /// <c>XeroCallFailedException</c> with Xero's message verbatim when refused (the category's
-    /// option cap, a duplicate name). Drops the cached tracking reads so the next one sees it.
-    /// </summary>
-    Task<string> CreateCostCodeOptionAsync(string optionName, CancellationToken ct);
-
-    /// <summary>
-    /// Renames one option in Xero's "Cost Code" tracking category by id and returns the id.
-    /// Xero applies a rename to history — callers warn before, not after. Throws like the create.
-    /// </summary>
-    Task<string> RenameCostCodeOptionAsync(string trackingOptionId, string newName, CancellationToken ct);
-
-    /// <summary>
     /// Confirms an allocated draft (or submitted) bill / credit note back into Xero and
     /// approves it: re-reads the invoice fresh, stamps Sites + Cost Code tracking on each
     /// instructed line — physically splitting a line into one Xero line per cost centre

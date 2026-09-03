@@ -87,7 +87,6 @@
     <Compile Include="..\api\Features\Xero\XeroClient.ReadsCash.cs" Link="Shared\Xero\XeroClient.ReadsCash.cs" />
     <Compile Include="..\api\Features\Xero\XeroClient.Writes.cs" Link="Shared\Xero\XeroClient.Writes.cs" />
     <Compile Include="..\api\Features\Xero\XeroClient.SitePnl.cs" Link="Shared\Xero\XeroClient.SitePnl.cs" />
-    <Compile Include="..\api\Features\Xero\XeroClient.TrackingOptions.cs" Link="Shared\Xero\XeroClient.TrackingOptions.cs" />
     <Compile Include="..\api\Features\Xero\XeroClient.Attachments.cs" Link="Shared\Xero\XeroClient.Attachments.cs" />
     <Compile Include="..\api\Features\Xero\XeroClient.LineItems.cs" Link="Shared\Xero\XeroClient.LineItems.cs" />
     <Compile Include="..\api\Features\Xero\XeroClient.Http.cs" Link="Shared\Xero\XeroClient.Http.cs" />

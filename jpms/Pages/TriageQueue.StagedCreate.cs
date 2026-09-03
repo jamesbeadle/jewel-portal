@@ -137,6 +137,24 @@ public partial class TriageQueue
                 new CreatedNowRecord(item.Reference, "inventory item", staged.Title.Trim()), null);
         }
 
+        if (staged.Kind == StagedRecordKind.SiteInstruction)
+        {
+            // The site instruction written in the Internal pane's Actions, raised through the
+            // same rules as one raised on the project's Site Instructions page (SI numbering)
+            // with the prompting email tagged to it.
+            busyLabel = "Raising site instruction";
+            var instruction = await Intake.CreateSiteInstructionFromMessageAsync(new Jewel.JPMS.Contracts.SiteInstructions.CreateSiteInstructionFromMessage(
+                anchor.Id, triageProjectId,
+                staged.Title.Trim(),
+                staged.Description.Trim(),
+                staged.SiteInstructionLocation.Trim(),
+                InternetMessageId: anchor.InternetMessageId,
+                Scope: scope,
+                AllowCrossPathway: true));
+            return new StagedCreateOutcome(
+                new CreatedNowRecord(instruction.Reference, "site instruction", staged.Title.Trim()), null);
+        }
+
         if (staged.Kind == StagedRecordKind.CalendarEvent)
         {
             // The calendar event staged in System Actions, raised through the same rules as one
@@ -223,6 +241,7 @@ public partial class TriageQueue
             {
                 StagedRecordKind.Defect => "Describe the defect first — then Create now.",
                 StagedRecordKind.Inventory => "Name the product first — then Create now.",
+                StagedRecordKind.SiteInstruction => "Give the instruction a title first — then Create now.",
                 _ => "Give the staged record a title first — then Create now."
             };
             return;
@@ -264,6 +283,12 @@ public partial class TriageQueue
             && stagedInventory.InventoryProblem is { } inventoryProblem)
         {
             actionError = $"The staged inventory item isn't ready — {inventoryProblem}";
+            return;
+        }
+        if (staged is { Kind: StagedRecordKind.SiteInstruction } stagedInstruction
+            && stagedInstruction.SiteInstructionProblem is { } instructionProblem)
+        {
+            actionError = $"The staged site instruction isn't ready — {instructionProblem}";
             return;
         }
         // Creating now tags the email to the new record, so the thread-spread decision must be

@@ -67,7 +67,8 @@
        again would attach every file twice. *@
     <AttachmentPicker Attachments="attachments" AttachmentsChanged="picked => attachments = picked"
                       Projects="@Projects" ProjectId="@ProjectId"
-                      OriginalAttachments="@(IsForward ? null : anchorDetail?.Attachments)" OriginalMessageId="@AnchorMessageId" />
+                      OriginalAttachments="@(IsForward ? null : anchorDetail?.Attachments)" OriginalMessageId="@AnchorMessageId"
+                      ThreadConversationId="@(string.IsNullOrEmpty(ReplyTo?.ConversationId) ? null : ReplyTo!.ConversationId)" ThreadSubject="@ReplyTo?.Subject" />
     @if (IsForward && anchorDetail is { Attachments.Count: > 0 } forwarded)
     {
         <p class="text-xs text-content-subtle">
