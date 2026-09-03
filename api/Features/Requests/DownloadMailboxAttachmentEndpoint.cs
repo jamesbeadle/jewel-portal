@@ -47,12 +47,38 @@ public sealed class DownloadMailboxAttachmentEndpoint
         var inline = request.Query.TryGetValue("inline", out var inlineValue)
             && (inlineValue == "1" || string.Equals(inlineValue, "true", StringComparison.OrdinalIgnoreCase));
 
-        var result = new FileContentResult(attachment.Content, attachment.ContentType)
+        // Senders' systems often label a real PDF or image "application/octet-stream". Served as
+        // that, an inline request downloads instead of rendering — so a generic type is replaced
+        // by the one the file name implies (2026-09-03). Downloads keep whatever Graph said.
+        var contentType = inline ? ContentTypeForInline(attachment.ContentType, attachment.Name) : attachment.ContentType;
+
+        var result = new FileContentResult(attachment.Content, contentType)
         {
             EnableRangeProcessing = true
         };
         if (!inline)
             result.FileDownloadName = string.IsNullOrWhiteSpace(attachment.Name) ? "attachment" : attachment.Name;
         return result;
+    }
+
+    private static string ContentTypeForInline(string? declared, string? name)
+    {
+        var isGeneric = string.IsNullOrWhiteSpace(declared)
+            || declared.Equals("application/octet-stream", StringComparison.OrdinalIgnoreCase)
+            || declared.Equals("binary/octet-stream", StringComparison.OrdinalIgnoreCase);
+        if (!isGeneric) return declared!;
+
+        var extension = Path.GetExtension(name ?? "").ToLowerInvariant();
+        return extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".bmp" => "image/bmp",
+            ".svg" => "image/svg+xml",
+            _ => declared ?? "application/octet-stream"
+        };
     }
 }

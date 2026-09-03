@@ -7,7 +7,13 @@ public sealed class UpdateTodoItemHandler : ICommandHandler<UpdateTodoItem, Todo
 {
     private readonly JpmsContext context;
     private readonly TodoActivityRecorder activity;
-    public UpdateTodoItemHandler(JpmsContext context, TodoActivityRecorder activity) { this.context = context; this.activity = activity; }
+    private readonly TodoCompletionRecordTagger completionTagger;
+    public UpdateTodoItemHandler(JpmsContext context, TodoActivityRecorder activity, TodoCompletionRecordTagger completionTagger)
+    {
+        this.context = context;
+        this.activity = activity;
+        this.completionTagger = completionTagger;
+    }
 
     public async Task<TodoItem> HandleAsync(UpdateTodoItem command, CancellationToken cancellationToken)
     {
@@ -35,6 +41,13 @@ public sealed class UpdateTodoItemHandler : ICommandHandler<UpdateTodoItem, Todo
             activity.Record(entity, line.Kind, line.Summary);
 
         await context.SaveChangesAsync(cancellationToken);
+
+        // Ticking the item off also files its source email(s) to the records the item or the
+        // email names (the variation it asked for, the work order it raised) — best-effort, after
+        // the completion itself is safely saved. See TodoCompletionRecordTagger.
+        if (!wasComplete && command.IsComplete)
+            await completionTagger.TagSourceEmailsAsync(entity, actorEmail: null, cancellationToken);
+
         return entity.ToModel(await context.PersonNamesForAsync(new[] { entity }, cancellationToken));
     }
 

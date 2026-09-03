@@ -14,33 +14,104 @@ namespace Jewel.JPMS.Pages;
 public partial class TriageQueue
 {
     // ---- Project auto-match ----
-    // A simple lower-case search of the email chain for a project's name: when exactly one live
-    // project's name appears verbatim (case-insensitive) in the selected email's subject, body or
-    // thread, the project pickers are pre-filled with it. The triager still sees — and can change —
-    // the choice; an ambiguous chain (two project names in one thread) pre-fills nothing, and a
-    // choice already made is never overridden.
+    // Two sources, in order of trust. (1) The thread's own record tags: an earlier email in the
+    // chain already filed to "JPMS/JBB-2026-002-RFI-017" names its project outright, so a reply
+    // lands on that project without reading a word of it. (2) Failing that, the project's NAME as
+    // a whole word in the selected email's subject, body or thread (ProjectNameMatch — a lead
+    // project called "Test" used to match "latest" and poison the whole chain, 2026-08-28). Either
+    // way the rule is the same: exactly one project pre-fills; an ambiguous answer (two projects'
+    // tags, two names in one thread) pre-fills nothing. The triager still sees — and can change —
+    // the choice, and a choice already made is never overridden.
     private async Task TryPrefillProjectFromEmailAsync()
     {
         if (view != QueueView.Active || selected is null) return;
         if (!string.IsNullOrWhiteSpace(triageProjectId)) return;
 
-        var haystack = BuildEmailSearchText();
-        if (haystack.Length == 0) return;
+        var projectId = await ProjectFromThreadTagsAsync(selected) ?? ProjectFromEmailText();
+        if (projectId is null) return;
 
-        // Live projects only (the pickers hide completed ones by default), and names under four
-        // characters are skipped — too short to be an honest match rather than a coincidence.
-        var matches = AllProjects
-            .Where(project => project.Stage != ProjectStage.Completed)
-            .Where(project => project.Name.Trim() is { Length: >= 4 } name
-                && haystack.Contains(name.ToLowerInvariant(), StringComparison.Ordinal))
-            .ToList();
-        if (matches.Count != 1) return;
-
-        triageProjectId = matches[0].ProjectId;
+        triageProjectId = projectId;
         projectAutoMatched = true;
         // The link panel shows records for its chosen project, so the pre-fill loads them too —
         // otherwise it would claim "no records on this project yet" without having looked.
         await LoadLinkRecordsAsync();
+    }
+
+    // The project the chain's existing record tags name, or null when they name none or more than
+    // one. Project-referenced stems ("JBB-2026-002-RFI-017", the programme bucket "SCH-JBB-2026-002")
+    // are read off the project list here; any other record stems (to-dos, bid packages…) are
+    // resolved the way the tag chips are (ResolveRecordTags) — a live read that can fail, and a
+    // failure here is simply "no opinion", never an error toast on opening an email.
+    private async Task<string?> ProjectFromThreadTagsAsync(MailboxMessage anchor)
+    {
+        var stems = thread.Prepend(anchor)
+            .SelectMany(member => member.Categories)
+            .Select(TriageEmailDisplay.TagLabel)
+            .Where(stem => !string.IsNullOrWhiteSpace(stem) && !IsWorkflowTag(stem))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (stems.Count == 0) return null;
+
+        var projectIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var unresolved = new List<string>();
+        foreach (var stem in stems)
+        {
+            var byReference = AllProjects.FirstOrDefault(project => StemBelongsTo(stem, project));
+            if (byReference is not null) projectIds.Add(byReference.ProjectId);
+            else unresolved.Add(stem);
+        }
+
+        if (unresolved.Count > 0)
+        {
+            try
+            {
+                var records = await Queries.AskAsync(new ResolveRecordTags(unresolved), CancellationToken.None);
+                // The read is live: if the triager has moved on to another email meanwhile, this
+                // answer belongs to the old one and must not land on the new.
+                if (!ReferenceEquals(selected, anchor)) return null;
+                foreach (var record in records)
+                    if (!string.IsNullOrWhiteSpace(record.ProjectId)) projectIds.Add(record.ProjectId);
+            }
+            catch
+            {
+                // No opinion from the tags — fall through to whatever the references alone said.
+            }
+        }
+
+        return projectIds.Count == 1 ? projectIds.First() : null;
+    }
+
+    // "JBB-2026-002-RFI-017" and "SCH-JBB-2026-002" both belong to project JBB-2026-002. The
+    // reference must be followed by the end of the stem or a separator, so JBB-2026-01 can never
+    // claim JBB-2026-012's records.
+    private static bool StemBelongsTo(string stem, Project project)
+    {
+        var reference = project.Reference?.Trim();
+        if (string.IsNullOrEmpty(reference)) return false;
+        if (stem.StartsWith("SCH-", StringComparison.OrdinalIgnoreCase))
+            return string.Equals(stem["SCH-".Length..], reference, StringComparison.OrdinalIgnoreCase);
+        return stem.StartsWith(reference, StringComparison.OrdinalIgnoreCase)
+            && (stem.Length == reference.Length || stem[reference.Length] == '-');
+    }
+
+    // Tags that route or mark an email rather than name a record — never a project clue.
+    private static bool IsWorkflowTag(string stem) => stem.ToLowerInvariant() is
+        "discarded" or "replied" or "admin"
+        or "client" or "subcontractor" or "supplier" or "internal"
+        or "intcomms" or "subcomms" or "supcomms";
+
+    // The one live project whose name stands as a whole word somewhere in the chain, else null.
+    // Live projects only (the pickers hide completed ones by default); names under four characters
+    // are skipped by ProjectNameMatch — too short to be an honest match rather than a coincidence.
+    private string? ProjectFromEmailText()
+    {
+        var haystack = BuildEmailSearchText();
+        if (haystack.Length == 0) return null;
+        var matches = AllProjects
+            .Where(project => project.Stage != ProjectStage.Completed)
+            .Where(project => ProjectNameMatch.MentionsName(haystack, project.Name))
+            .ToList();
+        return matches.Count == 1 ? matches[0].ProjectId : null;
     }
 
     // Everything searchable about the selected email's chain, joined and lower-cased once: subject,

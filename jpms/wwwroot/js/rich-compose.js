@@ -6,8 +6,9 @@
 //   • PASTED IMAGES: an image on the clipboard (a screenshot, a snip of a drawing) is inserted
 //     inline as a data: URL <img>. The server extracts each one into a proper cid inline
 //     attachment before sending, so what the composer shows is what the recipient sees;
-//   • pasted HTML is flattened to the same small tag set client-side, so Outlook's kilobytes of
-//     span-soup never enter the editor (the server sanitises again regardless — this is for the
+//   • PASTED TEXT goes in as plain text ("paste values") — no colours, fonts or bold from the
+//     source; only line breaks survive. HTML-only clipboards are flattened to the small structural
+//     tag set instead, again without styling (the server sanitises regardless — this is for the
 //     editing experience, not for safety);
 //   • AUTO-CAPITALISATION as you type — sentence starts and the pronoun "i" — handled by
 //     rich-compose-autocapitalise.js (with rich-compose-caret.js underneath), wired up here.
@@ -32,10 +33,10 @@ window.jpmsRichCompose = (function () {
         "STYLE", "SCRIPT", "HEAD", "META", "LINK", "TITLE", "TEMPLATE", "NOSCRIPT", "XML",
         "OBJECT", "EMBED", "IFRAME"
     ]);
-    // Style properties that survive the paste flattener, per tag. Colour only — it matches what
-    // the toolbar's colour button produces and what the server's outbound sanitiser lets through;
-    // everything else in a pasted style attribute (fonts, sizes, margins) is still dropped.
-    const KEEP_STYLE_PROPS = { SPAN: ["color"] };
+    // Style properties that survive the paste flattener, per tag. Deliberately empty: pasted
+    // text never brings colour (or anything else) with it — see onPaste. The toolbar's colour
+    // button writes <span style="color:…"> through execValue, which doesn't pass through here.
+    const KEEP_STYLE_PROPS = {};
 
     const instances = new Map();
 
@@ -90,6 +91,17 @@ window.jpmsRichCompose = (function () {
         if (entry) entry.dotNetRef.invokeMethodAsync("OnEditorHtmlChanged", element.innerHTML);
     }
 
+    function plainTextToHtml(text) {
+        // Escape, then keep the line structure: a blank line is a paragraph break, a single
+        // newline a <br>. Trailing newline from a whole-paragraph copy is dropped so the caret
+        // doesn't land on an empty line.
+        const escaped = text.replace(/\r\n?/g, "\n").replace(/\n+$/, "")
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const paragraphs = escaped.split(/\n{2,}/);
+        if (paragraphs.length === 1) return paragraphs[0].replace(/\n/g, "<br>");
+        return paragraphs.map(paragraph => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`).join("");
+    }
+
     function insertHtmlAtCaret(element, html) {
         element.focus();
         // execCommand("insertHTML") keeps the caret position and undo stack.
@@ -119,6 +131,20 @@ window.jpmsRichCompose = (function () {
             }
         }
 
+        // PASTE VALUES: text on the clipboard always goes in as plain text — line breaks kept,
+        // every colour/font/size/bold from the source dropped. Copying out of a coloured Outlook
+        // email into a reply was carrying the sender's text colour into the composer, and the PM
+        // team want pasted text to simply take on the composer's own formatting (as Excel's
+        // "paste values" does). Formatting is applied deliberately with the toolbar afterwards.
+        const text = clipboard.getData("text/plain");
+        if (text) {
+            event.preventDefault();
+            insertHtmlAtCaret(element, plainTextToHtml(text));
+            return;
+        }
+
+        // No plain-text flavour (rare — some apps put only HTML on the clipboard): flatten the
+        // HTML to the small structural tag set instead, still without any styling.
         const html = clipboard.getData("text/html");
         if (html) {
             event.preventDefault();

@@ -154,7 +154,10 @@ internal static class AiWriteTools
             new(
                 "complete_todo",
                 "WRITE: mark a to-do item done (or reopen it with complete false) — the same act as "
-                + "ticking it off on the To-dos page, immediately. Everything else on the item stays as "
+                + "ticking it off on the To-dos page, immediately. Completing also files the item's "
+                + "tagged email(s) to every record on its project that the item or the email names "
+                + "(\"Variation V31\", \"VO32\", \"WO-0045\"), so the record shows its source email "
+                + "— no separate file_email_to_record needed. Everything else on the item stays as "
                 + "it stands. list_todos and find_by_reference give the todoItemId.",
                 AiToolSchema.Object(
                     ("todoItemId", "string", "The item's id, from list_todos or find_by_reference.", true),

@@ -105,8 +105,9 @@ public partial class ProjectValuation
                 $"Invoice {invoice?.DisplayNumber} was rejected{(invoice?.RejectedAt is { } rej ? $" on {rej:dd MMM yyyy}" : "")} — amend it (back to draft, ready to resend), or cancel it in Valuation Invoices below.",
             ClaimStage.AwaitingPayment =>
                 $"Invoice {invoice?.DisplayNumber} issued for {Money(invoice?.Amount ?? 0m)} — payment is no gate: carry on with the next claim and record the payment (Actions) when the cash lands.",
-            ClaimStage.ReadyToConfirm =>
-                $"Invoice {invoice?.DisplayNumber} is paid — confirm to lock this period as the baseline and roll into the next.",
+            ClaimStage.ReadyToConfirm => IsLatestClaim(claim)
+                ? $"Invoice {invoice?.DisplayNumber} is paid — confirm to lock this period as the baseline and roll into the next."
+                : $"Invoice {invoice?.DisplayNumber} is paid — confirm to lock this period as the baseline the next claim measures against. It has already been rolled over, so nothing new is started.",
             ClaimStage.Confirmed =>
                 $"Confirmed{(claim.ConfirmedAt is { } at ? $" on {at:dd MMM yyyy}" : "")} — this claim is the baseline the next period starts from.",
             _ => ""
@@ -132,8 +133,15 @@ public partial class ProjectValuation
         yield return new(3, "Approve", approved || confirmed, claimed && !approved && !confirmed);
         yield return new(4, "Invoice", invoiced || confirmed, approved && !invoiced && !confirmed);
         yield return new(5, "Paid", paid || confirmed, invoiced && !paid && !confirmed);
-        yield return new(6, "Confirm & roll over", confirmed, paid && !confirmed);
+        yield return new(6, ConfirmLabel(claim), confirmed, paid && !confirmed);
     }
+
+    // Rolling over is a once-only step: it seeds the next period from this claim. Once a
+    // later claim exists this claim HAS been rolled over, so its step, button and Actions
+    // item read plain "Confirm" — confirming still matters (it is what makes this claim the
+    // baseline the later draft measures against), but nothing new is started from it.
+    private string ConfirmLabel(ValuationClaim claim) =>
+        IsLatestClaim(claim) ? "Confirm & roll over" : "Confirm";
 
     private static string ClaimBadgeClass(ValuationClaimStatus status)
     {
@@ -206,7 +214,7 @@ public partial class ProjectValuation
                     Hint: "Un-issue the claim — back to Draft, % complete editable again",
                     Disabled: busy, Group: 1));
                 if (StageFor(claim) != ClaimStage.ReadyToConfirm)
-                    items.Add(new(Label: "Confirm & roll over",
+                    items.Add(new(Label: ConfirmLabel(claim),
                         OnSelect: EventCallback.Factory.Create(this, ConfirmClickedAsync),
                         Hint: "Normally done once the claim's invoice is paid — confirming now will ask first",
                         Disabled: busy, Group: 1));

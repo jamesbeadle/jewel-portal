@@ -44,6 +44,7 @@ public static class TodosFeatureRegistration
         // mailbox compose handler's bridge — an email sent from the item's page is a line too.
         services.AddScoped<TodoActivityRecorder>();
         services.AddScoped<TodoEmailActivityRecorder>();
+        services.AddScoped<TodoCompletionRecordTagger>();
         services.AddScoped<IQueryHandler<ListTodoActivity, IReadOnlyList<TodoActivity>>, ListTodoActivityHandler>();
         services.AddScoped<ICommandHandler<LogTodoProgress, TodoItem>, LogTodoProgressHandler>();
         services.AddScoped<LogTodoProgressAuthorisation>();

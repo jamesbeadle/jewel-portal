@@ -87,18 +87,18 @@
             @* The disable reason stands NEXT TO the button it disables (2026-08-27: "I
                shouldn't have to go around checking whether I've done things — the UX should
                guide me"). A tooltip on a disabled button is invisible; this isn't. *@
-            @if (!Busy && PendingSummary is not null && (DecisionsMissing || DocTriageProjectMissing))
+            @if (!Busy && PendingSummary is not null && (DecisionsMissing || ProjectMissing))
             {
-                <p class="text-xs text-amber-600 max-w-xs text-right">@(DecisionsMissing ? DecisionsMissingHint : DocTriageProjectMissingHint)</p>
+                <p class="text-xs text-amber-600 max-w-xs text-right">@(DecisionsMissing ? DecisionsMissingHint : ProjectMissingHint)</p>
             }
             <button type="button" class="@DiscardTabClass" @onclick="() => DiscardArmedChanged.InvokeAsync(!DiscardArmed)">🗑 Discard</button>
-            <button type="button" class="btn-primary" disabled="@(Busy || PendingSummary is null || DecisionsMissing || DocTriageProjectMissing)"
+            <button type="button" class="btn-primary" disabled="@(Busy || PendingSummary is null || DecisionsMissing || ProjectMissing)"
                     @onclick="() => OnApply.InvokeAsync(false)">
                 @ApplyLabel
             </button>
             @if (OutboxSendCount > 0)
             {
-                <button type="button" class="btn-secondary" disabled="@(Busy || DecisionsMissing || DocTriageProjectMissing)" @onclick="() => OnApply.InvokeAsync(true)"
+                <button type="button" class="btn-secondary" disabled="@(Busy || DecisionsMissing || ProjectMissing)" @onclick="() => OnApply.InvokeAsync(true)"
                         title="Applies the to-dos, filing and tagging above, but stages every lined-up email as an Outlook draft instead of sending it">
                     @(OutboxSendCount == 1 ? "Save reply as draft" : "Save replies as drafts")
                 </button>
@@ -141,9 +141,9 @@
     /// <summary>True while a Yes/No pair on show is still blank; its hint names the blanks.</summary>
     [Parameter] public bool DecisionsMissing { get; set; }
     [Parameter] public string DecisionsMissingHint { get; set; } = "";
-    /// <summary>True when staged document triage needs a project that isn't picked yet.</summary>
-    [Parameter] public bool DocTriageProjectMissing { get; set; }
-    [Parameter] public string DocTriageProjectMissingHint { get; set; } = "";
+    /// <summary>True when something staged (a Relevant Event, document triage) needs a project that isn't picked yet; its hint says which.</summary>
+    [Parameter] public bool ProjectMissing { get; set; }
+    [Parameter] public string ProjectMissingHint { get; set; } = "";
 
     [Parameter] public bool Busy { get; set; }
     /// <summary>What the Apply button says — "Apply", or "Discard email" when discard is all there is.</summary>

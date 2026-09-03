@@ -70,11 +70,29 @@ public static class TriageEmailDisplay
 
 
     /// <summary>Same previewable set as the drawing viewer: PDFs (the in-app viewer) and images.</summary>
-    public static bool IsPreviewable(IntakeAttachment attachment)
+    public static bool IsPreviewable(IntakeAttachment attachment) => IsPdf(attachment) || IsImage(attachment);
+
+    /// <summary>
+    /// A PDF by Graph's content type OR by file name. Senders' systems (a merchant's K8 export, a
+    /// scanner, a forwarded file) often label a .pdf as application/octet-stream — the type alone
+    /// hid the Preview button on real PDFs (2026-09-03), so the extension counts too.
+    /// </summary>
+    public static bool IsPdf(IntakeAttachment attachment) =>
+        (attachment.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase)
+        || HasExtension(attachment.Name, ".pdf");
+
+    /// <summary>An image by content type or by a browser-renderable image extension.</summary>
+    public static bool IsImage(IntakeAttachment attachment) =>
+        (attachment.ContentType ?? "").StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+        || HasExtension(attachment.Name, ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg");
+
+    private static bool HasExtension(string? name, params string[] extensions)
     {
-        var type = attachment.ContentType ?? "";
-        return type.Contains("pdf", StringComparison.OrdinalIgnoreCase)
-            || type.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+        if (string.IsNullOrWhiteSpace(name)) return false;
+        var trimmed = name.Trim();
+        foreach (var extension in extensions)
+            if (trimmed.EndsWith(extension, StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
     }
 
     /// <summary>Ids go in the query string, never the path — Graph ids don't survive a URL path segment.</summary>

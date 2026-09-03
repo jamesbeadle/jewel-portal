@@ -183,10 +183,15 @@
                             }
                             break;
                         case ClaimStage.ReadyToConfirm:
+                            @* Rolling over happens once: only the newest claim offers it. A claim
+                               that already has a later period behind it just confirms — locking
+                               its figures as that later period's baseline. *@
                             <button @onclick="ConfirmClickedAsync" disabled="@busy"
-                                    title="The invoice payment is already recorded — this locks the period as the baseline and rolls into the next"
+                                    title="@(IsLatestClaim(s)
+                                        ? "The invoice payment is already recorded — this locks the period as the baseline and rolls into the next"
+                                        : "The invoice payment is already recorded — this locks the period as the baseline the next claim measures against (it has already been rolled over)")"
                                     class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-4 py-2 hover:bg-accent-hover disabled:bg-surface-field transition shrink-0">
-                                Confirm &amp; roll over
+                                @ConfirmLabel(s)
                             </button>
                             break;
                         case ClaimStage.Confirmed:

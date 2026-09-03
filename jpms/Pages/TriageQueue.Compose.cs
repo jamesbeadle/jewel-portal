@@ -218,16 +218,23 @@ public partial class TriageQueue
     private IReadOnlyList<string> SelectedThreadTags =>
         selected?.ThreadTags is { Count: > 0 } tags ? tags : Array.Empty<string>();
 
-    // True while attachments are ticked for Document Triage but the email has no project.
-    // The project is REQUIRED for a Document Triage send (decision 2026-08-28): a file landing
-    // in the queue with no project is as good as discarded, and the triage bar — where the
-    // email says which job it is — is the cheapest place to set it. Same standing-hint
-    // treatment as the Yes/No pairs (2026-08-27: the disable reason stands next to the button).
-    private bool DocTriageProjectMissing =>
-        selected is not null && stagedDocControlIds.Count > 0 && string.IsNullOrWhiteSpace(triageProjectId);
+    // True while something staged NEEDS the email's project and none is picked. Two stagings
+    // require one: a Relevant Event for the Programme (a programme belongs to a project — with
+    // no project there is no programme to tag it into; reported 2026-09-03 as a UI bug: the
+    // pair took a Yes with "No project" picked and Apply lit up, only refusing on the click)
+    // and attachments ticked for Document Triage (decision 2026-08-28: a file landing in the
+    // queue with no project is as good as discarded). The triage bar — where the email says
+    // which job it is — is the cheapest place to set it. Same standing-hint treatment as the
+    // Yes/No pairs (2026-08-27: the disable reason stands next to the button), and the same
+    // refusals live in ApplyRefusal as belt-and-braces behind the disabled button.
+    private bool ProjectMissing =>
+        selected is not null && string.IsNullOrWhiteSpace(triageProjectId)
+        && (relevantEventStaged == true || stagedDocControlIds.Count > 0);
 
-    private const string DocTriageProjectMissingHint =
-        "Set the Project first — attachments can't go to Document Triage without one";
+    private string ProjectMissingHint =>
+        relevantEventStaged == true
+            ? "Set the Project first — a Relevant Event goes on that project's programme (or answer No)"
+            : "Set the Project first — attachments can't go to Document Triage without one";
 
     private string DecisionsMissingHint =>
         $"Answer {AndJoin(MissingDecisionNames())} — Yes or No — first";

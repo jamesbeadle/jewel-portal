@@ -24,7 +24,8 @@ public partial class TriageQueue
 
     private void OpenEmailAttachmentPreview(IntakeAttachment attachment)
     {
-        var isPdf = (attachment.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase);
+        // Type OR .pdf name — a sender's system may label a real PDF application/octet-stream.
+        var isPdf = TriageEmailDisplay.IsPdf(attachment);
         workspace.OpenPreview(
             new PreviewRequest(attachment.Name, TriageEmailDisplay.AttachmentUrl(selected?.Id ?? "", attachment, inline: true),
                 TriageEmailDisplay.AttachmentUrl(selected?.Id ?? "", attachment, inline: false), isPdf),

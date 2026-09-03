@@ -104,11 +104,17 @@ public partial class ProjectValuation
         if (Selected is null) return Task.CompletedTask;
         showConfirmNudge = false;
         var confirmed = Selected;
+        // Decide BEFORE the store reloads: is this the newest claim, i.e. has nothing been
+        // rolled over from it yet?
+        var rollOver = IsLatestClaim(confirmed);
         return GuardAsync(async () =>
         {
             await Store.ConfirmClaimAsync(ProjectId, confirmed.ValuationClaimId);
             // Roll straight over: offer the next period seeded from the claim just confirmed.
-            OpenNextClaimForm(confirmed);
+            // Only once — a claim that already has a later period behind it was rolled over
+            // when that period was started; the server has just re-based that draft on this
+            // claim's figures, and opening the form again would only create a duplicate.
+            if (rollOver) OpenNextClaimForm(confirmed);
         }, "Couldn't confirm the claim — the server may be restarting. Please try again.");
     }
 
