@@ -22,7 +22,12 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Gate: the suite must pass before anything reaches Azure. See tests.yml.
+  test:
+    uses: ./.github/workflows/tests.yml
+
   build_and_deploy:
+    needs: test
     runs-on: ubuntu-latest
     name: Build and deploy MCP host
     steps:

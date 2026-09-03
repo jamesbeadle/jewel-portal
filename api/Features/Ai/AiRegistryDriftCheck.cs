@@ -117,5 +117,6 @@ public static class AiRegistryDriftCheck
             [RecordType.BuildingControlInspection] = RecordReach.None("GAP: building control shipped 2026-08-27, connector tool pending"),
             [RecordType.Inventory] = RecordReach.None("GAP: inventory shipped 2026-08-28, connector tool pending"),
             [RecordType.SiteInstruction] = RecordReach.None("GAP: site instructions shipped 2026-09-03, connector tool pending"),
+            [RecordType.TenderEnquiry] = RecordReach.None("GAP: get_tender_enquiry_context was removed in 45a6ebf (2026-09-03); the record type stays (persisted as 13, routed by TriageCategories) so it needs a replacement tool"),
         };
 }

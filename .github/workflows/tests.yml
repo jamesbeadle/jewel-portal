@@ -1,0 +1,44 @@
+name: Tests
+
+# The test gate every deploy workflow must pass through.
+#
+# Why this exists: on 2026-09-03 commit 45a6ebf deleted the RecordType.TenderEnquiry entry from
+# AiRegistryDriftCheck.Reachability while the enum member stayed. AiRegistryDriftCheck.Assert()
+# runs at boot and throws on drift, so the isolated worker died on startup and every /api/* route
+# returned 500 until it was found by hand. AiConnectorTests.DriftCheck_passes makes exactly that
+# call and would have failed the build — but no workflow ran the tests, so nothing asked.
+#
+# Called by jpms-swa.yml, jpms-worker.yml and jpms-mcp.yml via workflow_call. Every deploy job
+# declares `needs: test`, so a red suite blocks the deploy rather than reporting after the fact.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Run test suite
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Run tests
+        run: >
+          dotnet test tests/Jewel.JPMS.Tests/Jewel.JPMS.Tests.csproj
+          -c Release
+          --logger "trx;LogFileName=test-results.trx"
+          --results-directory ./test-results
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./test-results
+          retention-days: 14
