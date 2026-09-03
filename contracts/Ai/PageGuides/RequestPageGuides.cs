@@ -43,22 +43,5 @@ public static class RequestPageGuides
             + "RFIs with list_requests (per project), resolve references with find_by_reference, and "
             + "navigate_to a row's detail page. Nothing is created or edited here — raise or work an "
             + "RFI on its project's register, its detail page, or the Control Centre."),
-
-        new("/estimating-queue", "Estimating queue",
-            "The QS's estimating queue — leads currently at the Tendering or Feasibility Review "
-            + "stage, ordered by capture date, oldest first. A person reads the leads table "
-            + "(Reference, Contact, Site, Source, Value, Stage badge) and exports it to Excel. "
-            + "There is nothing to create or edit on the page itself, no tool reads leads, and no "
-            + "dialog opens here — you can only navigate_to this page and describe what the user "
-            + "sees. Lead capture, qualification and won/lost outcomes are handled elsewhere in the "
-            + "leads pipeline."),
-
-        new("/nurture", "Nurture",
-            "The CRM nurture list — leads at the Lost or Nurture stage, kept warm for future "
-            + "opportunities, newest first; the header notes the lifecycle re-opens when a lead is "
-            + "contacted. A person reads the same leads table as the estimating queue and exports it "
-            + "to Excel. Nothing is created or edited here, no tool reads leads, and no dialog opens "
-            + "here — you can only navigate_to this page. Marking a lead lost or won happens "
-            + "elsewhere in the leads pipeline."),
     };
 }

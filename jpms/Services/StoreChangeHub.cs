@@ -21,7 +21,6 @@ public sealed class StoreChangeHub : IDisposable
     public StoreChangeHub(
         IUserDirectory directory,
         IAccessRequestStore accessRequests,
-        ILeadStore leads,
         ISubcontractorStore subcontractors,
         IRateLibrary rates,
         IHsRegister hs,
@@ -38,7 +37,6 @@ public sealed class StoreChangeHub : IDisposable
     {
         Track(h => directory.OnChange += h, h => directory.OnChange -= h);
         Track(h => accessRequests.OnChange += h, h => accessRequests.OnChange -= h);
-        Track(h => leads.OnChange += h, h => leads.OnChange -= h);
         Track(h => subcontractors.OnChange += h, h => subcontractors.OnChange -= h);
         Track(h => rates.OnChange += h, h => rates.OnChange -= h);
         Track(h => hs.OnChange += h, h => hs.OnChange -= h);

@@ -1,0 +1,545 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html{color-scheme:dark}body{margin:0}img{max-width:100%}</style>
+<title>JPMS Navigation Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --canvas:#0B0B0C;
+    --surface:#161719;
+    --raised:#1F2024;
+    --field:#2A2D31;
+    --line:#232427;
+    --line-strong:#34373B;
+    --content:#FFFFFF;
+    --muted:#C4C8CE;
+    --subtle:#8A9099;
+    --faint:#5A5F68;
+    --accent:#57E08A;
+    --info:#4691F6;
+    --warn:#E0B457;
+    --negative:#FF4D4D;
+    --sans:'Poppins',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--canvas);
+    color:var(--muted);
+    font-family:var(--sans);
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:48px 24px 96px}
+
+  /* ---- header ---- */
+  header{border-bottom:1px solid var(--line);padding-bottom:32px;margin-bottom:36px}
+  .eyebrow{
+    font-size:11px;text-transform:uppercase;letter-spacing:.14em;
+    font-weight:600;color:var(--subtle);margin:0 0 12px;
+  }
+  h1{
+    font-size:clamp(30px,4.6vw,46px);line-height:1.08;margin:0 0 14px;
+    color:var(--content);font-weight:600;letter-spacing:-.02em;text-wrap:balance;
+  }
+  .lede{max-width:64ch;margin:0;color:var(--muted)}
+  .lede strong{color:var(--content);font-weight:500}
+  .counts{display:flex;flex-wrap:wrap;gap:28px;margin-top:28px}
+  .count b{
+    display:block;font-size:26px;color:var(--content);font-weight:600;
+    font-variant-numeric:tabular-nums;line-height:1.2;
+  }
+  .count span{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--subtle)}
+
+  /* ---- clamp notice ---- */
+  .notice{
+    display:flex;gap:14px;align-items:flex-start;
+    border-left:2px solid var(--warn);background:var(--surface);
+    padding:16px 18px;border-radius:0 6px 6px 0;margin:0 0 40px;
+  }
+  .notice p{margin:0;font-size:14px}
+  .notice .tag{
+    font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--warn);white-space:nowrap;padding-top:3px;
+  }
+
+  /* ---- rail strip ---- */
+  .rail{
+    background:var(--surface);border:1px solid var(--line);border-radius:8px;
+    padding:20px 22px;margin-bottom:44px;
+  }
+  .rail h2{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--subtle);margin:0 0 16px;font-weight:600}
+  .rail ol{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+  .rail li{
+    font-size:13px;color:var(--muted);background:var(--raised);
+    border:1px solid var(--line-strong);border-radius:4px;padding:5px 11px;
+  }
+  .rail li.home{color:var(--accent);border-color:rgba(87,224,138,.4)}
+  .rail li.solo{color:var(--info);border-color:rgba(70,145,246,.35)}
+  .rail .sep{align-self:center;color:var(--faint);font-size:12px;padding:0 2px}
+
+  /* ---- section headings ---- */
+  h2.section{
+    font-size:12px;text-transform:uppercase;letter-spacing:.14em;color:var(--subtle);
+    font-weight:600;margin:0 0 18px;padding-bottom:10px;border-bottom:1px solid var(--line);
+  }
+  .block{margin-bottom:48px}
+
+  /* ---- folder grid ---- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;align-items:start}
+  .folder{
+    background:var(--surface);border:1px solid var(--line);border-radius:8px;
+    padding:18px 20px 16px;
+  }
+  .folder > h3{
+    display:flex;align-items:baseline;gap:10px;margin:0 0 4px;
+    font-size:16px;font-weight:600;color:var(--content);
+  }
+  .folder > h3 .n{
+    font-family:var(--mono);font-size:11px;color:var(--faint);font-weight:400;
+  }
+  .folder > p.note{margin:0 0 14px;font-size:12.5px;color:var(--subtle);line-height:1.45}
+  .rows{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:11px}
+  .rows > li{border-top:1px solid var(--line);padding-top:11px}
+  .rows > li:first-child{border-top:0;padding-top:0}
+  .name{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    color:var(--content);font-size:14px;font-weight:500;
+  }
+  code{
+    font-family:var(--mono);font-size:11.5px;color:var(--muted);
+    background:var(--field);border-radius:3px;padding:1px 6px;
+    display:inline-block;word-break:break-word;
+  }
+  .path{margin-top:4px}
+  .scope{
+    font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    padding:2px 6px;border-radius:3px;line-height:1.5;
+  }
+  .scope.project{color:var(--accent);background:rgba(87,224,138,.1);border:1px solid rgba(87,224,138,.28)}
+  .scope.company{color:var(--info);background:rgba(70,145,246,.1);border:1px solid rgba(70,145,246,.28)}
+  .kids{list-style:none;margin:7px 0 0;padding:0 0 0 14px;border-left:1px solid var(--line-strong);
+    display:flex;flex-direction:column;gap:5px}
+  .kids li{font-size:12.5px;color:var(--subtle)}
+  .kids li b{color:var(--muted);font-weight:500}
+  .kids code{font-size:11px;background:transparent;padding:0;color:var(--faint)}
+
+  /* ---- legend ---- */
+  .legend{display:flex;flex-wrap:wrap;gap:20px;margin:0 0 26px;font-size:12.5px;color:var(--subtle)}
+  .legend span{display:flex;align-items:center;gap:7px}
+
+  /* ---- flat tables ---- */
+  .flat{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:14px}
+  .flat li{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:13px 16px}
+  .flat .name{font-size:14px}
+  .flat p{margin:5px 0 0;font-size:12.5px;color:var(--subtle)}
+  .flat li.orphan{border-color:rgba(255,77,77,.28)}
+  .flat li.orphan .name{color:#FF8A8A}
+
+  footer{border-top:1px solid var(--line);margin-top:56px;padding-top:20px;font-size:12.5px;color:var(--faint)}
+  footer code{background:transparent;padding:0;color:var(--subtle)}
+</style>
+
+
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="eyebrow">Jewel Bespoke Build · JPMS portal</p>
+  <h1>Every view on the rail, and everything behind it</h1>
+  <p class="lede">The side nav is a single catalog — <strong>Home</strong>, the project picker, ten collapsible folders, then four folderless rows at the foot. Rows marked <strong>project</strong> resolve their <code>{project}</code> template against whatever the picker has selected; the rest are company-wide. Read from <code>SidebarFolders.cs</code>, <code>DesktopNavigation.cs</code> and every <code>@page</code> route in <code>jpms/Pages</code>.</p>
+  <div class="counts">
+    <div class="count"><b>10</b><span>Folders</span></div>
+    <div class="count"><b>63</b><span>Rail destinations</span></div>
+    <div class="count"><b>89</b><span>Page components</span></div>
+    <div class="count"><b>99</b><span>Routes in total</span></div>
+  </div>
+</header>
+
+<div class="notice">
+  <span class="tag">Nav clamp</span>
+  <p>Since the 2026-08-11 decision every row below is gated to <strong>Managing Director and Finance Director</strong>, with administrators bypassing the gate and seeing everything. Weekly Cashflow adds <strong>Accounts</strong> — the one deliberate exception. The Admin folder's first four rows are administrators only. Every other role signs in and sees <strong>Home alone</strong>; API permissions are untouched by the clamp, so their pages remain reachable by URL.</p>
+</div>
+
+<section class="rail">
+  <h2>The rail, in order</h2>
+  <ol>
+    <li class="home">Home</li>
+    <li class="sep">│ picker │</li>
+    <li>Project</li>
+    <li>Subcontractor</li>
+    <li>Supplier</li>
+    <li>Internal</li>
+    <li>Time</li>
+    <li>Finance</li>
+    <li>Financial Reports</li>
+    <li>Xero</li>
+    <li>Audit</li>
+    <li>Admin</li>
+    <li class="sep">│ foot │</li>
+    <li class="solo">Control Centre</li>
+    <li class="solo">Document Triage</li>
+    <li class="solo">Xero Cost Allocation</li>
+    <li class="solo">Valuation Reports</li>
+  </ol>
+</section>
+
+<div class="block">
+  <h2 class="section">Above the folders</h2>
+  <ul class="flat">
+    <li>
+      <div class="name">Home <span class="scope company">company</span></div>
+      <div class="path"><code>/dashboard</code></div>
+      <p>Role-dependent: administrators get AdminHome, everyone else RoleHome. Site Manager, Foreman and Site Operative get the My&nbsp;Day workspace rendered inline. Tiles link out to <code>/rfis</code>, <code>/projects</code> and the triage backlog.</p>
+    </li>
+    <li>
+      <div class="name">Project picker</div>
+      <div class="path"><code>— dropdown, not a route</code></div>
+      <p>Recently opened, then the full list in work order. Carries the per-user <b>Show completed</b> toggle, and a <b>View all projects</b> link to <code>/projects</code>. Only rendered when the role's rail actually contains a project-scoped row.</p>
+    </li>
+    <li>
+      <div class="name">Sign out</div>
+      <div class="path"><code>/logout</code></div>
+      <p>Foot of the rail, under the signed-in name and email.</p>
+    </li>
+  </ul>
+</div>
+
+<div class="block">
+  <h2 class="section">The ten folders</h2>
+  <div class="legend">
+    <span><span class="scope project">project</span> follows the picked project</span>
+    <span><span class="scope company">company</span> whole-company route</span>
+    <span style="color:var(--faint)">indented items are reached from the row above, not from the rail</span>
+  </div>
+  <div class="grid">
+
+    <div class="folder">
+      <h3><span class="n">01</span> Project</h3>
+      <p class="note">The picked job, led by the record chain: Request → RFI → Variation. Its first row is where a bare project URL lands.</p>
+      <ul class="rows">
+        <li>
+          <div class="name">RFIs <span class="scope project">project</span></div>
+          <div class="path"><code>/projects/{id}/requests</code></div>
+          <ul class="kids">
+            <li><b>Register tabs</b> <code>/requests/all · /general · /rfis</code></li>
+            <li><b>Request detail</b> <code>/requests/view/{requestId}</code> — Request / official pane via <code>?tab=official</code></li>
+          </ul>
+        </li>
+        <li>
+          <div class="name">Variation Orders <span class="scope project">project</span></div>
+          <div class="path"><code>/projects/{id}/variations</code></div>
+          <ul class="kids">
+            <li><b>Variation detail</b> <code>/variations/{variationOrderId}</code></li>
+            <li><b>Legacy routes</b> <code>/requests/variations</code> and <code>/voq/{id}</code>, same pages</li>
+          </ul>
+        </li>
+        <li>
+          <div class="name">Architect's Instructions <span class="scope project">project</span></div>
+          <div class="path"><code>/projects/{id}/architect-instructions</code></div>
+        </li>
+        <li>
+          <div class="name">Valuation Report Snapshots <span class="scope project">project</span></div>
+          <div class="path"><code>/projects/{id}/valuation-snapshots</code></div>
+        </li>
+        <li>
+          <div class="name">Drawings <span class="scope project">project</span></div>
+          <div class="path"><code>/projects/{id}/drawings</code></div>
+          <ul class="kids">
+            <li><b>Drawing detail</b> <code>/drawings/{drawingId}</code></li>
+            <li><b>Ambiguous revisions</b> <code>/drawings/ambiguous</code></li>
+          </ul>
+        </li>
+        <li><div class="name">Programme <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/programme</code></div></li>
+        <li><div class="name">Calendar <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/calendar</code></div></li>
+        <li><div class="name">To-do <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/todos</code></div></li>
+        <li><div class="name">Progress <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/progress</code></div></li>
+        <li><div class="name">Defects <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/defects</code></div></li>
+        <li><div class="name">Inventory <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/inventory</code></div></li>
+        <li>
+          <div class="name">Building Control <span class="scope project">project</span></div>
+          <div class="path"><code>/projects/{id}/building-control</code></div>
+          <ul class="kids"><li><b>Inspection detail</b> <code>/building-control/inspections/{id}</code></li></ul>
+        </li>
+        <li><div class="name">Communications <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/communications</code></div></li>
+        <li><div class="name">Useful Information <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/useful-information</code></div></li>
+        <li>
+          <div class="name">Project Settings <span class="scope project">project</span></div>
+          <div class="path"><code>/projects/{id}/settings</code></div>
+          <ul class="kids"><li>Absorbs the retired <code>/setup</code>, <code>/financials-setup</code> and <code>/operations-setup</code> pages, which now redirect here</li></ul>
+        </li>
+      </ul>
+    </div>
+
+    <div class="folder">
+      <h3><span class="n">02</span> Subcontractor</h3>
+      <p class="note">Inviting bids, placing the orders, and the correspondence tagged <code>JPMS/SubComms</code> at triage.</p>
+      <ul class="rows">
+        <li>
+          <div class="name">Bid Package Invites <span class="scope project">project</span></div>
+          <div class="path"><code>/projects/{id}/bid-package-invites</code></div>
+          <ul class="kids"><li><b>Package detail</b> <code>/bid-package-invites/{bidPackageId}</code></li></ul>
+        </li>
+        <li>
+          <div class="name">Work Orders <span class="scope project">project</span></div>
+          <div class="path"><code>/projects/{id}/work-orders</code></div>
+          <ul class="kids"><li><b>Printable PO</b> <code>/work-orders/{workOrderId}/po</code></li></ul>
+        </li>
+        <li><div class="name">Communications <span class="scope company">company</span></div><div class="path"><code>/subcontractors/communications</code></div></li>
+        <li><div class="name">Chasers <span class="scope company">company</span></div><div class="path"><code>/subcontractors/communications/chaser</code></div></li>
+        <li><div class="name">Info Requests <span class="scope company">company</span></div><div class="path"><code>/subcontractors/communications/info-request</code></div></li>
+        <li><div class="name">H&amp;S <span class="scope company">company</span></div><div class="path"><code>/subcontractors/communications/h-s</code></div></li>
+      </ul>
+    </div>
+
+    <div class="folder">
+      <h3><span class="n">03</span> Supplier</h3>
+      <p class="note">Split from Subcontractor on 2026-08-27 — materials and goods, tagged <code>JPMS/SupComms</code>.</p>
+      <ul class="rows">
+        <li><div class="name">Communications <span class="scope company">company</span></div><div class="path"><code>/suppliers/communications</code></div></li>
+        <li><div class="name">Materials <span class="scope company">company</span></div><div class="path"><code>/suppliers/communications/materials</code></div></li>
+        <li><div class="name">Finishes <span class="scope company">company</span></div><div class="path"><code>/suppliers/communications/finishes</code></div></li>
+      </ul>
+    </div>
+
+    <div class="folder">
+      <h3><span class="n">04</span> Internal</h3>
+      <p class="note">The company's own running lists, and the staff mail tagged <code>JPMS/IntComms</code>.</p>
+      <ul class="rows">
+        <li>
+          <div class="name">Todo <span class="scope company">company</span></div>
+          <div class="path"><code>/todos</code></div>
+          <ul class="kids"><li><b>To-do detail</b> <code>/todos/{todoItemId}</code></li></ul>
+        </li>
+        <li>
+          <div class="name">Tender Enquiries <span class="scope company">company</span></div>
+          <div class="path"><code>/tender-enquiries</code></div>
+          <ul class="kids"><li><b>Enquiry detail</b> <code>/tender-enquiries/{tenderEnquiryId}</code></li></ul>
+        </li>
+        <li>
+          <div class="name">Directory <span class="scope company">company</span></div>
+          <div class="path"><code>/directory</code></div>
+          <ul class="kids">
+            <li><b>Record detail</b> <code>/directory/{subcontractorId}</code></li>
+            <li>Its tables still link out to the standalone <code>/clients</code> and <code>/architects</code> pages</li>
+          </ul>
+        </li>
+        <li><div class="name">Communications <span class="scope company">company</span></div><div class="path"><code>/internal/communications</code></div></li>
+        <li><div class="name">Site Instructions <span class="scope company">company</span></div><div class="path"><code>/internal/communications/site-instruction</code></div></li>
+        <li><div class="name">Registers <span class="scope company">company</span></div><div class="path"><code>/registers</code></div></li>
+        <li><div class="name">Policies <span class="scope company">company</span></div><div class="path"><code>/policies</code></div></li>
+      </ul>
+    </div>
+
+    <div class="folder">
+      <h3><span class="n">05</span> Time</h3>
+      <p class="note">Labour on the picked site, and the company-wide worker registry behind it.</p>
+      <ul class="rows">
+        <li><div class="name">Labour overview <span class="scope company">company</span></div><div class="path"><code>/labour/overview</code></div></li>
+        <li><div class="name">Labour <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/labour</code></div></li>
+        <li><div class="name">Workers <span class="scope company">company</span></div><div class="path"><code>/labour/workers</code></div></li>
+        <li><div class="name">Xero mapping <span class="scope company">company</span></div><div class="path"><code>/labour/xero-mapping</code></div></li>
+      </ul>
+    </div>
+
+    <div class="folder">
+      <h3><span class="n">06</span> Finance</h3>
+      <p class="note">The money that is worked rather than read — the cost ledger, the spend that feeds it, and the coding setup.</p>
+      <ul class="rows">
+        <li><div class="name">Financials <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/financials</code></div></li>
+        <li><div class="name">WO Allocation <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/work-order-allocation</code></div></li>
+        <li><div class="name">Payment Certificates <span class="scope company">company</span></div><div class="path"><code>/finance/payment-certificates</code></div></li>
+        <li>
+          <div class="name">Cost Codes <span class="scope company">company</span></div>
+          <div class="path"><code>/cost-codes</code></div>
+          <ul class="kids"><li>Sibling tab of Rates under the <b>Setup</b> workspace section</li></ul>
+        </li>
+        <li>
+          <div class="name">Rates <span class="scope company">company</span></div>
+          <div class="path"><code>/rate-library</code></div>
+          <ul class="kids"><li><b>Stale rates</b> <code>/rate-library/stale</code></li></ul>
+        </li>
+      </ul>
+    </div>
+
+    <div class="folder">
+      <h3><span class="n">07</span> Financial Reports</h3>
+      <p class="note">The money that is read. Weekly Cashflow is the one row Accounts can see.</p>
+      <ul class="rows">
+        <li><div class="name">Project Cashflow <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/cashflow</code></div></li>
+        <li>
+          <div class="name">Cash Forecast <span class="scope company">company</span></div>
+          <div class="path"><code>/finance/cash-forecast</code></div>
+          <ul class="kids"><li>Retired slugs <code>/finance</code> and <code>/finance/cash-summary</code> land on the same page</li></ul>
+        </li>
+        <li><div class="name">Weekly Cashflow <span class="scope company">company</span></div><div class="path"><code>/finance/weekly-cashflow</code></div></li>
+        <li><div class="name">Profit Summary <span class="scope company">company</span></div><div class="path"><code>/finance/profit-summary</code></div></li>
+      </ul>
+    </div>
+
+    <div class="folder">
+      <h3><span class="n">08</span> Xero</h3>
+      <p class="note">Every screen that reads or feeds the accounts system — one home per screen since 2026-08-11.</p>
+      <ul class="rows">
+        <li>
+          <div class="name">Xero Transactions <span class="scope company">company</span></div>
+          <div class="path"><code>/finance/xero</code></div>
+          <ul class="kids"><li>Sibling tab of Allocation under the <b>Xero</b> workspace section</li></ul>
+        </li>
+        <li><div class="name">Aged Receivables <span class="scope company">company</span></div><div class="path"><code>/finance/aged-receivables</code></div></li>
+        <li><div class="name">Aged Payables <span class="scope company">company</span></div><div class="path"><code>/finance/aged-payables</code></div></li>
+      </ul>
+    </div>
+
+    <div class="folder">
+      <h3><span class="n">09</span> Audit</h3>
+      <p class="note">Who did what — review rather than day-to-day work, so it sits near the foot.</p>
+      <ul class="rows">
+        <li><div class="name">Reconciliation Audit <span class="scope project">project</span></div><div class="path"><code>/projects/{id}/reconciliation-audit</code></div></li>
+        <li><div class="name">System Audit Trail <span class="scope company">company</span></div><div class="path"><code>/audit</code></div></li>
+        <li><div class="name">Agent Activity <span class="scope company">company</span></div><div class="path"><code>/agents/activity</code></div></li>
+        <li>
+          <div class="name">AI Connections <span class="scope company">company</span></div>
+          <div class="path"><code>/settings/ai-connections</code></div>
+          <ul class="kids"><li>Every signed-in user can open this directly; only the nav row is clamped</li></ul>
+        </li>
+      </ul>
+    </div>
+
+    <div class="folder">
+      <h3><span class="n">10</span> Admin</h3>
+      <p class="note">Running the system itself. The first four rows are administrators only; the three AI rows are directors too.</p>
+      <ul class="rows">
+        <li>
+          <div class="name">Users <span class="scope company">company</span></div>
+          <div class="path"><code>/admin/users</code></div>
+          <ul class="kids"><li><b>Revoked</b> <code>/admin/users/revoked</code> — sibling tab, no rail row of its own</li></ul>
+        </li>
+        <li><div class="name">System <span class="scope company">company</span></div><div class="path"><code>/admin/system</code></div></li>
+        <li><div class="name">Integrations <span class="scope company">company</span></div><div class="path"><code>/admin/integrations</code></div></li>
+        <li><div class="name">Trades <span class="scope company">company</span></div><div class="path"><code>/admin/trades</code></div></li>
+        <li><div class="name">AI Agents <span class="scope company">company</span></div><div class="path"><code>/admin/agents</code></div></li>
+        <li><div class="name">AI Skills <span class="scope company">company</span></div><div class="path"><code>/admin/skills</code></div></li>
+        <li><div class="name">AI Actions <span class="scope company">company</span></div><div class="path"><code>/admin/ai-actions</code></div></li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<div class="block">
+  <h2 class="section">Folderless rows, at the foot of the rail</h2>
+  <ul class="flat">
+    <li>
+      <div class="name">Control Centre <span class="scope company">company</span></div>
+      <div class="path"><code>/control-centre</code></div>
+      <p>The mailbox intake queue and router for all correspondence across every project. Legacy slug <code>/requests/triage</code> lands here.</p>
+    </li>
+    <li>
+      <div class="name">Document Triage <span class="scope company">company</span></div>
+      <div class="path"><code>/document-triage</code></div>
+      <p>The attachment queue the Control Centre feeds — filed out to Drawings, Payment Certificates or subcontractor records. Legacy slug <code>/document-control</code>.</p>
+    </li>
+    <li>
+      <div class="name">Xero Cost Allocation <span class="scope company">company</span></div>
+      <div class="path"><code>/finance/allocation</code></div>
+      <p>Distributing allocated purchase lines to cost centres. Standing work, so it left the Xero folder in August.</p>
+    </li>
+    <li>
+      <div class="name">Valuation Reports <span class="scope project">project</span></div>
+      <div class="path"><code>/projects/{id}/valuation</code></div>
+      <p>The picked project's live valuation report — the flagship output, elevated out of its folder to the top level.</p>
+    </li>
+  </ul>
+</div>
+
+<div class="block">
+  <h2 class="section">Reachable, but not from the rail</h2>
+  <ul class="flat">
+    <li>
+      <div class="name">All projects</div>
+      <div class="path"><code>/projects</code></div>
+      <p>From the picker's <b>View all projects</b> link and the Home tiles.</p>
+    </li>
+    <li>
+      <div class="name">Project landing redirect</div>
+      <div class="path"><code>/projects/{id}</code></div>
+      <p>Bare project URL — redirects to the first project-scoped row the role can see, i.e. RFIs.</p>
+    </li>
+    <li>
+      <div class="name">RFI dashboard (all projects)</div>
+      <div class="path"><code>/rfis</code></div>
+      <p>From the Home tiles <b>Open RFIs</b> / <b>Overdue RFIs</b> and the Open Requests panel.</p>
+    </li>
+    <li>
+      <div class="name">Clients</div>
+      <div class="path"><code>/clients</code></div>
+      <p>Predates the merged Directory; still linked from the Directory's client table.</p>
+    </li>
+    <li>
+      <div class="name">Architects</div>
+      <div class="path"><code>/architects</code></div>
+      <p>Same story — linked from the Directory's architect table and from the Clients page.</p>
+    </li>
+    <li>
+      <div class="name">My Day</div>
+      <div class="path"><code>/my-day</code></div>
+      <p>Retired page, redirects to <code>/dashboard</code>, where the worker's day now renders inline.</p>
+    </li>
+  </ul>
+</div>
+
+<div class="block">
+  <h2 class="section">Orphans — removed 3 September 2026</h2>
+  <ul class="flat">
+    <li class="orphan">
+      <div class="name">Estimating queue · Nurture · Sales analytics</div>
+      <div class="path"><code>/estimating-queue</code> · <code>/nurture</code> · <code>/sales-analytics</code></div>
+      <p>The CRM front end: three routed pages with no rail row and no inbound link anywhere in the app. Deleted along with their plumbing — <code>LeadsTable</code>, <code>LeadsBySourceTable</code>, <code>LeadStageBadge</code>, <code>ILeadStore</code>/<code>HttpLeadStore</code>, <code>Features/Leads</code>, the DI and route registrations, and their three AI page guides. 648 lines.</p>
+      <p><strong style="color:var(--accent)">Kept:</strong> the Leads API (<code>api/Features/Leads</code>, ~20 endpoints) and the <code>list_leads</code> connector tool. The pipeline has no front door now — that is a decision to revisit, not an accident.</p>
+    </li>
+  </ul>
+</div>
+
+<div class="block">
+  <h2 class="section">Outside the rail entirely</h2>
+  <ul class="flat">
+    <li>
+      <div class="name">Subcontractor portal</div>
+      <div class="path"><code>/portal</code> · <code>/portal/work-orders/{workOrderId}</code></div>
+      <p>Where a Subcontractor account lands at sign-in instead of the dashboard.</p>
+    </li>
+    <li>
+      <div class="name">Client portal</div>
+      <div class="path"><code>/client</code> · <code>/client/requests/{id}</code> · <code>/client/variations/{id}</code></div>
+      <p>Where a Client account lands at sign-in.</p>
+    </li>
+    <li>
+      <div class="name">Authentication</div>
+      <div class="path"><code>/</code> · <code>/login</code> · <code>/logout</code> · <code>/forgot-password</code> · <code>/set-password</code></div>
+      <p>No rail; the root path is the login page.</p>
+    </li>
+    <li>
+      <div class="name">Connector authorisation</div>
+      <div class="path"><code>/connect/authorize</code></div>
+      <p>The OAuth consent step when a user connects their own AI to the portal's MCP surface.</p>
+    </li>
+  </ul>
+</div>
+
+<footer>
+  Compiled 3 September 2026 from <code>jpms/Services/Navigation/SidebarFolders.cs</code>, <code>DesktopNavigation.cs</code>, <code>WorkspaceSections.cs</code> and the <code>@page</code> directives under <code>jpms/Pages</code>. Route counts include legacy aliases and redirect stubs.
+</footer>
+
+</div>
+
+</body>
+</html>

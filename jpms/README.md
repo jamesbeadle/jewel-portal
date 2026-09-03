@@ -23,9 +23,6 @@ The whole site map's Phase-1 internal scope is shipped as a navigable shell with
 | `/dashboard` | — | Role-aware home (Admin / placeholder / request-access) |
 | `/leads` + `/leads/{id}/{tab}` | 00 CRM | Lead pipeline with seven tabs (overview / qualification / site-visits / info-chase / bid-decision / proposal / outcome) |
 | `/leads/new` | 00 CRM | Capture-lead form |
-| `/estimating-queue` | 00 CRM | QS prioritised queue |
-| `/nurture` | 00 CRM | Lost leads kept warm |
-| `/sales-analytics` | 00 CRM | Source attribution + win rate |
 | `/projects` + `/projects/{id}` | All | Portfolio + project hub with tabbed sub-areas |
 | `/projects/{id}/drawings` (+`/{drawingId}`) | 01 Drawings | Drawing register, upload, revision history |
 | `/projects/{id}/boq` | 02 BoQ | Line items, direct add, totals |

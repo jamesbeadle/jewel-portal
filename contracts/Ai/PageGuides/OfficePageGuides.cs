@@ -207,11 +207,5 @@ public static class OfficePageGuides
             + "category, worker to Xero contact, and the account codes labour lands on. Finance "
             + "sets a mapping with a from-date; the labour coding runs read whatever is effective. "
             + "You navigate_to only — no dialog or page action is registered here."),
-
-        new("/sales-analytics", "Sales analytics",
-            "The CRM's sales analytics page — source attribution and win rate by channel, drawn "
-            + "from the lead store: three stat tiles (Total leads, Won, Win rate) and a "
-            + "leads-by-source table. It is read-only with no controls. You navigate_to only; "
-            + "leads themselves are not created or edited here."),
     };
 }

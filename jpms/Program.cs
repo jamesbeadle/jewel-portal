@@ -24,7 +24,6 @@ using Jewel.JPMS.Features.Drawings;
 using Jewel.JPMS.Features.Hs;
 using Jewel.JPMS.Features.Inventory;
 using Jewel.JPMS.Features.Lads;
-using Jewel.JPMS.Features.Leads;
 using Jewel.JPMS.Features.Mobilisation;
 using Jewel.JPMS.Features.Parties;
 using Jewel.JPMS.Features.Platform;
@@ -68,7 +67,6 @@ builder.Services.AddScoped<IErrorSink>(services => services.GetRequiredService<E
 builder.Services.AddCqrsTransport();
 builder.Services.AddDirectoryReadModels();
 builder.Services.AddProjectsReadModels();
-builder.Services.AddLeadsReadModels();
 builder.Services.AddBoqReadModels();
 builder.Services.AddRatesReadModels();
 builder.Services.AddDrawingsReadModels();
@@ -99,7 +97,6 @@ builder.Services.AddRecordLinksReadModels();
 builder.Services.AddScoped<IUserDirectory, HttpUserDirectory>();
 builder.Services.AddScoped<IAccessRequestStore, HttpAccessRequestStore>();
 
-builder.Services.AddScoped<ILeadStore, HttpLeadStore>();
 builder.Services.AddScoped<IRateLibrary, HttpRateLibrary>();
 builder.Services.AddScoped<IBoqStore, HttpBoqStore>();
 builder.Services.AddScoped<IDrawingStore, HttpDrawingStore>();
@@ -180,7 +177,6 @@ using (var routeScope = app.Services.CreateScope())
     ProjectsRouteRegistration.RegisterProjectsRoutes(queryRoutes, commandRoutes);
     ProjectContractsRouteRegistration.RegisterProjectContractsRoutes(queryRoutes, commandRoutes);
     AiRouteRegistration.RegisterAiRoutes(queryRoutes, commandRoutes);
-    LeadsRouteRegistration.RegisterLeadsRoutes(queryRoutes, commandRoutes);
     BoqRouteRegistration.RegisterBoqRoutes(queryRoutes, commandRoutes);
     RatesRouteRegistration.RegisterRatesRoutes(queryRoutes, commandRoutes);
     DrawingsRouteRegistration.RegisterDrawingsRoutes(queryRoutes, commandRoutes);

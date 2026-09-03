@@ -379,9 +379,9 @@ ageing toggle due date ↔ invoice date; Refresh, Excel export. Read-only.
   is code). **AI Skills** — `/admin/skills`: versioned markdown skills, in
   force on the assistant's next message, no deploy; each save is a new version.
 
-## CRM remnants
+## Off-rail pages
 
-`/estimating-queue` (leads at Tendering/Feasibility, oldest first), `/nurture`
-(Lost/Nurture leads kept warm), `/sales-analytics` (source attribution, win
-rate), `/rfis` (company-wide read-only RFI register, overdue day-counts in
-red). `/dashboard` (alias `/my-day`) is the role-aware home.
+`/rfis` (company-wide read-only RFI register, overdue day-counts in red).
+`/dashboard` (alias `/my-day`) is the role-aware home. The CRM front end
+(`/estimating-queue`, `/nurture`, `/sales-analytics`) was removed on
+2026-09-03 — the leads API and the `list_leads` tool remain, with no page.
