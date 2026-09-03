@@ -22,19 +22,16 @@
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
-        <input class="field" type="text" placeholder="name@example.com; other@example.com"
-               value="@toField" @oninput="e => toField = e.Value?.ToString() ?? string.Empty" />
+        <RecipientInput Value="@toField" ValueChanged="value => toField = value" />
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
-            <input class="field" type="text" placeholder="Separated by ;"
-                   value="@ccField" @oninput="e => ccField = e.Value?.ToString() ?? string.Empty" />
+            <RecipientInput Value="@ccField" ValueChanged="value => ccField = value" Placeholder="Copied recipients" />
         </div>
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
-            <input class="field" type="text" placeholder="Separated by ;"
-                   value="@bccField" @oninput="e => bccField = e.Value?.ToString() ?? string.Empty" />
+            <RecipientInput Value="@bccField" ValueChanged="value => bccField = value" Placeholder="Blind-copied recipients" />
         </div>
     </div>
     <div>

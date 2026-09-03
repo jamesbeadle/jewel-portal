@@ -28,8 +28,7 @@
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
-        <input class="field" type="text" placeholder="name@example.com; other@example.com"
-               value="@toField" @oninput="e => { toField = e.Value?.ToString() ?? string.Empty; _ = NotifyEditedAsync(); }" />
+        <RecipientInput Value="@toField" ValueChanged="value => { toField = value; _ = NotifyEditedAsync(); }" />
     </div>
     <div>
         <div class="flex items-center justify-between">
@@ -40,15 +39,13 @@
                         @onclick="() => showBcc = true">Bcc</button>
             }
         </div>
-        <input class="field" type="text" placeholder="Copied recipients — separated by ;"
-               value="@ccField" @oninput="e => { ccField = e.Value?.ToString() ?? string.Empty; _ = NotifyEditedAsync(); }" />
+        <RecipientInput Value="@ccField" ValueChanged="value => { ccField = value; _ = NotifyEditedAsync(); }" Placeholder="Copied recipients" />
     </div>
     @if (showBcc)
     {
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
-            <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
-                   value="@bccField" @oninput="e => { bccField = e.Value?.ToString() ?? string.Empty; _ = NotifyEditedAsync(); }" />
+            <RecipientInput Value="@bccField" ValueChanged="value => { bccField = value; _ = NotifyEditedAsync(); }" Placeholder="Blind-copied recipients" />
         </div>
     }
     <div>

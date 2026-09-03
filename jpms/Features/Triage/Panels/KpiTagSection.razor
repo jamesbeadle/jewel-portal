@@ -1,0 +1,201 @@
+@namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Contracts.Kpi
+@using Jewel.JPMS.Features.Kpi
+@inject KpiPeopleReadModel People
+@inject KpiReadModel Kpis
+@inject ICommandSender Commands
+@implements IDisposable
+
+@*
+    The Internal pane's KPI tagging section (2026-09-03, James: "no way to tag to an existing
+    KPI"): everyone already on the KPI list — portal users and name-only people alike — one row
+    each, "Tag as KPI" staging the mark exactly as the Actions form does (a StagedSystemAction the
+    email's Apply runs; NO Outlook tag, the register is administrators-only). Expand a row to read
+    what is already filed under that person, like the category registers. Administrators only —
+    the pane renders it for no other role. New people are added from the Actions form ("Someone
+    else…") or Admin → KPI emails.
+*@
+
+<div class="rounded-lg border border-line">
+    <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-left"
+            title="Everyone on the KPI list — pick to file this email as a KPI under them (administrators only; nothing is tagged in the mailbox)"
+            @onclick="() => open = !open">
+        <svg class="@("w-3.5 h-3.5 text-content-subtle transition-transform shrink-0" + (open ? " rotate-90" : ""))"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+        <span class="text-sm font-medium text-content flex-1">KPI people</span>
+        <span class="text-xs text-content-subtle">admin only</span>
+        @if (StagedHere.Count > 0)
+        {
+            <span class="min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-[10px] font-semibold inline-flex items-center justify-center leading-none shrink-0">@StagedHere.Count</span>
+        }
+    </button>
+    @if (open)
+    {
+        <div class="px-3 pb-3 space-y-2">
+            @if (failed)
+            {
+                <p class="text-xs text-negative">The KPI people list couldn't be loaded — the error banner above has the detail.</p>
+            }
+            else if (People.Current is null)
+            {
+                <p class="text-xs text-content-subtle italic">Loading KPI people…</p>
+            }
+            else if (People.Current.Count == 0)
+            {
+                <p class="text-xs text-content-subtle italic">Nobody is on the KPI list yet — use Actions → Mark as KPI to file the first one (or add people under Admin → KPI emails).</p>
+            }
+            else
+            {
+                <p class="text-xs text-content-subtle">"Tag as KPI" files this email under the person when you Apply. Nothing is tagged in the mailbox; only administrators see the register.</p>
+                @foreach (var row in People.Current.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    var person = row;
+                    var rowKey = person.KpiPersonId;
+                    var staged = StagedFor(person);
+                    <div @key="rowKey" class="rounded-lg border border-line">
+                        <div class="w-full flex items-center gap-2 px-3 py-2">
+                            <button type="button" class="flex items-center gap-2 text-left flex-1 min-w-0"
+                                    title="@(person.Email is null ? "Added by name — no portal login" : person.Email)"
+                                    @onclick="() => ToggleRow(rowKey)">
+                                <svg class="@("w-3 h-3 text-content-subtle transition-transform shrink-0" + (IsRowOpen(rowKey) ? " rotate-90" : ""))"
+                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+                                <span class="text-sm text-content truncate">@person.Name</span>
+                                <span class="text-xs text-content-subtle shrink-0">@person.KpiCount KPI@(person.KpiCount == 1 ? "" : "s")</span>
+                            </button>
+                            @if (staged is not null)
+                            {
+                                <button type="button" class="shrink-0 rounded-full border border-accent bg-accent/10 text-accent px-3 py-1 text-xs font-medium transition hover:border-negative hover:text-negative"
+                                        title="@($"Staged — Apply files this email as a KPI under {person.Name}. Click to untag.")"
+                                        @onclick="() => UnstageAsync(staged)">✓ Tagged KPI</button>
+                            }
+                            else
+                            {
+                                <button type="button" class="shrink-0 rounded-full border border-line text-content-muted px-3 py-1 text-xs font-medium transition hover:border-accent hover:text-accent"
+                                        title="@($"Stage this email as a KPI under {person.Name} — the inbox's Apply lands it")"
+                                        @onclick="() => StageAsync(person)">Tag as KPI</button>
+                            }
+                        </div>
+                        @if (IsRowOpen(rowKey))
+                        {
+                            <div class="px-3 pb-3">
+                                @if (Kpis.Current is null)
+                                {
+                                    <p class="text-xs text-content-subtle italic">Loading KPI emails…</p>
+                                }
+                                else
+                                {
+                                    var filed = Kpis.Current.Where(k => k.PersonId == person.KpiPersonId).OrderByDescending(k => k.MarkedAt).ToList();
+                                    @if (filed.Count == 0)
+                                    {
+                                        <p class="text-xs text-content-subtle italic">Nothing filed under @person.Name yet.</p>
+                                    }
+                                    else
+                                    {
+                                        <div class="space-y-1">
+                                            @foreach (var kpi in filed)
+                                            {
+                                                <div class="flex items-baseline gap-3 text-xs">
+                                                    <span class="text-content-subtle whitespace-nowrap shrink-0">@kpi.ReceivedAt.ToLocalTime().ToString("d MMM yyyy")</span>
+                                                    <span class="text-content-muted shrink-0">@kpi.Reference</span>
+                                                    <span class="text-content truncate" title="@kpi.Subject">@kpi.Subject</span>
+                                                    @if (!string.IsNullOrWhiteSpace(kpi.Note))
+                                                    {
+                                                        <span class="text-content-subtle truncate shrink-0 max-w-[12rem]" title="@kpi.Note">— @kpi.Note</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The open email's mailbox ids — the staged mark files it by them.</summary>
+    [Parameter, EditorRequired] public string MessageId { get; set; } = "";
+    [Parameter] public string? InternetMessageId { get; set; }
+    /// <summary>The page's staged actions — the KPI mark stages into the same list the Actions
+    /// form uses, so the Actions tab, the badge and Apply all see one thing.</summary>
+    [Parameter, EditorRequired] public List<StagedSystemAction> StagedActions { get; set; } = new();
+    [Parameter] public EventCallback OnStagingChanged { get; set; }
+    [Parameter] public string Pathway { get; set; } = "Internal";
+
+    private bool open;
+    private bool failed;
+    private readonly HashSet<string> openRows = new();
+
+    private bool IsRowOpen(string key) => openRows.Contains(key);
+    private void ToggleRow(string key)
+    {
+        if (!openRows.Add(key)) openRows.Remove(key);
+        // The register is read on first expand — a section nobody opens costs nothing.
+        if (openRows.Count > 0 && Kpis.Current is null) _ = LoadAsync(Kpis.RefreshAsync);
+    }
+
+    /// <summary>The staged mark for this person, if any — matched by the key StageKpiAction and
+    /// this section both stamp (StagedSystemAction.Key = "kpi:{personId}").</summary>
+    private StagedSystemAction? StagedFor(KpiPerson person) =>
+        StagedActions.FirstOrDefault(a => a.Kind == SystemActionKind.MarkAsKpi && a.Key == KpiStaging.KeyFor(person.KpiPersonId));
+
+    private List<StagedSystemAction> StagedHere =>
+        StagedActions.Where(a => a.Kind == SystemActionKind.MarkAsKpi).ToList();
+
+    protected override void OnInitialized()
+    {
+        People.OnChanged += StateHasChanged;
+        Kpis.OnChanged += StateHasChanged;
+        if (People.Current is null) _ = LoadAsync(People.RefreshAsync);
+    }
+
+    private async Task LoadAsync(Func<CancellationToken, Task> refresh)
+    {
+        try { await refresh(CancellationToken.None); }
+        catch { failed = true; }
+        StateHasChanged();
+    }
+
+    private async Task StageAsync(KpiPerson person)
+    {
+        var messageId = MessageId;
+        var internetMessageId = InternetMessageId;
+        var personId = person.KpiPersonId;
+        var commands = Commands;
+        var people = People;
+        var register = Kpis;
+        StagedActions.Add(new StagedSystemAction(
+            SystemActionKind.MarkAsKpi,
+            $"file this email as a KPI under {person.Name}",
+            async () =>
+            {
+                await commands.SendAsync(new MarkEmailAsKpi(messageId, PersonId: personId, InternetMessageId: internetMessageId), CancellationToken.None);
+                try
+                {
+                    if (people.Current is not null) await people.RefreshAsync(CancellationToken.None);
+                    if (register.Current is not null) await register.RefreshAsync(CancellationToken.None);
+                }
+                catch { /* the toast has it */ }
+            })
+        { Pathway = Pathway, Key = KpiStaging.KeyFor(personId) });
+        await OnStagingChanged.InvokeAsync();
+    }
+
+    private async Task UnstageAsync(StagedSystemAction staged)
+    {
+        StagedActions.Remove(staged);
+        await OnStagingChanged.InvokeAsync();
+    }
+
+    public void Dispose()
+    {
+        People.OnChanged -= StateHasChanged;
+        Kpis.OnChanged -= StateHasChanged;
+    }
+}

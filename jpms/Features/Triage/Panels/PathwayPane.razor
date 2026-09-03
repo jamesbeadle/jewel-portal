@@ -1,5 +1,6 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
 @using Jewel.JPMS.Features.Triage.Workspace
+@inject SessionService Session
 
 @*
     One pathway's pane (2026-08-27 restructure): the whole "how I deal with this email on the
@@ -121,6 +122,16 @@
                         </div>
                     }
                 </div>
+            }
+
+            @* KPI people (2026-09-03): the Internal pane's administrators-only tagging section —
+               file the open email as a KPI under someone already on the KPI list. Stages the
+               same hidden mark the Actions form does; nothing is tagged in the mailbox. *@
+            @if (HasOpenEmail && Config.Pathway == "Internal" && Session.ActiveRole == Role.Admin)
+            {
+                <KpiTagSection MessageId="@EmailKey" InternetMessageId="@InternetMessageId"
+                               StagedActions="StagedActions" Pathway="@Config.Pathway"
+                               OnStagingChanged="StagingChangedAsync" />
             }
 
             @if (Config.Family is { } family)

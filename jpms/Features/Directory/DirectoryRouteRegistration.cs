@@ -10,12 +10,15 @@ public static class DirectoryRouteRegistration
         services.AddScoped<DirectoryReadModel>();
         services.AddScoped<RevokedDirectoryReadModel>();
         services.AddScoped<AccessRequestsReadModel>();
+        services.AddScoped<EmailAddressBook>();
         return services;
     }
 
     public static void RegisterDirectoryRoutes(QueryRouteTable queries, CommandRouteTable commands)
     {
         queries.Register<ListDirectoryUsers, IReadOnlyList<DirectoryUser>>(QueryRoute.Static("/api/directory"));
+        // The composers' address book — every directory email address, fetched once per session.
+        queries.Register<ListEmailRecipients, IReadOnlyList<EmailRecipient>>(QueryRoute.Static("/api/email-recipients"));
         queries.Register<ListRevokedDirectoryUsers, IReadOnlyList<RevokedDirectoryUser>>(QueryRoute.Static("/api/directory-revoked"));
         queries.Register<GetDirectoryUser, DirectoryUser?>(new QueryRoute(
             "/api/directory/{email}",

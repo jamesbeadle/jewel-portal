@@ -62,6 +62,7 @@ forecast-components, qs-accruals, prelim-items (+ entries), eots, defects, settl
 
 Admin-only queries: `GET /api/directory`, `GET /api/directory-revoked`, `GET /api/access-requests`.
 Self-or-admin: `GET /api/directory/{email}`.
+Internal staff (JpmsRoleSets.AllInternal): `GET /api/email-recipients` — the composers' address book (ListEmailRecipients: staff, party/project/company contacts, workers), 2026-09-03.
 
 ## Notes
 

@@ -184,7 +184,7 @@
         case SystemActionKind.MarkAsKpi:
             <StageKpiAction @key="kind" MessageId="@MessageId" InternetMessageId="@InternetMessageId"
                             EmailSubject="@EmailSubject" SenderEmail="@SenderEmail"
-                            RecipientEmails="@RecipientEmails" OnStaged="StagedAsync" />
+                            RecipientEmails="@RecipientEmails" StagedActions="StagedActions" OnStaged="StagedAsync" />
             break;
     }
     @if (IsRecordCreate(kind))

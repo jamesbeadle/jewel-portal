@@ -15,8 +15,7 @@
 
     <div>
         <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
-        <input class="field" type="text" placeholder="name@example.com; other@example.com"
-               value="@To" @oninput="e => ToChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+        <RecipientInput Value="@To" ValueChanged="value => ToChanged.InvokeAsync(value)" />
     </div>
     <div>
         <div class="flex items-center justify-between">
@@ -26,15 +25,13 @@
                 <button type="button" class="text-xs text-content-subtle hover:text-content underline" @onclick="() => ShowBccChanged.InvokeAsync(true)">Bcc</button>
             }
         </div>
-        <input class="field" type="text" placeholder="Copied recipients — separated by ;"
-               value="@Cc" @oninput="e => CcChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+        <RecipientInput Value="@Cc" ValueChanged="value => CcChanged.InvokeAsync(value)" Placeholder="Copied recipients" />
     </div>
     @if (ShowBcc)
     {
         <div>
             <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
-            <input class="field" type="text" placeholder="Blind-copied recipients — separated by ;"
-                   value="@Bcc" @oninput="e => BccChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
+            <RecipientInput Value="@Bcc" ValueChanged="value => BccChanged.InvokeAsync(value)" Placeholder="Blind-copied recipients" />
         </div>
     }
     <div>

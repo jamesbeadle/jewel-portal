@@ -1,0 +1,270 @@
+@using Jewel.JPMS.Features.Directory
+@inject IJSRuntime Js
+@inject EmailAddressBook Book
+
+@* A To / Cc / Bcc field that picks people from the portal's address book (decision 2026-09-03:
+   recipients come from the directory — staff, client and architect contacts, project contact
+   sheets, the company directory and workers — not from Outlook contacts, so no Graph Contacts
+   permission is involved). Each recipient is a chip; typing searches the book and Enter or a click
+   adds the match. A free-typed address still works: ";" "," Enter Tab or clicking away commits
+   whatever was typed as a chip, so nothing the old text field accepted is lost.
+
+   The value stays the same semicolon-separated string the composers always carried
+   ("Jo Bloggs <jo@x.com>; other@y.com") — MailCompose.ParseRecipients strips the display names on
+   send, the Outbox shows it as-is, and staged drafts round-trip untouched. Chips are exactly the
+   segments of that string.
+
+   The popup is position:fixed and measured through jpmsSearchSelect.rect for the same reason as
+   SearchSelect: every composer lives inside an overflow container that would clip it. *@
+
+<div class="relative" @ref="wrapperRef" @onfocusout="OnFocusOut">
+    <div class="field flex flex-wrap items-center gap-1 cursor-text @(Disabled ? "opacity-40" : "")"
+         style="min-height:2.5rem;padding-top:.3rem;padding-bottom:.3rem"
+         @onmousedown="FocusInputAsync" @onmousedown:preventDefault="true">
+        @for (var i = 0; i < chips.Count; i++)
+        {
+            var index = i;
+            var chip = chips[index];
+            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium max-w-full
+                         @(chip.LooksValid ? "bg-surface-raised border-line text-content" : "bg-negative/10 border-negative/30 text-negative")"
+                  title="@(chip.LooksValid ? chip.Email : "Not an email address — it will be dropped on send")">
+                <span class="truncate">@chip.Label</span>
+                @if (!Disabled)
+                {
+                    <button type="button" tabindex="-1" class="text-content-subtle hover:text-negative leading-none" aria-label="Remove @chip.Label"
+                            @onmousedown="() => RemoveAsync(index)" @onmousedown:preventDefault="true" @onmousedown:stopPropagation="true">×</button>
+                }
+            </span>
+        }
+        <input @ref="inputRef" type="text" autocomplete="off" spellcheck="false" disabled="@Disabled"
+               class="grow bg-transparent border-0 outline-none p-0 text-sm text-content placeholder:text-content-faint"
+               style="min-width:10rem"
+               value="@buffer" placeholder="@(chips.Count == 0 ? Placeholder : "")"
+               @oninput="OnInput" @onkeydown="OnKeyDown" @onmousedown:stopPropagation="true" />
+    </div>
+
+    @if (isOpen && suggestions.Count > 0)
+    {
+        <div class="rounded-lg border border-line bg-surface-raised shadow-lg overflow-y-auto max-h-64 py-1"
+             style="@popupStyle" @onmousedown:preventDefault="true">
+            @for (var i = 0; i < suggestions.Count; i++)
+            {
+                var index = i;
+                var suggestion = suggestions[index];
+                @* Mousedown, not click — see SearchSelect: click fires after focusout has already
+                   closed the popup and removed the button. *@
+                <button type="button" id="@ItemId(index)" tabindex="-1"
+                        class="block w-full text-left px-3 py-1.5 @(index == highlight ? "bg-content text-surface" : "text-content hover:bg-surface")"
+                        @onmousedown="() => PickAsync(suggestion)" @onmousedown:preventDefault="true" @onmousedown:stopPropagation="true">
+                    <span class="block text-sm truncate">@suggestion.Name</span>
+                    <span class="block text-[11px] truncate @(index == highlight ? "text-surface/80" : "text-content-subtle")">
+                        @SecondLineOf(suggestion)
+                    </span>
+                </button>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The semicolon-separated recipients string the composers carry.</summary>
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Start typing a name or email address…";
+    [Parameter] public bool Disabled { get; set; }
+
+    private sealed record Chip(string Raw, string Label, string Email, bool LooksValid);
+
+    private ElementReference wrapperRef;
+    private ElementReference inputRef;
+    private readonly string uid = Guid.NewGuid().ToString("N")[..8];
+
+    private List<Chip> chips = new();
+    private string lastParsedValue = "\0";
+    private string buffer = "";
+    private bool isOpen;
+    private int highlight;
+    private bool revealHighlight;
+    private string popupStyle = "";
+    private IReadOnlyList<EmailRecipient> suggestions = Array.Empty<EmailRecipient>();
+
+    protected override void OnParametersSet()
+    {
+        // Re-parse only when the host actually changed the string (a prefill, a draft reopening) —
+        // our own ValueChanged round-trips carry the same text back.
+        if (Value == lastParsedValue) return;
+        lastParsedValue = Value;
+        chips = SplitSegments(Value).Select(ChipOf).ToList();
+    }
+
+    protected override Task OnInitializedAsync() => Book.EnsureLoadedAsync();
+
+    private static IEnumerable<string> SplitSegments(string value) =>
+        (value ?? "").Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static Chip ChipOf(string raw)
+    {
+        var open = raw.LastIndexOf('<');
+        var close = raw.LastIndexOf('>');
+        if (open >= 0 && close > open)
+        {
+            var email = raw[(open + 1)..close].Trim();
+            var name = raw[..open].Trim();
+            return new Chip(raw, name.Length > 0 ? name : email, email, email.Contains('@'));
+        }
+        return new Chip(raw, raw, raw, raw.Contains('@'));
+    }
+
+    private IReadOnlyCollection<string> ChipEmails => chips.Select(chip => chip.Email).ToList();
+
+    private static string SecondLineOf(EmailRecipient recipient) =>
+        CaptionOf(recipient) is { } caption ? $"{recipient.Email} · {caption}" : recipient.Email;
+
+    private static string? CaptionOf(EmailRecipient recipient) =>
+        recipient.Organisation is { } organisation
+            ? recipient.Detail is { } detail && recipient.Kind != EmailRecipientKind.Staff ? $"{organisation} — {detail}" : organisation
+            : recipient.Detail;
+
+    private async Task EmitAsync()
+    {
+        var value = string.Join("; ", chips.Select(chip => chip.Raw));
+        lastParsedValue = value;
+        await ValueChanged.InvokeAsync(value);
+    }
+
+    private async Task FocusInputAsync()
+    {
+        if (Disabled) return;
+        await Js.InvokeVoidAsync("jpmsRecipientInput.focus", inputRef);
+    }
+
+    private async Task OnInput(ChangeEventArgs args)
+    {
+        var typed = args.Value?.ToString() ?? "";
+        // A separator commits what came before it, exactly as the old text field would have read it.
+        if (typed.EndsWith(';') || typed.EndsWith(','))
+        {
+            await CommitTypedAsync(typed[..^1]);
+            return;
+        }
+        buffer = typed;
+        await RefreshSuggestionsAsync();
+    }
+
+    private async Task RefreshSuggestionsAsync()
+    {
+        suggestions = Book.Search(buffer, ChipEmails);
+        if (suggestions.Count == 0) { isOpen = false; return; }
+        if (!isOpen) await MeasureAsync();
+        isOpen = true;
+        highlight = 0;
+        revealHighlight = true;
+    }
+
+    private async Task MeasureAsync()
+    {
+        var rect = await Js.InvokeAsync<PopupRect>("jpmsSearchSelect.rect", wrapperRef);
+        const double popupMax = 268; // max-h-64 plus margin
+        var below = rect.ViewportHeight - rect.Bottom;
+        var width = Math.Round(rect.Width);
+        var vertical = below >= popupMax || below >= rect.Top
+            ? FormattableString.Invariant($"top:{Math.Round(rect.Bottom + 4)}px;")
+            : FormattableString.Invariant($"bottom:{Math.Round(rect.ViewportHeight - rect.Top + 4)}px;");
+        popupStyle = FormattableString.Invariant($"position:fixed;left:{Math.Round(rect.Left)}px;width:{width}px;z-index:70;") + vertical;
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs args)
+    {
+        switch (args.Key)
+        {
+            case "ArrowDown":
+                if (isOpen && suggestions.Count > 0) { highlight = Math.Min(highlight + 1, suggestions.Count - 1); revealHighlight = true; }
+                else if (buffer.Length > 0) await RefreshSuggestionsAsync();
+                break;
+            case "ArrowUp":
+                if (isOpen && highlight > 0) { highlight--; revealHighlight = true; }
+                break;
+            case "Enter":
+                if (isOpen && highlight >= 0 && highlight < suggestions.Count) await PickAsync(suggestions[highlight]);
+                else if (buffer.Trim().Length > 0) await CommitTypedAsync(buffer);
+                break;
+            case "Tab":
+                if (buffer.Trim().Length > 0)
+                {
+                    if (isOpen && suggestions.Count == 1) await PickAsync(suggestions[0]);
+                    else await CommitTypedAsync(buffer);
+                }
+                else Close();
+                break;
+            case "Escape":
+                Close();
+                break;
+            case "Backspace":
+                if (buffer.Length == 0 && chips.Count > 0 && !Disabled) await RemoveAsync(chips.Count - 1);
+                break;
+        }
+    }
+
+    private async Task PickAsync(EmailRecipient recipient)
+    {
+        chips.Add(ChipOf(recipient.Addressed));
+        await ClearBufferAsync();
+        await EmitAsync();
+    }
+
+    private async Task CommitTypedAsync(string typed)
+    {
+        // "a@x; b@y" pasted in one go becomes several chips.
+        var added = false;
+        foreach (var segment in SplitSegments(typed))
+        {
+            chips.Add(ChipOf(segment));
+            added = true;
+        }
+        await ClearBufferAsync();
+        if (added) await EmitAsync();
+    }
+
+    private async Task RemoveAsync(int index)
+    {
+        if (index < 0 || index >= chips.Count) return;
+        chips.RemoveAt(index);
+        await EmitAsync();
+        if (isOpen) await RefreshSuggestionsAsync();
+    }
+
+    private async Task ClearBufferAsync()
+    {
+        buffer = "";
+        Close();
+        // The DOM holds what was typed; a re-render of value="" is a no-op when the last rendered
+        // value was already "", so the box is cleared explicitly.
+        await Js.InvokeVoidAsync("jpmsRecipientInput.clear", inputRef);
+    }
+
+    private async Task OnFocusOut()
+    {
+        // Leaving the field commits a half-typed address rather than silently losing it.
+        if (buffer.Trim().Length > 0) await CommitTypedAsync(buffer);
+        else Close();
+    }
+
+    private void Close()
+    {
+        isOpen = false;
+        suggestions = Array.Empty<EmailRecipient>();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (isOpen && revealHighlight)
+        {
+            revealHighlight = false;
+            await Js.InvokeVoidAsync("jpmsSearchSelect.reveal", ItemId(highlight));
+        }
+    }
+
+    private string ItemId(int index) => $"jpms-ri-{uid}-{index}";
+
+    private sealed record PopupRect(double Top, double Left, double Width, double Bottom, double ViewportHeight, double ViewportWidth);
+}

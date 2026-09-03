@@ -12,6 +12,7 @@ public static class DirectoryFeatureRegistration
         services.AddScoped<IQueryHandler<ListDirectoryUsers, IReadOnlyList<DirectoryUser>>, ListDirectoryUsersHandler>();
         services.AddScoped<IQueryHandler<ListRevokedDirectoryUsers, IReadOnlyList<RevokedDirectoryUser>>, ListRevokedDirectoryUsersHandler>();
         services.AddScoped<IQueryHandler<GetDirectoryUser, DirectoryUser?>, GetDirectoryUserHandler>();
+        services.AddScoped<IQueryHandler<ListEmailRecipients, IReadOnlyList<EmailRecipient>>, ListEmailRecipientsHandler>();
 
         services.AddScoped<ICommandHandler<UpsertDirectoryUser, DirectoryUser>, UpsertDirectoryUserHandler>();
         services.AddScoped<UpsertDirectoryUserAuthorisation>();
