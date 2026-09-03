@@ -62,9 +62,15 @@ public sealed class ListProjectCommunicationsHandler
         // keep the precise single-filter read; large ones scan the marker-tagged stream (the same
         // read behind triage's Tagged tab — one simple clause) and intersect with the project's
         // tags here. The scan returns Total = 0, which the UI treats as "count unknown".
-        var page = queryTags.Count <= MaxOrFilterTags
-            ? await graph.ListByTagsAsync(queryTags.ToList(), query.Cursor, query.Take, newestFirst: false, cancellationToken)
-            : await ScanTaggedForAsync(queryTags, query.Cursor, query.Take, cancellationToken);
+        // Search (2026-09-03): Graph's $search cannot combine with a category filter, so the
+        // mailbox is searched at large and the hits intersected with the project's query tags here
+        // — the same shape as the marker scan, keyed on relevance instead of the tag stream. One
+        // page, no cursor; Total is the kept count (it IS known, unlike the scan's).
+        var page = !string.IsNullOrWhiteSpace(query.Search)
+            ? await SearchTaggedForAsync(queryTags, query.Search, cancellationToken)
+            : queryTags.Count <= MaxOrFilterTags
+                ? await graph.ListByTagsAsync(queryTags.ToList(), query.Cursor, query.Take, newestFirst: false, cancellationToken)
+                : await ScanTaggedForAsync(queryTags, query.Cursor, query.Take, cancellationToken);
 
         // Pathway filter (the Communications tab's Client/Subcontractor/Internal segmented control):
         // applied per page against each message's bucket category. Total becomes 0 ("count
@@ -78,7 +84,7 @@ public sealed class ListProjectCommunicationsHandler
             messages = messages
                 .Where(message => string.Equals(message.Bucket, bucketTag, StringComparison.OrdinalIgnoreCase))
                 .ToList();
-            total = 0;
+            total = string.IsNullOrWhiteSpace(query.Search) ? 0 : messages.Count;
         }
 
         var items = messages
@@ -121,6 +127,23 @@ public sealed class ListProjectCommunicationsHandler
     // How many marker-stream pages (of up to 100 messages) one request will walk before handing
     // back a cursor. Bounds the worst case; the UI's Load more continues from the cursor.
     private const int MaxScanPages = 20;
+
+    // Graph's $search page ceiling (the client clamps to 50) — the widest single relevance read.
+    private const int SearchTake = 50;
+
+    /// <summary>
+    /// The mailbox-wide relevance search, kept to the emails carrying one of this project's
+    /// query tags. Relevance order is preserved (a find wants its best hits first), and the
+    /// underlying read can't page, so a common word in a busy mailbox is capped at Graph's
+    /// page ceiling before the project filter — a narrower phrase finds more, never less.
+    /// </summary>
+    private async Task<MailboxPage> SearchTaggedForAsync(
+        IReadOnlySet<string> projectTags, string search, CancellationToken cancellationToken)
+    {
+        var page = await graph.SearchAsync(search.Trim(), SearchTake, cancellationToken);
+        var kept = page.Items.Where(message => message.Categories.Any(projectTags.Contains)).ToList();
+        return new MailboxPage(kept, null, kept.Count);
+    }
 
     /// <summary>
     /// Pages through every marker-tagged email (one simple filter Graph always accepts) and keeps

@@ -118,8 +118,13 @@ public static class SitePageGuides
             + "by record type; each row shows its pathway chip and the record(s) it is tagged to, "
             + "and Reply / Forward opens the composer above the list — sending happens there and "
             + "then from the projects mailbox, and the sent copy files back into this list by the "
-            + "thread's tags. Tagging itself is done in the Control Centre (stage_triage_tag), and "
-            + "a brand-new email is drafted there too (open_modal compose_email) — not here."),
+            + "thread's tags. A search box finds emails within the project's tagged mail (subject, "
+            + "body, sender, attachment name — list_project_communications search); while a search "
+            + "is live the list is one relevance-ordered page. Each row's \"Add tag\" (triage roles) "
+            + "links an already-triaged email to another of this project's records — a record type "
+            + "then the record — without a trip to the Control Centre; that is the only tagging "
+            + "here. Initial triage (stage_triage_tag) and a brand-new email (open_modal "
+            + "compose_email) still happen in the Control Centre — not here."),
 
         new("/projects/{project}/defects", "Defects",
             "The project's defect register — each defect carries a sequential DEF-#### reference "

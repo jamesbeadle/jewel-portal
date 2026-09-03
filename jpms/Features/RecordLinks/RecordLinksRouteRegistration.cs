@@ -87,6 +87,7 @@ public static class RecordLinksRouteRegistration
                     if (q.Type is { } type) url += $"&type={type}";
                     if (!string.IsNullOrWhiteSpace(q.Bucket)) url += $"&bucket={Uri.EscapeDataString(q.Bucket)}";
                     if (!string.IsNullOrWhiteSpace(q.Cursor)) url += $"&cursor={Uri.EscapeDataString(q.Cursor)}";
+                    if (!string.IsNullOrWhiteSpace(q.Search)) url += $"&q={Uri.EscapeDataString(q.Search)}";
                     return url;
                 }));
 

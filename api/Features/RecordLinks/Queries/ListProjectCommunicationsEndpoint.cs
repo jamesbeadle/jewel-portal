@@ -58,8 +58,12 @@ public sealed class ListProjectCommunicationsEndpoint
             bucket = char.ToUpperInvariant(bucketRaw[0]) + bucketRaw[1..].ToLowerInvariant();
         }
 
+        // Search is optional free text; blank = the paged tag read. The handler trims it.
+        var searchRaw = request.Query["q"].ToString();
+        var search = string.IsNullOrWhiteSpace(searchRaw) ? null : searchRaw.Trim();
+
         var result = await handler.HandleAsync(
-            new ListProjectCommunications(projectId, type, string.IsNullOrWhiteSpace(cursor) ? null : cursor, take, bucket),
+            new ListProjectCommunications(projectId, type, string.IsNullOrWhiteSpace(cursor) ? null : cursor, take, bucket, search),
             request.HttpContext.RequestAborted);
         return new OkObjectResult(result);
     }

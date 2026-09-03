@@ -1,4 +1,5 @@
 using Jewel.JPMS.Features.Triage;
+using static Jewel.JPMS.Features.Triage.RecordLinkVocabulary;
 
 namespace Jewel.JPMS.Pages;
 
@@ -25,6 +26,33 @@ public partial class ProjectCommunications
     private readonly List<ProjectCommunication> items = new();
     private string? nextCursor;
     private int total;
+
+    // Search within the project's tagged mail. searchText mirrors the box; activeSearch is the
+    // query the current list answers (null = the ordinary paged read). Debounced like the Control
+    // Centre's Tagged-tab search: 500ms, two characters minimum.
+    private string searchText = "";
+    private string? activeSearch;
+    private string searchPending = "";
+    private CancellationTokenSource? searchDebounce;
+    private bool SearchActive => activeSearch is not null;
+
+    // The inline "Add tag" picker: open on at most one row at a time. Type first, then one of
+    // this project's records of that type (the Control Centre's link trio minus the project
+    // pick — the page IS the project).
+    private string? tagPickerMessageId;
+    private RecordType tagRecordType = RecordTypeOptions[0];
+    private IReadOnlyList<LinkableRecord> tagRecords = Array.Empty<LinkableRecord>();
+    private bool tagRecordsLoading;
+    private string tagRecordId = "";
+    private bool tagBusy;
+    private string? tagError;
+    private (string MessageId, string Text)? tagAdded;
+
+    // Linking is a triage power (the api's LinkMessageToRecord gate) — mirrors
+    // TaggedEmailSearch.CanSearchMailbox / TriageQueue.CanTriage; keep the three in step.
+    private bool CanTag =>
+        Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector
+            or Role.ProjectManager or Role.FinanceDirector);
 
     // The email a Reply or Forward was pressed on (the shared composer opens above the list;
     // sending from a record page sends immediately), which of the two it was, and the
@@ -106,6 +134,147 @@ public partial class ProjectCommunications
 
     private Task LoadMoreAsync() => LoadAsync(reset: false);
 
+    // ---- Search ------------------------------------------------------------------------------
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchText = e.Value?.ToString() ?? "";
+        var query = searchText.Trim();
+        if (query == searchPending) return;
+        searchPending = query;
+        searchDebounce?.Cancel();
+        if (query.Length < 2)
+        {
+            // Typed back below the threshold: leave search mode (reloading the paged list if a
+            // search was showing) but keep the box's text — the user may still be typing.
+            if (SearchActive) _ = ClearSearchResultsAsync();
+            return;
+        }
+        var cts = searchDebounce = new CancellationTokenSource();
+        _ = RunSearchAsync(query, cts.Token);
+    }
+
+    private async Task ClearSearchAsync()
+    {
+        searchDebounce?.Cancel();
+        searchText = "";
+        searchPending = "";
+        await ClearSearchResultsAsync();
+    }
+
+    private async Task ClearSearchResultsAsync()
+    {
+        activeSearch = null;
+        await LoadAsync(reset: true);
+        StateHasChanged();
+    }
+
+    private async Task RunSearchAsync(string query, CancellationToken token)
+    {
+        try { await Task.Delay(500, token); } catch (TaskCanceledException) { return; }
+        if (token.IsCancellationRequested) return;
+        activeSearch = query;
+        await LoadAsync(reset: true);
+        if (token.IsCancellationRequested) return;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose() => searchDebounce?.Cancel();
+
+    // ---- Add tag -----------------------------------------------------------------------------
+
+    private bool IsTagPickerOpen(MailboxMessage message) => tagPickerMessageId == message.Id;
+
+    private void ToggleTagPicker(MailboxMessage message)
+    {
+        if (tagBusy) return;
+        if (IsTagPickerOpen(message))
+        {
+            tagPickerMessageId = null;
+            return;
+        }
+        tagPickerMessageId = message.Id;
+        tagError = null;
+        tagAdded = null;
+        tagRecordId = "";
+        // Keep the last chosen type and its loaded records across rows — tagging several emails
+        // to the same kind of record is the common run; only the first open fetches.
+        if (tagRecords.Count == 0 && !tagRecordsLoading) _ = LoadTagRecordsAsync();
+    }
+
+    private async Task OnTagTypeChanged(ChangeEventArgs e)
+    {
+        if (!Enum.TryParse<RecordType>(e.Value?.ToString(), out var type) || type == tagRecordType) return;
+        tagRecordType = type;
+        await LoadTagRecordsAsync();
+    }
+
+    private void OnTagRecordChanged(ChangeEventArgs e) => tagRecordId = e.Value?.ToString() ?? "";
+
+    private async Task LoadTagRecordsAsync()
+    {
+        tagRecordsLoading = true;
+        tagRecordId = "";
+        tagRecords = Array.Empty<LinkableRecord>();
+        tagError = null;
+        StateHasChanged();
+        try
+        {
+            tagRecords = await Intake.ListLinkableRecordsAsync(ProjectId, tagRecordType);
+        }
+        catch
+        {
+            tagRecords = Array.Empty<LinkableRecord>();
+            tagError = $"Couldn't load this project's {RecordTypeLabelPlural(tagRecordType)}. Please try again.";
+        }
+        finally
+        {
+            tagRecordsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // Already carried by the email — offered greyed so the picker says why rather than failing.
+    private static bool AlreadyTagged(ProjectCommunication item, LinkableRecord record) =>
+        item.Message.Categories.Any(category =>
+            string.Equals(category, "JPMS/" + record.TagReference, StringComparison.OrdinalIgnoreCase));
+
+    private async Task AddTagAsync(ProjectCommunication item)
+    {
+        if (tagBusy || string.IsNullOrWhiteSpace(tagRecordId)) return;
+        var record = tagRecords.FirstOrDefault(r => r.RecordId == tagRecordId);
+        if (record is null) return;
+        tagError = null;
+        tagBusy = true;
+        try
+        {
+            // The type to link as is the picked RECORD's own type, not the dropdown's (the
+            // Scheduling picker lists NOD/EOT/LAD claims documents alongside the bucket).
+            // Cross-pathway links file the thread under both, exactly as the Control Centre does.
+            await Intake.LinkMessageToRecordAsync(
+                item.Message.Id, item.Message.InternetMessageId, record.Type, record.RecordId,
+                allowCrossPathway: true);
+            tagAdded = (item.Message.Id, $"Tagged to {record.Reference} — {record.Title}. It now shows under that record too.");
+            tagPickerMessageId = null;
+            tagRecordId = "";
+            // The tag lives in the mailbox; re-read so the new chip (and any pathway change)
+            // shows straight away. The search or page in view is re-run as-is.
+            await LoadAsync(reset: true);
+        }
+        catch (CommandFailedException ex)
+        {
+            tagError = ex.Message;
+        }
+        catch
+        {
+            tagError = "That tag didn't apply. Please try again.";
+        }
+        finally
+        {
+            tagBusy = false;
+        }
+    }
+
     private async Task LoadAsync(bool reset)
     {
         if (reset)
@@ -120,7 +289,7 @@ public partial class ProjectCommunications
         try
         {
             var page = await Queries.AskAsync(
-                new ListProjectCommunications(ProjectId, TypeFilter, nextCursor, PageSize, bucketFilter),
+                new ListProjectCommunications(ProjectId, TypeFilter, nextCursor, PageSize, bucketFilter, activeSearch),
                 CancellationToken.None);
             items.AddRange(page.Items);
             nextCursor = page.NextCursor;
@@ -138,7 +307,9 @@ public partial class ProjectCommunications
     }
 
     private string EmptyHeadline =>
-        TypeFilter is { } type
+        activeSearch is { } query
+            ? $"No tagged emails match “{query}”."
+            : TypeFilter is { } type
             ? $"No emails tagged to {TypeOptions.First(o => o.Type == type).Label} yet."
             : bucketFilter is { } bucket
                 ? $"No tagged emails on the {bucket} pathway yet."

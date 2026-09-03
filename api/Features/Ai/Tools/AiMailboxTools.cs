@@ -244,11 +244,14 @@ internal static class AiMailboxTools
                 "A project's Communications tab, read live: every mailbox email tagged to any of "
                 + "the project's records, newest first, each with the records it is filed under. "
                 + "Narrow by record type or pathway bucket (Client, Subcontractor, Internal). "
-                + "Paged by cursor; a bucket filter reports total 0, meaning count unknown.",
+                + "Paged by cursor; a bucket filter reports total 0, meaning count unknown. "
+                + "Pass search to find emails within the project's tagged mail by subject, body, "
+                + "sender or attachment name (relevance-ordered, one page, no cursor).",
                 AiToolSchema.Object(
                     ("projectId", "string", "Defaults to the project in view; pass it otherwise.", false),
                     ("type", "string", "Only emails filed under this record type (e.g. Request, VariationQuote, WorkOrder).", false),
                     ("bucket", "string", "Only this pathway: Client, Subcontractor or Internal.", false),
+                    ("search", "string", "Free text to find within the project's tagged emails.", false),
                     ("cursor", "string", "The nextCursor from the previous page.", false),
                     ("take", "number", "Messages per page, default 25.", false)),
                 AiToolKind.Read,
@@ -275,7 +278,8 @@ internal static class AiMailboxTools
                             type,
                             AiToolSchema.Text(input, "cursor"),
                             Math.Clamp(AiToolSchema.Number(input, "take") ?? 25, 1, 100),
-                            AiToolSchema.Text(input, "bucket")), ct);
+                            AiToolSchema.Text(input, "bucket"),
+                            AiToolSchema.Text(input, "search")), ct);
 
                     return Serialise(new
                     {

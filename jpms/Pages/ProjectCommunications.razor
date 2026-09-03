@@ -1,8 +1,11 @@
 @page "/projects/{ProjectId}/communications"
 @using Jewel.JPMS.Features.Triage
+@using static Jewel.JPMS.Features.Triage.RecordLinkVocabulary
+@implements IDisposable
 @inject AuthService Auth
 @inject SessionService Session
 @inject IQueryClient Queries
+@inject IIntakeQueue Intake
 @inject NavigationManager Nav
 @inject Jewel.JPMS.Features.Projects.ProjectListReadModel ProjectList
 
@@ -18,7 +21,10 @@
     record(s) the email is tagged to — an email can feed several records at once (e.g. a request
     AND a cost centre). Every row carries the consistent Reply widget — replying from here SENDS
     there and then; the sent copy inherits the thread's tags and files back into this roll-up.
-    Tagging itself stays in mailbox triage.
+    A search box (2026-09-03) finds emails WITHIN the project's tagged mail — subjects, bodies,
+    senders, attachment names — one relevance-ordered page. Each row's "Add tag" links the
+    already-triaged email to another of this project's records (type, then record) for triage
+    roles — additional tags only; first-time triage and every action stay in the Control Centre.
 *@
 
 <ApprovedSessionGate>
@@ -34,19 +40,36 @@
             }
         </div>
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-            <div class="flex items-center gap-2">
-                <label for="comms-type" class="text-sm text-content-subtle">Tagged to</label>
-                <select id="comms-type" class="field w-52" value="@typeFilterRaw" @onchange="OnTypeFilterChanged">
-                    <option value="">All types</option>
-                    @foreach (var option in TypeOptions)
+            <div class="flex flex-wrap items-center gap-3">
+                @* Search within the project's tagged mail: debounced, two characters minimum,
+                   one relevance-ordered page while live (the pager stands down). *@
+                <div class="relative">
+                    <input type="search" class="field w-64 pr-8" placeholder="Search emails…"
+                           value="@searchText" @oninput="OnSearchInput" aria-label="Search this project's emails" />
+                    @if (!string.IsNullOrEmpty(searchText))
                     {
-                        <option value="@option.Type">@option.Label</option>
+                        <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-content-subtle hover:text-content text-xs"
+                                title="Clear search" @onclick="ClearSearchAsync">✕</button>
                     }
-                </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="comms-type" class="text-sm text-content-subtle">Tagged to</label>
+                    <select id="comms-type" class="field w-52" value="@typeFilterRaw" @onchange="OnTypeFilterChanged">
+                        <option value="">All types</option>
+                        @foreach (var option in TypeOptions)
+                        {
+                            <option value="@option.Type">@option.Label</option>
+                        }
+                    </select>
+                </div>
             </div>
             @* Total == 0 means "count unknown", not "none": both the >10-tags marker-scan path and
                any bucket-filtered read count per page only — hide the tally rather than lie. *@
-            @if (loaded && total > 0)
+            @if (loaded && SearchActive)
+            {
+                <p class="text-xs text-content-subtle">@(items.Count == 1 ? "1 match" : $"{items.Count} matches") for “@activeSearch”</p>
+            }
+            else if (loaded && total > 0)
             {
                 <p class="text-xs text-content-subtle">Showing @items.Count of @total</p>
             }
@@ -57,7 +80,7 @@
             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
         }
 
-        <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="Loading communications">
+        <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="@(SearchActive ? "Searching emails" : "Loading communications")">
         @if (items.Count == 0)
         {
             @* A failed fetch leaves the list empty; the banner above says so, and "nothing tagged
@@ -67,7 +90,9 @@
                 <div class="panel p-8 text-center">
                     <p class="text-sm text-content">@EmptyHeadline</p>
                     <p class="text-xs text-content-subtle mt-1">
-                        Tag an email to a record in the Control Centre and it will appear here.
+                        @(SearchActive
+                            ? "Searches cover subjects, bodies, senders and attachment names of this project's tagged emails — try a different or shorter phrase."
+                            : "Tag an email to a record in the Control Centre and it will appear here.")
                     </p>
                 </div>
             }
@@ -149,12 +174,76 @@
                                     @onclick="() => StartCompose(item.Message, forward: false)">↩ Reply</button>
                             <button type="button" class="text-xs font-medium text-accent hover:underline"
                                     @onclick="() => StartCompose(item.Message, forward: true)">→ Forward</button>
+                            @if (CanTag)
+                            {
+                                <button type="button" class="text-xs font-medium text-accent hover:underline"
+                                        @onclick="() => ToggleTagPicker(item.Message)">
+                                    @(IsTagPickerOpen(item.Message) ? "✕ Close" : "+ Add tag")
+                                </button>
+                            }
                         </div>
+                        @if (CanTag && IsTagPickerOpen(item.Message))
+                        {
+                            @* Additional tags for an already-triaged email: a record type, then one of
+                               THIS project's records of that type — the Control Centre's "Link to
+                               another record" trio minus the project pick. Cross-pathway links file the
+                               thread under both pathways, exactly as the Control Centre does. *@
+                            <div class="mt-3 rounded-lg border border-line bg-surface-raised p-3 space-y-2">
+                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Add a tag</p>
+                                @if (tagError is not null)
+                                {
+                                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@tagError</p>
+                                }
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <select class="field w-64" value="@((int)tagRecordType)" @onchange="OnTagTypeChanged" disabled="@tagBusy">
+                                        @foreach (var recordType in RecordTypeOptions)
+                                        {
+                                            <option value="@((int)recordType)">@RecordTypeLabel(recordType) — @RecordTypePathwayLabel(recordType)</option>
+                                        }
+                                    </select>
+                                    @if (tagRecordsLoading)
+                                    {
+                                        <span class="text-sm text-content-subtle italic">Loading @(RecordTypeLabelPlural(tagRecordType))…</span>
+                                    }
+                                    else if (tagRecords.Count == 0)
+                                    {
+                                        <span class="text-sm text-content-subtle italic">No @(RecordTypeLabelPlural(tagRecordType)) on this project.</span>
+                                    }
+                                    else
+                                    {
+                                        <select class="field w-80" value="@tagRecordId" @onchange="OnTagRecordChanged" disabled="@tagBusy">
+                                            <option value="">Select a @(RecordTypeLabelSingular(tagRecordType))…</option>
+                                            @foreach (var record in tagRecords)
+                                            {
+                                                <option value="@record.RecordId" disabled="@AlreadyTagged(item, record)">
+                                                    @record.Reference — @record.Title@(AlreadyTagged(item, record) ? " (already tagged)" : "")
+                                                </option>
+                                            }
+                                        </select>
+                                    }
+                                    <button type="button" class="btn-primary text-xs px-2.5 py-1.5"
+                                            disabled="@(tagBusy || string.IsNullOrWhiteSpace(tagRecordId))" @onclick="() => AddTagAsync(item)">
+                                        @(tagBusy ? "Tagging…" : "Add tag")
+                                    </button>
+                                </div>
+                                @if (BucketLabel(item.Message.Bucket) is { } threadPathway
+                                     && RecordTypePathwayLabel(tagRecordType) is { Length: > 0 } linkPathway
+                                     && linkPathway is "Client" or "Subcontractor" or "Supplier" or "Internal"
+                                     && linkPathway != threadPathway)
+                                {
+                                    <p class="text-xs text-content-subtle">This files the thread under @linkPathway as well as @threadPathway.</p>
+                                }
+                            </div>
+                        }
+                        @if (tagAdded is { } added && added.MessageId == item.Message.Id)
+                        {
+                            <p class="mt-2 text-xs text-positive">@added.Text</p>
+                        }
                     </li>
                 }
             </ul>
 
-            @if (nextCursor is not null)
+            @if (nextCursor is not null && !SearchActive)
             {
                 <div class="mt-4 text-center">
                     <button type="button" class="btn-secondary text-sm" disabled="@loadingMore" @onclick="LoadMoreAsync">
