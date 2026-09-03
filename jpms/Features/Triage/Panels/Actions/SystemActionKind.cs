@@ -24,9 +24,6 @@ public enum SystemActionKind
     CreateTodos,
     CompleteTodo,
     AddDirectoryContact,
-    // Hand the email to the QS (Nigel, 2026-08-22: a tender enquiry's next step) — a forward
-    // lined up in the Outbox with the QS staff pre-filled, sent by Apply.
-    ForwardToQs,
     // An architect inviting Jewel to tender (2026-08-25): logs the enquiry — creating its
     // Lead-stage project when the job is new — with the PQQ and drawings copied off the email.
     LogTenderEnquiry,
@@ -43,8 +40,9 @@ public enum SystemActionKind
     AddInventoryItem,
     // An email worth keeping as evidence of how someone at Jewel is performing (2026-09-03):
     // files it as a KPI under a portal user. ADMINISTRATORS ONLY — the row is offered to no
-    // other role — and nothing is tagged in the mailbox: the mark lives in the KPI register
-    // (Admin → KPI emails) alone, invisible to everyone else triaging the queue.
+    // other role. The mark lives in the KPI register (Admin → KPI emails) alone; the email is
+    // tagged only JPMS/Admin (+ Internal pathway) so it leaves the queue — nobody else can tell
+    // it is a KPI. Spread follows the Control Centre's "Entire thread" answer at Apply.
     MarkAsKpi
 }
 
@@ -72,7 +70,6 @@ public static class SystemActionKinds
         SystemActionKind.CreateTodos,
         SystemActionKind.CompleteTodo,
         SystemActionKind.AddDirectoryContact,
-        SystemActionKind.ForwardToQs,
         SystemActionKind.MarkAsKpi
     };
 
@@ -95,7 +92,6 @@ public static class SystemActionKinds
         SystemActionKind.CreateTodos => "Create To-do Items",
         SystemActionKind.CompleteTodo => "Mark To-do Done",
         SystemActionKind.AddDirectoryContact => "Add Directory Contact",
-        SystemActionKind.ForwardToQs => "Forward to QS",
         SystemActionKind.LogTenderEnquiry => "Log Tender Enquiry",
         SystemActionKind.MarkAsKpi => "Mark as KPI",
         _ => kind.ToString()
@@ -135,4 +131,11 @@ public sealed record StagedSystemAction(
     /// the Tagging tab's KPI section and the Actions form see one another's staging. Null for
     /// every other kind.</summary>
     public string? Key { get; init; }
+
+    /// <summary>An action whose server command tags the email needs the Control Centre's "Entire
+    /// thread" answer, which is only known at Apply (the pane stages before the pair is answered,
+    /// and it can change afterwards). When set, Apply calls this with the resolved
+    /// <see cref="Jewel.JPMS.Contracts.RecordLinks.LinkThreadScope"/> INSTEAD of
+    /// <see cref="ExecuteAsync"/>. Null = the action tags nothing; ExecuteAsync runs.</summary>
+    public Func<Jewel.JPMS.Contracts.RecordLinks.LinkThreadScope, Task>? ExecuteWithScopeAsync { get; init; }
 }

@@ -62,8 +62,6 @@ public partial class PathwayPane
     /// down to the Actions section for "Mark as KPI" (EmailKey is its live Graph id).</summary>
     [Parameter] public string? InternetMessageId { get; set; }
     [Parameter] public IReadOnlyList<string> RecipientEmails { get; set; } = Array.Empty<string>();
-    [Parameter] public IReadOnlyList<TodoAssignablePerson> QsRecipients { get; set; } = Array.Empty<TodoAssignablePerson>();
-    [Parameter] public EventCallback OnForwardToQs { get; set; }
 
     private bool HasOpenEmail => !string.IsNullOrWhiteSpace(EmailSubject);
     private bool HasActionsTab => Config.ActionGroups.Count > 0;

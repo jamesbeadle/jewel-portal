@@ -46,7 +46,10 @@ public sealed record PathwayPaneConfig(
                 SystemActionKind.ApproveVariationOrder,
                 SystemActionKind.RejectVariationOrder,
             }),
-            (SystemActionGuide.PeopleGroup, new[] { SystemActionKind.ForwardToQs }),
+            // Handing a client-side email to someone at Jewel — a tender enquiry the QS should
+            // price, say — is a to-do assigned to them (2026-09-03: "Forward to QS" retired; the
+            // assignee sees the email on the to-do). No register of forwards is kept.
+            (SystemActionGuide.PeopleGroup, new[] { SystemActionKind.CreateTodos }),
         });
 
     public static PathwayPaneConfig Subcontractor { get; } = new(

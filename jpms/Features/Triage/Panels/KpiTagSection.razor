@@ -47,7 +47,7 @@
             }
             else
             {
-                <p class="text-xs text-content-subtle">"Tag as KPI" files this email under the person when you Apply. Nothing is tagged in the mailbox; only administrators see the register.</p>
+                <p class="text-xs text-content-subtle">"Tag as KPI" files this email under the person when you Apply and tags the email Admin so it leaves the queue — the tag doesn't say KPI; only administrators see the register.</p>
                 @foreach (var row in People.Current.OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase))
                 {
                     var person = row;
@@ -170,20 +170,25 @@
         var commands = Commands;
         var people = People;
         var register = Kpis;
+        // Tags the email (JPMS/Admin), so it runs with the plan's "Entire thread" scope at Apply;
+        // the scope-less ExecuteAsync is the MessageOnly fallback.
+        Func<LinkThreadScope, Task> run = async scope =>
+        {
+            await commands.SendAsync(
+                new MarkEmailAsKpi(messageId, PersonId: personId, InternetMessageId: internetMessageId, Scope: scope),
+                CancellationToken.None);
+            try
+            {
+                if (people.Current is not null) await people.RefreshAsync(CancellationToken.None);
+                if (register.Current is not null) await register.RefreshAsync(CancellationToken.None);
+            }
+            catch { /* the toast has it */ }
+        };
         StagedActions.Add(new StagedSystemAction(
             SystemActionKind.MarkAsKpi,
-            $"file this email as a KPI under {person.Name}",
-            async () =>
-            {
-                await commands.SendAsync(new MarkEmailAsKpi(messageId, PersonId: personId, InternetMessageId: internetMessageId), CancellationToken.None);
-                try
-                {
-                    if (people.Current is not null) await people.RefreshAsync(CancellationToken.None);
-                    if (register.Current is not null) await register.RefreshAsync(CancellationToken.None);
-                }
-                catch { /* the toast has it */ }
-            })
-        { Pathway = Pathway, Key = KpiStaging.KeyFor(personId) });
+            $"file this email as a KPI under {person.Name} and tag it Admin",
+            () => run(LinkThreadScope.MessageOnly))
+        { Pathway = Pathway, Key = KpiStaging.KeyFor(personId), ExecuteWithScopeAsync = run });
         await OnStagingChanged.InvokeAsync();
     }
 

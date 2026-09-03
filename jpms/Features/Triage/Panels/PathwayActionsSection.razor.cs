@@ -112,8 +112,7 @@ public partial class PathwayActionsSection
     // and a tender enquiry usually creates its own — everything else raises on the email's project.
     private static bool NeedsProject(SystemActionKind actionKind) =>
         actionKind is not (SystemActionKind.AddDirectoryContact or SystemActionKind.CreateTodos
-            or SystemActionKind.ForwardToQs or SystemActionKind.LogTenderEnquiry
-            or SystemActionKind.MarkAsKpi);
+            or SystemActionKind.LogTenderEnquiry or SystemActionKind.MarkAsKpi);
 
     /// <summary>The open email's mailbox ids — "Mark as KPI" files the email by them (no tag, so
     /// the page's link path is not involved).</summary>
@@ -127,11 +126,6 @@ public partial class PathwayActionsSection
     /// <summary>The open email's subject — the tender enquiry editor titles the enquiry from it.</summary>
     [Parameter] public string EmailSubject { get; set; } = "";
 
-    /// <summary>Staff holding the QS role — "Forward to QS" pre-fills them.</summary>
-    [Parameter] public IReadOnlyList<TodoAssignablePerson> QsRecipients { get; set; } = Array.Empty<TodoAssignablePerson>();
-
-    /// <summary>"Forward to QS" pressed — the page opens the forward in the Outbox.</summary>
-    [Parameter] public EventCallback OnForwardToQs { get; set; }
 
     private List<TodoDraftRow> TitledTodoRows => TodoRows.Where(r => !string.IsNullOrWhiteSpace(r.Title)).ToList();
 

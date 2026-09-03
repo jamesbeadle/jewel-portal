@@ -38,18 +38,7 @@ public partial class TriageQueue
     {
         outboxComposeAnchor = message;
         outboxComposeAnchorIsForward = true;
-        outboxForwardTo = null;
         workspace.ShowOpposite(PanelKind.Outbox, anchor);
-    }
-
-    // Recipients a forward opens with — set by "Forward to QS", cleared by every other forward.
-    private string? outboxForwardTo;
-
-    private void StartForwardToQs()
-    {
-        if (selected is null) return;
-        StartOutboxForward(selected, PanelKind.Client);
-        outboxForwardTo = string.Join("; ", QsRecipients.Select(person => person.Email));
     }
 
     // "Edit in Email window" on the Outbox's current-reply row — that composer lives under the

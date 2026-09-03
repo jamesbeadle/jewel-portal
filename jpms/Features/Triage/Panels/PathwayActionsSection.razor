@@ -178,9 +178,6 @@
         case SystemActionKind.AddDirectoryContact:
             <StageDirectoryContactAction OnStaged="StagedAsync" />
             break;
-        case SystemActionKind.ForwardToQs:
-            <StageForwardToQsAction QsRecipients="@QsRecipients" OnForward="OnForwardToQs" />
-            break;
         case SystemActionKind.MarkAsKpi:
             <StageKpiAction @key="kind" MessageId="@MessageId" InternetMessageId="@InternetMessageId"
                             EmailSubject="@EmailSubject" SenderEmail="@SenderEmail"

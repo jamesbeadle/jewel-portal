@@ -351,7 +351,6 @@ else
                             OnChanged="StateHasChanged"
                             @bind-ComposeAnchor="outboxComposeAnchor"
                             ComposeAnchorIsForward="@outboxComposeAnchorIsForward"
-                            ComposeForwardTo="@outboxForwardTo"
                             CurrentReplyPending="@ReplyDraftPending"
                             CurrentReplyIsForward="@replyIsForward"
                             CurrentReplySubject="@replySubject"
@@ -404,8 +403,6 @@ else
                      EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
                      SenderEmail="@(selected?.FromEmail ?? "")"
                      InternetMessageId="@selected?.InternetMessageId"
-                     RecipientEmails="@OpenEmailRecipients"
-                     QsRecipients="@QsRecipients"
-                     OnForwardToQs="StartForwardToQs" />
+                     RecipientEmails="@OpenEmailRecipients" />
     };
 }

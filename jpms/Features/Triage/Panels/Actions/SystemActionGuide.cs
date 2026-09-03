@@ -42,7 +42,6 @@ public static class SystemActionGuide
                 SystemActionKind.CreateTodos,
                 SystemActionKind.CompleteTodo,
                 SystemActionKind.AddDirectoryContact,
-                SystemActionKind.ForwardToQs,
                 SystemActionKind.MarkAsKpi,
             }),
         };
@@ -72,7 +71,6 @@ public static class SystemActionGuide
         SystemActionKind.CreateTodos => "Something for someone at Jewel to do — the catch-all when no record fits.",
         SystemActionKind.CompleteTodo => "This email shows a to-do is done — tick it off.",
         SystemActionKind.AddDirectoryContact => "A new supplier, subcontractor or contact to keep on file from this email.",
-        SystemActionKind.ForwardToQs => "Pass this to the QS — a tender enquiry, pricing or a quote they need to pick up. Lines up a forward with the QS pre-filled; Apply sends it.",
         SystemActionKind.MarkAsKpi => "This email is evidence of how someone at Jewel is performing — good or bad. Files it as a KPI under that person in the administrators-only register (Admin → KPI emails). Nothing is tagged in the mailbox; nobody else sees the mark.",
         _ => ""
     };

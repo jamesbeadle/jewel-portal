@@ -13,10 +13,6 @@ public partial class TriageQueue
     private IReadOnlyList<SearchSelect.Option> todoAssigneeOptions = Array.Empty<SearchSelect.Option>();
     private IReadOnlyList<TodoAssignablePerson> assignablePeople = Array.Empty<TodoAssignablePerson>();
 
-    // "Forward to QS" (2026-08-22): everyone in the staff directory with the QS role.
-    private IReadOnlyList<TodoAssignablePerson> QsRecipients =>
-        assignablePeople.Where(person => person.Role == Role.QuantitySurveyor).ToList();
-
     // The drafts exactly as they will be posted. Built in one place so the count promised on the
     // summary and the batch the apply actually sends can never disagree.
     private List<TodoItemDraft> CurrentTodoDrafts() => createTodoRows
