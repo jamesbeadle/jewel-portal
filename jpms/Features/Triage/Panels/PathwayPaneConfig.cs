@@ -24,7 +24,7 @@ public sealed record PathwayPaneConfig(
         "The client, or their architect and team",
         new[]
         {
-            RecordType.Request, RecordType.Variation, RecordType.TenderEnquiry,
+            RecordType.Request, RecordType.Variation,
             RecordType.BuildingControlInspection, RecordType.BuildingControlCase,
             RecordType.Lad, RecordType.ValuationReportSnapshot
         },
@@ -34,7 +34,6 @@ public sealed record PathwayPaneConfig(
             (SystemActionGuide.RaiseGroup, new[]
             {
                 SystemActionKind.RaiseRfi,
-                SystemActionKind.LogTenderEnquiry,
                 SystemActionKind.RaiseVariationOrder,
                 SystemActionKind.RaiseBuildingControlInspection,
             }),
@@ -46,9 +45,10 @@ public sealed record PathwayPaneConfig(
                 SystemActionKind.ApproveVariationOrder,
                 SystemActionKind.RejectVariationOrder,
             }),
-            // Handing a client-side email to someone at Jewel — a tender enquiry the QS should
-            // price, say — is a to-do assigned to them (2026-09-03: "Forward to QS" retired; the
-            // assignee sees the email on the to-do). No register of forwards is kept.
+            // Handing a client-side email to someone at Jewel — a tender enquiry the QS or Sales &
+            // Marketing should pick up, say — is a to-do assigned to them (2026-09-03: "Forward to
+            // QS" retired, and the same day "Log Tender Enquiry" with it: the assignee sees the
+            // email on the to-do). No register of forwards or enquiries is kept.
             (SystemActionGuide.PeopleGroup, new[] { SystemActionKind.CreateTodos }),
         });
 
@@ -129,7 +129,6 @@ public sealed record PathwayPaneConfig(
     {
         RecordType.Request => "Request / RFI",
         RecordType.Variation => "Variation Order",
-        RecordType.TenderEnquiry => "Tender Enquiry",
         RecordType.Lad => "LADs claim",
         RecordType.ValuationReportSnapshot => "Valuation report snapshot",
         RecordType.Scheduling => "Relevant Event",
@@ -154,7 +153,6 @@ public sealed record PathwayPaneConfig(
     {
         RecordType.Request => "Requests / RFIs",
         RecordType.Lad => "LADs claims",
-        RecordType.TenderEnquiry => "Tender Enquiries",
         _ => TypeLabel(type) + "s"
     };
 }

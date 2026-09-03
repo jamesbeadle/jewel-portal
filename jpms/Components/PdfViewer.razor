@@ -103,7 +103,18 @@
     {
         // Init when the URL first arrives, and re-init if the previewed revision changes under
         // the same component instance (a new upload landing while the page is open).
-        if (loadedUrl == FileUrl || string.IsNullOrEmpty(FileUrl) || error is not null) return;
+        // A failure belongs to the URL that failed — a different revision picked from the history
+        // list gets a fresh attempt rather than inheriting the old error.
+        if (loadedUrl == FileUrl || string.IsNullOrEmpty(FileUrl)) return;
+        if (error is not null)
+        {
+            // The error state doesn't render the viewport, so clear it and let the next render
+            // bring the surface back before initialising against those fresh element refs.
+            error = null;
+            ready = false;
+            StateHasChanged();
+            return;
+        }
         var previous = loadedUrl;
         loadedUrl = FileUrl;
         if (previous is not null)

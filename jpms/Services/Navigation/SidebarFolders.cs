@@ -195,12 +195,9 @@ public static class SidebarFolders
                 // The master to-do list: all projects plus company-wide items, with a project filter.
                 new SidebarRow(new NavigationItem("Todo", "/todos"),
                     DesktopNavigation.DirectorRoles),
-                // The bid pipeline: every invitation to tender (TEQ-#### references), company-wide.
-                // An enquiry isn't a project yet (James, 2026-08-25), so it lives here rather than
-                // in the project folder — even though each sits on a Lead-stage project behind
-                // the scenes for its drawings and correspondence.
-                new SidebarRow(new NavigationItem("Tender Enquiries", "/tender-enquiries"),
-                    DesktopNavigation.DirectorRoles),
+                // The Tender Enquiries register (TEQ-####, 2026-08-25) was retired on 2026-09-03:
+                // an architect's invitation to tender is handled as a to-do (James: "we will just
+                // do this through todo"), so nothing here lists them any more.
                 // Everyone the company deals with — Clients · Architects · Subcontractors · Staff.
                 new SidebarRow(new NavigationItem("Directory", "/directory"),
                     DesktopNavigation.DirectorRoles),

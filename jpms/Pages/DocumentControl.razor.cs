@@ -27,7 +27,15 @@ public partial class DocumentControl
     private bool busy;
     private string busyLabel = "Working";
     private string? actionError;
-    private string? fileNote;
+    // The last completed action's outcome ("Filed as…", "Extracted 3 files…"). Every action
+    // CLOSES the open document (2026-09-03 rule: once it's done, the document leaves the screen
+    // and the page waits for the next pick), so this renders in the right pane's empty state —
+    // not beside a document that has already left the list — until the next selection or view
+    // switch.
+    private string? doneNote;
+    // Queue items that appeared from the last archive extraction: badged and tinted in the list
+    // until each is opened, so the unpacked files are findable among the rest of the queue.
+    private readonly HashSet<string> freshIds = new(StringComparer.Ordinal);
 
     // ---- The source email: fetched live per item on first open; null after a failed fetch,
     //      which the pane renders as the snapshot-only fallback. ----

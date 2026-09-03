@@ -35,7 +35,7 @@ internal static partial class AiRecordTools
                 RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector,
                     JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.SiteManager,
                     JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator,
-                    JpmsRoles.OfficeAdmin, JpmsRoles.Foreman),
+                    JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing, JpmsRoles.Foreman),
                 async (context, input, ct) =>
                 {
                     var search = AiToolSchema.Text(input, "search");

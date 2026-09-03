@@ -30,6 +30,7 @@ public static class DesktopNavigation
         Role.HealthSafetyOfficer,
         Role.OfficeComplianceCoordinator,
         Role.OfficeAdmin,
+        Role.SalesMarketing,
         Role.Foreman,
         Role.Accounts
     };
@@ -59,8 +60,10 @@ public static class DesktopNavigation
         Role.SiteManager,
         Role.HealthSafetyOfficer,
         Role.OfficeComplianceCoordinator,
-        // Office Admin mirrors the Compliance role's reach (decision 2026-08-07).
-        Role.OfficeAdmin
+        // Office Admin mirrors the Compliance role's reach (decision 2026-08-07); Sales &
+        // Marketing mirrors Office Admin (decision 2026-09-03).
+        Role.OfficeAdmin,
+        Role.SalesMarketing
     };
 
     // Who sees the master To-do list in the sidebar. The project roles — whose sidebar is the

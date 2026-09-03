@@ -7,7 +7,7 @@ public sealed class ListCompanyContactsEndpoint
     // Same audience as the directory list itself — the contacts are the record's contact details.
     private static readonly RoleSet InternalRolesThatMayListDirectory = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
-        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin,
+        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing,
         JpmsRoles.Foreman);
 
     private readonly SignedInUserResolver users;

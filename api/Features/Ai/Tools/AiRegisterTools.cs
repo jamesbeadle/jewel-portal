@@ -1,7 +1,6 @@
 using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Api.Features.Registers;
 using Jewel.JPMS.Api.Features.Requests;
-using Jewel.JPMS.Api.Features.TenderEnquiries;
 using Jewel.JPMS.Api.Features.UsefulInformation;
 using Jewel.JPMS.Contracts.Architects;
 using Jewel.JPMS.Contracts.Clients;
@@ -11,7 +10,6 @@ using Jewel.JPMS.Contracts.Leads;
 using Jewel.JPMS.Contracts.Rates;
 using Jewel.JPMS.Contracts.Registers;
 using Jewel.JPMS.Contracts.Requests;
-using Jewel.JPMS.Contracts.TenderEnquiries;
 using Jewel.JPMS.Contracts.UsefulInformation;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -112,55 +110,6 @@ internal static class AiRegisterTools
                             rate.Unit,
                             rate = rate.Value,
                             lastPricedAt = rate.LastPricedAt
-                        })
-                    });
-                }),
-
-            new(
-                "list_tender_enquiries",
-                "The tender-enquiry register (TEQ-####): architects' invitations to tender, each "
-                + "with its status (Received, Declined, PqqSubmitted, Shortlisted, NotShortlisted, "
-                + "TenderSubmitted, Won, Lost), the architect and contact, PQQ/tender due dates, "
-                + "the next date it is working towards and whether it is overdue. Omit projectId "
-                + "for the whole company register (live ones first); pass it for one project's. "
-                + "get_tender_enquiry_context reads one enquiry in full — answers, documents, "
-                + "scope.",
-                AiToolSchema.Object(
-                    ("projectId", "string", "Only this project's enquiries; omit for the whole company register.", false)),
-                AiToolKind.Read,
-                TenderEnquiryRoles.Readers,
-                async (context, input, ct) =>
-                {
-                    var projectId = AiToolSchema.Text(input, "projectId");
-                    var enquiries = string.IsNullOrWhiteSpace(projectId)
-                        ? await context.Services
-                            .GetRequiredService<IQueryHandler<ListTenderEnquiries, IReadOnlyList<TenderEnquiry>>>()
-                            .HandleAsync(new ListTenderEnquiries(), ct)
-                        : await context.Services
-                            .GetRequiredService<IQueryHandler<ListTenderEnquiriesForProject, IReadOnlyList<TenderEnquiry>>>()
-                            .HandleAsync(new ListTenderEnquiriesForProject(projectId), ct);
-                    return Serialise(new
-                    {
-                        ok = true,
-                        count = enquiries.Count,
-                        enquiries = enquiries.Select(enquiry => new
-                        {
-                            enquiry.TenderEnquiryId,
-                            enquiry.ProjectId,
-                            reference = enquiry.Reference,
-                            enquiry.Title,
-                            enquiry.ArchitectPracticeName,
-                            enquiry.ArchitectContactName,
-                            enquiry.ArchitectContactEmail,
-                            status = enquiry.Status.ToString(),
-                            enquiry.ReceivedAt,
-                            enquiry.PqqDueAt,
-                            enquiry.TenderDueAt,
-                            nextDueAt = enquiry.NextDueAt,
-                            isOverdue = enquiry.IsOverdue,
-                            enquiry.OwnerEmail,
-                            enquiry.DecidedAt,
-                            enquiry.DecisionNote
                         })
                     });
                 }),

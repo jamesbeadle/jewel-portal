@@ -24,9 +24,6 @@ public enum SystemActionKind
     CreateTodos,
     CompleteTodo,
     AddDirectoryContact,
-    // An architect inviting Jewel to tender (2026-08-25): logs the enquiry — creating its
-    // Lead-stage project when the job is new — with the PQQ and drawings copied off the email.
-    LogTenderEnquiry,
     // An email arranging something dated (2026-08-27) — a site visit, a delivery, a meeting:
     // raises it on the project's Calendar tab with the email tagged to it.
     RaiseCalendarEvent,
@@ -59,7 +56,6 @@ public static class SystemActionKinds
     public static readonly SystemActionKind[] All =
     {
         SystemActionKind.RaiseRfi,
-        SystemActionKind.LogTenderEnquiry,
         SystemActionKind.PromoteRequestToRfi,
         SystemActionKind.ReopenRfi,
         SystemActionKind.CloseRfi,
@@ -100,7 +96,6 @@ public static class SystemActionKinds
         SystemActionKind.CreateTodos => "Create To-do Items",
         SystemActionKind.CompleteTodo => "Mark To-do Done",
         SystemActionKind.AddDirectoryContact => "Add Directory Contact",
-        SystemActionKind.LogTenderEnquiry => "Log Tender Enquiry",
         SystemActionKind.MarkAsKpi => "Mark as KPI",
         _ => kind.ToString()
     };

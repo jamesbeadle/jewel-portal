@@ -1,18 +1,1 @@
-using Jewel.JPMS.Contracts.TenderEnquiries;
-
-namespace Jewel.JPMS.Api.Features.TenderEnquiries.Commands;
-
-public sealed class SetTenderEnquiryStatusValidation
-{
-    public ValidationOutcome Check(SetTenderEnquiryStatus command)
-    {
-        var errors = new List<string>();
-        if (string.IsNullOrWhiteSpace(command.TenderEnquiryId)) errors.Add("TenderEnquiryId is required.");
-        if (!Enum.IsDefined(command.Status)) errors.Add("Status is not recognised.");
-        if (command.Status.IsRetired()) errors.Add("That status is no longer used.");
-        var isEnding = !command.Status.IsOpen();
-        if (isEnding && string.IsNullOrWhiteSpace(command.Note))
-            errors.Add("Say why the enquiry ended this way — the note is the surviving record.");
-        return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
-    }
-}
+// Retired 2026-09-03: the Tender Enquiries feature was removed. This file is empty on purpose so the build stays green — git rm it when convenient.

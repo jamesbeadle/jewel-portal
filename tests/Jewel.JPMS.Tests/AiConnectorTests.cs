@@ -155,7 +155,7 @@ public sealed class AiConnectorTests
             "search_mailbox", "list_document_triage", "list_project_communications",
             "get_weekly_cashflow_plan", "get_aged_payables", "get_aged_receivables",
             "list_payment_certificates", "list_xero_ledger_lines",
-            "list_leads", "list_rates", "list_tender_enquiries", "list_clients",
+            "list_leads", "list_rates", "list_clients",
             "list_architects", "list_workers", "list_company_registers", "list_portal_users",
             "list_rfis_across_projects", "list_useful_information",
             "list_calendar_events", "get_building_control", "get_programme",

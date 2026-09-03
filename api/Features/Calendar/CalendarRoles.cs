@@ -22,5 +22,5 @@ internal static class CalendarRoles
         JpmsRoles.ProjectManager,
         JpmsRoles.SiteManager,
         JpmsRoles.OfficeComplianceCoordinator,
-        JpmsRoles.OfficeAdmin);
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 }

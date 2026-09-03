@@ -99,8 +99,17 @@ public partial class ProjectDrawingDetail
 
     // Read from the cached register rather than a blocking query. A synchronous
     // wait on an async HTTP call (the old DrawingStore.Find) deadlocks on WebAssembly.
+    private string? loadedDrawingId;
+
     private void Reload()
     {
+        // Previous/Next keep this component instance — a picked older revision must not carry
+        // over to the neighbouring document.
+        if (loadedDrawingId != DrawingId)
+        {
+            loadedDrawingId = DrawingId;
+            previewOverrideId = null;
+        }
         drawing = Siblings.FirstOrDefault(candidate => candidate.DrawingId == DrawingId);
         // The revision fetch is started by reading it, and every read now sits behind a closed
         // gate — so start it here or the gate waits on a load nothing ever asked for.
@@ -128,17 +137,43 @@ public partial class ProjectDrawingDetail
     private (int index, int total)? Position =>
         CurrentIndex >= 0 ? (CurrentIndex + 1, Siblings.Count) : null;
 
-    // The version to preview: the approved revision if there is one, otherwise the
+    // The default version to preview: the approved revision if there is one, otherwise the
     // most recently received revision that has a stored file.
-    private DrawingRevision? PreviewRevision =>
+    private DrawingRevision? DefaultPreviewRevision =>
         DrawingStore.RevisionsFor(DrawingId)
             .Where(revision => !string.IsNullOrEmpty(revision.BlobRef))
             .OrderByDescending(revision => revision.ApprovalStatus == DrawingApprovalStatus.Approved)
             .ThenByDescending(revision => revision.ReceivedAt)
             .FirstOrDefault();
 
+    // A revision the user picked from the history list with "Preview". Falls back to the default
+    // when it no longer resolves (deleted, or the page moved to another document). Older revisions
+    // were download-only until 2026-09-03 — the pane was pinned to the approved/latest one.
+    private string? previewOverrideId;
+
+    private DrawingRevision? PreviewRevision =>
+        (previewOverrideId is null
+            ? null
+            : DrawingStore.RevisionsFor(DrawingId).FirstOrDefault(revision =>
+                revision.DrawingRevisionId == previewOverrideId && !string.IsNullOrEmpty(revision.BlobRef)))
+        ?? DefaultPreviewRevision;
+
+    private bool IsPreviewingOlderRevision =>
+        previewOverrideId is not null
+        && PreviewRevision is { } showing
+        && DefaultPreviewRevision is { } latest
+        && showing.DrawingRevisionId != latest.DrawingRevisionId;
+
+    private void PreviewRevisionRequested(DrawingRevision revision) =>
+        previewOverrideId = revision.DrawingRevisionId;
+
+    private void PreviewLatest() => previewOverrideId = null;
+
+    // Trust the file's extension as well as the stored content type — a PDF that arrived as
+    // application/octet-stream is still a PDF (same gate as the Control Centre attachment preview).
     private static bool IsPdf(DrawingRevision revision) =>
-        (revision.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase);
+        (revision.ContentType ?? "").Contains("pdf", StringComparison.OrdinalIgnoreCase)
+        || revision.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
 
     // Extraction needs a previewable PDF revision and the shared Bluebeam connection.
     private bool CanExtract =>

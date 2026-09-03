@@ -204,7 +204,7 @@
 
     private bool IsAdminView =>
         Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
-            or Role.OfficeAdmin or Role.OfficeComplianceCoordinator;
+            or Role.OfficeAdmin or Role.SalesMarketing or Role.OfficeComplianceCoordinator;
 
     protected override async Task OnInitializedAsync()
     {

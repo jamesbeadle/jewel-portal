@@ -8,7 +8,7 @@ public sealed class SuggestBidPackagesAuthorisation
     // creating one, and it reads the whole valuation report, which is not for wider eyes.
     private static readonly RoleSet RolesThatMayCreatePackages = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, SuggestBidPackages command) => RolesThatMayCreatePackages.IncludesAny(user.Roles);
 }

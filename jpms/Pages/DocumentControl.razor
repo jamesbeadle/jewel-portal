@@ -83,6 +83,7 @@
                             {
                                 <DocumentListItem @key="item.DocumentControlItemId" Item="item"
                                                   IsOpen="@(item.DocumentControlItemId == selectedId)"
+                                                  IsFresh="@freshIds.Contains(item.DocumentControlItemId)"
                                                   ProjectHint="@ProjectNameFor(item.ProjectIdHint)"
                                                   OnSelect="() => Select(item.DocumentControlItemId)" />
                             }
@@ -95,8 +96,21 @@
             <div>
                 @if (Selected is not { } item)
                 {
-                    <div class="panel p-8 text-center text-sm text-content-subtle">
-                        Select a document to preview it, read its email and file it.
+                    @* A finished action lands here: the document has left the list, so its outcome
+                       is said in the emptied pane and the page waits for the next pick. *@
+                    <div class="panel p-8 text-center space-y-3">
+                        @if (doneNote is not null)
+                        {
+                            <div class="mx-auto inline-flex items-start gap-2 rounded-lg bg-positive/10 border border-positive/30 px-3 py-2 text-sm text-content text-left">
+                                <svg class="w-4 h-4 mt-0.5 shrink-0 text-positive" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
+                                </svg>
+                                <span>@doneNote</span>
+                            </div>
+                        }
+                        <p class="text-sm text-content-subtle">
+                            @(doneNote is null ? "Select a document to preview it, read its email and file it." : "Waiting for the next document.")
+                        </p>
                     </div>
                 }
                 else
@@ -122,10 +136,6 @@
                         @if (actionError is not null)
                         {
                             <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
-                        }
-                        @if (fileNote is not null)
-                        {
-                            <p class="rounded-lg bg-positive/10 border border-positive/30 px-3 py-2 text-sm text-content">@fileNote</p>
                         }
 
                         <DocumentOutcomeCard Item="item" DestinationHref="@DestinationHref(item)" Busy="busy" OnRestore="DoRestore" />

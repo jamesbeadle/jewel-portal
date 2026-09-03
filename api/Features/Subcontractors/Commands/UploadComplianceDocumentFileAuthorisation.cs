@@ -16,7 +16,7 @@ public sealed class UploadComplianceDocumentFileAuthorisation
         JpmsRoles.ProjectManager,
         JpmsRoles.Estimator,
         JpmsRoles.OfficeComplianceCoordinator,
-        JpmsRoles.OfficeAdmin);
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user) => AllowedToUpload.IncludesAny(user.Roles);
 }

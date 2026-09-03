@@ -180,9 +180,6 @@ public partial class TriageQueue
                 new CreatedNowRecord(inspection.Reference, "building control inspection", inspection.StageName), null);
         }
 
-        if (staged.Kind == StagedRecordKind.TenderEnquiry)
-            return await LogStagedTenderEnquiryAsync(staged, anchor, scope);
-
         busyLabel = staged.RequestKind == RequestType.Rfi ? "Raising RFI" : "Creating request";
         var request = await Intake.CreateRequestFromMessageAsync(new CreateRequestFromMessage(
             anchor.Id, triageProjectId, staged.RequestKind, "", staged.Title.Trim(),
@@ -199,28 +196,6 @@ public partial class TriageQueue
                 staged.RequestKind == RequestType.Rfi ? "RFI" : "request",
                 staged.Title.Trim()),
             null);
-    }
-
-    /// <summary>
-    /// The tender enquiry staged in System Actions, logged through LogTenderEnquiryFromMessage:
-    /// its Lead project created when the job is new (the bar then points at that project, so the
-    /// NEXT act on this email — a reply, a Create now follow-up — lands there; to-dos staged in
-    /// the same apply have already been raised company-wide), the ticked files copied across,
-    /// the email tagged to the enquiry.
-    /// </summary>
-    private async Task<StagedCreateOutcome> LogStagedTenderEnquiryAsync(
-        StagedRecordCreate staged, MailboxMessage anchor, LinkThreadScope scope)
-    {
-        busyLabel = "Logging tender enquiry";
-        var enquiry = await Intake.LogTenderEnquiryFromMessageAsync(
-            staged.TenderEnquiry.ToCommand(anchor.Id, anchor.InternetMessageId, triageProjectId, scope, allowCrossPathway: true));
-        if (staged.TenderEnquiry.CreatesNewProject)
-        {
-            await LoadProjectsAsync();
-            triageProjectId = enquiry.ProjectId;
-        }
-        return new StagedCreateOutcome(
-            new CreatedNowRecord(enquiry.Reference, "tender enquiry", enquiry.Title), null);
     }
 
     /// <summary>
@@ -246,17 +221,12 @@ public partial class TriageQueue
             };
             return;
         }
-        if (string.IsNullOrWhiteSpace(triageProjectId) && !StagedCreatesOwnProject)
+        if (string.IsNullOrWhiteSpace(triageProjectId))
         {
             actionError = "To create the record now, set the email's Project in the bar above first.";
             return;
         }
         // The same "decision not yet made" gates as Apply, for the decisions this act consumes.
-        if (StagedTenderEnquiryProblem is { } enquiryProblem)
-        {
-            actionError = $"The staged tender enquiry isn't ready — {enquiryProblem}";
-            return;
-        }
         if (StagedCalendarEventProblem is { } calendarNowProblem)
         {
             actionError = $"The staged calendar event isn't ready — {calendarNowProblem}";

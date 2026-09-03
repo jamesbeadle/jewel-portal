@@ -6,7 +6,7 @@ namespace Jewel.JPMS.Services;
 /// The multipart/streaming edge of building control files — uploads from this computer (or the
 /// phone's browser, on site) and the proxied download URLs. Listing rides the tab's one view
 /// query (BuildingControlReadModel); removal and re-kind go through the command routes.
-/// Deliberately not cached — the tender-enquiry attachment store's reasoning.
+/// Deliberately not cached — attachment lists change under the page's feet.
 /// </summary>
 public interface IBuildingControlAttachmentClient
 {

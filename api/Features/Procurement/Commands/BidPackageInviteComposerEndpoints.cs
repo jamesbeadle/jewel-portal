@@ -12,7 +12,7 @@ public sealed class BidPackageInviteComposerEndpoints
 {
     private static readonly RoleSet AllowedToInvite = RoleSet.Of(
         Role.Admin, JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     private readonly SignedInUserResolver users;
     private readonly IQueryHandler<GetBidPackageInviteComposerDraft, BidPackageInviteComposerDraft?> get;

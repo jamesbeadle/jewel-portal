@@ -157,12 +157,6 @@
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
                                       EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail" />
             break;
-        case SystemActionKind.LogTenderEnquiry:
-            <StageTenderEnquiryEditor @key="kind" ProjectId="@ProjectId" Projects="@Projects"
-                                      StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"
-                                      EmailAttachments="@EmailAttachments" SenderEmail="@SenderEmail"
-                                      EmailSubject="@EmailSubject" />
-            break;
         case SystemActionKind.RaiseCalendarEvent:
             <StageCalendarEventAction @key="kind"
                                       StagedCreate="@StagedCreate" StagedCreateChanged="StagedCreateChanged"

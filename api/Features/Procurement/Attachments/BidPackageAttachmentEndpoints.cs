@@ -22,7 +22,7 @@ public sealed class BidPackageAttachmentEndpoints
         JpmsRoles.ProjectManager,
         JpmsRoles.Estimator,
         JpmsRoles.OfficeComplianceCoordinator,
-        JpmsRoles.OfficeAdmin);
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     private readonly SignedInUserResolver users;
     private readonly JpmsContext context;

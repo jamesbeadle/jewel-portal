@@ -12,7 +12,7 @@ public sealed class PostRequestMessageAuthorisation
         RoleSet.Of(
             JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager,
             JpmsRoles.Estimator, JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead,
-            JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.Architect,
+            JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing, JpmsRoles.Architect,
             JpmsRoles.Subcontractor, JpmsRoles.Foreman);
 
     public bool Allows(SignedInUser user, PostRequestMessage command) => RolesThatMayPostMessages.IncludesAny(user.Roles);

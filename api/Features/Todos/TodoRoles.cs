@@ -48,7 +48,7 @@ internal static class TodoRoles
         JpmsRoles.SiteManager,
         JpmsRoles.HealthAndSafetyLead,
         JpmsRoles.OfficeComplianceCoordinator,
-        JpmsRoles.OfficeAdmin
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing
     };
 
     // The same pool as a set, for gate checks ("is this AssigneeRole value allowed?").

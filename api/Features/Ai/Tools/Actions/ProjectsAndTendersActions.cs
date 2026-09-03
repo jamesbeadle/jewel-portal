@@ -8,14 +8,11 @@ using Jewel.JPMS.Api.Features.ProjectContracts.Commands;
 using Jewel.JPMS.Api.Features.Projects.Commands;
 using Jewel.JPMS.Api.Features.Projects.Contacts;
 using Jewel.JPMS.Api.Features.Requests;
-using Jewel.JPMS.Api.Features.TenderEnquiries;
-using Jewel.JPMS.Api.Features.TenderEnquiries.Commands;
 using Jewel.JPMS.Contracts.ArchitectInstructions;
 using Jewel.JPMS.Contracts.BuildingControl;
 using Jewel.JPMS.Contracts.Mobilisation;
 using Jewel.JPMS.Contracts.ProjectContracts;
 using Jewel.JPMS.Contracts.Projects;
-using Jewel.JPMS.Contracts.TenderEnquiries;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 
@@ -52,15 +49,12 @@ internal sealed partial class ProjectsAndTendersActions : IAiActionSource
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead);
 
     public IEnumerable<AiAction> Build() =>
-        TenderEnquiriesActions()
-            .Concat(ProjectsActions())
+        ProjectsActions()
             .Concat(ProjectContractsActions())
             .Concat(MobilisationActions())
             .Concat(BuildingControlActions())
             .Concat(ArchitectInstructionsActions());
 
-    // Skipped: UploadTenderEnquiryAttachments — multipart/form-data file upload, no JSON command dispatch.
-    // Skipped: RemoveTenderEnquiryAttachment — no Authorisation class: the endpoint gates inline on TenderEnquiryRoles.Managers, and AiAction requires a DI-resolvable authorisation class with Allows.
     // Skipped: AttachProjectContractDocument (UploadProjectContractDocumentEndpoint) — multipart/form-data upload; the command is server-constructed after the blob is stored.
     // Skipped: AttachProjectContractAmendment (UploadProjectContractAmendmentEndpoint) — multipart/form-data upload; the command is server-constructed after the blob is stored.
     // Skipped: AcceptMyWorkOrder (Portal) — no command dispatch: the endpoint writes the acceptance directly through JpmsContext.

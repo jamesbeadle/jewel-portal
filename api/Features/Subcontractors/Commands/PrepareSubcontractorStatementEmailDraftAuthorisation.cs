@@ -8,7 +8,7 @@ public sealed class PrepareSubcontractorStatementEmailDraftAuthorisation
     // may email work orders, plus the finance director who owns the account reconciliations.
     private static readonly RoleSet RolesThatMayEmailStatements = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager,
-        JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, PrepareSubcontractorStatementEmailDraft command) =>
         RolesThatMayEmailStatements.IncludesAny(user.Roles);

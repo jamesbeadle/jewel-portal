@@ -78,7 +78,7 @@ public partial class Todos
     private bool HasInternalRole =>
         Session.AvailableRoles.Any(role => role is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
             or Role.ProjectManager or Role.QuantitySurveyor or Role.SiteManager or Role.HealthSafetyOfficer
-            or Role.OfficeComplianceCoordinator or Role.OfficeAdmin or Role.Foreman or Role.Accounts);
+            or Role.OfficeComplianceCoordinator or Role.OfficeAdmin or Role.SalesMarketing or Role.Foreman or Role.Accounts);
 
     protected override async Task OnInitializedAsync()
     {

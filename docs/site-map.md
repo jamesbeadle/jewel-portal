@@ -48,15 +48,9 @@ This is the contract between scoping and Blazor implementation. Every Phase 1 us
     /leads/{id}/proposal                             US-00-08,09 (issue + negotiation)
     /leads/{id}/outcome                              US-00-10,11 (Won → project-shell; Lost reason)
 
-/tender-enquiries                                  [Owner P03; Read internal]   (BUILT 2026-08-25)
-                                                   Inbound tender enquiries, company-wide (Internal folder —
-                                                   an enquiry isn't a project yet). Logged from the invitation
-                                                   email in the Control Centre ("Log Tender Enquiry", which
-                                                   creates the Lead-stage project) or by hand here. TEQ-#### tags.
-  /tender-enquiries/{tenderEnquiryId}              Status (Received → PQQ submitted →
-                                                   Shortlisted → Tender submitted → Won/Lost), PQQ answers
-                                                   → /api/tender-enquiries/{id}/document (PDF, attachable
-                                                   from Compose), documents, tagged emails, history.
+(/tender-enquiries — the TEQ-#### register built 2026-08-25 — was RETIRED 2026-09-03: an
+ architect's invitation to tender is a to-do assigned to whoever picks it up, e.g. the Sales &
+ Marketing role. Its DB tables remain, unused.)
 
 /estimating-queue                                  [Owner P04; Read P01,P03]
                                                    US-00-07 (prioritised queue with deadline)

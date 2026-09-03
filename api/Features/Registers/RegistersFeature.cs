@@ -14,7 +14,7 @@ internal static class RegisterRoleSets
 {
     public static readonly RoleSet ManageRegisters = RoleSet.Of(
         Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector,
-        JpmsRoles.OfficeAdmin, JpmsRoles.OfficeComplianceCoordinator);
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing, JpmsRoles.OfficeComplianceCoordinator);
 }
 
 internal static class RegisterIdentifierFactory

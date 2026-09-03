@@ -43,7 +43,7 @@ internal sealed partial class LabourAndBackOfficeActions : IAiActionSource
         RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector,
             JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.SiteManager,
             JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator,
-            JpmsRoles.OfficeAdmin, JpmsRoles.Architect, JpmsRoles.Client,
+            JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing, JpmsRoles.Architect, JpmsRoles.Client,
             JpmsRoles.Subcontractor, JpmsRoles.Foreman, JpmsRoles.SiteOperative,
             JpmsRoles.Accounts);
 

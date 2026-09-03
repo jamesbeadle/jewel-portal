@@ -15,7 +15,7 @@ internal static class DocumentControlRoles
         JpmsRoles.ProjectManager,
         JpmsRoles.Estimator,
         JpmsRoles.OfficeComplianceCoordinator,
-        JpmsRoles.OfficeAdmin);
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     /// <summary>Who may read the payment certificate register — the money-facing circle
     /// (mirrors the finance reads' CommercialTeam gate).</summary>

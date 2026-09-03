@@ -7,7 +7,7 @@ public sealed class SetBidPackageLineItemCoverageAuthorisation
     // Coverage mapping is a commercial decision — same roles that may edit the line items themselves,
     // plus the QS/Estimator who owns tender-to-BoQ reconciliation.
     private static readonly RoleSet RolesThatMaySetCoverage =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, SetBidPackageLineItemCoverage command) => RolesThatMaySetCoverage.IncludesAny(user.Roles);
 }

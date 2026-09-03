@@ -104,6 +104,7 @@ public partial class DocumentControl
     {
         if (view == next) return;
         view = next;
+        doneNote = null;
         // The open document stays open only if it lives in the new view.
         if (Selected is { } open && open.Status != StatusFor(next)) selectedId = null;
     }
@@ -112,12 +113,26 @@ public partial class DocumentControl
     {
         if (selectedId == itemId) return;
         selectedId = itemId;
+        freshIds.Remove(itemId);
         actionError = null;
-        fileNote = null;
+        doneNote = null;
         sourceEmailOpen = false;
         sourceEmailLoading = false;
         sourceEmail = null;
         ResetFilingForm();
+    }
+
+    // A completed action takes the document off the screen: the row has already left this view,
+    // so keeping its detail open beside a list that no longer highlights it read as "nothing
+    // happened". The outcome shows in the emptied right pane until the next pick.
+    private void CloseAfterAction(string note)
+    {
+        selectedId = null;
+        actionError = null;
+        doneNote = note;
+        sourceEmailOpen = false;
+        sourceEmailLoading = false;
+        sourceEmail = null;
     }
 
     private void ResetFilingForm()
@@ -308,16 +323,23 @@ public partial class DocumentControl
         var item = Selected;
         if (item is null || busy) return;
         actionError = null;
-        fileNote = null;
+        doneNote = null;
         try
         {
             busyLabel = "Extracting archive";
             busy = true;
             var extracted = await Store.ExtractArchiveAsync(item.DocumentControlItemId);
             items = await Store.ListAsync();
-            fileNote = extracted.Count == 1
-                ? "Extracted 1 file into the queue."
-                : $"Extracted {extracted.Count} files into the queue.";
+            // The archive itself is now Filed ("Extracted n files…") and has left the queue; its
+            // contents are the new queue rows — badged so they stand out from the rest.
+            freshIds.Clear();
+            foreach (var child in extracted) freshIds.Add(child.DocumentControlItemId);
+            CloseAfterAction(extracted.Count switch
+            {
+                0 => $"Nothing new to extract from {item.FileName} — its files were already in the queue.",
+                1 => $"Extracted 1 file from {item.FileName} into the queue — it's marked \"Extracted\" in the list. Select it to file it.",
+                _ => $"Extracted {extracted.Count} files from {item.FileName} into the queue — they're marked \"Extracted\" in the list. Select one to file it."
+            });
         }
         catch (Jewel.JPMS.Cqrs.CommandFailedException ex) { actionError = ex.Message; }
         catch { actionError = "That didn't complete. Please try again."; }
@@ -327,7 +349,7 @@ public partial class DocumentControl
     private async Task RunFiling(string label, Func<Task<DocumentControlItem>> action)
     {
         actionError = null;
-        fileNote = null;
+        doneNote = null;
         try
         {
             busyLabel = label;
@@ -336,12 +358,12 @@ public partial class DocumentControl
             items = AllItems
                 .Select(existing => existing.DocumentControlItemId == updated.DocumentControlItemId ? updated : existing)
                 .ToList();
-            fileNote = updated.Status switch
+            CloseAfterAction(updated.Status switch
             {
-                DocumentControlStatus.Filed => $"Filed as {updated.FiledLabel}.",
-                DocumentControlStatus.Discarded => "Discarded — restorable from the Discarded view.",
-                _ => "Back in the queue."
-            };
+                DocumentControlStatus.Filed => $"{updated.FileName} filed as {updated.FiledLabel}. Select the next document.",
+                DocumentControlStatus.Discarded => $"{updated.FileName} discarded — restorable from the Discarded view. Select the next document.",
+                _ => $"{updated.FileName} is back in the queue. Select the next document."
+            });
         }
         catch (Jewel.JPMS.Cqrs.CommandFailedException ex) { actionError = ex.Message; }
         catch { actionError = "That didn't complete. Please try again."; }

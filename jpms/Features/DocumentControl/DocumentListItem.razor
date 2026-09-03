@@ -1,16 +1,28 @@
 @namespace Jewel.JPMS.Features.DocumentControl
 @using static Jewel.JPMS.Features.DocumentControl.DocumentControlDisplay
 
-<button type="button" @onclick="() => OnSelect.InvokeAsync()"
-        class="w-full text-left rounded-lg border px-3 py-2.5 transition @(IsOpen ? "border-accent bg-accent/5" : "border-line bg-surface hover:bg-surface-raised")">
+@* The open row is unmistakable — accent border, tint, ring and a solid left bar — because the
+   detail pane on the right is only readable against a list that plainly says which row it is
+   (2026-09-03: "no highlighting of the selected document"). Rows just unpacked from an archive
+   carry an "Extracted" badge until they are opened. *@
+<button type="button" @onclick="() => OnSelect.InvokeAsync()" aria-current="@(IsOpen ? "true" : null)"
+        class="relative w-full text-left rounded-lg border pl-4 pr-3 py-2.5 transition @RowClass">
+    @if (IsOpen)
+    {
+        <span class="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r bg-accent" aria-hidden="true"></span>
+    }
     <div class="flex items-baseline justify-between gap-3">
-        <span class="text-sm font-medium text-content truncate">@Item.FileName</span>
+        <span class="text-sm truncate @(IsOpen ? "font-semibold text-content" : "font-medium text-content")">@Item.FileName</span>
         <span class="text-xs text-content-subtle shrink-0">@ListDate(Item.ReceivedAt)</span>
     </div>
     <p class="text-xs text-content-subtle truncate mt-0.5">
         @DisplaySender(Item)@(string.IsNullOrWhiteSpace(Item.Subject) ? "" : $" — {Item.Subject}")
     </p>
     <div class="flex flex-wrap items-center gap-1.5 mt-1">
+        @if (IsFresh)
+        {
+            <span class="inline-flex items-center rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-semibold px-2 py-0.5">Extracted</span>
+        }
         @if (Item.FileSizeBytes > 0)
         {
             <span class="text-[10px] text-content-subtle">@FormatSize(Item.FileSizeBytes)</span>
@@ -29,7 +41,15 @@
 @code {
     [Parameter, EditorRequired] public DocumentControlItem Item { get; set; } = default!;
     [Parameter] public bool IsOpen { get; set; }
+    /// <summary>True for a queue row that came out of the last archive extraction and hasn't been opened yet.</summary>
+    [Parameter] public bool IsFresh { get; set; }
     /// <summary>The name of the project the sender's email hinted at, when the master knows it.</summary>
     [Parameter] public string? ProjectHint { get; set; }
     [Parameter] public EventCallback OnSelect { get; set; }
+
+    private string RowClass => IsOpen
+        ? "border-accent bg-accent/10 ring-2 ring-accent/40 shadow-sm"
+        : IsFresh
+            ? "border-amber-300 bg-amber-50/60 hover:bg-amber-50"
+            : "border-line bg-surface hover:bg-surface-raised";
 }

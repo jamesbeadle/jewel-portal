@@ -34,7 +34,7 @@ public partial class ProjectBidPackageInviteDetail
     // so the button never offers an act the server would refuse.
     private bool CanAddToDirectory => Session.AvailableRoles.Any(r =>
         r is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
-            or Role.OfficeComplianceCoordinator or Role.OfficeAdmin);
+            or Role.OfficeComplianceCoordinator or Role.OfficeAdmin or Role.SalesMarketing);
 
     // The "Add to directory" act on a submitted tender: promotes a tender-only prospect into the
     // Directory proper. Available even on a closed package — judging a company worth keeping is

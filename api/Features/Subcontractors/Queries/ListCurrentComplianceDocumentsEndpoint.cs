@@ -18,7 +18,7 @@ public sealed class ListCurrentComplianceDocumentsEndpoint
     // internal role set.
     private static readonly RoleSet InternalRolesThatMayReadCompliance = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
-        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     [Function(nameof(ListCurrentComplianceDocuments))]
     public async Task<IActionResult> Run(

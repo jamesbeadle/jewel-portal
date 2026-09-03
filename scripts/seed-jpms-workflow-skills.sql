@@ -167,7 +167,7 @@ by machinery, you must enforce by discipline.
    email can feed a request AND a cost centre AND the programme at once; multiple filings are
    normal, not a smell.
 5. **Create at most ONE new record per email per pass** (create_request_from_message,
-   create_work_order_from_message, create_defect_from_message, log_tender_enquiry_from_message,
+   create_work_order_from_message, create_defect_from_message,
    create_inventory_item_from_message, …). Creating mints the record''s tag onto the email, so the
    next filing decision sees it. If an email seems to need two new records, do the second on a
    second pass, after the first exists.

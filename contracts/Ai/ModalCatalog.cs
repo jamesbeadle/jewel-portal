@@ -9,7 +9,7 @@ public static partial class ModalCatalog
         {
             VariationDraft, ManualVariation, ComposeEmail, ReplyEmail, BidPackageDetails, TenderReply,
             ManualTimesheet, RecordAbsence, WorkerWeek, WorkOrderEdit, WorkOrderCreate,
-            VariationEditLines, ClaimProgress, VariationBuildUp, TenderEnquiryAnswers
+            VariationEditLines, ClaimProgress, VariationBuildUp
         };
 
     public static ModalDescriptor? Find(string? modalKey) =>

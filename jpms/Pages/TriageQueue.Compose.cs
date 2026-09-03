@@ -88,13 +88,10 @@ public partial class TriageQueue
                 parts.Add(stagedDocControlIds.Count == 1
                     ? "send 1 attachment to Document Triage"
                     : $"send {stagedDocControlIds.Count} attachments to Document Triage");
-            if (StagedCreateReady && (!string.IsNullOrWhiteSpace(triageProjectId) || StagedCreatesOwnProject))
+            if (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId))
                 parts.Add(stagedCreate!.Kind switch
                 {
                     StagedRecordKind.BidPackage => "create the bid package from this email",
-                    StagedRecordKind.TenderEnquiry => StagedCreatesOwnProject
-                        ? "create a Lead project and log the tender enquiry from this email"
-                        : "log the tender enquiry from this email",
                     StagedRecordKind.WorkOrder => StagedWorkOrderSummary(stagedCreate),
                     StagedRecordKind.Defect => "raise the defect from this email",
                     StagedRecordKind.Inventory => "add the inventory item from this email",
@@ -249,7 +246,7 @@ public partial class TriageQueue
                 || relevantEventStaged == true
                 || stagedSystemActions.Count > 0
                 || stagedDocControlIds.Count > 0
-                || (StagedCreateReady && (!string.IsNullOrWhiteSpace(triageProjectId) || StagedCreatesOwnProject));
+                || (StagedCreateReady && !string.IsNullOrWhiteSpace(triageProjectId));
             var sendCount = (ReplyDraftPending ? 1 : 0) + queuedReplies.Count;
             if (sendCount > 0)
             {

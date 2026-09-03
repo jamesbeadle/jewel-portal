@@ -10,7 +10,7 @@ public sealed class DeleteBidPackageAuthorisation
     // anything a work order references are refused regardless of who asks.
     private static readonly RoleSet RolesThatMayDeletePackages = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, DeleteBidPackage command) => RolesThatMayDeletePackages.IncludesAny(user.Roles);
 }

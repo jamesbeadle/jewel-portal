@@ -119,7 +119,6 @@ builder.Services.AddScoped<IRequestRegister, HttpRequestRegister>();
 builder.Services.AddScoped<IRequestAttachmentStore, HttpRequestAttachmentStore>();
 builder.Services.AddScoped<IWorkOrderAttachmentStore, HttpWorkOrderAttachmentStore>();
 builder.Services.AddScoped<IBidPackageAttachmentStore, HttpBidPackageAttachmentStore>();
-builder.Services.AddScoped<ITenderEnquiryAttachmentStore, HttpTenderEnquiryAttachmentStore>();
 builder.Services.AddScoped<IBuildingControlAttachmentClient, HttpBuildingControlAttachmentClient>();
 builder.Services.AddScoped<ICompanyTenderTermsStore, HttpCompanyTenderTermsStore>();
 builder.Services.AddScoped<IArchitectInstructionStore, HttpArchitectInstructionStore>();
@@ -188,7 +187,6 @@ using (var routeScope = app.Services.CreateScope())
     DocumentControlRouteRegistration.RegisterDocumentControlRoutes(queryRoutes, commandRoutes);
     ProgressRouteRegistration.RegisterProgressRoutes(queryRoutes, commandRoutes);
     ProcurementRouteRegistration.RegisterProcurementRoutes(queryRoutes, commandRoutes);
-    Jewel.JPMS.Features.TenderEnquiries.TenderEnquiriesRouteRegistration.RegisterTenderEnquiriesRoutes(queryRoutes, commandRoutes);
     SubcontractorsRouteRegistration.RegisterSubcontractorsRoutes(queryRoutes, commandRoutes);
     PortalRouteRegistration.RegisterPortalRoutes(queryRoutes, commandRoutes);
     Jewel.JPMS.Features.ClientPortal.ClientPortalRouteRegistration.RegisterClientPortalRoutes(queryRoutes, commandRoutes);

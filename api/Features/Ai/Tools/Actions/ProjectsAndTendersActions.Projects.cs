@@ -8,14 +8,11 @@ using Jewel.JPMS.Api.Features.ProjectContracts.Commands;
 using Jewel.JPMS.Api.Features.Projects.Commands;
 using Jewel.JPMS.Api.Features.Projects.Contacts;
 using Jewel.JPMS.Api.Features.Requests;
-using Jewel.JPMS.Api.Features.TenderEnquiries;
-using Jewel.JPMS.Api.Features.TenderEnquiries.Commands;
 using Jewel.JPMS.Contracts.ArchitectInstructions;
 using Jewel.JPMS.Contracts.BuildingControl;
 using Jewel.JPMS.Contracts.Mobilisation;
 using Jewel.JPMS.Contracts.ProjectContracts;
 using Jewel.JPMS.Contracts.Projects;
-using Jewel.JPMS.Contracts.TenderEnquiries;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 

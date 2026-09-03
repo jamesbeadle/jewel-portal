@@ -151,7 +151,7 @@ internal sealed partial class SubcontractorsAndLeadsActions
             AuthorisationType: typeof(UploadComplianceDocumentAuthorisation),
             ValidationType: typeof(UploadComplianceDocumentValidation),
             VisibleTo: RoleSet.Of(
-                JpmsRoles.Director, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin,
+                JpmsRoles.Director, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing,
                 JpmsRoles.Subcontractor),
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),

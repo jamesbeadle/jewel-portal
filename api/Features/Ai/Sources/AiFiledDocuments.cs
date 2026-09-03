@@ -8,7 +8,6 @@ using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Api.Features.ProjectContracts;
 using Jewel.JPMS.Api.Features.ProjectContracts.Storage;
 using Jewel.JPMS.Api.Features.Subcontractors.Storage;
-using Jewel.JPMS.Api.Features.TenderEnquiries.Attachments;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Ai.Sources;
@@ -34,9 +33,6 @@ internal static class AiFiledDocuments
     public const string CertificatePrefix = "cert:";
     public const string DocumentControlPrefix = "doc:";
     public const string CompliancePrefix = "compliance:";
-    /// <summary>A document kept on a tender enquiry — the PQQ as received, the drawings that came
-    /// with it (2026-08-25). Read set = every internal role, as the enquiry pages.</summary>
-    public const string TenderEnquiryPrefix = "teq:";
 
     /// <summary>Drawings listed per project before the result says it clipped — a big job has
     /// hundreds; the model narrows with a query.</summary>
@@ -46,7 +42,7 @@ internal static class AiFiledDocuments
     /// <summary>Mirrors DownloadComplianceDocumentEndpoint's internal set (declared inline there).</summary>
     private static readonly RoleSet ComplianceReaders = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager, JpmsRoles.Estimator,
-        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.SiteManager, JpmsRoles.HealthAndSafetyLead, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public static bool IsFiledHandle(string sourceId) =>
         sourceId.StartsWith(ContractPrefix, StringComparison.OrdinalIgnoreCase)
@@ -55,8 +51,7 @@ internal static class AiFiledDocuments
         || sourceId.StartsWith(DrawingPrefix, StringComparison.OrdinalIgnoreCase)
         || sourceId.StartsWith(CertificatePrefix, StringComparison.OrdinalIgnoreCase)
         || sourceId.StartsWith(DocumentControlPrefix, StringComparison.OrdinalIgnoreCase)
-        || sourceId.StartsWith(CompliancePrefix, StringComparison.OrdinalIgnoreCase)
-        || sourceId.StartsWith(TenderEnquiryPrefix, StringComparison.OrdinalIgnoreCase);
+        || sourceId.StartsWith(CompliancePrefix, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>One filed document as list_sources reports it.</summary>
     public sealed record Listed(
@@ -233,25 +228,7 @@ internal static class AiFiledDocuments
             }
         }
 
-        if (recordType == RecordType.TenderEnquiry && JpmsRoleSets.AllInternal.IncludesAny(roles))
-            documents.AddRange(await ListTenderEnquiryDocumentsAsync(db, recordId, ct));
-
         return documents;
-    }
-
-    /// <summary>The files kept on a tender enquiry: the questionnaire as the architect sent it,
-    /// the drawings, supporting material — oldest first, as the enquiry's Documents tab lists them.</summary>
-    public static async Task<List<Listed>> ListTenderEnquiryDocumentsAsync(Jewel.JPMS.Api.Data.JpmsContext db, string tenderEnquiryId, CancellationToken ct)
-    {
-        var rows = await db.TenderEnquiryAttachments.AsNoTracking()
-            .Where(row => row.TenderEnquiryId == tenderEnquiryId && row.BlobRef != "")
-            .OrderBy(row => row.AddedAt)
-            .ToListAsync(ct);
-        return rows.Select(row => new Listed(TenderEnquiryPrefix + row.TenderEnquiryAttachmentId, "tender_enquiry_document",
-                row.FileName, row.ContentType, row.FileSizeBytes,
-                row.Source == (int)TenderEnquiryAttachmentSource.Email ? $"«{row.FileName}» — copied off the enquiry email" : $"«{row.FileName}» — uploaded",
-                row.AddedAt, Readable(row.FileName, row.ContentType), null))
-            .ToList();
     }
 
     /// <summary>A subcontractor's compliance files, current version per kind — listed when the
@@ -365,17 +342,6 @@ internal static class AiFiledDocuments
                 return new Opened(null, null, null, $"«{file.Kind}» was recorded before files were stored — there is no file to read.");
             var store = context.Services.GetRequiredService<IComplianceBlobStore>();
             var blob = await store.OpenAsync(file.BlobPath, ct);
-            return await FromStreamAsync(blob?.Content, blob?.Length, file.FileName, Prefer(file.ContentType, blob?.ContentType), ct);
-        }
-
-        if (sourceId.StartsWith(TenderEnquiryPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            if (!JpmsRoleSets.AllInternal.IncludesAny(roles)) return Refuse("tender enquiry documents");
-            var id = sourceId[TenderEnquiryPrefix.Length..];
-            var file = await db.TenderEnquiryAttachments.AsNoTracking().FirstOrDefaultAsync(row => row.TenderEnquiryAttachmentId == id, ct);
-            if (file is null) return new Opened(null, null, null, $"No tender enquiry document exists with id \"{id}\" — get_tender_enquiry_context lists them.");
-            var store = context.Services.GetRequiredService<ITenderEnquiryAttachmentStore>();
-            var blob = await store.OpenAsync(file.BlobRef, ct);
             return await FromStreamAsync(blob?.Content, blob?.Length, file.FileName, Prefer(file.ContentType, blob?.ContentType), ct);
         }
 

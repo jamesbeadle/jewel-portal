@@ -27,7 +27,8 @@ public static class RolePresentations
             [Role.Foreman]                     = new("Foreman / Site Team",        "P11", "bg-lime-500",    "border-lime-500/40 bg-lime-500/15 text-lime-300"),
             [Role.SiteOperative]               = new("Site Operative",             "P12", "bg-amber-500",   "border-amber-500/40 bg-amber-500/15 text-amber-300"),
             [Role.Accounts]                    = new("Accounts",                   "P13", "bg-fuchsia-500", "border-fuchsia-500/40 bg-fuchsia-500/15 text-fuchsia-300"),
-            [Role.OfficeAdmin]                 = new("Office Admin",               "P14", "bg-cyan-500",    "border-cyan-500/40 bg-cyan-500/15 text-cyan-300")
+            [Role.OfficeAdmin]                 = new("Office Admin",               "P14", "bg-cyan-500",    "border-cyan-500/40 bg-cyan-500/15 text-cyan-300"),
+            [Role.SalesMarketing]              = new("Sales & Marketing",          "P15", "bg-rose-500",    "border-rose-500/40 bg-rose-500/15 text-rose-300")
         };
 
     public static RolePresentation For(Role role) => Map[role];

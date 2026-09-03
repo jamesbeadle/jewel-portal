@@ -35,5 +35,13 @@ public enum Role
     // offered by the to-do assignment pickers (TodoRoles.AssignableTodoRolesInPickerOrder).
     // Access-wise it mirrors OfficeComplianceCoordinator: same project pages, same
     // subcontractor/procurement/drawing gates — kept side by side wherever that role appears.
-    OfficeAdmin
+    OfficeAdmin,
+
+    // Sales & Marketing (2026-09-03) — the desk an inbound tender enquiry lands on now that the
+    // Tender Enquiries register is retired (James: "we will just do this through todo"): an
+    // architect's invitation becomes a to-do assigned to this role, and the assignee sees the
+    // email on the to-do. Access-wise it mirrors OfficeAdmin (James's choice), so it is added
+    // beside OfficeAdmin in every gate that role appears in. Persists as int 15 — appended, never
+    // inserted mid-list.
+    SalesMarketing
 }

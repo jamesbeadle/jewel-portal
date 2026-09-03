@@ -41,7 +41,6 @@ using Jewel.JPMS.Api.Features.Platform;
 using Jewel.JPMS.Api.Features.ClientPortal;
 using Jewel.JPMS.Api.Features.Portal;
 using Jewel.JPMS.Api.Features.Procurement;
-using Jewel.JPMS.Api.Features.TenderEnquiries;
 using Jewel.JPMS.Api.Features.Progress;
 using Jewel.JPMS.Api.Features.Retention;
 using Jewel.JPMS.Api.Features.ProjectContracts;
@@ -103,7 +102,6 @@ var host = new HostBuilder()
         services.AddDocumentControlFeature(context.Configuration);
         services.AddProgressFeature(context.Configuration);
         services.AddProcurementFeature(context.Configuration);
-        services.AddTenderEnquiriesFeature(context.Configuration);
         services.AddLocalSearchFeature(context.Configuration);
         services.AddVariationsFeature();
         services.AddSubcontractorsFeature(context.Configuration);

@@ -174,9 +174,7 @@ public partial class AttachmentPicker
             // one under its V-ref — so a VO can be attached and sent at any point in its life.
             var requests = await Intake.ListLinkableRecordsAsync(projectId, RecordType.Request);
             var variations = await Intake.ListLinkableRecordsAsync(projectId, RecordType.Variation);
-            // Tender enquiries carry the PQQ response — the third official document.
-            var tenderEnquiries = await Intake.ListLinkableRecordsAsync(projectId, RecordType.TenderEnquiry);
-            recordsByProject[projectId] = requests.Concat(variations).Concat(tenderEnquiries).ToList();
+            recordsByProject[projectId] = requests.Concat(variations).ToList();
         }
         catch
         {

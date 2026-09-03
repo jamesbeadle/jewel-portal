@@ -54,7 +54,7 @@ public static class RecordLinkVocabulary
     public static TriagePathway? ImpliedPathway(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
-            or RecordType.Scheduling or RecordType.Lad or RecordType.TenderEnquiry => TriagePathway.Client,
+            or RecordType.Scheduling or RecordType.Lad => TriagePathway.Client,
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
         RecordType.SupplierComms or RecordType.Inventory => TriagePathway.Supplier,
@@ -67,7 +67,7 @@ public static class RecordLinkVocabulary
     public static string RecordTypePathwayLabel(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
-            or RecordType.Scheduling or RecordType.Lad or RecordType.TenderEnquiry
+            or RecordType.Scheduling or RecordType.Lad
             or RecordType.BuildingControlCase or RecordType.BuildingControlInspection => "Client",
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => "Subcontractor",

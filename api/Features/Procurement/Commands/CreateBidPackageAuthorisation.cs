@@ -9,7 +9,7 @@ public sealed class CreateBidPackageAuthorisation
     // removed 2026-08-12 when bid packages were separated from the variation process).
     private static readonly RoleSet RolesThatMayCreatePackages = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, CreateBidPackage command) => RolesThatMayCreatePackages.IncludesAny(user.Roles);
 }

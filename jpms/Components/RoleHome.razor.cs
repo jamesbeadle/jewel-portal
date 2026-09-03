@@ -31,7 +31,7 @@ public partial class RoleHome
     private bool ShowMyTodos =>
         Role is Role.ManagingDirector or Role.FinanceDirector or Role.ProjectManager
             or Role.QuantitySurveyor or Role.SiteManager or Role.HealthSafetyOfficer
-            or Role.OfficeComplianceCoordinator or Role.OfficeAdmin or Role.Accounts;
+            or Role.OfficeComplianceCoordinator or Role.OfficeAdmin or Role.SalesMarketing or Role.Accounts;
 
     // Whoever chases or answers RFIs: the PM owns the change layer, the director watches it, the
     // QS prices what comes out of it, and the architect is usually the one being waited on.
@@ -208,6 +208,7 @@ public partial class RoleHome
         Role.HealthSafetyOfficer => "Open actions and anything due for inspection.",
         Role.OfficeComplianceCoordinator => "Paperwork that is about to lapse.",
         Role.OfficeAdmin => "The office work waiting on you.",
+        Role.SalesMarketing => "The enquiries and bids waiting on you.",
         Role.Accounts => "The accounts work waiting on you.",
         Role.Architect => "The requests waiting on your response.",
         Role.Client => "Where your project has got to.",

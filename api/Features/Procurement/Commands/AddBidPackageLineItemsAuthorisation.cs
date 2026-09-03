@@ -12,7 +12,7 @@ public sealed class AddBidPackageLineItemsAuthorisation
     // separated from the VO quoting process.)
     private static readonly RoleSet RolesThatMayEditLineItems = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, AddBidPackageLineItems command) => RolesThatMayEditLineItems.IncludesAny(user.Roles);
 }

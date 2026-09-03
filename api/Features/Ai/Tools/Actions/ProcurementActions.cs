@@ -15,7 +15,7 @@ internal sealed partial class ProcurementActions : IAiActionSource
     // SetBidPackageLineItemCoverageAuthorisation (all declare this same set privately).
     private static readonly RoleSet PackageCreators = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     // Mirrors the tender-administration gates: CreateBidPackageFromMessageAuthorisation,
     // InviteSubcontractorsToBidPackageAuthorisation, DeclineBidPackageRecipientAuthorisation,
@@ -26,7 +26,7 @@ internal sealed partial class ProcurementActions : IAiActionSource
     // UpdateBidPackageScopeAuthorisation, UpdateWorkOrderAuthorisation.
     private static readonly RoleSet PackageAdministrators = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     // Mirrors CloseBidPackageAuthorisation / ReopenBidPackageAuthorisation.
     private static readonly RoleSet PackageClosers =
@@ -35,7 +35,7 @@ internal sealed partial class ProcurementActions : IAiActionSource
     // Mirrors ReviseQuoteAuthorisation / SubmitQuoteForBidPackageAuthorisation.
     private static readonly RoleSet QuoteWriters = RoleSet.Of(
         JpmsRoles.Director, JpmsRoles.ProjectManager,
-        JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.Subcontractor);
+        JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing, JpmsRoles.Subcontractor);
 
     // Mirrors CreateManualWorkOrderAuthorisation / CreateWorkOrderFromMessageAuthorisation /
     // ApproveWorkOrderAuthorisation / RejectWorkOrderAuthorisation /
@@ -51,7 +51,7 @@ internal sealed partial class ProcurementActions : IAiActionSource
     // Mirrors SendWorkOrderPoEmailAuthorisation.
     private static readonly RoleSet PoEmailSenders = RoleSet.Of(
         Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager,
-        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public IEnumerable<AiAction> Build() =>
         BidPackagesActions()

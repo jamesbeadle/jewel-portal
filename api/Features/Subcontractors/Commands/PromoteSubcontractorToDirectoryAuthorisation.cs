@@ -7,7 +7,7 @@ public sealed class PromoteSubcontractorToDirectoryAuthorisation
     // Promoting a prospect IS adding a company to the directory, so the gate mirrors
     // AddSubcontractorToDirectoryAuthorisation exactly.
     private static readonly RoleSet RolesThatMayPromote =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, PromoteSubcontractorToDirectory command) => RolesThatMayPromote.IncludesAny(user.Roles);
 }

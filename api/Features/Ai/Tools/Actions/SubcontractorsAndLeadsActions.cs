@@ -25,7 +25,7 @@ internal sealed partial class SubcontractorsAndLeadsActions : IAiActionSource
     // Replicas of role sets held as PRIVATE fields inside the authorisation classes they mirror —
     // kept identical to the source lists named in each entry's AuthorisationType.
     private static readonly RoleSet DirectoryCurators =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     private static readonly RoleSet DirectoryRecordEditors =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);

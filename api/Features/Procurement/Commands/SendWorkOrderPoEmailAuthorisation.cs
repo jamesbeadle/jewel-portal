@@ -10,7 +10,7 @@ public sealed class SendWorkOrderPoEmailAuthorisation
     // the PO page (PrepareWorkOrderEmailDraftAuthorisation).
     private static readonly RoleSet RolesThatMaySendPoEmails =
         RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager,
-            JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+            JpmsRoles.Estimator, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, SendWorkOrderPoEmail command) => RolesThatMaySendPoEmails.IncludesAny(user.Roles);
 }

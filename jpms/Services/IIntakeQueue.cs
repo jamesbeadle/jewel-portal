@@ -75,12 +75,6 @@ public interface IIntakeQueue
     // record from this email", alongside the bid package above.
     Task<WorkOrder> CreateWorkOrderFromMessageAsync(CreateWorkOrderFromMessage command, CancellationToken cancellationToken = default);
 
-    // Log a tender enquiry from an architect's invitation email — creating its Lead-stage project
-    // when the job is new, copying the ticked attachments (PQQ, drawings) onto it, and linking the
-    // email. The Client pathway's "create a new record from this email" for inbound tenders.
-    Task<TenderEnquiry> LogTenderEnquiryFromMessageAsync(
-        Jewel.JPMS.Contracts.TenderEnquiries.LogTenderEnquiryFromMessage command, CancellationToken cancellationToken = default);
-
     // Create one or more to-do items on a project from an email (several can be captured from a single
     // message). The email is tagged "JPMS/TODO-####" per item, so each item reads its mail back live by
     // its own tag — the to-do half of "create a new record from this email".

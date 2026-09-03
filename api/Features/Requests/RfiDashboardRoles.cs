@@ -17,5 +17,5 @@ internal static class RfiDashboardRoles
             JpmsRoles.Estimator,
             JpmsRoles.SiteManager,
             JpmsRoles.HealthAndSafetyLead,
-            JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+            JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 }

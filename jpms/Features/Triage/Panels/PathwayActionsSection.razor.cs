@@ -52,7 +52,6 @@ public partial class PathwayActionsSection
             or SystemActionKind.RaiseDefect
             or SystemActionKind.AddInventoryItem
             or SystemActionKind.RaiseSiteInstruction
-            or SystemActionKind.LogTenderEnquiry
             or SystemActionKind.RaiseCalendarEvent
             or SystemActionKind.RaiseBuildingControlInspection;
 
@@ -109,11 +108,11 @@ public partial class PathwayActionsSection
         set => chosenKind = value;
     }
 
-    // To-dos are company-wide until a project is set, a directory contact has no project at all,
-    // and a tender enquiry usually creates its own — everything else raises on the email's project.
+    // To-dos are company-wide until a project is set and a directory contact has no project at
+    // all — everything else raises on the email's project.
     private static bool NeedsProject(SystemActionKind actionKind) =>
         actionKind is not (SystemActionKind.AddDirectoryContact or SystemActionKind.CreateTodos
-            or SystemActionKind.LogTenderEnquiry or SystemActionKind.MarkAsKpi);
+            or SystemActionKind.MarkAsKpi);
 
     /// <summary>The open email's mailbox ids — "Mark as KPI" files the email by them (no tag, so
     /// the page's link path is not involved).</summary>

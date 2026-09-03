@@ -25,7 +25,7 @@ public static class JpmsRoleSets
         JpmsRoles.SiteManager,
         JpmsRoles.HealthAndSafetyLead,
         JpmsRoles.OfficeComplianceCoordinator,
-        JpmsRoles.OfficeAdmin,
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing,
         JpmsRoles.Foreman,
         JpmsRoles.Accounts);
 
@@ -45,7 +45,7 @@ public static class JpmsRoleSets
         JpmsRoles.SiteManager,
         JpmsRoles.HealthAndSafetyLead,
         JpmsRoles.OfficeComplianceCoordinator,
-        JpmsRoles.OfficeAdmin,
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing,
         JpmsRoles.Foreman,
         JpmsRoles.Architect);
 
@@ -59,7 +59,7 @@ public static class JpmsRoleSets
         JpmsRoles.SiteManager,
         JpmsRoles.HealthAndSafetyLead,
         JpmsRoles.OfficeComplianceCoordinator,
-        JpmsRoles.OfficeAdmin,
+        JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing,
         JpmsRoles.Foreman,
         JpmsRoles.Architect,
         JpmsRoles.Subcontractor);

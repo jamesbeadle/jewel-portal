@@ -74,8 +74,7 @@ public partial class TriageQueue
     // Which pane's badge a drafted record counts on — mirrors which pane offers its create.
     private static string? StagedCreatePathway(StagedRecordKind kind) => kind switch
     {
-        StagedRecordKind.Request or StagedRecordKind.TenderEnquiry
-            or StagedRecordKind.BuildingControlInspection => "Client",
+        StagedRecordKind.Request or StagedRecordKind.BuildingControlInspection => "Client",
         StagedRecordKind.BidPackage or StagedRecordKind.WorkOrder or StagedRecordKind.Defect => "Subcontractor",
         StagedRecordKind.Inventory => "Supplier",
         StagedRecordKind.CalendarEvent => "Internal", // raised from the Internal pane, beside the Calendar
@@ -84,20 +83,6 @@ public partial class TriageQueue
     };
 
     private bool StagedCreateReady => stagedCreate is { } sc && sc.IsReady;
-
-    // A tender enquiry usually brings its own Lead project, so it needs no project in the bar.
-    private bool StagedCreatesOwnProject =>
-        stagedCreate is { Kind: StagedRecordKind.TenderEnquiry } sc && sc.TenderEnquiry.CreatesNewProject;
-
-    // Joining an existing project is only ever the same job's second email — the bar's project
-    // must itself still be a Lead.
-    private bool TriageProjectIsLead =>
-        !string.IsNullOrWhiteSpace(triageProjectId) && Projects.Find(triageProjectId)?.Stage == ProjectStage.Lead;
-
-    private string? StagedTenderEnquiryProblem =>
-        stagedCreate is { Kind: StagedRecordKind.TenderEnquiry } sc
-            ? sc.TenderEnquiry.Problem(TriageProjectIsLead)
-            : null;
 
     private string? StagedCalendarEventProblem =>
         stagedCreate is { Kind: StagedRecordKind.CalendarEvent } stagedEvent

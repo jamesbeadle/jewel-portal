@@ -8,7 +8,7 @@ public sealed class ConsolidateDirectoryRecordsAuthorisation
     // the directory-management gate (Admin passes implicitly — admins pass every gate). PMs may
     // edit records but deliberately can't merge them.
     private static readonly RoleSet RolesThatMayConsolidate =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, ConsolidateDirectoryRecords command) => RolesThatMayConsolidate.IncludesAny(user.Roles);
 }

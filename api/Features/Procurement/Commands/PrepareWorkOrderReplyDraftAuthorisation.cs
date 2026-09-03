@@ -7,7 +7,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 public sealed class PrepareWorkOrderReplyDraftAuthorisation
 {
     private static readonly RoleSet RolesThatMayEmailWorkOrders =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, PrepareWorkOrderReplyDraft command) => RolesThatMayEmailWorkOrders.IncludesAny(user.Roles);
 }

@@ -7,7 +7,7 @@ namespace Jewel.JPMS.Api.Features.Procurement.Commands;
 public sealed class RecordTenderResponseAuthorisation
 {
     private static readonly RoleSet RolesThatMayFile =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin);
+        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.OfficeComplianceCoordinator, JpmsRoles.OfficeAdmin, JpmsRoles.SalesMarketing);
 
     public bool Allows(SignedInUser user, RecordTenderResponse command) => RolesThatMayFile.IncludesAny(user.Roles);
 }

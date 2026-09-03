@@ -189,6 +189,16 @@
             {
             <div class="grid gap-6 lg:grid-cols-5">
                 <div class="lg:col-span-3">
+                    @if (IsPreviewingOlderRevision)
+                    {
+                        <div class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 flex flex-wrap items-center justify-between gap-3">
+                            <span>Showing an earlier revision — not the approved / latest one.</span>
+                            <button type="button" @onclick="PreviewLatest"
+                                    class="rounded-lg border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 transition">
+                                Back to latest
+                            </button>
+                        </div>
+                    }
                     @if (PreviewRevision is null)
                     {
                         <div class="rounded-xl border border-line bg-surface p-8 text-center text-sm text-content-subtle italic">
@@ -228,7 +238,9 @@
                 </div>
                 <div class="lg:col-span-2">
                     <DrawingRevisionList Revisions="DrawingStore.RevisionsFor(drawing.DrawingId)"
-                                         ProjectId="@ProjectId" DrawingId="@drawing.DrawingId" />
+                                         ProjectId="@ProjectId" DrawingId="@drawing.DrawingId"
+                                         PreviewedRevisionId="@PreviewRevision?.DrawingRevisionId"
+                                         OnPreview="PreviewRevisionRequested" />
                 </div>
             </div>
 
