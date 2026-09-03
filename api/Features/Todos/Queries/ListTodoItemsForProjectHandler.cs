@@ -9,18 +9,14 @@ public sealed class ListTodoItemsForProjectHandler : IQueryHandler<ListTodoItems
 
     public async Task<IReadOnlyList<TodoItem>> HandleAsync(ListTodoItemsForProject query, CancellationToken cancellationToken)
     {
-        // Open items first (earliest due date, then oldest first); completed items follow, most
-        // recently completed at the top of the done pile.
+        // TodosOrdering.InListOrder: open items in number order, then the done pile newest-first.
         var entities = await context.TodoItems.AsNoTracking()
             .Where(t => t.ProjectId == query.ProjectId)
             .ToListAsync(cancellationToken);
 
         var personNames = await context.PersonNamesForAsync(entities, cancellationToken);
         return entities
-            .OrderBy(t => t.IsComplete)
-            .ThenBy(t => t.IsComplete ? DateTimeOffset.MaxValue : (t.DueAt ?? DateTimeOffset.MaxValue))
-            .ThenByDescending(t => t.IsComplete ? (t.CompletedAt ?? DateTimeOffset.MinValue) : DateTimeOffset.MinValue)
-            .ThenBy(t => t.Number)
+            .InListOrder()
             .Select(t => t.ToModel(personNames))
             .ToList()
             .AsReadOnly();

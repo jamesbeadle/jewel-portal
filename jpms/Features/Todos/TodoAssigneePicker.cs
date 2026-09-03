@@ -4,8 +4,9 @@ namespace Jewel.JPMS.Features.Todos;
 // The one shape every assignee picker shares: the option pool (roles first, then each role's
 // directory holders indented beneath it), the SearchSelect value encoding, and the row/detail
 // labels. An assignee is a ROLE, optionally pinned to a named holder (TodoAssignee) — the picker
-// offers "Project Manager" (the pool) and "Project Manager — Jane Doe" (pinned) as sibling
-// options, so pinning is one pick, not a second control. Built in one place so the project tab,
+// pool carries "Project Manager" and "Project Manager — Jane Doe" as sibling rows, and
+// TodoAssigneeSelect shows that pool as TWO controls — pick the role, then optionally the person
+// (2026-09-03: one flat list of "Role" / "Role — Name" rows read terribly). Built in one place so the project tab,
 // the To-dos browser, the dashboard panel, the item's page and the triage form can never encode
 // or label an assignee differently.
 public static class TodoAssigneePicker
@@ -46,6 +47,27 @@ public static class TodoAssigneePicker
                             Value(role, person.Email),
                             $"{role.DisplayName()} — {person.DisplayName}"))))
             .ToList();
+
+    // The pool split the way TodoAssigneeSelect shows it: the ROLE rows (values without a pinned
+    // person) and, for one role, its named holders with the "Role — " prefix stripped so the
+    // person control reads "Nigel Reilly", not "Director / MD — Nigel Reilly" a second time.
+    public static IReadOnlyList<SearchSelect.Option> RoleOptions(IReadOnlyList<SearchSelect.Option> pool) =>
+        pool.Where(option => !option.Value.Contains(PersonSeparator)).ToList();
+
+    public static IReadOnlyList<SearchSelect.Option> PeopleOptions(IReadOnlyList<SearchSelect.Option> pool, Role role)
+    {
+        var prefix = $"{(int)role}{PersonSeparator}";
+        return pool
+            .Where(option => option.Value.StartsWith(prefix, StringComparison.Ordinal))
+            .Select(option => new SearchSelect.Option(option.Value, PersonLabel(option.Label, role)))
+            .ToList();
+    }
+
+    private static string PersonLabel(string label, Role role)
+    {
+        var prefix = $"{role.DisplayName()} — ";
+        return label.StartsWith(prefix, StringComparison.Ordinal) ? label[prefix.Length..] : label;
+    }
 
     // The row/detail label for an item's assignee: "Project Manager", or
     // "Project Manager — Jane Doe" when pinned (falling back to the email if the pinned person's

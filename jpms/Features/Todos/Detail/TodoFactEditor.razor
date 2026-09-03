@@ -1,4 +1,5 @@
 @namespace Jewel.JPMS.Features.Todos.Detail
+@using Jewel.JPMS.Features.Todos
 
 @* The two-step editor both editable facts (Assigned to, Scope) share: pick, then Save. Two steps
    on purpose — a single-click picker in a detail view is one stray click away from handing work
@@ -6,10 +7,18 @@
    page's error bar says why) so the pick survives to retry rather than silently reverting. *@
 
 <dd class="mt-1 space-y-2">
-    <SearchSelect Options="@Options" Value="@picked" ValueChanged="v => picked = v"
-                  Placeholder="@Placeholder" WidthClass="w-full"
-                  InputClass="bg-surface border border-line px-2 py-1"
-                  Disabled="@Busy" />
+    @if (Assignee)
+    {
+        <TodoAssigneeSelect Options="@Options" Value="@picked" ValueChanged="v => picked = v"
+                            Placeholder="@Placeholder" Disabled="@Busy" />
+    }
+    else
+    {
+        <SearchSelect Options="@Options" Value="@picked" ValueChanged="v => picked = v"
+                      Placeholder="@Placeholder" WidthClass="w-full"
+                      InputClass="bg-surface border border-line px-2 py-1"
+                      Disabled="@Busy" />
+    }
     <div class="flex gap-2">
         <button type="button" class="btn-primary text-xs px-2 py-1"
                 disabled="@(Busy || (RequirePick && picked == ""))" @onclick="SaveAsync">Save</button>
@@ -24,6 +33,9 @@
     /// <summary>Where the picker starts: the current value when the options offer it, else blank.</summary>
     [Parameter] public string InitialValue { get; set; } = "";
     [Parameter] public string Placeholder { get; set; } = "";
+    /// <summary>True when the options are the assignee pool: the pick is then the role + optional
+    /// person pair (<see cref="TodoAssigneeSelect"/>) rather than one flat list.</summary>
+    [Parameter] public bool Assignee { get; set; }
     /// <summary>One sentence under the buttons saying what saving MEANS for this fact.</summary>
     [Parameter] public string Hint { get; set; } = "";
     [Parameter] public bool Busy { get; set; }

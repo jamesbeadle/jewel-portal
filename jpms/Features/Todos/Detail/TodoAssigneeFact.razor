@@ -1,16 +1,15 @@
 @namespace Jewel.JPMS.Features.Todos.Detail
 @using Jewel.JPMS.Features.Todos
 
-@* The "Assigned to" fact: a role, optionally pinned to a named holder — the picker offers both as
-   sibling rows ("Project Manager" and "Project Manager — Jane Doe"), so reassigning and pinning
-   are one pick. Reassigning a DONE item would move work nobody is going to do, so the control is
+@* The "Assigned to" fact: a role, optionally pinned to a named holder — the picker is the role
+   select plus the optional person select (TodoAssigneeSelect), then Save. Reassigning a DONE item would move work nobody is going to do, so the control is
    for open items only. *@
 
 <div>
     <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Assigned to</dt>
     @if (editing)
     {
-        <TodoFactEditor Options="@Options" InitialValue="@TodoAssigneePicker.ValueFor(Item)"
+        <TodoFactEditor Options="@Options" InitialValue="@TodoAssigneePicker.ValueFor(Item)" Assignee="true"
                         Placeholder="Unassigned" Busy="@Busy" RequirePick="false"
                         Hint="A role puts this item on the list of everyone holding it; a named person keeps it to their list alone. Either way it leaves the old assignee's list."
                         OnSave="SaveAsync" OnCancel="() => editing = false" />

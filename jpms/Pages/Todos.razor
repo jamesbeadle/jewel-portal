@@ -332,8 +332,7 @@ else
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
                 <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
-                <SearchSelect Options="@assigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v"
-                              Placeholder="Unassigned" WidthClass="w-full" />
+                <TodoAssigneeSelect Options="@assigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v" />
             </div>
             <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
         </div>

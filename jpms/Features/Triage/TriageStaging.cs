@@ -12,6 +12,9 @@ public sealed class TodoDraftRow
     public string Title { get; set; } = "";
     public string Notes { get; set; } = "";
     public List<string> Assignees { get; } = new();
+    // Form state only: the chip the assignee picker is currently showing (its role, and the
+    // optional person select that pins it). Never sent — Assignees is what the command reads.
+    public string PendingAssignee { get; set; } = "";
     // New drafts start due one week out — the house default for an item raised today. The field
     // stays editable (or clearable) in the modal; this is a starting value, not a rule.
     public string Due { get; set; } = DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");

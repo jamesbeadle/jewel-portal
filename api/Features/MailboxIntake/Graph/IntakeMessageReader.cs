@@ -50,8 +50,9 @@ public interface IIntakeMessageReader
     /// <summary>Fetch body + attachments for a Graph message id, or null if it can't be retrieved.</summary>
     Task<IntakeMessageContent?> GetAsync(string graphMessageId, CancellationToken ct);
 
-    /// <summary>Download one attachment's bytes (a Graph fileAttachment), or null if it can't be
-    /// retrieved / isn't a file attachment (item and reference attachments have no bytes).</summary>
+    /// <summary>Download one attachment's bytes: a Graph fileAttachment as-is, or an itemAttachment
+    /// (an email attached to the email) as its raw MIME named <c>{subject}.eml</c>. Null if it can't
+    /// be retrieved or has no bytes (reference attachments are links, not files).</summary>
     Task<IntakeAttachmentContent?> GetAttachmentAsync(string graphMessageId, string attachmentId, CancellationToken ct);
 }
 
@@ -222,14 +223,21 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
             var root = doc.RootElement;
 
-            // Only fileAttachment has contentBytes; item/reference attachments are not downloadable files.
+            var name = root.TryGetProperty("name", out var n) ? n.GetString() ?? "attachment" : "attachment";
+
+            // Only fileAttachment has contentBytes. An itemAttachment is an Outlook item the sender
+            // dragged into the email — nearly always a forwarded *message* ("please see Re: …") — and
+            // Graph serves its raw MIME from /$value, which downloads as a .eml that Outlook opens.
+            // Reference attachments (OneDrive links) have no bytes at all and stay undownloadable.
             if (!root.TryGetProperty("contentBytes", out var bytesEl) || bytesEl.ValueKind != JsonValueKind.String)
             {
-                _logger.LogWarning("Attachment {AttachmentId} is not a file attachment.", attachmentId);
+                var odataType = root.TryGetProperty("@odata.type", out var typeEl) ? typeEl.GetString() : null;
+                if (string.Equals(odataType, "#microsoft.graph.itemAttachment", StringComparison.OrdinalIgnoreCase))
+                    return await GetItemAttachmentMimeAsync(url, name, token, ct);
+
+                _logger.LogWarning("Attachment {AttachmentId} is not a file attachment ({Type}).", attachmentId, odataType);
                 return null;
             }
-
-            var name = root.TryGetProperty("name", out var n) ? n.GetString() ?? "attachment" : "attachment";
             var contentType = root.TryGetProperty("contentType", out var t) ? t.GetString() ?? "application/octet-stream" : "application/octet-stream";
             var content = Convert.FromBase64String(bytesEl.GetString() ?? "");
             var contentId = root.TryGetProperty("contentId", out var cid) ? cid.GetString() : null;
@@ -240,5 +248,34 @@ public sealed class GraphIntakeMessageReader : IIntakeMessageReader
             _logger.LogWarning(ex, "Attachment read errored for {GraphId}/{AttachmentId}.", graphMessageId, attachmentId);
             return null;
         }
+    }
+
+    /// <summary>The raw MIME of an attached message, as Graph returns it from
+    /// <c>…/attachments/{id}/$value</c>. Named <c>{subject}.eml</c> so the browser hands it to the mail
+    /// client rather than showing bytes. Null (logged) if Graph won't serve it — e.g. the attached
+    /// item is a contact or calendar entry rather than a message.</summary>
+    private async Task<IntakeAttachmentContent?> GetItemAttachmentMimeAsync(
+        string attachmentUrl, string name, string token, CancellationToken ct)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, attachmentUrl + "/$value");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var response = await _http.SendAsync(request, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Graph item attachment $value read failed: {Status}.", (int)response.StatusCode);
+            return null;
+        }
+
+        var content = await response.Content.ReadAsByteArrayAsync(ct);
+        if (content.Length == 0) return null;
+
+        // Outlook names an attached message by its subject, with no extension; strip characters a
+        // filename can't carry and give it the extension mail clients associate with raw messages.
+        var fileName = new string(name.Trim().Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c).ToArray());
+        if (string.IsNullOrWhiteSpace(fileName)) fileName = "attached message";
+        if (!fileName.EndsWith(".eml", StringComparison.OrdinalIgnoreCase)) fileName += ".eml";
+
+        return new IntakeAttachmentContent(fileName, "message/rfc822", content);
     }
 }

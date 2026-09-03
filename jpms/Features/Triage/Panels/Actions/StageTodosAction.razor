@@ -1,4 +1,5 @@
 @namespace Jewel.JPMS.Features.Triage.Panels
+@using Jewel.JPMS.Features.Todos
 
 @* The to-do drafting surface, moved here from System Tags' Internal tab (2026-08-10): the same
    multi-draft LIST ⇄ DETAIL editor, editing the page-owned rows in place. One to-do is raised
@@ -27,17 +28,19 @@
                                 @TodoAssigneeLabel(picked)
                                 <button type="button" title="Remove assignee"
                                         class="leading-none px-1 text-content-subtle hover:text-negative"
-                                        @onclick="() => { row.Assignees.Remove(picked); NotifyTodos(); }">&times;</button>
+                                        @onclick="() => RemoveTodoAssignee(row, picked)">&times;</button>
                             </span>
                         }
                     </div>
                 }
-                @{ var roleOptions = TodoOptionsFor(row); }
-                <SearchSelect Options="@roleOptions" Value=""
-                              ValueChanged="v => AddTodoAssignee(row, v)"
-                              Placeholder="@(row.Assignees.Count == 0 ? "Unassigned" : "Add another…")"
-                              Disabled="@(roleOptions.Count == 0)"
-                              WidthClass="w-full" />
+                @* Role first, then (optionally) a person: picking a role adds it as a chip at once,
+                   and the person select that appears pins THAT chip to a named holder. Picking a
+                   different role starts another chip; the pinned one stays as it is. *@
+                <TodoAssigneeSelect Options="@TodoAssigneeOptions" Value="@row.PendingAssignee"
+                                    ValueChanged="v => PickTodoAssignee(row, v)"
+                                    Placeholder="@(row.Assignees.Count == 0 ? "Unassigned" : "Add another…")"
+                                    Taken="@row.Assignees"
+                                    Disabled="@(TodoAssigneeOptions.Count == 0)" />
                 @if (row.Assignees.Count > 1)
                 {
                     <p class="text-xs text-content-subtle mt-1">Raised as @row.Assignees.Count separate to-dos, one per assignee.</p>
@@ -127,16 +130,36 @@
 
     private List<TodoDraftRow> TitledTodoRows => TodoRows.Where(r => !string.IsNullOrWhiteSpace(r.Title)).ToList();
 
-    private IReadOnlyList<SearchSelect.Option> TodoOptionsFor(TodoDraftRow row) =>
-        TodoAssigneeOptions.Where(option => !row.Assignees.Contains(option.Value)).ToList();
-
     private string TodoAssigneeLabel(string value) =>
         TodoAssigneeOptions.FirstOrDefault(option => option.Value == value)?.Label ?? value;
 
-    private void AddTodoAssignee(TodoDraftRow row, string value)
+    // The picker's value is the row's "pending" chip — the one the person select would pin. A
+    // pick of the SAME role (a person chosen, or cleared back to the pool) re-points that chip;
+    // any other role adds a fresh chip and it becomes the pending one. A blank role pick just
+    // drops the pending state (the chip already on the row stays).
+    private void PickTodoAssignee(TodoDraftRow row, string value)
     {
-        if (string.IsNullOrWhiteSpace(value) || row.Assignees.Contains(value)) return;
-        row.Assignees.Add(value);
+        if (string.IsNullOrWhiteSpace(value)) { row.PendingAssignee = ""; return; }
+        var pending = TodoAssigneePicker.Parse(row.PendingAssignee);
+        var picked = TodoAssigneePicker.Parse(value);
+        var pendingIndex = row.Assignees.IndexOf(row.PendingAssignee);
+        if (pending is not null && picked is not null && pending.Role == picked.Role && pendingIndex >= 0)
+        {
+            if (row.Assignees.Contains(value) && value != row.PendingAssignee) row.Assignees.RemoveAt(pendingIndex);
+            else row.Assignees[pendingIndex] = value;
+        }
+        else if (!row.Assignees.Contains(value))
+        {
+            row.Assignees.Add(value);
+        }
+        row.PendingAssignee = value;
+        NotifyTodos();
+    }
+
+    private void RemoveTodoAssignee(TodoDraftRow row, string value)
+    {
+        row.Assignees.Remove(value);
+        if (row.PendingAssignee == value) row.PendingAssignee = "";
         NotifyTodos();
     }
 

@@ -28,7 +28,13 @@
                   @bind="note" @bind:event="oninput"></textarea>
     </div>
     <p class="text-xs text-content-subtle">Administrators only. Nothing is tagged in the mailbox — the mark goes to Admin → KPI emails, and nobody else can see it.</p>
-    <button type="button" class="btn-primary" disabled="@(person is null || person.IsEmpty)" @onclick="StageAsync">Stage action</button>
+    @if (!CanStage)
+    {
+        <p class="text-xs text-amber-500">@(UserDirectory.IsLoaded ? "Pick the person the KPI is about before staging." : "Waiting for the people list…")</p>
+    }
+    <button type="button" class="@(CanStage ? "btn-primary" : "btn-primary opacity-50 cursor-not-allowed")" disabled="@(!CanStage)"
+            title="@(CanStage ? "Line up the KPI mark for this email's Apply" : "Pick the person first")"
+            @onclick="StageAsync">Stage action</button>
 </div>
 
 @code {
@@ -51,6 +57,7 @@
     protected override void OnInitialized()
     {
         UserDirectory.OnChange += OnDirectoryChanged;
+        _ = UserDirectory.All(); // starts the lazy fetch the pre-match waits on
         TryPrematch();
     }
 
@@ -93,9 +100,14 @@
 
     private void OnPersonChanged(KpiPersonChoice? choice) => person = choice;
 
+    // Nothing stages without a person: the directory must be in (so the pick is a real one) and
+    // a choice made — an id, a portal email, or a typed name that isn't blank.
+    private bool CanStage => UserDirectory.IsLoaded && person is { IsEmpty: false }
+        && (person.Name is null || !string.IsNullOrWhiteSpace(person.Name));
+
     private async Task StageAsync()
     {
-        if (person is null || person.IsEmpty) return;
+        if (!CanStage) return;
         var chosen = person;
         var chosenName = picker?.LabelFor(chosen) ?? chosen.Name ?? chosen.Email ?? chosen.PersonId ?? "";
         var chosenNote = note.Trim();

@@ -22,10 +22,15 @@ public static class ConversationBySubject
 
         var found = await graph.SearchAsync(ConversationSubject.StripPrefixes(subject), SearchTake, cancellationToken);
         var anchorReceivedAt = byConversation.Items.FirstOrDefault()?.ReceivedAt ?? DateTimeOffset.UtcNow;
+        // De-duplicate on the STABLE id. Graph's $search hands back the same item under a different
+        // Graph id encoding (the "AAkALg…" search-store form) from the "AQMk…" id the conversation
+        // filter returned, so keying on Id let the one opened email appear twice — "2 emails" on a
+        // one-email thread (V27 Rear Patio, 2026-09-03). The conversation read comes first in the
+        // Concat, so the survivor keeps the canonical id the rest of the page acts on.
         var members = byConversation.Items
             .Concat(found.Items.Where(email => ConversationSubject.SameThread(email.Subject, subject)))
             .Where(email => IsWithinWindow(email, anchorReceivedAt))
-            .GroupBy(email => email.Id)
+            .GroupBy(StableKey, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .OrderBy(email => email.ReceivedAt)
             .ToList();
@@ -34,6 +39,11 @@ public static class ConversationBySubject
             return byConversation;
         return new MailboxPage(members, null, members.Count, MatchedBySubject: true);
     }
+
+    // InternetMessageId is the RFC id every copy of a message shares whatever folder or Graph id
+    // encoding it is read through; the Graph id is only the fallback when Graph omits it.
+    private static string StableKey(MailboxMessage email)
+        => string.IsNullOrWhiteSpace(email.InternetMessageId) ? email.Id : email.InternetMessageId;
 
     private static bool IsWithinWindow(MailboxMessage email, DateTimeOffset anchorReceivedAt)
     {

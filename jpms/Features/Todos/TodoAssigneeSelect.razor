@@ -1,0 +1,60 @@
+@namespace Jewel.JPMS.Features.Todos
+
+@* The assignee picker every to-do surface shares: a ROLE select and, once a role with named
+   holders is picked, an optional PERSON select beside it. The value in and out is still the one
+   TodoAssigneePicker encoding ("3" = the role's pool, "3|jane@…" = pinned to Jane), so the
+   surfaces that used to bind one flat SearchSelect bind this instead with no other change.
+   Changing the role clears the pin (the old person doesn't hold the new role); clearing the
+   person drops back to the role's pool; clearing the role is "Unassigned". *@
+
+<div class="grid gap-2 @(ShowPeople ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1")">
+    <SearchSelect Options="@RoleOptions" Value="@RoleValue" ValueChanged="OnRoleChangedAsync"
+                  Placeholder="@Placeholder" WidthClass="w-full" InputClass="@InputClass"
+                  Disabled="@Disabled" />
+    @if (ShowPeople)
+    {
+        <SearchSelect Options="@PeopleOptions" Value="@PersonValue" ValueChanged="OnPersonChangedAsync"
+                      Placeholder="@PersonPlaceholder" WidthClass="w-full" InputClass="@InputClass"
+                      Disabled="@Disabled" />
+    }
+</div>
+
+@code {
+    /// <summary>The combined pool from <see cref="TodoAssigneePicker.BuildOptions"/> (roles and
+    /// "Role — Person" rows); the component splits it into the two controls.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<SearchSelect.Option> Options { get; set; } = Array.Empty<SearchSelect.Option>();
+    /// <summary>Encoded assignee value ("" = unassigned) — see <see cref="TodoAssigneePicker"/>.</summary>
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    /// <summary>The role control's blank row / placeholder.</summary>
+    [Parameter] public string Placeholder { get; set; } = "Unassigned";
+    /// <summary>The person control's blank row / placeholder — blank means the whole role.</summary>
+    [Parameter] public string PersonPlaceholder { get; set; } = "Anyone in the role";
+    /// <summary>Values already taken elsewhere on the form (a multi-assignee row's chips) that
+    /// the lists should not offer again.</summary>
+    [Parameter] public IReadOnlyCollection<string>? Taken { get; set; }
+    [Parameter] public string InputClass { get; set; } = "bg-surface border border-line px-2 py-1";
+    [Parameter] public bool Disabled { get; set; }
+
+    private TodoAssignee? Current => TodoAssigneePicker.Parse(Value);
+
+    private string RoleValue => Current is { } current ? TodoAssigneePicker.Value(current.Role) : "";
+    private string PersonValue => Current?.PersonEmail is null ? "" : Value;
+
+    private bool IsTaken(string value) => Taken is not null && Taken.Contains(value) && value != Value;
+
+    private IReadOnlyList<SearchSelect.Option> RoleOptions =>
+        TodoAssigneePicker.RoleOptions(Options).Where(option => !IsTaken(option.Value) || option.Value == RoleValue).ToList();
+
+    private IReadOnlyList<SearchSelect.Option> PeopleOptions =>
+        Current is { } current
+            ? TodoAssigneePicker.PeopleOptions(Options, current.Role).Where(option => !IsTaken(option.Value)).ToList()
+            : Array.Empty<SearchSelect.Option>();
+
+    private bool ShowPeople => Current is not null && PeopleOptions.Count > 0;
+
+    private Task OnRoleChangedAsync(string roleValue) => ValueChanged.InvokeAsync(roleValue);
+
+    private Task OnPersonChangedAsync(string personValue) =>
+        ValueChanged.InvokeAsync(string.IsNullOrEmpty(personValue) ? RoleValue : personValue);
+}
