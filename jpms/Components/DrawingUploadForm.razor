@@ -8,7 +8,9 @@
    the dialog. One file keeps the full form; several switch it to bulk mode: each file becomes
    its own drawing (blank code and title, revision label extracted from the file name where it
    is obvious) filed into the chosen folder, so a register can be populated quickly and the
-   details attached later through each drawing's page.
+   details attached later through each drawing's page. A zip dropped here is unpacked in the
+   browser into its files (DrawingArchiveExpander) — each lands as its own drawing; the zip
+   itself is never registered.
 
    The folder picker sits ABOVE the drop zone and is ONE instance whatever the mode — rendered
    always and only hidden by CSS in revision mode. When it lived inside the single/bulk branches
@@ -73,14 +75,25 @@
              @ondragleave="() => dragDepth = Math.Max(0, dragDepth - 1)"
              @ondrop="() => dragDepth = 0"
              @ondragend="() => dragDepth = 0">
-            <InputFile OnChange="OnFilesSelected" multiple="@(!isRevision)" disabled="@busy"
-                       class="absolute inset-0 h-full w-full opacity-0 cursor-pointer" />
+            @* One InputFile per drop, all kept: a picked file is only a handle into its own
+               input's file list, and the next pick on that input kills every earlier handle. So
+               inputs that hold selected files stay in the DOM (hidden, disabled) and only the
+               newest takes the drop zone — see inputGenerations in the code-behind. *@
+            @foreach (var generation in inputGenerations)
+            {
+                var isActive = generation == ActiveGeneration;
+                <InputFile @key="generation" OnChange="OnFilesSelected" multiple="@(!isRevision)"
+                           disabled="@(busy || unpacking is not null || !isActive)"
+                           class="@(isActive ? "absolute inset-0 h-full w-full opacity-0 cursor-pointer" : "hidden")" />
+            }
             <p class="text-sm text-content-muted pointer-events-none">
-                @(isRevision
-                    ? "Drag the revised file here, or click to choose it."
-                    : selectedFiles.Count == 0
-                        ? "Drag drawing files here, or click to choose — select as many as needed."
-                        : "Drop or choose more files to add them to the selection.")
+                @(unpacking is not null
+                    ? $"Unpacking {unpacking}…"
+                    : isRevision
+                        ? "Drag the revised file here, or click to choose it."
+                        : selectedFiles.Count == 0
+                            ? "Drag drawing files here, or click to choose — select as many as needed. A zip is unpacked into its files."
+                            : "Drop or choose more files to add them to the selection.")
             </p>
         </div>
 
@@ -185,7 +198,7 @@
         <p class="text-xs text-content-subtle">New uploads are saved as <span class="font-medium">Unapproved</span>. They become the latest drawing only once approved.</p>
     }
 
-    <button type="submit" disabled="@busy"
+    <button type="submit" disabled="@(busy || unpacking is not null)"
             class="w-full rounded-lg bg-accent text-accent-ink font-medium px-4 py-2.5 hover:bg-accent-hover transition disabled:opacity-60">
         @SubmitLabel
     </button>

@@ -1,4 +1,4 @@
-
+using Jewel.JPMS.Features.Drawings;
 
 namespace Jewel.JPMS.Components;
 
@@ -18,6 +18,19 @@ public partial class DrawingUploadForm
     private List<IBrowserFile> selectedFiles = new();
     private bool isRevision;
     private int dragDepth;
+
+    // One <InputFile> per drop, kept alive. A picked IBrowserFile is only a handle into ITS
+    // input element's current file list — the next pick on the same element replaces that list
+    // and every earlier handle dies ("There is no file with ID 1. The file list may have
+    // changed."), which is exactly how the first file of an append-on-drop selection failed to
+    // upload. So each drop that leaves live handles behind retires its input (rendered hidden,
+    // files intact) and a fresh one takes the drop zone. Cleared on Clear all / after upload.
+    private readonly List<int> inputGenerations = new() { 0 };
+    private int nextGeneration = 1;
+    private int ActiveGeneration => inputGenerations[^1];
+
+    // While a dropped zip is being unpacked into its files.
+    private string? unpacking;
     private string selectedDrawingId = "";
     private string drawingCode = "";
     private string title = "";
@@ -42,7 +55,9 @@ public partial class DrawingUploadForm
     // The idle labels say WHERE the upload goes — "to the register" — so this button reads as the
     // save-to-the-portal step, distinct from the page button that merely opens this panel.
     private string SubmitLabel =>
-        busy
+        unpacking is not null
+            ? $"Unpacking {unpacking}…"
+            : busy
             ? IsBulk ? $"Uploading {bulkDone} of {bulkTotal}…" : "Uploading…"
             : IsBulk ? $"Upload {selectedFiles.Count} drawings to the register"
             : isRevision ? "Upload revision to the register" : "Upload drawing to the register";
@@ -53,7 +68,7 @@ public partial class DrawingUploadForm
         error = null;
     }
 
-    private void OnFilesSelected(InputFileChangeEventArgs e)
+    private async Task OnFilesSelected(InputFileChangeEventArgs e)
     {
         if (e.FileCount > MaxBulkFiles)
         {
@@ -62,7 +77,8 @@ public partial class DrawingUploadForm
         }
         error = null;
 
-        // A revision is one file into one drawing — a new pick REPLACES the old one.
+        // A revision is one file into one drawing — a new pick REPLACES the old one (same input,
+        // so the replaced handle dying is exactly right).
         if (isRevision)
         {
             selectedFiles = e.GetMultipleFiles(1).ToList();
@@ -74,11 +90,39 @@ public partial class DrawingUploadForm
 
         // New-drawing mode APPENDS: a second drag adds to the selection rather than wiping it,
         // so a register can be gathered from several drops (each file has its ✕ to take it back
-        // out). A file already selected — same name and size — is skipped, so dropping the same
-        // batch twice doesn't double anything up. Kept files keep their failure notes and
-        // already-registered drawing ids, so a retry after adding more still works.
-        var incoming = e.GetMultipleFiles(MaxBulkFiles)
+        // out). A zip is unpacked here into its files — each becomes its own drawing, the zip
+        // itself is never registered. A file already selected — same name and size — is skipped,
+        // so dropping the same batch twice doesn't double anything up. Kept files keep their
+        // failure notes and already-registered drawing ids, so a retry after adding more still works.
+        var incoming = new List<IBrowserFile>();
+        var keptLiveHandle = false;
+        foreach (var picked in e.GetMultipleFiles(MaxBulkFiles))
+        {
+            if (DrawingArchiveExpander.LooksLikeZip(picked.Name, picked.ContentType))
+            {
+                unpacking = picked.Name;
+                StateHasChanged();
+                try
+                {
+                    incoming.AddRange(await DrawingArchiveExpander.ExpandAsync(picked, CancellationToken.None));
+                }
+                catch (Exception ex)
+                {
+                    error = ex.Message;
+                }
+                finally
+                {
+                    unpacking = null;
+                }
+                continue;
+            }
+            incoming.Add(picked);
+            keptLiveHandle = true;
+        }
+
+        incoming = incoming
             .Where(file => !selectedFiles.Any(existing => existing.Name == file.Name && existing.Size == file.Size))
+            .GroupBy(file => (file.Name, file.Size)).Select(group => group.First())
             .ToList();
         if (selectedFiles.Count + incoming.Count > MaxBulkFiles)
         {
@@ -87,7 +131,24 @@ public partial class DrawingUploadForm
         }
         selectedFiles.AddRange(incoming);
         MaybeExtractRevisionLabel();
+
+        // This input now owns live handles: retire it (hidden, files intact) and take the next
+        // drop on a fresh one — see inputGenerations.
+        if (keptLiveHandle) inputGenerations.Add(nextGeneration++);
     }
+
+    // A fresh input, and the retired ones dropped — nothing selected refers to them any more.
+    private void ResetInputs()
+    {
+        inputGenerations.Clear();
+        inputGenerations.Add(nextGeneration++);
+    }
+
+    // A handle that died anyway (a stale build, a browser quirk) can't be retried — say what to do.
+    private static string UploadFailureMessage(Exception ex) =>
+        ex.Message.Contains("There is no file with ID", StringComparison.OrdinalIgnoreCase)
+            ? "The browser lost hold of this file — remove it (✕) and drop it in again."
+            : ex.Message;
 
     private void MaybeExtractRevisionLabel()
     {
@@ -109,6 +170,7 @@ public partial class DrawingUploadForm
         failures.Clear();
         registeredIds.Clear();
         error = null;
+        ResetInputs();
     }
 
     private async Task HandleUpload()
@@ -184,7 +246,7 @@ public partial class DrawingUploadForm
         }
         catch (Exception ex)
         {
-            error = $"Upload failed: {ex.Message}";
+            error = $"Upload failed: {UploadFailureMessage(ex)}";
         }
         finally
         {
@@ -232,7 +294,7 @@ public partial class DrawingUploadForm
                 }
                 catch (Exception ex)
                 {
-                    failures.Add((file.Name, ex.Message));
+                    failures.Add((file.Name, UploadFailureMessage(ex)));
                     stillFailing.Add(file);
                 }
             }
@@ -264,6 +326,7 @@ public partial class DrawingUploadForm
         selectedFiles = new List<IBrowserFile>();
         failures.Clear();
         registeredIds.Clear();
+        ResetInputs();
         drawingCode = ""; title = ""; revisionLabel = ""; issuedBy = ""; selectedDrawingId = "";
         folderPicker?.Reset();
     }
