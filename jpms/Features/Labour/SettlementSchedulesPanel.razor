@@ -2,9 +2,12 @@
 @using static Jewel.JPMS.Features.Labour.LabourDisplay
 
 @* Settlement: the per-worker monthly schedule, its verdict, and the §6a run. Each worker's
-   signed-off month, split by site × cost code × nature — the exact totals the covering bill is
-   coded to in Dext. The run writes DRAFT bills only: it recodes the covered bill (or stages one
-   if none has arrived), and approval stays with the accountant in Xero. *@
+   signed-off month, split by site × cost code × nature — the exact split the worker's bill is
+   coded to in Xero. Since 2026-09-03 the run's normal path is the cover route: it finds the
+   worker's existing bill (draft or authorised), recodes it keeping its total and VAT, and moves
+   the cover onto the new lines; it stages a draft only where no bill exists. "Code month into
+   Xero" previews first — the confirm modal shows what the run would do per worker — and only
+   the confirm writes. *@
 <Panel Title="Settlement schedules" Class="mb-6" BodyClass="p-0" IsLoading="@Loading" LoadingLabel="Loading schedules">
     @if (Schedules is null)
     {
@@ -23,14 +26,16 @@
             }
             <span class="flex-1"></span>
             <button type="button" class="btn-primary" disabled="@RunningCoding"
-                    @onclick="() => OnRunCoding.InvokeAsync()">@(RunningCoding ? "Coding into Xero…" : "Code month into Xero")</button>
+                    @onclick="() => OnPreviewCoding.InvokeAsync()">@(RunningCoding ? "Working…" : "Code month into Xero")</button>
         </div>
         <p class="px-5 pt-3 text-xs text-content-subtle">
             Each worker's signed-off month, split by site × cost code × nature — the exact
-            totals the covering bill is coded to in Dext. The run writes DRAFT bills only:
-            it recodes the covered bill (or stages one if none has arrived), and approval
-            stays with the accountant in Xero. Anything unsigned, unmapped or in variance
-            is skipped and reported, never guessed.
+            split the worker's bill is coded to in Xero. The run finds the worker's existing
+            bill for the month (draft or authorised) and recodes it, keeping its total, VAT
+            and status and moving the settlement cover onto the new lines; it stages a
+            draft only where no bill exists, and approving that draft stays with the
+            accountant. Anything unsigned, unmapped, paid or already coded is skipped and
+            reported, never guessed — and you see the plan before anything is written.
         </p>
         @if (CodingResults is not null)
         {
@@ -78,7 +83,20 @@
                             <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@(schedule.CoveredBillTotal == 0m ? "—" : schedule.CoveredBillTotal.ToString("N2"))</td>
                             <td class="px-2 py-2.5"><SettlementVerdictPill Schedule="schedule" /></td>
                             <td class="px-5 py-2.5 text-content-subtle text-xs whitespace-nowrap">
-                                @(schedule.LastCodingOutcome == "" ? "—" : $"{schedule.LastCodingOutcome} · {schedule.LastCodedAt:dd MMM HH:mm}")
+                                @if (schedule.LastCodingOutcome == "")
+                                {
+                                    <span>—</span>
+                                }
+                                else
+                                {
+                                    <span>@CodingOutcomeLabel(schedule.LastCodingOutcome) · @schedule.LastCodedAt?.ToString("dd MMM HH:mm")</span>
+                                    @if (CodingOutcomeBlocksRerun(schedule.LastCodingOutcome))
+                                    {
+                                        <button type="button" class="ml-2 underline text-content-subtle hover:text-content"
+                                                title="Reopen this worker-month for the coding run (a reason is recorded)"
+                                                @onclick="() => OnResetCoding.InvokeAsync(schedule)" @onclick:stopPropagation="true">Reset</button>
+                                    }
+                                }
                             </td>
                         </tr>
                         @if (expandedWorkerId == schedule.WorkerId)
@@ -94,14 +112,62 @@
     }
 </Panel>
 
+@* The dry run's plan, confirmed before anything is written (item E). Would-recode rows name
+   the bill, its status and totals; would-stage rows say no bill exists; skips carry their
+   reason. Confirm runs the real thing against exactly this list. *@
+<Modal IsOpen="@(CodingPlan is not null)" Title="@($"Code {MonthLabel} into Xero?")"
+       ConfirmLabel="@(RunningCoding ? "Coding into Xero…" : (PlanWrites == 0 ? "Nothing to write" : $"Write {PlanWrites} to Xero"))"
+       ConfirmDisabled="@(RunningCoding || PlanWrites == 0)" CancelLabel="@(PlanWrites == 0 ? "Close" : "Cancel")"
+       OnCancel="() => OnCancelPlan.InvokeAsync()" OnConfirm="() => OnRunCoding.InvokeAsync()" Class="max-w-3xl">
+    @if (CodingPlan is not null)
+    {
+        <p class="text-xs text-content-subtle mb-3">
+            This is what the run will do, worker by worker. Nothing has been written yet.
+            @if (PlanWrites == 0)
+            {
+                <span>Nothing here needs writing — every worker is skipped for the reason shown.</span>
+            }
+        </p>
+        <div class="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+            @foreach (var row in CodingPlan)
+            {
+                <div class="rounded-lg border border-line px-3 py-2 text-sm">
+                    <p class="text-content">
+                        <span class="font-medium">@row.WorkerName</span>
+                        <span class="ml-2 text-[11px] font-semibold rounded-full px-2 py-0.5 @PlanPillClass(row.Outcome)">@CodingOutcomeLabel(row.Outcome)</span>
+                    </p>
+                    <p class="text-content-muted text-xs mt-1">@row.Detail</p>
+                </div>
+            }
+        </div>
+    }
+</Modal>
+
 @code {
     [Parameter] public SettlementScheduleSnapshot? Schedules { get; set; }
     [Parameter] public bool Loading { get; set; }
     [Parameter] public bool RunningCoding { get; set; }
     [Parameter] public IReadOnlyList<XeroCodingRunResult>? CodingResults { get; set; }
+    /// <summary>The dry run's per-worker plan; non-null opens the confirm modal.</summary>
+    [Parameter] public IReadOnlyList<XeroCodingRunResult>? CodingPlan { get; set; }
+    [Parameter] public EventCallback OnPreviewCoding { get; set; }
     [Parameter] public EventCallback OnRunCoding { get; set; }
+    [Parameter] public EventCallback OnCancelPlan { get; set; }
+    [Parameter] public EventCallback<WorkerSettlementSchedule> OnResetCoding { get; set; }
     [Parameter] public EventCallback<WorkerSettlementSchedule> OnAddLine { get; set; }
     [Parameter] public EventCallback<string> OnRemoveLine { get; set; }
 
     private string? expandedWorkerId;
+
+    private string MonthLabel => Schedules is null ? "the month" : new DateTime(Schedules.Year, Schedules.Month, 1).ToString("MMMM yyyy");
+
+    private int PlanWrites => CodingPlan?.Count(row => row.Outcome is XeroCodingOutcome.WouldRecodeBill or XeroCodingOutcome.WouldStageDraft) ?? 0;
+
+    private static string PlanPillClass(XeroCodingOutcome outcome) => outcome switch
+    {
+        XeroCodingOutcome.WouldRecodeBill => "bg-positive/10 text-positive",
+        XeroCodingOutcome.WouldStageDraft => "bg-info/10 text-info",
+        XeroCodingOutcome.Failed => "bg-negative/10 text-negative",
+        _ => "bg-surface-raised text-content-subtle",
+    };
 }

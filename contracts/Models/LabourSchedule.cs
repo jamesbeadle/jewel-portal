@@ -92,15 +92,26 @@ public sealed record XeroMappingsSnapshot(
 
 public enum XeroCodingOutcome
 {
-    /// <summary>A Dext-arrived draft bill was recoded to the schedule.</summary>
+    /// <summary>The worker's existing bill for the month (Dext-arrived, draft OR authorised —
+    /// the cover route's normal state) was recoded to the schedule's split, its total, VAT
+    /// treatment and cover kept.</summary>
     BillRecoded = 0,
     /// <summary>No bill had arrived; a draft bill matching the schedule was staged.</summary>
     DraftStaged = 1,
     /// <summary>The run skipped this worker-month and reported why (mapping gap, not signed
-    /// off, already coded…). Nothing was written.</summary>
+    /// off, already coded, bill paid…). Nothing was written.</summary>
     Skipped = 2,
     /// <summary>Xero rejected the write; Detail carries its own words.</summary>
     Failed = 3,
+    /// <summary>Dry run (2026-09-03): the run WOULD recode the named bill. Nothing written, not
+    /// recorded against the worker-month.</summary>
+    WouldRecodeBill = 4,
+    /// <summary>Dry run: the run WOULD stage a draft bill. Nothing written, not recorded.</summary>
+    WouldStageDraft = 5,
+    /// <summary>The worker-month's coding outcome was reset by a person (2026-09-03) so the run
+    /// can take it again — Detail carries who, why and what it was before. Recorded, so the
+    /// history reads: staged → reset → recoded.</summary>
+    Reset = 6,
 }
 
 public sealed record XeroCodingRunResult(
@@ -109,3 +120,11 @@ public sealed record XeroCodingRunResult(
     XeroCodingOutcome Outcome,
     string Detail,
     string XeroBillId);
+
+/// <summary>What the coding run reports for a month (2026-09-03): the per-worker outcomes plus
+/// whether this was a dry run — a preview never writes and never records.</summary>
+public sealed record XeroCodingRunReport(
+    int Year,
+    int Month,
+    bool DryRun,
+    IReadOnlyList<XeroCodingRunResult> Outcomes);

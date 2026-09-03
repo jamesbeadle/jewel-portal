@@ -95,16 +95,30 @@ public interface IXeroClient
     Task<XeroApprovalResult> SetSiteTrackingAsync(XeroSiteTrackingRequest request, CancellationToken ct);
 
     /// <summary>
-    /// Recodes a DRAFT/SUBMITTED bill's whole line list to a settlement schedule
-    /// (docs/Labour-Overview-Forecast-and-Xero-Mapping-Scope.md §6a), leaving its status
-    /// untouched — the automation keys, the accountant approves in Xero. Refused for
-    /// AUTHORISED/PAID bills.
+    /// One bill as Xero holds it right now — status, what is paid or credited against it, VAT
+    /// treatment, totals (2026-09-03). Null when Xero has no bill by that id (deleted). Throws
+    /// <see cref="XeroCallFailedException"/> when Xero can't be asked, so "deleted" and "Xero is
+    /// down" never read the same.
     /// </summary>
-    Task<XeroApprovalResult> RecodeDraftBillAsync(XeroDraftCodingRequest request, CancellationToken ct);
+    Task<XeroBillSummary?> GetBillAsync(string invoiceId, CancellationToken ct);
+
+    /// <summary>
+    /// Recodes a bill's whole line list to a settlement schedule
+    /// (docs/Labour-Overview-Forecast-and-Xero-Mapping-Scope.md §6a) — DRAFT, SUBMITTED or
+    /// AUTHORISED with nothing paid or credited (2026-09-03: the cover route authorises the
+    /// bill BEFORE the run sees it, so authorised is the normal state). Status, LineAmountTypes,
+    /// tax type and totals are preserved; the schedule supplies the split. The result carries
+    /// the fresh line ids so the caller can re-point covers. Refused for paid / credited /
+    /// voided / deleted bills.
+    /// </summary>
+    Task<XeroBillRecodeResult> RecodeBillAsync(XeroBillCodingRequest request, CancellationToken ct);
 
     /// <summary>
     /// Stages a brand-new DRAFT ACCPAY bill matching a settlement schedule. FreshStatus carries
-    /// the new bill's InvoiceID on success so the run can record what it created.
+    /// the new bill's InvoiceID on success so the run can record what it created. The tax type
+    /// is NEVER assumed (2026-09-03): the contact's default purchases tax type, else the tax
+    /// type on the contact's most recent bill, else omitted so Xero's account default applies —
+    /// Note says which, so the run can relay it.
     /// </summary>
     Task<XeroApprovalResult> CreateDraftBillAsync(XeroDraftBillRequest request, CancellationToken ct);
 

@@ -1,0 +1,66 @@
+@namespace Jewel.JPMS.Features.Labour
+@inject ILabourStore Labour
+
+@* Reopen a worker-month for the Xero coding run (2026-09-03, item D). The run-once gate reads
+   the latest recorded outcome, so a month coded to a bill that was then deleted by hand sat
+   behind "draft staged" for ever. The reset appends a Reset outcome — who, why, what it was —
+   and the next run takes the month again. Nothing in Xero is touched. Opened by the page with
+   Open(schedule); the dialog owns the reason. *@
+<Modal IsOpen="@open" Title="@($"Reset coding — {workerName}")"
+       ConfirmLabel="Reset outcome" ConfirmDisabled="@(saving || string.IsNullOrWhiteSpace(reason))"
+       OnCancel="() => open = false" OnConfirm="SaveAsync">
+    <p class="text-xs text-content-subtle mb-3">
+        This month currently reads <span class="font-medium text-content">@currentOutcome</span>.
+        Resetting records why and lets the next run code this month again — it changes nothing in
+        Xero itself. If the run's bill is still in Xero, the run will find it and recode it rather
+        than stage another.
+    </p>
+    <div class="space-y-3">
+        <label class="block text-sm text-content-muted">Reason (recorded against the month)
+            <textarea class="field mt-1" rows="3" @bind="reason" @bind:event="oninput"
+                      placeholder="e.g. Staged draft deleted by hand on 2 Sep — real bill is authorised"></textarea>
+        </label>
+        @if (error is not null)
+        {
+            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public int Year { get; set; }
+    [Parameter] public int Month { get; set; }
+
+    private bool open;
+    private bool saving;
+    private string? error;
+    private string workerId = "";
+    private string workerName = "";
+    private string currentOutcome = "";
+    private string reason = "";
+
+    public void Open(WorkerSettlementSchedule schedule)
+    {
+        workerId = schedule.WorkerId;
+        workerName = schedule.WorkerName;
+        currentOutcome = schedule.LastCodingOutcome == ""
+            ? "not coded"
+            : $"{LabourDisplay.CodingOutcomeLabel(schedule.LastCodingOutcome)} · {schedule.LastCodedAt:dd MMM HH:mm}";
+        reason = ""; error = null;
+        open = true;
+        StateHasChanged();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(reason)) { error = "Say why — the reason is what the run history keeps."; return; }
+        saving = true; error = null;
+        try
+        {
+            await Labour.ResetXeroCodingOutcomeAsync(Year, Month, workerId, reason.Trim());
+            open = false;
+        }
+        catch (Exception) { error = "Could not reset the outcome — check the error bar and try again."; }
+        finally { saving = false; }
+    }
+}

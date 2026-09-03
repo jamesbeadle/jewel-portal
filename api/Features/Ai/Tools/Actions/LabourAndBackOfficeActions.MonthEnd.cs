@@ -7,7 +7,9 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 internal sealed partial class LabourAndBackOfficeActions
 {
     // The whole month-end chain from the connector (2026-08-31, the accountant's ask): sign off
-    // → run the coding → human approves the bill in Xero → mark the cover / post the variance.
+    // → preview the coding → run the coding → (a draft the run staged is approved by a human in
+    // Xero) → post any variance. Since 2026-09-03 the run's normal path is to recode the
+    // worker's EXISTING authorised bill (the cover route) and re-point the cover itself;
     // view_settlement_month is the read that pairs with these.
     private static IEnumerable<AiAction> MonthEndActions() => new AiAction[]
     {
@@ -63,18 +65,48 @@ internal sealed partial class LabourAndBackOfficeActions
                 + "the settlement view."),
 
         new AiAction(
+            Name: "preview_xero_coding",
+            Area: "Labour",
+            Description: "DRY RUN of run_xero_coding (writes nothing, to Xero or to the run "
+                + "history): for the month it reports per worker exactly what the run WOULD do — "
+                + "WouldRecodeBill (naming the bill, its status, net/VAT/total and the line split), "
+                + "WouldStageDraft (no bill exists for the worker-month), or Skipped with the "
+                + "reason (not signed off, mapping gap, bill paid/credited/voided, already coded, "
+                + "two candidate bills). Same gates, same bill search, same skip reasons as the "
+                + "real run — the list IS the confirmation list.",
+            CommandType: typeof(PreviewXeroCodingByName),
+            ResultType: typeof(XeroCodingRunReport),
+            AuthorisationType: typeof(PreviewXeroCodingByNameAuthorisation),
+            ValidationType: typeof(PreviewXeroCodingByNameValidation),
+            VisibleTo: LabourRoleSets.ManageSettlement,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "ALWAYS run this before run_xero_coding and show the user the per-worker list "
+                + "verbatim — the run writes to the live ledger and a duplicate is far cheaper to "
+                + "prevent than to find. workerNames narrows it the same way. A WouldRecodeBill "
+                + "row that differs from the schedule is not a blocker: the bill's money is split "
+                + "in the schedule's proportions and the difference is posted with "
+                + "add_labour_settlement_variance."),
+
+        new AiAction(
             Name: "run_xero_coding",
             Area: "Labour",
             Description: "WRITES TO XERO: runs the month's automated labour coding — the Labour "
-                + "overview's Run Xero coding. For each fully signed-off worker-month it recodes "
-                + "the covered Dext draft bill to the settlement schedule's split (Sites and Cost "
-                + "Code tracking per the effective-dated mappings) or stages a draft bill where "
-                + "none has arrived. Everything lands DRAFT in Xero — approving the bill there "
-                + "stays human. Unsigned weeks, mapping gaps, open variances and already-coded "
-                + "months skip-and-report; the run never guesses a code and never writes from "
-                + "unsigned data. Returns per-worker outcomes the way approval outcomes come "
-                + "back: BillRecoded, DraftStaged, Skipped or Failed, each with the detail in "
-                + "the run's own words.",
+                + "overview's Code month into Xero. For each fully signed-off worker-month it "
+                + "FINDS the worker's existing bill for the month — the covered bill, or one "
+                + "recognised by contact + period, draft OR AUTHORISED (the cover route "
+                + "authorises the bill before the run sees it, so authorised is the normal state "
+                + "for our sole traders) — and recodes that bill's lines to the settlement "
+                + "schedule's split (Sites and Cost Code tracking per the effective-dated "
+                + "mappings), keeping the bill's status, total, VAT treatment and attachment and "
+                + "moving the timesheet cover onto the new lines in the same transaction, so the "
+                + "settlement verdict reads the same before and after. Only where NO bill exists "
+                + "does it stage a DRAFT bill — VAT from the contact's default in Xero (or their "
+                + "last bill), never assumed. A bill it cannot recode (paid, part-paid, credited, "
+                + "voided) skips naming the bill and its status; it NEVER stages a second bill "
+                + "beside an existing one. Unsigned weeks, mapping gaps and already-coded months "
+                + "skip-and-report. Returns per-worker outcomes: BillRecoded, DraftStaged, "
+                + "Skipped or Failed, each with the detail in the run's own words.",
             CommandType: typeof(RunXeroCodingByName),
             ResultType: typeof(XeroCodingRunReport),
             AuthorisationType: typeof(RunXeroCodingByNameAuthorisation),
@@ -83,14 +115,41 @@ internal sealed partial class LabourAndBackOfficeActions
             EmailStamps: new[] { "RunByEmail" },
             NameStamps: Array.Empty<string>(),
             RequiresConfirmation: true,
-            Notes: "Read view_settlement_month FIRST and show the user who will code and who "
-                + "will skip (FullySignedOff, verdict, lastCodingOutcome tell you) before the "
-                + "confirm turn. workerNames narrows the run to named workers; leave it out to "
-                + "run everyone with activity in the month. Every skip's detail names its fix: "
-                + "not signed off → sign_off_labour_week; a mapping gap → set_site_xero_mapping "
-                + "or set_cost_code_xero_mapping, then re-run; an open variance → resolve it on "
-                + "the settlement view first. Already-coded worker-months skip by design "
-                + "(run-once) — relay that rather than trying to force a re-run."),
+            Notes: "Call preview_xero_coding FIRST and put its per-worker list in the confirm "
+                + "turn — the user confirms against that list, not against a summary. "
+                + "workerNames narrows the run to named workers; leave it out to run everyone "
+                + "with activity in the month. Every skip's detail names its fix: not signed off "
+                + "→ sign_off_labour_week; a mapping gap → set_site_xero_mapping or "
+                + "set_cost_code_xero_mapping, then re-run; two candidate bills → mark the right "
+                + "one as settlement (set_xero_line_timesheet_cover). Already-coded worker-months "
+                + "skip by design (run-once) UNLESS the bill they were coded to has since been "
+                + "deleted or voided in Xero, in which case the run takes them again; otherwise "
+                + "reset_xero_coding_outcome (with a reason) is the deliberate way to re-run one. "
+                + "Running the same month twice produces the same end state, never two bills."),
+
+        new AiAction(
+            Name: "reset_xero_coding_outcome",
+            Area: "Labour",
+            Description: "Resets one worker-month's Xero coding outcome so run_xero_coding will "
+                + "take it again. The run-once gate reads the LATEST recorded outcome, so a "
+                + "worker-month coded to a bill that was then deleted by hand sat behind "
+                + "DraftStaged for ever; the reset appends a Reset outcome — who, why, what it "
+                + "was — and the history reads staged → reset → recoded. Touches nothing in "
+                + "Xero. Refuses when the latest outcome is not BillRecoded/DraftStaged (nothing "
+                + "is blocking the run).",
+            CommandType: typeof(ResetXeroCodingOutcomeByName),
+            ResultType: typeof(Acknowledgement),
+            AuthorisationType: typeof(ResetXeroCodingOutcomeByNameAuthorisation),
+            ValidationType: typeof(ResetXeroCodingOutcomeByNameValidation),
+            VisibleTo: LabourRoleSets.ManageSettlement,
+            EmailStamps: new[] { "ResetByEmail" },
+            NameStamps: Array.Empty<string>(),
+            RequiresConfirmation: true,
+            Notes: "workerName as the user says it; year/month are the worker-month; reason is "
+                + "mandatory and is what future readers of the run history see. In the confirm "
+                + "turn show the current outcome (view_settlement_month's lastCodingOutcome) and "
+                + "say plainly that the next run WILL write to Xero for this worker — then "
+                + "preview_xero_coding to show what it would do."),
 
         new AiAction(
             Name: "set_xero_line_timesheet_cover",

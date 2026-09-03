@@ -133,19 +133,109 @@ public sealed class RunXeroCodingByNameHandler : ICommandHandler<RunXeroCodingBy
     {
         // Names → register ids up front, so a typo refuses the whole run with guidance instead of
         // silently running nobody (the id-keyed handler treats an unknown id as "not wanted").
-        List<string>? workerIds = null;
-        if (command.WorkerNames is { Count: > 0 })
-        {
-            var workers = await context.Workers.AsNoTracking().ToListAsync(cancellationToken);
-            workerIds = command.WorkerNames
-                .Select(name => WorkerNameResolver.Resolve(workers, name, "running the Xero coding").WorkerId)
-                .Distinct()
-                .ToList();
-        }
+        var workerIds = await ResolveWorkerIdsAsync(context, command.WorkerNames, "running the Xero coding", cancellationToken);
 
         var outcomes = await runner.HandleAsync(
             new RunXeroCoding(command.Year, command.Month, workerIds),
             command.RunByEmail, cancellationToken);
-        return new XeroCodingRunReport(command.Year, command.Month, outcomes);
+        return new XeroCodingRunReport(command.Year, command.Month, false, outcomes);
+    }
+
+    /// <summary>Names → register ids, refusing the whole run on a typo (shared with the preview).</summary>
+    internal static async Task<List<string>?> ResolveWorkerIdsAsync(
+        JpmsContext context, IReadOnlyList<string>? workerNames, string purpose, CancellationToken cancellationToken)
+    {
+        if (workerNames is not { Count: > 0 }) return null;
+        var workers = await context.Workers.AsNoTracking().ToListAsync(cancellationToken);
+        return workerNames
+            .Select(name => WorkerNameResolver.Resolve(workers, name, purpose).WorkerId)
+            .Distinct()
+            .ToList();
+    }
+}
+
+// ---- preview_xero_coding (2026-09-03, item E) -------------------------------------------------
+
+public sealed class PreviewXeroCodingByNameAuthorisation
+{
+    // Same gate as the run: seeing what the run would write is ManageSettlement's business.
+    public bool Allows(SignedInUser user, PreviewXeroCodingByName command) =>
+        LabourRoleSets.ManageSettlement.IncludesAny(user.Roles);
+}
+
+public sealed class PreviewXeroCodingByNameValidation
+{
+    public ValidationOutcome Check(PreviewXeroCodingByName command)
+    {
+        var errors = new List<string>();
+        if (command.Year < 2020 || command.Year > 2100)
+            errors.Add("Year must be between 2020 and 2100.");
+        if (command.Month < 1 || command.Month > 12)
+            errors.Add("Month must be between 1 and 12.");
+        if (command.WorkerNames is { Count: > 0 } && command.WorkerNames.Any(string.IsNullOrWhiteSpace))
+            errors.Add("workerNames must not contain blank entries — leave the list out to preview every worker.");
+        return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
+    }
+}
+
+public sealed class PreviewXeroCodingByNameHandler : ICommandHandler<PreviewXeroCodingByName, XeroCodingRunReport>
+{
+    private readonly JpmsContext context;
+    private readonly RunXeroCodingHandler runner;
+    public PreviewXeroCodingByNameHandler(JpmsContext context, RunXeroCodingHandler runner)
+    { this.context = context; this.runner = runner; }
+
+    public async Task<XeroCodingRunReport> HandleAsync(PreviewXeroCodingByName command, CancellationToken cancellationToken)
+    {
+        var workerIds = await RunXeroCodingByNameHandler.ResolveWorkerIdsAsync(
+            context, command.WorkerNames, "previewing the Xero coding", cancellationToken);
+        var outcomes = await runner.HandleAsync(
+            new RunXeroCoding(command.Year, command.Month, workerIds, DryRun: true), runByEmail: "", cancellationToken);
+        return new XeroCodingRunReport(command.Year, command.Month, true, outcomes);
+    }
+}
+
+// ---- reset_xero_coding_outcome (2026-09-03, item D) -------------------------------------------
+
+public sealed class ResetXeroCodingOutcomeByNameAuthorisation
+{
+    // Same gate as ResetXeroCodingOutcomeEndpoint's inline check.
+    public bool Allows(SignedInUser user, ResetXeroCodingOutcomeByName command) =>
+        LabourRoleSets.ManageSettlement.IncludesAny(user.Roles);
+}
+
+public sealed class ResetXeroCodingOutcomeByNameValidation
+{
+    public ValidationOutcome Check(ResetXeroCodingOutcomeByName command)
+    {
+        var errors = new List<string>();
+        if (string.IsNullOrWhiteSpace(command.WorkerName))
+            errors.Add("Worker name is required.");
+        if (command.Year < 2020 || command.Year > 2100)
+            errors.Add("Year must be between 2020 and 2100.");
+        if (command.Month < 1 || command.Month > 12)
+            errors.Add("Month must be between 1 and 12.");
+        if (string.IsNullOrWhiteSpace(command.Reason))
+            errors.Add("reason is required — it is recorded against the worker-month.");
+        return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
+    }
+}
+
+public sealed class ResetXeroCodingOutcomeByNameHandler : ICommandHandler<ResetXeroCodingOutcomeByName, Acknowledgement>
+{
+    private readonly JpmsContext context;
+    private readonly ResetXeroCodingOutcomeHandler reset;
+    public ResetXeroCodingOutcomeByNameHandler(JpmsContext context, ResetXeroCodingOutcomeHandler reset)
+    { this.context = context; this.reset = reset; }
+
+    public async Task<Acknowledgement> HandleAsync(ResetXeroCodingOutcomeByName command, CancellationToken cancellationToken)
+    {
+        var workers = await context.Workers.AsNoTracking().ToListAsync(cancellationToken);
+        var worker = WorkerNameResolver.Resolve(workers, command.WorkerName, "resetting their coding outcome");
+        // InvalidOperationException from the handler (nothing to reset) reaches the caller as a
+        // message, not a 500 — the gateway's convention.
+        return await reset.HandleAsync(
+            new ResetXeroCodingOutcome(worker.WorkerId, command.Year, command.Month, command.Reason),
+            command.ResetByEmail, cancellationToken);
     }
 }

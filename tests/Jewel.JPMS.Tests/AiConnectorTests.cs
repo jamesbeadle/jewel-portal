@@ -211,6 +211,7 @@ public sealed class AiConnectorTests
         foreach (var name in new[]
         {
             "sign_off_labour_week", "remove_labour_week_sign_off", "run_xero_coding",
+            "preview_xero_coding", "reset_xero_coding_outcome",
             "set_xero_line_timesheet_cover", "add_labour_settlement_variance",
             "set_site_xero_mapping", "set_cost_code_xero_mapping"
         })
@@ -223,13 +224,16 @@ public sealed class AiConnectorTests
         // never drops the gate.
         foreach (var name in new[]
         {
-            "sign_off_labour_week", "run_xero_coding", "add_labour_settlement_variance",
-            "set_site_xero_mapping", "set_cost_code_xero_mapping"
+            "sign_off_labour_week", "run_xero_coding", "reset_xero_coding_outcome",
+            "add_labour_settlement_variance", "set_site_xero_mapping", "set_cost_code_xero_mapping"
         })
         {
             Assert.True(AiActionRegistry.All.Single(a => a.Name == name).RequiresConfirmation,
                 $"{name} must be confirm-first.");
         }
+
+        // The dry run is read-shaped: it never asks for confirmation (2026-09-03).
+        Assert.False(AiActionRegistry.All.Single(a => a.Name == "preview_xero_coding").RequiresConfirmation);
 
         // The settlement cluster gates on ManageSettlement — a site role never sees it.
         var foreman = UserWith(Role.Foreman);

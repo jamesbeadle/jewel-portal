@@ -86,12 +86,17 @@ internal static class AiLabourMonthEndTools
                                 line.WorkerSettlementLineId
                             })
                         }),
-                        note = "The month-end chain: sign_off_labour_week per worker-week → run_xero_coding "
-                            + "(fully signed-off months only; DRAFT bills in Xero) → the user approves the "
-                            + "bill in Xero → set_xero_line_timesheet_cover marks the settled line, and "
-                            + "add_labour_settlement_variance posts an accepted difference. A verdict of "
-                            + "NoBillYet with lastCodingOutcome DraftStaged means the staged draft is "
-                            + "awaiting approval in Xero, not a missing invoice."
+                        note = "The month-end chain: sign_off_labour_week per worker-week → "
+                            + "preview_xero_coding (what the run would do, writes nothing) → "
+                            + "run_xero_coding (fully signed-off months only). The run's normal path "
+                            + "(2026-09-03) is to find the worker's existing bill — covered, or recognised "
+                            + "by contact + period, draft OR authorised — recode it to the schedule and "
+                            + "re-point the cover itself, so verdict Matches survives the run; it stages a "
+                            + "DRAFT only where no bill exists, and that draft is approved by a human in "
+                            + "Xero. add_labour_settlement_variance posts an accepted difference. A "
+                            + "verdict of NoBillYet with lastCodingOutcome DraftStaged means the staged "
+                            + "draft is awaiting approval in Xero, not a missing invoice; lastCodingOutcome "
+                            + "Reset means a person reopened the month for the run."
                     });
                 }),
 

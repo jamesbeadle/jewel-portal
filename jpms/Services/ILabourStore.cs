@@ -96,7 +96,11 @@ public interface ILabourStore
     Task RefreshXeroMappingsAsync();
     Task SetSiteXeroMappingAsync(string projectId, string optionId, string optionName);
     Task SetCostCodeXeroMappingAsync(string costCode, string optionId, string optionName, string labourAccount, string materialsAccount, string travelAccount);
-    Task<IReadOnlyList<XeroCodingRunResult>> RunXeroCodingAsync(int year, int month, IReadOnlyList<string>? workerIds);
+    /// <summary>The §6a run; dryRun previews per worker what it would do and writes nothing
+    /// (2026-09-03). A real run refreshes the month's schedules afterwards.</summary>
+    Task<IReadOnlyList<XeroCodingRunResult>> RunXeroCodingAsync(int year, int month, IReadOnlyList<string>? workerIds, bool dryRun = false);
+    /// <summary>Reopens a worker-month for the run (appends a Reset outcome, reason recorded).</summary>
+    Task ResetXeroCodingOutcomeAsync(int year, int month, string workerId, string reason);
 
     // Settlement reconciliation.
     IReadOnlyList<LabourSettlementRow> SettlementFor(string projectId);

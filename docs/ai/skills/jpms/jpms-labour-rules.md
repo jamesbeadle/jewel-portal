@@ -44,15 +44,28 @@ description: "Labour and timesheet doctrine — how hours become cost and what i
      days never hold the old month's settlement up, and a whole week inside one month is
      unchanged (one marker).
 4. **view_settlement_month** — who will code, who will skip and why (FullySignedOff, verdict,
-   lastCodingOutcome).
-5. **run_xero_coding** (confirm-first) — recodes the covered Dext draft bill or stages a draft;
-   everything lands DRAFT in Xero, approving the bill there stays human. Skips report their fix:
-   a mapping gap → get_xero_mappings, then set_site_xero_mapping / set_cost_code_xero_mapping;
-   not signed off → step 3. Already-coded months skip by design (run-once) — relay that.
-6. After the user approves the bill in Xero and it syncs back: **set_xero_line_timesheet_cover**
-   marks the line as settlement of the approved timesheets; when the totals will not tie and the
-   difference is accepted, **add_labour_settlement_variance** (confirm-first) posts it visibly —
-   never absorb a difference silently.
+   lastCodingOutcome — `Reset` means a person reopened the month for the run).
+5. **preview_xero_coding** — the dry run. Writes nothing; reports per worker what the run WOULD
+   do (WouldRecodeBill naming the bill, WouldStageDraft, or Skipped with the reason). Show the
+   list verbatim; it is the confirmation list for step 6.
+6. **run_xero_coding** (confirm-first) — since 2026-09-03 the run's NORMAL path is the cover
+   route: it finds the worker's existing bill for the month (covered, or recognised by contact +
+   period; draft OR AUTHORISED — our sole traders' bills are authorised before the run sees
+   them), recodes its lines to the schedule's split keeping the bill's total, VAT treatment,
+   status and attachment, and moves the timesheet cover onto the new lines in the same
+   transaction. It stages a DRAFT only where no bill exists at all — VAT from the contact's
+   default (or their last bill), never assumed — and approving that draft stays human. A bill it
+   cannot recode (paid, credited, voided) skips naming the bill and its status; it never stages
+   a second bill beside an existing one. Skips report their fix: a mapping gap →
+   get_xero_mappings, then set_site_xero_mapping / set_cost_code_xero_mapping; not signed off →
+   step 3; two candidate bills → set_xero_line_timesheet_cover on the right one. Already-coded
+   months skip by design (run-once) unless their bill has since been deleted or voided in Xero;
+   **reset_xero_coding_outcome** (confirm-first, reason mandatory) is the deliberate way to
+   reopen one. Running twice gives the same end state, never two bills.
+7. When the bill's total will not tie to the schedule and the difference is accepted,
+   **add_labour_settlement_variance** (confirm-first) posts it visibly — never absorb a
+   difference silently. **set_xero_line_timesheet_cover** still marks (or unmarks) a line by hand
+   when recognition picked nothing or the wrong bill.
 
 ## Settlement identity (2026-08-31)
 

@@ -354,11 +354,18 @@ public sealed class HttpLabourStore : ILabourStore
         await xeroMappingsReadModel.RefreshAsync(CancellationToken.None);
     }
 
-    public async Task<IReadOnlyList<XeroCodingRunResult>> RunXeroCodingAsync(int year, int month, IReadOnlyList<string>? workerIds)
+    public async Task<IReadOnlyList<XeroCodingRunResult>> RunXeroCodingAsync(int year, int month, IReadOnlyList<string>? workerIds, bool dryRun = false)
     {
-        var results = await commands.SendAsync(new RunXeroCoding(year, month, workerIds), CancellationToken.None);
-        await schedulesReadModel.RefreshAsync(year, month, CancellationToken.None);
+        var results = await commands.SendAsync(new RunXeroCoding(year, month, workerIds, dryRun), CancellationToken.None);
+        // A dry run changes nothing — the schedules on screen are still right.
+        if (!dryRun) await schedulesReadModel.RefreshAsync(year, month, CancellationToken.None);
         return results;
+    }
+
+    public async Task ResetXeroCodingOutcomeAsync(int year, int month, string workerId, string reason)
+    {
+        await commands.SendAsync(new ResetXeroCodingOutcome(workerId, year, month, reason), CancellationToken.None);
+        await schedulesReadModel.RefreshAsync(year, month, CancellationToken.None);
     }
 
     public IReadOnlyList<LabourSettlementRow> SettlementFor(string projectId)

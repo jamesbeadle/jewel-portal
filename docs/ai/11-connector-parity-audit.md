@@ -189,6 +189,15 @@ money. Reads to match: view_settlement_month, view_worker_month (cross-project),
 get_xero_mappings (AiLabourMonthEndTools.cs). find_by_reference now resolves project
 references (JBB-2026-002 → kind "project").
 
+**2026-09-03 (the accountant's "coding run must settle a worker who already has a bill")**: the
+coding run's normal path is now to find and recode the worker's EXISTING bill (draft or
+authorised, by cover or by contact + period) and re-point the cover itself; staging is the
+exception. Two actions joined the cluster: preview_xero_coding (the dry run — read-shaped, no
+confirmation, the list the run is confirmed against) and reset_xero_coding_outcome
+(confirm-first, ResetByEmail stamp, reason mandatory) — by-name wrappers over
+RunXeroCodingHandler(DryRun) and the new ResetXeroCodingOutcome endpoint
+(POST labour/xero-coding/reset).
+
 **Still open, with reasons**: the cash forecast/statement COMPUTATION (the phasing runs
 client-side over several stores; the inputs are now all readable — a server-side statement tool
 is a real build, not a wrapper); profit summary / Xero site P&L and Xero transactions reads;

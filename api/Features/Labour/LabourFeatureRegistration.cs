@@ -135,6 +135,17 @@ public static class LabourFeatureRegistration
         services.AddScoped<ICommandHandler<RunXeroCodingByName, XeroCodingRunReport>, RunXeroCodingByNameHandler>();
         services.AddScoped<RunXeroCodingByNameAuthorisation>();
         services.AddScoped<RunXeroCodingByNameValidation>();
+        // Dry run (preview_xero_coding) and the coding-outcome reset (2026-09-03, items D + E):
+        // the reset has an endpoint of its own; both have by-name wrappers for the connector.
+        services.AddScoped<ICommandHandler<PreviewXeroCodingByName, XeroCodingRunReport>, PreviewXeroCodingByNameHandler>();
+        services.AddScoped<PreviewXeroCodingByNameAuthorisation>();
+        services.AddScoped<PreviewXeroCodingByNameValidation>();
+        services.AddScoped<ResetXeroCodingOutcomeHandler>();
+        services.AddScoped<ICommandHandler<ResetXeroCodingOutcome, Acknowledgement>>(
+            provider => provider.GetRequiredService<ResetXeroCodingOutcomeHandler>());
+        services.AddScoped<ICommandHandler<ResetXeroCodingOutcomeByName, Acknowledgement>, ResetXeroCodingOutcomeByNameHandler>();
+        services.AddScoped<ResetXeroCodingOutcomeByNameAuthorisation>();
+        services.AddScoped<ResetXeroCodingOutcomeByNameValidation>();
         // Gate classes for the settlement/Xero write cluster (2026-08-31): the endpoints keep
         // their inline checks; these exist so the connector's action gateway composes the same
         // RoleSet constants and argument rules (SettlementCommandGates.cs).

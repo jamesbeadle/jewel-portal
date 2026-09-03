@@ -65,13 +65,84 @@ public sealed record XeroScheduleLine(
     string CostCodeOption);
 
 /// <summary>
-/// Recode a DRAFT (or SUBMITTED) bill's entire line list to a settlement schedule WITHOUT
-/// approving it — the §6a automation does the keying, the accountant's approval in Xero remains
-/// the human gate. Refused for AUTHORISED/PAID bills.
+/// Recode a bill's entire line list to a settlement schedule (2026-09-03: DRAFT, SUBMITTED or
+/// AUTHORISED — an authorised bill with nothing paid or credited against it is the cover
+/// route's NORMAL state, and Xero permits editing it). The bill's status, LineAmountTypes,
+/// tax type and totals are preserved: the schedule supplies the SPLIT (weights, accounts,
+/// tracking, descriptions); the bill's own SubTotal / TotalTax / Total are pro-rated across it
+/// penny-safe, so the recode never moves the total or the VAT. Refused for PAID / VOIDED /
+/// DELETED bills and for anything with a payment or credit note applied.
 /// </summary>
-public sealed record XeroDraftCodingRequest(
+public sealed record XeroBillCodingRequest(
     string InvoiceId,
     IReadOnlyList<XeroScheduleLine> Lines);
+
+/// <summary>One line as Xero holds it after a recode — the fresh LineItemID is what the run
+/// re-points the timesheet cover onto.</summary>
+public sealed record XeroRecodedLine(
+    string LineItemId,
+    string Description,
+    decimal LineAmount,
+    decimal TaxAmount,
+    string AccountCode,
+    string? SiteOption,
+    string? CostCodeOption);
+
+/// <summary>What a recode did: the bill's status (unchanged), the VAT treatment it kept, its
+/// totals as Xero reports them after the write, and the new lines with their ids.</summary>
+public sealed record XeroBillRecodeResult(
+    bool Succeeded,
+    string? Error,
+    string Status,
+    string LineAmountTypes,
+    string? TaxType,
+    decimal SubTotal,
+    decimal TotalTax,
+    decimal Total,
+    IReadOnlyList<XeroRecodedLine> Lines)
+{
+    public static XeroBillRecodeResult Failed(string error) =>
+        new(false, error, "", "", null, 0m, 0m, 0m, Array.Empty<XeroRecodedLine>());
+}
+
+/// <summary>
+/// One bill as Xero holds it right now — the fresh read the coding run and its dry run make
+/// before deciding anything about an existing bill (status, what is paid or credited against
+/// it, its VAT treatment and totals). Null from the client means Xero has no bill by that id.
+/// </summary>
+public sealed record XeroBillSummary(
+    string InvoiceId,
+    string Status,
+    string? InvoiceNumber,
+    string? Reference,
+    string? ContactName,
+    DateTime? Date,
+    string LineAmountTypes,
+    decimal SubTotal,
+    decimal TotalTax,
+    decimal Total,
+    decimal AmountPaid,
+    decimal AmountCredited,
+    decimal AmountDue,
+    int LineCount,
+    string? TaxType)
+{
+    /// <summary>Editable in Xero: draft, submitted or authorised with nothing paid or credited.</summary>
+    public bool IsRecodable =>
+        (Status.Equals("DRAFT", StringComparison.OrdinalIgnoreCase)
+         || Status.Equals("SUBMITTED", StringComparison.OrdinalIgnoreCase)
+         || Status.Equals("AUTHORISED", StringComparison.OrdinalIgnoreCase))
+        && AmountPaid == 0m && AmountCredited == 0m;
+
+    /// <summary>Why it cannot be recoded, in words the accountant can act on.</summary>
+    public string NotRecodableReason =>
+        Status.Equals("PAID", StringComparison.OrdinalIgnoreCase) ? "it is PAID"
+        : Status.Equals("VOIDED", StringComparison.OrdinalIgnoreCase) ? "it is VOIDED"
+        : Status.Equals("DELETED", StringComparison.OrdinalIgnoreCase) ? "it is DELETED"
+        : AmountPaid > 0m ? $"it is {Status} with £{AmountPaid:N2} paid against it"
+        : AmountCredited > 0m ? $"it is {Status} with £{AmountCredited:N2} credited against it"
+        : $"it is {Status}";
+}
 
 /// <summary>
 /// Stage a brand-new DRAFT ACCPAY bill matching a settlement schedule, for a worker-month whose
@@ -84,13 +155,18 @@ public sealed record XeroDraftBillRequest(
     string Reference,
     IReadOnlyList<XeroScheduleLine> Lines);
 
+// Note (2026-09-03): a sentence the caller should relay — for a staged draft bill, which VAT
+// treatment was applied and where it came from (the contact's default, their last bill, or
+// Xero's account default when neither answers).
 public sealed record XeroApprovalResult(
     bool Succeeded,
     bool AlreadyApproved,
     string? FreshStatus,
-    string? Error)
+    string? Error,
+    string? Note = null)
 {
     public static XeroApprovalResult Ok(string status) => new(true, false, status, null);
+    public static XeroApprovalResult Ok(string status, string note) => new(true, false, status, null, note);
     public static XeroApprovalResult SkippedAlreadyApproved(string status) => new(true, true, status, null);
     public static XeroApprovalResult Failed(string error) => new(false, false, null, error);
 }

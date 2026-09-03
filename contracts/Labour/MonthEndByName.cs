@@ -39,14 +39,18 @@ public sealed record RemoveWorkerWeekSignOffByName(
     DateTimeOffset? MonthStart = null) : ICommand<Acknowledgement>;
 
 /// <summary>
-/// The §6a automation, run for one month from the connector — the Labour overview's "Run Xero
-/// coding", by name: for each fully signed-off worker-month, recode the covered Dext draft bill
-/// to the settlement schedule (Sites and Cost Code tracking per the effective-dated mappings) or
-/// stage a draft bill where none has arrived. Everything lands DRAFT in Xero; approval there
-/// stays human. Mapping gaps, unsigned weeks, open variances and already-coded months
-/// skip-and-report per worker — the run never guesses and never writes from unsigned data.
-/// WorkerNames narrows the run; null runs every worker with activity in the month.
-/// RunByEmail is stamped server-side from the connector caller.
+/// The §6a automation, run for one month from the connector — the Labour overview's "Code month
+/// into Xero", by name: for each fully signed-off worker-month, find the worker's existing bill
+/// for the month (draft or authorised — the cover route is the sole trader's normal path) and
+/// recode its lines to the settlement schedule (Sites and Cost Code tracking per the
+/// effective-dated mappings), keeping the bill's total, VAT treatment, status and cover; or stage
+/// a draft bill only where no bill exists. A bill that cannot be recoded (paid, part-paid,
+/// credited, voided) skips with its status named — a second bill is never staged beside one.
+/// Mapping gaps, unsigned weeks and already-coded months skip-and-report per worker — the run
+/// never guesses and never writes from unsigned data. WorkerNames narrows the run; null runs
+/// every worker with activity in the month. RunByEmail is stamped server-side from the connector
+/// caller. The report (XeroCodingRunReport, Models) is one row per worker with what happened —
+/// BillRecoded / DraftStaged / Skipped / Failed — and the detail in the run's own words.
 /// </summary>
 public sealed record RunXeroCodingByName(
     int Year,
@@ -54,10 +58,27 @@ public sealed record RunXeroCodingByName(
     IReadOnlyList<string>? WorkerNames = null,
     string RunByEmail = "") : ICommand<XeroCodingRunReport>;
 
-/// <summary>The run's per-worker outcomes, reported the way approval outcomes are: one row per
-/// worker with what happened (BillRecoded / DraftStaged / Skipped / Failed) and the detail in the
-/// run's own words.</summary>
-public sealed record XeroCodingRunReport(
+/// <summary>
+/// The dry run of <see cref="RunXeroCodingByName"/> (2026-09-03, item E of the accountant's
+/// spec): the same gates, the same bill search, the same skip reasons — but it reports per
+/// worker what the run WOULD do (WouldRecodeBill / WouldStageDraft / Skipped) and writes nothing,
+/// to Xero or to the run history. Run it, show the list, get the yes, then run_xero_coding.
+/// </summary>
+public sealed record PreviewXeroCodingByName(
     int Year,
     int Month,
-    IReadOnlyList<XeroCodingRunResult> Outcomes);
+    IReadOnlyList<string>? WorkerNames = null) : ICommand<XeroCodingRunReport>;
+
+/// <summary>
+/// Resets a worker-month's coding outcome (2026-09-03, item D): the run-once gate reads the
+/// LATEST recorded outcome, so a worker-month whose staged bill was later deleted by hand sits
+/// behind DraftStaged for ever. The reset records a Reset outcome (who, why, what it was) —
+/// history is appended, never erased — and the next run takes the month again. Touches nothing
+/// in Xero. ResetByEmail is stamped server-side from the connector caller.
+/// </summary>
+public sealed record ResetXeroCodingOutcomeByName(
+    string WorkerName,
+    int Year,
+    int Month,
+    string Reason,
+    string ResetByEmail = "") : ICommand<Acknowledgement>;

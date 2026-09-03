@@ -115,8 +115,9 @@ else
         {
             <SettlementSchedulesPanel @key="@($"settlement:{MonthKey}")" Schedules="Labour.Schedules(year, month)"
                                       Loading="@(!Labour.SchedulesLoadedFor(year, month) && !dataFailed)"
-                                      RunningCoding="isRunningCoding" CodingResults="codingResults"
-                                      OnRunCoding="RunCodingAsync"
+                                      RunningCoding="isRunningCoding" CodingResults="codingResults" CodingPlan="codingPlan"
+                                      OnPreviewCoding="PreviewCodingAsync" OnRunCoding="RunCodingAsync" OnCancelPlan="CancelCodingPlan"
+                                      OnResetCoding="OpenCodingReset"
                                       OnAddLine="OpenSettleLine" OnRemoveLine="RemoveSettlementLineAsync" />
         }
 
@@ -139,5 +140,6 @@ else
 
     <AbsenceModal @ref="absenceModal" Year="year" Month="month" />
     <SettlementLineModal @ref="settlementLineModal" Year="year" Month="month" />
+    <CodingResetModal @ref="codingResetModal" Year="year" Month="month" />
     <WeekEntryModal @ref="weekEntryModal" OnSaved="lines => weekSummaryLines = lines" />
 }

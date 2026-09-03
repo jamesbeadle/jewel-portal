@@ -46,10 +46,22 @@ public sealed record SetCostCodeXeroMapping(
 
 /// <summary>
 /// The §6a automation, run per month (optionally narrowed to named workers). For each fully
-/// signed-off worker-month it either recodes the covered draft bill to the schedule's split or
-/// stages a draft bill, ALWAYS leaving the bill DRAFT in Xero — the accountant's approval there
-/// remains the human gate. Mapping gaps skip-and-report; nothing is ever guessed. Every write
-/// and every skip is recorded against the worker-month.
+/// signed-off worker-month it finds the worker's existing bill for the month — covered, or
+/// recognised by contact + period, draft OR authorised (2026-09-03: the cover route is the sole
+/// trader's normal path, so an authorised bill is the normal case) — and recodes its lines to
+/// the schedule's split, keeping the bill's total, VAT treatment, status and cover; or stages a
+/// draft bill only where no bill exists at all. A bill it cannot recode (paid, credited, voided)
+/// skips with its status named — never a second bill. Mapping gaps skip-and-report; nothing is
+/// ever guessed. Every write and every skip is recorded against the worker-month.
+/// DryRun (2026-09-03) reports what the run WOULD do per worker and writes nothing anywhere.
 /// </summary>
-public sealed record RunXeroCoding(int Year, int Month, IReadOnlyList<string>? WorkerIds)
+public sealed record RunXeroCoding(int Year, int Month, IReadOnlyList<string>? WorkerIds, bool DryRun = false)
     : ICommand<IReadOnlyList<XeroCodingRunResult>>;
+
+/// <summary>
+/// Resets a worker-month's coding outcome (2026-09-03): appends a Reset outcome to the run
+/// history (who, why, what it was) so the run-once gate — which reads the latest outcome —
+/// lets the month be coded again. Touches nothing in Xero; the reason is mandatory.
+/// </summary>
+public sealed record ResetXeroCodingOutcome(string WorkerId, int Year, int Month, string Reason)
+    : ICommand<Acknowledgement>;
