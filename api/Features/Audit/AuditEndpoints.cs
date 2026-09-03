@@ -42,6 +42,11 @@ public sealed class AuditEndpoints
             : TriageRoles.AllowedToTriage;
         if (!signedInUser.Roles.Contains(Role.Admin) && !gate.IncludesAny(signedInUser.Roles))
             return new StatusCodeResult(403);
+        // The KPI register is administrators-only (2026-09-03); its audit rows carry only a
+        // reference, but a read NARROWED to them is a read of the register's rhythm — refused.
+        if (eventType is AuditEventType.KpiEmailMarked or AuditEventType.KpiEmailRemoved
+            && !signedInUser.Roles.Contains(Role.Admin))
+            return new StatusCodeResult(403);
         RecordType? recordType = null;
         if (Opt("recordType") is { } rawRecordType && Enum.TryParse<RecordType>(rawRecordType, ignoreCase: true, out var parsedRecordType))
             recordType = parsedRecordType;

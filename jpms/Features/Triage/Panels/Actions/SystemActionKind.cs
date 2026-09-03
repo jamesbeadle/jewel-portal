@@ -40,7 +40,12 @@ public enum SystemActionKind
     // A supplier's email about goods for the job (2026-08-28) — a delivery note, an order
     // confirmation: adds the item (product + location details) to the project's Inventory tab
     // with the email tagged to it (JPMS/INV-####).
-    AddInventoryItem
+    AddInventoryItem,
+    // An email worth keeping as evidence of how someone at Jewel is performing (2026-09-03):
+    // files it as a KPI under a portal user. ADMINISTRATORS ONLY — the row is offered to no
+    // other role — and nothing is tagged in the mailbox: the mark lives in the KPI register
+    // (Admin → KPI emails) alone, invisible to everyone else triaging the queue.
+    MarkAsKpi
 }
 
 public static class SystemActionKinds
@@ -67,7 +72,8 @@ public static class SystemActionKinds
         SystemActionKind.CreateTodos,
         SystemActionKind.CompleteTodo,
         SystemActionKind.AddDirectoryContact,
-        SystemActionKind.ForwardToQs
+        SystemActionKind.ForwardToQs,
+        SystemActionKind.MarkAsKpi
     };
 
     public static string Label(SystemActionKind kind) => kind switch
@@ -91,6 +97,7 @@ public static class SystemActionKinds
         SystemActionKind.AddDirectoryContact => "Add Directory Contact",
         SystemActionKind.ForwardToQs => "Forward to QS",
         SystemActionKind.LogTenderEnquiry => "Log Tender Enquiry",
+        SystemActionKind.MarkAsKpi => "Mark as KPI",
         _ => kind.ToString()
     };
 }

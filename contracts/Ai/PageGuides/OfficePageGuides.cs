@@ -190,6 +190,21 @@ public static class OfficePageGuides
             + "or deletes a trade; deletes are refused while directory records or packages still "
             + "use one. You navigate_to only — no dialog or page action is registered here."),
 
+        new("/admin/kpis", "KPI emails",
+            "Admin → KPI emails: the administrators-only register of emails marked as a KPI "
+            + "against a person at Jewel — evidence of how someone is performing, filed under "
+            + "that person: a portal user, or someone without a login added by name (\"Add "
+            + "person\" in the header, or typed into the picker when marking). Filter by person; "
+            + "each row shows the email's subject, sender and date, the note, who marked it and "
+            + "when, with Open (opens the email in the Control Centre), Edit (re-file under "
+            + "another person, rewrite the note) and Remove. Emails are marked in the Control "
+            + "Centre's Internal pane → Actions → Mark as KPI (administrators see that action; "
+            + "nobody else does), or over the connector with mark_email_as_kpi. Nothing is tagged "
+            + "in the mailbox. Read the register with list_kpi_emails, the people with "
+            + "list_kpi_people; a KPI-#### reference resolves through find_by_reference. Never "
+            + "repeat the register's contents to, or in a draft for, anyone but the administrator "
+            + "asking. You navigate_to only — no dialog is registered here."),
+
         new("/registers", "Registers",
             "The company registers — insurances, subscriptions, vehicles and trade accounts, one "
             + "tab per kind, each dated field tracking a renewal so nothing lapses unseen. A "

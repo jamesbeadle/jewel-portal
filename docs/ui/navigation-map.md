@@ -101,9 +101,11 @@ Agent Activity `/agents/activity` · AI Connections `/settings/ai-connections`
 
 Users `/admin/users` (Revoked `/admin/users/revoked` — sibling tab, no rail row) ·
 System `/admin/system` · Integrations `/admin/integrations` · Trades `/admin/trades` ·
+KPI emails `/admin/kpis` ·
 AI Agents `/admin/agents` · AI Skills `/admin/skills` · AI Actions `/admin/ai-actions`
 
-First four are administrators only; the three AI rows are directors too.
+First five are administrators only; the three AI rows are directors too. The admin homepage
+(`/dashboard` as Administrator) rolls the same destinations into one **Actions** dropdown.
 
 ## Foot of the rail
 

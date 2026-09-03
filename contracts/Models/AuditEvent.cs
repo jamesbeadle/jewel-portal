@@ -116,7 +116,13 @@ public enum AuditEventType
     // Variation conversation (written since 2026-08-31): a message was posted on a variation
     // order's in-app conversation — the VO twin of NotePosted above. Posts from the client
     // portal carry Pathway "Client"; internal posts leave Pathway "".
-    VariationNotePosted = 37         // a message was posted on a variation order's conversation
+    VariationNotePosted = 37,        // a message was posted on a variation order's conversation
+    // KPI emails (written since 2026-09-03): an administrator marked an email as a KPI against a
+    // portal user, or took the mark off. The register itself is administrators-only, so these
+    // rows carry the KPI reference and nothing else — no user, no subject, no message id — and
+    // the audit endpoint refuses a non-administrator's read narrowed to them. Pathway is "".
+    KpiEmailMarked = 38,             // an email was marked as a KPI (KPI-####)
+    KpiEmailRemoved = 39             // a KPI mark was taken off an email
 }
 
 // One append-only audit event. WebLink (when present) opens the email or draft in Outlook on the

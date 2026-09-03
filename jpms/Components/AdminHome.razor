@@ -4,9 +4,16 @@
 
 <section class="px-6 py-6 md:px-8">
 
-    <header class="mb-6 md:mb-8">
-        <h1 class="eyebrow mb-1">JPMS · Administrator</h1>
-        <p class="text-[10px] text-content-subtle break-all leading-snug">You are signed in as @CurrentUser.Email</p>
+    <header class="mb-6 md:mb-8 flex items-start justify-between gap-4">
+        <div>
+            <h1 class="eyebrow mb-1">JPMS · Administrator</h1>
+            <p class="text-[10px] text-content-subtle break-all leading-snug">You are signed in as @CurrentUser.Email</p>
+        </div>
+        @* The admin areas, rolled into one Actions menu (James, 2026-09-03) rather than a row of
+           links: the rail's Admin folder lists the same destinations, so the homepage offers them
+           once, out of the way. Grouped: people · system · the KPI register · the AI shelf. *@
+        <DropdownMenu Label="Actions" Items="@AdminActions" WidthClass="w-64"
+                      ToggleTitle="Administration — users, system, integrations, trades, the KPI register and the AI shelf" />
     </header>
 
     <AdminStatsRow />
@@ -17,6 +24,8 @@
     <div class="space-y-6 mb-6">
         @* Open to-do items assigned to this administrator — general and project items alike. *@
         <MyTodosPanel />
+        @* The KPI register's latest marks — administrators only, like this whole page (2026-09-03). *@
+        <AdminKpiPanel />
         <OpenRequestsPanel />
         <NextValuationsPanel />
     </div>
@@ -30,6 +39,20 @@
 
 @code {
     [Parameter, EditorRequired] public AuthenticatedUser CurrentUser { get; set; } = default!;
+
+    private static readonly IReadOnlyList<DropdownMenu.Item> AdminActions = new DropdownMenu.Item[]
+    {
+        new("Users", Href: "/admin/users", Hint: "Everyone who can sign in, invites and roles", Group: 0),
+        new("Revoked users", Href: "/admin/users/revoked", Hint: "Restore or permanently delete revoked users", Group: 0),
+        new("System", Href: "/admin/system", Hint: "Announce an app version, tender T&Cs", Group: 1),
+        new("Integrations", Href: "/admin/integrations", Hint: "The portal's shared external connections", Group: 1),
+        new("Trades", Href: "/admin/trades", Hint: "The curated trade list", Group: 1),
+        new("KPI emails", Href: "/admin/kpis", Hint: "Emails marked as a KPI against a member of staff — administrators only", Group: 2),
+        new("Audit trail", Href: "/audit", Hint: "The system audit register", Group: 2),
+        new("AI Agents", Href: "/admin/agents", Hint: "The live agent registry", Group: 3),
+        new("AI Skills", Href: "/admin/skills", Hint: "The assistant's versioned skills", Group: 3),
+        new("AI Actions", Href: "/admin/ai-actions", Hint: "Skills wired to connector actions", Group: 3),
+    };
 
     protected override void OnInitialized()
     {

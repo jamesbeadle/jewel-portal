@@ -1,0 +1,445 @@
+@page "/admin/kpis"
+@using Jewel.JPMS.Contracts.Kpi
+@using Jewel.JPMS.Features.Kpi
+@inject AuthService Auth
+@inject SessionService Session
+@inject KpiReadModel Kpis
+@inject KpiPeopleReadModel People
+@inject IUserDirectory UserDirectory
+@inject ICommandSender Commands
+@inject ControlCentreOpenEmail OpenEmail
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>KPI emails · JPMS</PageTitle>
+
+@*
+    Admin → KPI emails (2026-09-03): the administrators-only register of emails marked as a KPI
+    against a person at Jewel — evidence of how someone is performing, filed under that person:
+    a portal user, or someone without a login added by name ("Add person", or typed into the
+    picker when marking). Marked in the Control Centre's Internal pane (Actions → Mark as KPI) or
+    over the connector; nothing is tagged in the mailbox, so this page is the only place the
+    marks exist. Filter by person; Open hands the email to the Control Centre; Edit re-files /
+    re-notes in a modal; Remove asks first. The API refuses every other role, so the page's own gate is the
+    same courtesy the other admin pages show.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else if (Session.ActiveRole != Role.Admin)
+{
+    <section class="px-6 md:px-8 py-12 max-w-2xl">
+        <div class="panel p-6">
+            <p class="text-sm text-content-muted">
+                This area is for administrators. If you hold the Administrator role, switch to it to see the KPI register.
+            </p>
+        </div>
+    </section>
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <WorkspaceSectionNav />
+        <header class="mb-6 md:mb-8">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
+            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">KPI emails</h1>
+            <p class="text-sm text-content-muted mt-1">
+                Emails marked as a KPI against a member of staff — filed under the person (with or without a
+                portal login), visible to administrators only. Mark one from the Control Centre's Internal pane
+                (Actions → Mark as KPI); nothing is tagged in the mailbox.
+            </p>
+        </header>
+
+        @if (dataFailed && (Kpis.Current is null || People.Current is null))
+        {
+            <div class="panel p-5 max-w-3xl">
+                <p class="text-sm text-negative">
+                    The KPI register couldn't be loaded. The error banner above has the detail — fix or retry, then reload this page.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="max-w-5xl">
+                <Panel Title="KPI register" IsLoading="@(Kpis.Current is null || People.Current is null)" LoadingLabel="Loading KPI emails">
+                    <HeaderActions>
+                        <SearchSelect Options="@PersonOptions" Value="@personFilter" ValueChanged="v => personFilter = v"
+                                      Placeholder="All people" WidthClass="w-64" />
+                        <button type="button" class="btn-secondary text-xs" disabled="@busy"
+                                title="Add someone KPIs can be filed under who has no portal login"
+                                @onclick="StartAddPerson">Add person</button>
+                    </HeaderActions>
+                    <ChildContent>
+                    @if (actionError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+                    }
+                    @if (actionNote is not null)
+                    {
+                        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@actionNote</p>
+                    }
+
+                    @if (Rows.Count == 0)
+                    {
+                        <p class="text-sm text-content-subtle italic">
+                            @(personFilter == "" ? "No emails have been marked as a KPI yet." : "No KPI emails filed under this person.")
+                        </p>
+                        @if (personFilter == "" && (People.Current?.Count ?? 0) > 0)
+                        {
+                            <p class="text-xs text-content-subtle mt-2">People on the list: @string.Join(", ", (People.Current ?? Array.Empty<KpiPerson>()).Select(p => p.Name))</p>
+                        }
+                    }
+                    else
+                    {
+                        @if (personFilter == "")
+                        {
+                            <div class="flex flex-wrap items-center gap-1.5 mb-4">
+                                @foreach (var group in ByPerson)
+                                {
+                                    var person = group;
+                                    <button type="button" class="inline-flex items-center gap-1.5 rounded-full border border-line text-content-muted px-3 py-1 text-xs font-medium transition hover:border-accent hover:text-accent"
+                                            title="@($"Only {person.Name}'s KPI emails")" @onclick="() => personFilter = person.PersonId">
+                                        <span>@person.Name</span>
+                                        <span class="min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-[10px] font-semibold inline-flex items-center justify-center leading-none">@person.Count</span>
+                                    </button>
+                                }
+                            </div>
+                        }
+                        <div class="rounded-xl border border-line bg-surface overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-surface-raised border-b border-line">
+                                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                        <th class="px-4 py-3">Ref</th>
+                                        <th class="px-4 py-3">Person</th>
+                                        <th class="px-4 py-3">Email</th>
+                                        <th class="px-4 py-3">Note</th>
+                                        <th class="px-4 py-3">Marked</th>
+                                        <th class="px-4 py-3"></th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-line">
+                                    @foreach (var row in Rows)
+                                    {
+                                        var kpi = row;
+                                        <tr>
+                                            <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@kpi.Reference</td>
+                                            <td class="px-4 py-2.5 whitespace-nowrap">
+                                                <span class="text-content font-medium">@kpi.PersonName</span>
+                                                @if (kpi.PersonEmail is null)
+                                                {
+                                                    <span class="ml-1 text-[10px] uppercase tracking-wider text-content-subtle" title="Added by name — no portal login">no login</span>
+                                                }
+                                            </td>
+                                            <td class="px-4 py-2.5 min-w-0">
+                                                <p class="text-content truncate max-w-md" title="@kpi.Subject">@kpi.Subject</p>
+                                                <p class="text-xs text-content-subtle truncate max-w-md">
+                                                    @(string.IsNullOrWhiteSpace(kpi.FromName) ? kpi.FromEmail : kpi.FromName) · @kpi.ReceivedAt.ToLocalTime().ToString("d MMM yyyy")
+                                                </p>
+                                            </td>
+                                            <td class="px-4 py-2.5 text-content-muted max-w-xs">
+                                                <span class="line-clamp-2" title="@kpi.Note">@(string.IsNullOrWhiteSpace(kpi.Note) ? "—" : kpi.Note)</span>
+                                            </td>
+                                            <td class="px-4 py-2.5 whitespace-nowrap text-xs text-content-subtle">
+                                                @kpi.MarkedAt.ToLocalTime().ToString("d MMM yyyy")<br />@kpi.MarkedByEmail
+                                            </td>
+                                            <td class="px-4 py-2.5 text-right">
+                                                @if (removingId == kpi.KpiEmailId)
+                                                {
+                                                    <span class="inline-flex items-center gap-2">
+                                                        <span class="text-xs text-content-muted">Remove @kpi.Reference?</span>
+                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
+                                                                disabled="@busy" @onclick="() => ConfirmRemoveAsync(kpi)">Remove now</button>
+                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs" disabled="@busy"
+                                                                @onclick="() => removingId = null">Cancel</button>
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="inline-flex items-center gap-2">
+                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
+                                                                title="Open the email in the Control Centre"
+                                                                @onclick="() => OpenInControlCentre(kpi)">Open</button>
+                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
+                                                                title="Re-file under another person, or change the note"
+                                                                @onclick="() => StartEdit(kpi)">Edit</button>
+                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
+                                                                disabled="@busy" title="Take the KPI mark off this email"
+                                                                @onclick="() => StartRemove(kpi)">Remove</button>
+                                                    </span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-content-subtle mt-2">
+                            Open hands the email to the Control Centre with it selected. Removing takes the mark off; the
+                            email itself is untouched.
+                        </p>
+                    }
+                    </ChildContent>
+                </Panel>
+            </div>
+        }
+    </section>
+
+    <Modal IsOpen="editing is not null"
+           Title="@(editing is null ? "" : $"Edit {editing.Reference}")"
+           ConfirmLabel="@(busy ? "Saving…" : "Save changes")"
+           ConfirmDisabled="@(busy || editPerson is null || editPerson.IsEmpty)"
+           OnCancel="() => editing = null"
+           OnConfirm="SaveEditAsync"
+           Class="max-w-xl">
+        @if (editing is not null)
+        {
+            <div class="space-y-4">
+                @if (formError is not null)
+                {
+                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+                }
+                <p class="text-sm text-content truncate" title="@editing.Subject">@editing.Subject</p>
+                <div class="space-y-1">
+                    <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Filed under</label>
+                    <KpiPersonPicker Value="@editPerson" ValueChanged="v => editPerson = v" />
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Note <span class="font-normal normal-case">(optional)</span></label>
+                    <textarea class="field w-full" rows="3" @bind="editNote" @bind:event="oninput"></textarea>
+                </div>
+            </div>
+        }
+    </Modal>
+
+    <Modal IsOpen="addingPerson"
+           Title="Add a person"
+           ConfirmLabel="@(busy ? "Adding…" : "Add person")"
+           ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(newPersonName))"
+           OnCancel="() => addingPerson = false"
+           OnConfirm="AddPersonAsync"
+           Class="max-w-md">
+        <div class="space-y-4">
+            @if (formError is not null)
+            {
+                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+            }
+            <p class="text-sm text-content-muted">
+                Someone at Jewel without a portal login — they'll be offered wherever a KPI is filed. Portal
+                users are already offered by name and need no adding.
+            </p>
+            <div class="space-y-1">
+                <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Name</label>
+                <input class="field w-full" placeholder="e.g. James Clark" @bind="newPersonName" @bind:event="oninput"
+                       @onkeydown="@(e => { if (e.Key == "Enter") _ = AddPersonAsync(); })" />
+            </div>
+        </div>
+    </Modal>
+}
+
+@code {
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool fetchStarted;
+    private bool busy;
+    private string? actionError;
+    private string? actionNote;
+    private string personFilter = "";
+
+    private string? removingId;
+    private KpiEmail? editing;
+    private KpiPersonChoice? editPerson;
+    private string editNote = "";
+    private string? formError;
+    private bool addingPerson;
+    private string newPersonName = "";
+
+    private sealed record PersonGroup(string PersonId, string Name, int Count);
+
+    private IReadOnlyList<KpiEmail> All => Kpis.Current ?? Array.Empty<KpiEmail>();
+
+    private IReadOnlyList<KpiEmail> Rows =>
+        (personFilter == "" ? All : All.Where(k => k.PersonId == personFilter))
+            .OrderByDescending(k => k.MarkedAt)
+            .ToList();
+
+    private IReadOnlyList<PersonGroup> ByPerson =>
+        All.GroupBy(k => k.PersonId)
+            .Select(g => new PersonGroup(g.Key, g.First().PersonName, g.Count()))
+            .OrderByDescending(g => g.Count).ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    // The filter offers everyone on the KPI people list — those with KPIs first, by count.
+    private IReadOnlyList<SearchSelect.Option> PersonOptions =>
+        (People.Current ?? Array.Empty<KpiPerson>())
+            .OrderByDescending(p => p.KpiCount).ThenBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(p => new SearchSelect.Option(p.KpiPersonId, p.KpiCount == 0 ? p.Name : $"{p.Name} ({p.KpiCount})"))
+            .ToList();
+
+    private void OpenInControlCentre(KpiEmail kpi)
+    {
+        // The Control Centre re-finds the email by its ids; the envelope here is the snapshot,
+        // which is all the selection needs to land on the right row.
+        OpenEmail.Set(new MailboxMessage(
+            kpi.MessageId, kpi.InternetMessageId ?? "", kpi.FromEmail, kpi.FromName, kpi.Subject, "",
+            false, kpi.ReceivedAt, Array.Empty<string>(), kpi.ConversationId ?? ""));
+        Nav.NavigateTo("/control-centre");
+    }
+
+    private void StartAddPerson()
+    {
+        addingPerson = true;
+        newPersonName = "";
+        formError = null;
+        removingId = null;
+    }
+
+    private async Task AddPersonAsync()
+    {
+        if (busy || string.IsNullOrWhiteSpace(newPersonName)) return;
+        formError = null;
+        try
+        {
+            busy = true;
+            var person = await Commands.SendAsync(new AddKpiPerson(newPersonName.Trim()), CancellationToken.None);
+            addingPerson = false;
+            actionNote = $"{person.Name} is on the list" + (person.Email is null ? "." : $" (linked to {person.Email}).");
+            await People.RefreshAsync(CancellationToken.None);
+        }
+        catch (CommandFailedException ex) { formError = $"Couldn't add the person: {ex.Message}"; }
+        catch { formError = "Couldn't add the person. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private void StartEdit(KpiEmail kpi)
+    {
+        editing = kpi;
+        editPerson = new KpiPersonChoice(PersonId: kpi.PersonId);
+        editNote = kpi.Note;
+        formError = null;
+        removingId = null;
+        actionError = null;
+        actionNote = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        if (busy || editing is null || editPerson is null || editPerson.IsEmpty) return;
+        formError = null;
+        try
+        {
+            busy = true;
+            var saved = await Commands.SendAsync(
+                new UpdateKpiEmail(editing.KpiEmailId, editPerson.PersonId, editPerson.Email, editPerson.Name, editNote.Trim()),
+                CancellationToken.None);
+            editing = null;
+            actionNote = $"{saved.Reference} saved — filed under {saved.PersonName}.";
+            await Kpis.RefreshAsync(CancellationToken.None);
+            await People.RefreshAsync(CancellationToken.None);
+        }
+        catch (CommandFailedException ex) { formError = $"Couldn't save: {ex.Message}"; }
+        catch { formError = "Couldn't save. Please try again."; }
+        finally { busy = false; }
+    }
+
+    private void StartRemove(KpiEmail kpi)
+    {
+        removingId = kpi.KpiEmailId;
+        actionError = null;
+        actionNote = null;
+    }
+
+    private async Task ConfirmRemoveAsync(KpiEmail kpi)
+    {
+        if (busy || removingId != kpi.KpiEmailId) return;
+        actionError = null;
+        actionNote = null;
+        try
+        {
+            busy = true;
+            await Commands.SendAsync(new RemoveKpiEmail(kpi.KpiEmailId), CancellationToken.None);
+            removingId = null;
+            actionNote = $"{kpi.Reference} removed — the email is no longer a KPI for {kpi.PersonName}.";
+            await Kpis.RefreshAsync(CancellationToken.None);
+            await People.RefreshAsync(CancellationToken.None);
+        }
+        catch (CommandFailedException ex) { actionError = $"Couldn't remove the KPI: {ex.Message}"; }
+        catch { actionError = "Couldn't remove the KPI. Please try again."; }
+        finally { busy = false; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn)
+        {
+            Nav.NavigateTo("/login", forceLoad: true);
+            return;
+        }
+        Session.OnChange += OnSessionChanged;
+        Kpis.OnChanged += StateHasChanged;
+        People.OnChanged += StateHasChanged;
+        UserDirectory.OnChange += StateHasChanged;
+        sessionReady = true;
+
+        if (Session.ActiveRole == Role.Admin)
+        {
+            fetchStarted = true;
+            await FetchAsync();
+        }
+    }
+
+    private void OnSessionChanged()
+    {
+        // Switching to the Administrator role happens in place (no navigation), so the fetch the
+        // admin branch gates on may never have started — start it now or the gate pulses forever.
+        if (Session.ActiveRole == Role.Admin && !fetchStarted)
+        {
+            fetchStarted = true;
+            _ = FetchAndRepaintAsync();
+        }
+        StateHasChanged();
+    }
+
+    private async Task FetchAsync()
+    {
+        // Stale-while-revalidate: an already-loaded register paints immediately and refreshes
+        // behind itself; a cold one is awaited so the panel's gate opens onto real data.
+        try
+        {
+            _ = UserDirectory.All(); // starts the directory's lazy fetch for the re-file picker
+            var refreshes = new List<Task>();
+            refreshes.Add(Kpis.Current is null ? Kpis.RefreshAsync(CancellationToken.None) : RevalidateAsync(Kpis.RefreshAsync));
+            refreshes.Add(People.Current is null ? People.RefreshAsync(CancellationToken.None) : RevalidateAsync(People.RefreshAsync));
+            await Task.WhenAll(refreshes);
+        }
+        catch { dataFailed = true; }
+    }
+
+    private static async Task RevalidateAsync(Func<CancellationToken, Task> refresh)
+    {
+        try { await refresh(CancellationToken.None); }
+        catch { /* background revalidation — the toast already reported it and the stale list stands */ }
+    }
+
+    private async Task FetchAndRepaintAsync()
+    {
+        await FetchAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Session.OnChange -= OnSessionChanged;
+        Kpis.OnChanged -= StateHasChanged;
+        People.OnChanged -= StateHasChanged;
+        UserDirectory.OnChange -= StateHasChanged;
+    }
+}

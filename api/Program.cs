@@ -28,6 +28,7 @@ using Jewel.JPMS.Api.Features.DocumentControl;
 using Jewel.JPMS.Api.Features.Drawings;
 using Jewel.JPMS.Api.Features.Hs;
 using Jewel.JPMS.Api.Features.Inventory;
+using Jewel.JPMS.Api.Features.Kpi;
 using Jewel.JPMS.Api.Features.Labour;
 using Jewel.JPMS.Api.Features.Registers;
 using Jewel.JPMS.Api.Features.Lads;
@@ -121,6 +122,7 @@ var host = new HostBuilder()
         services.AddCvrFeature();
         services.AddCloseoutFeature();
         services.AddInventoryFeature();
+        services.AddKpiFeature();
         services.AddRequestsFeature(context.Configuration);
         services.AddArchitectInstructionsFeature(context.Configuration);
         services.AddRecordLinksFeature();

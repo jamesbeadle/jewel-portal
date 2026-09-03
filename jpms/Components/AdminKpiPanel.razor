@@ -1,0 +1,67 @@
+@using Jewel.JPMS.Features.Kpi
+@inject KpiReadModel Kpis
+@implements IDisposable
+
+@*
+    The admin home's KPI panel (2026-09-03): the latest emails marked as a KPI, by person, with
+    the register a click away. Administrators only — the page that hosts it already is, and the
+    API refuses everyone else. Gated on its own store like every data-bearing panel.
+*@
+
+<div class="panel p-5">
+    <div class="flex items-center justify-between gap-2 mb-3">
+        <div class="flex items-center gap-3">
+            <h2 class="text-sm font-semibold text-content">KPI emails</h2>
+            @if (Kpis.Current is { Count: > 0 } all)
+            {
+                <span class="text-[11px] text-content-subtle">@all.Count marked · @all.Select(k => k.PersonId).Distinct().Count() people</span>
+            }
+        </div>
+        <a class="text-xs text-accent underline underline-offset-2" href="/admin/kpis">Open register</a>
+    </div>
+    <LoadGate IsLoading="@(Kpis.Current is null && !failed)" Label="Loading KPI emails">
+        @if (failed && Kpis.Current is null)
+        {
+            <p class="text-sm text-negative">The KPI register couldn't be loaded — the error banner above has the detail.</p>
+        }
+        else if (Kpis.Current is { Count: 0 })
+        {
+            <p class="text-sm text-content-subtle italic">
+                No emails marked yet. Mark one from the Control Centre's Internal pane — Actions → Mark as KPI.
+            </p>
+        }
+        else
+        {
+            <div class="space-y-1.5">
+                @foreach (var kpi in Latest)
+                {
+                    <div class="flex items-baseline gap-3 text-sm">
+                        <span class="text-content-subtle whitespace-nowrap shrink-0">@kpi.MarkedAt.ToLocalTime().ToString("d MMM")</span>
+                        <span class="text-content font-medium whitespace-nowrap shrink-0">@kpi.PersonName</span>
+                        <span class="text-content-muted truncate" title="@kpi.Subject">@kpi.Subject</span>
+                        @if (!string.IsNullOrWhiteSpace(kpi.Note))
+                        {
+                            <span class="text-content-subtle truncate shrink-0 max-w-[14rem]" title="@kpi.Note">— @kpi.Note</span>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </LoadGate>
+</div>
+
+@code {
+    private bool failed;
+
+    private IReadOnlyList<KpiEmail> Latest =>
+        (Kpis.Current ?? Array.Empty<KpiEmail>()).OrderByDescending(k => k.MarkedAt).Take(6).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Kpis.OnChanged += StateHasChanged;
+        try { await Kpis.RefreshAsync(CancellationToken.None); }
+        catch { failed = true; }
+    }
+
+    public void Dispose() => Kpis.OnChanged -= StateHasChanged;
+}

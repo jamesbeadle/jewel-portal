@@ -102,6 +102,9 @@ public sealed record PathwayPaneConfig(
                 SystemActionKind.CreateTodos,
                 SystemActionKind.CompleteTodo,
                 SystemActionKind.AddDirectoryContact,
+                // Administrators only (SystemActionGuide.AdministratorOnly) — the section
+                // drops it from the dropdown for every other role.
+                SystemActionKind.MarkAsKpi,
             }),
         });
 

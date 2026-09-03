@@ -1,0 +1,145 @@
+@namespace Jewel.JPMS.Components
+@using Jewel.JPMS.Features.Kpi
+@inject IUserDirectory UserDirectory
+@inject KpiPeopleReadModel People
+@implements IDisposable
+
+@*
+    Who a KPI is filed under (2026-09-03): one searchable list of everyone at Jewel — the people
+    already on the KPI list (portal users and name-only people alike) plus every portal user not
+    yet on it — and, at the foot, "Someone else…" for a member of staff with no login, typed by
+    name. The choice is a KpiPersonChoice: an existing personId, a portal email, or a bare name;
+    the server resolves all three by one rule (KpiPersonResolver). Shared by the Control Centre's
+    Mark as KPI form and the register's re-file modal.
+*@
+
+<div class="space-y-2">
+    @if (!Ready)
+    {
+        <select class="field" disabled><option>Loading people…</option></select>
+    }
+    else
+    {
+        <SearchSelect Options="@Options" Value="@key" ValueChanged="OnKeyChanged"
+                      Placeholder="@Placeholder" WidthClass="w-full" InputClass="field" />
+    }
+    @if (key == NewKey)
+    {
+        <input class="field w-full" placeholder="Their name, e.g. James Clark" value="@newName"
+               @oninput="OnNewNameInput" />
+        <p class="text-xs text-content-subtle">Someone without a portal login — added to the KPI people list when this is saved.</p>
+    }
+</div>
+
+@code {
+    private const string NewKey = "__new";
+
+    [Parameter] public KpiPersonChoice? Value { get; set; }
+    [Parameter] public EventCallback<KpiPersonChoice?> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Select the person…";
+
+    private string key = "";
+    private string newName = "";
+
+    private bool peopleFailed;
+
+    private bool Ready => UserDirectory.IsLoaded && (People.Current is not null || peopleFailed);
+
+    private IReadOnlyList<SearchSelect.Option> Options
+    {
+        get
+        {
+            var people = People.Current ?? Array.Empty<KpiPerson>();
+            var onList = people
+                .Select(person => new SearchSelect.Option(
+                    "id:" + person.KpiPersonId,
+                    person.Email is null ? $"{person.Name} — no login" : $"{person.Name} — {person.Email}"));
+            var listedEmails = people.Where(p => p.Email is not null).Select(p => p.Email!).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var users = UserDirectory.All()
+                .Where(user => !listedEmails.Contains(user.Email))
+                .Select(user => new SearchSelect.Option("email:" + user.Email, $"{user.DisplayName} — {user.Email}"));
+            return onList.Concat(users)
+                .OrderBy(option => option.Label, StringComparer.OrdinalIgnoreCase)
+                .Append(new SearchSelect.Option(NewKey, "Someone else… (no portal login)"))
+                .ToList();
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        UserDirectory.OnChange += Repaint;
+        People.OnChanged += Repaint;
+        if (People.Current is null) _ = LoadPeopleAsync();
+    }
+
+    protected override void OnParametersSet() => ReflectValue();
+
+    // Reflect a value set from outside (the modal opening on a row, the triage pre-match) unless
+    // the reader is mid-way through typing a new name. A portal email whose person is already
+    // on the KPI list selects that person's row — the list never shows the same person twice.
+    private void ReflectValue()
+    {
+        if (key == NewKey && (Value is null || Value is { Name: not null })) return;
+        key = Value switch
+        {
+            { PersonId: not null } v => "id:" + v.PersonId,
+            { Email: not null } v => (People.Current ?? Array.Empty<KpiPerson>())
+                    .FirstOrDefault(p => string.Equals(p.Email, v.Email, StringComparison.OrdinalIgnoreCase)) is { } listed
+                ? "id:" + listed.KpiPersonId
+                : "email:" + v.Email,
+            { Name: not null } v => NewKey,
+            _ => ""
+        };
+        if (Value is { Name: not null } named && key == NewKey) newName = named.Name;
+    }
+
+    private async Task LoadPeopleAsync()
+    {
+        try { await People.RefreshAsync(CancellationToken.None); }
+        catch { peopleFailed = true; /* the toast has it; the picker offers the directory alone */ }
+        StateHasChanged();
+    }
+
+    private void Repaint()
+    {
+        ReflectValue();
+        StateHasChanged();
+    }
+
+    private async Task OnKeyChanged(string value)
+    {
+        key = value;
+        if (key == NewKey)
+        {
+            await ValueChanged.InvokeAsync(string.IsNullOrWhiteSpace(newName) ? null : new KpiPersonChoice(Name: newName.Trim()));
+            return;
+        }
+        await ValueChanged.InvokeAsync(Parse(key));
+    }
+
+    private async Task OnNewNameInput(ChangeEventArgs e)
+    {
+        newName = e.Value?.ToString() ?? "";
+        await ValueChanged.InvokeAsync(string.IsNullOrWhiteSpace(newName) ? null : new KpiPersonChoice(Name: newName.Trim()));
+    }
+
+    private static KpiPersonChoice? Parse(string value) =>
+        value.StartsWith("id:") ? new KpiPersonChoice(PersonId: value[3..])
+        : value.StartsWith("email:") ? new KpiPersonChoice(Email: value[6..])
+        : null;
+
+    /// <summary>The human label for a choice — the staged-action summary and the modal use it.</summary>
+    public string LabelFor(KpiPersonChoice choice) => choice switch
+    {
+        { PersonId: not null } c => (People.Current ?? Array.Empty<KpiPerson>()).FirstOrDefault(p => p.KpiPersonId == c.PersonId)?.Name ?? c.PersonId,
+        { Email: not null } c => UserDirectory.Find(c.Email)?.DisplayName ?? c.Email,
+        { Name: not null } c => c.Name,
+        _ => ""
+    };
+
+    public void Dispose()
+    {
+        UserDirectory.OnChange -= Repaint;
+        People.OnChanged -= Repaint;
+    }
+}

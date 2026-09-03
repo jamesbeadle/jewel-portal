@@ -198,6 +198,11 @@ public sealed partial class JpmsContext : DbContext
     // Project inventory — products held for the job and where they're kept (INV-#### tag stems).
     public DbSet<InventoryItemEntity> InventoryItems => Set<InventoryItemEntity>();
 
+    // KPI emails — emails marked against a person (a portal user or someone added by name),
+    // administrators only (2026-09-03).
+    public DbSet<KpiPersonEntity> KpiPeople => Set<KpiPersonEntity>();
+    public DbSet<KpiEmailEntity> KpiEmails => Set<KpiEmailEntity>();
+
     // Building control — the statutory sign-off trail: the case with the body, its inspection
     // stages, and the files (photos, site reports, notices, the completion certificate).
     public DbSet<BuildingControlCaseEntity> BuildingControlCases => Set<BuildingControlCaseEntity>();

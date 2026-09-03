@@ -72,8 +72,24 @@ public partial class PathwayActionsSection
     /// guide (every group), which no pane uses but keeps the component honest standalone.</summary>
     [Parameter] public IReadOnlyList<(string Title, IReadOnlyList<SystemActionKind> Kinds)>? Groups { get; set; }
 
-    private IReadOnlyList<(string Title, IReadOnlyList<SystemActionKind> Kinds)> EffectiveGroups =>
-        Groups ?? SystemActionGuide.Groups;
+    [Inject] private SessionService Session { get; set; } = default!;
+
+    // The pane's groups, minus the administrator-only kinds (Mark as KPI) for every other active
+    // role — an administrator viewing as a PM is not offered them either: the register they
+    // feed is administrators-only, and the API refuses the write for anyone else anyway.
+    private IReadOnlyList<(string Title, IReadOnlyList<SystemActionKind> Kinds)> EffectiveGroups
+    {
+        get
+        {
+            var groups = Groups ?? SystemActionGuide.Groups;
+            if (Session.ActiveRole == Role.Admin) return groups;
+            return groups
+                .Select(group => (group.Title, (IReadOnlyList<SystemActionKind>)group.Kinds
+                    .Where(kind => !SystemActionGuide.AdministratorOnly.Contains(kind)).ToList()))
+                .Where(group => group.Item2.Count > 0)
+                .ToList();
+        }
+    }
 
     private SystemActionKind? chosenKind;
 
@@ -95,7 +111,17 @@ public partial class PathwayActionsSection
     // and a tender enquiry usually creates its own — everything else raises on the email's project.
     private static bool NeedsProject(SystemActionKind actionKind) =>
         actionKind is not (SystemActionKind.AddDirectoryContact or SystemActionKind.CreateTodos
-            or SystemActionKind.ForwardToQs or SystemActionKind.LogTenderEnquiry);
+            or SystemActionKind.ForwardToQs or SystemActionKind.LogTenderEnquiry
+            or SystemActionKind.MarkAsKpi);
+
+    /// <summary>The open email's mailbox ids — "Mark as KPI" files the email by them (no tag, so
+    /// the page's link path is not involved).</summary>
+    [Parameter] public string MessageId { get; set; } = "";
+    [Parameter] public string? InternetMessageId { get; set; }
+
+    /// <summary>The open email's To/Cc addresses — "Mark as KPI" pre-matches the portal user
+    /// from the sender first, then these.</summary>
+    [Parameter] public IReadOnlyList<string> RecipientEmails { get; set; } = Array.Empty<string>();
 
     /// <summary>The open email's subject — the tender enquiry editor titles the enquiry from it.</summary>
     [Parameter] public string EmailSubject { get; set; } = "";

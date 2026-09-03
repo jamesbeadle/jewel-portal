@@ -53,6 +53,7 @@ public static partial class AiToolCatalogue
             .Concat(AiFinanceTools.Build())
             .Concat(AiLabourMonthEndTools.Build())
             .Concat(AiRegisterTools.Build())
+            .Concat(AiKpiTools.Build())
             .Concat(AiDeliveryTools.Build())
             .Concat(AiTenderEnquiryTools.Build())
             .Concat(AiSkillTools.Build())

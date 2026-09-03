@@ -251,6 +251,23 @@ public sealed partial class JpmsContext
             .HasIndex(row => row.Number)
             .HasDatabaseName("IX_InventoryItems_Number");
 
+        // ---- KPI emails --------------------------------------------------------------------------
+        // People resolve by portal email (a user's KpiPerson is found, never duplicated); emails
+        // read per person (the admin register's filter); Number resolves KPI-#### references; the
+        // internet message id answers "is this email already marked for this person".
+        modelBuilder.Entity<KpiPersonEntity>()
+            .HasIndex(row => row.Email)
+            .HasDatabaseName("IX_KpiPeople_Email");
+        modelBuilder.Entity<KpiEmailEntity>()
+            .HasIndex(row => row.PersonId)
+            .HasDatabaseName("IX_KpiEmails_PersonId");
+        modelBuilder.Entity<KpiEmailEntity>()
+            .HasIndex(row => row.Number)
+            .HasDatabaseName("IX_KpiEmails_Number");
+        modelBuilder.Entity<KpiEmailEntity>()
+            .HasIndex(row => row.InternetMessageId)
+            .HasDatabaseName("IX_KpiEmails_InternetMessageId");
+
         // ---- Building control ---------------------------------------------------------------------
         // Read per project (the tab's one view); numbers resolve BC-####/BCI-#### tags back to
         // their records; attachments are read per case and per inspection.

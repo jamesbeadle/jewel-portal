@@ -365,6 +365,10 @@ public static class SidebarFolders
                 // add, rename, delete (delete blocked while any record carries the trade).
                 new SidebarRow(new NavigationItem("Trades", "/admin/trades"),
                     DesktopNavigation.AdministratorOnly),
+                // Emails marked as a KPI against a member of staff (2026-09-03) — the
+                // administrators-only register; nothing else in the system shows the marks.
+                new SidebarRow(new NavigationItem("KPI emails", "/admin/kpis"),
+                    DesktopNavigation.AdministratorOnly),
                 // The agent architecture, live — the registry the turn loop actually runs on,
                 // each agent with its configuration and its skills (docs/ai/05-agents-and-skills.md).
                 new SidebarRow(new NavigationItem("AI Agents", "/admin/agents"),

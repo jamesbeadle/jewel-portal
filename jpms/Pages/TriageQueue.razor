@@ -403,6 +403,8 @@ else
                      TodoProjectNote="@TodoProjectNote"
                      EmailAttachments="@(detail?.Attachments ?? Array.Empty<IntakeAttachment>())"
                      SenderEmail="@(selected?.FromEmail ?? "")"
+                     InternetMessageId="@selected?.InternetMessageId"
+                     RecipientEmails="@OpenEmailRecipients"
                      QsRecipients="@QsRecipients"
                      OnForwardToQs="StartForwardToQs" />
     };

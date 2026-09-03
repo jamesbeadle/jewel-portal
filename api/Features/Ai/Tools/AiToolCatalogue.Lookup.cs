@@ -19,9 +19,10 @@ public static partial class AiToolCatalogue
             new(
                 "find_by_reference",
                 "Look up a single record by the reference a person would say out loud — V72, RFI-049, REQ-0122, "
-                + "NOD-003, TODO-0074, WO-0045, BPI-0003, DEF-0012, or a project reference like JBB-2026-002. "
+                + "NOD-003, TODO-0074, WO-0045, BPI-0003, DEF-0012, KPI-0003 (administrators only), or a project "
+                + "reference like JBB-2026-002. "
                 + "Searches variations, requests, to-dos, work "
-                + "orders, bid packages, defects and projects across every project. Tolerant of how people type: "
+                + "orders, bid packages, defects, KPIs and projects across every project. Tolerant of how people type: "
                 + "rfi001, RFI-001, vo80, VOQ-0080, V80 and todo 74 all find their record, and a project-prefixed "
                 + "reference (JBB-2026-001-REQ-0113) matches too. Use this before saying you cannot find "
                 + "something — ONE call, not one per spelling. The one thing it cannot see: a DRAFT work "
@@ -88,11 +89,51 @@ public static partial class AiToolCatalogue
                     // the lookup is by Number). 2026-08-21: TODO-0074 came back "not found" and the
                     // model told the user to click the card it could not reach — a reference a
                     // person can read out loud must resolve here, whatever the record type.
-                    var stemForm = System.Text.RegularExpressions.Regex.Match(cleaned, "^(todo|wo|bpi|def)0*(\\d+)$");
+                    var stemForm = System.Text.RegularExpressions.Regex.Match(cleaned, "^(todo|wo|bpi|def|kpi)0*(\\d+)$");
                     if (stemForm.Success && int.TryParse(stemForm.Groups[2].Value, out var stemNumber))
                     {
                         switch (stemForm.Groups[1].Value)
                         {
+                            case "kpi":
+                            {
+                                // KPI-#### (2026-09-03): the administrators-only register. A
+                                // non-administrator gets the same "not found" as a reference that
+                                // does not exist — the register's contents are never confirmed
+                                // to anyone else, not even by a miss.
+                                if (!context.User.Roles.Contains(Role.Admin)) break;
+                                var kpi = await context.Db.KpiEmails.AsNoTracking()
+                                    .FirstOrDefaultAsync(row => row.Number == stemNumber, ct);
+                                if (kpi is null) break;
+                                var kpiPerson = await context.Db.KpiPeople.AsNoTracking()
+                                    .FirstOrDefaultAsync(row => row.KpiPersonId == kpi.PersonId, ct);
+                                return Serialise(new
+                                {
+                                    ok = true,
+                                    kind = "kpi",
+                                    matches = new[]
+                                    {
+                                        new
+                                        {
+                                            reference = kpi.Reference,
+                                            kpiEmailId = kpi.KpiEmailId,
+                                            personId = kpi.PersonId,
+                                            person = kpiPerson?.Name ?? "(person removed)",
+                                            personEmail = kpiPerson?.Email,
+                                            subject = kpi.Subject,
+                                            from = string.IsNullOrWhiteSpace(kpi.FromName) ? kpi.FromEmail : $"{kpi.FromName} <{kpi.FromEmail}>",
+                                            receivedAt = kpi.ReceivedAt,
+                                            note = string.IsNullOrWhiteSpace(kpi.Note) ? null : kpi.Note,
+                                            markedBy = kpi.MarkedByEmail,
+                                            markedAt = kpi.MarkedAt,
+                                            messageId = kpi.MessageId,
+                                            internetMessageId = kpi.InternetMessageId,
+                                            route = "/admin/kpis"
+                                        }
+                                    },
+                                    note = "Administrators only — never repeat to anyone else. Read the email with "
+                                        + "get_mailbox_message(messageId, internetMessageId); the whole register is list_kpi_emails."
+                                });
+                            }
                             case "todo":
                             {
                                 var items = await context.Db.TodoItems

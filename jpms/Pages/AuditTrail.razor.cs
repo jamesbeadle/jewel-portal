@@ -56,7 +56,9 @@ public partial class AuditTrail
         (AuditEventType.LabourChaseDayDismissed,  "Chase day dismissed"),
         (AuditEventType.DrawingDataExtracted,    "Drawing data extracted"),
         (AuditEventType.DocumentArchiveExtracted, "Archive extracted"),
-        (AuditEventType.BluebeamConnected,       "Bluebeam connected")
+        (AuditEventType.BluebeamConnected,       "Bluebeam connected"),
+        (AuditEventType.KpiEmailMarked,          "KPI marked"),
+        (AuditEventType.KpiEmailRemoved,         "KPI removed")
     };
 
     // Mirrors the API's TriageRoles.AllowedToTriage — the audit trail is a triage-side tool.
@@ -203,6 +205,8 @@ public partial class AuditTrail
         AuditEventType.DrawingDataExtracted   => "Drawing data extracted",
         AuditEventType.DocumentArchiveExtracted => "Archive extracted",
         AuditEventType.BluebeamConnected      => "Bluebeam connected",
+        AuditEventType.KpiEmailMarked         => "KPI marked",
+        AuditEventType.KpiEmailRemoved        => "KPI removed",
         _                                     => type.ToString()
     };
 

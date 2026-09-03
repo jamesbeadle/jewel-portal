@@ -58,6 +58,10 @@ public partial class PathwayPane
     [Parameter] public string? TodoProjectNote { get; set; }
     [Parameter] public IReadOnlyList<IntakeAttachment> EmailAttachments { get; set; } = Array.Empty<IntakeAttachment>();
     [Parameter] public string SenderEmail { get; set; } = "";
+    /// <summary>The open email's stable internet message id and its To/Cc addresses — passed
+    /// down to the Actions section for "Mark as KPI" (EmailKey is its live Graph id).</summary>
+    [Parameter] public string? InternetMessageId { get; set; }
+    [Parameter] public IReadOnlyList<string> RecipientEmails { get; set; } = Array.Empty<string>();
     [Parameter] public IReadOnlyList<TodoAssignablePerson> QsRecipients { get; set; } = Array.Empty<TodoAssignablePerson>();
     [Parameter] public EventCallback OnForwardToQs { get; set; }
 

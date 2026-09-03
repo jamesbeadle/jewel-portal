@@ -2574,6 +2574,104 @@ namespace Jewel.JPMS.Api.Migrations
                     b.ToTable("InventoryItems");
                 });
 
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.KpiEmailEntity", b =>
+                {
+                    b.Property<string>("KpiEmailId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ConversationId")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("FromEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FromName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("InternetMessageId")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTimeOffset>("MarkedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("MarkedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("MessageId")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PersonId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("ReceivedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.HasKey("KpiEmailId");
+
+                    b.HasIndex("InternetMessageId")
+                        .HasDatabaseName("IX_KpiEmails_InternetMessageId");
+
+                    b.HasIndex("Number")
+                        .HasDatabaseName("IX_KpiEmails_Number");
+
+                    b.HasIndex("PersonId")
+                        .HasDatabaseName("IX_KpiEmails_PersonId");
+
+                    b.ToTable("KpiEmails");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.KpiPersonEntity", b =>
+                {
+                    b.Property<string>("KpiPersonId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.HasKey("KpiPersonId");
+
+                    b.HasIndex("Email")
+                        .HasDatabaseName("IX_KpiPeople_Email");
+
+                    b.ToTable("KpiPeople");
+                });
+
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LabourChaseDismissalEntity", b =>
                 {
                     b.Property<string>("LabourChaseDismissalId")

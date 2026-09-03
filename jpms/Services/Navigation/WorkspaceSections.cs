@@ -69,7 +69,9 @@ public static class WorkspaceSections
             // The portal's shared external connections (Bluebeam Studio).
             new WorkspaceTab("Integrations", "/admin/integrations", Array.Empty<Role>()),
             // The curated trade list every directory record and bid package picks from.
-            new WorkspaceTab("Trades", "/admin/trades", Array.Empty<Role>())
+            new WorkspaceTab("Trades", "/admin/trades", Array.Empty<Role>()),
+            // Emails marked as a KPI against a member of staff — administrators only (2026-09-03).
+            new WorkspaceTab("KPI emails", "/admin/kpis", Array.Empty<Role>())
         });
 
     public static readonly IReadOnlyList<WorkspaceSectionInfo> All =

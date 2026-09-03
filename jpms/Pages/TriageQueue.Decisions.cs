@@ -38,6 +38,13 @@ public partial class TriageQueue
     private string OpenQueueEmailSubject =>
         view == QueueView.Active && selected is not null ? selected.Subject : "";
 
+    // The open email's To/Cc addresses (from its on-demand detail) — "Mark as KPI" pre-matches
+    // the portal user from them after the sender. Empty until the detail lands.
+    private IReadOnlyList<string> OpenEmailRecipients =>
+        detail is null || selected is null || detail.MessageId != selected.Id
+            ? Array.Empty<string>()
+            : (detail.To ?? Array.Empty<string>()).Concat(detail.Cc ?? Array.Empty<string>()).ToList();
+
     private string TriageProjectName =>
         AllProjects.FirstOrDefault(project => project.ProjectId == triageProjectId)?.Name ?? "";
 
