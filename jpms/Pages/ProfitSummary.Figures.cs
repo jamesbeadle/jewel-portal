@@ -135,17 +135,46 @@ public partial class ProfitSummary
             : Array.Empty<XeroSiteMonthlyLabourAccrual>();
 
     // The rows every Xero panel actually reads: the stored Xero months, plus (switch on) the
-    // accrual as cost-only pseudo-months. Null while the store hasn't answered — the same
-    // "not fetched yet" contract as the snapshot's own Rows.
+    // accrual folded into the same month's cost of sales. Null while the store hasn't answered —
+    // the same "not fetched yet" contract as the snapshot's own Rows. One row per project-month
+    // is the contract every panel relies on: the cumulative chart keys a dictionary by month, so
+    // an accrual appended as a second row for a month Xero already holds (the usual case — the
+    // month has bills AND unsettled timesheets) threw Argument_AddingDuplicateWithKey and took
+    // the whole page down the moment the switch was turned on (JPMS-7F5BF8, 2026-09-03). An
+    // accrual for a month Xero has no row for becomes a cost-only row of its own.
     private IReadOnlyList<XeroSiteMonthlyPnl>? EffectivePnlRows()
     {
         var stored = SitePnl.Current?.Rows;
         if (stored is null) return null;
         var accruals = ActiveAccruals;
         if (accruals.Count == 0) return stored;
-        return stored
-            .Concat(accruals.Select(accrual =>
-                new XeroSiteMonthlyPnl(accrual.ProjectId, accrual.Month, 0m, accrual.Amount, 0m)))
+
+        static (string ProjectId, DateTime Month) KeyFor(string projectId, DateTime month) =>
+            (projectId.ToUpperInvariant(), new DateTime(month.Year, month.Month, 1));
+
+        var merged = new Dictionary<(string, DateTime), XeroSiteMonthlyPnl>();
+        foreach (var row in stored)
+        {
+            var key = KeyFor(row.ProjectId, row.Month);
+            merged[key] = merged.TryGetValue(key, out var existing)
+                ? existing with
+                {
+                    Income = existing.Income + row.Income,
+                    CostOfSales = existing.CostOfSales + row.CostOfSales,
+                    OperatingExpenses = existing.OperatingExpenses + row.OperatingExpenses
+                }
+                : row;
+        }
+        foreach (var accrual in accruals)
+        {
+            var key = KeyFor(accrual.ProjectId, accrual.Month);
+            merged[key] = merged.TryGetValue(key, out var existing)
+                ? existing with { CostOfSales = existing.CostOfSales + accrual.Amount }
+                : new XeroSiteMonthlyPnl(accrual.ProjectId, key.Month, 0m, accrual.Amount, 0m);
+        }
+        return merged.Values
+            .OrderBy(row => row.ProjectId, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(row => row.Month)
             .ToList();
     }
 
