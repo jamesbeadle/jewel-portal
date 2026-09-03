@@ -77,6 +77,11 @@ public static class XeroFeatureRegistration
         services.AddScoped<IQueryHandler<ListXeroLedgerLinesForProject, IReadOnlyList<XeroLedgerLine>>,
             ListXeroLedgerLinesForProjectHandler>();
         services.AddScoped<ICommandHandler<SetXeroAllocation, int>, SetXeroAllocationHandler>();
+        // The gate + shape check as classes, for the connector's set_xero_allocation action
+        // (2026-09-03 — the accountant could read the queue but not press Allocate). The HTTP
+        // endpoint keeps its inline role check; both read XeroLedgerRoles.AllowedToAllocate.
+        services.AddScoped<SetXeroAllocationAuthorisation>();
+        services.AddScoped<SetXeroAllocationValidation>();
         services.AddScoped<ICommandHandler<AllocateSuggestedXeroLines, int>, AllocateSuggestedXeroLinesHandler>();
         services.AddScoped<IQueryHandler<ListXeroInvoiceAttachments, IReadOnlyList<XeroInvoiceAttachment>>,
             ListXeroInvoiceAttachmentsHandler>();

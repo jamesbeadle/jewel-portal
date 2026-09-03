@@ -15,7 +15,8 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 /// keeps its role set as a private field, so each VisibleTo below replicates the identical
 /// roles with RoleSet.Of(...) — the field name comments say which authorisation each copies.
 /// None of these endpoints stamp the signed-in user onto the command, so every entry's
-/// stamp lists are empty.</summary>
+/// stamp lists are empty — except the Xero allocation (CommercialActions.XeroAllocation,
+/// 2026-09-03), whose endpoint stamps AllocatedBy from the signed-in user's email.</summary>
 internal sealed partial class CommercialActions : IAiActionSource
 {
     // Replica of AddClaimPeriodAuthorisation.RolesThatMayDefineClaimPeriods.
@@ -88,7 +89,8 @@ internal sealed partial class CommercialActions : IAiActionSource
             .Concat(FinancialsActions())
             .Concat(InputsActions())
             .Concat(CvrActions())
-            .Concat(CashflowActions());
+            .Concat(CashflowActions())
+            .Concat(XeroAllocationActions());
 
     // No skipped endpoints: every command endpoint under Features/Commercial,
     // Features/CommercialInputs, Features/Cvr and Features/Cashflow dispatches an
