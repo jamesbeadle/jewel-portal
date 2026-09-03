@@ -43,8 +43,9 @@ public enum SystemActionKind
     AddInventoryItem,
     // An email worth keeping as evidence of how someone at Jewel is performing (2026-09-03):
     // files it as a KPI under a portal user. ADMINISTRATORS ONLY — the row is offered to no
-    // other role — and nothing is tagged in the mailbox: the mark lives in the KPI register
-    // (Admin → KPI emails) alone, invisible to everyone else triaging the queue.
+    // other role. The mark lives in the KPI register (Admin → KPI emails) alone; the email is
+    // tagged only JPMS/Admin (+ Internal pathway) so it leaves the queue — nobody else can tell
+    // it is a KPI. Spread follows the Control Centre's "Entire thread" answer at Apply.
     MarkAsKpi
 }
 
@@ -129,4 +130,11 @@ public sealed record StagedSystemAction(
     /// or the Supplier side), so the badge and the pane's own staged list count by where the
     /// action was actually staged, never by kind alone. Null = staged outside a pane.</summary>
     public string? Pathway { get; init; }
+
+    /// <summary>An action whose server command tags the email needs the Control Centre's "Entire
+    /// thread" answer, which is only known at Apply (the pane stages before the pair is answered,
+    /// and it can change afterwards). When set, Apply calls this with the resolved
+    /// <see cref="Jewel.JPMS.Contracts.RecordLinks.LinkThreadScope"/> INSTEAD of
+    /// <see cref="ExecuteAsync"/>. Null = the action tags nothing; ExecuteAsync runs.</summary>
+    public Func<Jewel.JPMS.Contracts.RecordLinks.LinkThreadScope, Task>? ExecuteWithScopeAsync { get; init; }
 }

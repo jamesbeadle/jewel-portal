@@ -56,7 +56,7 @@ public partial class TriageQueue
         if (created is null) return;
         filed |= created.Value;
 
-        await RunStagedSystemActionsAsync();
+        await RunStagedSystemActionsAsync(plan);
         filed |= await DiscardAnchorAsync(plan);
         await SendQueuedRepliesAsync(plan, saveAsDraftOnly);
         await SendOpenReplyAsync(plan, saveAsDraftOnly, filed, uploadParts);

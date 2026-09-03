@@ -28,6 +28,14 @@ public static class TriageCategories
     /// to the queue, and later replies surface it as a "Thread:" hint like any record tag.</summary>
     public const string Replied = "JPMS/Replied";
 
+    /// <summary>Present on an email an ADMINISTRATOR has dealt with outside the record model — today
+    /// the Control Centre's "Mark as KPI" (2026-09-03). The queue is Inbox-without-a-JPMS-tag, so the
+    /// KPI mark (which lives in the administrators-only register, never in the mailbox) needs SOME
+    /// workflow tag to take the email out of the queue; this deliberately neutral one says only
+    /// "admin handled it" and nothing about why. An ordinary workflow tag like Replied: carries the
+    /// marker, removing it returns the email to the queue.</summary>
+    public const string Admin = "JPMS/Admin";
+
     // --- Communication pathways (buckets) ---
     // Every triaged thread is filed under exactly one pathway: who the correspondence is with.
     // The pathway is a category tag stamped thread-wide alongside the record tag, so each pathway

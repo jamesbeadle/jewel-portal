@@ -3,7 +3,8 @@ using Jewel.JPMS.Contracts.Kpi;
 
 namespace Jewel.JPMS.Api.Features.Kpi.Commands;
 
-// Deletes the KPI row. The email is untouched — it was never tagged. Audited by reference only.
+// Deletes the KPI row. The email keeps its JPMS/Admin tag (an administrator did deal with it;
+// the Tagged tab's remove-tag returns it to the queue if wanted). Audited by reference only.
 public sealed class RemoveKpiEmailHandler : ICommandHandler<RemoveKpiEmail, Acknowledgement>
 {
     private readonly JpmsContext context;

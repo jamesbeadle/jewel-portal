@@ -40,7 +40,8 @@ public partial class PathwayActionsSection
     /// <summary>The page's busy flag — disables Create now while any apply/create is running.</summary>
     [Parameter] public bool Busy { get; set; }
 
-    /// <summary>Done pressed under a record form — the page hands this window back to the email.</summary>
+    /// <summary>Done pressed under a record form, or Stage action pressed on a store call — the
+    /// page hands this window back to the email.</summary>
     [Parameter] public EventCallback OnClose { get; set; }
 
     // The actions that draft the page's staged record — the ones the footer finishes.
@@ -157,6 +158,11 @@ public partial class PathwayActionsSection
         }
         StagedActions.Add(action);
         await OnStagingChanged.InvokeAsync();
+        // Stage action pressed = done here (James, 2026-09-03: the form staying open after the
+        // click read as "nothing happened", so it got pressed again). Hand the window back to
+        // the email the same way Done does — the triage bar's "This will run N system action(s)"
+        // line and the tab badge show the action waiting for Apply; Remove is on the Actions tab.
+        await OnClose.InvokeAsync();
     }
 
     private async Task RemoveAsync(StagedSystemAction action)

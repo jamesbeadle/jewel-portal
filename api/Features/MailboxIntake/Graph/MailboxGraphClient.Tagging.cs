@@ -229,12 +229,13 @@ public sealed partial class MailboxGraphClient
         }
     }
 
-    // Outlook category colour presets: marker grey, discarded red, replied teal, pathways distinct
-    // (Client green, Subcontractor orange, Internal purple), record tags blue.
+    // Outlook category colour presets: marker grey, discarded red, replied teal, admin yellow,
+    // pathways distinct (Client green, Subcontractor orange, Internal purple), record tags blue.
     private static string ColourFor(string name) =>
         name.Equals(TriageCategories.Marker, StringComparison.OrdinalIgnoreCase) ? "preset8"
         : name.Equals(TriageCategories.Discarded, StringComparison.OrdinalIgnoreCase) ? "preset0"
         : name.Equals(TriageCategories.Replied, StringComparison.OrdinalIgnoreCase) ? "preset6"
+        : name.Equals(TriageCategories.Admin, StringComparison.OrdinalIgnoreCase) ? "preset3"
         : name.Equals(TriageCategories.Client, StringComparison.OrdinalIgnoreCase) ? "preset4"
         : name.Equals(TriageCategories.Subcontractor, StringComparison.OrdinalIgnoreCase) ? "preset1"
         : name.Equals(TriageCategories.Internal, StringComparison.OrdinalIgnoreCase) ? "preset9"

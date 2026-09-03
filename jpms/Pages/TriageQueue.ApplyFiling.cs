@@ -123,13 +123,18 @@ public partial class TriageQueue
 
     // ---- System actions lined up in the Actions pane — run once the filing above has landed,
     //      each removed as it succeeds so a failed one can be retried without re-running its
-    //      predecessors. A failure stops the apply with its reason. ----
-    private async Task RunStagedSystemActionsAsync()
+    //      predecessors. A failure stops the apply with its reason. An action that tags the
+    //      email (Mark as KPI) takes the plan's thread scope — the "Entire thread" answer —
+    //      the same way every record link above does. ----
+    private async Task RunStagedSystemActionsAsync(ApplyPlan plan)
     {
         foreach (var stagedAction in stagedSystemActions.ToList())
         {
             busyLabel = $"System action: {SystemActionKinds.Label(stagedAction.Kind)}";
-            await stagedAction.ExecuteAsync();
+            if (stagedAction.ExecuteWithScopeAsync is { } withScope)
+                await withScope(plan.Scope);
+            else
+                await stagedAction.ExecuteAsync();
             stagedSystemActions.Remove(stagedAction);
         }
     }

@@ -23,6 +23,15 @@ window.jpmsRichCompose = (function () {
         "H1", "H2", "H3", "H4", "TABLE", "THEAD", "TBODY", "TR", "TH", "TD", "HR"
     ]);
     const KEEP_ATTRS = { A: ["href"], IMG: ["src", "alt"] };
+    // Elements whose CONTENT is not prose and must go with them, not be unwrapped. Outlook and
+    // Word put their CSS in <style><!-- … --></style>: inside a raw-text element that "<!--" is
+    // text, not a comment node, so unwrapping <style> (the default for a disallowed tag) would
+    // drop the whole stylesheet into the editor as visible text — which is exactly what happened
+    // when a Word-authored email was copied out of the reading pane.
+    const DROP_TAGS = new Set([
+        "STYLE", "SCRIPT", "HEAD", "META", "LINK", "TITLE", "TEMPLATE", "NOSCRIPT", "XML",
+        "OBJECT", "EMBED", "IFRAME"
+    ]);
     // Style properties that survive the paste flattener, per tag. Colour only — it matches what
     // the toolbar's colour button produces and what the server's outbound sanitiser lets through;
     // everything else in a pasted style attribute (fonts, sizes, margins) is still dropped.
@@ -36,6 +45,10 @@ window.jpmsRichCompose = (function () {
         const children = Array.from(node.childNodes);
         for (const child of children) {
             if (child.nodeType === Node.ELEMENT_NODE) {
+                if (DROP_TAGS.has(child.tagName)) {
+                    node.removeChild(child);
+                    continue;
+                }
                 cleanNode(child);
                 if (!KEEP_TAGS.has(child.tagName)) {
                     while (child.firstChild) node.insertBefore(child.firstChild, child);
@@ -109,8 +122,12 @@ window.jpmsRichCompose = (function () {
         const html = clipboard.getData("text/html");
         if (html) {
             event.preventDefault();
-            const scratch = document.createElement("div");
-            scratch.innerHTML = html;
+            // Parse as a whole document rather than innerHTML on a div: the clipboard carries a
+            // full <html><head>…</head><body>…</body></html> from Outlook/Word, and a document
+            // parser puts the head's <style>/<meta> where they belong instead of inlining them
+            // ahead of the body as element children.
+            const parsed = new DOMParser().parseFromString(html, "text/html");
+            const scratch = parsed.body;
             cleanNode(scratch);
             insertHtmlAtCaret(element, scratch.innerHTML);
             return;

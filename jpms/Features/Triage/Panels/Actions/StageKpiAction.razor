@@ -10,8 +10,11 @@
 @* Mark as KPI as a STAGED action (administrators only, 2026-09-03): pick the person the email is
    evidence about — pre-matched from the sender, then the To/Cc list; a portal user, someone
    already on the KPI list, or "Someone else…" typed by name for staff with no login — add an
-   optional note, stage; MarkEmailAsKpi runs with the email's Apply. No tag, no project: the mark
-   lives in the administrators-only register (Admin → KPI emails) and nowhere the queue can see. *@
+   optional note, stage; MarkEmailAsKpi runs with the email's Apply. No project: the mark lives
+   in the administrators-only register (Admin → KPI emails). The server tags the email JPMS/Admin
+   (+ Internal pathway) so it leaves the queue (2026-09-03 — the queue is Inbox-without-a-tag, so
+   an untagged KPI email never left it); the tag says nothing about KPIs. How far it spreads is the
+   Control Centre's "Entire thread" answer, handed in at Apply via ExecuteWithScopeAsync. *@
 
 <div class="space-y-3">
     <div class="space-y-1">
@@ -27,7 +30,7 @@
         <textarea class="field w-full" rows="2" placeholder="Why this is a KPI — e.g. handled the client's complaint same day"
                   @bind="note" @bind:event="oninput"></textarea>
     </div>
-    <p class="text-xs text-content-subtle">Administrators only. Nothing is tagged in the mailbox — the mark goes to Admin → KPI emails, and nobody else can see it.</p>
+    <p class="text-xs text-content-subtle">Administrators only. The mark goes to Admin → KPI emails, where nobody else can see it; the email is tagged <span class="font-medium">Admin</span> (Internal pathway) so it leaves the queue — the tag doesn't say KPI.</p>
     @if (!CanStage)
     {
         <p class="text-xs text-amber-500">@(UserDirectory.IsLoaded ? "Pick the person the KPI is about before staging." : "Waiting for the people list…")</p>
@@ -116,23 +119,27 @@
         var commands = Commands;
         var register = Kpis;
         var people = People;
+        // The command tags the email, so it runs with the plan's thread scope: ExecuteAsync
+        // (scope-less) is the MessageOnly fallback for any caller that doesn't hand one in.
+        Func<LinkThreadScope, Task> run = async scope =>
+        {
+            await commands.SendAsync(
+                new MarkEmailAsKpi(messageId, chosen.PersonId, chosen.Email, chosen.Name, chosenNote, internetMessageId, Scope: scope),
+                CancellationToken.None);
+            // Keep already-loaded lists current (a name-only person is new to the people
+            // list); a list never opened stays unfetched.
+            try
+            {
+                if (people.Current is not null) await people.RefreshAsync(CancellationToken.None);
+                if (register.Current is not null) await register.RefreshAsync(CancellationToken.None);
+            }
+            catch { /* the toast has it */ }
+        };
         await OnStaged.InvokeAsync(new StagedSystemAction(
             SystemActionKind.MarkAsKpi,
-            $"file this email as a KPI under {chosenName}" + (chosenNote == "" ? "" : $" (“{chosenNote}”)"),
-            async () =>
-            {
-                await commands.SendAsync(
-                    new MarkEmailAsKpi(messageId, chosen.PersonId, chosen.Email, chosen.Name, chosenNote, internetMessageId),
-                    CancellationToken.None);
-                // Keep already-loaded lists current (a name-only person is new to the people
-                // list); a list never opened stays unfetched.
-                try
-                {
-                    if (people.Current is not null) await people.RefreshAsync(CancellationToken.None);
-                    if (register.Current is not null) await register.RefreshAsync(CancellationToken.None);
-                }
-                catch { /* the toast has it */ }
-            }));
+            $"file this email as a KPI under {chosenName} and tag it Admin" + (chosenNote == "" ? "" : $" (“{chosenNote}”)"),
+            () => run(LinkThreadScope.MessageOnly))
+        { ExecuteWithScopeAsync = run });
         note = "";
     }
 

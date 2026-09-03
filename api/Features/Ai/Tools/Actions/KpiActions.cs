@@ -6,8 +6,9 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 
 /// <summary>
 /// The KPI register's writes over the connector (2026-09-03) — administrators only, mirroring
-/// the endpoints' gate exactly (KpiRoles). The mark is invisible in the mailbox: nothing is
-/// tagged, so a KPI never surfaces to anyone triaging the queue.
+/// the endpoints' gate exactly (KpiRoles). The KPI itself is invisible in the mailbox — the
+/// email is tagged only JPMS/Admin (+ Internal pathway) so it leaves the triage queue; the tag
+/// says an administrator dealt with it, never that it is a KPI.
 /// </summary>
 internal sealed class KpiActions : IAiActionSource
 {
@@ -26,10 +27,12 @@ internal sealed class KpiActions : IAiActionSource
             Area: "KPI",
             Description: "Marks a mailbox email as a KPI filed under one person at Jewel "
                 + "(administrators only). The email is read back from the mailbox and its "
-                + "subject, sender and date snapshotted onto the KPI row; NOTHING in the mailbox "
-                + "is tagged, so nobody triaging the queue can see the mark. Optional note says "
-                + "why it's a KPI. Marking the same email for the same person twice keeps the one "
-                + "row (a new note replaces the old). Answers with the KPI-#### reference.",
+                + "subject, sender and date snapshotted onto the KPI row, then tagged JPMS/Admin "
+                + "(+ the Internal pathway) so it leaves the triage queue — the tag says only that "
+                + "an administrator handled it; nobody triaging can see it is a KPI. Optional note "
+                + "says why it's a KPI. Marking the same email for the same person twice keeps the "
+                + "one row (a new note replaces the old) and re-applies the tag. Answers with the "
+                + "KPI-#### reference.",
             CommandType: typeof(MarkEmailAsKpi),
             ResultType: typeof(KpiEmail),
             AuthorisationType: typeof(MarkEmailAsKpiAuthorisation),
@@ -39,6 +42,8 @@ internal sealed class KpiActions : IAiActionSource
             NameStamps: Array.Empty<string>(),
             Notes: "messageId is the mailbox message id (search_mailbox / list_triage_queue / "
                 + "get_mailbox_message give it; send internetMessageId too when you have it). "
+                + "scope defaults to MessageOnly (the one email leaves the queue); EntireThread "
+                + "tags its whole conversation out too. "
                 + PersonNotes),
 
         new AiAction(
@@ -61,8 +66,9 @@ internal sealed class KpiActions : IAiActionSource
             Name: "remove_kpi_email",
             Area: "KPI",
             Description: "Takes the KPI mark off an email — deletes the KPI row permanently "
-                + "(administrators only). The email itself is untouched; it was never tagged. "
-                + "The person stays on the list. There is no undo: mark it again if it was a "
+                + "(administrators only). The email keeps its JPMS/Admin tag (so it stays out of "
+                + "the queue; removing the tag in the Control Centre's Tagged tab returns it). The "
+                + "person stays on the list. There is no undo: mark it again if it was a "
                 + "mistake.",
             CommandType: typeof(RemoveKpiEmail),
             ResultType: typeof(Acknowledgement),

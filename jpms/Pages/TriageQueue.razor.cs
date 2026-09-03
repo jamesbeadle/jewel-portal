@@ -87,7 +87,7 @@ public partial class TriageQueue
     // "Discarded" is always offered; the rest accrue as tagged emails load.
     private readonly HashSet<string> selectedTags = new(StringComparer.OrdinalIgnoreCase);
     private bool filterOpen;
-    private readonly SortedSet<string> knownTags = new(StringComparer.OrdinalIgnoreCase) { "JPMS/Discarded", "JPMS/Replied" };
+    private readonly SortedSet<string> knownTags = new(StringComparer.OrdinalIgnoreCase) { "JPMS/Discarded", "JPMS/Replied", "JPMS/Admin" };
 
     // The Tagged tab's search box (see the markup comment). A resolved reference lives in
     // taggedSearchRecord + taggedSearchTag (the "JPMS/…" category LoadTaggedAsync filters by,
