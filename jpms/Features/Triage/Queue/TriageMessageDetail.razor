@@ -41,9 +41,22 @@
 @if (Detail is not null && Detail.Attachments.Count > 0)
 {
     <div class="rounded-lg bg-surface-raised border border-line p-3">
-        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
-            @Detail.Attachments.Count attachment@(Detail.Attachments.Count == 1 ? "" : "s")
-        </p>
+        <div class="flex items-center justify-between gap-3 mb-2">
+            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">
+                @Detail.Attachments.Count attachment@(Detail.Attachments.Count == 1 ? "" : "s")
+            </p>
+            @* One click ticks (or clears) "Send to document triage" on every attachment — a
+               nine-attachment supplier email shouldn't need nine clicks. *@
+            @if (ShowDocumentTriageTick && TickableAttachmentIds.Count > 1)
+            {
+                <button type="button" class="text-xs text-accent hover:underline whitespace-nowrap disabled:opacity-50"
+                        disabled="@Busy"
+                        title="@(AllTicked ? "Untick every attachment" : "Tick every attachment to send to document triage")"
+                        @onclick="ToggleAllDocumentTriage">
+                    @(AllTicked ? "Clear all" : "Select all")
+                </button>
+            }
+        </div>
         <ul class="space-y-1">
             @foreach (var attachment in Detail.Attachments)
             {
@@ -197,6 +210,35 @@ else if (Selected.HasAttachments && Detail is not null)
     [Parameter] public EventCallback<MailboxMessage> OnSelectMessage { get; set; }
     [Parameter] public EventCallback OnRetryThread { get; set; }
     [Parameter] public EventCallback<IntakeAttachment> OnPreviewAttachment { get; set; }
+
+    /// <summary>Attachments that can carry the document-triage tick — those with a mailbox id.</summary>
+    private IReadOnlyList<string> TickableAttachmentIds =>
+        Detail is null
+            ? Array.Empty<string>()
+            : Detail.Attachments.Where(a => !string.IsNullOrEmpty(a.Id)).Select(a => a.Id!).ToList();
+
+    private bool AllTicked
+    {
+        get
+        {
+            var ids = TickableAttachmentIds;
+            return ids.Count > 0 && ids.All(id => StagedDocumentControlIds.Contains(id));
+        }
+    }
+
+    /// <summary>Select all → tick every attachment not yet ticked; Clear all → untick every one. Each
+    /// change goes through the same per-attachment callback the ticks use, so the parent's staging
+    /// stays the single source of truth.</summary>
+    private async Task ToggleAllDocumentTriage()
+    {
+        if (Busy) return;
+        var tick = !AllTicked;
+        foreach (var id in TickableAttachmentIds)
+        {
+            if (StagedDocumentControlIds.Contains(id) == tick) continue;
+            await OnToggleDocumentTriage.InvokeAsync((id, tick));
+        }
+    }
 
     /// <summary>The thread's outbound legs — sent from the projects mailbox itself, oldest-first like the thread.</summary>
     private IReadOnlyList<MailboxMessage> SentReplies =>
