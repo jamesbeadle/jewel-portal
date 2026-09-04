@@ -68,7 +68,7 @@ public sealed class ErrorReporter : IErrorSink, IDisposable
         Publish(new ErrorReport(
             ErrorReport.NewReference(),
             DateTimeOffset.Now,
-            SummaryFor(statusCode, serverMessage, exception),
+            SummaryFor(httpMethod, statusCode, serverMessage, exception),
             Detail: serverMessage ?? exception?.Message,
             Operation: operation,
             HttpMethod: httpMethod,
@@ -123,7 +123,7 @@ public sealed class ErrorReporter : IErrorSink, IDisposable
     /// that bothered to explain itself ("Reference 'RFI-012' is already used…") is always clearer
     /// than anything we could infer from a status code.
     /// </summary>
-    private static string SummaryFor(int? statusCode, string? serverMessage, Exception? exception)
+    private static string SummaryFor(string httpMethod, int? statusCode, string? serverMessage, Exception? exception)
     {
         if (!string.IsNullOrWhiteSpace(serverMessage)) return serverMessage!;
 
@@ -138,11 +138,22 @@ public sealed class ErrorReporter : IErrorSink, IDisposable
             403 => "You don't have permission to do that.",
             404 => "That record no longer exists — someone may have deleted it.",
             408 or 504 => "The server took too long to answer. Try again in a moment.",
+            >= 500 when IsRead(httpMethod) => "The server hit a problem answering that. Nothing has changed — try again in a moment.",
             >= 500 => "The server hit a problem handling that. Nothing was saved.",
             null => "Couldn't reach the server. Check your connection and try again.",
             _ => "That request didn't go through."
         };
     }
+
+    /// <summary>
+    /// Whether the failed request was only ever going to read. "Nothing was saved" is the
+    /// reassurance a failed write needs; on a read it is a non-sequitur — the user was not saving
+    /// anything — and it sends them hunting for work they never lost. A cold host answering 503 to
+    /// a background GET is the common case, so this is the sentence most users actually meet.
+    /// </summary>
+    private static bool IsRead(string httpMethod) =>
+        string.Equals(httpMethod, "GET", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(httpMethod, "HEAD", StringComparison.OrdinalIgnoreCase);
 
     public void Dispose() => sink.OnError -= HandleCaptured;
 }
