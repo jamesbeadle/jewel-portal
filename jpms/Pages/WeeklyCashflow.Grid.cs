@@ -1,5 +1,4 @@
 using Jewel.JPMS.Contracts.WeeklyCashflow;
-using Jewel.JPMS.Features.WeeklyCashflow;
 
 namespace Jewel.JPMS.Pages;
 
@@ -97,33 +96,8 @@ public partial class WeeklyCashflow
         Plan.Current?.Exclusions.FirstOrDefault(exclusion => exclusion.PlacementKey == placementKey)?.ExcludedByEmail;
 
 
-    /// <summary>The supplier groups as they land on this grid: each group with the band entries
-    /// whose supplier (label) it holds. A group none of whose suppliers has a bill right now
-    /// simply doesn't render. A supplier somehow in two groups counts once — the plan's first
-    /// group wins.</summary>
-    private IReadOnlyList<GroupSlice> GroupSlicesFor(WeeklyCashflowView view)
-    {
-        var plan = Plan.Current;
-        if (plan is null || plan.SupplierGroups.Count == 0) return Array.Empty<GroupSlice>();
-
-        var groupByContact = new Dictionary<string, WeeklyCashflowSupplierGroup>(StringComparer.OrdinalIgnoreCase);
-        foreach (var group in plan.SupplierGroups)
-            foreach (var contactName in group.ContactNames)
-                groupByContact.TryAdd(contactName.Trim(), group);
-
-        var members = new Dictionary<string, List<WeeklyCashflowEntry>>(StringComparer.Ordinal);
-        foreach (var entry in WeeklyCashflowBands.EntriesFor(view, WeeklyCashflowBand.SupplierBills))
-        {
-            if (!groupByContact.TryGetValue(entry.Label, out var group)) continue;
-            if (!members.TryGetValue(group.SupplierGroupId, out var list))
-                members[group.SupplierGroupId] = list = new List<WeeklyCashflowEntry>();
-            list.Add(entry);
-        }
-
-        return plan.SupplierGroups
-            .Where(group => members.ContainsKey(group.SupplierGroupId))
-            .Select(group => new GroupSlice(group, members[group.SupplierGroupId]))
-            .ToList();
-    }
-
+    /// <summary>The supplier groups as they land on this grid — GroupSlice.For's rule (shared with
+    /// the export, so the two fold the same bills into the same lines), fed the current plan.</summary>
+    private IReadOnlyList<GroupSlice> GroupSlicesFor(WeeklyCashflowView view) =>
+        GroupSlice.For(view, Plan.Current?.SupplierGroups ?? Array.Empty<WeeklyCashflowSupplierGroup>());
 }

@@ -3,17 +3,16 @@
 @using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
 
 @* A supplier group's combined row: its bills summed per week cell, each cell carrying the
-   ‹ ↺ › controls that move the WHOLE cell together. Open, the member bills render beneath it
-   through the host's row template, so the entry row stays defined once. *@
+   ‹ ↺ › controls that move the WHOLE cell together. One line, the group's name alone — the bill
+   count and the whole-cell hint live in the hover text, so the band stays compact (accountant,
+   2026-09-04). Open, the member bills render beneath it through the host's row template, so
+   the entry row stays defined once. *@
 <tr class="border-b border-line/50 text-[13px] bg-surface-raised/40">
     <td class="pl-9 pr-4 py-1.5">
-        <button type="button" class="flex items-start gap-1.5 text-left w-full" @onclick="() => OnToggle.InvokeAsync(Slice.Group.SupplierGroupId)"
-                title="@(Open ? "Collapse to the group line" : $"Show the {Slice.Entries.Count} bills behind this line")">
-            <span class="text-content-subtle mt-0.5 text-[10px]">@(Open ? "▾" : "▸")</span>
-            <span>
-                <span class="text-content font-medium">@Slice.Group.Name</span>
-                <span class="block text-[11px] text-content-faint font-normal">supplier group · @Slice.Entries.Count @(Slice.Entries.Count == 1 ? "bill" : "bills") · ‹ › moves the whole cell</span>
-            </span>
+        <button type="button" class="flex items-center gap-1.5 text-left w-full" @onclick="() => OnToggle.InvokeAsync(Slice.Group.SupplierGroupId)"
+                title="@ToggleTitle">
+            <span class="text-content-subtle text-[10px]">@(Open ? "▾" : "▸")</span>
+            <span class="text-content font-medium">@Slice.Group.Name</span>
         </button>
     </td>
     @for (var index = 0; index <= View.WeekStarts.Count; index++)
@@ -72,4 +71,9 @@
 
     private bool CellBusy(IReadOnlyList<WeeklyCashflowEntry> members) =>
         GroupBusy || members.Any(row => MovingKeys.Contains(row.PlacementKey));
+
+    private string ToggleTitle =>
+        Open
+            ? "Collapse to the group line"
+            : $"Supplier group · show the {Slice.Entries.Count} {(Slice.Entries.Count == 1 ? "bill" : "bills")} behind this line · ‹ › on a cell moves every bill in it";
 }

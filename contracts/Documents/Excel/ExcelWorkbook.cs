@@ -123,6 +123,11 @@ public sealed class ExcelSheet
     public bool AutoFilter { get; set; } = true;
     /// <summary>Freeze the header row. Ignored when the header row is off.</summary>
     public bool FreezeHeaderRow { get; set; } = true;
+    /// <summary>A presentation grid's own freeze — this many leading rows (its title and heading rows)
+    /// and leading columns (its label column) stay put while the body scrolls. Read only when the
+    /// header-row freeze above does not apply; zero means no freeze.</summary>
+    public int FrozenRows { get; set; }
+    public int FrozenColumns { get; set; }
     /// <summary>Show worksheet gridlines. Presentation sheets switch them off.</summary>
     public bool ShowGridLines { get; set; } = true;
     /// <summary>Print landscape, fitted to one page wide — for presentation sheets an accountant may print.</summary>

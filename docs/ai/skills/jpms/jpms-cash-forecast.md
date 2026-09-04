@@ -29,3 +29,8 @@ description: "The cash forecast's and weekly cashflow's timing doctrine. Load be
 - One supplier belongs to at most one supplier group (two would double-count its bills); a group
   move is per-bill placements — a partial failure leaves the moved ones standing.
 - Placements are shared truth with a who/when stamp — say who moved what when reporting the plan.
+- The Excel export is the grid on paper: "Weekly plan" — one line per supplier (a supplier group
+  is one line) with a column per week, band totals, net movement and, for directors, the closing
+  balance; "Detail" — every bill/invoice under its line with due and expected dates, parked
+  entries listed uncounted; "Data" — the flat list for pivoting. A shaded amount is one the
+  accountant moved.

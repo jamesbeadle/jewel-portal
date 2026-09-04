@@ -33,14 +33,8 @@ public static partial class ExcelWorkbookWriter
 
         builder.Append("<sheetViews><sheetView workbookViewId=\"0\"");
         if (!sheet.ShowGridLines) builder.Append(" showGridLines=\"0\"");
-        if (sheet.ShowHeaderRow && sheet.FreezeHeaderRow)
-        {
-            builder.Append("""><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>""");
-        }
-        else
-        {
-            builder.Append("/></sheetViews>");
-        }
+        var pane = FrozenPaneXml(sheet);
+        builder.Append(pane is null ? "/></sheetViews>" : $">{pane}</sheetView></sheetViews>");
         builder.Append("""<sheetFormatPr defaultRowHeight="15"/>""");
 
         builder.Append("<cols>");

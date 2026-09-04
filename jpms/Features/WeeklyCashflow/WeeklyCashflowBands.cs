@@ -9,9 +9,7 @@ public static class WeeklyCashflowBands
     public static IEnumerable<WeeklyCashflowEntry> EntriesFor(WeeklyCashflowView view, WeeklyCashflowBand band) =>
         view.Entries
             .Where(entry => entry.Band == band)
-            .OrderBy(entry => entry.WeekIndex)
-            .ThenBy(entry => entry.Label, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(entry => entry.PlacementKey, StringComparer.Ordinal);
+            .InGridOrder();
 
     public static decimal[] TotalsFor(WeeklyCashflowView view, WeeklyCashflowBand band)
     {
