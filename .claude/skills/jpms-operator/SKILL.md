@@ -51,7 +51,7 @@ picked project. Folders (in rail order):
 | **Internal** | Todo (`/todos`) · Directory · Registers · Policies |
 | **Time** | Labour overview · Labour (per project) · Workers · Xero mapping |
 | **Finance** | Financials (`…/financials`) · WO Allocation · Payment Certificates · Cost Codes · Rates |
-| **Financial Reports** | Project Cashflow · Cash Forecast (`/finance/cash-forecast`) · Profit Summary |
+| **Financial Reports** | Project Cashflow · Cash Forecast (`/finance/cash-forecast`) · Weekly Cashflow (`/finance/weekly-cashflow`, directors + Accounts) · Profit Summary |
 | **Xero** | Xero Transactions · Aged Receivables · Aged Payables |
 | **Audit** | Reconciliation Audit · System Audit Trail (`/audit`) · Agent Activity |
 | **Admin** | Users · System · Trades · AI Agents · AI Skills |
@@ -86,6 +86,7 @@ specific tab. Full page-by-page detail: `references/site-map.md`.
 | Raise / progress a defect | Defects register (DEF-#### = its mailbox tag) or from a sub's email in Control Centre |
 | Delay events, NOD / EOT / LADs | Programme tab → Claims sub-tab |
 | Chase money answers | Aged Receivables / Aged Payables (include drafts Xero's own reports can't see); Cash Forecast for the months ahead; Profit Summary for margin |
+| Plan the next 13 weeks' payments — who gets paid which week | Weekly Cashflow (`/finance/weekly-cashflow`): move entries with ‹ ›, group suppliers into one line, park with ⊘, add manual items; the Excel export is the grid one line per supplier. Over the connector, `get_weekly_cashflow_grid` reads the same grid |
 
 Lifecycles, statuses and reference formats (REQ-0001, V72, DEF-####, mail tags,
 claim stepper): `references/lifecycles.md`.

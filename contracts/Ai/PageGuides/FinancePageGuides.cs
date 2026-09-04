@@ -37,6 +37,34 @@ public static class FinancePageGuides
             + "/projects/{project}/cashflow, not here.",
             Aliases: new[] { "/finance", "/finance/cash-summary" }),
 
+        new("/finance/weekly-cashflow", "Weekly Cashflow",
+            "The accountant's live 13-week payment plan (directors and Accounts): every outstanding "
+            + "Xero bill and sales invoice seeded into the week of its due date — or its Xero Planned "
+            + "(bills) / Expected (invoices) date when one is set — plus the manual items Xero can't "
+            + "see (subcontractors, staff, subscriptions, direct debits, other), one column per week "
+            + "with anything overdue in the current week and a Later column beyond the horizon. "
+            + "Directors' tiles: cash in bank, to pay this week, the lowest week and the horizon-end "
+            + "balance; Accounts sees to pay this week plus cash out and cash in over the 13 visible "
+            + "weeks instead (the bank position is directors only). The user moves any entry to the "
+            + "week it will really be paid "
+            + "with ‹ › on its cell (↺ returns it; ‣ marks a moved entry), groups suppliers into one "
+            + "line via Group suppliers (a group row is one line — its bill count is in the hover "
+            + "text, and its ‹ › move every bill in the cell), excludes an entry already covered "
+            + "elsewhere with ⊘ (parked struck-through, uncounted), and adds or edits manual items "
+            + "with Add item. Moves change WHEN, never HOW MUCH, and are shared with the whole team. "
+            + "The Excel export is the grid on paper: a Weekly plan tab with one line per supplier "
+            + "(groups honoured) and a column per week plus band totals, net movement and the "
+            + "directors' closing balance; a Detail tab opening every line into its bills with due "
+            + "and expected dates; a Data tab as a flat list for pivoting — a shaded amount is one "
+            + "the accountant moved. Read the grid as the page shows it with "
+            + "get_weekly_cashflow_grid (one line per supplier, amounts per week, moved flags; "
+            + "includeEntries for the bills behind a line) and the raw overlay with "
+            + "get_weekly_cashflow_plan; the plan's writes are the perform_action weekly-cashflow "
+            + "suite (create/update/archive item, place entry, set exclusion, save/remove supplier "
+            + "group). Real payment agreements belong in Xero as the bill's Planned date or the "
+            + "invoice's Expected date — a portal placement is week-to-week juggling. Ageing and the "
+            + "drafts-included totals live on /finance/aged-payables and /finance/aged-receivables."),
+
         new("/finance/profit-summary", "Profit Summary",
             "Gross profit by project, three ways: the Running profit by month grid (project-to-date "
             + "running % per month end, Xero site P&L, invoiced basis), summary tiles (budgeted "

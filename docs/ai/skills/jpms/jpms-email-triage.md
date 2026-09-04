@@ -17,7 +17,7 @@ by machinery, you must enforce by discipline.
 2. **Attachments before body** (doc-first rule). If the email carries drawings, certificates or
    compliance documents, send them to Document Triage (send_attachments_to_document_control)
    before acting on the words.
-3. **To-dos next** — anything the email demands of the team (create_todos_from_message).
+3. **To-dos next** — anything the email demands of the team (create_todo_items_from_message).
 4. **File to records** (file_email_to_record) — every record the email genuinely concerns. An
    email can feed a request AND a cost centre AND the programme at once; multiple filings are
    normal, not a smell.
@@ -28,9 +28,15 @@ by machinery, you must enforce by discipline.
    second pass, after the first exists.
 6. **Discard only what needs nothing** (discard_mailbox_message) — circulars, pure
    acknowledgements. Discard is restorable; when in doubt, file rather than discard.
-7. **Replies LAST, and only as drafts.** Everything above must be filed before any reply is
-   prepared, so a failed send loses nothing already filed. The connector never sends email —
-   prepare_*_draft actions stage a draft in the shared mailbox and the human sends from Outlook.
+7. **Replies LAST.** Everything above must be filed before any reply goes, so a failed send
+   loses nothing already filed. send_mailbox_email IS the Control Centre's Reply box: read the
+   email with get_mailbox_message, take its replyAll envelope (to, cc, subject — the same prefill
+   the page shows), write the body as plain text, then show the user the recipients, subject and
+   body and get their explicit yes — the action is confirm-first, and the email leaves the
+   projects mailbox the moment the confirmed call succeeds. A sent reply tags the thread
+   JPMS/Replied and it leaves the queue. saveAsDraftOnly true stages the reviewed draft in the
+   mailbox's Drafts folder instead, for a person to send from Outlook; the prepare_*_draft actions
+   do the same for record-anchored emails (a purchase order, a request's official document).
 
 ## Decisions, not defaults
 
@@ -45,5 +51,7 @@ by machinery, you must enforce by discipline.
 
 ## What you cannot do (by design)
 
-Sending email (all paths are draft-then-human-sends) and bulk retagging are portal-only. Say so
-rather than improvising.
+Attach a file from the user's own computer to an email (attachments go by reference only — a
+drawing revision, a progress photo, the replied-to email's own attachments, a record's official
+PDF), stage decisions into the page's pending Apply (each connector action lands at once), and
+bulk retagging are portal-only. Say so rather than improvising.

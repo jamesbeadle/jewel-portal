@@ -1,6 +1,7 @@
 using Jewel.JPMS.Api.Features.DocumentControl;
 using Jewel.JPMS.Api.Features.Requests;
 using Jewel.JPMS.Contracts.DocumentControl;
+using Jewel.JPMS.Contracts.MailboxCompose;
 using Jewel.JPMS.Contracts.RecordLinks;
 using Jewel.JPMS.Contracts.Requests;
 using Microsoft.Extensions.DependencyInjection;
@@ -105,9 +106,10 @@ internal static class AiMailboxTools
             new(
                 "get_mailbox_message",
                 "One mailbox email in full, read live: sanitised body, envelope (from/to/cc, "
-                + "subject), its current JPMS tags and pathway bucket, and its attachments with the "
-                + "ids read_email_attachment takes. Works for ANY mailbox message — triaged or not. "
-                + "A very long body is clipped and the result says so.",
+                + "subject), its current JPMS tags and pathway bucket, its attachments with the "
+                + "ids read_email_attachment takes, and the replyAll envelope a reply starts from "
+                + "(what send_mailbox_email takes). Works for ANY mailbox message — triaged or "
+                + "not. A very long body is clipped and the result says so.",
                 AiToolSchema.Object(
                     ("messageId", "string", "The message id from list_triage_queue, search_mailbox or a communications listing.", true),
                     ("internetMessageId", "string", "The stable fallback id from the same listing — pass it when you have it.", false)),
@@ -119,12 +121,14 @@ internal static class AiMailboxTools
                     if (string.IsNullOrWhiteSpace(messageId))
                         return Fail("A messageId is required — list_triage_queue and search_mailbox return them.");
 
+                    var internetMessageId = AiToolSchema.Text(input, "internetMessageId");
                     var detail = await context.Services
                         .GetRequiredService<IQueryHandler<GetMailboxMessageDetail, MailboxMessageDetail>>()
-                        .HandleAsync(new GetMailboxMessageDetail(messageId, AiToolSchema.Text(input, "internetMessageId")), ct);
+                        .HandleAsync(new GetMailboxMessageDetail(messageId, internetMessageId), ct);
 
                     var body = detail.BodyHtml ?? "";
                     var clipped = body.Length > MaxBodyChars;
+                    var replyAll = ReplyAllEnvelope.For(detail);
 
                     return Serialise(new
                     {
@@ -133,13 +137,19 @@ internal static class AiMailboxTools
                         from = new { email = detail.FromEmail, name = detail.FromName },
                         to = detail.To,
                         cc = detail.Cc,
+                        replyTo = detail.ReplyTo,
+                        mailboxAddress = detail.MailboxAddress,
                         subject = detail.Subject,
                         tags = detail.Categories,
                         bucket = detail.Bucket,
                         body = clipped ? body[..MaxBodyChars] : body,
                         bodyClipped = clipped,
                         attachments = detail.Attachments,
-                        note = "Attachments open with read_email_attachment(messageId, attachmentId)."
+                        replyAll = new { to = replyAll.To, cc = replyAll.Cc, subject = replyAll.Subject },
+                        note = "Attachments open with read_email_attachment(messageId, attachmentId). "
+                            + "To answer this email, send_mailbox_email (perform_action) takes "
+                            + "replyToMessageId = messageId (replyToInternetMessageId = the listing "
+                            + "row's internetMessageId, when you have it) plus replyAll's to/cc/subject."
                     });
                 }),
 

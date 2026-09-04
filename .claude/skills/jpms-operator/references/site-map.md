@@ -327,6 +327,29 @@ valuation date + expected monthly valuation. Position to Completion statement
 below; Excel export. Phased months tie to each project's Cashflow tab to the
 penny.
 
+### Weekly Cashflow — `/finance/weekly-cashflow` (directors + Accounts)
+The accountant's live 13-week payment plan, one column per week: every
+outstanding Xero bill and sales invoice seeded at its due week (or its Xero
+Planned / Expected date), plus manual items Xero can't see (subcontractors,
+staff, subscriptions, direct debits, other). Overdue sits in the current week;
+Later is beyond the horizon. Directors' tiles: cash in bank, to pay this week,
+lowest week, horizon-end balance; Accounts sees to pay this week plus cash
+out / cash in over the 13 weeks (the bank position is directors only). Work it with ‹ › on a
+cell to move an entry to the week it will really be paid (↺ returns it, ‣
+marks a moved entry — moves change WHEN, never HOW MUCH, and are shared);
+**Group suppliers** folds chosen suppliers into one line (a group row is one
+line; its ‹ › move every bill in that cell); ⊘ parks an entry already covered
+elsewhere, struck through and uncounted; **Add item** adds manual outgoings.
+Excel export is the grid on paper: **Weekly plan** (one line per supplier,
+groups honoured, a column per week, band totals, net movement, directors'
+closing balance), **Detail** (every bill under its line with due/expected
+dates), **Data** (flat list for pivoting); a shaded amount was moved. Real
+payment agreements belong in Xero (bill Planned date / invoice Expected date);
+ageing lives on Aged Payables/Receivables. Over the connector:
+`get_weekly_cashflow_grid` returns this grid line by line (includeEntries for
+the bills behind a line), `get_weekly_cashflow_plan` the raw overlay, and the
+`*_weekly_cashflow_*` actions the writes.
+
 ### Profit Summary — `/finance/profit-summary`
 Gross profit by project three ways: running % by month end (Xero site P&L,
 invoiced basis), summary tiles (budgeted, forecast, biggest swing vs the

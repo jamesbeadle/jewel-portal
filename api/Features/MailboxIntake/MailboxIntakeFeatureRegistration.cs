@@ -97,6 +97,9 @@ public static class MailboxIntakeFeatureRegistration
                 Jewel.JPMS.Contracts.MailboxCompose.SendMailboxEmail,
                 Jewel.JPMS.Contracts.MailboxCompose.ComposeOutcome>>(
             sp => sp.GetRequiredService<Compose.SendMailboxEmailHandler>());
+        // The gate class the connector's action gateway composes for send_mailbox_email
+        // (2026-09-04) — the same AllInternal set the endpoint checks inline.
+        services.AddScoped<Compose.SendMailboxEmailAuthorisation>();
 
         return services;
     }

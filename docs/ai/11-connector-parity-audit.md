@@ -88,8 +88,11 @@ instruction commands (Update, ImportFromMessage — the multipart ones stay skip
 queue's Discard/Restore/RemoveTag and CreateRequestFromMessage (inline TriageRoles),
 SetXeroAllocation and friends (inline XeroLedgerRoles — only worth it once the ledger is
 readable), the labour/registers/policies clusters (inline role sets throughout), and
-UpdateManualWorkOrder (server-derived flag). Standing on purpose: every SendMailboxEmail path
-(drafts only, the human presses send), every multipart upload, and the whole subcontractor portal.
+UpdateManualWorkOrder (server-derived flag). Standing on purpose: every multipart upload and the
+whole subcontractor portal. (SendMailboxEmail stood here too — "drafts only, the human presses
+send" — until 2026-09-04; see §7. The stance had already been crossed by send_work_order_po_email,
+and the connector's own doctrine telling every AI tool "the connector never sends email" was
+sending users back to Nigel with "your MCP can't do what the website does".)
 
 ## 5. Recommended fix order
 
@@ -198,6 +201,39 @@ confirmation, the list the run is confirmed against) and reset_xero_coding_outco
 RunXeroCodingHandler(DryRun) and the new ResetXeroCodingOutcome endpoint
 (POST labour/xero-coding/reset).
 
+**2026-09-04 (the accountant's "the export must read like the page")**: the weekly cashflow's
+COMPUTATION is now server-readable. get_weekly_cashflow_grid (AiWeeklyCashflowGridTool.cs,
+WeeklyCashflowRoles) seeds the aged payables/receivables through WeeklyCashflowSeeding, applies
+the plan's placements and exclusions with WeeklyCashflowMaths, and folds the result with
+WeeklyCashflowExportBands — the same contracts code the page and its redesigned Excel export use
+— into one line per supplier (a supplier group is one line), with only the cells that hold money,
+net per week, and the closing balance for directors only (the cash-summary gate mirrored).
+get_weekly_cashflow_plan stays the raw overlay. The page guide for /finance/weekly-cashflow
+(FinancePageGuides) arrived with it — the page had shipped 2026-08-27 without one.
+
+**2026-09-04 (Nigel: "the MCP server can do everything the website can")**: an AI tool asked
+to send a thanks-only reply from the Control Centre went round the catalogue twice and reported,
+correctly, that no reply-and-send action existed — SendMailboxEmail was on the skip list, and
+the jpms-email-triage skill said "the connector never sends email". The skip note's reasons had
+gone stale: POST mailbox/compose takes plain JSON when nothing is uploaded, and
+SendMailboxEmailHandler was already registered as ICommandHandler<SendMailboxEmail,
+ComposeOutcome>; the only missing piece was a gate class. Now declared as **send_mailbox_email**
+(RequestsActions.Mailbox.cs; SendMailboxEmailAuthorisation mirrors the endpoint's
+JpmsRoleSets.AllInternal check; SenderEmail stamped; confirm-first, because a sent email has no
+undo) — the Reply box, Compose pane and Outbox in one: reply-all in the thread, forward, or a
+brand-new email; markThreadHandled tags the thread JPMS/Replied; linkRecordType/linkRecordId
+and alsoRaiseRequest file it in the same act; saveAsDraftOnly keeps the old draft-then-Outlook
+path as a choice. Source=Upload attachments stay page-only (no bytes travel with a connector
+call; the handler refuses them with a message). get_mailbox_message now returns
+replyTo, mailboxAddress and a ready-made **replyAll** envelope
+(contracts ReplyAllEnvelope — the composer's prefill rule, so a model replies to addresses it
+has read, never ones it constructed). Doctrine caught up in the same delivery: the
+/control-centre page guide rewritten for the connector's verbs (it still told the model to
+use select_email / read_selected_email / stage_triage_* / open_modal reply_email — all removed
+2026-08-27), jpms-email-triage step 7 and its "cannot do" section rewritten (docs +
+seed script), and scripts/update-jpms-email-triage-skill-send-reply.sql moves the LIVE skill
+on with a revision row, replacing only the stale passages.
+
 **Still open, with reasons**: the cash forecast/statement COMPUTATION (the phasing runs
 client-side over several stores; the inputs are now all readable — a server-side statement tool
 is a real build, not a wrapper); profit summary / Xero site P&L and Xero transactions reads;
@@ -210,7 +246,7 @@ drawings' ambiguous-revision queue; to-do activity trails; Dashboard aggregates.
 
 | Page | Writes | Reads | Skill |
 |---|---|---|---|
-| Control Centre | mirrored except sends/discards (skips) + inventory GAP | ⚠ queue unreadable | email-triage |
+| Control Centre | mirrored — send_mailbox_email 2026-09-04 (uploads page-only) | queue readable 2026-08-31 | email-triage |
 | Document Triage | filing mirrored; discard/restore skipped | ⚠ queue unreadable | document-filing |
 | Requests / Request detail | full parity (attachments skipped) | covered | chain doctrine (page guides) |
 | Communications ×4 | send-only (skipped by design) | registers unreadable | — |

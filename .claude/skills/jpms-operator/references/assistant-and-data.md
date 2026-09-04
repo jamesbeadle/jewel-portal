@@ -32,6 +32,18 @@ read an untagged Control Centre queue email), `read_email_attachment` (alias),
 and attachments on a record's tagged emails, read one sheet or page at a time —
 docs/ai/06-context-retrieval.md), `load_page_guide`, `load_skill`,
 `load_skill_reference`.
+Finance reads (added 2026-08-31 / 2026-09-04, `AiFinanceTools.cs` and
+`AiWeeklyCashflowGridTool.cs`): `get_weekly_cashflow_grid` — the 13-week grid
+as the Weekly Cashflow page and its Excel export read it, one line per supplier
+(a supplier group is one line) with the amount per week and moved flags, net
+per week, closing balance for directors; `includeEntries` lists the bills
+behind each line. `get_weekly_cashflow_plan` — the raw overlay (manual items,
+placements, supplier groups, exclusions). `get_aged_payables` /
+`get_aged_receivables` (drafts included — the complete picture),
+`list_payment_certificates`, `list_xero_ledger_lines`. The weekly cashflow
+writes are `perform_action` actions: create/update/archive_weekly_cashflow_item,
+place_weekly_cashflow_entry, set_weekly_cashflow_exclusion,
+save/remove_weekly_cashflow_supplier_group (full-record writes — read first).
 Acts: `navigate_to`, `open_modal` / `update_open_modal` (registered dialogs),
 `stage_triage_tag` and `stage_triage_todo` (Control Centre staging — lands on
 the user's Apply), `switch_agent`.

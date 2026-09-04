@@ -4,78 +4,27 @@ namespace Jewel.JPMS.Pages;
 
 public partial class WeeklyCashflow
 {
+    // The Xero snapshots become seeds through WeeklyCashflowSeeding — the same mapping the
+    // connector's get_weekly_cashflow_grid uses, so the two can never read a bill differently.
+    // An excluded seed never reaches the maths: it renders struck-through at the foot of its
+    // band instead, so the money is visibly parked rather than silently dropped.
     private WeeklyCashflowView BuildView()
     {
-        var seeds = new List<WeeklyCashflowSeed>();
+        var plan = Plan.Current!;
+        var billSeeds = PayablesSnapshot!.Bills.Select(WeeklyCashflowSeeding.FromBill);
+        var invoiceSeeds = ReceivablesSnapshot!.Invoices.Select(WeeklyCashflowSeeding.FromInvoice);
+        var (counted, excluded) = WeeklyCashflowSeeding.Split(billSeeds.Concat(invoiceSeeds), plan.Exclusions);
+
         excludedSeeds.Clear();
-        var excludedKeys = ExcludedKeys();
-
-        // An excluded seed never reaches the maths — it renders struck-through at the foot of
-        // its band instead, so the money is visibly parked rather than silently dropped.
-        void Sort(WeeklyCashflowSeed seed)
-        {
-            if (excludedKeys.Contains(seed.PlacementKey)) excludedSeeds.Add(seed);
-            else seeds.Add(seed);
-        }
-
-        foreach (var bill in PayablesSnapshot!.Bills)
-        {
-            Sort(new WeeklyCashflowSeed(
-                WeeklyCashflowMaths.BillKeyFor(bill.InvoiceId),
-                WeeklyCashflowBand.SupplierBills,
-                string.IsNullOrWhiteSpace(bill.ContactName) ? "(no supplier)" : bill.ContactName!.Trim(),
-                BillDetail(bill),
-                AgedPayablesMaths.SignedAmountDue(bill),
-                AsDate(bill.DueDate ?? bill.Date),
-                AsDate(bill.PlannedPaymentDate)));
-        }
-
-        foreach (var invoice in ReceivablesSnapshot!.Invoices)
-        {
-            Sort(new WeeklyCashflowSeed(
-                WeeklyCashflowMaths.ReceiptKeyFor(invoice.InvoiceId),
-                WeeklyCashflowBand.ClientReceipts,
-                string.IsNullOrWhiteSpace(invoice.ContactName) ? "(no client)" : invoice.ContactName!.Trim(),
-                InvoiceDetail(invoice),
-                AgedReceivablesMaths.SignedAmountDue(invoice),
-                AsDate(invoice.DueDate ?? invoice.Date),
-                AsDate(invoice.ExpectedPaymentDate)));
-        }
+        excludedSeeds.AddRange(excluded);
 
         return WeeklyCashflowMaths.Build(
             today,
-            seeds,
-            Plan.Current!.Items,
-            Plan.Current.Placements,
+            counted,
+            plan.Items,
+            plan.Placements,
             IsDirector && BankReady ? BankSnapshot!.TotalCash : null);
     }
-
-    private static string BillDetail(XeroPayableBill bill)
-    {
-        var reference = bill.Number ?? bill.Reference ?? "no number";
-        var flags = string.Join(" · ", new[]
-        {
-            bill.IsDraft ? "draft" : null,
-            bill.IsCreditNote ? "credit note" : null
-        }.Where(flag => flag is not null));
-        return flags.Length > 0 ? $"{reference} · {flags}" : reference;
-    }
-
-    private static string InvoiceDetail(XeroReceivableInvoice invoice)
-    {
-        var reference = invoice.Number ?? invoice.Reference ?? "no number";
-        var flags = string.Join(" · ", new[]
-        {
-            invoice.IsDraft ? "draft" : null,
-            invoice.IsCreditNote ? "credit note" : null
-        }.Where(flag => flag is not null));
-        return flags.Length > 0 ? $"{reference} · {flags}" : reference;
-    }
-
-    // Re-kind before wrapping: a DateTime that arrives Kind=Local (offset-carrying JSON, a
-    // future serializer change) would make DateTimeOffset(date, TimeSpan.Zero) throw off-UTC.
-    private static DateTimeOffset? AsDate(DateTime? date) =>
-        date is { } value ? new DateTimeOffset(DateTime.SpecifyKind(value.Date, DateTimeKind.Utc), TimeSpan.Zero) : null;
 
     private void ToggleBand(WeeklyCashflowBand band)
     {
@@ -87,14 +36,8 @@ public partial class WeeklyCashflow
         if (!expandedGroups.Remove(supplierGroupId)) expandedGroups.Add(supplierGroupId);
     }
 
-    private HashSet<string> ExcludedKeys() =>
-        Plan.Current is { } plan
-            ? plan.Exclusions.Select(exclusion => exclusion.PlacementKey).ToHashSet(StringComparer.Ordinal)
-            : new HashSet<string>(StringComparer.Ordinal);
-
     private string? ExcludedByFor(string placementKey) =>
         Plan.Current?.Exclusions.FirstOrDefault(exclusion => exclusion.PlacementKey == placementKey)?.ExcludedByEmail;
-
 
     /// <summary>The supplier groups as they land on this grid — GroupSlice.For's rule (shared with
     /// the export, so the two fold the same bills into the same lines), fed the current plan.</summary>

@@ -34,3 +34,6 @@ description: "The cash forecast's and weekly cashflow's timing doctrine. Load be
   balance; "Detail" — every bill/invoice under its line with due and expected dates, parked
   entries listed uncounted; "Data" — the flat list for pivoting. A shaded amount is one the
   accountant moved.
+- Over the connector, **get_weekly_cashflow_grid** is that same grid line by line (Xero-seeded,
+  placements and exclusions applied, one line per supplier, amounts per week, moved flags) — quote
+  it for "who do we pay which week"; get_weekly_cashflow_plan is only the raw overlay.

@@ -13,7 +13,8 @@ internal sealed partial class RequestsActions : IAiActionSource
             .Concat(RequestEmailActions())
             .Concat(DocumentControlActions())
             .Concat(FilingActions())
-            .Concat(TriageActions());
+            .Concat(TriageActions())
+            .Concat(MailboxActions());
 
     // Skipped: PostRequestMessage — already dispatched by AiWriteTools.post_request_message; do not duplicate.
     // (DiscardMessage / RestoreMessage / RemoveTagFromMessage / CreateRequestFromMessage are no
@@ -21,7 +22,10 @@ internal sealed partial class RequestsActions : IAiActionSource
     // Skipped: AssignMessageToRequest (MailboxTriageEndpoints) — file_email_to_record covers the link path; the bare assign stays inline TriageRoles gate, no authorisation class to declare.
     // Skipped: ReplyInThreadFromMessage (MailboxTriageEndpoints) — same reason: inline TriageRoles gate, no authorisation class (stamps RaisedByEmail inline).
     // Skipped: RetagRequestWorkflowTags — one-off admin sweep with an inline TriageRoles gate; no authorisation or validation classes exist.
-    // Skipped: SendMailboxEmail (MailboxIntake/Compose) — multipart/form-data upload shape dispatched to a concrete handler (not an ICommandHandler registration), inline role gate, no authorisation class.
+    // (SendMailboxEmail is no longer skipped — gate class added 2026-09-04, action send_mailbox_email in
+    //  RequestsActions.Mailbox.cs. The old skip note had gone stale: the endpoint takes plain JSON when
+    //  nothing is uploaded and the handler was already registered as an ICommandHandler; only Source=Upload
+    //  attachments stay page-only, and the handler refuses them with a message when no bytes arrive.)
     // (LinkMessageToRecord is no longer skipped — gate classes added 2026-08-28, actions file_email_to_record and file_unfiled_replies above; RecordLinksEndpoints.Gate reads the same TriageRoles.AllowedToTriage set.)
     // Skipped: PrepareProgrammeReplyDraft (RecordLinks) — no Authorisation class: the role set is a private field of the endpoint itself, and there is no validation class either.
     // Skipped: BackfillBucketsEndpoint (RecordLinks) — no command dispatch: the endpoint performs the Graph sweep directly.
