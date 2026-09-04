@@ -23,6 +23,10 @@ description: "The cash forecast's and weekly cashflow's timing doctrine. Load be
 - The grid is Xero-seeded (bills at due/planned week, invoices at due/expected) plus manual
   items; **moving an entry changes WHEN it is paid, never how much** — the grid total always
   equals payables + receivables + items.
+- Manual items are OUTGOINGS only — a supplier's invoice that hasn't landed in Xero yet, overheads,
+  a wages run — added with Add item (the toolbar button, or the standing row at the foot of Cash
+  out); a manual band shows only while it holds a live item. There is no manual receipt: an
+  expected receipt is its sales invoice in Xero, placed by its Expected date — never a typed line.
 - **Real payment agreements live in Xero** (the bill's planned date; the invoice's expected
   date) — recorded once there, the grid follows. A portal placement is the fallback for
   week-to-week juggling, not the home of an agreement.

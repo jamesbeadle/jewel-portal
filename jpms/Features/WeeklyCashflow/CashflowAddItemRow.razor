@@ -1,0 +1,21 @@
+@namespace Jewel.JPMS.Features.WeeklyCashflow
+
+@* The standing invitation at the foot of Cash out — the one row that is there whether or not a
+   manual item exists. A manual band shows only while it holds a live item, so once the last one
+   is archived or runs out the band goes with it; this row stays, so the place to put an outgoing
+   Xero can't see yet (a supplier's invoice that hasn't landed, overheads, a wages run) is always
+   in the grid and not only behind the toolbar button. *@
+<tr class="border-b border-line text-[13px]">
+    <td class="px-4 py-2.5">
+        <button type="button" class="text-content-muted hover:text-content underline-offset-2 hover:underline text-left"
+                title="Add an outgoing Xero can't see yet — one-off or recurring" @onclick="() => OnAddItem.InvokeAsync()">+ Add item</button>
+        <span class="block text-[11px] text-content-faint">an expected bill, overheads or wages Xero can't see yet — it lands in its own band above</span>
+    </td>
+    <td colspan="@WeekCellCount"></td>
+</tr>
+
+@code {
+    /// <summary>The week cells plus Later — the columns this row leaves empty.</summary>
+    [Parameter] public int WeekCellCount { get; set; }
+    [Parameter] public EventCallback OnAddItem { get; set; }
+}

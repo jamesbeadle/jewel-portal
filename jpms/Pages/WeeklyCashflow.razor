@@ -138,7 +138,10 @@
                     Moves are shared: everyone sees the same plan. <span class="font-medium text-content-muted">Group
                     suppliers</span> (toolbar) pulls chosen suppliers into one line; ⊘ on a Xero row excludes an
                     entry that's already covered elsewhere — a direct debit, say — and parks it, struck through
-                    and uncounted, at the foot of its band.
+                    and uncounted, at the foot of its band. <span class="font-medium text-content-muted">Add item</span>
+                    (top right, or the row at the foot of Cash out) keeps the outgoings Xero can't see yet — a
+                    bill that hasn't landed, overheads, wages — one-off or recurring, each under its own band
+                    while it has a live item.
                 </p>
 
                 <WeeklyCashflowGrid View="view" IsDirector="IsDirector"
@@ -151,6 +154,7 @@
                                     ExcludedSeeds="excludedSeeds" ExcludedByFor="ExcludedByFor"
                                     MovingKeys="movingKeys" ExcludingKeys="excludingKeys"
                                     OnEdit="itemId => itemModal.OpenEdit(itemId)"
+                                    OnAddItem="() => itemModal.OpenAdd(today)"
                                     OnExclude="row => SetExclusionAsync(row.PlacementKey, true)"
                                     OnRestore="key => SetExclusionAsync(key, false)"
                                     OnReset="ResetEntryAsync"

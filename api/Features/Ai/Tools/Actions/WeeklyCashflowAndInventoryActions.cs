@@ -22,9 +22,9 @@ public sealed class WeeklyCashflowAndInventoryActions : IAiActionSource
         new AiAction(
             Name: "create_weekly_cashflow_item",
             Area: "Cashflow",
-            Description: "Adds a MANUAL item to the weekly cashflow plan — an outgoing or incoming "
-                + "the ledgers don't carry (wages run, VAT, a known receipt), with a category, "
-                + "amount, recurrence and first due date.",
+            Description: "Adds a MANUAL item to the weekly cashflow plan — an OUTGOING Xero can't see "
+                + "yet (a supplier's invoice that hasn't landed, overheads, a wages run, VAT), with a "
+                + "category, amount, recurrence and first due date. Cash out only.",
             CommandType: typeof(CreateWeeklyCashflowItem),
             ResultType: typeof(WeeklyCashflowItem),
             AuthorisationType: typeof(CreateWeeklyCashflowItemAuthorisation),
@@ -33,7 +33,9 @@ public sealed class WeeklyCashflowAndInventoryActions : IAiActionSource
             EmailStamps: new[] { "CreatedByEmail" },
             NameStamps: Array.Empty<string>(),
             Notes: "Xero-fed bills and invoices arrive in the plan automatically — manual items are "
-                + "only for flows Xero does not know about. Amounts in pounds."),
+                + "only for money Xero does not know about YET, and every one counts as cash out. "
+                + "There is no manual receipt: an expected receipt is its sales invoice in Xero, "
+                + "placed by its Expected date. Amounts in pounds."),
 
         new AiAction(
             Name: "update_weekly_cashflow_item",

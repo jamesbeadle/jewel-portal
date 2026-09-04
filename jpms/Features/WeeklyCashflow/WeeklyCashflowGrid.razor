@@ -2,10 +2,10 @@
 @namespace Jewel.JPMS.Features.WeeklyCashflow
 @using static Jewel.JPMS.Features.Cashflow.CashflowDisplay
 
-@* The weekly grid: one column per week, the two Xero bands and a band per manual category in
-   play, then the running answer — net movement, and for directors the closing bank balance.
-   The page owns the moves, the exclusions and the dialogs; every band reads the same page state
-   and reports to the same page handlers, so Band wires a section once rather than three times. *@
+@* The weekly grid: one column per week, the two Xero bands, a band per manual category in play
+   and the standing Add item row, then the running answer — net movement, and for directors the
+   closing bank balance. The page owns the moves, the exclusions and the dialogs; every band reads
+   the same page state and reports to the same page handlers, so Band wires a section once. *@
 <div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
     <table class="w-full text-sm border-collapse">
         <thead class="bg-surface-raised border-b border-line">
@@ -32,14 +32,11 @@
             @Band(WeeklyCashflowBand.SupplierBills, "Supplier bills",
                   "one line per outstanding bill in Xero — drafts included, as Aged Payables counts them; a Planned date set in Xero picks the week",
                   SupplierGroups)
-            @foreach (var category in WeeklyCashflowCategories.All)
+            @foreach (var category in WeeklyCashflowCategories.All.Where(HasLiveItems))
             {
-                var band = WeeklyCashflowMaths.BandFor(category);
-                if (View.Entries.Any(entry => entry.Band == band))
-                {
-                    @Band(band, WeeklyCashflowCategories.BandLabel(category), "manual items — added on this page", Array.Empty<GroupSlice>())
-                }
+                @Band(WeeklyCashflowMaths.BandFor(category), WeeklyCashflowCategories.BandLabel(category), "manual items — added on this page", Array.Empty<GroupSlice>())
             }
+            <CashflowAddItemRow WeekCellCount="View.WeekStarts.Count + 1" OnAddItem="OnAddItem" />
             @* ── The running answer ── *@
             <tr class="border-t-2 border-line border-b border-line font-semibold">
                 <td class="px-4 py-3 text-content">
@@ -86,6 +83,9 @@
     [Parameter] public EventCallback<string> OnRestore { get; set; }
     [Parameter] public EventCallback<WeeklyCashflowEntry> OnReset { get; set; }
     [Parameter] public EventCallback<(WeeklyCashflowEntry Entry, int ToWeek)> OnMove { get; set; }
+    [Parameter] public EventCallback OnAddItem { get; set; }
+
+    private bool HasLiveItems(WeeklyCashflowCategory category) => View.Entries.Any(entry => entry.Band == WeeklyCashflowMaths.BandFor(category));
 
     private RenderFragment Band(WeeklyCashflowBand band, string label, string sub, IReadOnlyList<GroupSlice> groups) => __builder =>
     {
