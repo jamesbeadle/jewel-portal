@@ -1,18 +1,20 @@
 name: Tests
 
-# The test gate every deploy workflow must pass through.
+# Manual-only test run. Not wired into the deploy workflows.
 #
-# Why this exists: on 2026-09-03 commit 45a6ebf deleted the RecordType.TenderEnquiry entry from
+# History: on 2026-09-03 commit 45a6ebf deleted the RecordType.TenderEnquiry entry from
 # AiRegistryDriftCheck.Reachability while the enum member stayed. AiRegistryDriftCheck.Assert()
 # runs at boot and throws on drift, so the isolated worker died on startup and every /api/* route
-# returned 500 until it was found by hand. AiConnectorTests.DriftCheck_passes makes exactly that
-# call and would have failed the build — but no workflow ran the tests, so nothing asked.
+# returned 500 (including sign-in) until it was found by hand. The entry was restored in c8b6a9f.
 #
-# Called by jpms-swa.yml, jpms-worker.yml and jpms-mcp.yml via workflow_call. Every deploy job
-# declares `needs: test`, so a red suite blocks the deploy rather than reporting after the fact.
+# This workflow was briefly used as a `needs: test` gate on the three deploy workflows the same
+# evening, but the suite is red on the ubuntu runner while green on Windows (suspected font /
+# platform difference in the PDF layout tests), which turned every deploy run red even though
+# the deploys themselves succeeded. The gate was removed on 2026-09-04 and the deploy workflows
+# put back to how they were. Run this by hand from the Actions tab when you want the suite's
+# verdict from a Linux runner; re-gate the deploys only once it is green here.
 
 on:
-  workflow_call:
   workflow_dispatch:
 
 jobs:
