@@ -101,6 +101,8 @@ public static class AiRegistryDriftCheck
             [RecordType.WorkOrder] = RecordReach.Via("list_work_orders", "get_work_order_context", "find_by_reference"),
             [RecordType.Defect] = RecordReach.Via("list_defects", "find_by_reference"),
             [RecordType.ValuationReportSnapshot] = RecordReach.Via("get_valuation_context"),
+            // The claims list (ids, names, statuses) comes back with the report.
+            [RecordType.ValuationClaim] = RecordReach.Via("get_valuation_context"),
 
             // Record-less tag families: correspondence buckets, not records — there is no id for a
             // list tool to return. read_record_emails reads them when given the scope.

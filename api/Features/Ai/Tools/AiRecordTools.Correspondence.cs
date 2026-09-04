@@ -102,7 +102,8 @@ internal static partial class AiRecordTools
                 AiToolSchema.Object(
                     ("recordType", "string",
                         "One of: request, bid_package, variation, variation_quote, work_order, defect, "
-                        + "todo, lad, cost_centre, scheduling, subcontractor_comms, valuation_snapshot. "
+                        + "todo, lad, cost_centre, scheduling, subcontractor_comms, valuation_snapshot, "
+                        + "valuation_claim. "
                         + "Defaults to the record in view.", false),
                     ("recordId", "string", "The record's id. Defaults to the record in view.", false),
                     ("maxChars", "number",
@@ -121,7 +122,7 @@ internal static partial class AiRecordTools
                     {
                         return Fail($"Emails cannot be read for \"{typeText}\" — tagged mail exists for: request, "
                             + "bid_package, variation, variation_quote, work_order, defect, todo, lad, "
-                            + "cost_centre, scheduling, subcontractor_comms, valuation_snapshot.");
+                            + "cost_centre, scheduling, subcontractor_comms, valuation_snapshot, valuation_claim.");
                     }
 
                     IReadOnlyList<MailboxMessage> messages;

@@ -234,6 +234,22 @@ use select_email / read_selected_email / stage_triage_* / open_modal reply_email
 seed script), and scripts/update-jpms-email-triage-skill-send-reply.sql moves the LIVE skill
 on with a revision row, replacing only the stale passages.
 
+**2026-09-04 (Nigel: "why isn't the August valuation report an option for tagging")**: the
+Client pane's snapshot section lists only FROZEN statements, and a Draft claim has none until its
+invoice is raised — so the month's correspondence had nowhere to file until the money moved.
+The live claim is now a record of its own: **RecordType.ValuationClaim** (ValuationClaimLinkProvider,
+tag JPMS/VAL-{project}-{claim number}, Client pathway, drift-check reach via
+get_valuation_context — whose claims list already carried each ValuationClaimId). The connector
+needed no new tool: file_email_to_record's type enum is generated from RecordType, so
+ValuationClaim is accepted the moment the api deploys, and read_record_emails takes
+recordType valuation_claim (both help texts say so, as does the /control-centre page guide and
+get_valuation_context's description). On the site, the valuation page gained a Correspondence
+section for the selected claim and every snapshot merges its claim's mail with its own, so the
+statement carries the period's whole story and Confirm & roll over moves the tag on by itself.
+Doctrine: jpms-email-triage step 4 and a new jpms-valuation-cycle "Correspondence" section (docs +
+seed script); scripts/update-jpms-skills-valuation-claims.sql moves the two LIVE skills on with
+revision rows.
+
 **Still open, with reasons**: the cash forecast/statement COMPUTATION (the phasing runs
 client-side over several stores; the inputs are now all readable — a server-side statement tool
 is a real build, not a wrapper); profit summary / Xero site P&L and Xero transactions reads;

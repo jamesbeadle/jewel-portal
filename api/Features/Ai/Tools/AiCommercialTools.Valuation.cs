@@ -30,6 +30,9 @@ internal static partial class AiCommercialTools
                 + "and this period's increment — plus the claims list (which is selected, its status) "
                 + "and the report totals. The selected claim is the newest unless claimId says "
                 + "otherwise. Filter with variationRef (\"V01\") to see one variation's lines only. "
+                + "Each claim's ValuationClaimId is also its correspondence record id: read_record_emails "
+                + "(recordType valuation_claim) reads the mail tagged to the period, and "
+                + "file_email_to_record (type ValuationClaim) files an email to it. "
                 + "Call this before reviewing or correcting % complete, and before claim_progress.",
                 AiToolSchema.Object(
                     ("projectId", "string", "Defaults to the project in view.", false),

@@ -49,9 +49,12 @@ monthly claims; the claim card's stepper is **Value & lock → Claim → Approve
 Invoice → Paid → Confirm & roll over**, one primary button per stage, with an
 Actions menu for rename, reopen, record rejection/payment, issue without
 approval, delete. Lines are added/edited while the claim is Draft; Valuation
-Invoices and Snapshots sections sit inline; working-copy PDF/Excel exports
-always available. Approving variations — which writes their lines here —
-happens on the variation record, not here.
+Invoices, Snapshots and Correspondence sections sit inline; working-copy
+PDF/Excel exports always available. Each claim is a linkable record in the
+Control Centre (Client → Valuation claims): mail tagged to the live claim
+reads back in Correspondence and on every snapshot frozen from it; rolling
+over starts the next claim with its own tag. Approving variations — which
+writes their lines here — happens on the variation record, not here.
 
 ## Project folder
 

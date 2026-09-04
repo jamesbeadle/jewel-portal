@@ -52,6 +52,7 @@ internal static partial class AiRecordTools
             "subcontractor comms" => RecordType.SubcontractorComms,
             "supplier comms" => RecordType.SupplierComms,
             "valuation snapshot" or "valuation report snapshot" => RecordType.ValuationReportSnapshot,
+            "valuation claim" or "valuation period" => RecordType.ValuationClaim,
             _ => null
         };
         recordType = mapped ?? default;

@@ -42,7 +42,12 @@ public static class TriagePageGuides
             + "un-files; send_attachments_to_document_control is the \"Send to document triage\" "
             + "tick. Page-only: the triage bar's Relevant Event and Entire thread decisions and "
             + "uploading a file from the user's computer onto a reply. Find records to file to "
-            + "with find_by_reference, list_requests or list_variations. Filing attachments to "
+            + "with find_by_reference, list_requests or list_variations — and, for the month's "
+            + "valuation, get_valuation_context (a claim's ValuationClaimId files as type "
+            + "ValuationClaim: the live period's own correspondence, shown on the Valuation "
+            + "Report's Correspondence section and on every snapshot frozen from the claim) or "
+            + "list_valuation_snapshots (type ValuationReportSnapshot, the frozen statement the "
+            + "client was sent). Filing attachments to "
             + "the project Documents register, Payment Certificates or subcontractor records is "
             + "not done here — Document Triage (/document-triage, list_document_triage) is where "
             + "a copied attachment gets filed.",

@@ -21,6 +21,12 @@ by machinery, you must enforce by discipline.
 4. **File to records** (file_email_to_record) — every record the email genuinely concerns. An
    email can feed a request AND a cost centre AND the programme at once; multiple filings are
    normal, not a smell.
+   A valuation period is a record too: mail about the month's claim — the site-meeting notes
+   that settle what is claimed, the QS's working, the architect's early queries — files to the
+   LIVE claim (type ValuationClaim; the recordId is the claim's ValuationClaimId from
+   get_valuation_context). The frozen statement (type ValuationReportSnapshot, ids from
+   list_valuation_snapshots) is for the client's response to what was actually sent; a snapshot
+   reads its claim's mail as well as its own, so filing to the claim is never the wrong choice.
 5. **Create at most ONE new record per email per pass** (create_request_from_message,
    create_work_order_from_message, create_defect_from_message,
    create_inventory_item_from_message, …). Creating mints the record's tag onto the email, so the

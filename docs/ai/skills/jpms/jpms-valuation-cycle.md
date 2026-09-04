@@ -42,3 +42,17 @@ description: "The monthly valuation claim and invoice cycle — the money path f
   list_valuation_invoices' summary, never by adding numbers yourself.
 - Deleting claims or invoices is recovery machinery, not tidying — user's explicit say-so, named
   by number, every time.
+
+## Correspondence
+
+- **The live claim is a record in its own right.** Mail about the period — what to claim, the
+  QS's working, the architect's early queries — files to the claim (file_email_to_record, type
+  ValuationClaim, recordId = the claim's ValuationClaimId from get_valuation_context) and reads
+  back with read_record_emails (recordType valuation_claim). Its mail tag is
+  JPMS/VAL-{project reference}-{claim number}.
+- **A snapshot inherits its claim's mail.** Every snapshot frozen from a claim shows the claim's
+  correspondence beside anything tagged to the snapshot itself (type ValuationReportSnapshot),
+  so the statement carries the period's whole story; the client's reply to a sent statement
+  can go on either.
+- **Roll-over moves the tag on its own.** Confirm & roll over starts the next claim with the
+  next number — new mail files to the new period; nothing is re-tagged.

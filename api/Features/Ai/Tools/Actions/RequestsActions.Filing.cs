@@ -52,7 +52,10 @@ internal sealed partial class RequestsActions
             NameStamps: Array.Empty<string>(),
             Notes: "messageId is the mailbox message id as read_record_emails / get_mailbox_message "
                 + "return it (internetMessageId is an optional stable fallback). type + recordId "
-                + "name the record (recordId via find_by_reference). scope is ThreadBehindAnchor "
+                + "name the record (recordId via find_by_reference; for a valuation claim — type "
+                + "ValuationClaim, the live period's own correspondence — it is the claim's "
+                + "ValuationClaimId from get_valuation_context, and for a frozen statement — type "
+                + "ValuationReportSnapshot — an id from list_valuation_snapshots). scope is ThreadBehindAnchor "
                 + "(default), MessageOnly or EntireThread. If the answer says the thread is "
                 + "already filed under another pathway, ASK THE USER before re-calling with "
                 + "allowCrossPathway true — never confirm a cross-filing on your own. pathway "

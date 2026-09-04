@@ -60,14 +60,25 @@ public partial class ValuationSnapshotViewer
         await LoadEmailsAsync();
     }
 
-    // The emails triaged to this snapshot's tag, read live — a failure opens the gate with its
-    // own message rather than blocking the report above (the frozen lines are the main event).
+    // The emails triaged to this snapshot's tag PLUS those tagged to the claim it was frozen from
+    // (the period's correspondence travels with its statement), read live and merged — an email
+    // tagged to both appears once. A failure opens the gate with its own message rather than
+    // blocking the report above (the frozen lines are the main event).
     private async Task LoadEmailsAsync()
     {
         try
         {
-            emails = await Queries.AskAsync(
-                new ListRecordEmails(RecordType.ValuationReportSnapshot, SnapshotId), CancellationToken.None);
+            var tagged = new List<MailboxMessage>(await Queries.AskAsync(
+                new ListRecordEmails(RecordType.ValuationReportSnapshot, SnapshotId), CancellationToken.None));
+            if (detail?.Snapshot.ValuationClaimId is { Length: > 0 } claimId)
+            {
+                tagged.AddRange(await Queries.AskAsync(
+                    new ListRecordEmails(RecordType.ValuationClaim, claimId), CancellationToken.None));
+            }
+            emails = tagged
+                .GroupBy(email => string.IsNullOrEmpty(email.InternetMessageId) ? email.Id : email.InternetMessageId)
+                .Select(group => group.First())
+                .ToList();
         }
         catch
         {

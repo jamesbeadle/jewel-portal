@@ -115,10 +115,11 @@
 
     // Valuation snapshots' VRS-… reference is a minted mail-tag stem, not a name any triager
     // recognises (decision 2026-08-20) — their rows lead with the valuation's own name (the
-    // provider's title) and the stem retreats to the hover hint. Every other type's reference
-    // ("RFI-001", "WO-0003") IS its everyday name, so those rows keep it.
+    // provider's title) and the stem retreats to the hover hint; a claim's VAL-… stem is the
+    // same kind of thing. Every other type's reference ("RFI-001", "WO-0003") IS its
+    // everyday name, so those rows keep it.
     private static bool ShowReference(LinkableRecord record) =>
-        record.Type != RecordType.ValuationReportSnapshot;
+        record.Type is not (RecordType.ValuationReportSnapshot or RecordType.ValuationClaim);
 
     private static string RowHint(LinkableRecord record) =>
         ShowReference(record)

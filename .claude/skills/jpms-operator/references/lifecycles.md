@@ -75,6 +75,13 @@ Snapshots freeze automatically when an invoice is raised, and again on
 submit/issue after an amendment. The live report is internal-only; snapshots
 are the client-facing artefact.
 
+Correspondence: the live claim is a linkable record in the Control Centre
+(Client → Valuation claims, tag `JPMS/VAL-{project}-{claim number}`), so mail
+about the period files to it before anything is sent. A snapshot reads its
+own tag (`JPMS/VRS-{project}-{n}`) AND its claim's, so the period's mail
+travels with the statement frozen from it; Confirm & roll over starts the
+next claim, whose number mints the next tag.
+
 ## Bid packages and work orders
 
 Bid package: Draft on creation (title + trade) → lines/summary built on the

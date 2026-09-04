@@ -24,5 +24,6 @@ public enum RecordType
     BuildingControlInspection = 16, // one building control inspection stage — the inspector's booking/report thread files against it
     SupplierComms = 17,    // the record-less "supplier communication" tag family (general + categories) — supplier-side correspondence tied to no record
     Inventory = 18,        // an inventory item on a project (product + location details) — supplier-side, the Supplier pathway's first linkable record
-    SiteInstruction = 19   // a written instruction to site on a project (title + instruction + location) — internal-side; the email alone is rarely the instruction, so the record carries the words (2026-09-03)
+    SiteInstruction = 19,  // a written instruction to site on a project (title + instruction + location) — internal-side; the email alone is rarely the instruction, so the record carries the words (2026-09-03)
+    ValuationClaim = 20    // a valuation claim — one period of the live valuation report (Draft → Issued → Confirmed); the period's correspondence files here before anything is put to the client, and every snapshot frozen from the claim reads it too (2026-09-04)
 }

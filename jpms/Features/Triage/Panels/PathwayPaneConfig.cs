@@ -26,7 +26,7 @@ public sealed record PathwayPaneConfig(
         {
             RecordType.Request, RecordType.Variation,
             RecordType.BuildingControlInspection, RecordType.BuildingControlCase,
-            RecordType.Lad, RecordType.ValuationReportSnapshot
+            RecordType.Lad, RecordType.ValuationClaim, RecordType.ValuationReportSnapshot
         },
         Family: null,
         new (string, IReadOnlyList<SystemActionKind>)[]
@@ -130,6 +130,7 @@ public sealed record PathwayPaneConfig(
         RecordType.Request => "Request / RFI",
         RecordType.Variation => "Variation Order",
         RecordType.Lad => "LADs claim",
+        RecordType.ValuationClaim => "Valuation claim",
         RecordType.ValuationReportSnapshot => "Valuation report snapshot",
         RecordType.Scheduling => "Relevant Event",
         RecordType.BidPackageInvite => "Bid Package Invite",

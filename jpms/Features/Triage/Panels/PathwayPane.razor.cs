@@ -135,10 +135,10 @@ public partial class PathwayPane
         await OnClose.InvokeAsync();
     }
 
-    // The staged chip reads the everyday name: the title for a valuation snapshot (its VRS-… stem
-    // is a minted mail tag, decision 2026-08-20), the reference for everything else.
+    // The staged chip reads the everyday name: the title for a valuation snapshot or claim (their
+    // VRS-… / VAL-… stems are minted mail tags, decision 2026-08-20), the reference for everything else.
     private static string ChipLabel(LinkableRecord record) =>
-        record.Type == RecordType.ValuationReportSnapshot ? record.Title : record.Reference;
+        record.Type is RecordType.ValuationReportSnapshot or RecordType.ValuationClaim ? record.Title : record.Reference;
 
     private string TabClass(PaneTab tab) =>
         "px-4 py-2 text-sm border-b-2 -mb-px transition inline-flex items-center gap-1.5 "

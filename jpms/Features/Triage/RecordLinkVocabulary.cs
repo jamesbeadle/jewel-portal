@@ -14,7 +14,7 @@ public static class RecordLinkVocabulary
     // Variation — one record, one number, per the 2026-07-23 unification.
     public static readonly RecordType[] RecordTypeOptions =
     {
-        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase, RecordType.Inventory, RecordType.SiteInstruction
+        RecordType.Request, RecordType.BidPackageInvite, RecordType.WorkOrder, RecordType.Scheduling, RecordType.Lad, RecordType.Variation, RecordType.ValuationClaim, RecordType.Todo, RecordType.CalendarEvent, RecordType.BuildingControlInspection, RecordType.BuildingControlCase, RecordType.Inventory, RecordType.SiteInstruction
     };
 
     // What each pathway's "Link to existing" offers (the pathway filters the actions — the plan's
@@ -24,7 +24,7 @@ public static class RecordLinkVocabulary
     // travels with the link command.
     public static readonly RecordType[] ClientLinkTypes =
     {
-        RecordType.Request, RecordType.Variation, RecordType.Lad, RecordType.Scheduling,
+        RecordType.Request, RecordType.Variation, RecordType.ValuationClaim, RecordType.Lad, RecordType.Scheduling,
         RecordType.BuildingControlInspection, RecordType.BuildingControlCase
     };
     // Subcontractor covers the whole subcontract lifecycle, not just the tender: an email can land
@@ -54,7 +54,7 @@ public static class RecordLinkVocabulary
     public static TriagePathway? ImpliedPathway(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
-            or RecordType.Scheduling or RecordType.Lad => TriagePathway.Client,
+            or RecordType.Scheduling or RecordType.Lad or RecordType.ValuationClaim => TriagePathway.Client,
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => TriagePathway.Subcontractor,
         RecordType.SupplierComms or RecordType.Inventory => TriagePathway.Supplier,
@@ -67,7 +67,7 @@ public static class RecordLinkVocabulary
     public static string RecordTypePathwayLabel(RecordType type) => type switch
     {
         RecordType.Request or RecordType.Variation or RecordType.VariationQuote
-            or RecordType.Scheduling or RecordType.Lad
+            or RecordType.Scheduling or RecordType.Lad or RecordType.ValuationClaim
             or RecordType.BuildingControlCase or RecordType.BuildingControlInspection => "Client",
         RecordType.BidPackageInvite or RecordType.WorkOrder
             or RecordType.SubcontractorComms => "Subcontractor",
@@ -99,6 +99,7 @@ public static class RecordLinkVocabulary
         RecordType.Variation        => "Variation Order",
         RecordType.VariationQuote   => "Variation Order Quote",
         RecordType.Lad              => "LADs claim",
+        RecordType.ValuationClaim   => "Valuation claim",
         RecordType.Todo             => "To-do item",
         RecordType.CalendarEvent    => "Calendar event",
         RecordType.BuildingControlInspection => "Building Control Inspection",

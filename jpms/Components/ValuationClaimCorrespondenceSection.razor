@@ -1,0 +1,100 @@
+@using Jewel.JPMS.Features.Triage.Panels
+@inject IQueryClient Queries
+
+@* The mail behind the selected claim: everything tagged to the period in the Control Centre
+   (Client → Valuation claims), read back live by the claim's own tag — the snapshot viewer's
+   Correspondence mechanism, and every snapshot frozen from this claim shows the same mail beside
+   its own. Reading only: tagging and replying stay in the Control Centre. *@
+<div class="rounded-xl border border-line bg-surface overflow-hidden">
+    <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
+            class="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface-raised/60 transition">
+        <svg class="@ChevronClass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 6l6 6-6 6" />
+        </svg>
+        <span class="font-semibold text-content whitespace-nowrap">Correspondence</span>
+        @if (Claim is { } claim)
+        {
+            <span class="text-xs text-content-subtle whitespace-nowrap">@claim.DisplayName</span>
+        }
+        @* The count renders only once the mailbox has answered — a placeholder count would be believed. *@
+        @if (emails is { } answered)
+        {
+            <span class="text-xs text-content-subtle whitespace-nowrap">@answered.Count @(answered.Count == 1 ? "email" : "emails")</span>
+        }
+    </button>
+
+    @if (isOpen)
+    {
+        <div class="border-t border-line px-4 py-4">
+            @if (Claim is null)
+            {
+                <p class="text-sm text-content-subtle italic">No claim selected.</p>
+            }
+            else
+            {
+                <LoadGate IsLoading="@(emails is null && loadError is null)" Label="Loading correspondence">
+                    @if (loadError is not null)
+                    {
+                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
+                    }
+                    else if (emails is { Count: 0 })
+                    {
+                        <p class="text-sm text-content-subtle italic">
+                            No emails are tagged to @Claim.DisplayName yet. Tag one in the Control Centre —
+                            Client → Valuation claims — and it appears here, and on every snapshot frozen from this claim.
+                        </p>
+                    }
+                    else if (emails is not null)
+                    {
+                        <CorrespondenceThreadList Emails="emails" />
+                    }
+                </LoadGate>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>The selected claim — the period whose tagged mail this section reads; null when
+    /// the project has no claim selected.</summary>
+    [Parameter] public ValuationClaim? Claim { get; set; }
+
+    private bool isOpen;
+    // Null until the mailbox has ANSWERED — an empty list is a real "none", never a placeholder.
+    private IReadOnlyList<MailboxMessage>? emails;
+    private string? loadError;
+    private string loadedClaimId = "";
+
+    private string ChevronClass => isOpen
+        ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform"
+        : "w-4 h-4 shrink-0 text-content-subtle transition-transform";
+
+    private void Toggle() => isOpen = !isOpen;
+
+    // The claim picker sits above this section, so the claim can change while it is open.
+    protected override async Task OnParametersSetAsync()
+    {
+        var claimId = Claim?.ValuationClaimId ?? "";
+        if (claimId == loadedClaimId) return;
+        loadedClaimId = claimId;
+        emails = null;
+        loadError = null;
+        if (claimId.Length == 0) return;
+        await LoadEmailsAsync(claimId);
+    }
+
+    private async Task LoadEmailsAsync(string claimId)
+    {
+        try
+        {
+            var answered = await Queries.AskAsync(new ListRecordEmails(RecordType.ValuationClaim, claimId), CancellationToken.None);
+            // A slower answer for a claim no longer selected must not land on the current one.
+            if (claimId == loadedClaimId) emails = answered;
+        }
+        catch
+        {
+            if (claimId == loadedClaimId) loadError = "Couldn't load this claim's correspondence. Please try again.";
+        }
+    }
+}

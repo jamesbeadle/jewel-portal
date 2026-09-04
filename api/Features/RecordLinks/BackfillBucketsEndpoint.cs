@@ -206,6 +206,7 @@ public sealed class BackfillBucketsEndpoint
         if (stem.StartsWith("VO-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("SCH-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("LAD-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
+        if (stem.StartsWith("VAL-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Client;
         if (stem.StartsWith("BPI-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
         if (stem.StartsWith("WO-", StringComparison.OrdinalIgnoreCase)) return TriageCategories.Subcontractor;
         // Materials moved to the SUPPLIER family 2026-08-27 keeping its SubComms-Mats stem —

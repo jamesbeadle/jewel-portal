@@ -103,6 +103,7 @@ public partial class ProjectCommunications
         (RecordType.Defect,           "Defects"),
         (RecordType.Inventory,        "Inventory"),
         (RecordType.SiteInstruction,  "Site instructions"),
+        (RecordType.ValuationClaim,   "Valuation claims"),
         (RecordType.ValuationReportSnapshot, "Valuation snapshots")
     };
 
@@ -352,6 +353,7 @@ public partial class ProjectCommunications
         RecordType.Defect           => "Defect",
         RecordType.Inventory        => "Inventory item",
         RecordType.SiteInstruction  => "Site instruction",
+        RecordType.ValuationClaim   => "Valuation claim",
         RecordType.ValuationReportSnapshot => "Valuation snapshot",
         RecordType.SubcontractorComms => "Subcontractor comms",
         RecordType.SupplierComms    => "Supplier comms",

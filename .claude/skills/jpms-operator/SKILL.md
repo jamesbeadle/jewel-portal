@@ -79,6 +79,7 @@ specific tab. Full page-by-page detail: `references/site-map.md`.
 | Record the architect's instruction | Architect's Instructions register — file it, tick the variations it covers |
 | Run the monthly claim | Valuation Report claim card stepper: Value & lock → Claim → Approve → Invoice → Paid → Confirm & roll over |
 | See what the client was sent | Valuation Report Snapshots (frozen; the live report is internal-only) |
+| File an email about the month's valuation (site-meeting notes, the QS's working, the architect's early queries) | Control Centre → Client → **Valuation claims** — the live claim. Its mail reads back in the Valuation Report's Correspondence section and on every snapshot frozen from it; the client's reply to a sent statement can go on the snapshot instead. Confirm & roll over starts the next claim with its own tag |
 | Tender a trade | Bid Package Invites → package detail: Details (lines) → Tender list (invite email, BCC) → Submissions → **Award** (raises the work order) |
 | Raise / approve a work order | Work Orders tab — "Add work order", two-click Approve (mints WO number, emails the PO) |
 | Pay-side reconciliation | Xero Cost Allocation (code purchase lines to project + cost centre; allocating a draft bill fully approves it in Xero) then WO Allocation (tie lines to work orders) |

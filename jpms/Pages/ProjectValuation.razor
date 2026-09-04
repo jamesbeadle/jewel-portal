@@ -245,6 +245,11 @@
                 <div class="mt-3">
                     <ValuationSnapshotsSection ProjectId="@ProjectId" OnView="OpenSnapshot" OnDeleted="OnSnapshotDeleted" OnEmail="OpenSnapshotEmail" />
                 </div>
+                @* The selected claim's own mail: the period is a linkable record in the Control
+                   Centre (Client → Valuation claims), and reads it back here by tag. *@
+                <div class="mt-3">
+                    <ValuationClaimCorrespondenceSection Claim="@Selected" />
+                </div>
             </ExtraSections>
         </ValuationReportTable>
         </LoadGate>
