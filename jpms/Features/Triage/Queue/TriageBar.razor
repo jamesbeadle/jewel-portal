@@ -69,7 +69,7 @@
     @if (DiscardArmed)
     {
         <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-content">
-            Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Applied by the Apply button.
+            Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Press <strong class="font-semibold">@ApplyLabel</strong> to go ahead, or <strong class="font-semibold">Keep email</strong> to change your mind.
         </p>
     }
     @* ---- The one action bar: whatever is set up here and in the windows below — a reply,
@@ -91,7 +91,14 @@
             {
                 <p class="text-xs text-amber-600 max-w-xs text-right">@(DecisionsMissing ? DecisionsMissingHint : ProjectMissingHint)</p>
             }
-            <button type="button" class="@DiscardTabClass" @onclick="() => DiscardArmedChanged.InvokeAsync(!DiscardArmed)">🗑 Discard</button>
+            @* Armed, this button is the way OUT — so it stops looking destructive and says so:
+               grey "Keep email" against the green "Discard email", per the design system's
+               green-does-it / grey-backs-out split (2026-09-04: someone armed discard, changed
+               their mind, and could not see which button cancelled it). *@
+            <button type="button" class="@DiscardTabClass" title="@DiscardToggleTitle"
+                    @onclick="() => DiscardArmedChanged.InvokeAsync(!DiscardArmed)">
+                @DiscardToggleLabel
+            </button>
             <button type="button" class="btn-primary" disabled="@(Busy || PendingSummary is null || DecisionsMissing || ProjectMissing)"
                     @onclick="() => OnApply.InvokeAsync(false)">
                 @ApplyLabel
@@ -132,7 +139,7 @@
     /// <summary>True when the project was matched from the email text rather than picked.</summary>
     [Parameter] public bool ProjectAutoMatched { get; set; }
     [Parameter] public string? ActionError { get; set; }
-    /// <summary>Armed discard — applied by the same Apply button, disarmed by the 🗑 toggle.</summary>
+    /// <summary>Armed discard — applied by the same Apply button, cancelled by the same toggle ("Keep email" while armed).</summary>
     [Parameter] public bool DiscardArmed { get; set; }
     [Parameter] public EventCallback<bool> DiscardArmedChanged { get; set; }
 
@@ -153,9 +160,18 @@
     /// <summary>Fires the one Apply; true means stage the lined-up emails as drafts instead of sending.</summary>
     [Parameter] public EventCallback<bool> OnApply { get; set; }
 
+    private string DiscardToggleLabel => DiscardArmed ? "Keep email" : "🗑 Discard";
+
+    private string DiscardToggleTitle => DiscardArmed
+        ? "Cancel the discard — this email stays in the queue"
+        : "Discard this email if it isn't for a record at all";
+
+    // Same pill geometry either way so nothing shifts on the toggle; only the colour changes —
+    // a red-hovering "🗑 Discard" while it is the destructive act on offer, a plain grey
+    // "Keep email" once it is the escape from one.
     private string DiscardTabClass =>
         "rounded-lg px-3 py-1.5 text-sm border transition "
         + (DiscardArmed
-            ? "border-negative text-negative bg-negative/10 font-medium"
+            ? "border-line-strong text-content bg-surface-raised font-medium hover:border-line-strong"
             : "border-line text-content-subtle hover:text-negative hover:border-negative/50");
 }
