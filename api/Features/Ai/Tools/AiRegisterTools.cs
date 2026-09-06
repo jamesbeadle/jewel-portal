@@ -6,7 +6,6 @@ using Jewel.JPMS.Contracts.Architects;
 using Jewel.JPMS.Contracts.Clients;
 using Jewel.JPMS.Contracts.Directory;
 using Jewel.JPMS.Contracts.Labour;
-using Jewel.JPMS.Contracts.Leads;
 using Jewel.JPMS.Contracts.Rates;
 using Jewel.JPMS.Contracts.Registers;
 using Jewel.JPMS.Contracts.Requests;
@@ -39,48 +38,7 @@ internal static class AiRegisterTools
     {
         return new List<AiTool>
         {
-            new(
-                "list_leads",
-                "The whole lead pipeline, newest-captured first: every lead with its stage "
-                + "(NewLead → Qualified → SurveyBooked → SurveyComplete → AwaitingInformation → "
-                + "DrawingsReceived → FeasibilityReview → Tendering → ProposalIssued → Negotiation, "
-                + "ending Won / Lost / Nurture), contact, company, site address, estimated value, "
-                + "source, owner and captured date. The estimating queue is the Tendering and "
-                + "FeasibilityReview leads taken oldest-captured-first; Nurture holds lost leads "
-                + "kept warm for future work. Call this for anything about who is in the pipeline "
-                + "or what estimating has on.",
-                AiToolSchema.Empty(),
-                AiToolKind.Read,
-                // Mirror of ListLeadsInPipelineEndpoint.RolesThatMayReadLeads (= AllInternal).
-                JpmsRoleSets.AllInternal,
-                async (context, _, ct) =>
-                {
-                    var leads = await context.Services
-                        .GetRequiredService<IQueryHandler<ListLeadsInPipeline, IReadOnlyList<Lead>>>()
-                        .HandleAsync(new ListLeadsInPipeline(), ct);
-                    return Serialise(new
-                    {
-                        ok = true,
-                        count = leads.Count,
-                        leads = leads.Select(lead => new
-                        {
-                            lead.LeadId,
-                            lead.Reference,
-                            lead.ContactName,
-                            lead.ContactEmail,
-                            lead.ContactPhone,
-                            lead.CompanyName,
-                            lead.SiteAddress,
-                            lead.EstimatedValue,
-                            source = lead.Source.ToString(),
-                            stage = lead.Stage.ToString(),
-                            isActive = lead.Stage.IsActive(),
-                            lead.OwnerEmail,
-                            lead.CapturedAt
-                        })
-                    });
-                }),
-
+            // list_leads moved to AiSalesTools with the Sales rebuild (2026-09-06).
             new(
                 "list_rates",
                 "The company rate library — every priced rate: trade, description, supplier, "

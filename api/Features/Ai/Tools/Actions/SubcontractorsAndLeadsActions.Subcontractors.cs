@@ -202,9 +202,6 @@ internal sealed partial class SubcontractorsAndLeadsActions
             NameStamps: Array.Empty<string>(),
             RequiresConfirmation: true,
             Notes: "Confirm with the user which trade, by name, before calling. tradeId comes from "
-                + "list_trades."),
-
-        // ── Leads & CRM ───────────────────────────────────────────────────────────────────────
-
+                + "list_trades.")
     };
 }

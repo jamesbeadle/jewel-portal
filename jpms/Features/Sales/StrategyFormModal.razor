@@ -1,0 +1,160 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject ICommandSender Commands
+@inject IUserDirectory UserDirectory
+@inject AuthService Auth
+@implements IDisposable
+
+@*
+    Create or edit a sales strategy — the methodology written down with its justification. The
+    fields ARE the argument: who, where, why now, what backs it, how they are reached, what we say.
+    The approach plan is not here — it is drafted (or written) on the strategy page from these
+    fields, and an edit here carries the existing plan forward untouched.
+*@
+
+<Modal IsOpen="@IsOpen"
+       Title="@(Existing is null ? "New strategy" : "Edit strategy")"
+       ConfirmLabel="@(busy ? "Saving…" : Existing is null ? "Create strategy" : "Save changes")"
+       ConfirmDisabled="@(busy || !FormReady)"
+       OnCancel="Cancel"
+       OnConfirm="SaveAsync"
+       Class="max-w-3xl">
+    @if (error is not null)
+    {
+        <p class="rounded bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+    }
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-content mb-1">Name *</label>
+            <input type="text" class="field w-full" maxlength="256" placeholder="e.g. Farnham postcodes — build before the price rise"
+                   value="@name" @oninput="e => name = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">Who it targets</label>
+            <select class="field w-full" value="@audience" @onchange="e => audience = Enum.Parse<SalesAudience>(e.Value?.ToString() ?? nameof(SalesAudience.Homeowners))">
+                @foreach (var option in Enum.GetValues<SalesAudience>())
+                {
+                    <option value="@option">@option.DisplayName()</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">How they are reached</label>
+            <select class="field w-full" value="@channel" @onchange="e => channel = Enum.Parse<SalesChannel>(e.Value?.ToString() ?? nameof(SalesChannel.Mixed))">
+                @foreach (var option in Enum.GetValues<SalesChannel>())
+                {
+                    <option value="@option">@option.DisplayName()</option>
+                }
+            </select>
+        </div>
+        <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-content mb-1">Where</label>
+            <input type="text" class="field w-full" maxlength="512" placeholder="Postcodes, towns, a radius — e.g. GU9, GU10, RH12; practices within 25 miles"
+                   value="@targetArea" @oninput="e => targetArea = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-content mb-1">Hypothesis — why these people, why now</label>
+            <textarea class="field w-full" rows="4" maxlength="4000"
+                      placeholder="e.g. House prices in these postcodes will rise faster than the county over the next 3–5 years as the station upgrade lands; an owner who extends now captures the gain on a bigger house."
+                      value="@hypothesis" @oninput="e => hypothesis = e.Value?.ToString() ?? string.Empty"></textarea>
+        </div>
+        <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-content mb-1">Evidence — the data and findings behind it</label>
+            <textarea class="field w-full" rows="4" maxlength="4000"
+                      placeholder="What backs it and where it came from: Land Registry price-paid trends, planning applications granted, infrastructure announcements, Companies House, what architects told us…"
+                      value="@evidence" @oninput="e => evidence = e.Value?.ToString() ?? string.Empty"></textarea>
+        </div>
+        <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-content mb-1">Proposition — what we say to them</label>
+            <textarea class="field w-full" rows="2" maxlength="1024"
+                      placeholder="e.g. Building now is the investment that pays twice: a better home, and the gain when prices move."
+                      value="@proposition" @oninput="e => proposition = e.Value?.ToString() ?? string.Empty"></textarea>
+        </div>
+        <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-content mb-1">Owner *</label>
+            <SearchSelect Options="@OwnerOptions" Value="@ownerEmail" ValueChanged="v => ownerEmail = v"
+                          Placeholder="Who is running it" WidthClass="w-full" InputClass="field" />
+        </div>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public SalesStrategy? Existing { get; set; }
+    [Parameter] public EventCallback<SalesStrategy> OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool busy;
+    private string? error;
+    private string? loadedForKey;
+
+    private string name = "";
+    private SalesAudience audience = SalesAudience.Homeowners;
+    private SalesChannel channel = SalesChannel.DirectMail;
+    private string targetArea = "";
+    private string hypothesis = "";
+    private string evidence = "";
+    private string proposition = "";
+    private string ownerEmail = "";
+
+    private bool FormReady => !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(ownerEmail);
+
+    private IReadOnlyList<SearchSelect.Option> OwnerOptions =>
+        UserDirectory.All()
+            .OrderBy(user => user.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(user => new SearchSelect.Option(user.Email, string.IsNullOrWhiteSpace(user.DisplayName) ? user.Email : user.DisplayName))
+            .ToList();
+
+    protected override void OnInitialized()
+    {
+        UserDirectory.OnChange += StateHasChanged;
+        _ = UserDirectory.All();
+    }
+
+    protected override void OnParametersSet()
+    {
+        var key = IsOpen ? Existing?.StrategyId ?? "new" : null;
+        if (key is null) { loadedForKey = null; return; }
+        if (loadedForKey == key) return;
+        loadedForKey = key;
+        error = null;
+        if (Existing is { } strategy)
+        {
+            name = strategy.Name; audience = strategy.Audience; channel = strategy.Channel;
+            targetArea = strategy.TargetArea; hypothesis = strategy.Hypothesis; evidence = strategy.Evidence;
+            proposition = strategy.Proposition; ownerEmail = strategy.OwnerEmail;
+        }
+        else
+        {
+            name = ""; audience = SalesAudience.Homeowners; channel = SalesChannel.DirectMail;
+            targetArea = ""; hypothesis = ""; evidence = ""; proposition = "";
+            ownerEmail = Auth.CurrentUser?.Email ?? "";
+        }
+    }
+
+    private async Task Cancel()
+    {
+        if (busy) return;
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (!FormReady || busy) return;
+        busy = true; error = null;
+        try
+        {
+            SalesStrategy saved = Existing is { } strategy
+                ? await Commands.SendAsync(new UpdateSalesStrategy(
+                    strategy.StrategyId, name.Trim(), audience, targetArea.Trim(), hypothesis.Trim(), evidence.Trim(),
+                    channel, proposition.Trim(), strategy.ApproachPlan, ownerEmail.Trim()), CancellationToken.None)
+                : await Commands.SendAsync(new CreateSalesStrategy(
+                    name.Trim(), audience, targetArea.Trim(), hypothesis.Trim(), evidence.Trim(),
+                    channel, proposition.Trim(), ownerEmail.Trim()), CancellationToken.None);
+            await OnSaved.InvokeAsync(saved);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    public void Dispose() => UserDirectory.OnChange -= StateHasChanged;
+}

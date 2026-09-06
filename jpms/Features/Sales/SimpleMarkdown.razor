@@ -1,0 +1,98 @@
+@using System.Text
+@using System.Text.RegularExpressions
+
+@*
+    Renders the small markdown an approach plan uses — headings, paragraphs, bullet and numbered
+    lists, bold, italics, inline code — as HTML on the design-system classes. Everything is
+    HTML-encoded first, so a plan (Claude's or a person's) can never inject markup. Deliberately
+    tiny: no tables, no links, no nesting beyond one level — a plan that needs more is edited as
+    text.
+*@
+
+<div class="plan-markdown text-sm text-content-muted space-y-3">@((MarkupString)Html)</div>
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+
+    private string Html => Render(Text);
+
+    private static readonly Regex Bold = new(@"\*\*(.+?)\*\*", RegexOptions.Compiled);
+    private static readonly Regex Italic = new(@"(?<![\*\w])\*(?!\s)(.+?)(?<!\s)\*(?!\w)", RegexOptions.Compiled);
+    private static readonly Regex Code = new(@"`([^`]+)`", RegexOptions.Compiled);
+    private static readonly Regex Numbered = new(@"^\s*\d+[.)]\s+(.*)$", RegexOptions.Compiled);
+    private static readonly Regex Bulleted = new(@"^\s*[-*•]\s+(.*)$", RegexOptions.Compiled);
+    private static readonly Regex Heading = new(@"^(#{1,6})\s+(.*)$", RegexOptions.Compiled);
+
+    private static string Inline(string line)
+    {
+        var encoded = System.Net.WebUtility.HtmlEncode(line);
+        encoded = Code.Replace(encoded, "<code class=\"text-xs bg-surface-raised px-1 rounded\">$1</code>");
+        encoded = Bold.Replace(encoded, "<strong class=\"text-content font-medium\">$1</strong>");
+        encoded = Italic.Replace(encoded, "<em>$1</em>");
+        return encoded;
+    }
+
+    private static string Render(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "";
+        var html = new StringBuilder();
+        var paragraph = new List<string>();
+        string? listTag = null;
+
+        void FlushParagraph()
+        {
+            if (paragraph.Count == 0) return;
+            html.Append("<p>").Append(string.Join(" ", paragraph)).Append("</p>");
+            paragraph.Clear();
+        }
+        void CloseList()
+        {
+            if (listTag is null) return;
+            html.Append("</").Append(listTag).Append('>');
+            listTag = null;
+        }
+        void OpenList(string tag)
+        {
+            if (listTag == tag) return;
+            CloseList();
+            html.Append(tag == "ol"
+                ? "<ol class=\"list-decimal pl-5 space-y-1\">"
+                : "<ul class=\"list-disc pl-5 space-y-1\">");
+            listTag = tag;
+        }
+
+        foreach (var raw in text.Replace("\r\n", "\n").Split('\n'))
+        {
+            var line = raw.TrimEnd();
+            if (line.Length == 0) { FlushParagraph(); CloseList(); continue; }
+
+            var heading = Heading.Match(line);
+            if (heading.Success)
+            {
+                FlushParagraph(); CloseList();
+                var level = heading.Groups[1].Value.Length;
+                var cls = level <= 2 ? "text-lg font-semibold text-content pt-2" : "text-base font-medium text-content pt-1";
+                html.Append("<h4 class=\"").Append(cls).Append("\">").Append(Inline(heading.Groups[2].Value)).Append("</h4>");
+                continue;
+            }
+            var numbered = Numbered.Match(line);
+            if (numbered.Success)
+            {
+                FlushParagraph(); OpenList("ol");
+                html.Append("<li>").Append(Inline(numbered.Groups[1].Value)).Append("</li>");
+                continue;
+            }
+            var bulleted = Bulleted.Match(line);
+            if (bulleted.Success)
+            {
+                FlushParagraph(); OpenList("ul");
+                html.Append("<li>").Append(Inline(bulleted.Groups[1].Value)).Append("</li>");
+                continue;
+            }
+            CloseList();
+            paragraph.Add(Inline(line.Trim()));
+        }
+        FlushParagraph(); CloseList();
+        return html.ToString();
+    }
+}

@@ -1,0 +1,6 @@
+@* The stage pill every lead list and page shows — one look for one ladder. *@
+<span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap @Stage.PillClass()" title="@Stage.Meaning()">@Stage.DisplayName()</span>
+
+@code {
+    [Parameter, EditorRequired] public LeadStage Stage { get; set; }
+}

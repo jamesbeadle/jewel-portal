@@ -17,9 +17,10 @@ resolve to every role.
 |---|---|---|
 | CreateProjectShell | POST /api/projects | Director, ProjectManager |
 | UpdateProjectDetails | PUT /api/projects/{projectId} | Director, ProjectManager |
-| CaptureLead / UpdateLeadDetails / BookSiteVisit / RecordInformationChaseItem / IssueProposal / ReviseProposal / RecordLeadQualificationScore | POST·PUT /api/leads… | Director, ProjectManager, QuantitySurveyor |
-| RecordSiteVisitNotes | PUT /api/site-visits/{id} | Director, ProjectManager, QuantitySurveyor, SiteManager |
-| RecordBidDecision / MarkLeadAsWon / MarkLeadAsLost | POST /api/leads/{id}/… | Director, ProjectManager |
+| CaptureLead / UpdateLead / LogLeadActivity / MoveLeadStage (open stages) | POST·PUT /api/sales/leads… | Director, FinanceDirector, ProjectManager, QuantitySurveyor, SalesMarketing (SalesRoles.SalesTeam) |
+| MoveLeadStage (Lost / Nurture) / WinLead | POST /api/sales/leads/{id}/stage · /win | Director, FinanceDirector (SalesRoles.Deciders) |
+| CreateSalesStrategy / UpdateSalesStrategy / GenerateStrategyApproachPlan | POST·PUT /api/sales/strategies… | SalesRoles.SalesTeam |
+| SetSalesStrategyStatus | POST /api/sales/strategies/{id}/status | SalesRoles.Deciders |
 | AddBoqLine / UpdateBoqLine / RemoveBoqLine | POST·PUT·DELETE /api/…boq… | Director, ProjectManager, QuantitySurveyor |
 | SignOffBoqForProject | POST /api/projects/{id}/boq/sign-off | Director |
 | AddRate / ReviseRate | POST·PUT /api/rates… | Director, QuantitySurveyor |
@@ -54,8 +55,8 @@ resolve to every role.
 
 ## Queries (authenticate only, unless noted)
 
-`GET` endpoints returning read models: projects, leads (+ qualification/site-visits/info-chase/
-proposal/outcome), boq (+ sign-off), rates, drawings (+ revisions), bid-packages, quotes,
+`GET` endpoints returning read models: projects, sales/leads (+ {id} with timeline),
+sales/strategies (+ {id} with funnel and leads), boq (+ sign-off), rates, drawings (+ revisions), bid-packages, quotes,
 work-orders, subcontractors (+ compliance), hs-records (+ attendance), mobilisation, changes,
 site-reports, programme, valuations, cost-code-budgets, timesheets, cvr-snapshots,
 forecast-components, qs-accruals, prelim-items (+ entries), eots, defects, settlement, vat.

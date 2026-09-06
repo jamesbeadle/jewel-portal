@@ -1,60 +1,82 @@
 namespace Jewel.JPMS.Models;
 
+/// <summary>
+/// Where a lead has got to (Sales → Leads, rebuilt 2026-09-06). One short ladder — New →
+/// Contacted → Engaged → Site visit → Proposal — ending Won or Lost, with Nurture for a lead that
+/// is not live now but worth keeping warm. Deliberately coarse: a strategy is judged by how many
+/// of its leads climb the ladder, so every strategy's leads must climb the SAME ladder. The May
+/// 2026 13-stage pipeline (Qualified, Survey booked, Awaiting information, Feasibility…) was
+/// retired with the rebuild; persisted ints were remapped by the AddSalesStrategies migration.
+/// Values persist as ints — append, never reorder.
+/// </summary>
 public enum LeadStage
 {
-    NewLead,
-    Qualified,
-    SurveyBooked,
-    SurveyComplete,
-    AwaitingInformation,
-    DrawingsReceived,
-    FeasibilityReview,
-    Tendering,
-    ProposalIssued,
-    Negotiation,
-    Won,
-    Lost,
-    Nurture
+    New = 0,
+    Contacted = 1,
+    Engaged = 2,
+    SiteVisit = 3,
+    Proposal = 4,
+    Won = 5,
+    Lost = 6,
+    Nurture = 7
 }
 
 public static class LeadStageExtensions
 {
+    /// <summary>The ladder in the order a lead climbs it — the open stages, then the outcomes.
+    /// Pickers and boards render in this order, never enum order.</summary>
+    public static readonly IReadOnlyList<LeadStage> Ladder = new[]
+    {
+        LeadStage.New, LeadStage.Contacted, LeadStage.Engaged, LeadStage.SiteVisit, LeadStage.Proposal,
+        LeadStage.Won, LeadStage.Lost, LeadStage.Nurture
+    };
+
     public static string DisplayName(this LeadStage stage) => stage switch
     {
-        LeadStage.NewLead             => "New Lead",
-        LeadStage.Qualified           => "Qualified",
-        LeadStage.SurveyBooked        => "Survey Booked",
-        LeadStage.SurveyComplete      => "Survey Complete",
-        LeadStage.AwaitingInformation => "Awaiting Information",
-        LeadStage.DrawingsReceived    => "Drawings Received",
-        LeadStage.FeasibilityReview   => "Feasibility Review",
-        LeadStage.Tendering           => "Tendering",
-        LeadStage.ProposalIssued      => "Proposal Issued",
-        LeadStage.Negotiation         => "Negotiation",
-        LeadStage.Won                 => "Won",
-        LeadStage.Lost                => "Lost",
-        LeadStage.Nurture             => "Nurture",
+        LeadStage.New       => "New",
+        LeadStage.Contacted => "Contacted",
+        LeadStage.Engaged   => "Engaged",
+        LeadStage.SiteVisit => "Site visit",
+        LeadStage.Proposal  => "Proposal",
+        LeadStage.Won       => "Won",
+        LeadStage.Lost      => "Lost",
+        LeadStage.Nurture   => "Nurture",
         _ => stage.ToString()
     };
 
-    public static string AccentDotClass(this LeadStage stage) => stage switch
+    /// <summary>One line on what the stage means, for pickers and the board's column headers.</summary>
+    public static string Meaning(this LeadStage stage) => stage switch
     {
-        LeadStage.NewLead             => "bg-slate-400",
-        LeadStage.Qualified           => "bg-sky-500",
-        LeadStage.SurveyBooked        => "bg-indigo-500",
-        LeadStage.SurveyComplete      => "bg-indigo-600",
-        LeadStage.AwaitingInformation => "bg-amber-500",
-        LeadStage.DrawingsReceived    => "bg-amber-600",
-        LeadStage.FeasibilityReview   => "bg-violet-500",
-        LeadStage.Tendering           => "bg-violet-600",
-        LeadStage.ProposalIssued      => "bg-emerald-500",
-        LeadStage.Negotiation         => "bg-emerald-600",
-        LeadStage.Won                 => "bg-slate-900",
-        LeadStage.Lost                => "bg-rose-500",
-        LeadStage.Nurture             => "bg-slate-500",
-        _ => "bg-slate-400"
+        LeadStage.New       => "Found or received — nobody has spoken to them yet.",
+        LeadStage.Contacted => "We have reached out; no reply or conversation yet.",
+        LeadStage.Engaged   => "They are talking to us about a possible project.",
+        LeadStage.SiteVisit => "A visit is booked or has happened.",
+        LeadStage.Proposal  => "A proposal or budget has gone to them.",
+        LeadStage.Won       => "They have chosen Jewel — a client and a project exist.",
+        LeadStage.Lost      => "Not going ahead with us.",
+        LeadStage.Nurture   => "Not now, but worth keeping in touch with.",
+        _ => ""
     };
 
-    public static bool IsActive(this LeadStage stage) =>
+    /// <summary>Pill classes on the design-system tokens: the open stages step from faint to the
+    /// accent as a lead warms, Won reads positive, Lost negative, Nurture neutral.</summary>
+    public static string PillClass(this LeadStage stage) => stage switch
+    {
+        LeadStage.New       => "bg-surface-raised text-content-subtle",
+        LeadStage.Contacted => "bg-surface-raised text-content",
+        LeadStage.Engaged   => "bg-info/15 text-info",
+        LeadStage.SiteVisit => "bg-info/25 text-info",
+        LeadStage.Proposal  => "bg-accent/15 text-accent",
+        LeadStage.Won       => "bg-positive/25 text-positive",
+        LeadStage.Lost      => "bg-negative/15 text-negative",
+        LeadStage.Nurture   => "bg-surface-raised text-content-faint",
+        _ => "bg-surface-raised text-content-subtle"
+    };
+
+    /// <summary>Still being worked — not Won, Lost or parked in Nurture.</summary>
+    public static bool IsOpen(this LeadStage stage) =>
         stage is not (LeadStage.Won or LeadStage.Lost or LeadStage.Nurture);
+
+    /// <summary>A closed outcome: Won or Lost. Nurture is neither — it can be reopened.</summary>
+    public static bool IsOutcome(this LeadStage stage) => stage is LeadStage.Won or LeadStage.Lost;
 }

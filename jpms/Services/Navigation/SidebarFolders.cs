@@ -28,6 +28,7 @@ public enum SidebarFolder
     FinancialReports,
     Xero,
     Audit,
+    Sales,
     Admin
 }
 
@@ -342,6 +343,28 @@ public static class SidebarFolders
                 // Every signed-in user can open /settings/ai-connections directly (the setup
                 // guide links it); the nav row follows the rail's directors-only clamp.
                 new SidebarRow(new NavigationItem("AI Connections", "/settings/ai-connections"),
+                    DesktopNavigation.DirectorRoles)
+            }),
+
+        // ---- Sales: how Jewel finds its next projects (2026-09-06) — the lead register, and
+        // the strategies (methodologies with their justification) that feed it. Leads first: it
+        // is the working list; Strategies is where a new way of finding clients is written down
+        // and judged by its funnel. Sits between Audit and Admin (James's call, 2026-09-06). ----
+        new SidebarFolderInfo(
+            SidebarFolder.Sales,
+            "Sales",
+            "#sales",
+            new[]
+            {
+                // Every lead whatever found it — strategy, inbound, referral, architect, past
+                // client, by hand — on one ladder: New → Contacted → Engaged → Site visit →
+                // Proposal → Won / Lost, Nurture for the parked. Won creates the client and
+                // the project shell.
+                new SidebarRow(new NavigationItem("Leads", "/sales/leads"),
+                    DesktopNavigation.DirectorRoles),
+                // The ways of finding leads, each with its hypothesis, evidence, channel,
+                // Claude-drafted approach plan and the funnel its leads make.
+                new SidebarRow(new NavigationItem("Strategies", "/sales/strategies"),
                     DesktopNavigation.DirectorRoles)
             }),
 

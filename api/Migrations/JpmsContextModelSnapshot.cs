@@ -2897,12 +2897,93 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<int>("Source")
                         .HasColumnType("int");
 
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("LostReason")
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Postcode")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("ProjectId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("ProspectKind")
+                        .HasColumnType("int");
+
                     b.Property<int>("Stage")
                         .HasColumnType("int");
 
+                    b.Property<DateTimeOffset>("StageChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("StrategyId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
                     b.HasKey("LeadId");
 
+                    b.HasIndex("Number")
+                        .HasDatabaseName("IX_Leads_Number");
+
+                    b.HasIndex("StrategyId")
+                        .HasDatabaseName("IX_Leads_StrategyId");
+
                     b.ToTable("Leads");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LeadActivityEntity", b =>
+                {
+                    b.Property<string>("LeadActivityId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LeadId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("RecordedByEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.HasKey("LeadActivityId");
+
+                    b.HasIndex("LeadId")
+                        .HasDatabaseName("IX_LeadActivities_LeadId");
+
+                    b.ToTable("LeadActivities");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.LeadOutcomeEntity", b =>
@@ -4726,6 +4807,72 @@ namespace Jewel.JPMS.Api.Migrations
                     b.HasKey("RetentionReleaseId");
 
                     b.ToTable("RetentionReleases");
+                });
+
+            modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.SalesStrategyEntity", b =>
+                {
+                    b.Property<string>("StrategyId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("ApproachPlan")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Audience")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Channel")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Evidence")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Hypothesis")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("OwnerEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset?>("PlanGeneratedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Proposition")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TargetArea")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("StrategyId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_SalesStrategies_Status");
+
+                    b.ToTable("SalesStrategies");
                 });
 
             modelBuilder.Entity("Jewel.JPMS.Api.Data.Entities.SettlementRecordEntity", b =>

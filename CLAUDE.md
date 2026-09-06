@@ -6,6 +6,19 @@
 - **Valuation invoice** is the canonical term for an amount of money Jewel has claimed for the client to pay (raised against the current valuation; lifecycle: raised & sent in one move — Submitted, awaiting approval — → Approved → Issued → Paid, with Raised surviving as a draft/recovery state; one click per material stage, driven from the claim card on the valuation page). Never introduce "cash call", "payment application", "application for payment", or "client invoice" for this concept in UI copy, code identifiers, or docs. "Cash call" survives only in historical meeting notes and immutable EF migrations. See `docs/00-business-context/glossary.md`.
 - **Variation** is the canonical term for the priced change item, and it is **one document with one number through every stage** — its `VariationOrderStatus` (Quoting → Issued → Awaiting AI → Approved / Rejected) is what says where it has got to. Never present "VOQ" and "VO" as two records or two ladder steps: the 2026-07-23 `UnifyVariationOrders` migration folded them into one row, and the UI followed. The record lineage is **three** stages — Request → RFI → Variation. (Bid packages left the chain on 2026-08-12: a variation order sets the sales side for a cost code, a bid package groups works across cost codes by trade — they are separate records, and tendering runs entirely on the bid package. `SelectedBidPackageId` and the packages' parent `VariationOrderQuoteId` column survive as legacy data only.) A user always reads the number as `V72` (`VariationOrder.DisplayNumber`, and the `VariationRef` minted at approval, which is the same number). "VOQ" survives only in persisted identifiers and API surface: the `VariationOrderQuotes` table and its `VariationOrderQuoteId` column, the stored `Reference` (`VOQ-0072`), the `JPMS/VOQ-…` mail tags, the `/api/…/voq(s)/…` routes, `RecordType.VariationQuote`, and command names like `CreateVoqFromRfq`. The page route is `/projects/{id}/variations/{id}`; the old `/voq/{id}` route is kept on the same page so links already sent out still land.
 
+- **Sales strategy** and **lead** (Sales folder, 2026-09-06). A *strategy* is a methodology for
+  FINDING leads written down with its justification — audience, target area, hypothesis (why these
+  people, why now), evidence, channel, proposition, a Claude-drafted approach plan, a status and
+  the funnel its leads make. A *lead* is a person we might convince to build with Jewel plus the
+  property the work would be on; every lead lands in the one register whatever found it and
+  carries its strategy's id when a strategy did. One ladder for every lead: New → Contacted →
+  Engaged → Site visit → Proposal → Won / Lost, Nurture for the parked (`LeadStage`, ints
+  remapped from the May prototype by `AddSalesStrategies`). **Won is `WinLead`**, never a stage
+  move — it creates the Client account and the project shell in one handler. Code lives in
+  `contracts/Sales`, `api/Features/Sales`, `jpms/Features/Sales` + `jpms/Pages/Sales*.razor`;
+  the prototype's satellite CRM tables (QualificationAssessments, SiteVisits, InfoChaseItems,
+  BidDecisions, Proposals, LeadOutcomes) stay in the database, unread.
+
 ## Record tabs & the in-view toolbar (jpms)
 
 - **The request chain renders as document tabs, not chips.** `RecordTabBar` (Components) is on

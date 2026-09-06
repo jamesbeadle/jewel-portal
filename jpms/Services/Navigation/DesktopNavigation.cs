@@ -20,7 +20,7 @@ public static class DesktopNavigation
         SidebarFolder Folder, string Label, string IconKey, IReadOnlyList<NavigationItem> Items);
 
     // Mirrored by the API's JpmsRoleSets.AllInternal — keep the two lists in step.
-    private static readonly Role[] AllInternalRoles =
+    internal static readonly Role[] AllInternalRoles =
     {
         Role.ManagingDirector,
         Role.FinanceDirector,

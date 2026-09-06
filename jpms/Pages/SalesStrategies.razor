@@ -1,0 +1,154 @@
+@page "/sales/strategies"
+@using Jewel.JPMS.Contracts.Sales
+@using Jewel.JPMS.Features.Sales
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+@inject SalesStrategyListReadModel Strategies
+@implements IDisposable
+
+<PageTitle>Sales strategies · JPMS</PageTitle>
+
+@*
+    Sales → Strategies (2026-09-06): the ways Jewel finds its leads, each written down with its
+    justification so it can be judged — who it targets, where, why now, the evidence, the
+    channel, the pitch, a Claude-drafted approach plan, and the funnel its leads make. The site is
+    deliberately not built for one methodology: homeowners in the postcodes about to move, sold
+    building now as an investment; architects, shown what the portal takes off their desk;
+    referrers; past clients — each is a strategy here, and every lead they find lands in the one
+    Leads register carrying the strategy's name. Cards, Active first; a card opens the strategy.
+*@
+
+@if (!sessionReady)
+{
+    <section class="px-6 md:px-8 py-12">
+        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
+    </section>
+}
+else if (!Session.IsApproved)
+{
+    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
+}
+else
+{
+    <section class="px-6 md:px-8 py-8 md:py-12">
+        <WorkspaceSectionNav />
+        <header class="mb-6 flex items-end justify-between gap-4">
+            <div>
+                <p class="eyebrow mb-1">JPMS · Sales</p>
+                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Strategies</h1>
+                <p class="text-sm text-content-muted mt-2 max-w-3xl">
+                    How we find the next project — each way written down with its justification: who, where, why now,
+                    the evidence behind it, how they are reached and what we say. Every lead a strategy finds carries
+                    its name, so the funnel below each card is the strategy's own scorecard.
+                </p>
+            </div>
+            @if (CanWork)
+            {
+                <button type="button" class="btn-primary shrink-0" @onclick="() => createOpen = true">New strategy</button>
+            }
+        </header>
+
+        @if (dataFailed && Strategies.Current is null)
+        {
+            <div class="panel p-6 max-w-3xl">
+                <p class="text-sm text-negative">The strategies couldn't be loaded — the error banner has the detail. Reload the page to retry.</p>
+            </div>
+        }
+        else if (Strategies.Current is null)
+        {
+            <LoadGate IsLoading="true" Prominent="true" Label="Loading strategies" />
+        }
+        else if (Rows.Count == 0)
+        {
+            <div class="panel p-6 max-w-3xl">
+                <p class="text-sm text-content-muted">
+                    No strategies yet. A strategy is a way of finding leads with the reasoning written down —
+                    for example, homeowners in the postcodes where house prices are about to move, approached by post
+                    with the research; or the architects whose jobs the portal would make run more smoothly.
+                    Start with New strategy, then let the approach plan be drafted from what you write.
+                </p>
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+                @foreach (var row in Rows)
+                {
+                    var overview = row;
+                    var strategy = overview.Strategy;
+                    var funnel = overview.Funnel;
+                    <a href="/sales/strategies/@strategy.StrategyId" class="panel p-6 block hover:border-line-strong transition">
+                        <div class="flex items-start justify-between gap-3 mb-3">
+                            <div class="min-w-0">
+                                <h2 class="text-lg font-semibold text-content truncate" title="@strategy.Name">@strategy.Name</h2>
+                                <p class="text-xs text-content-subtle mt-0.5">
+                                    @strategy.Audience.DisplayName() · @strategy.Channel.DisplayName()
+                                    @if (!string.IsNullOrWhiteSpace(strategy.TargetArea))
+                                    {
+                                        <text> · @strategy.TargetArea</text>
+                                    }
+                                </p>
+                            </div>
+                            <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap @strategy.Status.PillClass()">@strategy.Status.DisplayName()</span>
+                        </div>
+                        <p class="text-sm text-content-muted line-clamp-3 mb-4" title="@strategy.Hypothesis">
+                            @(string.IsNullOrWhiteSpace(strategy.Hypothesis) ? "No hypothesis written yet." : strategy.Hypothesis)
+                        </p>
+                        <div class="grid grid-cols-4 gap-2 text-center border-t border-line pt-4">
+                            <div><p class="text-xl font-medium text-content">@funnel.Leads</p><p class="text-xs text-content-subtle">leads</p></div>
+                            <div><p class="text-xl font-medium text-content">@funnel.Engaged</p><p class="text-xs text-content-subtle">engaged</p></div>
+                            <div><p class="text-xl font-medium text-content">@funnel.Proposals</p><p class="text-xs text-content-subtle">proposals</p></div>
+                            <div><p class="text-xl font-medium @(funnel.Won > 0 ? "text-positive" : "text-content")">@funnel.Won</p><p class="text-xs text-content-subtle">won</p></div>
+                        </div>
+                        <p class="text-xs text-content-subtle mt-3">
+                            @(funnel.PipelineValue > 0 ? $"{WholeMoney(funnel.PipelineValue)} open" : "No open value")
+                            @if (funnel.WonValue > 0)
+                            {
+                                <text> · @WholeMoney(funnel.WonValue) won</text>
+                            }
+                            @if (string.IsNullOrWhiteSpace(strategy.ApproachPlan))
+                            {
+                                <text> · no approach plan yet</text>
+                            }
+                        </p>
+                    </a>
+                }
+            </div>
+        }
+    </section>
+
+    <StrategyFormModal IsOpen="@createOpen" OnSaved="OnCreatedAsync" OnCancel="() => createOpen = false" />
+}
+
+@code {
+    private bool sessionReady;
+    private bool dataFailed;
+    private bool createOpen;
+
+    private IReadOnlyList<SalesStrategyOverview> Rows => Strategies.Current ?? Array.Empty<SalesStrategyOverview>();
+
+    private bool CanWork => Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
+        or Role.ProjectManager or Role.QuantitySurveyor or Role.SalesMarketing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Strategies.OnChanged += StateHasChanged;
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        sessionReady = true;
+        try { await Strategies.RefreshAsync(CancellationToken.None); }
+        catch { dataFailed = true; }
+    }
+
+    private async Task OnCreatedAsync(SalesStrategy strategy)
+    {
+        createOpen = false;
+        try { await Strategies.RefreshAsync(CancellationToken.None); }
+        catch (OperationCanceledException) { throw; }
+        catch { }
+        Nav.NavigateTo($"/sales/strategies/{strategy.StrategyId}");
+    }
+
+    public void Dispose() => Strategies.OnChanged -= StateHasChanged;
+}
