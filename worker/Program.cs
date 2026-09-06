@@ -153,6 +153,7 @@ var host = new HostBuilder()
         else
             services.AddSingleton<IAzureImageClient, NullAzureImageClient>();
         var imagineStorage = context.Configuration["ImagineStorage:ConnectionString"]
+            ?? context.Configuration["DrawingsStorage:ConnectionString"]
             ?? context.Configuration["AzureWebJobsStorage"];
         if (string.IsNullOrWhiteSpace(imagineStorage))
             services.AddSingleton<IImagineImageStore, NullImagineImageStore>();

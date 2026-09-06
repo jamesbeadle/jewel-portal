@@ -60,7 +60,7 @@ public sealed class AzureBlobImagineImageStore : IImagineImageStore
 /// on the page rather than a silent empty gallery.</summary>
 public sealed class NullImagineImageStore : IImagineImageStore
 {
-    private const string Reason = "Image storage isn't configured (ImagineStorage:ConnectionString or AzureWebJobsStorage).";
+    private const string Reason = "Image storage isn't configured (ImagineStorage:ConnectionString / DrawingsStorage:ConnectionString).";
 
     public bool IsConfigured => false;
 

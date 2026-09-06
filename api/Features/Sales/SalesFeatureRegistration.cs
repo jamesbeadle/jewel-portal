@@ -35,9 +35,12 @@ public static class SalesFeatureRegistration
             services.AddSingleton<IImagineRenderQueue>(_ => new StorageImagineRenderQueue(queueConnection!));
         }
 
-        // The imagine blob store (photos + renders): its own setting, else the Functions storage
-        // account like the drawings store.
-        var imagineStorage = configuration["ImagineStorage:ConnectionString"] ?? configuration["AzureWebJobsStorage"];
+        // The imagine blob store (photos + renders): its own setting, else the drawings storage
+        // account (the same fallback chain as every other blob feature — the SWA API has no
+        // AzureWebJobsStorage of its own).
+        var imagineStorage = configuration["ImagineStorage:ConnectionString"]
+            ?? configuration["DrawingsStorage:ConnectionString"]
+            ?? configuration["AzureWebJobsStorage"];
         if (string.IsNullOrWhiteSpace(imagineStorage))
             services.AddSingleton<IImagineImageStore, NullImagineImageStore>();
         else
