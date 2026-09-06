@@ -5,7 +5,7 @@
     Renders the small markdown an approach plan uses — headings, paragraphs, bullet and numbered
     lists, bold, italics, inline code — as HTML on the design-system classes. Everything is
     HTML-encoded first, so a plan (Claude's or a person's) can never inject markup. Deliberately
-    tiny: no tables, no links, no nesting beyond one level — a plan that needs more is edited as
+    tiny: no tables, no nesting beyond one level; links are http(s) only — a plan that needs more is edited as
     text.
 *@
 
@@ -22,6 +22,11 @@
     private static readonly Regex Numbered = new(@"^\s*\d+[.)]\s+(.*)$", RegexOptions.Compiled);
     private static readonly Regex Bulleted = new(@"^\s*[-*•]\s+(.*)$", RegexOptions.Compiled);
     private static readonly Regex Heading = new(@"^(#{1,6})\s+(.*)$", RegexOptions.Compiled);
+    // Links, after HTML-encoding: [label](https://…) and bare https://… — http(s) only, so an
+    // encoded plan can never smuggle a javascript: href. The research findings are full of them.
+    private static readonly Regex MarkdownLink = new(@"\[([^\]]+)\]\((https?://[^\s)]+)\)", RegexOptions.Compiled);
+    private static readonly Regex BareUrl = new(@"(?<![""'>=\]\(])(https?://[^\s<)\]]+)", RegexOptions.Compiled);
+    private const string LinkClass = "text-info hover:underline underline-offset-4 break-all";
 
     private static string Inline(string line)
     {
@@ -29,6 +34,14 @@
         encoded = Code.Replace(encoded, "<code class=\"text-xs bg-surface-raised px-1 rounded\">$1</code>");
         encoded = Bold.Replace(encoded, "<strong class=\"text-content font-medium\">$1</strong>");
         encoded = Italic.Replace(encoded, "<em>$1</em>");
+        encoded = MarkdownLink.Replace(encoded, "<a class=\"" + LinkClass + "\" href=\"$2\" target=\"_blank\" rel=\"noopener\">$1</a>");
+        encoded = BareUrl.Replace(encoded, match =>
+        {
+            // Trailing punctuation belongs to the sentence, not the address.
+            var url = match.Value.TrimEnd('.', ',', ';', ':');
+            var tail = match.Value[url.Length..];
+            return "<a class=\"" + LinkClass + "\" href=\"" + url + "\" target=\"_blank\" rel=\"noopener\">" + url + "</a>" + tail;
+        });
         return encoded;
     }
 

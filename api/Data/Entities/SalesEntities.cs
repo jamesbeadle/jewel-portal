@@ -23,6 +23,16 @@ public sealed class SalesStrategyEntity
     [MaxLength(256)]     public string OwnerEmail { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
+
+    // ---- The brief + AI research (added the same day, AddSalesStrategyResearch) ----
+    // The idea in the team's own words; the research reads this first.
+    [MaxLength(4000)]    public string Brief { get; set; } = "";
+    public int ResearchStatus { get; set; }
+    public DateTimeOffset? ResearchRequestedAt { get; set; }
+    public DateTimeOffset? ResearchCompletedAt { get; set; }
+    [MaxLength(2000)]    public string? ResearchError { get; set; }
+    // Markdown findings with sources; nvarchar(max).
+    public string ResearchFindings { get; set; } = "";
 }
 
 // One touch on a lead — its timeline (see Jewel.JPMS.Models.LeadActivity). Stage moves write

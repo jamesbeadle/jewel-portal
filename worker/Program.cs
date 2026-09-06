@@ -4,8 +4,10 @@ using Jewel.JPMS.Api.Features.MailboxIntake.Actions;
 using Jewel.JPMS.Api.Features.MailboxIntake.Graph;
 using Jewel.JPMS.Api.Features.MailboxIntake.Queue;
 using Jewel.JPMS.Api.Cqrs;
+using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Bluebeam;
 using Jewel.JPMS.Api.Features.Bluebeam.Extraction;
+using Jewel.JPMS.Api.Features.Sales.Research;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Api.Features.Xero;
 using Jewel.JPMS.Api.Features.Xero.Ledger;
@@ -116,6 +118,21 @@ var host = new HostBuilder()
         services.AddScoped<BluebeamConnectionWriter>();
         services.AddScoped<DrawingExtractionRunner>();
         services.AddScoped<DrawingExtractionResultWriter>();
+
+        // Sales strategy research (2026-09-06): the queue consumer that turns a brief into an
+        // evidenced strategy — Claude with web search, then the approach plan. Same Anthropic
+        // options as the SWA API (app setting Anthropic__ApiKey, identical name); without a key
+        // the runner stamps every run Failed with that reason rather than crashing the host.
+        var anthropicOptions = AnthropicOptions.FromConfiguration(context.Configuration);
+        services.AddSingleton(anthropicOptions);
+        if (anthropicOptions.IsConfigured)
+            services.AddSingleton<IClaudeClient>(sp =>
+                new ClaudeClient(new HttpClient(), anthropicOptions, sp.GetRequiredService<ILogger<ClaudeClient>>()));
+        else
+            services.AddSingleton<IClaudeClient, NullClaudeClient>();
+        services.AddSingleton(sp => new StrategyResearcher(
+            new HttpClient { Timeout = TimeSpan.FromMinutes(6) }, anthropicOptions, sp.GetRequiredService<ILogger<StrategyResearcher>>()));
+        services.AddScoped<StrategyResearchRunner>();
 
         // The drawings blob store — the extraction reads revision PDFs and writes the payload
         // blobs beside them. Same connection resolution as DrawingsFeatureRegistration in the api.

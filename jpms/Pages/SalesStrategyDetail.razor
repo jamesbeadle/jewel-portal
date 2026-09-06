@@ -83,6 +83,11 @@ else
                 @if (CanWork)
                 {
                     <button type="button" class="btn-secondary" @onclick="() => editOpen = true">Edit</button>
+                    <button type="button" class="btn-secondary" disabled="@(busy || strategy.ResearchStatus.IsInProgress())"
+                            title="Claude reads the brief, searches the web, fills in the blanks and drafts the plan — a few minutes, in the background"
+                            @onclick="RunResearchAsync">
+                        @(strategy.ResearchStatus == StrategyResearchStatus.Complete ? "Research again with AI" : "Research with AI")
+                    </button>
                     <button type="button" class="btn-primary" @onclick="() => addLeadOpen = true">Add lead</button>
                 }
             </div>
@@ -91,6 +96,28 @@ else
         @if (actionError is not null)
         {
             <p class="rounded bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@actionError</p>
+        }
+
+        @if (strategy.ResearchStatus.IsInProgress())
+        {
+            <div class="panel px-6 py-4 mb-6 flex items-center gap-4">
+                <JewelIcon Class="w-5 h-5 animate-jewel-pulse shrink-0" />
+                <div class="text-sm">
+                    <p class="text-content font-medium">@(strategy.ResearchStatus == StrategyResearchStatus.Queued ? "Research queued" : "Claude is researching this strategy")</p>
+                    <p class="text-content-subtle">Reading the brief, searching the web for the areas, the numbers and the sources, then drafting the plan. Usually two to five minutes — this page checks back every few seconds; you can leave and come back.</p>
+                </div>
+            </div>
+        }
+        else if (strategy.ResearchStatus == StrategyResearchStatus.Failed)
+        {
+            <div class="panel px-6 py-4 mb-6 text-sm">
+                <p class="text-negative font-medium">The research didn't complete.</p>
+                <p class="text-content-muted mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.ResearchError) ? "No reason was recorded." : strategy.ResearchError)</p>
+                @if (CanWork)
+                {
+                    <p class="text-content-subtle mt-2">Fix the cause if it names one, then Research with AI again.</p>
+                }
+            </div>
         }
 
         <div class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
@@ -104,6 +131,17 @@ else
 
         <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
             <div class="xl:col-span-2 space-y-6">
+                @if (!string.IsNullOrWhiteSpace(strategy.ResearchFindings))
+                {
+                    <Panel Title="Research findings">
+                        <SimpleMarkdown Text="@strategy.ResearchFindings" />
+                        @if (strategy.ResearchCompletedAt is { } researchedAt)
+                        {
+                            <p class="text-xs text-content-faint mt-4">Researched by Claude @researchedAt.ToLocalTime().ToString("d MMM yyyy HH:mm"). Every figure carries its source; check the ones a decision rests on.</p>
+                        }
+                    </Panel>
+                }
+
                 <Panel Title="Approach plan">
                     <HeaderActions>
                         @if (CanWork)
@@ -124,8 +162,8 @@ else
                         else if (string.IsNullOrWhiteSpace(strategy.ApproachPlan))
                         {
                             <p class="text-sm text-content-subtle italic">
-                                No plan yet. Generate with AI drafts one from the hypothesis, evidence, channel and proposition —
-                                the better those read, the better the plan. Or write it by hand.
+                                No plan yet. Research with AI (above) finds the evidence and drafts the plan in one go; Generate with AI
+                                drafts one from what is written here; or write it by hand.
                             </p>
                         }
                         else
@@ -193,6 +231,10 @@ else
             <div class="space-y-6">
                 <Panel Title="The argument">
                     <dl class="space-y-4 text-sm">
+                        <div>
+                            <dt class="eyebrow">The brief — the idea in our words</dt>
+                            <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Brief) ? "—" : strategy.Brief)</dd>
+                        </div>
                         <div>
                             <dt class="eyebrow">Hypothesis — why these people, why now</dt>
                             <dd class="text-content mt-1 whitespace-pre-wrap">@(string.IsNullOrWhiteSpace(strategy.Hypothesis) ? "—" : strategy.Hypothesis)</dd>
@@ -303,6 +345,11 @@ else
     private string planDraft = "";
     private string guidance = "";
 
+    // While the research is queued or running the page re-reads the strategy every few
+    // seconds, so the findings and plan appear without a reload; the timer stops itself as
+    // soon as the status settles, and on navigating away.
+    private CancellationTokenSource? polling;
+
     private SalesStrategy? Strategy => Detail.Current(StrategyId)?.Strategy;
     private SalesStrategyFunnel Funnel => Detail.Current(StrategyId)?.Funnel ?? SalesStrategyFunnel.Empty;
     private IReadOnlyList<Lead> Leads => Detail.Current(StrategyId)?.Leads ?? Array.Empty<Lead>();
@@ -350,6 +397,52 @@ else
                 Strategies.Current is null ? Strategies.RefreshAsync(CancellationToken.None) : Task.CompletedTask);
         }
         catch { dataFailed = true; }
+        EnsurePolling();
+    }
+
+    private void EnsurePolling()
+    {
+        if (Strategy is not { } strategy || !strategy.ResearchStatus.IsInProgress() || polling is not null) return;
+        polling = new CancellationTokenSource();
+        _ = PollAsync(polling.Token);
+    }
+
+    private async Task PollAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(6));
+            while (await timer.WaitForNextTickAsync(ct))
+            {
+                try { await Detail.RefreshAsync(StrategyId, ct); }
+                catch (OperationCanceledException) { throw; }
+                catch { continue; } // the toast has the detail; try again next tick
+                if (Strategy is not { } current || !current.ResearchStatus.IsInProgress()) break;
+            }
+        }
+        catch (OperationCanceledException) { }
+        finally
+        {
+            polling?.Dispose();
+            polling = null;
+            // The status settled: the strategies list's card carries it too.
+            try { await Strategies.RefreshAsync(CancellationToken.None); } catch { }
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task RunResearchAsync()
+    {
+        if (busy) return;
+        busy = true; actionError = null;
+        try
+        {
+            await Commands.SendAsync(new RunStrategyResearch(StrategyId), CancellationToken.None);
+            await ReloadAsync();
+            EnsurePolling();
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
     }
 
     private async Task ReloadAsync()
@@ -402,7 +495,7 @@ else
         try
         {
             await Commands.SendAsync(new UpdateSalesStrategy(
-                strategy.StrategyId, strategy.Name, strategy.Audience, strategy.TargetArea, strategy.Hypothesis,
+                strategy.StrategyId, strategy.Name, strategy.Brief, strategy.Audience, strategy.TargetArea, strategy.Hypothesis,
                 strategy.Evidence, strategy.Channel, strategy.Proposition, planDraft, strategy.OwnerEmail), CancellationToken.None);
             planEditOpen = false;
             await ReloadAsync();
@@ -435,6 +528,7 @@ else
 
     public void Dispose()
     {
+        polling?.Cancel();
         Detail.OnChanged -= StateHasChanged;
         Strategies.OnChanged -= StateHasChanged;
     }

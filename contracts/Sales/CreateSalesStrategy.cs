@@ -4,13 +4,15 @@ using Jewel.JPMS.Models;
 namespace Jewel.JPMS.Contracts.Sales;
 
 /// <summary>
-/// Writes down a new way of finding leads: who it targets, where, why (the hypothesis and the
-/// evidence behind it), how they are reached and what they are told. Starts as a Draft with no
-/// approach plan; GenerateStrategyApproachPlan drafts one from these fields. OwnerEmail is the
+/// Writes down a new way of finding leads. The Brief — the idea in the team's own words — plus
+/// an audience and a channel is enough; where, the hypothesis, the evidence and the proposition
+/// can be left blank for RunStrategyResearch to fill in. Starts as a Draft with no approach
+/// plan; GenerateStrategyApproachPlan (or the research run) drafts one. OwnerEmail is the
 /// portal email of whoever is running it — the signed-in user unless another is named.
 /// </summary>
 public sealed record CreateSalesStrategy(
     string Name,
+    string Brief,
     SalesAudience Audience,
     string TargetArea,
     string Hypothesis,
@@ -24,6 +26,7 @@ public sealed record CreateSalesStrategy(
 public sealed record UpdateSalesStrategy(
     string StrategyId,
     string Name,
+    string Brief,
     SalesAudience Audience,
     string TargetArea,
     string Hypothesis,
@@ -50,3 +53,14 @@ public sealed record SetSalesStrategyStatus(
 public sealed record GenerateStrategyApproachPlan(
     string StrategyId,
     string? Guidance) : ICommand<SalesStrategy>;
+
+/// <summary>
+/// Sends the strategy to the worker for AI research: Claude reads the brief and whatever else is
+/// written, searches the web (house-price trends, planning, infrastructure, practices, whatever
+/// the brief calls for), fills in the blank definition fields — where, hypothesis, evidence,
+/// proposition — writes its findings with sources into ResearchFindings, and drafts the approach
+/// plan. Fields already written by hand are kept. Takes a few minutes; the strategy's
+/// ResearchStatus goes Queued → Running → Complete / Failed and the page polls it. Refused while
+/// a run is already queued or running, or when the queue / Anthropic key is not configured.
+/// </summary>
+public sealed record RunStrategyResearch(string StrategyId) : ICommand<SalesStrategy>;

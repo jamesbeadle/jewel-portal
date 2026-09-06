@@ -15,6 +15,10 @@ namespace Jewel.JPMS.Models;
 public sealed record SalesStrategy(
     string StrategyId,
     string Name,
+    // The idea in the team's own words — the one thing a strategy needs before research can run:
+    // "homeowners in the areas where prices are about to jump, sold building now as an investment,
+    // reached by post with the research". Everything below can be left for the research to fill.
+    string Brief,
     SalesAudience Audience,
     // Where it applies: postcodes, towns, "within 20 miles of the office" — free text, one line.
     string TargetArea,
@@ -33,7 +37,42 @@ public sealed record SalesStrategy(
     SalesStrategyStatus Status,
     string OwnerEmail,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    // AI research (RunStrategyResearch): Claude reads the brief, searches the web for the areas,
+    // the data and the angle, fills in the blank definition fields, writes its findings (markdown
+    // with sources) and drafts the approach plan. Runs in the worker — minutes, not seconds.
+    StrategyResearchStatus ResearchStatus = StrategyResearchStatus.NotRun,
+    DateTimeOffset? ResearchRequestedAt = null,
+    DateTimeOffset? ResearchCompletedAt = null,
+    string? ResearchError = null,
+    string ResearchFindings = "");
+
+/// <summary>Where the AI research has got to. Values persist as ints — append only.</summary>
+public enum StrategyResearchStatus
+{
+    NotRun = 0,
+    Queued = 1,
+    Running = 2,
+    Complete = 3,
+    Failed = 4
+}
+
+public static class StrategyResearchStatusExtensions
+{
+    public static string DisplayName(this StrategyResearchStatus status) => status switch
+    {
+        StrategyResearchStatus.NotRun   => "Not researched",
+        StrategyResearchStatus.Queued   => "Research queued",
+        StrategyResearchStatus.Running  => "Researching",
+        StrategyResearchStatus.Complete => "Researched",
+        StrategyResearchStatus.Failed   => "Research failed",
+        _ => status.ToString()
+    };
+
+    /// <summary>Queued or Running — the page keeps polling while this is true.</summary>
+    public static bool IsInProgress(this StrategyResearchStatus status) =>
+        status is StrategyResearchStatus.Queued or StrategyResearchStatus.Running;
+}
 
 /// <summary>Who the strategy targets. Values persist as ints — append only.</summary>
 public enum SalesAudience

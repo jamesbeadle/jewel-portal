@@ -125,6 +125,16 @@
     <Compile Include="..\api\Features\Drawings\Storage\IDrawingBlobStore.cs" Link="Shared\Bluebeam\IDrawingBlobStore.cs" />
     <Compile Include="..\api\Features\Drawings\Storage\AzureBlobDrawingStore.cs" Link="Shared\Bluebeam\AzureBlobDrawingStore.cs" />
     <Compile Include="..\api\Features\Drawings\Storage\NullDrawingBlobStore.cs" Link="Shared\Bluebeam\NullDrawingBlobStore.cs" />
+    <!-- Shared Sales research source (2026-09-06): the strategy-research queue consumer runs the
+         SAME researcher, runner, plan prompt and Claude client the api compiles. The command
+         handlers and endpoints are deliberately NOT linked. -->
+    <Compile Include="..\api\Features\Ai\AnthropicOptions.cs" Link="Shared\Sales\AnthropicOptions.cs" />
+    <Compile Include="..\api\Features\Ai\ClaudeClient.cs" Link="Shared\Sales\ClaudeClient.cs" />
+    <Compile Include="..\api\Features\Sales\SalesEntityMapping.cs" Link="Shared\Sales\SalesEntityMapping.cs" />
+    <Compile Include="..\api\Features\Sales\Research\SalesQueues.cs" Link="Shared\Sales\SalesQueues.cs" />
+    <Compile Include="..\api\Features\Sales\Research\StrategyPlanPrompt.cs" Link="Shared\Sales\StrategyPlanPrompt.cs" />
+    <Compile Include="..\api\Features\Sales\Research\StrategyResearcher.cs" Link="Shared\Sales\StrategyResearcher.cs" />
+    <Compile Include="..\api\Features\Sales\Research\StrategyResearchRunner.cs" Link="Shared\Sales\StrategyResearchRunner.cs" />
   </ItemGroup>
 
   <ItemGroup>

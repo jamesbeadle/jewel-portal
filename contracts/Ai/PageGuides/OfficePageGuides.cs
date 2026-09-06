@@ -97,10 +97,14 @@ public static class OfficePageGuides
             + "with its justification so it can be judged — e.g. homeowners in postcodes where "
             + "house prices are about to move, approached by post with a research brochure; "
             + "architects, shown how the portal's project management removes their chasing. A "
-            + "strategy has an audience, a target area, a hypothesis (why these people, why "
-            + "now), the evidence behind it, a channel, a proposition, an approach plan (drafted "
-            + "by Claude from those fields, then edited), a status (Draft / Active / Paused / "
-            + "Retired) and an owner — and a funnel counted from the leads that carry its id: "
+            + "strategy starts as a BRIEF — the idea in the team's own words — with an audience "
+            + "and a channel; AI research (run_strategy_research, \"Research with AI\" on the page, "
+            + "or the tick on the New strategy dialog) then searches the web and fills in the "
+            + "target area, the hypothesis (why these people, why now), the evidence with source "
+            + "URLs and the proposition, writes its findings, and drafts the approach plan — or "
+            + "the team writes any of those by hand and the research keeps what they wrote. A "
+            + "status (Draft / Active / Paused / Retired), an owner — and a funnel counted from "
+            + "the leads that carry its id: "
             + "leads found, contacted, engaged, proposals, won, lost, the open pipeline value "
             + "and the won value. Manually: cards with the funnel figures, \"New strategy\" "
             + "opens the create modal, a card opens the strategy page. Over the connector: "
@@ -110,11 +114,14 @@ public static class OfficePageGuides
             + "that is a strategy — capture the hypothesis and evidence in their words."),
 
         new("/sales/strategies/{strategyId}", "Sales strategy",
-            "One strategy: its definition (edit in a modal), its funnel, the approach plan "
-            + "(markdown — \"Generate with AI\" drafts or redrafts it from the definition with an "
-            + "optional steer; \"Edit plan\" rewrites it by hand), a status control (directors) "
-            + "and the leads it has found, with \"Add lead\" capturing a new one already "
-            + "attributed to the strategy. Over the connector: get_sales_strategy, "
+            "One strategy: its brief and definition (edit in a modal), the research state "
+            + "(\"Research with AI\" queues a background run — Queued → Running → Complete / "
+            + "Failed with the reason; the page polls while it runs), the research findings "
+            + "(markdown with sources), its funnel, the approach plan (markdown — \"Generate "
+            + "with AI\" drafts or redrafts it from the definition and findings with an optional "
+            + "steer; \"Edit plan\" rewrites it by hand), a status control (directors) and the "
+            + "leads it has found, with \"Add lead\" capturing a new one already attributed to "
+            + "the strategy. Over the connector: get_sales_strategy, run_strategy_research, "
             + "update_sales_strategy, generate_strategy_plan, set_sales_strategy_status, and "
             + "capture_lead with this strategyId."),
 

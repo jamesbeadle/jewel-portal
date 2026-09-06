@@ -1,6 +1,8 @@
 using Jewel.JPMS.Api.Features.Sales.Commands;
 using Jewel.JPMS.Api.Features.Sales.Queries;
+using Jewel.JPMS.Api.Features.Sales.Research;
 using Jewel.JPMS.Contracts.Sales;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Jewel.JPMS.Api.Features.Sales;
@@ -9,8 +11,16 @@ namespace Jewel.JPMS.Api.Features.Sales;
 /// they feed. Replaced the May 2026 Leads/CRM prototype (Features/Leads) wholesale.</summary>
 public static class SalesFeatureRegistration
 {
-    public static IServiceCollection AddSalesFeature(this IServiceCollection services)
+    public static IServiceCollection AddSalesFeature(this IServiceCollection services, IConfiguration configuration)
     {
+        // The research queue's producer side — same account resolution as the mailbox and
+        // Bluebeam queues, so the worker (which consumes) sees the same queue.
+        var queueConnection = configuration["MailboxQueuesConnection"] ?? configuration["AzureWebJobsStorage"];
+        if (string.IsNullOrWhiteSpace(queueConnection))
+            services.AddSingleton<IStrategyResearchQueue, NullStrategyResearchQueue>();
+        else
+            services.AddSingleton<IStrategyResearchQueue>(_ => new StorageStrategyResearchQueue(queueConnection!));
+
         services.AddScoped<IQueryHandler<ListLeads, IReadOnlyList<Lead>>, ListLeadsHandler>();
         services.AddScoped<IQueryHandler<GetLead, LeadDetail?>, GetLeadHandler>();
         services.AddScoped<IQueryHandler<ListSalesStrategies, IReadOnlyList<SalesStrategyOverview>>, ListSalesStrategiesHandler>();
@@ -25,6 +35,7 @@ public static class SalesFeatureRegistration
         Register<UpdateSalesStrategy, SalesStrategy, UpdateSalesStrategyHandler, UpdateSalesStrategyAuthorisation, UpdateSalesStrategyValidation>(services);
         Register<SetSalesStrategyStatus, SalesStrategy, SetSalesStrategyStatusHandler, SetSalesStrategyStatusAuthorisation, SetSalesStrategyStatusValidation>(services);
         Register<GenerateStrategyApproachPlan, SalesStrategy, GenerateStrategyApproachPlanHandler, GenerateStrategyApproachPlanAuthorisation, GenerateStrategyApproachPlanValidation>(services);
+        Register<RunStrategyResearch, SalesStrategy, RunStrategyResearchHandler, RunStrategyResearchAuthorisation, RunStrategyResearchValidation>(services);
         return services;
     }
 

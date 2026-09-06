@@ -4822,6 +4822,11 @@ namespace Jewel.JPMS.Api.Migrations
                     b.Property<int>("Audience")
                         .HasColumnType("int");
 
+                    b.Property<string>("Brief")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
                     b.Property<int>("Channel")
                         .HasColumnType("int");
 
@@ -4855,6 +4860,23 @@ namespace Jewel.JPMS.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(1024)
                         .HasColumnType("nvarchar(1024)");
+
+                    b.Property<DateTimeOffset?>("ResearchCompletedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ResearchError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ResearchFindings")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset?>("ResearchRequestedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("ResearchStatus")
+                        .HasColumnType("int");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");

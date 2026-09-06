@@ -121,13 +121,14 @@ internal sealed class SalesActions : IAiActionSource
         new AiAction(
             Name: "create_sales_strategy",
             Area: Area,
-            Description: "Writes down a new way of finding leads — a sales strategy with its "
-                + "justification: name, audience (Homeowners, Architects, Developers, Landowners, "
-                + "Referrers, PastClients, Other), targetArea (postcodes / towns), hypothesis "
-                + "(why these people, why now), evidence (the data and findings behind it), "
-                + "channel (DirectMail, Email, Phone, InPerson, LinkedIn, SocialMedia, Events, "
-                + "Partnerships, Website, Mixed) and proposition (what we would say to them). "
-                + "Starts as a Draft with no approach plan — generate_strategy_plan drafts one.",
+            Description: "Writes down a new way of finding leads — a sales strategy. The brief is "
+                + "the idea in the user's own words (e.g. \"homeowners in the areas where prices are "
+                + "about to jump, sold building now as an investment, reached by post\"); with an "
+                + "audience (Homeowners, Architects, Developers, Landowners, Referrers, PastClients, "
+                + "Other) and a channel (DirectMail, Email, Phone, InPerson, LinkedIn, SocialMedia, "
+                + "Events, Partnerships, Website, Mixed) that is enough — targetArea, hypothesis, "
+                + "evidence and proposition can be left blank for run_strategy_research to fill in "
+                + "from web research, or written by hand. Starts as a Draft with no approach plan.",
             CommandType: typeof(CreateSalesStrategy),
             ResultType: typeof(SalesStrategy),
             AuthorisationType: typeof(CreateSalesStrategyAuthorisation),
@@ -136,8 +137,31 @@ internal sealed class SalesActions : IAiActionSource
             EmailStamps: Array.Empty<string>(),
             NameStamps: Array.Empty<string>(),
             Notes: "ownerEmail is the portal email of whoever runs the strategy — the signed-in "
-                + "user unless they say otherwise. Write the hypothesis and evidence in the "
-                + "user's words; the plan generator builds on them."),
+                + "user unless they say otherwise. Put the idea in the brief in the user's words; "
+                + "then offer run_strategy_research to do the finding-out."),
+
+        new AiAction(
+            Name: "run_strategy_research",
+            Area: Area,
+            Description: "Sends a strategy for AI research in the background: Claude reads the "
+                + "brief, searches the web from several angles (house-price movement, planning, "
+                + "infrastructure, the actual practices or people, whatever the brief calls for), "
+                + "fills in whichever of targetArea / hypothesis / evidence / proposition are "
+                + "blank, writes its findings with source URLs, and drafts the approach plan. "
+                + "Takes a few minutes: the strategy's researchStatus goes Queued → Running → "
+                + "Complete or Failed (with the reason) — read it back with get_sales_strategy. "
+                + "Fields already written by hand are kept.",
+            CommandType: typeof(RunStrategyResearch),
+            ResultType: typeof(SalesStrategy),
+            AuthorisationType: typeof(RunStrategyResearchAuthorisation),
+            ValidationType: typeof(RunStrategyResearchValidation),
+            VisibleTo: SalesRoles.SalesTeam,
+            EmailStamps: Array.Empty<string>(),
+            NameStamps: Array.Empty<string>(),
+            Notes: "Needs a brief (or a hypothesis) on the strategy first. Refused while a run "
+                + "is already in progress. Tell the user it runs in the background and to check "
+                + "back in a few minutes rather than polling every few seconds.",
+            RequiresConfirmation: true),
 
         new AiAction(
             Name: "update_sales_strategy",
