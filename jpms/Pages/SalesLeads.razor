@@ -53,8 +53,7 @@
 
         <Panel Title="Lead register" IsLoading="@(Leads.Current is null || Strategies.Current is null)" LoadingLabel="Loading leads" BodyClass="p-0">
             <HeaderActions>
-                <input type="search" class="field h-8 py-1 text-sm w-56" placeholder="Search name, company, postcode, ref"
-                       value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+                <SearchInput @bind-Value="search" Placeholder="Search name, company, postcode, ref" Width="w-56" />
                 <SearchSelect Options="@StrategyOptions" Value="@strategyFilter" ValueChanged="v => strategyFilter = v"
                               Placeholder="All strategies" WidthClass="w-56" />
             </HeaderActions>
@@ -193,8 +192,7 @@
             .ToList();
 
     private static string ChipClass(bool active) =>
-        "rounded border px-3 py-1 text-xs font-medium transition "
-        + (active ? "border-accent text-accent bg-accent/10" : "border-line text-content-muted hover:border-line-strong hover:text-content");
+        (active ? "chip chip-active" : "chip");
 
     private static string OwnerLabel(string email)
     {

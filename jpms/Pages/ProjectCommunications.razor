@@ -44,8 +44,7 @@
                 @* Search within the project's tagged mail: debounced, two characters minimum,
                    one relevance-ordered page while live (the pager stands down). *@
                 <div class="relative">
-                    <input type="search" class="field w-64 pr-8" placeholder="Search emails…"
-                           value="@searchText" @oninput="OnSearchInput" aria-label="Search this project's emails" />
+                    <SearchInput Value="@searchText" ValueChanged="OnSearchInput" Placeholder="Search emails…" Width="w-64" />
                     @if (!string.IsNullOrEmpty(searchText))
                     {
                         <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-content-subtle hover:text-content text-xs"
@@ -132,7 +131,7 @@
                                 @* The thread's pathway (bucket category), when triage has filed it. *@
                                 @if (BucketLabel(item.Message.Bucket) is { } pathway)
                                 {
-                                    <span class="@BucketChipClass(pathway)">@pathway</span>
+                                    <Pill Tone="@StatusTones.PathwayTone(pathway)">@pathway</Pill>
                                 }
                             </span>
                             <span class="text-xs text-content-subtle">@DateTimeText(item.Message.ReceivedAt)</span>

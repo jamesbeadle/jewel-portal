@@ -51,7 +51,7 @@
             <div class="flex flex-wrap items-center gap-1 mt-1">
                 @if (TriagePathways.FromBucket(Item.Bucket) is { } rowPathway)
                 {
-                    <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(rowPathway) text-xs font-medium px-2 py-0.5">@TriagePathways.Label(rowPathway)</span>
+                    <Pill Tone="@TriagePathways.Tone(rowPathway)">@TriagePathways.Label(rowPathway)</Pill>
                 }
                 @foreach (var tag in Item.Categories)
                 {

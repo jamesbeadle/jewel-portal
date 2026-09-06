@@ -37,8 +37,7 @@ else
             <Notice Tone="Tone.Negative">@error</Notice>
         }
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <input class="field" type="search" placeholder="Search contact, number or reference…"
-                   value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
+            <SearchInput @bind-Value="search" Placeholder="Search contact, number or reference…" />
             <select class="field" @bind="typeFilter">
                 <option value="">All transaction types</option>
                 <option value="ACCPAY">Purchase invoices (bills)</option>

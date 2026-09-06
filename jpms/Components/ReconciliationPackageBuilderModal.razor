@@ -27,9 +27,7 @@
             <div class="rounded-lg border border-line bg-surface p-3">
                 <div class="flex items-center justify-between gap-2 mb-2">
                     <p class="eyebrow">Cost side — work orders</p>
-                    <input type="search" placeholder="Search…"
-                           class="field text-xs w-36"
-                           @bind="orderSearch" @bind:event="oninput" />
+                    <SearchInput @bind-Value="orderSearch" Placeholder="Search…" Width="w-36" />
                 </div>
                 <div class="overflow-y-auto max-h-72 space-y-1">
                     @foreach (var detail in FilteredOrders)
@@ -57,9 +55,7 @@
                        title="Tick a line to take its full remaining value; edit the amount for a partial share when a client line covers more than one sub">
                         Sales side — valuation lines
                     </p>
-                    <input type="search" placeholder="Search…"
-                           class="field text-xs w-36"
-                           @bind="lineSearch" @bind:event="oninput" />
+                    <SearchInput @bind-Value="lineSearch" Placeholder="Search…" Width="w-36" />
                 </div>
                 <div class="overflow-y-auto max-h-72 space-y-1">
                     @foreach (var entry in FilteredLines)
@@ -103,9 +99,7 @@
                    title="Tick an invoice line to take its full non-work-order remainder; edit the amount for a partial share. Spend already linked to a work order arrives through the order — only the unlinked remainder is offered here.">
                     Cost side — direct purchase invoices (not linked to a work order)
                 </p>
-                <input type="search" placeholder="Search…"
-                       class="field text-xs w-36"
-                       @bind="costSearch" @bind:event="oninput" />
+                <SearchInput @bind-Value="costSearch" Placeholder="Search…" Width="w-36" />
             </div>
             @if (costLinesLoading)
             {

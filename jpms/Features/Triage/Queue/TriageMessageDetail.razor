@@ -257,8 +257,7 @@ else if (Selected.HasAttachments && Detail is not null)
     }
 
     private static string ThreadTabClass(bool isCurrent) =>
-        "rounded-md px-2 py-0.5 text-xs border transition "
-        + (isCurrent
-            ? "bg-accent text-accent-ink border-accent font-semibold"
-            : "border-line text-content-muted hover:text-content hover:border-line-strong");
+        (isCurrent
+            ? "chip chip-active"
+            : "chip");
 }

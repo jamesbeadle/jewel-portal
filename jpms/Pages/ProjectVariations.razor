@@ -79,9 +79,7 @@
            description, cost code and the originating request's own text. *@
         <div class="flex flex-wrap items-center gap-2 mb-5 text-sm">
             <div class="relative ml-auto w-full sm:w-80">
-                <input type="search" placeholder="Search text in variations…"
-                       class="field pl-3 pr-8"
-                       value="@search" @oninput="OnSearchInput" />
+                <SearchInput Value="@search" ValueChanged="OnSearchInput" Placeholder="Search text in variations…" />
                 @if (Searching)
                 {
                     <button type="button" title="Clear search"

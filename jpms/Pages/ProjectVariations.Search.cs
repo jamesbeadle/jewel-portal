@@ -13,7 +13,7 @@ public partial class ProjectVariations
 
     private bool Searching => !string.IsNullOrWhiteSpace(search);
 
-    private void OnSearchInput(ChangeEventArgs e) => search = e.Value?.ToString() ?? "";
+    private void OnSearchInput(string value) => search = value;
 
     private void ClearSearch() => search = "";
 

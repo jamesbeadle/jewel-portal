@@ -161,19 +161,9 @@ public partial class AuditTrail
 
     private string PathwayTabClass(string? pathway) =>
         pathwayFilter == pathway
-            ? "btn-primary text-xs px-2.5 py-1.5"
-            : "btn-secondary text-xs px-2.5 py-1.5";
+            ? "chip chip-active"
+            : "chip";
 
-    private static string PathwayChipClass(string pathway)
-    {
-        const string baseClass = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ";
-        return pathway switch
-        {
-            "Client"        => baseClass + "bg-accent/10 text-accent",
-            "Subcontractor" => baseClass + "bg-positive/10 text-positive",
-            _               => baseClass + "bg-surface-raised border border-line text-content-muted"
-        };
-    }
 
     private static string EventLabel(AuditEventType type) => type switch
     {

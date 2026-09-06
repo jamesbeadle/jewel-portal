@@ -115,7 +115,6 @@ else
 
     private string ChipClass(XeroInvoiceAttachment attachment) =>
         (selected == attachment
-            ? "bg-content text-surface border-content"
-            : "bg-surface text-content-muted border-line hover:text-content")
-        + " text-xs font-medium border rounded-full px-3 py-1 transition-colors";
+            ? "chip chip-active"
+            : "chip");
 }

@@ -111,9 +111,7 @@
                follow the search, so a match sitting under Closed announces itself rather than
                reading as "nothing found". *@
             <div class="relative ml-auto w-full sm:w-80">
-                <input type="search" placeholder="@SearchPlaceholder"
-                       class="field pl-3 pr-8"
-                       value="@search" @oninput="OnSearchInput" />
+                <SearchInput Value="@search" ValueChanged="OnSearchInput" Placeholder="@SearchPlaceholder" />
                 @if (Searching)
                 {
                     <button type="button" title="Clear search"

@@ -84,8 +84,7 @@ public partial class CostCodes
     }
 
     private static string TabCss(bool active) =>
-        (active ? "bg-content text-surface" : "bg-surface text-content-muted hover:text-content")
-        + " text-sm font-medium px-4 py-1.5 transition-colors";
+        (active ? "chip chip-active" : "chip");
 
     private void EnsureProjectsRequested()
     {

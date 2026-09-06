@@ -58,10 +58,9 @@ public partial class SubcontractorCommunications
             .FirstOrDefault() ?? "";
 
     private string ChipClass(string? tag) =>
-        "rounded-full border px-3 py-1 text-xs font-medium transition "
-        + (categoryTagFilter == tag
-            ? "border-accent bg-accent/10 text-accent"
-            : "border-line text-content-muted hover:text-content hover:border-line-strong");
+        (categoryTagFilter == tag
+            ? "chip chip-active"
+            : "chip");
 
     // The email a Reply or Forward was pressed on (the shared composer opens above the list;
     // sending from this page sends immediately), which of the two it was, and the confirmation

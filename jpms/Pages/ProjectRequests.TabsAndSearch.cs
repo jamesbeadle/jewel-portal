@@ -68,7 +68,7 @@ public partial class ProjectRequests
 
     private bool Searching => !string.IsNullOrWhiteSpace(search);
 
-    private void OnSearchInput(ChangeEventArgs e) => search = e.Value?.ToString() ?? "";
+    private void OnSearchInput(string value) => search = value;
 
     private void ClearSearch() => search = "";
 
@@ -164,8 +164,8 @@ public partial class ProjectRequests
 
     private string FilterClass(string slug)
     {
-        if (slug == ActiveSlug) return "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium";
-        return "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+        if (slug == ActiveSlug) return "chip chip-active";
+        return "chip";
     }
 
     // ---- Excel export ----------------------------------------------------------------------

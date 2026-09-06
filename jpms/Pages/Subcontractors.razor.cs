@@ -33,8 +33,8 @@ public partial class Subcontractors
 
     private string GroupChipClass(DirectoryGroup value) =>
         group == value
-            ? "btn-primary text-xs px-2.5 py-1.5"
-            : "btn-secondary text-xs px-2.5 py-1.5";
+            ? "chip chip-active"
+            : "chip";
 
     private string GroupSummary => group switch
     {

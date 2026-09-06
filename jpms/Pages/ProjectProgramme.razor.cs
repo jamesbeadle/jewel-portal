@@ -88,9 +88,9 @@ public partial class ProjectProgramme
 
     private string SubTabClass(SubView tab)
     {
-        var baseClass = "px-3 py-2 text-sm font-medium border-b-2 -mb-px transition inline-flex items-center";
+        var baseClass = "";
         return view == tab
-            ? $"{baseClass} border-accent text-content"
-            : $"{baseClass} border-transparent text-content-muted hover:text-content";
+            ? $"tab tab-active"
+            : $"tab";
     }
 }

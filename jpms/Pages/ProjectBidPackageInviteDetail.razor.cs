@@ -35,8 +35,8 @@ public partial class ProjectBidPackageInviteDetail
 
     // The chip classes the RFIs register uses for its document-type tabs.
     private string TabClass(string key) => key == activeTab
-        ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
-        : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+        ? "chip chip-active"
+        : "chip";
 
     // ---- The Actions menu (header) --------------------------------------------------------------
 

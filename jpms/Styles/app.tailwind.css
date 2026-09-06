@@ -148,6 +148,32 @@
         @apply border-line-strong;
     }
 
+    /* In-view navigation comes in exactly two looks, and the difference is the point:
+       a TAB changes the route (an <a href>) and reads as an underline on the section's
+       baseline — WorkspaceSectionNav, RecordTabBar and every register's kind switch; a CHIP
+       filters local state (a <button>) and reads as a small bordered pill. Decision 2026-09-03.
+       TabRow and FilterChips render these; a view never composes them by hand. */
+    .tab {
+        @apply inline-flex items-center gap-1.5 px-3 py-2 -mb-px text-sm font-medium border-b-2 border-transparent text-content-faint hover:text-content transition-colors whitespace-nowrap;
+    }
+
+    .tab-active {
+        @apply border-accent text-content;
+    }
+
+    .chip {
+        @apply inline-flex items-center gap-1.5 h-8 px-3 rounded border border-line bg-transparent text-sm font-medium text-content-muted hover:text-content hover:border-line-strong transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed;
+    }
+
+    .chip-active {
+        @apply border-accent bg-accent/10 text-accent hover:text-accent hover:border-accent;
+    }
+
+    /* The count that rides on a tab or chip. */
+    .chip-count {
+        @apply ml-1 rounded bg-surface-raised px-1.5 py-0.5 text-xs text-content-subtle;
+    }
+
     /* A Toolbar's icon button: the Minimal button at a fixed 32px square, glyph in currentColor.
        Disabled styling is built in because toolbars are exactly where "can't right now" is
        common — an export with no rows, a refresh already in flight. */

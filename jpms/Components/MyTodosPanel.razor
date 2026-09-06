@@ -241,8 +241,8 @@
 
     private string ViewTabClass(bool board) =>
         boardView == board
-            ? "btn-primary text-xs px-2 py-1"
-            : "btn-secondary text-xs px-2 py-1";
+            ? "chip chip-active"
+            : "chip";
 
     private async Task SetView(bool board)
     {

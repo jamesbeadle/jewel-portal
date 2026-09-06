@@ -34,17 +34,14 @@ public static class TriagePathways
         return null;
     }
 
-    /// <summary>
-    /// Pathway chip colours: green-ish Client, orange-ish Subcontractor, blue-ish Supplier,
-    /// purple-ish Internal — the same rounded-pill shape as the tag chips, but distinct hues so
-    /// rows can be scanned by pathway.
-    /// </summary>
-    public static string ChipColour(TriagePathway pathway) => pathway switch
+    /// <summary>The pathway's Tone — Client positive, Subcontractor warning, Supplier info,
+    /// Internal muted — so the pathway pill reads the same in the queue, the reading pane and
+    /// every register (Pill + StatusTones.PathwayTone share this reading).</summary>
+    public static Jewel.JPMS.Components.Tone Tone(TriagePathway pathway) => pathway switch
     {
-        TriagePathway.Client        => "bg-positive/10 text-positive",
-        TriagePathway.Subcontractor => "bg-warning/10 text-warning",
-        TriagePathway.Supplier      => "bg-sky-500/10 text-sky-600",
-        TriagePathway.Internal      => "bg-purple-500/10 text-purple-600",
-        _                           => "bg-accent/10 text-accent"
+        TriagePathway.Client        => Jewel.JPMS.Components.Tone.Positive,
+        TriagePathway.Subcontractor => Jewel.JPMS.Components.Tone.Warning,
+        TriagePathway.Supplier      => Jewel.JPMS.Components.Tone.Info,
+        _                           => Jewel.JPMS.Components.Tone.Muted
     };
 }

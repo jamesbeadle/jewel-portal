@@ -14,9 +14,7 @@
    tagged matches in the list's place. While a query is live the pathway/tag controls
    render disabled (never hidden): the search owns the one server-side filter slot. *@
 <div class="relative mb-3 max-w-xl">
-    <input type="search" class="field w-full text-sm pr-8"
-           placeholder="Search tagged emails — subject or sender, or a record reference (WO-0045)"
-           value="@SearchText" @oninput="OnSearchInput" />
+    <SearchInput Value="@SearchText" ValueChanged="OnSearchInput" Placeholder="Search tagged emails — subject or sender, or a record reference (WO-0045)" Width="w-full" />
     @if (SearchText.Trim().Length > 0)
     {
         <button type="button" title="Clear search"
@@ -159,7 +157,7 @@ else if (SearchResults is not null)
 @code {
     /// <summary>The live search text; input flows up, the page debounces and reads.</summary>
     [Parameter] public string SearchText { get; set; } = "";
-    [Parameter] public EventCallback<ChangeEventArgs> OnSearchInput { get; set; }
+    [Parameter] public EventCallback<string> OnSearchInput { get; set; }
     [Parameter] public EventCallback OnClearSearch { get; set; }
     /// <summary>True while a search owns the one server-side filter slot — the filters disable.</summary>
     [Parameter] public bool SearchActive { get; set; }
@@ -205,9 +203,9 @@ else if (SearchResults is not null)
 
     private string PathwayFilterChipClass(string? bucket)
     {
-        var baseClass = "rounded-full border px-3 py-1 text-xs font-medium transition";
+        var baseClass = "";
         return PathwayBucketFilter == bucket
-            ? $"{baseClass} border-accent bg-surface-raised text-content"
-            : $"{baseClass} border-line text-content-muted hover:text-content hover:border-line-strong";
+            ? $"chip chip-active"
+            : $"chip";
     }
 }

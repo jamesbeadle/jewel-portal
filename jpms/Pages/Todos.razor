@@ -78,8 +78,7 @@
                status — the whole point of searching is finding the thing wherever it is filed —
                so the status tabs stand down while one is typed. *@
             <div class="relative flex-1 min-w-[220px]">
-                <input type="search" class="field w-full text-sm pr-8" placeholder="Search to-dos — reference (TODO-0011), title or notes"
-                       value="@search" @oninput="OnSearchInput" />
+                <SearchInput Value="@search" ValueChanged="OnSearchInput" Placeholder="Search to-dos — reference (TODO-0011), title or notes" Width="w-full" />
                 @if (HasQuery)
                 {
                     <button type="button" title="Clear search"

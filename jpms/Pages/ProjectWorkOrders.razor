@@ -35,9 +35,7 @@
                         Supplier
                     </button>
                 </div>
-                <input type="search" placeholder="Search by supplier…"
-                       class="field w-52"
-                       @bind="supplierSearch" @bind:event="oninput" />
+                <SearchInput @bind-Value="supplierSearch" Placeholder="Search by supplier…" Width="w-52" />
                 <ExportToExcelButton FileName="Work orders"
                                      Disabled="@(LiveOrders.Count == 0)"
                                      ShowIncludeAllRows="@Searching"

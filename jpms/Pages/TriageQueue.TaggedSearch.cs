@@ -12,9 +12,9 @@ namespace Jewel.JPMS.Pages;
 
 public partial class TriageQueue
 {
-    private void OnTaggedSearchInput(ChangeEventArgs e)
+    private void OnTaggedSearchInput(string value)
     {
-        taggedSearch = e.Value?.ToString() ?? "";
+        taggedSearch = value;
         var query = taggedSearch.Trim();
         if (query == taggedSearchPending) return;
         taggedSearchPending = query;

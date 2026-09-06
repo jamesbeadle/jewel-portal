@@ -45,8 +45,7 @@
         @if (notes.Count > FilterThreshold)
         {
             <div class="relative mb-4">
-                <input type="search" class="field w-full text-sm pr-8" placeholder="Filter notes by keyword"
-                       value="@filter" @oninput="OnFilterInput" />
+                <SearchInput Value="@filter" ValueChanged="OnFilterInput" Placeholder="Filter notes by keyword" Width="w-full" />
                 @if (HasFilter)
                 {
                     <button type="button" title="Clear filter"
@@ -151,7 +150,7 @@
 
     private bool HasFilter => !string.IsNullOrWhiteSpace(filter);
 
-    private void OnFilterInput(ChangeEventArgs e) => filter = e.Value?.ToString() ?? "";
+    private void OnFilterInput(string value) => filter = value;
 
     private void ClearFilter() => filter = "";
 

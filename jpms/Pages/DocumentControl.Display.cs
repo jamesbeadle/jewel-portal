@@ -23,16 +23,14 @@ public partial class DocumentControl
         string.IsNullOrWhiteSpace(projectId) ? null : ProjectList.Find(projectId)?.Name;
 
     private string ViewTabClass(DocView tab) =>
-        "px-3 py-2 text-sm border-b-2 -mb-px transition "
-        + (view == tab
-            ? "border-accent text-content font-medium"
-            : "border-transparent text-content-muted hover:text-content");
+        (view == tab
+            ? "tab tab-active"
+            : "tab");
 
     private string DestinationTabClass(FileDestination tab) =>
-        "rounded-md text-xs px-2.5 py-1.5 transition "
-        + (destination == tab
-            ? "bg-accent text-accent-ink font-medium"
-            : "text-content-muted hover:bg-surface-raised");
+        (destination == tab
+            ? "chip chip-active"
+            : "chip");
 
     public void Dispose()
     {

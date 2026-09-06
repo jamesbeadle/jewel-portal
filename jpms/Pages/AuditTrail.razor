@@ -111,7 +111,7 @@
                             <td class="whitespace-nowrap">
                                 @if (!string.IsNullOrEmpty(item.Pathway))
                                 {
-                                    <span class="@PathwayChipClass(item.Pathway)">@item.Pathway</span>
+                                    <Pill Tone="@StatusTones.PathwayTone(item.Pathway)">@item.Pathway</Pill>
                                 }
                                 else
                                 {

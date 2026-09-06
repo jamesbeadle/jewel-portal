@@ -29,7 +29,7 @@
                     <span class="eyebrow">Tagged</span>
                     @if (TriagePathways.FromBucket(Selected.Bucket) is { } openEmailPathway)
                     {
-                        <span class="inline-flex items-center rounded-full @TriagePathways.ChipColour(openEmailPathway) text-xs font-medium px-2.5 py-1">@TriagePathways.Label(openEmailPathway)</span>
+                        <Pill Tone="@TriagePathways.Tone(openEmailPathway)">@TriagePathways.Label(openEmailPathway)</Pill>
                     }
                     @foreach (var tag in Selected.Categories)
                     {

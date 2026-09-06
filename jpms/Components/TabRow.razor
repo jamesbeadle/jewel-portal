@@ -1,0 +1,35 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE route tab row: sibling views the user switches between by NAVIGATING (RFIs · General,
+    Ours · Xero sites…). Each item is a link, the active one underlined in the accent — the
+    look WorkspaceSectionNav and RecordTabBar already wear. For a switch that changes local
+    state without a route, use FilterChips instead; the difference is meant to be visible.
+
+        <TabRow Items="@tabs" ActiveKey="@kind" />   with tabs = new[] { new TabItem("rfi", "RFIs", "/…/requests"), … }
+*@
+
+<nav class="border-b border-line mb-6 overflow-x-auto @Class" aria-label="@AriaLabel">
+    <ul class="flex items-center gap-1 whitespace-nowrap">
+        @foreach (var tab in Items)
+        {
+            <li>
+                <a href="@tab.Href" class="tab @(tab.Key == ActiveKey ? "tab-active" : "")" title="@tab.Title"
+                   aria-current="@(tab.Key == ActiveKey ? "page" : null)">
+                    @tab.Label
+                    @if (tab.Count is { } count)
+                    {
+                        <span class="chip-count">@count</span>
+                    }
+                </a>
+            </li>
+        }
+    </ul>
+</nav>
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<TabItem> Items { get; set; } = Array.Empty<TabItem>();
+    [Parameter] public string? ActiveKey { get; set; }
+    [Parameter] public string AriaLabel { get; set; } = "Sections";
+    [Parameter] public string Class { get; set; } = "";
+}

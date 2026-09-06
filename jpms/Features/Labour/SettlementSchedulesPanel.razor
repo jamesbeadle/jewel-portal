@@ -165,9 +165,9 @@
 
     private static string PlanPillClass(XeroCodingOutcome outcome) => outcome switch
     {
-        XeroCodingOutcome.WouldRecodeBill => "bg-positive/10 text-positive",
-        XeroCodingOutcome.WouldStageDraft => "bg-info/10 text-info",
-        XeroCodingOutcome.Failed => "bg-negative/10 text-negative",
-        _ => "bg-surface-raised text-content-subtle",
+        XeroCodingOutcome.WouldRecodeBill => "",
+        XeroCodingOutcome.WouldStageDraft => "",
+        XeroCodingOutcome.Failed => "",
+        _ => "chip",
     };
 }

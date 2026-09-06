@@ -103,9 +103,7 @@
                        title="Tick a line to take its full remaining value; edit the amount for a partial share when a client line covers more than one sub">
                         Sales side — valuation lines
                     </p>
-                    <input type="search" placeholder="Search…"
-                           class="field text-xs w-36"
-                           @bind="lineSearch" @bind:event="oninput" />
+                    <SearchInput @bind-Value="lineSearch" Placeholder="Search…" Width="w-36" />
                 </div>
                 <div class="overflow-y-auto max-h-60 space-y-1">
                     @foreach (var entry in FilteredSalesLines)

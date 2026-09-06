@@ -1,0 +1,48 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE search box: the Figma _Input with the search glyph trailing and a "Search" placeholder
+    in G6, sitting top-right of the content area beside the FilterChips. Debounced so a list
+    filters as you type without re-rendering on every keystroke; Escape clears.
+
+        <SearchInput @bind-Value="query" Placeholder="Search by supplier…" />
+*@
+
+<div class="relative @Width @Class">
+    <input type="search" class="field pr-10" placeholder="@Placeholder" value="@Value" title="@Title"
+           aria-label="@(Title ?? Placeholder)" @oninput="OnInput" @onkeydown="OnKey" />
+    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-content-faint pointer-events-none" aria-hidden="true">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+    </span>
+</div>
+
+@code {
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Search";
+    [Parameter] public string? Title { get; set; }
+    /// <summary>Width class — the Figma's search is 430px on the desktop frame; "w-full" in a stack.</summary>
+    [Parameter] public string Width { get; set; } = "w-72";
+    [Parameter] public int DebounceMs { get; set; } = 200;
+    [Parameter] public string Class { get; set; } = "";
+
+    private CancellationTokenSource? debounce;
+
+    private async Task OnInput(ChangeEventArgs e)
+    {
+        var text = e.Value?.ToString() ?? "";
+        debounce?.Cancel();
+        if (DebounceMs <= 0) { await ValueChanged.InvokeAsync(text); return; }
+        var cts = debounce = new CancellationTokenSource();
+        try
+        {
+            await Task.Delay(DebounceMs, cts.Token);
+            await ValueChanged.InvokeAsync(text);
+        }
+        catch (TaskCanceledException) { }
+    }
+
+    private Task OnKey(KeyboardEventArgs e) =>
+        e.Key == "Escape" && Value.Length > 0 ? ValueChanged.InvokeAsync("") : Task.CompletedTask;
+}

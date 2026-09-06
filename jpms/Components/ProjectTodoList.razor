@@ -73,8 +73,7 @@
     {
         <div class="flex items-center gap-2 mb-4">
             <div class="relative flex-1">
-                <input type="search" class="field w-full text-sm pr-8" placeholder="Search keywords — filters the list and finds related requests, variations and drawings"
-                       value="@search" @oninput="OnSearchInput" />
+                <SearchInput Value="@search" ValueChanged="OnSearchInput" Placeholder="Search keywords — filters the list and finds related requests, variations and drawings" Width="w-full" />
                 @if (HasQuery)
                 {
                     <button type="button" title="Clear search"
