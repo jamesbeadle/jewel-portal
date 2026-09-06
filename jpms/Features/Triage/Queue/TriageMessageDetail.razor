@@ -147,7 +147,7 @@ else if (Selected.HasAttachments && Detail is not null)
     }
     else if (ThreadError is { } threadProblem)
     {
-        <p class="text-xs text-amber-600">
+        <p class="text-xs text-warning">
             @threadProblem
             <button type="button" class="ml-2 underline" @onclick="() => OnRetryThread.InvokeAsync()">Retry</button>
         </p>
@@ -179,7 +179,7 @@ else if (Selected.HasAttachments && Detail is not null)
                 }
                 @if (ThreadMatchedBySubject)
                 {
-                    <span class="text-[11px] text-amber-600"
+                    <span class="text-[11px] text-warning"
                           title="Outlook gave this email a different conversation id from the rest of the chain, so its members were found by subject. Apply's whole-thread sweep follows Outlook's id — emails matched here by subject keep their own queue entries and are triaged from those.">
                         · thread matched by subject — Entire thread = Yes sweeps only the emails sharing this one's Outlook id
                     </span>

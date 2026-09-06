@@ -62,7 +62,7 @@
 
         @if (drafted)
         {
-            <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900">
+            <Notice Tone="Tone.Positive">
                 <p class="mb-1">
                     Draft created in the shared mailbox to <span class="font-medium">@draftRecipients</span>,
                     with the report PDF attached. Review and send it from the mailbox's Drafts folder.
@@ -71,7 +71,7 @@
                 {
                     <a class="underline underline-offset-4 font-medium" href="@draftLink" target="_blank" rel="noopener">Open the draft in Outlook on the web</a>
                 }
-            </div>
+            </Notice>
         }
         else
         {

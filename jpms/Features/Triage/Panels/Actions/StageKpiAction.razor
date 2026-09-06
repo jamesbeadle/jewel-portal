@@ -33,11 +33,11 @@
     <p class="text-xs text-content-subtle">Administrators only. The mark goes to Admin → KPI emails, where nobody else can see it; the email is tagged <span class="font-medium">Admin</span> (Internal pathway) so it leaves the queue — the tag doesn't say KPI.</p>
     @if (duplicate is not null)
     {
-        <p class="text-xs text-amber-500">@duplicate</p>
+        <p class="text-xs text-warning">@duplicate</p>
     }
     @if (!CanStage)
     {
-        <p class="text-xs text-amber-500">@(UserDirectory.IsLoaded ? "Pick the person the KPI is about before staging." : "Waiting for the people list…")</p>
+        <p class="text-xs text-warning">@(UserDirectory.IsLoaded ? "Pick the person the KPI is about before staging." : "Waiting for the people list…")</p>
     }
     <button type="button" class="@(CanStage ? "btn-primary" : "btn-primary opacity-50 cursor-not-allowed")" disabled="@(!CanStage)"
             title="@(CanStage ? "Line up the KPI mark for this email's Apply" : "Pick the person first")"

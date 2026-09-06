@@ -21,7 +21,7 @@
             Current: <span class="font-medium">@Record.Kind.DisplayName()</span>
             @if (Record.HasRfq)
             {
-                <span class="ml-2 inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">RFQ enabled</span>
+                <Pill Tone="Tone.Warning" Class="ml-2">RFQ enabled</Pill>
             }
         </p>
 

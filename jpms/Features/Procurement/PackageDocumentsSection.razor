@@ -64,9 +64,9 @@
                         <span class="text-sm text-content-muted ml-2">@DrawingNaming.Name(drawing)</span>
                     </div>
                     <div class="flex items-center gap-3">
-                        <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium @(drawing.HasApprovedRevision ? "border-line bg-surface-raised text-content-muted" : "border-amber-200 bg-amber-50 text-amber-800")">
+                        <Pill Tone="@(drawing.HasApprovedRevision ? Tone.Muted : Tone.Warning)">
                             @(DrawingNaming.ApprovedRevisionText(drawing) ?? "No approved revision")
-                        </span>
+                        </Pill>
                         <a class="text-xs text-accent hover:underline" href="@($"/projects/{ProjectId}/documents/{drawing.DrawingId}")">Open</a>
                     </div>
                 </li>

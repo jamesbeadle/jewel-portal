@@ -78,7 +78,7 @@
                                     <td class="px-4 py-2 whitespace-nowrap">@order.Detail.SubcontractorName</td>
                                     <td class="px-4 py-2 text-content">@order.Detail.Order.Title</td>
                                     <td class="px-4 py-2 whitespace-nowrap">
-                                        <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@order.Detail.Order.Status</span>
+                                        <Pill Tone="Tone.Muted">@order.Detail.Order.Status</Pill>
                                     </td>
                                     <td class="px-4 py-2 text-right whitespace-nowrap" title="This centre's share of the order">@Money(order.Share)</td>
                                 </tr>

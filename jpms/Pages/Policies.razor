@@ -122,15 +122,15 @@
                                     <td class="px-5 py-2.5 font-medium text-content">@document.Title @(document.IsActive ? "" : "· superseded")</td>
                                     <td class="px-2 py-2.5 text-content-muted tabular-nums">@document.Revision</td>
                                     <td class="px-2 py-2.5 text-content-subtle whitespace-nowrap">@document.PublishedAt.ToString("dd MMM yyyy")</td>
-                                    <td class="px-2 py-2.5"><span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-positive/10 text-positive">@document.SignedCount</span></td>
+                                    <td class="px-2 py-2.5"><Pill Tone="Tone.Positive">@document.SignedCount</Pill></td>
                                     <td class="px-5 py-2.5">
                                         @if (document.OutstandingCount > 0)
                                         {
-                                            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">@document.OutstandingCount to chase</span>
+                                            <Pill Tone="Tone.Negative">@document.OutstandingCount to chase</Pill>
                                         }
                                         else
                                         {
-                                            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-positive/10 text-positive">All signed</span>
+                                            <Pill Tone="Tone.Positive">All signed</Pill>
                                         }
                                     </td>
                                 </tr>

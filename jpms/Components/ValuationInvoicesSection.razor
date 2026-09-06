@@ -91,14 +91,13 @@
                                     @invoice.DisplayNumber
                                     @if (invoice.IsManual)
                                     {
-                                        <span class="ml-1 inline-flex items-center rounded-full border border-line px-1.5 py-0.5 text-[10px] font-sans text-content-subtle"
-                                              title="Historic entry keyed in manually — counts toward certified to date and total paid">Manual</span>
+                                        <Pill Tone="Tone.Muted" Class="ml-1" Title="Historic entry keyed in manually — counts toward certified to date and total paid">Manual</Pill>
                                     }
                                 </td>
                                 <td class="px-3 py-2 text-content-muted whitespace-nowrap">@invoice.PeriodMonth.ToString("MMM yyyy")</td>
                                 <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(invoice.Amount)</td>
                                 <td class="px-3 py-2 whitespace-nowrap">
-                                    <span class="@BadgeClass(invoice.Status)" title="@StatusTitle(invoice)">@StatusLabel(invoice.Status)</span>
+                                    <Pill Tone="@invoice.Status.ToTone()" Title="@StatusTitle(invoice)">@StatusLabel(invoice.Status)</Pill>
                                 </td>
                                 <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(invoice.AmountPaid > 0 ? Money(invoice.AmountPaid) : "—")</td>
                                 <td class="px-3 py-2 whitespace-nowrap">

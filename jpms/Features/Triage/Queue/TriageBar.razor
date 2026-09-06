@@ -89,7 +89,7 @@
                guide me"). A tooltip on a disabled button is invisible; this isn't. *@
             @if (!Busy && PendingSummary is not null && (DecisionsMissing || ProjectMissing))
             {
-                <p class="text-xs text-amber-600 max-w-xs text-right">@(DecisionsMissing ? DecisionsMissingHint : ProjectMissingHint)</p>
+                <p class="text-xs text-warning max-w-xs text-right">@(DecisionsMissing ? DecisionsMissingHint : ProjectMissingHint)</p>
             }
             @* Armed, this button is the way OUT — so it stops looking destructive and says so:
                grey "Keep email" against the green "Discard email", per the design system's

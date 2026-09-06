@@ -67,11 +67,11 @@
                                     @supplier.Name
                                     @if (supplier.IsCustomer && !supplier.IsSupplier)
                                     {
-                                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">Customer</span>
+                                        <Pill Tone="Tone.Muted">Customer</Pill>
                                     }
                                     else if (!supplier.IsSupplier)
                                     {
-                                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle" title="No bills in Xero yet">New contact</span>
+                                        <Pill Tone="Tone.Muted" Title="No bills in Xero yet">New contact</Pill>
                                     }
                                 </p>
                                 <p class="text-xs text-content-subtle">
@@ -81,7 +81,7 @@
                             <td class="px-4 py-3 text-right">
                                 @if (supplier.AlreadyImported)
                                 {
-                                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">Imported</span>
+                                    <Pill Tone="Tone.Muted">Imported</Pill>
                                 }
                                 else
                                 {

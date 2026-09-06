@@ -47,13 +47,6 @@ public partial class PortalHome
         _ => status.ToString()
     };
 
-    private static string StatusPillClass(WorkOrderStatus status) => status switch
-    {
-        WorkOrderStatus.Released  => "bg-emerald-50 border-emerald-200 text-emerald-800",
-        WorkOrderStatus.Complete  => "bg-slate-100 border-slate-200 text-slate-700",
-        WorkOrderStatus.Cancelled => "bg-rose-50 border-rose-200 text-rose-800",
-        _ => "bg-slate-100 border-slate-200 text-slate-700"
-    };
 
     // ---- Variation requests ----
 
@@ -117,15 +110,6 @@ public partial class PortalHome
         _ => status.ToString()
     };
 
-    private static string RequestStatusPillClass(VariationRequestStatus status) => status switch
-    {
-        VariationRequestStatus.Submitted   => "bg-amber-50 border-amber-200 text-amber-800",
-        VariationRequestStatus.UnderReview => "bg-amber-50 border-amber-200 text-amber-800",
-        VariationRequestStatus.Accepted    => "bg-emerald-50 border-emerald-200 text-emerald-800",
-        VariationRequestStatus.Rejected    => "bg-rose-50 border-rose-200 text-rose-800",
-        VariationRequestStatus.Withdrawn   => "bg-slate-100 border-slate-200 text-slate-700",
-        _ => "bg-slate-100 border-slate-200 text-slate-700"
-    };
 
     // Only live versions drive the attention banner; superseded ones are history.
     private IReadOnlyList<ComplianceDocument> ExpiringOrExpired =>

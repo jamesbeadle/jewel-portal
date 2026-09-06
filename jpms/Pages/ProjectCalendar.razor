@@ -103,7 +103,7 @@ else
                                             <span class="text-content truncate">@item.Title</span>
                                             @if (item.ClientVisible)
                                             {
-                                                <span class="text-[10px] font-semibold rounded-full px-1.5 bg-info/10 text-info shrink-0">Client</span>
+                                                <Pill Tone="Tone.Info" Class="shrink-0">Client</Pill>
                                             }
                                         </button>
                                     }
@@ -160,7 +160,7 @@ else
                                             }
                                             @if (item.ClientVisible)
                                             {
-                                                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-info/10 text-info shrink-0">Client</span>
+                                                <Pill Tone="Tone.Info" Class="shrink-0">Client</Pill>
                                             }
                                             <span class="ml-auto font-mono text-xs text-content-subtle shrink-0">@item.Reference</span>
                                         </button>

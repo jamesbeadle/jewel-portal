@@ -199,7 +199,7 @@ else
         }
         @if (mergeResult is not null)
         {
-            <p class="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-emerald-600 mb-4">@mergeResult</p>
+            <p class="rounded-lg border border-line bg-surface px-3 py-2 text-sm text-positive mb-4">@mergeResult</p>
         }
 
         @if (draftBatchError is not null)
@@ -209,7 +209,7 @@ else
         @if (draftBatch is not null)
         {
             <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4 space-y-2">
-                <p class="text-sm font-medium @(draftBatch.FailedCount == 0 ? "text-emerald-600" : "text-content")">
+                <p class="text-sm font-medium @(draftBatch.FailedCount == 0 ? "text-positive" : "text-content")">
                     @draftBatch.PreparedCount of @draftBatch.Outcomes.Count draft@(draftBatch.Outcomes.Count == 1 ? "" : "s") created in the projects mailbox.
                     @if (draftBatch.FailedCount > 0)
                     {
@@ -223,7 +223,7 @@ else
                             <span class="font-mono text-xs text-content-muted">@LabelFor(outcome)</span>
                             @if (outcome.Succeeded)
                             {
-                                <span class="text-emerald-600">Draft created</span>
+                                <span class="text-positive">Draft created</span>
                                 <span class="text-xs text-content-subtle">To: @string.Join(", ", outcome.Draft!.Recipients)</span>
                                 @if (!string.IsNullOrWhiteSpace(outcome.Draft.WebLink))
                                 {

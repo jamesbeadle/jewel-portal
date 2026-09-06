@@ -12,7 +12,7 @@
     <HeaderActions>
         @if (!loading && failed is null && linked.Count > 0)
         {
-            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@linked.Count</span>
+            <Pill Tone="Tone.Info">@linked.Count</Pill>
         }
     </HeaderActions>
     <ChildContent>
@@ -38,7 +38,7 @@
                             <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
                                 <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                             </p>
-                            <span class="@TodoStatus.PillBaseClass @TodoStatus.PillClass(item)">@TodoStatus.Label(item)</span>
+                            <Pill Tone="@TodoStatus.Tone(item)" Class="shrink-0">@TodoStatus.Label(item)</Pill>
                         </div>
                         <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
                             <span class="whitespace-nowrap">@ScopeLabel(item)</span>

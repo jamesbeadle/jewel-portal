@@ -201,9 +201,9 @@
             <td class="px-4 py-3 text-center">
                 @if (DrawingNaming.ApprovedRevisionText(drawing) is { } approvedText)
                 {
-                    <span class="inline-flex items-center justify-center rounded bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-xs font-mono font-medium text-emerald-800">
+                    <Pill Tone="Tone.Positive" Class="justify-center font-mono">
                         @approvedText
-                    </span>
+                    </Pill>
                 }
                 else
                 {
@@ -213,21 +213,21 @@
             <td class="px-4 py-3 text-center whitespace-nowrap">
                 @if (drawing.UnapprovedCount > 0)
                 {
-                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                    <Pill Tone="Tone.Warning">
                         @drawing.UnapprovedCount pending
-                    </span>
+                    </Pill>
                 }
                 @if (drawing.ArchivedCount > 0)
                 {
-                    <span class="ml-1 inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">
+                    <Pill Tone="Tone.Muted" Class="ml-1">
                         @drawing.ArchivedCount archived
-                    </span>
+                    </Pill>
                 }
                 @if (drawing.UnapprovedCount == 0 && drawing.ArchivedCount == 0 && drawing.HasApprovedRevision)
                 {
-                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                    <Pill Tone="Tone.Positive">
                         Approved
-                    </span>
+                    </Pill>
                 }
             </td>
             <td class="px-4 py-3 text-center whitespace-nowrap">
@@ -236,31 +236,27 @@
                    just as loudly so un-analysed drawings can't be silently missed. *@
                 @if (drawing.LatestMetadataExtractedAt is { } extractedAt)
                 {
-                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800"
-                          title="Metadata extracted @extractedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">
+                    <Pill Tone="Tone.Positive" Title="@($"Metadata extracted {extractedAt.LocalDateTime:d MMM yyyy, HH:mm}")">
                         Metadata ✓
-                    </span>
+                    </Pill>
                 }
                 else
                 {
-                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
-                          title="The latest revision's metadata has not been extracted yet">
+                    <Pill Tone="Tone.Warning" Title="The latest revision's metadata has not been extracted yet">
                         Not extracted
-                    </span>
+                    </Pill>
                 }
                 @if (drawing.LatestAnalysedAt is { } analysedAt)
                 {
-                    <span class="ml-1 inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800"
-                          title="Change analysis run @analysedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">
+                    <Pill Tone="Tone.Positive" Class="ml-1" Title="@($"Change analysis run {analysedAt.LocalDateTime:d MMM yyyy, HH:mm}")">
                         Analysed ✓
-                    </span>
+                    </Pill>
                 }
                 else
                 {
-                    <span class="ml-1 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
-                          title="The latest revision has not been analysed yet">
+                    <Pill Tone="Tone.Warning" Class="ml-1" Title="The latest revision has not been analysed yet">
                         Not analysed
-                    </span>
+                    </Pill>
                 }
             </td>
             <td class="px-4 py-3 text-content-muted hidden md:table-cell">

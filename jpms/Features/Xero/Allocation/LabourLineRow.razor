@@ -54,10 +54,9 @@
     <td class="px-3 py-2.5 text-right whitespace-nowrap align-top">
         @if (Line.CoveredByTimesheets)
         {
-            <span class="inline-block text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface text-content-subtle border border-line align-middle"
-                  title="Marked as settlement — the covered value is excluded from cost-of-sales aggregations; the worker-month verdict lives on the Labour overview's Settlement view">
+            <Pill Tone="Tone.Muted" Class="align-middle" Title="Marked as settlement — the covered value is excluded from cost-of-sales aggregations; the worker-month verdict lives on the Labour overview's Settlement view">
                 Covered · @(Line.CoveredPeriodStart?.ToString("MMM yyyy") ?? "")
-            </span>
+            </Pill>
             <button class="text-xs font-medium rounded-lg px-2.5 py-1 border border-line text-content-muted hover:text-content ml-2 disabled:opacity-40 align-middle"
                     title="Remove the settlement mark — the line goes back to the outstanding labour list"
                     disabled="@Busy" @onclick="() => OnUnmarkCover.InvokeAsync()">Un-mark</button>

@@ -25,7 +25,7 @@
             <h2 class="text-lg font-semibold text-content leading-snug">@Record.Title</h2>
             @if (StatusLabel is { Length: > 0 } status)
             {
-                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[11px] font-medium px-2 py-0.5 mt-1.5">@status</span>
+                <Pill Tone="Tone.Info" Class="mt-1.5">@status</Pill>
             }
         </div>
 

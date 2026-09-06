@@ -262,7 +262,7 @@
                 <p class="text-sm text-content truncate flex-1">@email.Subject</p>
                 @if (email.HasAttachments)
                 {
-                    <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle shrink-0">attachment</span>
+                    <Pill Tone="Tone.Muted" Class="shrink-0">attachment</Pill>
                 }
             </div>
             @if (!string.IsNullOrWhiteSpace(email.BodyPreview))
@@ -272,7 +272,7 @@
             <div class="flex flex-wrap items-center gap-1 mt-1">
                 @if (email.Categories.Count == 0)
                 {
-                    <span class="inline-flex items-center rounded-full bg-surface-raised border border-line text-content-subtle text-[10px] font-medium px-2 py-0.5">Not tagged to a record</span>
+                    <Pill Tone="Tone.Muted">Not tagged to a record</Pill>
                 }
                 else
                 {
@@ -286,7 +286,7 @@
                         else
                         {
                             @* A workflow tag (Discarded, Replied) or a stem no provider claimed. *@
-                            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@stem</span>
+                            <Pill Tone="Tone.Info">@stem</Pill>
                         }
                     }
                 }

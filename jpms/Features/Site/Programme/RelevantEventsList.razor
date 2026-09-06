@@ -41,7 +41,7 @@ else
                     @email.Subject
                     @if (email.HasAttachments)
                     {
-                        <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                        <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
                     }
                 </p>
                 @if (expanded.Contains(email.Id))

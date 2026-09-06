@@ -107,7 +107,7 @@
                 @email.Subject
                 @if (email.HasAttachments)
                 {
-                    <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                    <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
                 }
             </p>
             @if (OtherTags(email) is { Count: > 0 } chips)
@@ -115,7 +115,7 @@
                 <div class="flex flex-wrap items-center gap-1 mt-1">
                     @foreach (var tag in chips)
                     {
-                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagStem(tag)</span>
+                        <Pill Tone="Tone.Info">@TagStem(tag)</Pill>
                     }
                 </div>
             }

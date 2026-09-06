@@ -176,7 +176,7 @@
                     <div class="flex items-center gap-3">
                         @if (emails is not null && Emails.Count > 0)
                         {
-                            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@Emails.Count</span>
+                            <Pill Tone="Tone.Info">@Emails.Count</Pill>
                         }
                         <EmailFinder Type="RecordType.BuildingControlInspection" RecordId="@inspection.BuildingControlInspectionId"
                                      RecordReference="@inspection.Reference" ExcludeTag="@OwnTag" OnLinked="ReloadEmailsAsync" />

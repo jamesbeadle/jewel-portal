@@ -5,17 +5,17 @@
     Purely presentational: the hosting panel owns loading, posting and the reply state.
 *@
 
-<div class="rounded-lg border px-4 py-3 @(IsInternal ? "border-amber-500/40 bg-amber-500/[0.04]" : "border-line bg-surface-raised")">
+<div class="rounded-lg border px-4 py-3 @(IsInternal ? "border-warning/40 bg-warning/5" : "border-line bg-surface-raised")">
     <div class="flex items-start justify-between gap-3 mb-2">
         <div class="flex items-center gap-2.5 min-w-0">
-            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold @(IsInternal ? "bg-amber-500/15 text-amber-600" : "bg-surface text-content-muted border border-line")"
+            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[11px] font-semibold @(IsInternal ? "bg-warning/15 text-warning" : "bg-surface text-content-muted border border-line")"
                   aria-hidden="true">@Initials()</span>
             <span class="text-sm font-semibold text-content truncate">@AuthorLabel()</span>
         </div>
         <div class="flex items-center gap-2 shrink-0">
             @if (ShowVisibility && IsInternal)
             {
-                <span class="inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Internal</span>
+                <Pill Tone="Tone.Warning">Internal</Pill>
             }
             <time class="text-xs text-content-subtle whitespace-nowrap" datetime="@Entry.PostedAt.ToString("o")">
                 @Entry.PostedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")

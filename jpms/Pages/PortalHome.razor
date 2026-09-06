@@ -155,7 +155,7 @@ else
             }
             @if (uploadNote is not null)
             {
-                <p class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900 mb-3">@uploadNote</p>
+                <Notice Tone="Tone.Positive" Class="mb-3">@uploadNote</Notice>
             }
             <div class="grid gap-3 sm:grid-cols-2">
                 <div>
@@ -219,9 +219,7 @@ else
                                 </div>
                                 <div class="text-right shrink-0">
                                     <p class="font-medium text-content">@workOrder.Order.Value.ToString("C0", GbCulture)</p>
-                                    <span class="inline-block mt-1 rounded-full border px-2 py-0.5 text-xs font-medium @StatusPillClass(workOrder.Order.Status)">
-                                        @StatusLabel(workOrder.Order.Status)
-                                    </span>
+                                    <Pill Tone="@workOrder.Order.Status.ToTone()" Class="mt-1">@StatusLabel(workOrder.Order.Status)</Pill>
                                     @if (workOrder.Order.IsAccepted)
                                     {
                                         <p class="text-[11px] text-content-subtle mt-1">Accepted @workOrder.Order.AcceptedAt!.Value.LocalDateTime.ToString("d MMM yyyy")</p>
@@ -229,7 +227,7 @@ else
                                 </div>
                             </div>
                             <p class="mt-2 text-xs">
-                                <a class="underline underline-offset-2 @(NeedsAcceptance(workOrder) ? "text-amber-400 font-medium" : "text-content-subtle") hover:text-content"
+                                <a class="underline underline-offset-2 @(NeedsAcceptance(workOrder) ? "text-warning font-medium" : "text-content-subtle") hover:text-content"
                                    href="@($"/portal/work-orders/{workOrder.Order.WorkOrderId}")">
                                     @(NeedsAcceptance(workOrder) ? "View & accept purchase order →" : "View purchase order →")
                                 </a>
@@ -281,14 +279,12 @@ else
                                     </p>
                                     @if (variationRequest.Status == VariationRequestStatus.Rejected && !string.IsNullOrWhiteSpace(variationRequest.RejectionReason))
                                     {
-                                        <p class="text-xs text-rose-700 mt-1">Rejected: @variationRequest.RejectionReason</p>
+                                        <p class="text-xs text-negative mt-1">Rejected: @variationRequest.RejectionReason</p>
                                     }
                                 </div>
                                 <div class="text-right shrink-0">
                                     <p class="font-medium text-content">@variationRequest.ProposedValue.ToString("C0", GbCulture)</p>
-                                    <span class="inline-block mt-1 rounded-full border px-2 py-0.5 text-xs font-medium @RequestStatusPillClass(variationRequest.Status)">
-                                        @RequestStatusLabel(variationRequest.Status)
-                                    </span>
+                                    <Pill Tone="@variationRequest.Status.ToTone()" Class="mt-1">@RequestStatusLabel(variationRequest.Status)</Pill>
                                     @if (variationRequest.IsOpen)
                                     {
                                         <button type="button" class="block ml-auto mt-1 text-xs text-content-subtle underline underline-offset-2 hover:text-content"
@@ -318,7 +314,7 @@ else
             }
             @if (variationNote is not null)
             {
-                <p class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900 mb-3">@variationNote</p>
+                <Notice Tone="Tone.Positive" Class="mb-3">@variationNote</Notice>
             }
             @if (OpenWorkOrders.Count == 0)
             {

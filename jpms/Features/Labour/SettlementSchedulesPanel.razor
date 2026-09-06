@@ -18,11 +18,11 @@
         <div class="flex flex-wrap items-center gap-3 px-5 py-3 border-b border-line">
             @if (Schedules.InvoicesToChase > 0)
             {
-                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">Invoices to chase: @Schedules.InvoicesToChase</span>
+                <Pill Tone="Tone.Negative">Invoices to chase: @Schedules.InvoicesToChase</Pill>
             }
             @if (Schedules.WorkersToReconcile > 0)
             {
-                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle">To reconcile: @Schedules.WorkersToReconcile</span>
+                <Pill Tone="Tone.Muted">To reconcile: @Schedules.WorkersToReconcile</Pill>
             }
             <span class="flex-1"></span>
             <button type="button" class="btn-primary" disabled="@RunningCoding"
@@ -74,7 +74,7 @@
                                 @schedule.WorkerName
                                 @if (!schedule.FullySignedOff)
                                 {
-                                    <span class="ml-2 text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle" title="Weeks with approved time are not all signed off">not signed off</span>
+                                    <Pill Tone="Tone.Muted" Class="ml-2" Title="Weeks with approved time are not all signed off">not signed off</Pill>
                                 }
                             </td>
                             <td class="px-2 py-2.5 text-right tabular-nums text-content">@schedule.GrossTotal.ToString("N2")</td>

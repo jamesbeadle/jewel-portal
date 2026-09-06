@@ -254,11 +254,11 @@
             var days = (date.Value.UtcDateTime.Date - DateTime.Today).Days;
             @if (days < 0)
             {
-                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">@date.Value.ToString("dd MMM yyyy") · lapsed</span>
+                <Pill Tone="Tone.Negative">@date.Value.ToString("dd MMM yyyy") · lapsed</Pill>
             }
             else if (days <= 30)
             {
-                <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-negative/10 text-negative">@date.Value.ToString("dd MMM yyyy") · @days d</span>
+                <Pill Tone="Tone.Negative">@date.Value.ToString("dd MMM yyyy") · @days d</Pill>
             }
             else
             {

@@ -9,7 +9,7 @@
     {
         <div class="flex items-center justify-center min-h-[170px]">
             <p class="text-[11px] text-content-subtle text-center leading-relaxed max-w-[240px]">
-                <span class="block text-amber-400 mb-1">@Card.Project.Name ⚠</span>
+                <span class="block text-warning mb-1">@Card.Project.Name ⚠</span>
                 @Card.Unavailable
             </p>
         </div>
@@ -50,7 +50,7 @@
             </span>
             @if (chart.Warning is not null)
             {
-                <span class="text-[10px] text-amber-400">⚠ @chart.Warning</span>
+                <span class="text-[10px] text-warning">⚠ @chart.Warning</span>
             }
         </div>
     }

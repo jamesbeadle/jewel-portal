@@ -77,12 +77,11 @@
                                 {
                                     @* Tender-only prospect: on this list but deliberately NOT in the
                                        Directory — promotion happens from their submitted tender. *@
-                                    <span class="ml-2 inline-flex items-center rounded-full bg-surface border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle"
-                                          title="Only on tender lists — not in the Directory. Add them from their submitted tender if they're worth keeping.">Not in directory</span>
+                                    <Pill Tone="Tone.Muted" Class="ml-2" Title="Only on tender lists — not in the Directory. Add them from their submitted tender if they're worth keeping.">Not in directory</Pill>
                                 }
                                 @if (sub is not null && string.IsNullOrWhiteSpace(sub.ContactEmail))
                                 {
-                                    <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No email address</span>
+                                    <Pill Tone="Tone.Warning" Class="ml-2">No email address</Pill>
                                 }
                                 else if (sub is not null)
                                 {

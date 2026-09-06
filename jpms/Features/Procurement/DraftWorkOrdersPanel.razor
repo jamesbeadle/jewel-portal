@@ -22,7 +22,7 @@
     @foreach (var detail in Drafts)
     {
         <li class="px-4 py-2 flex items-center gap-3">
-            <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">Draft</span>
+            <Pill Tone="Tone.Muted">Draft</Pill>
             <span class="text-content font-medium">@detail.Order.Title</span>
             <span class="text-content-subtle">@detail.SubcontractorName</span>
             <span class="ml-auto">@Money(detail.Order.Value)</span>
@@ -31,7 +31,7 @@
                 @* The approve warning: releasing the draft emails its purchase order there and then. *@
                 @if (pending == DraftDecision.Approve)
                 {
-                    <span class="text-[11px] @(SupplierEmailFor(detail) is null ? "text-amber-700" : "text-content-subtle")"
+                    <span class="text-[11px] @(SupplierEmailFor(detail) is null ? "text-warning" : "text-content-subtle")"
                           title="Approving releases the order — the purchase-order email is sent from the projects mailbox the moment the number is minted">
                         @(SupplierEmailFor(detail) is { } supplierEmail
                             ? $"PO will be emailed to {supplierEmail}"

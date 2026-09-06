@@ -22,7 +22,7 @@
                         <span class="flex flex-wrap gap-1">
                             @foreach (var trade in sub.Trades)
                             {
-                                <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@trade.Name</span>
+                                <Pill Tone="Tone.Muted">@trade.Name</Pill>
                             }
                         </span>
                     </td>

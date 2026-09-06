@@ -35,10 +35,10 @@
                 <div class="flex flex-wrap gap-1 mb-1">
                     @foreach (var trade in SelectedTrades)
                     {
-                        <span class="inline-flex items-center gap-1 rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">
+                        <Pill Tone="Tone.Muted">
                             @trade.Name
                             <button type="button" class="text-content-subtle hover:text-content" @onclick="() => tradeIds.Remove(trade.TradeId)">×</button>
-                        </span>
+                        </Pill>
                     }
                 </div>
             }

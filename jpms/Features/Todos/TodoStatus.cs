@@ -9,11 +9,8 @@ public static class TodoStatus
     public static string Label(TodoItem item) =>
         item.IsComplete ? "Done" : item.IsInProgress ? "In progress" : "Open";
 
-    public static string PillClass(TodoItem item) =>
-        item.IsComplete ? "bg-positive/10 text-positive"
-        : item.IsInProgress ? "bg-amber-400/10 text-amber-400"
-        : "bg-accent/10 text-accent";
-
-    public const string PillBaseClass =
-        "shrink-0 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium";
+    public static Jewel.JPMS.Components.Tone Tone(TodoItem item) =>
+        item.IsComplete ? Jewel.JPMS.Components.Tone.Positive
+        : item.IsInProgress ? Jewel.JPMS.Components.Tone.Warning
+        : Jewel.JPMS.Components.Tone.Info;
 }

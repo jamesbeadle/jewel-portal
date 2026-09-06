@@ -23,7 +23,7 @@
         var others = Filter(records.Except(Candidates()).ToList());
         @if (candidates.Count > 0)
         {
-            <p class="text-xs font-semibold text-amber-600">Possible matches for this email</p>
+            <p class="text-xs font-semibold text-warning">Possible matches for this email</p>
             <div class="space-y-1">
                 @foreach (var record in candidates) { @RecordRow(record, true) }
             </div>
@@ -131,7 +131,7 @@
         var baseClass = "w-full text-left rounded-lg border px-3 py-1.5 block min-w-0 transition";
         if (Picked.Any(r => r.RecordId == record.RecordId)) return $"{baseClass} border-accent bg-surface-raised";
         return candidate
-            ? $"{baseClass} border-amber-500/40 hover:border-amber-500"
+            ? $"{baseClass} border-warning/40 hover:border-warning"
             : $"{baseClass} border-line hover:border-line-strong";
     }
 

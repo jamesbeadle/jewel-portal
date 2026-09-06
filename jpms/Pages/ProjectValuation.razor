@@ -96,8 +96,8 @@
                     <div class="min-w-0">
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="font-semibold text-content">@s.DisplayName</span>
-                            <span class="@ClaimBadgeClass(s.Status)"
-                                  title="@(s.Status == ValuationClaimStatus.Preapproved && s.PreapprovedAt is { } pa ? $"Issued {pa:dd MMM yyyy}" : "")">@s.Status.DisplayName()</span>
+                            <Pill Tone="@s.Status.ToTone()"
+                                  Title="@(s.Status == ValuationClaimStatus.Preapproved && s.PreapprovedAt is { } pa ? $"Issued {pa:dd MMM yyyy}" : "")">@s.Status.DisplayName()</Pill>
                         </div>
                         <p class="text-sm text-content-muted mt-1.5">@StageHint(s)</p>
                     </div>

@@ -150,7 +150,7 @@
                                 <span class="text-sm text-content">@baselineEntry.Label</span>
                                 @if (baselineEntry.ProgrammeBaselineId == programme?.Baseline?.ProgrammeBaselineId)
                                 {
-                                    <span class="inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">current yardstick</span>
+                                    <Pill Tone="Tone.Info">current yardstick</Pill>
                                 }
                                 <span class="text-xs text-content-subtle">taken @baselineEntry.TakenAt.LocalDateTime.ToString("d MMM yyyy, HH:mm") by @baselineEntry.TakenByEmail</span>
                                 @if (confirmingRemoveBaselineId == baselineEntry.ProgrammeBaselineId)

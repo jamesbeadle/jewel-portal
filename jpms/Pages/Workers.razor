@@ -78,8 +78,7 @@
                             <td>
                                 @if (worker.SubcontractorId is null && worker.IsSoleTrader)
                                 {
-                                    <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface border border-line text-content-muted"
-                                          title="Bills under their own name — their own settlement counterparty">Sole trader</span>
+                                    <Pill Tone="Tone.Muted" Title="Bills under their own name — their own settlement counterparty">Sole trader</Pill>
                                 }
                                 else { @SubcontractorName(worker.SubcontractorId) }
                             </td>

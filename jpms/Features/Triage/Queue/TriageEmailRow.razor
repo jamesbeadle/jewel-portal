@@ -55,14 +55,14 @@
                 }
                 @foreach (var tag in Item.Categories)
                 {
-                    <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TriageEmailDisplay.TagLabel(tag)</span>
+                    <Pill Tone="Tone.Info">@TriageEmailDisplay.TagLabel(tag)</Pill>
                 }
             </div>
         }
         else if (ShowUntaggedFallback)
         {
             <div class="flex flex-wrap items-center gap-1 mt-1">
-                <span class="inline-flex items-center rounded-full bg-surface-raised border border-line text-content-subtle text-[10px] font-medium px-2 py-0.5">Untagged — still in the queue</span>
+                <Pill Tone="Tone.Muted">Untagged — still in the queue</Pill>
             </div>
         }
     }

@@ -73,10 +73,10 @@
         </div>
         @foreach (var tag in SelectedTags)
         {
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-accent bg-surface-raised px-2.5 py-1 text-xs text-content">
+            <Pill Tone="Tone.Muted">
                 @TriageEmailDisplay.TagLabel(tag)
                 <button type="button" class="text-content-subtle hover:text-negative disabled:opacity-50" disabled="@SearchActive" @onclick="() => OnToggleTag.InvokeAsync(tag)" title="Remove filter">✕</button>
-            </span>
+            </Pill>
         }
     </div>
 }

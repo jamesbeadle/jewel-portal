@@ -25,9 +25,9 @@
             }
             @if (Row.CertifiedToDate == 0m && Row.ActualCostOfSales > 0m)
             {
-                <span class="inline-flex w-fit items-center gap-1.5 rounded border border-amber-400/25 bg-amber-400/10 px-1.5 py-0.5 text-[10px] text-amber-400">
+                <Pill Tone="Tone.Warning">
                     ⚠ No certifications against @MoneyCompact(Row.ActualCostOfSales) cost
-                </span>
+                </Pill>
             }
         </div>
     </td>

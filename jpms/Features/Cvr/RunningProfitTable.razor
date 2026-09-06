@@ -54,7 +54,7 @@
                                 style="@(move is decimal shadePp ? MovementCellStyle(shadePp, Movement.ShadeMax) : "background:#12151c")"
                                 title="@(RunningCellHover(cellMonth, cell) + AccrualHover(row.Project.ProjectId, cellMonth))">
                                 <span class="font-medium @ProfitClass(runningLevel)">@PctCell(runningLevel)</span>@if (AccrualOwnFor(row.Project.ProjectId, cellMonth) > 0m)
-                                {<span class="text-amber-400 ml-0.5" aria-hidden="true">•</span>}
+                                {<span class="text-warning ml-0.5" aria-hidden="true">•</span>}
                                 <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(move)@(cell.Own.Empty ? "" : $" · {SignedMoneyCompact(cell.Own.Profit)}")</span>
                             </td>
                         }
@@ -68,11 +68,11 @@
                         <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(row.PositionMoney)</span>
                         @if (AccrualToDateFor(row.Project.ProjectId) is > 0m and var accruedToDate)
                         {
-                            <span class="block font-normal text-[10px] text-amber-400 mt-0.5">incl. @MoneyCompact(accruedToDate) accrued</span>
+                            <span class="block font-normal text-[10px] text-warning mt-0.5">incl. @MoneyCompact(accruedToDate) accrued</span>
                         }
                         @if (row.Stale)
                         {
-                            <span class="block font-normal text-[10px] text-amber-400 mt-0.5">⚠ no movement 6 mo</span>
+                            <span class="block font-normal text-[10px] text-warning mt-0.5">⚠ no movement 6 mo</span>
                         }
                     </td>
                 </tr>
@@ -110,7 +110,7 @@
                         <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(Movement.TotalPositionMoney)</span>
                         @if (Movement.Rows.Sum(gridRow => AccrualToDateFor(gridRow.Project.ProjectId)) is > 0m and var totalAccrued)
                         {
-                            <span class="block font-normal text-[10px] text-amber-400 mt-0.5">incl. @MoneyCompact(totalAccrued) accrued</span>
+                            <span class="block font-normal text-[10px] text-warning mt-0.5">incl. @MoneyCompact(totalAccrued) accrued</span>
                         }
                     </td>
                 </tr>

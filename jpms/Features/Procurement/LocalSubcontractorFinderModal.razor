@@ -76,7 +76,7 @@
                             <span class="text-sm font-medium text-content">@place.Name</span>
                             @if (place.ExistingSubcontractorId is not null)
                             {
-                                <span class="inline-flex items-center rounded-full bg-accent/10 border border-accent/30 px-1.5 py-0.5 text-[10px] font-medium text-accent">Already in directory</span>
+                                <Pill Tone="Tone.Info">Already in directory</Pill>
                             }
                             @if (place.Rating is not null)
                             {

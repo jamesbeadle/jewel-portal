@@ -72,8 +72,7 @@
                                 <span class="ml-2 text-[11px] text-content-subtle">@row.WorkOrderCount WO · @row.SalesLineCount lines@(row.CostLineCount > 0 ? $" · {row.CostLineCount} invoices" : "")</span>
                                 @if (row.IsLocked)
                                 {
-                                    <span class="ml-2 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle"
-                                          title="@($"Locked {row.LockedAt?.ToString("dd MMM yyyy")} — figures frozen; profit / loss realised against actual invoiced cost")">Locked</span>
+                                    <Pill Tone="Tone.Muted" Class="ml-2" Title="@($"Locked {row.LockedAt?.ToString("dd MMM yyyy")} — figures frozen; profit / loss realised against actual invoiced cost")">Locked</Pill>
                                 }
                             </td>
                             <td class="px-4 py-3 text-right whitespace-nowrap text-content">@WholeMoney(row.SalesValue)</td>

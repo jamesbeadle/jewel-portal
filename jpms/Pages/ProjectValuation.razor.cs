@@ -143,16 +143,6 @@ public partial class ProjectValuation
     private string ConfirmLabel(ValuationClaim claim) =>
         IsLatestClaim(claim) ? "Confirm & roll over" : "Confirm";
 
-    private static string ClaimBadgeClass(ValuationClaimStatus status)
-    {
-        const string baseClass = "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ";
-        return status switch
-        {
-            ValuationClaimStatus.Preapproved => baseClass + "bg-warning/10 border-warning/30 text-warning",
-            ValuationClaimStatus.Confirmed => baseClass + "bg-positive/10 border-positive/30 text-positive",
-            _ => baseClass + "bg-surface-raised border-line text-content-muted"
-        };
-    }
 
     // Certified to date moved (invoice issued / deleted / added as paid): the server has
     // re-frozen any Preapproved claim's totals, so re-pull claims to show them.

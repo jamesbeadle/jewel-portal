@@ -75,7 +75,7 @@ else
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
                                 <h3 class="text-base font-semibold text-content truncate">@ActiveCase.BodyName</h3>
-                                <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent whitespace-nowrap">@ActiveCase.Status.DisplayName()</span>
+                                <Pill Tone="Tone.Info">@ActiveCase.Status.DisplayName()</Pill>
                             </div>
                             <p class="text-xs text-content-subtle mt-0.5">
                                 @ActiveCase.Regime.Label()
@@ -311,7 +311,7 @@ else
                                         <td class="px-4 py-2.5 font-mono text-xs text-content-muted whitespace-nowrap">@inspection.Reference</td>
                                         <td class="px-4 py-2.5 text-content font-medium">@inspection.StageName</td>
                                         <td class="px-4 py-2.5 whitespace-nowrap">
-                                            <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(inspection.Status)">@inspection.Status.DisplayName()</span>
+                                            <Pill Tone="@inspection.Status.ToTone()">@inspection.Status.DisplayName()</Pill>
                                         </td>
                                         <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@DateText(inspection.BookedFor)</td>
                                         <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@DateText(inspection.InspectedAt)</td>

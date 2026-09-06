@@ -72,7 +72,7 @@
                                     </td>
                                 }
                                 <td class="px-4 py-2.5 text-content" title="@line.Comments">@DescriptionFor(line)</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@TypeLabel(line)</span></td>
+                                <td class="px-4 py-2.5 whitespace-nowrap"><Pill Tone="Tone.Muted">@TypeLabel(line)</Pill></td>
                                 <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.LineAmount < 0m ? "text-negative" : "text-content")">@Money(line.LineAmount)</td>
                             </tr>
                         }
@@ -120,7 +120,7 @@
                                         </td>
                                     }
                                     <td class="px-4 py-2.5" title="@line.Comments">@DescriptionFor(line)</td>
-                                    <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px]">@(line.LineType == ValuationLineType.Tbc ? "TBC" : "Declined")</span></td>
+                                    <td class="px-4 py-2.5 whitespace-nowrap"><Pill Tone="Tone.Muted">@(line.LineType == ValuationLineType.Tbc ? "TBC" : "Declined")</Pill></td>
                                     <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(line.LineAmount)</td>
                                 </tr>
                             }

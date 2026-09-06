@@ -73,7 +73,7 @@ else
                             </span>
                             @if (!string.IsNullOrWhiteSpace(result.StatusLabel))
                             {
-                                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5 shrink-0">@result.StatusLabel</span>
+                                <Pill Tone="Tone.Info" Class="shrink-0">@result.StatusLabel</Pill>
                             }
                         </div>
                         @if (!string.IsNullOrWhiteSpace(result.Summary))

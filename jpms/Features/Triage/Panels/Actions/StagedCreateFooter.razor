@@ -15,7 +15,7 @@
 else if (Staged.CreateProblem is { } problem)
 {
     <div class="pt-3 border-t border-line flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-amber-600">Not lined up yet — @problem</p>
+        <p class="text-sm text-warning">Not lined up yet — @problem</p>
         <button type="button" class="btn-secondary text-xs" @onclick="() => OnClose.InvokeAsync()">Back to the email</button>
     </div>
 }

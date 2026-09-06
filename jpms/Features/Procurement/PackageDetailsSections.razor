@@ -83,8 +83,7 @@
                                     <td class="px-4 py-2">
                                         @if (string.IsNullOrWhiteSpace(item.CostCode))
                                         {
-                                            <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
-                                                  title="This line predates the cost-code rule — edit the line items to set one.">No cost code</span>
+                                            <Pill Tone="Tone.Warning" Title="This line predates the cost-code rule — edit the line items to set one.">No cost code</Pill>
                                         }
                                         else
                                         {

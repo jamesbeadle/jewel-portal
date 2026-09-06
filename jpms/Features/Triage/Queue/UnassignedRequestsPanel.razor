@@ -4,10 +4,10 @@
 @* The amber warning panel above the queue: requests not tied to a live project, invisible to
    every register until someone returns them to the Control Centre and picks the right project.
    The host renders it only when there is something to say. *@
-<div class="panel p-5 mb-6 border-amber-500/40">
+<div class="panel p-5 mb-6 border-warning/40">
     <div class="flex items-start gap-2 mb-1">
-        <h2 class="text-sm font-semibold text-amber-700">Unassigned requests</h2>
-        <span class="inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600">@Requests.Count</span>
+        <h2 class="text-sm font-semibold text-warning">Unassigned requests</h2>
+        <Pill Tone="Tone.Warning">@Requests.Count</Pill>
     </div>
     <p class="text-xs text-content-subtle mb-3">
         These requests aren't tied to a live project, so they don't appear in any register. Return one to the Control Centre to process its emails again and pick the right project.

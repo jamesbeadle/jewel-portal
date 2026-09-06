@@ -60,7 +60,7 @@ else
                     }
                     <div class="flex items-center gap-3">
                         <h2 class="text-lg font-semibold text-content">@package.Title</h2>
-                        <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted">@package.Status</span>
+                        <Pill Tone="Tone.Muted">@package.Status</Pill>
                     </div>
                     <p class="text-sm text-content-muted">@package.Trade</p>
                     @if (CanEdit)

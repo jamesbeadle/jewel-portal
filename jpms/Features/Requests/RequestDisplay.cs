@@ -20,12 +20,4 @@ public static class RequestDisplay
     public static string Date(DateTimeOffset? value) =>
         value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
 
-    public static string StatusClass(RequestStatus status) => status switch
-    {
-        RequestStatus.NeedsAction    => "bg-amber-500/10 text-amber-600",
-        RequestStatus.Open           => "bg-blue-500/10 text-blue-600",
-        RequestStatus.NeedsVariation => "bg-violet-500/10 text-violet-600",
-        RequestStatus.Closed         => "bg-surface-raised border border-line text-content-muted",
-        _                            => "bg-surface-raised border border-line text-content-muted"
-    };
 }

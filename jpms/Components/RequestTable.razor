@@ -46,13 +46,11 @@
                         @record.Title
                         @if (record.CriticalPath)
                         {
-                            <span class="ml-1.5 inline-flex items-center rounded bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600"
-                                  title="Programme-related — the answer gates work on the programme's critical path">Critical path</span>
+                            <Pill Tone="Tone.Negative" Class="ml-1.5" Title="Programme-related — the answer gates work on the programme's critical path">Critical path</Pill>
                         }
                         @if (record.MergedIntoRequestId is not null)
                         {
-                            <span class="ml-1.5 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-content-muted"
-                                  title="Merged into another request — its conversation, queries and emails live there now">Merged</span>
+                            <Pill Tone="Tone.Muted" Class="ml-1.5" Title="Merged into another request — its conversation, queries and emails live there now">Merged</Pill>
                         }
                         @* Recent triage activity — emails linked to this record lately. Renders
                            nothing while quiet or before the activity store has loaded. *@
@@ -86,21 +84,18 @@
                                click it, pick the new status. The cell swallows the click so changing
                                a status never also navigates into the row. The panel itself renders
                                outside the scroll box, below — see StatusMenuStyle. *@
-                            <button type="button"
-                                    class="inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)"
-                                    title="Change status"
-                                    aria-haspopup="menu"
-                                    aria-expanded="@(statusMenuRequestId == record.RequestId ? "true" : "false")"
-                                    disabled="@(StatusBusyRequestId == record.RequestId)"
-                                    @onclick="e => ToggleStatusMenu(record.RequestId, e)">
-                                @StatusLabel(record.Status) <span class="text-[9px]" aria-hidden="true">▾</span>
-                            </button>
+                            <Pill Tone="@record.Status.ToTone()"
+                                  Title="Change status"
+                                  aria-haspopup="menu"
+                                  aria-expanded="@(statusMenuRequestId == record.RequestId ? "true" : "false")"
+                                  Disabled="@(StatusBusyRequestId == record.RequestId)"
+                                  OnClick="e => ToggleStatusMenu(record.RequestId, e)">
+                                @StatusLabel(record.Status)
+                            </Pill>
                         }
                         else
                         {
-                            <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">
-                                @StatusLabel(record.Status)
-                            </span>
+                            <Pill Tone="@record.Status.ToTone()">@StatusLabel(record.Status)</Pill>
                         }
                     </td>
                 </tr>
@@ -244,12 +239,4 @@
 
     private static string StatusLabel(RequestStatus status) => status.DisplayName();
 
-    private static string StatusClass(RequestStatus status) => status switch
-    {
-        RequestStatus.NeedsAction    => "bg-amber-500/10 text-amber-600",
-        RequestStatus.Open           => "bg-blue-500/10 text-blue-600",
-        RequestStatus.NeedsVariation => "bg-violet-500/10 text-violet-600",
-        RequestStatus.Closed         => "bg-surface-raised border border-line text-content-muted",
-        _                            => "bg-surface-raised border border-line text-content-muted"
-    };
 }

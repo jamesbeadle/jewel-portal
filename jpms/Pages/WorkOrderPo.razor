@@ -50,37 +50,33 @@ else
                 {
                     @* Checked before acceptance: a cancelled order may well have been accepted
                        first, and "Accepted by supplier" on a voided order reads as live. *@
-                    <span class="rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-content-subtle"
-                          title="This order was cancelled after issue — it keeps its number as the record of a voided purchase order, but its value counts nowhere.">
+                    <Pill Tone="Tone.Muted" Title="This order was cancelled after issue — it keeps its number as the record of a voided purchase order, but its value counts nowhere.">
                         Cancelled
-                    </span>
+                    </Pill>
                 }
                 else if (Detail.Order.IsAccepted)
                 {
-                    <span class="rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 px-2.5 py-0.5 text-xs font-medium"
-                          title="@($"Electronically accepted by {Detail.Order.AcceptedByName} on {Detail.Order.AcceptedAt!.Value.LocalDateTime:d MMM yyyy, HH:mm}")">
+                    <Pill Tone="Tone.Positive" Title="@($"Electronically accepted by {Detail.Order.AcceptedByName} on {Detail.Order.AcceptedAt!.Value.LocalDateTime:d MMM yyyy, HH:mm}")">
                         Accepted by supplier
-                    </span>
+                    </Pill>
                 }
                 else if (Detail.Order.Status == WorkOrderStatus.Released)
                 {
-                    <span class="rounded-full border border-amber-200 bg-amber-50 text-amber-800 px-2.5 py-0.5 text-xs font-medium">
+                    <Pill Tone="Tone.Warning">
                         Awaiting supplier acceptance
-                    </span>
+                    </Pill>
                 }
                 else if (Detail.Order.IsDraft)
                 {
-                    <span class="rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-content-subtle"
-                          title="This order hasn't been approved — it has no order number and the supplier can't see it. Approve or reject it from the Work Orders tab.">
+                    <Pill Tone="Tone.Muted" Title="This order hasn't been approved — it has no order number and the supplier can't see it. Approve or reject it from the Work Orders tab.">
                         Draft — awaiting approval
-                    </span>
+                    </Pill>
                 }
                 else if (Detail.Order.IsRejected)
                 {
-                    <span class="rounded-full border border-line px-2.5 py-0.5 text-xs font-medium text-content-subtle"
-                          title="This draft was rejected — it was never issued and counts nowhere.">
+                    <Pill Tone="Tone.Muted" Title="This draft was rejected — it was never issued and counts nowhere.">
                         Rejected
-                    </span>
+                    </Pill>
                 }
                 @* A draft has no number and the supplier must not hear about it (and a
                    rejected draft never does), so the covering email waits for approval.

@@ -40,7 +40,7 @@
                     @(card.Budget is decimal budget ? $"budget {MoneyCompact(budget)}" : "budget not loaded")
                     @if (card.Stale)
                     {
-                        <span class="text-amber-400"> · ⚠ no movement 6 mo</span>
+                        <span class="text-warning"> · ⚠ no movement 6 mo</span>
                     }
                 </p>
             </div>

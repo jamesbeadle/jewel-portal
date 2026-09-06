@@ -58,9 +58,9 @@ else
                 <div class="flex items-center gap-3">
                     @if (Order.Order.IsAccepted)
                     {
-                        <span class="rounded-full border border-emerald-200 bg-emerald-50 text-emerald-800 px-2.5 py-0.5 text-xs font-medium">
+                        <Pill Tone="Tone.Positive">
                             Accepted @Order.Order.AcceptedAt!.Value.LocalDateTime.ToString("d MMM yyyy")
-                        </span>
+                        </Pill>
                     }
                     else if (CanAcceptThisOrder)
                     {
@@ -88,7 +88,7 @@ else
             }
             @if (acceptNote is not null)
             {
-                <p class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900 mt-2">@acceptNote</p>
+                <Notice Tone="Tone.Positive" Class="mt-2">@acceptNote</Notice>
             }
         </div>
 

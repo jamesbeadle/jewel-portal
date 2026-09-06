@@ -60,7 +60,7 @@ else
                     <p class="eyebrow mb-1">JPMS · <span class="font-mono">@item.Reference</span></p>
                     <div class="flex items-center gap-3">
                         <h1 class="text-2xl md:text-3xl font-semibold leading-tight @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">@item.Title</h1>
-                        <span class="@TodoStatus.PillBaseClass @TodoStatus.PillClass(item)">@TodoStatus.Label(item)</span>
+                        <Pill Tone="@TodoStatus.Tone(item)" Class="shrink-0">@TodoStatus.Label(item)</Pill>
                     </div>
                 </div>
                 <div class="flex items-center gap-2">

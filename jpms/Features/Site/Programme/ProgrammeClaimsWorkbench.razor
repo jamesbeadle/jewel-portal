@@ -126,7 +126,7 @@ else if (openForm == Form.Lad)
                                 <span class="text-sm font-medium text-content">@nod.Title</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@nod.Status</span>
+                                <Pill Tone="Tone.Muted">@nod.Status</Pill>
                                 <span class="text-xs text-content-subtle">@((nod.IssuedAt ?? nod.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
                             </div>
                         </div>
@@ -162,9 +162,9 @@ else if (openForm == Form.Lad)
                             <div class="flex items-center gap-2">
                                 @if (RelatedNodReference(eot) is { } nodRef)
                                 {
-                                    <span class="inline-flex items-center rounded bg-accent/10 px-1.5 py-0.5 text-[10px] text-accent" title="Arises from this Notice of Delay">from @nodRef</span>
+                                    <Pill Tone="Tone.Info" Title="Arises from this Notice of Delay">from @nodRef</Pill>
                                 }
-                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@eot.Status</span>
+                                <Pill Tone="Tone.Muted">@eot.Status</Pill>
                                 <span class="text-xs text-content-subtle">@((eot.IssuedAt ?? eot.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
                             </div>
                         </div>
@@ -202,7 +202,7 @@ else if (openForm == Form.Lad)
                                 <span class="text-sm font-medium text-content">@lad.Title</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">@lad.Status.DisplayName()</span>
+                                <Pill Tone="Tone.Muted">@lad.Status.DisplayName()</Pill>
                                 <span class="text-xs text-content-subtle">@lad.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</span>
                             </div>
                         </div>

@@ -94,14 +94,14 @@
                                     }
                                     else
                                     {
-                                        <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">No cost code</span>
+                                        <Pill Tone="Tone.Warning">No cost code</Pill>
                                     }
                                 </td>
                                 <td class="px-3 py-2 text-content">
                                     @LineDescription(line)
                                     @if (LineTypeBadge(line) is { } badge)
                                     {
-                                        <span class="ml-2 inline-flex items-center rounded-full border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">@badge</span>
+                                        <Pill Tone="Tone.Muted" Class="ml-2">@badge</Pill>
                                     }
                                 </td>
                                 <td class="px-3 py-2 text-content-muted hidden sm:table-cell">@line.Unit</td>

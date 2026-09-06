@@ -35,10 +35,10 @@
                         <div class="flex flex-wrap gap-1 mt-0.5">
                             @foreach (var link in PredecessorsOf(task.ProgrammeTaskId))
                             {
-                                <span class="inline-flex items-center gap-1 rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">
+                                <Pill Tone="Tone.Muted">
                                     after @TaskTitle(link.PredecessorTaskId)@(link.LagDays != 0 ? $" {(link.LagDays > 0 ? "+" : "")}{link.LagDays}d" : "")
                                     <button type="button" class="text-content-faint hover:text-negative" title="Remove dependency" @onclick="() => OnRemoveLink.InvokeAsync(link.ProgrammeTaskLinkId)">×</button>
-                                </span>
+                                </Pill>
                             }
                         </div>
                     }

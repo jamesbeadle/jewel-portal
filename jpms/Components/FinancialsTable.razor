@@ -269,12 +269,10 @@
                     <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">PKG</td>
                     <td class="sticky left-[124px] z-10 bg-surface px-4 py-3 whitespace-nowrap">
                         <span class="text-content font-medium">@package.Name</span>
-                        <span class="ml-2 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle"
-                              title="A reconciliation package: work orders matched against the valuation lines that priced their scope — manage it in the Packages section below">Package</span>
+                        <Pill Tone="Tone.Muted" Class="ml-2" Title="A reconciliation package: work orders matched against the valuation lines that priced their scope — manage it in the Packages section below">Package</Pill>
                         @if (package.IsLocked)
                         {
-                            <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle"
-                                  title="Locked — figures frozen; profit / loss realised against actual invoiced cost">Locked</span>
+                            <Pill Tone="Tone.Muted" Class="ml-1" Title="Locked — figures frozen; profit / loss realised against actual invoiced cost">Locked</Pill>
                         }
                     </td>
                     <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.SalesValue)">@WholeMoney(package.SalesValue)</td>

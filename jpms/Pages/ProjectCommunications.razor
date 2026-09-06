@@ -141,7 +141,7 @@
                             @item.Message.Subject
                             @if (item.Message.HasAttachments)
                             {
-                                <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
                             }
                         </p>
                         @if (!string.IsNullOrWhiteSpace(item.Message.BodyPreview))
@@ -166,7 +166,7 @@
                                the email carries is hidden. *@
                             @foreach (var tag in UnresolvedTags(item))
                             {
-                                <span class="inline-flex items-center rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[10px] text-content-subtle">@TagStem(tag)</span>
+                                <Pill Tone="Tone.Muted">@TagStem(tag)</Pill>
                             }
                         </div>
                         <div class="mt-2 flex items-center gap-4">

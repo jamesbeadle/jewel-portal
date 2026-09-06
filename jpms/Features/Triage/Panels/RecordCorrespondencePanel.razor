@@ -14,7 +14,7 @@
     <div class="flex items-center gap-3">
         @if (Loaded && Emails.Count > 0)
         {
-            <span class="inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@Emails.Count</span>
+            <Pill Tone="Tone.Info">@Emails.Count</Pill>
         }
         @* Search the whole mailbox and tag what belongs here — the list AND the
            assistant's read_record_emails both get richer with each tag. *@

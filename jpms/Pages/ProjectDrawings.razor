@@ -41,9 +41,9 @@ else
                     }
                     @if (Ambiguous.Count > 0)
                     {
-                        <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                        <Pill Tone="Tone.Warning" Class="ml-2">
                             @Ambiguous.Count ambiguous
-                        </span>
+                        </Pill>
                     }
                 </p>
             </div>
@@ -54,7 +54,7 @@ else
                                      IncludeAllLabel="Include unapproved"
                                      BuildWorkbook="BuildExportWorkbook" />
                 <button type="button" @onclick="() => approvedOnly = !approvedOnly"
-                        class="rounded-lg border text-sm px-3 py-2 transition @(approvedOnly ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "border-line-strong text-content-muted hover:bg-surface-raised")">
+                        class="rounded-lg border text-sm px-3 py-2 transition @(approvedOnly ? "bg-positive/10 border-positive/30 text-positive" : "border-line-strong text-content-muted hover:bg-surface-raised")">
                     @(approvedOnly ? "Showing approved" : "All documents")
                 </button>
                 @if (CanManage)

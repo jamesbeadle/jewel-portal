@@ -139,11 +139,11 @@ else
                                 <td class="px-4 py-3">
                                     @if (costCode.IsActive)
                                     {
-                                        <span class="inline-flex items-center rounded-full bg-positive/10 text-positive px-2 py-0.5 text-xs font-medium">Active</span>
+                                        <Pill Tone="Tone.Positive">Active</Pill>
                                     }
                                     else
                                     {
-                                        <span class="inline-flex items-center rounded-full bg-surface-raised text-content-subtle px-2 py-0.5 text-xs font-medium">Retired</span>
+                                        <Pill Tone="Tone.Muted">Retired</Pill>
                                     }
                                 </td>
                                 <td class="px-4 py-3 text-right whitespace-nowrap">
@@ -256,11 +256,11 @@ else
                                     <td class="px-4 py-3">
                                         @if (option.IsArchived)
                                         {
-                                            <span class="inline-flex items-center rounded-full bg-surface-raised text-content-subtle px-2 py-0.5 text-xs font-medium">Archived</span>
+                                            <Pill Tone="Tone.Muted">Archived</Pill>
                                         }
                                         else
                                         {
-                                            <span class="inline-flex items-center rounded-full bg-positive/10 text-positive px-2 py-0.5 text-xs font-medium">Active</span>
+                                            <Pill Tone="Tone.Positive">Active</Pill>
                                         }
                                     </td>
                                     <td class="px-4 py-3 text-content-muted">

@@ -78,7 +78,7 @@
                         <div class="flex flex-wrap items-center gap-1">
                             @foreach (var tag in chips)
                             {
-                                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagStem(tag)</span>
+                                <Pill Tone="Tone.Info">@TagStem(tag)</Pill>
                             }
                         </div>
                     }

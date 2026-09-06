@@ -32,7 +32,7 @@
                                 <span class="text-content-subtle"> — @email.Subject</span>
                                 @if (email.HasAttachments)
                                 {
-                                    <span class="ml-2 inline-flex items-center rounded bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+                                    <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
                                 }
                             </p>
                             <p class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>

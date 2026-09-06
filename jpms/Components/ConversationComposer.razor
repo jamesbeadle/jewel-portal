@@ -5,7 +5,7 @@
     moment "Internal only" is ticked.
 *@
 
-<div class="rounded-lg border px-4 py-3 transition-colors @(internalOnly ? "border-amber-500/40 bg-amber-500/[0.04]" : "border-line bg-surface-raised")">
+<div class="rounded-lg border px-4 py-3 transition-colors @(internalOnly ? "border-warning/40 bg-warning/5" : "border-line bg-surface-raised")">
     @if (error is not null)
     {
         <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>

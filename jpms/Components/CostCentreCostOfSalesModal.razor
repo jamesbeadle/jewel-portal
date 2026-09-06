@@ -190,12 +190,11 @@
                                     <td class="px-4 py-2.5 whitespace-nowrap">@line.InvoiceNumber</td>
                                     <td class="px-4 py-2.5">@line.Description</td>
                                     <td class="px-4 py-2.5 whitespace-nowrap">
-                                        <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px]"
-                                              title="@(line.Net < 0m
+                                        <Pill Tone="Tone.Muted" Title="@(line.Net < 0m
                                                          ? $"Linked to {line.ViaWorkOrderRef} — moved onto that order's cost centres"
                                                          : $"Arrives via {line.ViaWorkOrderRef}, invoiced on {line.SourceCostCode}")">
                                             @line.ViaWorkOrderRef
-                                        </span>
+                                        </Pill>
                                     </td>
                                     <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0m ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
                                 </tr>

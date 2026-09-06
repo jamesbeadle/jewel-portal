@@ -128,12 +128,4 @@ public static class ComplianceStatusExtensions
         _ => status.ToString()
     };
 
-    public static string PillClass(this ComplianceStatus status) => status switch
-    {
-        ComplianceStatus.Current      => "bg-emerald-50 border-emerald-200 text-emerald-800",
-        ComplianceStatus.ExpiringSoon => "bg-amber-50 border-amber-200 text-amber-800",
-        ComplianceStatus.Expired      => "bg-rose-50 border-rose-200 text-rose-800",
-        ComplianceStatus.Missing      => "bg-slate-100 border-slate-200 text-slate-700",
-        _ => "bg-slate-100 border-slate-200 text-slate-700"
-    };
 }

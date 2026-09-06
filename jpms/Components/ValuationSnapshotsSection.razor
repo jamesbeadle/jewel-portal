@@ -66,8 +66,7 @@
                                     @snapshot.Label
                                     @if (snapshot.IsSuperseded)
                                     {
-                                        <span class="ml-1.5 inline-flex items-center rounded-full border border-line px-1.5 py-0.5 text-[10px] text-content-subtle"
-                                              title="A later snapshot replaced this one (the invoice was amended and resubmitted, or cancelled)">Superseded</span>
+                                        <Pill Tone="Tone.Muted" Class="ml-1.5" Title="A later snapshot replaced this one (the invoice was amended and resubmitted, or cancelled)">Superseded</Pill>
                                     }
                                 </td>
                                 <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Money(snapshot.TotalWorksComplete)</td>

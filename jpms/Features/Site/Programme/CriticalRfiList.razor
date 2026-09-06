@@ -26,7 +26,7 @@ else
                         <div class="flex items-center gap-2">
                             <span class="font-mono text-xs text-content-muted">@rfi.Reference</span>
                             <span class="text-sm font-medium text-content">@rfi.Title</span>
-                            <span class="inline-flex items-center rounded bg-rose-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-600">Critical path</span>
+                            <Pill Tone="Tone.Negative">Critical path</Pill>
                         </div>
                         <div class="flex items-center gap-2">
                             @if (rfi.DaysOutstanding is int days)
@@ -34,7 +34,7 @@ else
                                 <span class="text-xs @(rfi.IsOverdue ? "text-negative font-semibold" : "text-content-subtle")"
                                       title="Days outstanding since raised">@days d outstanding</span>
                             }
-                            <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(rfi.Status)">@rfi.Status.DisplayName()</span>
+                            <Pill Tone="@rfi.Status.ToTone()">@rfi.Status.DisplayName()</Pill>
                             <span class="text-xs text-content-subtle">@((rfi.IssuedAt ?? rfi.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
                         </div>
                     </div>
@@ -61,12 +61,4 @@ else
     [Parameter] public bool Loaded { get; set; }
 
     // Mirrors the request detail page's colouring so an RFI reads the same on both sides.
-    private static string StatusClass(RequestStatus status) => status switch
-    {
-        RequestStatus.NeedsAction    => "bg-amber-500/10 text-amber-600",
-        RequestStatus.Open           => "bg-blue-500/10 text-blue-600",
-        RequestStatus.NeedsVariation => "bg-violet-500/10 text-violet-600",
-        RequestStatus.Closed         => "bg-surface-raised border border-line text-content-muted",
-        _                            => "bg-surface-raised border border-line text-content-muted"
-    };
 }

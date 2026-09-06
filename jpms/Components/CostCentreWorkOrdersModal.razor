@@ -46,7 +46,7 @@
                                 }
                                 <td class="px-4 py-2.5 text-content whitespace-nowrap">@entry.SupplierName</td>
                                 <td class="px-4 py-2.5 text-content-muted" title="@entry.Line.Description">@entry.Line.Title</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap"><span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@entry.Order.Status</span></td>
+                                <td class="px-4 py-2.5 whitespace-nowrap"><Pill Tone="Tone.Muted">@entry.Order.Status</Pill></td>
                                 <td class="px-4 py-2.5 text-right whitespace-nowrap text-content">@Money(entry.Line.LineTotal)</td>
                                 <td class="px-4 py-2.5 text-right whitespace-nowrap text-content-muted">@Money(entry.Line.PaidToDate)</td>
                                 <td class="px-4 py-2.5 text-right whitespace-nowrap @(remaining == 0m ? "text-content-muted" : "text-content font-medium")">@Money(remaining)</td>

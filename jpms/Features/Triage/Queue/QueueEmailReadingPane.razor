@@ -33,7 +33,7 @@
                     }
                     @foreach (var tag in Selected.Categories)
                     {
-                        <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2.5 py-1">@TriageEmailDisplay.TagLabel(tag)</span>
+                        <Pill Tone="Tone.Info">@TriageEmailDisplay.TagLabel(tag)</Pill>
                     }
                 </div>
             }

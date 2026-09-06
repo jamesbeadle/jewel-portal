@@ -91,7 +91,7 @@ else
                                     @record.Title
                                     @if (record.ImpliesVariation)
                                     {
-                                        <span class="ml-1.5 inline-flex items-center rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-600">Variation</span>
+                                        <Pill Tone="Tone.Warning" Class="ml-1.5">Variation</Pill>
                                     }
                                 </td>
                                 <td class="px-4 py-3 text-content-subtle hidden xl:table-cell font-mono text-xs">@Dash(record.DrawingRef)</td>
@@ -116,9 +116,7 @@ else
                                     @(record.Value is null ? "—" : WholeMoney(record.Value.Value))
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span class="inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium @StatusClass(record.Status)">
-                                        @StatusLabel(record.Status)
-                                    </span>
+                                    <Pill Tone="@record.Status.ToTone()">@StatusLabel(record.Status)</Pill>
                                 </td>
                             </tr>
                         }
@@ -223,14 +221,6 @@ else
 
     private static string StatusLabel(RequestStatus status) => status.DisplayName();
 
-    private static string StatusClass(RequestStatus status) => status switch
-    {
-        RequestStatus.NeedsAction    => "bg-amber-500/10 text-amber-600",
-        RequestStatus.Open           => "bg-blue-500/10 text-blue-600",
-        RequestStatus.NeedsVariation => "bg-violet-500/10 text-violet-600",
-        RequestStatus.Closed         => "bg-surface-raised border border-line text-content-muted",
-        _                            => "bg-surface-raised border border-line text-content-muted"
-    };
 
     private ExcelWorkbook? BuildExportWorkbook(bool includeAllStatuses)
     {

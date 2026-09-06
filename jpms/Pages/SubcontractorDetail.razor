@@ -93,11 +93,11 @@ else
                 }
                 @foreach (var trade in subcontractor.Trades)
                 {
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-raised border border-line px-2.5 py-1 text-xs font-medium text-content-muted">
+                    <Pill Tone="Tone.Muted">
                         @trade.Name
                         <button type="button" class="text-content-subtle hover:text-content" title="Remove @trade.Name"
                                 disabled="@tradesBusy" @onclick="() => RemoveTrade(trade.TradeId)">×</button>
-                    </span>
+                    </Pill>
                 }
             </div>
             <div class="flex flex-wrap gap-2">
@@ -221,10 +221,10 @@ else
             }
             @if (inviteResult is not null)
             {
-                <div class="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900 mb-3">
+                <Notice Tone="Tone.Positive" Class="mb-3">
                     <p class="mb-1">Invite sent to <span class="font-medium">@inviteResult.Email</span>. If the email doesn't arrive, share this link (valid until @inviteResult.ExpiresAt.LocalDateTime.ToString("d MMM yyyy")):</p>
                     <code class="block break-all text-xs bg-white/60 rounded px-2 py-1">@inviteResult.InviteLink</code>
-                </div>
+                </Notice>
             }
             <div class="flex flex-wrap items-center gap-3">
                 <button type="button" class="btn-secondary" disabled="@(inviteBusy || string.IsNullOrWhiteSpace(subcontractor.ContactEmail))" @onclick="InviteToPortal">

@@ -258,7 +258,7 @@ else if (Kind == StagedRecordKind.WorkOrder)
 
         @if (StagedCreate is not null && Create.WorkOrderProblem is { } problem)
         {
-            <p class="text-xs text-amber-600">@problem</p>
+            <p class="text-xs text-warning">@problem</p>
         }
     </div>
 }
@@ -281,7 +281,7 @@ else if (Kind == StagedRecordKind.SiteInstruction)
 
         @if (StagedCreate is not null && Create.SiteInstructionProblem is { } siteInstructionProblem)
         {
-            <p class="text-xs text-amber-600">@siteInstructionProblem</p>
+            <p class="text-xs text-warning">@siteInstructionProblem</p>
         }
     </div>
 }
@@ -309,7 +309,7 @@ else if (Kind == StagedRecordKind.Inventory)
 
         @if (StagedCreate is not null && Create.InventoryProblem is { } inventoryProblem)
         {
-            <p class="text-xs text-amber-600">@inventoryProblem</p>
+            <p class="text-xs text-warning">@inventoryProblem</p>
         }
     </div>
 }
@@ -341,7 +341,7 @@ else
 
         @if (StagedCreate is not null && Create.DefectProblem is { } defectProblem)
         {
-            <p class="text-xs text-amber-600">@defectProblem</p>
+            <p class="text-xs text-warning">@defectProblem</p>
         }
     </div>
 }

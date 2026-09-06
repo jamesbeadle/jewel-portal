@@ -19,8 +19,7 @@
         else if (Timesheet.CostCode == "")
         {
             @* Weekly entries arrive uncoded on purpose — the approver codes the day via Adjust. *@
-            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised text-content-subtle"
-                  title="Entered without a cost code — Adjust the row to code it before approving.">uncoded</span>
+            <Pill Tone="Tone.Muted" Title="Entered without a cost code — Adjust the row to code it before approving.">uncoded</Pill>
         }
         else { <span class="tabular-nums">@Timesheet.CostCode</span> }
     </td>

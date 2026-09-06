@@ -41,8 +41,8 @@ public static class TriagePathways
     /// </summary>
     public static string ChipColour(TriagePathway pathway) => pathway switch
     {
-        TriagePathway.Client        => "bg-emerald-500/10 text-emerald-600",
-        TriagePathway.Subcontractor => "bg-orange-500/10 text-orange-600",
+        TriagePathway.Client        => "bg-positive/10 text-positive",
+        TriagePathway.Subcontractor => "bg-warning/10 text-warning",
         TriagePathway.Supplier      => "bg-sky-500/10 text-sky-600",
         TriagePathway.Internal      => "bg-purple-500/10 text-purple-600",
         _                           => "bg-accent/10 text-accent"

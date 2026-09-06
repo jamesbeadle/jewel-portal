@@ -61,8 +61,8 @@
         }
         else
         {
-            <div class="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2.5">
-                <p class="text-sm font-medium text-emerald-600">Draft created in the projects mailbox.</p>
+            <Notice Tone="Tone.Positive">
+                <p class="text-sm font-medium">Draft created in the projects mailbox.</p>
                 <p class="text-xs text-content-subtle mt-1">To: @string.Join(", ", DraftResult.Recipients)</p>
                 @if (DraftResult.Cc is { Count: > 0 } draftCc)
                 {
@@ -78,7 +78,7 @@
                     <a href="@DraftResult.WebLink" target="_blank" rel="noopener"
                        class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
                 }
-            </div>
+            </Notice>
             <div class="flex justify-end">
                 <button type="button" class="btn-primary" @onclick="() => OnCancel.InvokeAsync()">Done</button>
             </div>

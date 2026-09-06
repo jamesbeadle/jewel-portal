@@ -300,12 +300,12 @@ else
                                            un-approve, reject) link through to the variation, where their
                                            real flows — cost code, confirms, reversals — live. *@
                                         <div class="relative">
-                                            <button type="button" class="@BadgeClass(order) gap-1"
-                                                    title="Change status"
-                                                    disabled="@(variationStatusBusyId == order.VariationOrderId)"
-                                                    @onclick="() => ToggleVariationStatusMenu(order.VariationOrderId)">
-                                                @VariationStatusLabel(order) <span class="text-[9px]" aria-hidden="true">▾</span>
-                                            </button>
+                                            <Pill Tone="@order.Status.ToTone()"
+                                                  Title="Change status"
+                                                  Disabled="@(variationStatusBusyId == order.VariationOrderId)"
+                                                  OnClick="() => ToggleVariationStatusMenu(order.VariationOrderId)">
+                                                @VariationStatusLabel(order)
+                                            </Pill>
                                             @if (variationStatusMenuId == order.VariationOrderId)
                                             {
                                                 <div class="absolute left-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden">
@@ -330,7 +330,7 @@ else
                                     }
                                     else
                                     {
-                                        <span class="@BadgeClass(order)">@VariationStatusLabel(order)</span>
+                                        <Pill Tone="@order.Status.ToTone()">@VariationStatusLabel(order)</Pill>
                                     }
                                 </td>
                                 <td class="px-4 py-3 text-right whitespace-nowrap @(order.Status == VariationOrderStatus.Rejected ? "text-content-subtle line-through" : "text-content")">

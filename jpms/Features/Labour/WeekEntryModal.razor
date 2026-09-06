@@ -52,7 +52,7 @@
                     @if (row.Locked)
                     {
                         <td colspan="3" class="py-1.5 text-content-subtle">
-                            <span class="text-[11px] font-semibold rounded-full px-2 py-0.5 bg-surface-raised mr-2">recorded</span>@row.LockedDetail
+                            <Pill Tone="Tone.Muted" Class="mr-2">recorded</Pill>@row.LockedDetail
                         </td>
                     }
                     else

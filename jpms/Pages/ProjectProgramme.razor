@@ -36,21 +36,21 @@
                 Claims
                 @if (ClaimsCount > 0)
                 {
-                    <span class="ml-1.5 inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@ClaimsCount</span>
+                    <Pill Tone="Tone.Info" Class="ml-1.5">@ClaimsCount</Pill>
                 }
             </button>
             <button type="button" class="@SubTabClass(SubView.CriticalRfis)" @onclick="() => SwitchView(SubView.CriticalRfis)">
                 Critical Path RFIs
                 @if (OpenCriticalRfiCount > 0)
                 {
-                    <span class="ml-1.5 inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@OpenCriticalRfiCount</span>
+                    <Pill Tone="Tone.Info" Class="ml-1.5">@OpenCriticalRfiCount</Pill>
                 }
             </button>
             <button type="button" class="@SubTabClass(SubView.RelevantEvents)" @onclick="() => SwitchView(SubView.RelevantEvents)">
                 Relevant Events
                 @if (emailsLoaded && emails.Count > 0)
                 {
-                    <span class="ml-1.5 inline-flex items-center rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-medium text-accent">@emails.Count</span>
+                    <Pill Tone="Tone.Info" Class="ml-1.5">@emails.Count</Pill>
                 }
             </button>
         </div>

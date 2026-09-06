@@ -23,7 +23,7 @@
                         @(sub?.CompanyName ?? quote.SubcontractorId)
                         @if (won)
                         {
-                            <span class="ml-1.5 inline-flex items-center rounded-full bg-positive/10 border border-positive/30 px-1.5 py-0.5 text-[10px] font-medium text-positive normal-case tracking-normal">Won</span>
+                            <Pill Tone="Tone.Positive" Class="ml-1.5">Won</Pill>
                         }
                         @if (sub is { IsProspect: true } && CanAddToDirectory)
                         {

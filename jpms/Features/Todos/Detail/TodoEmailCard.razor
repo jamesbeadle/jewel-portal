@@ -14,7 +14,7 @@
         @Email.Subject
         @if (Email.HasAttachments)
         {
-            <span class="ml-2 inline-flex items-center rounded bg-surface border border-line px-1.5 py-0.5 text-[10px] text-content-subtle">attachment</span>
+            <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
         }
     </p>
     @if (OtherTags.Count > 0)
@@ -22,7 +22,7 @@
         <div class="flex flex-wrap items-center gap-1 mt-1">
             @foreach (var tag in OtherTags)
             {
-                <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@TagLabel(tag)</span>
+                <Pill Tone="Tone.Info">@TagLabel(tag)</Pill>
             }
         </div>
     }

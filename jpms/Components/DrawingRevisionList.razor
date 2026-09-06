@@ -24,18 +24,18 @@
                                 @switch (revision.ApprovalStatus)
                                 {
                                     case DrawingApprovalStatus.Approved:
-                                        <span class="ml-2 inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">Approved · latest</span>
+                                        <Pill Tone="Tone.Positive" Class="ml-2">Approved · latest</Pill>
                                         break;
                                     case DrawingApprovalStatus.Unapproved:
-                                        <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Unapproved</span>
+                                        <Pill Tone="Tone.Warning" Class="ml-2">Unapproved</Pill>
                                         break;
                                     case DrawingApprovalStatus.Archived:
-                                        <span class="ml-2 inline-flex items-center rounded-full bg-surface-raised border border-line px-1.5 py-0.5 text-[10px] font-medium text-content-subtle">Archived</span>
+                                        <Pill Tone="Tone.Muted" Class="ml-2">Archived</Pill>
                                         break;
                                 }
                                 @if (revision.IsAmbiguous)
                                 {
-                                    <span class="ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">Ambiguous</span>
+                                    <Pill Tone="Tone.Warning" Class="ml-2">Ambiguous</Pill>
                                 }
                             </p>
                             <p class="text-xs text-content-subtle mt-1 truncate" title="@revision.FileName">
@@ -57,27 +57,27 @@
                             <p class="mt-1.5 flex flex-wrap items-center gap-1">
                                 @if (revision.MetadataExtractedAt is { } extractedAt)
                                 {
-                                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                                    <Pill Tone="Tone.Positive">
                                         Metadata extracted @extractedAt.LocalDateTime.ToString("d MMM, HH:mm")
-                                    </span>
+                                    </Pill>
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                                    <Pill Tone="Tone.Warning">
                                         Metadata not extracted
-                                    </span>
+                                    </Pill>
                                 }
                                 @if (revision.AnalysedAt is { } analysedAt)
                                 {
-                                    <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-medium text-emerald-800">
+                                    <Pill Tone="Tone.Positive">
                                         Analysed @analysedAt.LocalDateTime.ToString("d MMM, HH:mm")
-                                    </span>
+                                    </Pill>
                                 }
                                 else
                                 {
-                                    <span class="inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                                    <Pill Tone="Tone.Warning">
                                         Not analysed
-                                    </span>
+                                    </Pill>
                                 }
                             </p>
                         </div>

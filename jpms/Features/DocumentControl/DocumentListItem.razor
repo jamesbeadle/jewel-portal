@@ -21,7 +21,7 @@
     <div class="flex flex-wrap items-center gap-1.5 mt-1">
         @if (IsFresh)
         {
-            <span class="inline-flex items-center rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-[10px] font-semibold px-2 py-0.5">Extracted</span>
+            <Pill Tone="Tone.Warning">Extracted</Pill>
         }
         @if (Item.FileSizeBytes > 0)
         {
@@ -29,11 +29,11 @@
         }
         @if (ProjectHint is not null)
         {
-            <span class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5">@ProjectHint</span>
+            <Pill Tone="Tone.Info">@ProjectHint</Pill>
         }
         @if (Item.Status == DocumentControlStatus.Filed)
         {
-            <span class="inline-flex items-center rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[10px] font-medium px-2 py-0.5">@Item.FiledLabel</span>
+            <Pill Tone="Tone.Positive">@Item.FiledLabel</Pill>
         }
     </div>
 </button>
@@ -50,6 +50,6 @@
     private string RowClass => IsOpen
         ? "border-accent bg-accent/10 ring-2 ring-accent/40 shadow-sm"
         : IsFresh
-            ? "border-amber-300 bg-amber-50/60 hover:bg-amber-50"
+            ? "border-warning/40 bg-warning/10 hover:bg-warning/15"
             : "border-line bg-surface hover:bg-surface-raised";
 }

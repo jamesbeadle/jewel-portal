@@ -18,17 +18,16 @@
     }
     <td class="px-3 py-2" title="@Entry.Line.Description">@Entry.Line.Title</td>
     <td class="px-3 py-2 whitespace-nowrap">
-        <span class="inline-block rounded-full border border-line px-2 py-0.5 text-[11px] text-content-subtle">@Entry.Detail.Order.Status</span>
+        <Pill Tone="@Entry.Detail.Order.Status.ToTone()">@Entry.Detail.Order.Status</Pill>
         @if (Summary is { } summary)
         {
-            <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @InvoicingClass(summary.InvoicingStatus)"
-                  title="@($"{MoneyExact(summary.InvoicedToDate)} invoiced of {MoneyExact(summary.Value)} · {MoneyExact(summary.RemainingToInvoice)} left to invoice (whole order)")">
+            <Pill Tone="@summary.InvoicingStatus.ToTone()" Class="ml-1"
+                  Title="@($"{MoneyExact(summary.InvoicedToDate)} invoiced of {MoneyExact(summary.Value)} · {MoneyExact(summary.RemainingToInvoice)} left to invoice (whole order)")">
                 @InvoicingLabel(summary.InvoicingStatus)
-            </span>
-            <span class="ml-1 inline-block rounded-full border border-line px-2 py-0.5 text-[11px] @PaymentClass(summary.PaymentStatus)"
-                  title="@PaymentTitle(summary.PaymentStatus)">
+            </Pill>
+            <Pill Tone="@summary.PaymentStatus.ToTone()" Class="ml-1" Title="@PaymentTitle(summary.PaymentStatus)">
                 @PaymentLabel(summary.PaymentStatus)
-            </span>
+            </Pill>
         }
     </td>
     <td class="px-3 py-2 text-right">@Money(Entry.Line.LineTotal)</td>
