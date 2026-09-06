@@ -79,3 +79,4 @@ ziB7Ad8I
 __pycache__/
 *.pyc
 .claude-transfer/
+Claude outputs/
