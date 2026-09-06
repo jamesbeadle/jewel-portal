@@ -1,6 +1,6 @@
 namespace Jewel.JPMS.Contracts.Ai;
 
-/// <summary>To-dos, the directory registers, audit, agents and admin. Data only.</summary>
+/// <summary>To-dos, the directory registers, the Sales section, audit, agents and admin. Data only.</summary>
 public static class OfficePageGuides
 {
     public static readonly IReadOnlyList<PageGuide> Guides = new PageGuide[]
@@ -64,6 +64,59 @@ public static class OfficePageGuides
             + "client\" button, and Export to Excel. You can navigate_to only — no dialog is "
             + "registered here. Architect practices are managed on /architects; when Jewel works "
             + "through an architect, the practice is the party on the project or request."),
+
+        // ---- Sales (2026-09-06): strategies for finding leads, and the register they feed ----
+        new("/sales/leads", "Leads",
+            "Sales → Leads: the one register of everyone Jewel might convince to build with it — "
+            + "to upgrade a house or have a new home built — whatever found them: a sales strategy "
+            + "(the lead carries the strategy's name), an inbound enquiry, a referral, an architect, "
+            + "a past client, or someone typing it in. Each lead is LD-#### with contact, company, "
+            + "prospect kind, the property/site address and postcode, a one-line summary, source, "
+            + "strategy, stage on the ladder New → Contacted → Engaged → Site visit → Proposal "
+            + "ending Won / Lost (or parked in Nurture), estimated value, owner and dates. "
+            + "Manually: stage chips filter the table (Open by default), a strategy filter, a "
+            + "search box, \"New lead\" opens the capture modal, a row opens the lead's own page. "
+            + "Over the connector: list_leads (filter by stage / strategyId), get_lead, "
+            + "capture_lead, update_lead, move_lead_stage, log_lead_activity, win_lead (directors: "
+            + "creates the Client and the project shell). Never file a lead as Won by hand — "
+            + "win_lead is what creates the records."),
+
+        new("/sales/leads/{leadId}", "Lead",
+            "One lead: its details (edit in a modal), its stage with a move control (any open "
+            + "stage; Lost asks for a reason; Nurture parks it; Won is the \"Won — create client "
+            + "& project\" button, directors only, which asks for the project reference and name "
+            + "and creates the Client account and the project shell in one move), and its "
+            + "timeline — every call, email, letter, meeting, site visit, proposal and note "
+            + "logged by hand plus every stage change, newest first. \"Log activity\" adds a "
+            + "touch. A Won lead links to its project. Over the connector: get_lead reads it "
+            + "(an LD-#### reference resolves), log_lead_activity, move_lead_stage, update_lead, "
+            + "win_lead act on it."),
+
+        new("/sales/strategies", "Sales strategies",
+            "Sales → Strategies: the methodologies Jewel uses to FIND leads, each written down "
+            + "with its justification so it can be judged — e.g. homeowners in postcodes where "
+            + "house prices are about to move, approached by post with a research brochure; "
+            + "architects, shown how the portal's project management removes their chasing. A "
+            + "strategy has an audience, a target area, a hypothesis (why these people, why "
+            + "now), the evidence behind it, a channel, a proposition, an approach plan (drafted "
+            + "by Claude from those fields, then edited), a status (Draft / Active / Paused / "
+            + "Retired) and an owner — and a funnel counted from the leads that carry its id: "
+            + "leads found, contacted, engaged, proposals, won, lost, the open pipeline value "
+            + "and the won value. Manually: cards with the funnel figures, \"New strategy\" "
+            + "opens the create modal, a card opens the strategy page. Over the connector: "
+            + "list_sales_strategies, get_sales_strategy, create_sales_strategy, "
+            + "update_sales_strategy, set_sales_strategy_status (directors), "
+            + "generate_strategy_plan. When the user describes a new way of finding clients, "
+            + "that is a strategy — capture the hypothesis and evidence in their words."),
+
+        new("/sales/strategies/{strategyId}", "Sales strategy",
+            "One strategy: its definition (edit in a modal), its funnel, the approach plan "
+            + "(markdown — \"Generate with AI\" drafts or redrafts it from the definition with an "
+            + "optional steer; \"Edit plan\" rewrites it by hand), a status control (directors) "
+            + "and the leads it has found, with \"Add lead\" capturing a new one already "
+            + "attributed to the strategy. Over the connector: get_sales_strategy, "
+            + "update_sales_strategy, generate_strategy_plan, set_sales_strategy_status, and "
+            + "capture_lead with this strategyId."),
 
         new("/dashboard", "Home",
             "The signed-in home page, rendered per active role: administrators get the admin home "

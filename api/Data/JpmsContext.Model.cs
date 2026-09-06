@@ -259,6 +259,22 @@ public sealed partial class JpmsContext
             .HasIndex(row => row.Number)
             .HasDatabaseName("IX_SiteInstructions_Number");
 
+        // ---- Sales (2026-09-06) ----------------------------------------------------------------
+        // Leads read as one register, filtered by strategy (the strategy page's funnel) and stage;
+        // Number resolves LD-#### references. A lead's timeline reads per lead.
+        modelBuilder.Entity<LeadEntity>()
+            .HasIndex(row => row.StrategyId)
+            .HasDatabaseName("IX_Leads_StrategyId");
+        modelBuilder.Entity<LeadEntity>()
+            .HasIndex(row => row.Number)
+            .HasDatabaseName("IX_Leads_Number");
+        modelBuilder.Entity<LeadActivityEntity>()
+            .HasIndex(row => row.LeadId)
+            .HasDatabaseName("IX_LeadActivities_LeadId");
+        modelBuilder.Entity<SalesStrategyEntity>()
+            .HasIndex(row => row.Status)
+            .HasDatabaseName("IX_SalesStrategies_Status");
+
         // ---- KPI emails --------------------------------------------------------------------------
         // People resolve by portal email (a user's KpiPerson is found, never duplicated); emails
         // read per person (the admin register's filter); Number resolves KPI-#### references; the

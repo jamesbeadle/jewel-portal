@@ -3,20 +3,18 @@ using Jewel.JPMS.Api.Features.Architects.Commands;
 using Jewel.JPMS.Api.Features.Clients;
 using Jewel.JPMS.Api.Features.Clients.Commands;
 using Jewel.JPMS.Api.Features.Directory.Commands;
-using Jewel.JPMS.Api.Features.Leads.Commands;
 using Jewel.JPMS.Api.Features.Parties;
 using Jewel.JPMS.Api.Features.Subcontractors.Commands;
 using Jewel.JPMS.Contracts.Architects;
 using Jewel.JPMS.Contracts.Clients;
 using Jewel.JPMS.Contracts.Directory;
-using Jewel.JPMS.Contracts.Leads;
 using Jewel.JPMS.Contracts.Parties;
 using Jewel.JPMS.Contracts.Subcontractors;
 
 namespace Jewel.JPMS.Api.Features.Ai.Tools.Actions;
 
-/// <summary>Subcontractor directory, leads/CRM, party-contact and user-directory commands as
-/// connector actions. Mirrors Features/Subcontractors, Features/Leads, Features/Parties,
+/// <summary>Subcontractor directory, party-contact and user-directory commands as connector
+/// actions. Mirrors Features/Subcontractors, Features/Parties,
 /// Features/Architects, Features/Clients and Features/Directory — each entry's VisibleTo copies
 /// its Authorisation class's role set (replicated inline where the endpoint keeps the set in a
 /// private field), and the stamps copy exactly what the endpoint stamps server-side.</summary>
@@ -30,12 +28,6 @@ internal sealed partial class SubcontractorsAndLeadsActions : IAiActionSource
     private static readonly RoleSet DirectoryRecordEditors =
         RoleSet.Of(JpmsRoles.Director, JpmsRoles.FinanceDirector, JpmsRoles.ProjectManager);
 
-    private static readonly RoleSet LeadWorkers =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager, JpmsRoles.Estimator);
-
-    private static readonly RoleSet LeadDeciders =
-        RoleSet.Of(JpmsRoles.Director, JpmsRoles.ProjectManager);
-
     private static readonly RoleSet PartyContactManagers =
         RoleSet.Of(Role.Admin, JpmsRoles.Director, JpmsRoles.ProjectManager);
 
@@ -45,7 +37,8 @@ internal sealed partial class SubcontractorsAndLeadsActions : IAiActionSource
 
     public IEnumerable<AiAction> Build() =>
         SubcontractorsActions()
-            .Concat(LeadsCrmActions())
+            // The Leads/CRM actions of the May prototype left with the Sales rebuild (2026-09-06)
+            // — see SalesActions.
             .Concat(ContactsActions())
             .Concat(DirectoryUsersActions());
 

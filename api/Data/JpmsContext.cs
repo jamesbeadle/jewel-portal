@@ -32,6 +32,9 @@ public sealed partial class JpmsContext : DbContext
     public DbSet<BidDecisionEntity> BidDecisions => Set<BidDecisionEntity>();
     public DbSet<ProposalEntity> Proposals => Set<ProposalEntity>();
     public DbSet<LeadOutcomeEntity> LeadOutcomes => Set<LeadOutcomeEntity>();
+    // Sales (2026-09-06): strategies for finding leads, and each lead's timeline.
+    public DbSet<SalesStrategyEntity> SalesStrategies => Set<SalesStrategyEntity>();
+    public DbSet<LeadActivityEntity> LeadActivities => Set<LeadActivityEntity>();
 
     public DbSet<BoqLineItemEntity> BoqLineItems => Set<BoqLineItemEntity>();
     public DbSet<BoqSignOffEntity> BoqSignOffs => Set<BoqSignOffEntity>();

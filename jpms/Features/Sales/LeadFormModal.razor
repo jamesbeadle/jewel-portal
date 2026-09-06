@@ -1,0 +1,263 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject ICommandSender Commands
+@inject IUserDirectory UserDirectory
+@inject AuthService Auth
+@implements IDisposable
+
+@*
+    Capture or edit a lead — the one form for both (Existing null = capturing). The strategy that
+    found the lead is a picker over the strategies list; when the modal is opened from a strategy
+    page, FixedStrategyId pre-selects it. Capturing lets a warmer starting stage be picked (an
+    inbound enquiry is already Engaged); editing never touches the stage — that is the lead page's
+    move control. Validation mirrors the server's (CaptureLeadValidation): a person or a company,
+    and an owner.
+*@
+
+<Modal IsOpen="@IsOpen"
+       Title="@(Existing is null ? "New lead" : $"Edit {Existing.Reference}")"
+       ConfirmLabel="@(busy ? "Saving…" : Existing is null ? "Add lead" : "Save changes")"
+       ConfirmDisabled="@(busy || !FormReady)"
+       OnCancel="Cancel"
+       OnConfirm="SaveAsync"
+       Class="max-w-3xl">
+    @if (error is not null)
+    {
+        <p class="rounded bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+    }
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">Contact name</label>
+            <input type="text" class="field w-full" maxlength="256" placeholder="Who we would be talking to"
+                   value="@contactName" @oninput="e => contactName = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">Company / practice</label>
+            <input type="text" class="field w-full" maxlength="256" placeholder="Blank for a private homeowner"
+                   value="@companyName" @oninput="e => companyName = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">Email</label>
+            <input type="email" class="field w-full" maxlength="256"
+                   value="@contactEmail" @oninput="e => contactEmail = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">Phone</label>
+            <input type="tel" class="field w-full" maxlength="64"
+                   value="@contactPhone" @oninput="e => contactPhone = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">Who they are</label>
+            <select class="field w-full" value="@prospectKind" @onchange="e => prospectKind = Enum.Parse<LeadProspectKind>(e.Value?.ToString() ?? nameof(LeadProspectKind.Homeowner))">
+                @foreach (var kind in Enum.GetValues<LeadProspectKind>())
+                {
+                    <option value="@kind">@kind.DisplayName()</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">Estimated value (£)</label>
+            <input type="number" class="field w-full" min="0" step="1000" placeholder="Rough, if known"
+                   value="@estimatedValueText" @oninput="e => estimatedValueText = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-content mb-1">Property / site address</label>
+            <input type="text" class="field w-full" maxlength="512" placeholder="Where the work would be"
+                   value="@propertyAddress" @oninput="e => propertyAddress = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">Postcode</label>
+            <input type="text" class="field w-full" maxlength="16" placeholder="e.g. GU10 1AA"
+                   value="@postcode" @oninput="e => postcode = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">Owner *</label>
+            <SearchSelect Options="@OwnerOptions" Value="@ownerEmail" ValueChanged="v => ownerEmail = v"
+                          Placeholder="Who is working it" WidthClass="w-full" InputClass="field" />
+        </div>
+        <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-content mb-1">The possible work, in a line</label>
+            <input type="text" class="field w-full" maxlength="512" placeholder="e.g. rear extension and loft conversion; new build on the plot next door"
+                   value="@summary" @oninput="e => summary = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">How we found them</label>
+            <select class="field w-full" value="@source" disabled="@(FixedStrategyId is not null)"
+                    @onchange="e => source = Enum.Parse<LeadSource>(e.Value?.ToString() ?? nameof(LeadSource.Manual))">
+                @foreach (var option in Enum.GetValues<LeadSource>())
+                {
+                    <option value="@option">@option.DisplayName()</option>
+                }
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-content mb-1">Strategy</label>
+            @if (FixedStrategyId is not null)
+            {
+                <input type="text" class="field w-full" disabled value="@(StrategyOptions.FirstOrDefault(o => o.Value == FixedStrategyId)?.Label ?? "This strategy")" />
+            }
+            else
+            {
+                <SearchSelect Options="@StrategyOptions" Value="@strategyId" ValueChanged="OnStrategyPicked"
+                              Placeholder="@(StrategyOptions.Count == 0 ? "No strategies yet" : "None — not found by a strategy")"
+                              WidthClass="w-full" InputClass="field" Disabled="@(StrategyOptions.Count == 0)" />
+            }
+        </div>
+        @if (Existing is null)
+        {
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-content mb-1">Starting stage</label>
+                <select class="field w-full" value="@stage" @onchange="e => stage = Enum.Parse<LeadStage>(e.Value?.ToString() ?? nameof(LeadStage.New))">
+                    @foreach (var option in LeadStageExtensions.Ladder.Where(s => s != LeadStage.Won && s != LeadStage.Lost))
+                    {
+                        <option value="@option">@option.DisplayName() — @option.Meaning()</option>
+                    }
+                </select>
+            </div>
+        }
+        <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-content mb-1">Notes</label>
+            <textarea class="field w-full" rows="4" maxlength="4000" placeholder="Anything worth knowing — how they came up, what they said, who else is involved"
+                      value="@notes" @oninput="e => notes = e.Value?.ToString() ?? string.Empty"></textarea>
+        </div>
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    /// <summary>Null = capturing a new lead; otherwise the lead being edited.</summary>
+    [Parameter] public Lead? Existing { get; set; }
+    /// <summary>The strategies the picker offers (Active and Draft lead the list).</summary>
+    [Parameter] public IReadOnlyList<SalesStrategyOverview>? Strategies { get; set; }
+    /// <summary>Pre-selects and pins the strategy — the strategy page's "Add lead".</summary>
+    [Parameter] public string? FixedStrategyId { get; set; }
+    [Parameter] public EventCallback<Lead> OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private bool busy;
+    private string? error;
+    private bool openedFor;
+    private string? loadedForKey;
+
+    private string contactName = "";
+    private string contactEmail = "";
+    private string contactPhone = "";
+    private string companyName = "";
+    private LeadProspectKind prospectKind = LeadProspectKind.Homeowner;
+    private string propertyAddress = "";
+    private string postcode = "";
+    private string summary = "";
+    private string notes = "";
+    private LeadSource source = LeadSource.Manual;
+    private string strategyId = "";
+    private string estimatedValueText = "";
+    private string ownerEmail = "";
+    private LeadStage stage = LeadStage.New;
+
+    private bool FormReady =>
+        (!string.IsNullOrWhiteSpace(contactName) || !string.IsNullOrWhiteSpace(companyName))
+        && !string.IsNullOrWhiteSpace(ownerEmail)
+        && (string.IsNullOrWhiteSpace(estimatedValueText) || decimal.TryParse(estimatedValueText, out _));
+
+    private IReadOnlyList<SearchSelect.Option> OwnerOptions =>
+        UserDirectory.All()
+            .OrderBy(user => user.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(user => new SearchSelect.Option(user.Email, string.IsNullOrWhiteSpace(user.DisplayName) ? user.Email : user.DisplayName))
+            .ToList();
+
+    private IReadOnlyList<SearchSelect.Option> StrategyOptions =>
+        (Strategies ?? Array.Empty<SalesStrategyOverview>())
+            .Select(row => new SearchSelect.Option(row.Strategy.StrategyId,
+                row.Strategy.Status == SalesStrategyStatus.Active ? row.Strategy.Name : $"{row.Strategy.Name} ({row.Strategy.Status.DisplayName()})"))
+            .ToList();
+
+    protected override void OnInitialized()
+    {
+        UserDirectory.OnChange += StateHasChanged;
+        _ = UserDirectory.All(); // starts the directory's lazy fetch for the owner picker
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Re-seed the fields each time the modal opens (or opens for a different lead), never
+        // while it is open — a re-render must not wipe what is being typed.
+        var key = IsOpen ? (Existing?.LeadId ?? "new") + "|" + (FixedStrategyId ?? "") : null;
+        if (key is null) { openedFor = false; loadedForKey = null; return; }
+        if (openedFor && loadedForKey == key) return;
+        openedFor = true;
+        loadedForKey = key;
+        error = null;
+        if (Existing is { } lead)
+        {
+            contactName = lead.ContactName; contactEmail = lead.ContactEmail; contactPhone = lead.ContactPhone;
+            companyName = lead.CompanyName; prospectKind = lead.ProspectKind; propertyAddress = lead.PropertyAddress;
+            postcode = lead.Postcode; summary = lead.Summary; notes = lead.Notes; source = lead.Source;
+            strategyId = lead.StrategyId ?? ""; estimatedValueText = lead.EstimatedValue?.ToString("0.##") ?? "";
+            ownerEmail = lead.OwnerEmail; stage = lead.Stage;
+        }
+        else
+        {
+            contactName = ""; contactEmail = ""; contactPhone = ""; companyName = "";
+            propertyAddress = ""; postcode = ""; summary = ""; notes = ""; estimatedValueText = "";
+            ownerEmail = Auth.CurrentUser?.Email ?? "";
+            stage = LeadStage.New;
+            strategyId = FixedStrategyId ?? "";
+            source = FixedStrategyId is null ? LeadSource.Manual : LeadSource.Strategy;
+            var audience = (Strategies ?? Array.Empty<SalesStrategyOverview>())
+                .FirstOrDefault(row => row.Strategy.StrategyId == FixedStrategyId)?.Strategy.Audience;
+            prospectKind = audience?.DefaultProspectKind() ?? LeadProspectKind.Homeowner;
+        }
+    }
+
+    private void OnStrategyPicked(string value)
+    {
+        strategyId = value;
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            source = LeadSource.Strategy;
+            var audience = (Strategies ?? Array.Empty<SalesStrategyOverview>())
+                .FirstOrDefault(row => row.Strategy.StrategyId == value)?.Strategy.Audience;
+            if (Existing is null && audience is { } a) prospectKind = a.DefaultProspectKind();
+        }
+        else if (source == LeadSource.Strategy)
+        {
+            source = LeadSource.Manual;
+        }
+    }
+
+    private async Task Cancel()
+    {
+        if (busy) return;
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (!FormReady || busy) return;
+        busy = true; error = null;
+        try
+        {
+            decimal? value = string.IsNullOrWhiteSpace(estimatedValueText) ? null : decimal.Parse(estimatedValueText);
+            var pickedStrategy = string.IsNullOrWhiteSpace(strategyId) ? null : strategyId;
+            Lead saved;
+            if (Existing is { } lead)
+            {
+                saved = await Commands.SendAsync(new UpdateLead(
+                    lead.LeadId, contactName.Trim(), contactEmail.Trim(), contactPhone.Trim(), companyName.Trim(),
+                    prospectKind, propertyAddress.Trim(), postcode.Trim(), summary.Trim(), notes.Trim(),
+                    source, pickedStrategy, value, ownerEmail.Trim()), CancellationToken.None);
+            }
+            else
+            {
+                saved = await Commands.SendAsync(new CaptureLead(
+                    contactName.Trim(), contactEmail.Trim(), contactPhone.Trim(), companyName.Trim(),
+                    prospectKind, propertyAddress.Trim(), postcode.Trim(), summary.Trim(), notes.Trim(),
+                    source, pickedStrategy, value, ownerEmail.Trim(), stage), CancellationToken.None);
+            }
+            await OnSaved.InvokeAsync(saved);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    public void Dispose() => UserDirectory.OnChange -= StateHasChanged;
+}

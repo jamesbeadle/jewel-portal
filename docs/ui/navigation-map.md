@@ -6,11 +6,11 @@ Read from `jpms/Services/Navigation/SidebarFolders.cs`, `DesktopNavigation.cs`,
 
 ## Shape of the rail
 
-`Home` → project picker → **10 collapsible folders** (58 rows) → **4 folderless rows** at the foot
+`Home` → project picker → **11 collapsible folders** (60 rows) → **4 folderless rows** at the foot
 → signed-in identity + Sign out.
 
 Folder order: Project · Subcontractor · Supplier · Internal · Time · Finance · Financial Reports ·
-Xero · Audit · Admin. Foot: Control Centre · Document Triage · Xero Cost Allocation ·
+Xero · Audit · Sales · Admin. Foot: Control Centre · Document Triage · Xero Cost Allocation ·
 Valuation Reports.
 
 **Nav clamp (decision 2026-08-11).** Every row is gated to Managing Director and Finance Director;
@@ -97,6 +97,16 @@ Transactions and Allocation are sibling tabs of the **Xero** workspace section.
 Reconciliation Audit `/projects/{id}/reconciliation-audit` · System Audit Trail `/audit` ·
 Agent Activity `/agents/activity` · AI Connections `/settings/ai-connections`
 (any signed-in user can open that last one directly; only the nav row is clamped)
+
+## 09a · Sales (2026-09-06)
+
+Leads `/sales/leads` (lead page `/sales/leads/{id}`) · Strategies `/sales/strategies`
+(strategy page `/sales/strategies/{id}`)
+
+The lead register and the strategies — methodologies for finding leads, each with its
+justification, a Claude-drafted approach plan and the funnel its leads make — that feed it.
+Leads and Strategies are sibling tabs of the **Sales** workspace section. Between Audit and
+Admin by James's call. Won on a lead creates the client account and the project shell.
 
 ## 10 · Admin
 

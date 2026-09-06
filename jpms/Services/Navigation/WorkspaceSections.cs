@@ -74,8 +74,19 @@ public static class WorkspaceSections
             new WorkspaceTab("KPI emails", "/admin/kpis", Array.Empty<Role>())
         });
 
+    // Sales (2026-09-06): the lead register and the strategies that feed it read as one area.
+    // Mirrors the API's SalesRoles.Readers (AllInternal); the rail's directors-only clamp still
+    // decides who sees the folder.
+    public static readonly WorkspaceSectionInfo Sales = new(
+        "Sales",
+        new[]
+        {
+            new WorkspaceTab("Leads", "/sales/leads", DesktopNavigation.AllInternalRoles),
+            new WorkspaceTab("Strategies", "/sales/strategies", DesktopNavigation.AllInternalRoles)
+        });
+
     public static readonly IReadOnlyList<WorkspaceSectionInfo> All =
-        new[] { Xero, FinanceSetup, Admin };
+        new[] { Xero, FinanceSetup, Admin, Sales };
 
     public static WorkspaceSectionInfo? SectionOwning(string path) =>
         All.FirstOrDefault(section => section.Owns(path));

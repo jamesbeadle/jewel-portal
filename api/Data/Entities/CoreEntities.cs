@@ -2,9 +2,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Jewel.JPMS.Api.Data.Entities;
 
+// A lead (see Jewel.JPMS.Models.Lead) — rebuilt 2026-09-06 for the Sales section: the May 2026
+// prototype's columns survive (SiteAddress is the property address; Stage/Source ints were
+// remapped by AddSalesStrategies), the rest were added then. The satellite CRM tables of that
+// prototype (QualificationAssessments, SiteVisits, InfoChaseItems, BidDecisions, Proposals,
+// LeadOutcomes — CrmEntities.cs) are no longer written or read; they stay in the database.
 public sealed class LeadEntity
 {
     [Key, MaxLength(64)] public string LeadId { get; set; } = "";
+    // Legacy free-text reference from the prototype; the LD-#### reference is computed from Number.
     [MaxLength(64)]      public string Reference { get; set; } = "";
     [MaxLength(256)]     public string ContactName { get; set; } = "";
     [MaxLength(256)]     public string ContactEmail { get; set; } = "";
@@ -16,6 +22,28 @@ public sealed class LeadEntity
     public int Stage { get; set; }
     [MaxLength(256)]     public string OwnerEmail { get; set; } = "";
     public DateTimeOffset CapturedAt { get; set; }
+
+    // ---- Sales rebuild (2026-09-06) ----
+    // Sequential, human-readable number (rendered as LD-0001) — global, minted by CaptureLeadHandler.
+    public int Number { get; set; }
+    public int ProspectKind { get; set; }
+    [MaxLength(16)]      public string Postcode { get; set; } = "";
+    [MaxLength(512)]     public string Summary { get; set; } = "";
+    [MaxLength(4000)]    public string Notes { get; set; } = "";
+    // The strategy that found the lead; null for inbound / referral / manual. No FK — the
+    // handlers own the relationship (a retired strategy keeps its leads).
+    [MaxLength(64)]      public string? StrategyId { get; set; }
+    public DateTimeOffset StageChangedAt { get; set; }
+    // Set by WinLead: the client account and project shell the lead became.
+    [MaxLength(64)]      public string? ClientId { get; set; }
+    [MaxLength(64)]      public string? ProjectId { get; set; }
+    // Set by MoveLeadStage → Lost; cleared on reopen.
+    [MaxLength(1024)]    public string? LostReason { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string DisplayReference => Number > 0
+        ? $"LD-{Number:0000}"
+        : (string.IsNullOrWhiteSpace(Reference) ? $"LD-{LeadId.PadRight(8, '0')[..8].ToUpperInvariant()}" : Reference);
 }
 
 public sealed class BoqLineItemEntity
