@@ -2,7 +2,7 @@
     Timesheet status pill for worker-facing views (My day). Compact, colour-coded, no £:
     Submitted = waiting for the PM, Approved = done, Rejected = needs the worker's attention.
 *@
-<span class="text-[11px] font-semibold rounded-full px-2 py-0.5 @PillClass">@Label</span>
+<span class="text-xs font-medium rounded px-2 py-0.5 @PillClass">@Label</span>
 
 @code {
     [Parameter, EditorRequired] public TimesheetStatus Status { get; set; }

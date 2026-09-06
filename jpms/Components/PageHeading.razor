@@ -2,7 +2,7 @@
 @inject SessionService Session
 @implements IDisposable
 
-<h1 class="text-xl font-semibold text-content truncate">@CurrentTitle</h1>
+<h1 class="text-xl font-medium text-content truncate">@CurrentTitle</h1>
 
 @code {
     protected override void OnInitialized() => Nav.LocationChanged += HandleLocationChanged;

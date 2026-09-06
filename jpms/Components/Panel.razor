@@ -9,7 +9,7 @@
     @if (Title is not null || HeaderActions is not null)
     {
         <header class="panel-header flex items-center justify-between gap-3">
-            <h2 class="text-base font-semibold text-content">@Title</h2>
+            <h2 class="text-lg font-semibold text-content">@Title</h2>
             @if (HeaderActions is not null)
             {
                 <div class="flex items-center gap-2">@HeaderActions</div>
@@ -28,7 +28,7 @@
     [Parameter] public RenderFragment? HeaderActions { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
     [Parameter] public string Class { get; set; } = "";
-    [Parameter] public string BodyClass { get; set; } = "p-5";
+    [Parameter] public string BodyClass { get; set; } = "p-6";
 
     /// <summary>True until every store this panel reads has landed. Compose several with
     /// LoadState.UntilAll(...) so the panel reveals itself in one piece.</summary>

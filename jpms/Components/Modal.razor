@@ -6,30 +6,32 @@
     <div class="@OverlayClass" @onclick="HandleOverlayClick">
         <div class="modal-panel @Class flex flex-col max-h-[85vh] outline-none" tabindex="-1"
              @ref="panelRef" @onclick:stopPropagation="true">
-            <header class="shrink-0 flex items-center justify-between gap-3 px-5 py-4 border-b border-line">
-                <h2 class="text-base font-semibold text-content">@Title</h2>
+            @* The Figma modal: 32px padding, 24/Semi title, a hairline under the header, Large buttons
+               in the footer (see .modal-panel and [data-modal-footer] in app.tailwind.css). *@
+            <header class="shrink-0 flex items-center justify-between gap-3 px-8 pt-8 pb-4 border-b border-line-strong">
+                <h2 class="text-2xl font-semibold text-content">@Title</h2>
                 <button type="button" @onclick="OnCancel" aria-label="Close"
-                        class="inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        class="inline-flex items-center justify-center w-8 h-8 rounded text-content hover:bg-surface-raised">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                          stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
                 </button>
             </header>
 
-            <div class="px-5 py-4 overflow-y-auto grow" data-modal-body>
+            <div class="px-8 py-6 overflow-y-auto grow" data-modal-body>
                 @ChildContent
             </div>
 
             @if (FooterContent is not null)
             {
-                <footer class="shrink-0 flex items-center justify-end gap-2 px-5 py-4 border-t border-line" data-modal-footer>
+                <footer class="shrink-0 flex items-center justify-end gap-2.5 px-8 pt-4 pb-8" data-modal-footer>
                     @FooterContent
                 </footer>
             }
             else if (ShowFooter)
             {
-                <footer class="shrink-0 flex items-center justify-end gap-2 px-5 py-4 border-t border-line" data-modal-footer>
-                    <button type="button" class="btn-neutral" @onclick="OnCancel">@CancelLabel</button>
-                    <button type="button" class="btn-primary" disabled="@ConfirmDisabled" @onclick="OnConfirm">@ConfirmLabel</button>
+                <footer class="shrink-0 flex items-center justify-end gap-2.5 px-8 pt-4 pb-8" data-modal-footer>
+                    <button type="button" class="btn-secondary btn-lg" @onclick="OnCancel">@CancelLabel</button>
+                    <button type="button" class="btn-primary btn-lg" disabled="@ConfirmDisabled" @onclick="OnConfirm">@ConfirmLabel</button>
                 </footer>
             }
         </div>

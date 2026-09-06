@@ -6,29 +6,29 @@
 
 <article class="@Class">
     <div class="flex items-baseline justify-between gap-3">
-        <p class="text-sm text-content-subtle">@Label</p>
+        <p class="text-sm font-medium text-content-subtle">@Label</p>
         @if (DeltaLabel is not null && !IsLoading)
         {
             <div class="text-right leading-tight">
-                <p class="text-xs font-medium @DeltaClass">@DeltaLabel</p>
+                <p class="text-sm font-medium @DeltaClass">@DeltaLabel</p>
                 @if (Caption is not null)
                 {
-                    <p class="text-[11px] text-content-subtle">@Caption</p>
+                    <p class="text-xs font-medium text-content-subtle">@Caption</p>
                 }
             </div>
         }
     </div>
     @if (IsLoading)
     {
-        <p class="mt-1 text-2xl md:text-3xl font-semibold text-content tracking-tight flex items-center h-9 md:h-10"
+        <p class="mt-2 text-2xl font-medium text-content flex items-center h-6"
            role="status" aria-live="polite" aria-busy="true">
-            <JewelIcon Class="w-6 h-6 md:w-7 md:h-7 animate-jewel-pulse" />
+            <JewelIcon Class="w-6 h-6 animate-jewel-pulse" />
             <span class="sr-only">Loading @Label</span>
         </p>
     }
     else
     {
-        <p class="mt-1 text-2xl md:text-3xl font-semibold text-content tracking-tight">@Value</p>
+        <p class="mt-2 text-2xl font-medium text-content">@Value</p>
     }
 </article>
 

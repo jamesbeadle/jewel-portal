@@ -3,7 +3,7 @@
 @* A sortable table column's header: the label as a button, with the ▼/▲ marker when this column
    drives the sort. The table owns the sort state; the header only reports the click. *@
 <button type="button"
-        class="inline-flex items-center gap-1 uppercase tracking-wider font-semibold hover:text-content"
+        class="inline-flex items-center gap-1 font-semibold text-content hover:text-content-muted"
         title="Sort by @Label"
         @onclick="() => OnSort.InvokeAsync(Column)">
     @Label

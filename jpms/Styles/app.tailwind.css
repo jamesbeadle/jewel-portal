@@ -39,81 +39,133 @@
 }
 
 @layer components {
+    /* ---- Recipes from the Open Book Figma (docs/ui/open-book-design-rules.md §4). Every class
+       below is the design's own spec in Tailwind tokens, so a view built from them matches the
+       file by construction. The doctrine that goes with them is §5 of that document and
+       DESIGN-SYSTEM.md. ---- */
+
+    /* A label. The design has no uppercase, no tracking and nothing under 12px: labels are
+       14/Med sentence case in G5 (content-subtle). The class name survives the transition so
+       the ~100 call sites keep working; the look is the Figma's. */
     .eyebrow {
-        @apply text-[11px] uppercase tracking-wider text-content-subtle font-semibold;
+        @apply text-sm font-medium text-content-subtle;
     }
 
+    /* Cards, panels and table containers are SQUARE in the design — hierarchy is fill and
+       border, never radius or shadow. */
     .panel {
-        @apply rounded-xl border border-line bg-surface;
+        @apply border border-line bg-surface;
     }
 
     .panel-header {
-        @apply px-5 py-3 border-b border-line;
+        @apply px-6 py-4 border-b border-line;
     }
 
+    /* The Figma `_Input`: 44px tall, 16px type, 4px radius, Table-Seperator border on a
+       Table-Highlight fill, G6 placeholder. Focus is not on any walked screen — accent border
+       is the house choice until it is (§8). */
     .field {
-        @apply w-full rounded-md border border-line bg-surface-field px-3 py-2 text-sm text-content placeholder:text-content-faint focus:border-line-strong focus:outline-none;
+        @apply w-full h-11 rounded border border-line-strong bg-surface-field px-4 py-3 text-base text-content placeholder:text-content-faint focus:border-accent focus:outline-none;
     }
 
+    /* Textareas share the field's skin but not its fixed height. */
+    textarea.field {
+        @apply h-auto;
+    }
+
+    /* Buttons come in TWO sizes only. Small (this, 32px / 14px) is every in-view action; Large
+       (`btn-lg`, 52px / 16px) is a dialog or form submit. 4px radius, 4px icon gap. */
     .btn {
-        @apply inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition;
+        @apply inline-flex items-center justify-center gap-1 h-8 rounded px-4 py-2 text-sm font-medium transition;
     }
 
+    /* Green means "do it", once: one solid accent control per view or per dialog footer.
+       Text on the green is the canvas colour. */
     .btn-primary {
         @apply btn bg-accent text-accent-ink hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-accent;
     }
 
-    /* Secondary ACTION button — green outline. Every button that does something is green: solid
-       (btn-primary) for the page's main act, outline (btn-secondary) for the rest. Buttons that
-       back out — Cancel / Keep / Close / Back — use btn-neutral or btn-ghost so "do it" and
-       "never mind" stay visually distinct. */
+    /* The Figma "Minimal" button — EVERY other button: a 1px Outline border, no fill, white
+       label. There is no green on it; the earlier "every action is green" rule is retired
+       (2026-09-03, Figma wins). Action vs dismiss is carried by position and label, as in the
+       design: green primary on the right, dismiss to its left. Disabled swaps the text to G6
+       rather than fading the whole control. */
     .btn-secondary {
-        @apply btn bg-surface-raised text-accent border border-accent/40 hover:border-accent hover:bg-accent/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-accent/40 disabled:hover:bg-surface-raised;
+        @apply btn border border-line bg-transparent text-content hover:border-line-strong hover:bg-surface-raised disabled:text-content-faint disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:bg-transparent;
     }
 
-    /* The old grey bordered button, kept for dismissals (Cancel/Keep/Close/Back) and as the base
-       under destructive text-negative overrides. */
+    /* Alias of btn-secondary, kept for one round so existing Cancel / Keep / Close / Back
+       call sites keep working. New code writes btn-secondary. */
     .btn-neutral {
-        @apply btn bg-surface-raised text-content border border-line hover:border-line-strong disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-line;
+        @apply btn-secondary;
     }
 
     .btn-ghost {
         @apply btn text-content-muted hover:text-content hover:bg-surface-raised;
     }
 
-    /* A Toolbar's icon button: fixed square, glyph inherits currentColor. Green like every other
-       action button; disabled styling is built in because toolbars are exactly where "can't right
-       now" is common — an export with no rows, a refresh already in flight. */
-    .btn-icon {
-        @apply inline-flex items-center justify-center w-8 h-8 rounded-md border border-accent/40 bg-surface-raised text-accent transition hover:border-accent hover:bg-accent/10 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-accent/40 disabled:hover:bg-surface-raised shrink-0;
+    /* The Large size — dialog and form submits (modal Cancel / Save). Large buttons take the
+       Table-Seperator border, small ones the Outline border. */
+    .btn-lg {
+        @apply h-[52px] px-8 py-4 text-base;
     }
 
+    .btn-secondary.btn-lg,
+    .btn-neutral.btn-lg {
+        @apply border-line-strong hover:border-line-strong;
+    }
+
+    /* A Modal's default footer upsizes its buttons to Large by itself, so the 26 dialogs that
+       pass their own FooterContent get the design's footer without a change each. Ghost and
+       destructive text buttons are left alone. */
+    [data-modal-footer] .btn-primary,
+    [data-modal-footer] .btn-secondary,
+    [data-modal-footer] .btn-neutral {
+        @apply h-[52px] px-8 py-4 text-base;
+    }
+
+    [data-modal-footer] .btn-secondary,
+    [data-modal-footer] .btn-neutral {
+        @apply border-line-strong;
+    }
+
+    /* A Toolbar's icon button: the Minimal button at a fixed 32px square, glyph in currentColor.
+       Disabled styling is built in because toolbars are exactly where "can't right now" is
+       common — an export with no rows, a refresh already in flight. */
+    .btn-icon {
+        @apply inline-flex items-center justify-center w-8 h-8 rounded border border-line bg-transparent text-content transition hover:border-line-strong hover:bg-surface-raised disabled:text-content-faint disabled:cursor-not-allowed disabled:hover:border-line disabled:hover:bg-transparent shrink-0;
+    }
+
+    /* The Figma `Table Wrapper`: header row on the CANVAS colour in white SemiBold, body rows on
+       surface in G4, every cell separated by the Table-Seperator border, 40px header / 48px rows,
+       16/24 cell padding. Links inside are `font-medium text-info`; money in the trailing column
+       is `font-medium text-content`. */
     .data-table {
-        @apply w-full text-sm text-left;
+        @apply w-full text-sm text-left border border-line-strong;
     }
 
     .data-table thead tr {
-        @apply text-content-subtle font-semibold border-b border-line;
+        @apply text-content font-semibold;
     }
 
     .data-table th {
-        @apply px-4 py-3 font-semibold;
+        @apply h-10 px-6 py-3 bg-canvas border-b border-line-strong font-semibold text-content;
     }
 
     .data-table tbody tr {
-        @apply border-b border-line transition;
-    }
-
-    .data-table tbody tr:last-child {
-        @apply border-b-0;
-    }
-
-    .data-table tbody tr.is-clickable:hover {
-        @apply bg-surface-raised cursor-pointer;
+        @apply transition;
     }
 
     .data-table td {
-        @apply px-4 py-3 text-content-muted;
+        @apply h-12 px-6 py-4 bg-surface border-b border-line-strong text-content-muted;
+    }
+
+    .data-table tbody tr:last-child td {
+        @apply border-b-0;
+    }
+
+    .data-table tbody tr.is-clickable:hover td {
+        @apply bg-surface-raised cursor-pointer;
     }
 
     /* The assistant panel's slide, and the shell's matching squeeze
@@ -147,6 +199,7 @@
         }
     }
 
+    /* Modal BG/Dark is #161819 @60%; canvas/70 is the nearest solid-token equivalent. */
     .modal-overlay {
         @apply fixed inset-0 z-50 flex items-center justify-center bg-canvas/70 p-4;
     }
@@ -165,8 +218,11 @@
         transition: padding-right 300ms ease-out;
     }
 
+    /* The Figma `_ Simple Modal Base`: 600 wide, on the CANVAS colour (darker than the page's
+       panels), 8px radius, Table-Seperator border, and the one shadow in the whole design —
+       0 4px 16px black @80%. Header / body / footer padding lives in Modal.razor. */
     .modal-panel {
-        @apply w-full max-w-md rounded-xl border border-line bg-surface shadow-2xl;
+        @apply w-full max-w-[600px] rounded-lg border border-line-strong bg-canvas shadow-[0_4px_16px_rgba(0,0,0,0.8)];
     }
 }
 
@@ -216,10 +272,10 @@
    panel into view and pulses its border/glow — used by the lineage bar's VO chip,
    whose target lives on the same page. */
 @keyframes jpms-flash {
-    0%   { box-shadow: 0 0 0 0 rgb(87 224 138 / 0);    border-color: theme('colors.line.DEFAULT'); }
-    20%  { box-shadow: 0 0 0 4px rgb(87 224 138 / 0.35); border-color: rgb(87 224 138 / 0.7); }
-    60%  { box-shadow: 0 0 0 4px rgb(87 224 138 / 0.2);  border-color: rgb(87 224 138 / 0.5); }
-    100% { box-shadow: 0 0 0 0 rgb(87 224 138 / 0);    border-color: theme('colors.line.DEFAULT'); }
+    0%   { box-shadow: 0 0 0 0 rgb(102 224 148 / 0);    border-color: theme('colors.line.DEFAULT'); }
+    20%  { box-shadow: 0 0 0 4px rgb(102 224 148 / 0.35); border-color: rgb(102 224 148 / 0.7); }
+    60%  { box-shadow: 0 0 0 4px rgb(102 224 148 / 0.2);  border-color: rgb(102 224 148 / 0.5); }
+    100% { box-shadow: 0 0 0 0 rgb(102 224 148 / 0);    border-color: theme('colors.line.DEFAULT'); }
 }
 
 .jpms-flash {
@@ -275,7 +331,7 @@
 /* The glowing frame: a hard inner ring plus a deep soft vignette, breathing. Drawn with inset
    box-shadows so it hugs the viewport at any size, and on its own element so the pulse animates
    the frame alone, not the dim (a throbbing page-darkness reads as a fault). */
-/* The colour IS the brand accent — rgb(87 224 138) = colors.accent.DEFAULT (#57E08A), same as
+/* The colour IS the action green — rgb(102 224 148) = colors.accent.DEFAULT (#66E094), same as
    every green button; keep the two in step. The alphas are deliberately low: an accent that
    looks right on a button turns lurid painted across a whole screen edge, so the frame whispers
    it — a fine ring and a shallow wash — rather than floodlighting it. */
@@ -285,24 +341,24 @@
     pointer-events: none;
     /* The resting frame — also what reduced-motion users see, so it lives outside the keyframes. */
     box-shadow:
-        inset 0 0 0 1.5px rgb(87 224 138 / 0.50),
-        inset 0 0 22px 2px rgb(87 224 138 / 0.14),
-        inset 0 0 90px 18px rgb(87 224 138 / 0.07);
+        inset 0 0 0 1.5px rgb(102 224 148 / 0.50),
+        inset 0 0 22px 2px rgb(102 224 148 / 0.14),
+        inset 0 0 90px 18px rgb(102 224 148 / 0.07);
     animation: jpms-takeover-breathe 2.8s ease-in-out infinite;
 }
 
 @keyframes jpms-takeover-breathe {
     0%, 100% {
         box-shadow:
-            inset 0 0 0 1.5px rgb(87 224 138 / 0.50),
-            inset 0 0 22px 2px rgb(87 224 138 / 0.14),
-            inset 0 0 90px 18px rgb(87 224 138 / 0.07);
+            inset 0 0 0 1.5px rgb(102 224 148 / 0.50),
+            inset 0 0 22px 2px rgb(102 224 148 / 0.14),
+            inset 0 0 90px 18px rgb(102 224 148 / 0.07);
     }
     50% {
         box-shadow:
-            inset 0 0 0 2px rgb(87 224 138 / 0.75),
-            inset 0 0 34px 6px rgb(87 224 138 / 0.22),
-            inset 0 0 120px 26px rgb(87 224 138 / 0.11);
+            inset 0 0 0 2px rgb(102 224 148 / 0.75),
+            inset 0 0 34px 6px rgb(102 224 148 / 0.22),
+            inset 0 0 120px 26px rgb(102 224 148 / 0.11);
     }
 }
 
@@ -323,11 +379,11 @@
     gap: 0.875rem;
     padding: 0.75rem 1.625rem 0.75rem 0.875rem;
     border-radius: 9999px;
-    border: 1px solid rgb(87 224 138 / 0.30);
-    background: rgb(11 11 12 / 0.78); /* the canvas colour, translucent — house glass, not black */
+    border: 1px solid rgb(102 224 148 / 0.30);
+    background: rgb(16 17 17 / 0.78); /* the canvas colour, translucent — house glass, not black */
     backdrop-filter: blur(8px);
     box-shadow:
-        0 0 18px 1px rgb(87 224 138 / 0.12),
+        0 0 18px 1px rgb(102 224 148 / 0.12),
         0 12px 40px rgb(0 0 0 / 0.50);
     animation: jpms-takeover-label-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
     animation-delay: 120ms;
@@ -342,15 +398,15 @@
     height: 2.75rem;
     flex-shrink: 0;
     border-radius: 9999px;
-    color: rgb(87 224 138 / 0.95);
-    background: rgb(87 224 138 / 0.08);
-    border: 1px solid rgb(87 224 138 / 0.30);
+    color: rgb(102 224 148 / 0.95);
+    background: rgb(102 224 148 / 0.08);
+    border: 1px solid rgb(102 224 148 / 0.30);
     animation: jpms-takeover-jewel 2.8s ease-in-out infinite;
 }
 
 @keyframes jpms-takeover-jewel {
-    0%, 100% { box-shadow: 0 0 12px 0 rgb(87 224 138 / 0.16); }
-    50%      { box-shadow: 0 0 22px 3px rgb(87 224 138 / 0.32); }
+    0%, 100% { box-shadow: 0 0 12px 0 rgb(102 224 148 / 0.16); }
+    50%      { box-shadow: 0 0 22px 3px rgb(102 224 148 / 0.32); }
 }
 
 .jpms-takeover-eyebrow {
@@ -358,7 +414,7 @@
     text-transform: uppercase;
     letter-spacing: 0.14em;
     font-weight: 600;
-    color: rgb(87 224 138 / 0.85);
+    color: rgb(102 224 148 / 0.85);
 }
 
 .jpms-takeover-title {

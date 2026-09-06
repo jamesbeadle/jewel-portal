@@ -6,8 +6,8 @@
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#0f172a",
-  "theme_color": "#0f172a",
+  "background_color": "#101111",
+  "theme_color": "#101111",
   "description": "JPMS — the Jewel Project Management System. The production client web app for Jewel Bespoke Build.",
   "prefer_related_applications": false,
   "icons": [

@@ -1,50 +1,93 @@
-# JPMS Design System — dark theme migration
+# JPMS Design System
 
-Adapted from the Open Book Figma. The goal of this document is that the look lives in **one place** (tokens + a small set of reusable classes and primitives), so converting the remaining pages is mechanical and future pages inherit the style for free.
+The look of the portal is the **Open Book** Figma (file `g7fm7dfuSYX81z1sdKAoyD`). This document is
+the short form; `docs/ui/open-book-design-rules.md` is the long form — every value below was read
+out of that file's local styles and Properties panels on 2026-09-03, not eyeballed from a
+screenshot. The goal is that the look lives in **one place** (tokens + a small set of reusable
+classes and primitives), so a page built from them matches the design by construction.
+
+**Standing decision (James, 2026-09-03): where this document, the Figma and an earlier jpms rule
+disagree, the Figma wins.** The earlier rules were stop-gaps for lower-level inconsistencies.
 
 ## 1. Tokens (single source of truth)
 
-All colours are named semantically in `tailwind.config.js`. Never write a raw hex in a component — change a token here and it propagates everywhere. If a colour is slightly off against the Figma, fix the one value below.
+All colours are named semantically in `tailwind.config.js`. Never write a raw hex in a component —
+change a token there and it propagates everywhere. Alpha Figma styles are flattened over the
+surface they sit on in the file.
 
-| Token | Hex | Used for |
-|---|---|---|
-| `canvas` | `#0B0B0C` | Page background (the darkest layer) |
-| `surface` | `#161719` | Panels, cards, table containers, headers |
-| `surface-raised` | `#1F2024` | Secondary buttons, hover states, raised areas |
-| `surface-field` | `#2A2D31` | Input fills |
-| `line` | `#232427` | Borders, dividers |
-| `line-strong` | `#34373B` | Hover/focus borders |
-| `content` | `#FFFFFF` | Primary text, headings, key figures |
-| `content-muted` | `#C4C8CE` | Body text |
-| `content-subtle` | `#8A9099` | Labels, eyebrows, account ids, inactive nav |
-| `content-faint` | `#5A5F68` | Placeholders, hints |
-| `accent` / `accent-hover` / `accent-ink` | `#57E08A` / `#4ECF7E` / `#0B0B0C` | Primary action (green); `accent-ink` is the text on it |
-| `positive` | `#4ED07D` | Positive amounts / deltas |
-| `negative` | `#FF4D4D` | Negative amounts / errors |
-| `info` | `#4691F6` | Transfers / neutral status |
+| Token | Hex | Figma style | Used for |
+|---|---|---|---|
+| `canvas` | `#101111` | BG/Dark | Page background; **table header rows**; the modal |
+| `surface` | `#19191C` | Panels/Dark @90% | Chrome (nav, top bar), cards, panels, table bodies |
+| `surface-raised` | `#282A31` | Panels/Table Highlight @70% | Hover / selected rows |
+| `surface-field` | `#282A31` | Panels/Table Highlight @70% | Input fills (same style as raised — on purpose) |
+| `line` | `#2E323A` | Boarders/Outline | Structural borders: nav, top bar, cards, **small** buttons |
+| `line-strong` | `#3C414A` | Boarders/Table Seperator @80% | Anything row- or field-shaped: table cells, inputs, radios, checkboxes, the modal, **large** buttons |
+| `content` | `#FFFFFF` | Text/White | Titles, values, button labels, header cells |
+| `content-muted` | `#DDDDDD` | Text/G4 | Table body text |
+| `content-subtle` | `#D1D1D1` | Text/G5 | Labels and captions (a label is content, not a hint) |
+| `content-faint` | `#8C8C8C` | Text/G6 | Inactive nav, placeholders, muted / disabled actions |
+| `accent` / `accent-hover` / `accent-ink` | `#66E094` / `#5ACF85` / `#101111` | Status/Positive | The ONE solid-green primary control per view; `accent-ink` is the text on it. `accent-hover` is a jpms assumption (Figma hover state not yet read) |
+| `positive` | `#66E094` | Status/Positive | Positive figures and deltas — the same green as `accent` |
+| `negative` | `#FF403C` | Status/Negative | Negative figures, errors. Never a button fill |
+| `info` | `#3CA1FF` | Status/Neutral | Neutral status **and links inside tables**. Never an action |
+| `brand` | `#4CDBEE` | Brand/Main | The logo / brand mark only |
 
-Type: **Poppins** (400/500/600/700), loaded in `index.html`, set as `font-sans`.
+`negative-strong` (`#8E1616`) and `negative-ink` (`#FFF1F1`) are jpms's own: the error toast's fill
+and its text.
 
-> These hex values are my best read of the Figma swatches. Please sanity-check `canvas`, `surface`, `surface-field`, `accent`, and `info` against the file — they're the ones most worth confirming.
+**Type: Poppins** (400/500/600/700), loaded in `index.html`, set as `font-sans`. The named sizes
+carry the Figma's fixed leadings (`tailwind.config.js` `fontSize`): `text-xs` 12/14 · `text-sm` 14/16
+· `text-base` 16/20 · `text-lg` 18/22 · `text-xl` 20/20 · `text-2xl` 24/24 · `text-4xl` 40/40 ·
+`text-5xl` 48/48. Letter-spacing is 0 everywhere.
 
 ## 2. Reusable classes (`Styles/app.tailwind.css`)
 
 For the common repeated idioms, use the class instead of re-typing utilities:
 
-| Class | Replaces | 
+| Class | What it is |
 |---|---|
-| `eyebrow` | `text-[11px] uppercase tracking-wider text-slate-500 font-semibold` |
-| `panel` | `rounded-xl border border-slate-200 bg-white` |
-| `panel-header` | `px-5 py-3 border-b border-slate-200 bg-slate-50` |
-| `field` | input border + bg + placeholder |
-| `btn-primary` / `btn-secondary` / `btn-neutral` / `btn-ghost` | bespoke button class strings |
-| `btn-icon` | a Toolbar's square icon button (fixed 8×8, green-bordered, disabled styling built in) |
+| `eyebrow` | A label: 14/Med sentence case in `content-subtle`. (The name is historical — there is no uppercase, no tracking, nothing under 12px in the design.) |
+| `panel` / `panel-header` | A square card: `border-line bg-surface`; header `px-6 py-4 border-b`. Body padding is 24 (`p-6`). |
+| `field` | The Figma input: `h-11 rounded border-line-strong bg-surface-field px-4 py-3 text-base`. `textarea.field` frees the height. |
+| `btn-primary` | Small solid-green button — the view's one primary act |
+| `btn-secondary` | The Figma "Minimal" button — every other action: 1px `line` border, no fill, white label. `btn-neutral` is an alias for one round. |
+| `btn-lg` | Add to either for the Large size (52px / 16px, `line-strong` border) — dialog and form submits |
+| `btn-ghost` | Quiet text-only dismissals |
+| `btn-icon` | A Toolbar's square icon button (32px, `line` border, no fill, disabled styling built in) |
+| `data-table` | The Figma table: header on `canvas` in white SemiBold, body on `surface` in `content-muted`, `line-strong` cell borders, 40/48px rows, 24/16 cell padding |
+| `modal-overlay` / `modal-panel` | Full-screen overlay + the dialog: 600 wide, on `canvas`, `rounded-lg`, `line-strong` border, the design's one shadow |
 
-**Button colour rule: every button that DOES something is green.** `btn-primary` (solid accent) stays reserved for the page's main act of creation; every other action — Edit, Reassign, Export, Load more, filter tabs, toolbar icons — is `btn-secondary` (accent text + accent/40 outline) or `btn-icon`. Buttons that back out (`Cancel`, `Keep`, `Close`, `Not now`, `Back`) use `btn-neutral` (the old grey bordered look) or `btn-ghost`, and destructive acts add `text-negative` (usually on `btn-neutral`/`btn-ghost`, with `border-negative/40` where the border should warn too). Never put a dismiss on a green class — the green/grey split is what makes "do it" findable at a glance.
-| `data-table` | the `<table>` + thead/tbody/td/row classes |
-| `modal-overlay` / `modal-panel` | full-screen overlay + dialog surface |
+**Buttons come in two sizes and two looks, and that is all.** Small (`btn-*`, 32px, 14/Med) for
+every in-view action; Large (`btn-lg`, 52px, 16/Med) for dialog and form submits — a `Modal`'s
+footer upsizes its buttons itself (`[data-modal-footer]`). **Green means "do it", once**: one
+`btn-primary` per view or per dialog footer; everything else is `btn-secondary` — grey-outlined,
+white text, no green. Action vs dismiss is carried by position and label (green on the right,
+dismiss to its left), exactly as in the design. Destructive acts add `text-negative` to a
+`btn-secondary`/`btn-ghost`. The 2026-08-14 "every action button is green" rule is retired.
 
-## 3. Reusable primitives (`Components/`)
+## 3. Usage rules (the doctrine that ships with each component)
+
+1. **Three fills, in order of depth**: page = `canvas`; chrome, cards and table bodies = `surface`;
+   fields and highlighted rows = `surface-field` / `surface-raised`. A table **header** drops back to
+   `canvas`. Nothing is lighter than `surface-raised` except a green button.
+2. **Two borders**: `line` around chrome and cards; `line-strong` around anything row- or
+   field-shaped (tables, inputs, radios, checkboxes, modal, large buttons).
+3. **Four text tones, monotonic**: `content` for titles, values, button labels, header cells;
+   `content-muted` for table body text; `content-subtle` for labels and captions; `content-faint`
+   for inactive nav, placeholders and muted actions. Never a raw grey.
+4. **Green means "do it", once.** Red is for figures and errors, never a button fill. Blue (`info`)
+   is for links in data and neutral status, never for actions.
+5. **Type: size by role, hierarchy by weight**: 20/Med page title · 18/Semi section title · 24/Semi
+   modal title · 24/Med headline figure · 20/Med card figure · 16/Med nav & inputs · 14/Med labels &
+   buttons · 14/Reg body · 12/Med captions. No 11px, no uppercase, no tracking.
+6. **Corners: 4px on controls (`rounded`), 8px on the modal (`rounded-lg`), 0 on everything else.**
+   No `rounded-xl`, no `rounded-md`, no pills.
+7. **No shadows except the modal.** No gradients; hierarchy is fill and border.
+8. **Spacing on the 4px grid**: cell padding 16/24, button padding 8/16 (small) 16/32 (large), card
+   padding 24, modal padding 32, nav padding 24/32, content gutter 32.
+
+## 4. Reusable primitives (`Components/`)
 
 | Component | Purpose |
 |---|---|
@@ -53,50 +96,26 @@ For the common repeated idioms, use the class instead of re-typing utilities:
 | `ActionIcon` | Name → outline action glyph (excel, download, refresh, email, document…) for toolbars and tab bars |
 | `Toolbar` / `ToolbarButton` / `ToolbarDivider` | THE in-view menu: a row of compact icon buttons with hover text for a component's view operations (export, refresh, download, email), grouped by related functionality with dividers. Labelled `btn-primary` stays reserved for the one primary act of creation |
 | `ExportToExcelButton` | The Excel export as a Toolbar icon button; with `ShowIncludeAllRows` it opens a current-view / include-all menu |
-| `RecordTabBar` | The request chain (Request → RFI → Variation, bid packages branching off) as document tabs — only existing records get a tab |
-| `Panel` | Card with optional title + header actions |
-| `Stat` | Small label/value tile |
-| `MetricStat` | Big figure with positive/negative delta + caption (the Total/Pending pattern) |
-| `Pagination` | Range label + prev/next pager for tables |
-| `Modal` | Dark dialog with title, close, Cancel/Action footer |
+| `RecordTabBar` | The request chain (Request → RFI → Variation) as document tabs — only existing records get a tab |
+| `Panel` | Card with optional title (18/Semi) + header actions; body `p-6` |
+| `Stat` / `FigureTile` | The Figma stat card: 14/Med label over a 20/Med figure, `p-6` |
+| `MetricStat` | The un-boxed headline figure: 14/Med label, 24/Med value, positive/negative delta + 12px caption |
+| `FormField` | 14/Med white label over a `field` |
+| `Pagination` | Range label + prev/next pager for tables (numbered pages per the Figma are still to come — open-book-design-rules.md §7 item 10) |
+| `Modal` | The Figma dialog: 24/Semi title, hairline under the header, Large Cancel/Action footer |
 
-## 4. Mechanical conversion map
+## 5. Keeping future work consistent
 
-When converting a page, find-and-replace these literals. This is the bulk of the work and is safe to apply in passes:
-
-| Old (light) | New (dark token) |
-|---|---|
-| `bg-white` | `bg-surface` |
-| `bg-slate-50` | `bg-surface` / `bg-surface-raised` |
-| `border-slate-200` | `border-line` |
-| `border-slate-300` (hover) | `border-line-strong` |
-| `divide-slate-200` | `divide-line` |
-| `text-slate-900` | `text-content` |
-| `text-slate-700` | `text-content-muted` |
-| `text-slate-600` | `text-content-muted` |
-| `text-slate-500` | `text-content-subtle` |
-| `text-slate-400` | `text-content-faint` |
-| `hover:bg-slate-50` | `hover:bg-surface-raised` |
-| `bg-slate-900 text-white` (badges/primary) | `bg-accent text-accent-ink` |
-
-After a pass, this should return nothing in converted files:
+New pages compose `Panel`, `Stat`/`MetricStat`, `data-table`, `Modal`, `btn-*`, `field` and
+`eyebrow` rather than hand-rolling utilities. The lint grep doubles as a CI check — any of these in
+`Pages`, `Components`, `Features` or `Layout` means the change drifted from the system:
 
 ```
-grep -rnE "slate-|bg-white|text-white" Pages Components Layout
+grep -rnE "slate-|bg-white|text-\[11px\]|text-\[10px\]|rounded-xl|rounded-md|rounded-full|uppercase|tracking-|shadow-" Pages Components Features Layout
 ```
 
-## 5. Phased rollout
+(`rounded-full` is allowed on avatars and radio buttons; `shadow-` only on the modal.)
 
-**Phase 1 — foundation (done).** Tokens, Poppins, jewel icon + favicon, reusable classes and primitives, app shell (the three layouts + the collapsible icon-rail side nav), and reference conversions: `Dashboard`/`RoleHome`, `ProjectsTable`, `Projects`, `WhatsNextPanel`, `RoleSwitcher`, `Login`.
-
-**Phase 2 — shared components (~115 in `Components/`).** Convert the reused building blocks first: every `*Table`, `*Form`, `*Badge`, `*Panel`, `*Card`, the tab navs and `FormField`. Because pages compose these, most pages visually update for free. Route table-heavy components through `data-table` + `Panel` + `Pagination`.
-
-**Phase 3 — page wrappers (68 in `Pages/`).** Mostly the `max-w-* px-* py-*` section headers and loading states. Standardise the page gutter: replace `max-w-* mx-auto px-4 py-8 md:py-12` (narrow, centred, over-padded) with `px-6 py-6 md:px-8` (near-full-width, modest gutter) to match the design. Apply the conversion map; replace header eyebrows with `eyebrow` and figures with `MetricStat` where a page shows totals.
-
-**Phase 4 — field app + portal + dialogs.** The `/site/*` mobile pages (their bodies are still light), external portal pages, and any inline modals → the `Modal` primitive and date-picker styling from the Figma.
-
-**Phase 5 — sweep + QA.** Run the grep lint above across the repo until clean; visually check each role's dashboard, a table page, a form page, and the mobile rail at 380px.
-
-## 6. Keeping future work consistent
-
-New pages should compose `Panel`, `Stat`/`MetricStat`, `data-table`, `Modal`, `btn-*`, `field`, and `eyebrow` rather than hand-rolling utilities. The Phase 5 grep doubles as a CI check — if `slate-`, `bg-white`, or `text-white` appears, the change drifted from the system.
+Still to read from the Figma (`docs/ui/open-book-design-rules.md` §8): row hover/select fill,
+the row-action dropdown, tabs vs pills, toggle switch, date picker, login page, button
+hover/pressed/disabled variants, status pills, and the mobile frames for `/site/*`.

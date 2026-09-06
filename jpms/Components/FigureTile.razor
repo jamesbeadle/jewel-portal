@@ -5,11 +5,11 @@
     Once the figure is known the caller renders it, with its caption, as the tile's body.
 *@
 
-<div class="rounded-xl border border-line bg-surface px-5 py-4" title="@Title">
-    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">@Label</p>
+<div class="panel p-6" title="@Title">
+    <p class="eyebrow mb-4">@Label</p>
     @if (IsLoading)
     {
-        <p class="text-2xl font-semibold text-content flex items-center h-8" role="status" aria-live="polite" aria-busy="true">
+        <p class="text-xl font-medium text-content flex items-center h-5" role="status" aria-live="polite" aria-busy="true">
             <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
             <span class="sr-only">@(LoadingLabel ?? $"Loading {Label.ToLowerInvariant()}")</span>
         </p>

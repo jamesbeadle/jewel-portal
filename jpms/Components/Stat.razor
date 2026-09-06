@@ -4,18 +4,18 @@
     this render a placeholder zero — a reader believes the first number they see.
 *@
 
-<article class="panel p-4">
-    <p class="eyebrow mb-1">@Label</p>
+<article class="panel p-6">
+    <p class="eyebrow mb-4">@Label</p>
     @if (IsLoading)
     {
-        <p class="text-content text-sm leading-snug flex items-center h-5" role="status" aria-live="polite" aria-busy="true">
-            <JewelIcon Class="w-3.5 h-3.5 animate-jewel-pulse" />
+        <p class="text-content text-xl font-medium flex items-center h-5" role="status" aria-live="polite" aria-busy="true">
+            <JewelIcon Class="w-4 h-4 animate-jewel-pulse" />
             <span class="sr-only">Loading @Label</span>
         </p>
     }
     else
     {
-        <p class="text-content text-sm leading-snug">@Value</p>
+        <p class="text-content text-xl font-medium">@Value</p>
     }
 </article>
 
