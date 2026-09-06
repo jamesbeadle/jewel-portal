@@ -96,7 +96,7 @@
         }
         else if (PayablesSnapshot is { IsConfigured: false } || ReceivablesSnapshot is { IsConfigured: false })
         {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+            <div class="panel-raised px-5 py-4 text-sm text-content-muted">
                 Xero isn't connected yet. Add the custom connection's credentials as the
                 <span class="font-mono text-content">Xero__ClientId</span> and
                 <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
@@ -104,14 +104,14 @@
         }
         else if (PayablesSnapshot?.Error is { } payablesError)
         {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+            <div class="panel-raised px-5 py-4 text-sm text-content-muted">
                 <p class="text-content font-medium mb-1">Xero returned an error reading the bills</p>
                 <p>@payablesError</p>
             </div>
         }
         else if (ReceivablesSnapshot?.Error is { } receivablesError)
         {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+            <div class="panel-raised px-5 py-4 text-sm text-content-muted">
                 <p class="text-content font-medium mb-1">Xero returned an error reading the invoices</p>
                 <p>@receivablesError</p>
             </div>
@@ -120,7 +120,7 @@
         {
             @if (PayablesSnapshot!.Truncated || ReceivablesSnapshot!.Truncated)
             {
-                <div class="rounded-xl border border-line bg-surface-raised px-5 py-3 text-sm text-content-muted mb-6">
+                <div class="panel-raised px-5 py-3 text-sm text-content-muted mb-6">
                     Xero holds more outstanding documents than the read's page cap could fetch — these totals are
                     incomplete. Raise the <span class="font-mono text-content">Xero__MaxPages</span> app setting.
                 </div>

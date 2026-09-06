@@ -31,7 +31,7 @@
         }
     </td>
     <td class="px-3 py-2 text-right">@Money(Entry.Line.LineTotal)</td>
-    <td class="px-3 py-2 text-right @(PaymentKnown ? "" : "text-content-subtle")"
+    <td class="px-3 py-2 text-right @(PaymentKnown ?"" : "text-content-subtle")"
         title="@(PaymentKnown ? "" : UnknownPaidHint)">@(PaymentKnown ? Money(Entry.Line.PaidToDate) : Dash)</td>
     <td class="px-3 py-2 text-right whitespace-nowrap" @onclick:stopPropagation>
         @if (CancelPending)
@@ -61,7 +61,7 @@
                and administrators (2026-08-21). *@
             <DropdownMenu Label="Actions" WidthClass="w-72"
                           Disabled="@CancelBusy"
-                          ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                          ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
                           Class="inline-block text-left"
                           OnOpenChanged="OnMenuOpenChanged"
                           Items="MenuItems" />

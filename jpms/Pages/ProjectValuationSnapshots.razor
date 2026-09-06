@@ -56,7 +56,7 @@
                 <tbody>
                     @foreach (var snapshot in Snapshots)
                     {
-                        <tr class="hover:bg-surface-raised cursor-pointer transition @(snapshot.IsSuperseded ? "opacity-60" : "")"
+                        <tr class="hover:bg-surface-raised cursor-pointer transition @(snapshot.IsSuperseded ?"opacity-60" : "")"
                             title="View the frozen report"
                             @onclick="() => viewingSnapshotId = snapshot.ValuationReportSnapshotId">
                             <td class="whitespace-nowrap">@DateTimeText(snapshot.TakenAt)</td>

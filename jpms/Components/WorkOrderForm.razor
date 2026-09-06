@@ -57,7 +57,7 @@
     </div>
 
     @* ── Programme: printed in the purchase order's Programme section ──── *@
-    <div class="rounded-lg border border-line bg-surface p-3">
+    <div class="rounded border border-line bg-surface p-3">
         <p class="eyebrow mb-2"
            title="Printed in the purchase order's Programme section — leave everything empty to omit it">Programme</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -86,7 +86,7 @@
     </div>
 
     @* ── Priced lines: each carries its own cost centre ────────────────── *@
-    <div class="rounded-lg border border-line bg-surface p-3">
+    <div class="rounded border border-line bg-surface p-3">
         <p class="eyebrow mb-2"
            title="Each line lands on its own cost centre — the order's value is their sum">Priced lines</p>
         <div class="space-y-2">
@@ -132,7 +132,7 @@
                     <button type="button" aria-label="Remove this line"
                             disabled="@(Busy || lines.Count == 1 || line.PaidToDate != 0m)"
                             title="@(line.PaidToDate != 0m ? $"{Money(line.PaidToDate)} already paid against this line — it can't be removed" : "")"
-                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-surface-raised"
+                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-negative hover:bg-surface-raised"
                             @onclick="() => RemoveLineAsync(lineIndex)">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -157,7 +157,7 @@
     </div>
 
     @* ── Deposit: percentage of the order value, printed at the foot of the PO when required ── *@
-    <div class="rounded-lg border border-line bg-surface p-3">
+    <div class="rounded border border-line bg-surface p-3">
         <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none"
                title="Tick when the subcontractor requires a deposit — the percentage prints at the foot of the purchase order">
             <input type="checkbox" class="cursor-pointer align-middle" disabled="@Busy" @bind="depositRequired" />

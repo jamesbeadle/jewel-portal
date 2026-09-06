@@ -41,9 +41,8 @@
 
     private string TabClass(QueueView tab)
     {
-        var baseClass = "";
         return View == tab
-            ? $"tab tab-active"
-            : $"tab";
+            ? "tab tab-active"
+            : "tab";
     }
 }

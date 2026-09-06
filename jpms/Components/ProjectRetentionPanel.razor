@@ -16,7 +16,7 @@
     confirmed manually — the schedule only ever forecasts.
 *@
 
-<div class="rounded-xl border border-line bg-surface-raised p-5 mb-6">
+<div class="panel-raised p-5 mb-6">
     <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-semibold text-content">Deposit & retention</h3>
         @if (CanEdit)
@@ -54,17 +54,17 @@
                 }
             </p>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-                <div class="rounded-lg border border-line bg-surface px-3 py-2">
+                <div class="rounded border border-line bg-surface px-3 py-2">
                     <p class="eyebrow"
                        title="Deposit % of the original contract sum — the cash the client paid up front">Received</p>
                     <p class="text-base font-semibold text-content">@Money(DepositReceived)</p>
                 </div>
-                <div class="rounded-lg border border-line bg-surface px-3 py-2">
+                <div class="rounded border border-line bg-surface px-3 py-2">
                     <p class="eyebrow"
                        title="Deposit % of the contract-side works complete on the latest claim — already deducted from payments due">Released to date</p>
                     <p class="text-base font-semibold text-content">@Money(DepositReleasedToDate)</p>
                 </div>
-                <div class="rounded-lg border border-line bg-surface px-3 py-2">
+                <div class="rounded border border-line bg-surface px-3 py-2">
                     <p class="eyebrow"
                        title="Received less released — still to be handed back over the remaining works">Still to release</p>
                     <p class="text-base font-semibold text-content">@Money(DepositReceived - DepositReleasedToDate)</p>
@@ -88,17 +88,17 @@
         </p>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            <div class="rounded-lg border border-line bg-surface px-3 py-2">
+            <div class="rounded border border-line bg-surface px-3 py-2">
                 <p class="eyebrow"
                    title="Retention % of total works complete on the latest valuation claim">Held to date</p>
                 <p class="text-base font-semibold text-content">@Money(Schedule.HeldToDate)</p>
             </div>
-            <div class="rounded-lg border border-line bg-surface px-3 py-2">
+            <div class="rounded border border-line bg-surface px-3 py-2">
                 <p class="eyebrow"
                    title="Confirmed releases only — money actually freed">Released to date</p>
                 <p class="text-base font-semibold text-content">@Money(Schedule.ReleasedToDate)</p>
             </div>
-            <div class="rounded-lg border border-line bg-surface px-3 py-2">
+            <div class="rounded border border-line bg-surface px-3 py-2">
                 <p class="eyebrow"
                    title="Held less released — still withheld by the client">Outstanding</p>
                 <p class="text-base font-semibold text-content">@Money(Schedule.Outstanding)</p>
@@ -112,7 +112,7 @@
                 (Schedule.FinalRelease, $"Balance {Current.DefectsPeriodMonths} months after completion")
             })
             {
-                <div class="flex items-center justify-between rounded-lg border border-line bg-surface px-3 py-2">
+                <div class="flex items-center justify-between rounded border border-line bg-surface px-3 py-2">
                     <div>
                         <p class="text-sm text-content">@label</p>
                         <p class="text-xs text-content-subtle">

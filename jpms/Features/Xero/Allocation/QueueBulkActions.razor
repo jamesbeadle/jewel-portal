@@ -5,7 +5,7 @@
                   Value="@ProjectId" ValueChanged="ProjectIdChanged" />
     <SearchSelect Options="@CostCenterOptions" WidthClass="w-52" Placeholder="Cost centre…"
                   Value="@CostCenterCode" ValueChanged="CostCenterCodeChanged" />
-    <button class="text-sm font-medium rounded-lg px-3 py-1.5 bg-content text-surface disabled:opacity-50"
+    <button class="text-sm font-medium rounded px-3 py-1.5 bg-content text-surface disabled:opacity-50"
             disabled="@(Busy || string.IsNullOrEmpty(ProjectId) || string.IsNullOrEmpty(CostCenterCode))"
             @onclick="() => OnAllocate.InvokeAsync()">Allocate selected</button>
     <button class="btn-secondary"

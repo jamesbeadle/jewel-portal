@@ -34,12 +34,12 @@
                         var move = row.MovementsPp[index];
                         @if (cell.Empty)
                         {
-                            <td class="text-center rounded-md text-xs text-content-faint" style="background:#12151c">—</td>
+                            <td class="text-center rounded text-xs text-content-faint" style="background:#12151c">—</td>
                         }
                         else if (cell.Running is not decimal runningLevel)
                         {
                             @* Costs have moved but nothing has EVER been invoiced — no honest running %; the £ is in the hover. *@
-                            <td class="text-center rounded-md text-xs text-content-faint" style="background:#12151c"
+                            <td class="text-center rounded text-xs text-content-faint" style="background:#12151c"
                                 title="@($"{cellMonth:MMM yy} — nothing invoiced to date · profit to date {SignedMoneyCompact(cell.CumProfit)}{AccrualHover(row.Project.ProjectId, cellMonth)}")">
                                 n/a
                                 @if (!cell.Own.Empty)
@@ -50,7 +50,7 @@
                         }
                         else
                         {
-                            <td class="text-center rounded-md text-xs tabular-nums"
+                            <td class="text-center rounded text-xs tabular-nums"
                                 style="@(move is decimal shadePp ? MovementCellStyle(shadePp, Movement.ShadeMax) : "background:#12151c")"
                                 title="@(RunningCellHover(cellMonth, cell) + AccrualHover(row.Project.ProjectId, cellMonth))">
                                 <span class="font-medium @ProfitClass(runningLevel)">@PctCell(runningLevel)</span>@if (AccrualOwnFor(row.Project.ProjectId, cellMonth) > 0m)
@@ -63,7 +63,7 @@
                         title="@($"running % now vs 6 months ago · the window itself: invoiced {MoneyCompact(row.Window.Income)} · profit {SignedMoneyCompact(row.Window.Profit)}")">
                         @(row.WindowDelta is decimal windowDelta ? SignedPp(windowDelta) : "—")
                     </td>
-                    <td class="text-center rounded-md text-xs font-semibold whitespace-nowrap border @ProfitClass(row.RunningPercent ?? 0m)">
+                    <td class="text-center rounded text-xs font-semibold whitespace-nowrap border @ProfitClass(row.RunningPercent ?? 0m)">
                         @(row.RunningPercent is decimal runningPct ? PctCell(runningPct) : "—")
                         <span class="block font-normal text-xs text-content-subtle mt-0.5">@MoneyCompact(row.PositionMoney)</span>
                         @if (AccrualToDateFor(row.Project.ProjectId) is > 0m and var accruedToDate)

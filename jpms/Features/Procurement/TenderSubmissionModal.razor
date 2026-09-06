@@ -17,7 +17,7 @@
     }
     @if (sourceEmail is { } fromEmail)
     {
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
             Extracted from <span class="font-medium text-content">@(string.IsNullOrWhiteSpace(fromEmail.FromName) ? fromEmail.FromEmail : fromEmail.FromName)</span>'s
             email of @DateText(fromEmail.ReceivedAt) — the figures below are
             THEIR submission as the AI read it. Review every line (and correct it where the read is
@@ -26,7 +26,7 @@
     }
     else
     {
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
             Recording a tender as the subcontractor gave it — the package's line items are pre-filled;
             enter the rates from their submission.
         </p>
@@ -34,7 +34,7 @@
 
     @if (extracting)
     {
-        <div class="flex items-center gap-3 rounded-lg border border-line bg-surface-raised px-3 py-4 mb-3">
+        <div class="flex items-center gap-3 rounded border border-line bg-surface-raised px-3 py-4 mb-3">
             <JewelSpinner />
             <p class="text-sm text-content-muted">Reading the tender — the email, its pricing schedule and the package's line items…</p>
         </div>
@@ -76,7 +76,7 @@
         <p class="text-xs text-content-subtle -mt-2 mb-3">@subcontractorNote</p>
     }
 
-    <div class="rounded-xl border border-line bg-surface mb-3">
+    <div class="panel mb-3">
         <table class="data-table data-table-dense">
             <thead>
                 <tr>
@@ -91,7 +91,7 @@
             <tbody>
                 @foreach (var draft in drafts)
                 {
-                    <tr class="@(draft.BidPackageLineItemId is null ? "bg-accent/5" : "")">
+                    <tr class="@(draft.BidPackageLineItemId is null ?"bg-accent/5" : "")">
                         <td><input class="field" @bind="draft.Description" /></td>
                         <td class="hidden sm:table-cell"><input class="field w-16" @bind="draft.Unit" /></td>
                         <td><input class="field w-20" type="number" step="any" @bind="draft.Quantity" /></td>

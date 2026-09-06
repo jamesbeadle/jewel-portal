@@ -39,7 +39,7 @@
         </p>
         @if (CodingResults is not null)
         {
-            <div class="mx-5 mt-3 rounded-lg border border-line bg-surface-raised p-3 text-sm">
+            <div class="mx-5 mt-3 rounded border border-line bg-surface-raised p-3 text-sm">
                 <p class="font-medium text-content mb-1">Coding run finished:</p>
                 @foreach (var result in CodingResults)
                 {
@@ -131,7 +131,7 @@
         <div class="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
             @foreach (var row in CodingPlan)
             {
-                <div class="rounded-lg border border-line px-3 py-2 text-sm">
+                <div class="rounded border border-line px-3 py-2 text-sm">
                     <p class="text-content">
                         <span class="font-medium">@row.WorkerName</span>
                         <span class="ml-2 text-xs font-semibold rounded-full px-2 py-0.5 @PlanPillClass(row.Outcome)">@CodingOutcomeLabel(row.Outcome)</span>

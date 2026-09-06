@@ -26,11 +26,11 @@
 
         @if (syncMessage is not null)
         {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-3 text-sm text-content-muted mb-6">@syncMessage</div>
+            <div class="panel-raised px-5 py-3 text-sm text-content-muted mb-6">@syncMessage</div>
         }
         @if (errorMessage is not null)
         {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-3 text-sm text-content mb-6">@errorMessage</div>
+            <div class="panel-raised px-5 py-3 text-sm text-content mb-6">@errorMessage</div>
         }
 
         @* This gate asks about the LEDGER, not about the open tab. It has to: the tab bar lives
@@ -139,7 +139,7 @@
                While a row's menu is open the overflow cap is lifted: the menu positions
                absolutely inside this container, and with the overflow active its bottom
                entries would be clipped at the container's edge. *@
-            <div class="rounded-xl border border-line bg-surface @(IsRowMenuOpen ? "" : "overflow-x-auto overflow-y-auto max-h-[85vh]")">
+            <div class="panel @(IsRowMenuOpen ?"" : "overflow-x-auto overflow-y-auto max-h-[85vh]")">
                 <table class="data-table">
                     <AllocationTableHeader Tab="activeTab" LabourTab="labourTab"
                                            AllSelected="AllVisibleSelected" OnToggleAll="ToggleSelectAll" />

@@ -46,11 +46,11 @@
             </div>
             @if (!string.IsNullOrWhiteSpace(loadedRequest.Description))
             {
-                <p class="text-sm text-content whitespace-pre-wrap rounded-lg bg-surface-raised border border-line p-3">@loadedRequest.Description</p>
+                <p class="text-sm text-content whitespace-pre-wrap rounded bg-surface-raised border border-line p-3">@loadedRequest.Description</p>
             }
             @foreach (var item in loadedRequest.ItemList)
             {
-                <div class="rounded-lg border border-line p-3">
+                <div class="rounded border border-line p-3">
                     <p class="text-sm text-content whitespace-pre-wrap">@item.Query</p>
                     @if (!string.IsNullOrWhiteSpace(item.Response))
                     {

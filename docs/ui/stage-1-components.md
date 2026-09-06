@@ -1,5 +1,13 @@
 # Stage 1 shared components — the list to discuss
 
+> **Status 2026-09-06 (evening): all twelve built and rolled out** on branch `ui/stage-1-components`
+> (`dotnet build` 0 errors, Tailwind build clean). What each round actually touched is in the
+> commit messages on that branch; the rules are in `CLAUDE.md` → *Shared components* and the
+> lint grep in `DESIGN-SYSTEM.md` §5. Correction to item 12: `Money()` was already used 327 times
+> via the static import — only the DATE helper was unused; both now go through `DateFormats`.
+> Item 6 nuance: pane switches that don't navigate (Programme · Claims · Critical RFIs) keep the
+> underline TabRow look — they are views, not filters.
+
 Surveyed from `main` at `04985b1` (the Tailwind retune) on 2026-09-06: 452 razor files under
 `jpms/` — 92 in `Pages`, 134 in `Components`, 223 in `Features`, 3 in `Layout`. Every number below
 comes from a grep over those four folders; the commands are in the appendix so the counts can be

@@ -18,7 +18,7 @@
    SearchSelect: every composer lives inside an overflow container that would clip it. *@
 
 <div class="relative" @ref="wrapperRef" @onfocusout="OnFocusOut">
-    <div class="field flex flex-wrap items-center gap-1 cursor-text @(Disabled ? "opacity-40" : "")"
+    <div class="field flex flex-wrap items-center gap-1 cursor-text @(Disabled ?"opacity-40" : "")"
          style="min-height:2.5rem;padding-top:.3rem;padding-bottom:.3rem"
          @onmousedown="FocusInputAsync" @onmousedown:preventDefault="true">
         @for (var i = 0; i < chips.Count; i++)
@@ -26,7 +26,7 @@
             var index = i;
             var chip = chips[index];
             <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium max-w-full
-                         @(chip.LooksValid ? "bg-surface-raised border-line text-content" : "bg-negative/10 border-negative/30 text-negative")"
+                         @(chip.LooksValid ?"bg-surface-raised border-line text-content" : "bg-negative/10 border-negative/30 text-negative")"
                   title="@(chip.LooksValid ? chip.Email : "Not an email address — it will be dropped on send")">
                 <span class="truncate">@chip.Label</span>
                 @if (!Disabled)
@@ -45,7 +45,7 @@
 
     @if (isOpen && suggestions.Count > 0)
     {
-        <div class="rounded-lg border border-line bg-surface-raised shadow-lg overflow-y-auto max-h-64 py-1"
+        <div class="rounded border border-line bg-surface-raised overflow-y-auto max-h-64 py-1"
              style="@popupStyle" @onmousedown:preventDefault="true">
             @for (var i = 0; i < suggestions.Count; i++)
             {
@@ -54,10 +54,10 @@
                 @* Mousedown, not click — see SearchSelect: click fires after focusout has already
                    closed the popup and removed the button. *@
                 <button type="button" id="@ItemId(index)" tabindex="-1"
-                        class="block w-full text-left px-3 py-1.5 @(index == highlight ? "bg-content text-surface" : "text-content hover:bg-surface")"
+                        class="block w-full text-left px-3 py-1.5 @(index == highlight ?"bg-content text-surface" : "text-content hover:bg-surface")"
                         @onmousedown="() => PickAsync(suggestion)" @onmousedown:preventDefault="true" @onmousedown:stopPropagation="true">
                     <span class="block text-sm truncate">@suggestion.Name</span>
-                    <span class="block text-xs truncate @(index == highlight ? "text-surface/80" : "text-content-subtle")">
+                    <span class="block text-xs truncate @(index == highlight ?"text-surface/80" : "text-content-subtle")">
                         @SecondLineOf(suggestion)
                     </span>
                 </button>

@@ -98,16 +98,16 @@
             @foreach (var item in VisibleOpenItems)
             {
                 <button type="button" @key="item.TodoItemId" title="Open this item"
-                        class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                        class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                         @onclick="() => OpenItem(item)">
                     <p class="truncate text-sm text-content">
                         <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                     </p>
                     <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
-                        <span class="whitespace-nowrap @(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
+                        <span class="whitespace-nowrap @(IsGeneral(item) ?"text-accent font-medium" : "")">@ScopeLabel(item)</span>
                         @if (item.DueAt is not null)
                         {
-                            <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @DateText(item.DueAt.Value)</span>
+                            <span class="whitespace-nowrap @(IsOverdue(item) ?"text-negative font-medium" : "")">Due @DateText(item.DueAt.Value)</span>
                         }
                         <TodoAssigneeBadge Item="item" />
                     </div>

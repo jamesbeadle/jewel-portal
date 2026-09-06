@@ -10,7 +10,7 @@
     <Checkbox Value="@item.Selected" ValueChanged="v => Toggle(item, v)">Row content</Checkbox>
 *@
 
-<label class="inline-flex items-center gap-2 text-sm text-content cursor-pointer select-none @Class @(Disabled ? "opacity-50 cursor-not-allowed" : "")" title="@Title">
+<label class="inline-flex items-center gap-2 text-sm text-content cursor-pointer select-none @Class @(Disabled ?"opacity-50 cursor-not-allowed" : "")" title="@Title">
     <input type="checkbox" checked="@Value" disabled="@Disabled" @onchange="OnChange" />
     @if (ChildContent is not null)
     {

@@ -137,7 +137,7 @@
                                     {
                                         <p class="text-sm text-content mb-3">@termsNote</p>
                                     }
-                                    <label class="btn-secondary inline-flex items-center gap-2 cursor-pointer @(termsUploading ? "opacity-60 pointer-events-none" : "")">
+                                    <label class="btn-secondary inline-flex items-center gap-2 cursor-pointer @(termsUploading ?"opacity-60 pointer-events-none" : "")">
                                         @(termsUploading ? "Uploading…" : terms.Exists ? "Replace the document" : "Upload the document")
                                         <InputFile OnChange="OnTermsFileSelected" accept=".pdf,application/pdf" class="hidden" disabled="@termsUploading" />
                                     </label>

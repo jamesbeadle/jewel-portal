@@ -52,7 +52,7 @@
 
             @if (OrphanedAttachments.Count > 0)
             {
-                <div class="rounded-lg border border-negative/40 bg-negative/5 px-4 py-3 mb-4">
+                <div class="rounded border border-negative/40 bg-negative/5 px-4 py-3 mb-4">
                     <p class="text-xs font-medium text-content mb-1">
                         Attachments pointing at nothing — the action or area was renamed or removed
                         in code. Detach them, or re-attach the skill under the current name.
@@ -158,7 +158,7 @@
         var skill = SkillFor(skillKey);
         var label = skill?.DisplayName ?? skillKey;
         var isOff = skill is { IsActive: false };
-        <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised px-2 py-0.5 text-xs @(viaArea || isOff ? "text-content-subtle" : "text-content")"
+        <span class="inline-flex items-center gap-1 rounded-full border border-line bg-surface-raised px-2 py-0.5 text-xs @(viaArea || isOff ?"text-content-subtle" : "text-content")"
               title="@(viaArea ? "Attached to the whole area — edit with the Area skills button." : skill?.Description ?? skillKey)">
             @label
             @if (viaArea)
@@ -180,7 +180,7 @@
             </p>
             @if (saveErrors.Count > 0)
             {
-                <div class="rounded-lg border border-negative/40 bg-negative/5 px-3 py-2 mb-2">
+                <div class="rounded border border-negative/40 bg-negative/5 px-3 py-2 mb-2">
                     @foreach (var saveError in saveErrors)
                     {
                         <p class="text-xs leading-snug text-content-muted">@saveError</p>

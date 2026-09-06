@@ -237,7 +237,7 @@ public partial class AttachmentPicker
         AttachmentsChanged.InvokeAsync(Attachments.Where(a => a.Key != attachment.Key).ToList());
 
     private string SourceButtonClass(Panel panel) =>
-        "inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 "
+        "inline-flex items-center gap-1 rounded border px-2.5 py-1.5 "
         + (openPanel == panel
             ? "border-accent text-accent bg-accent/5"
             : "border-line text-content-muted hover:text-content hover:border-line-strong");

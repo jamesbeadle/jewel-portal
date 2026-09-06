@@ -10,7 +10,7 @@
 
 @if (replies.Count > 0)
 {
-    <div class="rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 mb-3 space-y-2">
+    <div class="rounded bg-warning/10 border border-warning/30 px-3 py-2 mb-3 space-y-2">
         <div class="flex flex-wrap items-center justify-between gap-2">
             <p class="text-sm font-medium text-warning">
                 @replies.Count newer @(replies.Count == 1 ? "reply" : "replies") on this thread @(replies.Count == 1 ? "isn't" : "aren't") filed to this to-do yet.

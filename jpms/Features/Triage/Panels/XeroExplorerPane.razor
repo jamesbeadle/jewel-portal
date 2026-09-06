@@ -56,7 +56,7 @@ else
                 @foreach (var row in FilteredTransactions)
                 {
                     <button type="button" @key="row.TransactionId" @onclick="() => openTransaction = row"
-                            class="w-full text-left rounded-lg border border-line hover:border-line-strong hover:bg-surface-raised transition px-3 py-2">
+                            class="w-full text-left rounded border border-line hover:border-line-strong hover:bg-surface-raised transition px-3 py-2">
                         <div class="flex items-baseline justify-between gap-2">
                             <span class="text-sm text-content truncate">@(row.ContactName ?? "(no contact)")</span>
                             <span class="text-sm text-content tabular-nums shrink-0">@row.Total.ToString("N2")</span>

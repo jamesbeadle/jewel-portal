@@ -62,7 +62,7 @@
 
         @* Trades are managed here: each is a chip from the curated list, so when a company changes
            what it does (no longer a bricklayer, now a hod carrier) the record is updated in place. *@
-        <div class="rounded-xl border border-line bg-surface p-4 mb-6">
+        <div class="panel p-4 mb-6">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-sm font-semibold text-content">Trades</h2>
                 @if (tradesNote is not null)
@@ -111,7 +111,7 @@
         @* Contacts: the people on this record beyond its primary contact line. A consolidated
            master keeps every merged email/phone here, and Purpose says what each contact is used
            for ("Accounts", "Projects"…) — different contacts for different system purposes. *@
-        <div class="rounded-xl border border-line bg-surface p-4 mb-6">
+        <div class="panel p-4 mb-6">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-sm font-semibold text-content">Contacts</h2>
                 @if (contactsNote is not null)
@@ -203,7 +203,7 @@
 
         @* Portal access: invites the record's contact to the subcontractor portal. The login is
            linked to this record server-side, scoping their session to their own company's data. *@
-        <div class="rounded-xl border border-line bg-surface p-4 mb-6">
+        <div class="panel p-4 mb-6">
             <div class="flex items-center justify-between mb-2">
                 <h2 class="text-sm font-semibold text-content">Portal access</h2>
             </div>
@@ -233,7 +233,7 @@
         @* Statement of account: this record's work orders across every project with the invoices
            claimed against each — downloadable as the branded PDF, or drafted to the contact by
            email (shared-mailbox convention: a human reviews and sends from Outlook). *@
-        <div class="rounded-xl border border-line bg-surface p-4 mb-6">
+        <div class="panel p-4 mb-6">
             <div class="flex items-center justify-between mb-2">
                 <h2 class="text-sm font-semibold text-content">Statement of account</h2>
             </div>

@@ -67,7 +67,7 @@
                 @foreach (var note in visible)
                 {
                     <button type="button" @key="note.UsefulInformationNoteId" title="Open this note to read or edit it"
-                            class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                            class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                             @onclick="() => OpenEdit(note)">
                         <p class="truncate text-sm font-medium text-content">@note.Title</p>
                         <p class="mt-0.5 text-sm text-content-muted whitespace-pre-wrap line-clamp-3">@note.Body</p>

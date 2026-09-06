@@ -22,7 +22,7 @@
             </p>
 
             <div class="space-y-2">
-                <label class="flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer @(SelectedChainId == "" ? "border-accent bg-accent/5" : "border-line hover:border-line-strong")">
+                <label class="flex items-start gap-2.5 rounded border p-3 cursor-pointer @(SelectedChainId =="" ? "border-accent bg-accent/5" : "border-line hover:border-line-strong")">
                     <input type="radio" name="email-target" class="mt-0.5" checked="@(SelectedChainId == "")"
                            @onchange="() => SelectedChainIdChanged.InvokeAsync(string.Empty)" />
                     <span>
@@ -41,7 +41,7 @@
                     <p class="eyebrow pt-1">Or append to a tagged email chain</p>
                     @foreach (var email in TaggedEmails)
                     {
-                        <label class="flex items-start gap-2.5 rounded-lg border p-3 cursor-pointer @(SelectedChainId == email.MailboxId ? "border-accent bg-accent/5" : "border-line hover:border-line-strong")">
+                        <label class="flex items-start gap-2.5 rounded border p-3 cursor-pointer @(SelectedChainId == email.MailboxId ?"border-accent bg-accent/5" : "border-line hover:border-line-strong")">
                             <input type="radio" name="email-target" class="mt-0.5" checked="@(SelectedChainId == email.MailboxId)"
                                    @onchange="() => SelectedChainIdChanged.InvokeAsync(email.MailboxId!)" />
                             <span class="min-w-0">

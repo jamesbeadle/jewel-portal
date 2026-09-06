@@ -88,9 +88,8 @@ public partial class ProjectProgramme
 
     private string SubTabClass(SubView tab)
     {
-        var baseClass = "";
         return view == tab
-            ? $"tab tab-active"
-            : $"tab";
+            ? "tab tab-active"
+            : "tab";
     }
 }

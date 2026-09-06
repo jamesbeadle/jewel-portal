@@ -61,7 +61,7 @@
     <td class="px-3 py-2.5 text-right whitespace-nowrap">
         @if (Mode == XeroAllocationStatus.Allocated && Line.WriteBackStatus == XeroWriteBackStatus.Failed)
         {
-            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+            <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                     disabled="@Busy" title="@Line.WriteBackError"
                     @onclick="() => OnRetryWriteBack.InvokeAsync()">Retry Xero</button>
         }

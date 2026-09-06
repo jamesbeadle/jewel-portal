@@ -47,7 +47,7 @@
 
             @if (Current is { HasDocument: true } contract)
             {
-                <div class="rounded-lg border border-line bg-surface px-3 py-2.5 flex items-start justify-between gap-3">
+                <div class="rounded border border-line bg-surface px-3 py-2.5 flex items-start justify-between gap-3">
                     <div class="min-w-0">
                         <p class="text-sm text-content font-medium truncate">@contract.DocumentFileName</p>
                         <p class="text-xs text-content-subtle mt-0.5">
@@ -135,7 +135,7 @@
                 <ul class="space-y-2">
                     @foreach (var (amendment, index) in Amendments.Select((a, i) => (a, i)))
                     {
-                        <li class="rounded-lg border border-line bg-surface px-3 py-2.5 flex items-start justify-between gap-3">
+                        <li class="rounded border border-line bg-surface px-3 py-2.5 flex items-start justify-between gap-3">
                             <div class="min-w-0">
                                 <p class="text-sm text-content font-medium truncate">
                                     <span class="text-content-subtle">@(index + 1).</span> @amendment.Title

@@ -52,7 +52,7 @@
         {
             var eventsByDay = EventsByDay;
             var upcoming = Upcoming;
-            <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+            <div class="panel overflow-hidden mb-6">
                 <div class="grid grid-cols-7 border-b border-line">
                     @foreach (var dayName in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
                     {
@@ -69,10 +69,10 @@
                             var dayEvents = eventsByDay.TryGetValue(day, out var list) ? list : NoEvents;
                             var showAll = expandedDay == day;
                             var visible = showAll ? dayEvents : dayEvents.Take(3).ToList();
-                            <div class="min-h-[6.5rem] border-r border-line last:border-0 px-1.5 py-1.5 @(inMonth ? "" : "bg-surface-raised/40")">
+                            <div class="min-h-[6.5rem] border-r border-line last:border-0 px-1.5 py-1.5 @(inMonth ?"" : "bg-surface-raised/40")">
                                 <div class="flex justify-end mb-1">
                                     <span class="text-xs w-6 h-6 inline-flex items-center justify-center rounded-full
-                                                 @(isToday ? "bg-accent text-accent-ink font-semibold" : inMonth ? "text-content-muted" : "text-content-subtle/60")">
+                                                 @(isToday ?"bg-accent text-accent-ink font-semibold" : inMonth ? "text-content-muted" : "text-content-subtle/60")">
                                         @day.Day
                                     </span>
                                 </div>
@@ -124,7 +124,7 @@
                 }
                 else
                 {
-                    <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                    <div class="panel overflow-hidden">
                         @foreach (var group in upcoming.GroupBy(e => AgendaDay(e)))
                         {
                             <div class="border-b border-line last:border-0 px-4 py-3">

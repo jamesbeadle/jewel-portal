@@ -52,7 +52,7 @@
             </button>
             @if (FilterOpen)
             {
-                <div class="absolute z-20 mt-1 w-60 max-h-72 overflow-y-auto rounded-lg border border-line bg-surface-raised shadow-lg p-1">
+                <div class="absolute z-20 mt-1 w-60 max-h-72 overflow-y-auto rounded border border-line bg-surface-raised p-1">
                     <button type="button"
                             class="w-full text-left rounded px-3 py-1.5 text-sm text-content-muted hover:bg-surface hover:text-content"
                             @onclick="() => OnClearTagFilters.InvokeAsync()">
@@ -203,9 +203,8 @@ else if (SearchResults is not null)
 
     private string PathwayFilterChipClass(string? bucket)
     {
-        var baseClass = "";
         return PathwayBucketFilter == bucket
-            ? $"chip chip-active"
-            : $"chip";
+            ? "chip chip-active"
+            : "chip";
     }
 }

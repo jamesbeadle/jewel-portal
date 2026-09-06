@@ -92,7 +92,7 @@
             {
                 var type = linkType;
                 var typeKey = $"type:{type}";
-                <div @key="typeKey" class="rounded-lg border border-line">
+                <div @key="typeKey" class="rounded border border-line">
                     <button type="button" class="w-full flex items-center gap-2 px-3 py-2 text-left"
                             title="@($"The project's {PathwayPaneConfig.TypeLabelPlural(type)} — pick to tag the email")"
                             @onclick="() => Toggle(typeKey)">
@@ -147,7 +147,7 @@
                 {
                     var record = familyRecord;
                     var sectionKey = $"cat:{record.RecordId}";
-                    <div @key="sectionKey" class="rounded-lg border border-line">
+                    <div @key="sectionKey" class="rounded border border-line">
                         <div class="w-full flex items-center gap-2 px-3 py-2">
                             <button type="button" class="flex items-center gap-2 text-left flex-1 min-w-0"
                                     title="@(record.Summary ?? "")" @onclick="() => Toggle(sectionKey)">

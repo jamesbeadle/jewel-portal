@@ -13,11 +13,11 @@
    added below starts there). Manual entries are backdated historic invoices recorded
    directly as Issued/Paid. The claim card on the valuation page drives the happy path;
    this section's row menu covers the same moves plus the edge cases. *@
-<div class="rounded-xl border border-line bg-surface overflow-hidden">
+<div class="panel overflow-hidden">
     <div class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-raised/60 transition">
         <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
                 class="flex items-center gap-3 text-left grow min-w-0">
-            <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
+            <svg class="@(isOpen ?"w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M9 6l6 6-6 6" />
@@ -67,7 +67,7 @@
                (History, Delete…) are clipped at the table's edge — on a short table that hid
                Delete entirely. Short lists render identically either way; a long list grows to
                full height for the moment the menu is showing and gets its cap back on close. *@
-            <div class="border-t border-line @(openMenuId is null ? "overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
+            <div class="border-t border-line @(openMenuId is null ?"overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
                 <table class="data-table data-table-dense">
                     <thead>
                         <tr>
@@ -86,7 +86,7 @@
                     <tbody>
                         @foreach (var invoice in invoices)
                         {
-                            <tr class="@(invoice.Status == ValuationInvoiceStatus.Cancelled ? "opacity-50" : "")">
+                            <tr class="@(invoice.Status == ValuationInvoiceStatus.Cancelled ?"opacity-50" : "")">
                                 <td class="font-mono text-xs text-content-subtle whitespace-nowrap">
                                     @invoice.DisplayNumber
                                     @if (invoice.IsManual)
@@ -129,7 +129,7 @@
                                         else
                                         {
                                             <DropdownMenu Label="Actions" WidthClass="w-64" Disabled="@busy"
-                                                          ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                                                          ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
                                                           Class="inline-block text-left"
                                                           OnOpenChanged="open => openMenuId = open ? invoice.ValuationInvoiceId : (openMenuId == invoice.ValuationInvoiceId ? null : openMenuId)"
                                                           Items="InvoiceMenuItems(invoice)" />

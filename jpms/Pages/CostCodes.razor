@@ -48,7 +48,7 @@
         </Actions>
     </PageHeader>
 
-    <div class="mb-6 inline-flex flex-wrap rounded-lg border border-line overflow-hidden">
+    <div class="mb-6 inline-flex flex-wrap rounded border border-line overflow-hidden">
         <button class="@TabCss(activeTab == CostCodesTab.Ours)" @onclick="() => SwitchTab(CostCodesTab.Ours)">
             Our cost codes
         </button>
@@ -113,7 +113,7 @@
             <tbody>
                 @foreach (var costCode in VisibleCostCodes)
                 {
-                    <tr class="border-b border-line last:border-0 @(costCode.IsActive ? "" : "opacity-60")">
+                    <tr class="border-b border-line last:border-0 @(costCode.IsActive ?"" : "opacity-60")">
                         <td class="font-medium text-content whitespace-nowrap">@costCode.Code</td>
                         <td>@costCode.Name</td>
                         <td class="text-right text-content-subtle hidden md:table-cell">@costCode.SortOrder</td>
@@ -154,7 +154,7 @@
     }
     else if (!snapshot.IsConfigured)
     {
-        <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+        <div class="panel-raised px-5 py-4 text-sm text-content-muted">
             Xero isn't connected yet. Add the custom connection's credentials as the
             <span class="font-mono text-content">Xero__ClientId</span> and
             <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
@@ -162,7 +162,7 @@
     }
     else if (snapshot.Error is not null)
     {
-        <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+        <div class="panel-raised px-5 py-4 text-sm text-content-muted">
             <p class="text-content font-medium mb-1">Xero returned an error</p>
             <p>@snapshot.Error</p>
         </div>
@@ -176,7 +176,7 @@
 
         @if (category is null)
         {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+            <div class="panel-raised px-5 py-4 text-sm text-content-muted">
                 <p class="text-content font-medium mb-1">
                     Xero has no tracking category matching the configured @(sites ? "Sites" : "Cost Code") name
                 </p>
@@ -227,7 +227,7 @@
                 <tbody>
                     @foreach (var option in SortedOptions(category))
                     {
-                        <tr class="border-b border-line last:border-0 @(option.IsArchived ? "opacity-60" : "")">
+                        <tr class="border-b border-line last:border-0 @(option.IsArchived ?"opacity-60" : "")">
                             @* whitespace-pre so a stray leading/trailing space in Xero's
                                spelling stays visible rather than being swallowed — exact
                                phrasing is what this tab is for. *@
@@ -276,7 +276,7 @@
 
             @if (sites && !projectsFailed && UnmatchedSiteMappings(category) is { Count: > 0 } unmatched)
             {
-                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted mt-4">
+                <div class="panel-raised px-5 py-4 text-sm text-content-muted mt-4">
                     <p class="text-content font-medium mb-1">Project mappings that match no Xero site option</p>
                     <p class="mb-2">
                         These projects have a Xero site set that Xero's "@category.Name" category doesn't contain —
@@ -292,7 +292,7 @@
             }
             @if (!sites && SystemCodesWithoutXeroOption(category) is { Count: > 0 } missing)
             {
-                <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted mt-4">
+                <div class="panel-raised px-5 py-4 text-sm text-content-muted mt-4">
                     <div class="flex items-start justify-between gap-4 flex-wrap">
                         <div>
                             <p class="text-content font-medium mb-1">Active system codes with no Xero option yet (@missing.Count)</p>
@@ -369,7 +369,7 @@
                         Settings → Tracking categories → "@gaps.CategoryName", spelt exactly as shown (one per line, ready to paste):
                     </p>
                     <textarea readonly class="field h-48 font-mono text-xs">@MissingNamesText(gaps)</textarea>
-                    <div class="max-h-48 overflow-y-auto rounded-lg border border-line">
+                    <div class="max-h-48 overflow-y-auto rounded border border-line">
                         <table class="data-table data-table-dense">
                             <tbody>
                                 @foreach (var gap in gaps.Missing)

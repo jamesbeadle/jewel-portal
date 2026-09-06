@@ -44,7 +44,7 @@
         @foreach (var (kind, label) in Kinds)
         {
             <button type="button"
-                    class="@(activeKind == kind ? "btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
+                    class="@(activeKind == kind ?"btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
                     @onclick="() => activeKind = kind">@label</button>
         }
     </div>

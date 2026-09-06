@@ -92,8 +92,8 @@
 
     private string PaneClass(string pane) =>
         pane == activePane
-            ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
-            : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+            ? "px-3 py-1.5 rounded bg-accent text-accent-ink font-medium"
+            : "px-3 py-1.5 rounded text-content-muted hover:text-content hover:bg-surface-raised";
 
     protected override async Task OnInitializedAsync()
     {

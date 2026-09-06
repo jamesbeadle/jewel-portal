@@ -6,7 +6,7 @@
    bill offers the exclude toggle instead), the due/expected small print, and the amount sitting
    in its week's cell with the ‹ ↺ › movement controls beside it. *@
 <tr class="border-b border-line/50 text-[13px]">
-    <td class="@(InGroup ? "pl-14" : "pl-9") pr-4 py-1.5">
+    <td class="@(InGroup ?"pl-14" : "pl-9") pr-4 py-1.5">
         @if (Entry.ItemId is { } itemId)
         {
             <button type="button" class="text-content-muted hover:text-content underline-offset-2 hover:underline text-left"
@@ -27,7 +27,7 @@
     @for (var index = 0; index <= View.WeekStarts.Count; index++)
     {
         var cellIndex = index;
-        <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == View.WeekStarts.Count ? "border-l border-line" : "")">
+        <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == View.WeekStarts.Count ?"border-l border-line" : "")">
             @if (Entry.WeekIndex == cellIndex)
             {
                 <span class="inline-flex items-center gap-0.5">
@@ -40,7 +40,7 @@
                     <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
                             title="Pay a week earlier" disabled="@(Busy || cellIndex == 0)"
                             @onclick="() => OnMove.InvokeAsync((Entry, Math.Min(cellIndex, View.WeekStarts.Count) - 1))">‹</button>
-                    <span class="@(Entry.Moved ? "text-accent font-medium" : "text-content")"
+                    <span class="@(Entry.Moved ?"text-accent font-medium" : "text-content")"
                           title="@(Entry.Moved ? "Moved here — the " + (Entry.ExpectedOn is null ? "due" : "Xero expected") + " week is " + (Entry.NaturalOn is { } naturalOn ? naturalOn.UtcDateTime.ToString("d MMM") : "unknown") : null)">@(Entry.Moved ? "‣ " : "")@CellAmount(Entry.Amount)</span>
                     <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
                             title="Pay a week later" disabled="@(Busy || cellIndex >= View.WeekStarts.Count - 1)"

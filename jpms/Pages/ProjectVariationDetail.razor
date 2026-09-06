@@ -75,7 +75,7 @@
                         </button>
                         @if (orderStatusMenuOpen)
                         {
-                            <div class="absolute left-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-20 overflow-hidden">
+                            <div class="absolute left-0 mt-2 w-64 rounded border border-line bg-surface z-20 overflow-hidden">
                                 <ul class="divide-y divide-line">
                                     @foreach (var option in OrderStatusOptions)
                                     {
@@ -85,7 +85,7 @@
                                         var selectable = !isCurrent && !blocked;
                                         <li>
                                             <button type="button"
-                                                    class="w-full text-left px-3 py-2 text-sm transition @(selectable ? "text-content hover:bg-surface-raised" : "text-content-subtle cursor-default")"
+                                                    class="w-full text-left px-3 py-2 text-sm transition @(selectable ?"text-content hover:bg-surface-raised" : "text-content-subtle cursor-default")"
                                                     disabled="@(busy || !selectable)"
                                                     title="@PillOptionTitle(status)"
                                                     @onclick="() => ChangeStatus(status)">
@@ -156,7 +156,7 @@
                linked they stay on show at every stage: they are the evidence behind the figures. *@
             @if (linkedInstructions.Count > 0)
             {
-                <div class="rounded-lg bg-surface-raised border border-line px-3 py-2 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <div class="rounded bg-surface-raised border border-line px-3 py-2 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span class="eyebrow">Architect's Instruction</span>
                     @foreach (var instruction in linkedInstructions)
                     {
@@ -175,7 +175,7 @@
             {
                 @* "None is linked yet" is the one thing this page must not say before it has looked. *@
                 <LoadGate IsLoading="@(!instructionsLoaded)" Label="Loading instructions">
-                <div class="rounded-lg bg-surface-raised border border-line px-3 py-2 mb-4 text-sm text-content-subtle">
+                <div class="rounded bg-surface-raised border border-line px-3 py-2 mb-4 text-sm text-content-subtle">
                     Waiting on a formal Architect's Instruction. None is linked yet —
                     <a href="@($"/projects/{ProjectId}/architect-instructions")" class="text-accent hover:underline">file or link one</a>
                     when it arrives, then approve the variation to write the contract figures.

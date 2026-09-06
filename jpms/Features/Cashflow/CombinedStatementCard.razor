@@ -5,7 +5,7 @@
    the same rows, the same helpers, over the table's own figures, so the statement and the
    rows beneath it agree to the penny. With one project ticked this IS that project's
    statement. *@
-<div class="rounded-xl border border-line bg-surface mb-8 max-w-2xl">
+<div class="panel mb-8 max-w-2xl">
     <div class="px-4 py-3 border-b-2 border-line">
         <p class="eyebrow">Combined statement</p>
         <p class="text-sm font-semibold text-content mt-0.5">@SelectionLabel</p>
@@ -73,7 +73,7 @@
             <p class="text-sm text-content"
                title="The net still owed on allocated purchase lines, part-payment aware: a bill Xero has partly settled counts only its remainder, from the bill's AmountDue as last synced">Unpaid Xero purchase invoices</p>
         </div>
-        <p class="text-base font-semibold @(Combined.BillsUnpaid == 0m ? "text-content" : "text-negative") whitespace-nowrap">@Money(-Combined.BillsUnpaid)</p>
+        <p class="text-base font-semibold @(Combined.BillsUnpaid == 0m ?"text-content" : "text-negative") whitespace-nowrap">@Money(-Combined.BillsUnpaid)</p>
     </div>
 
     <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
@@ -88,7 +88,7 @@
     <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
         <p class="text-sm font-semibold text-content"
            title="Left to claim, less cost centre drawdowns, uninvoiced work orders and unpaid purchase invoices, plus the first retention releases — the net cash movement between now and practical completion">Practical completion cashflow</p>
-        <p class="text-xl font-semibold @(Combined.PracticalCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(Combined.PracticalCompletionCashflow)</p>
+        <p class="text-xl font-semibold @(Combined.PracticalCompletionCashflow < 0m ?"text-negative" : "text-positive") whitespace-nowrap">@Money(Combined.PracticalCompletionCashflow)</p>
     </div>
 
     <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
@@ -103,7 +103,7 @@
     <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
         <p class="text-sm font-semibold text-content"
            title="Practical completion cashflow plus the final retention releases — the selected projects' net cash movement to the end of their defects periods">Project completion cashflow</p>
-        <p class="text-xl font-semibold @(Combined.ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(Combined.ProjectCompletionCashflow)</p>
+        <p class="text-xl font-semibold @(Combined.ProjectCompletionCashflow < 0m ?"text-negative" : "text-positive") whitespace-nowrap">@Money(Combined.ProjectCompletionCashflow)</p>
     </div>
 </div>
 

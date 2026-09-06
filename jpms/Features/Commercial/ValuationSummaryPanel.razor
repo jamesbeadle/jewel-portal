@@ -5,7 +5,7 @@
 @* The valuation summary under the bill: the contract sums, works complete, retention, the
    deposit block for projects that carry one, and the payment due — the same figures the
    Cashflow tab reads (ValuationSummaryFigures), so the two can never drift. *@
-<div class="mt-4 rounded-xl border border-line bg-surface-raised p-5">
+<div class="mt-4 panel-raised p-5">
     <h3 class="text-sm font-semibold text-content mb-3">Valuation summary@(ClaimName is null ? "" : $" — {ClaimName}")</h3>
     <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm max-w-2xl">
         <SummaryRow Label="Original contract sum" Value="@Money(Figures.ContractSum)" />

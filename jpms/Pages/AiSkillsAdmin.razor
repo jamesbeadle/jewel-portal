@@ -83,7 +83,7 @@
                                         <td class="whitespace-nowrap">@AgentLabel(row.AgentKey)</td>
                                         <td>@(row.Pinned ? "Pinned" : "On demand")</td>
                                         <td>
-                                            <span class="@(row.IsActive ? "text-content" : "text-content-subtle")">
+                                            <span class="@(row.IsActive ?"text-content" : "text-content-subtle")">
                                                 @(row.IsActive ? "Active" : "Off")
                                             </span>
                                         </td>
@@ -122,7 +122,7 @@
 
             @if (saveErrors.Count > 0)
             {
-                <div class="rounded-lg border border-negative/40 bg-negative/5 px-4 py-3 mb-4">
+                <div class="rounded border border-negative/40 bg-negative/5 px-4 py-3 mb-4">
                     @foreach (var saveError in saveErrors)
                     {
                         <p class="text-xs leading-snug text-content-muted">@saveError</p>
@@ -205,7 +205,7 @@
                             @foreach (var reference in references)
                             {
                                 <button type="button" @onclick="() => EditReference(reference)"
-                                        class="w-full text-left rounded-lg border border-line bg-surface-raised px-3 py-2 hover:border-line-strong transition">
+                                        class="w-full text-left rounded border border-line bg-surface-raised px-3 py-2 hover:border-line-strong transition">
                                     <span class="block text-sm text-content">@reference.DisplayName
                                         <span class="text-xs text-content-subtle">— @reference.RefKey</span></span>
                                     <span class="block text-xs text-content-subtle truncate">@reference.Description</span>
@@ -220,7 +220,7 @@
                     }
                     else
                     {
-                        <div class="rounded-lg border border-line p-4 space-y-3">
+                        <div class="rounded border border-line p-4 space-y-3">
                             <div class="grid gap-3 md:grid-cols-2">
                                 <label class="block">
                                     <span class="block text-xs font-medium text-content-muted mb-1">Reference key</span>

@@ -35,11 +35,11 @@
             }
             @if (SubtitleContent is not null)
             {
-                <div class="text-sm text-content-muted @(Title is not null || TitleContent is not null ? "mt-1" : "")">@SubtitleContent</div>
+                <div class="text-sm text-content-muted @(Title is not null || TitleContent is not null ?"mt-1" : "")">@SubtitleContent</div>
             }
             else if (Subtitle is not null)
             {
-                <p class="text-sm text-content-muted @(Title is not null || TitleContent is not null ? "mt-1" : "")">@Subtitle</p>
+                <p class="text-sm text-content-muted @(Title is not null || TitleContent is not null ?"mt-1" : "")">@Subtitle</p>
             }
         </div>
         @if (HasActions)

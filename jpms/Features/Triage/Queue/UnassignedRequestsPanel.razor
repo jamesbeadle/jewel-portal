@@ -19,7 +19,7 @@
     <div class="space-y-2">
         @foreach (var request in Requests)
         {
-            <div @key="request.RequestId" class="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2">
+            <div @key="request.RequestId" class="flex items-center justify-between gap-3 rounded border border-line px-3 py-2">
                 <div class="min-w-0">
                     <p class="text-sm text-content truncate">
                         <span class="font-mono text-xs text-content-muted mr-2">@TriageEmailDisplay.Dash(request.Reference)</span>@TriageEmailDisplay.Dash(request.Title)

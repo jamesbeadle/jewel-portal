@@ -4,7 +4,7 @@
 
 @* The KPI strip. The movement tiles are everyone's; the bank-anchored tiles are the directors',
    mirroring the API's gate. Tiles keep their shape while loading: label stays, figure pulses. *@
-<div class="grid gap-4 sm:grid-cols-2 @(IsDirector ? "lg:grid-cols-4" : "lg:grid-cols-3") mb-8">
+<div class="grid gap-4 sm:grid-cols-2 @(IsDirector ?"lg:grid-cols-4" : "lg:grid-cols-3") mb-8">
     @if (IsDirector)
     {
         <StatTile Label="Cash in bank" IsLoading="@(Bank is null)">
@@ -35,7 +35,7 @@
             else
             {
                 var low = View.Closing[View.MinClosingIndex];
-                <p class="text-2xl font-semibold @(low < 0m ? "text-negative" : "text-content")">@Money(low)</p>
+                <p class="text-2xl font-semibold @(low < 0m ?"text-negative" : "text-content")">@Money(low)</p>
                 <p class="text-xs text-content-subtle mt-1">@WeekLabel(View.WeekStarts[View.MinClosingIndex], View.MinClosingIndex)</p>
             }
         </StatTile>
@@ -48,7 +48,7 @@
             else
             {
                 var horizonEnd = View.Closing[^1];
-                <p class="text-2xl font-semibold @(horizonEnd < 0m ? "text-negative" : "text-content")">@Money(horizonEnd)</p>
+                <p class="text-2xl font-semibold @(horizonEnd < 0m ?"text-negative" : "text-content")">@Money(horizonEnd)</p>
                 <p class="text-xs text-content-subtle mt-1">after @WeekLabel(View.WeekStarts[^1], View.WeekStarts.Count - 1)</p>
             }
         </StatTile>

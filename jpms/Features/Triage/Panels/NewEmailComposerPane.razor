@@ -11,7 +11,7 @@
 <div class="panel p-5">
     <h2 class="text-base font-semibold text-content mb-4">New email</h2>
     <div class="space-y-3">
-    <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+    <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
         Sends from the <span class="font-medium text-content">projects mailbox</span>. Optionally file it to a record so the sent copy shows in that record's correspondence — replies will arrive in the queue either way.
     </p>
 
@@ -51,7 +51,7 @@
     <AttachmentPicker Attachments="attachments" AttachmentsChanged="picked => attachments = picked"
                       Projects="ProjectOptionsFor(projectId)" ProjectId="@projectId" />
 
-    <div class="rounded-lg border border-line p-3 space-y-2">
+    <div class="rounded border border-line p-3 space-y-2">
         <label class="flex items-center gap-2 text-sm text-content">
             <input type="checkbox" checked="@fileToRecord" @onchange="OnFileToggled" />
             File this email to a record (the sent copy shows in its correspondence)

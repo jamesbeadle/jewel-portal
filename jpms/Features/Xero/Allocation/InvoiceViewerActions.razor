@@ -8,11 +8,11 @@
    are keyed in. *@
 @if (SplitOpen)
 {
-    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-4">
+    <div class="rounded border border-line bg-surface-raised px-4 py-3 space-y-4">
         <div class="flex items-center justify-between gap-2 flex-wrap">
             <span class="eyebrow">Split across cost centres</span>
             <span class="flex items-center gap-2">
-                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                         disabled="@Busy" @onclick="() => OnApplySplit.InvokeAsync()">
                     @(Applying ? "Allocating…" : "Allocate split")
                 </button>
@@ -26,11 +26,11 @@
 }
 else if (DisputeOpen)
 {
-    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-3">
+    <div class="rounded border border-line bg-surface-raised px-4 py-3 space-y-3">
         <div class="flex items-center justify-between gap-2 flex-wrap">
             <span class="eyebrow">Dispute this cost</span>
             <span class="flex items-center gap-2">
-                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                         disabled="@Busy" @onclick="() => OnConfirmDispute.InvokeAsync()">
                     @(Applying ? "Disputing…" : "Move to Disputed")
                 </button>
@@ -51,7 +51,7 @@ else
 {
     @* The full set of row choices, in two rows: code the line to a project
        and cost centre, or send it to a bucket / ignore it / dispute it. *@
-    <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-2">
+    <div class="rounded border border-line bg-surface-raised px-4 py-3 space-y-2">
         <div class="flex items-center gap-2 flex-wrap">
             <span class="eyebrow w-16">Allocate</span>
             <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
@@ -64,7 +64,7 @@ else
                it is visible WHY a coded line isn't offering plain Allocate. *@
             @if (!string.IsNullOrEmpty(ArmedBucket))
             {
-                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 max-w-[11rem] truncate"
+                <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40 max-w-[11rem] truncate"
                         title="@($"Allocate to the {ArmedBucket} bucket — pick a project or cost centre to code it instead")"
                         disabled="@Busy" @onclick="() => OnBucketAllocate.InvokeAsync()">
                     @(Applying ? "Allocating…" : $"Allocate to {ArmedBucket}")
@@ -72,7 +72,7 @@ else
             }
             else
             {
-                <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
+                <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                         disabled="@(Busy || !CanAllocate)"
                         @onclick="() => OnAllocate.InvokeAsync()">
                     @(Applying ? "Allocating…" : "Allocate")

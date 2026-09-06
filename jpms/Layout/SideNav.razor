@@ -29,7 +29,7 @@
             <span class="@LabelClass">JPMS</span>
         </a>
         <button type="button" @onclick="OnToggleExpand"
-                class="hidden md:inline-flex items-center justify-center w-8 h-8 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised"
+                class="hidden md:inline-flex items-center justify-center w-8 h-8 rounded text-content-subtle hover:text-content hover:bg-surface-raised"
                 aria-label="Toggle navigation">
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round">
@@ -54,7 +54,7 @@
                 <li class="hidden md:block pt-2 pb-1">
                     <div class="relative">
                         <button type="button" @onclick="() => pickerOpen = !pickerOpen"
-                                class="w-full flex items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-left hover:border-line-strong transition"
+                                class="w-full flex items-center gap-2 rounded border border-line bg-surface-raised px-3 py-2 text-left hover:border-line-strong transition"
                                 aria-haspopup="listbox" aria-expanded="@pickerOpen" title="Switch project">
                             @if (PickedProject is { } picked)
                             {
@@ -67,7 +67,7 @@
                             {
                                 <span class="min-w-0 flex-1 text-sm text-content-subtle">Pick a project…</span>
                             }
-                            <svg class="w-4 h-4 text-content-subtle shrink-0 transition-transform @(pickerOpen ? "rotate-180" : "")"
+                            <svg class="w-4 h-4 text-content-subtle shrink-0 transition-transform @(pickerOpen ?"rotate-180" : "")"
                                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
                         </button>
@@ -76,7 +76,7 @@
                         {
                             <button type="button" class="fixed inset-0 z-30 cursor-default" aria-hidden="true"
                                     @onclick="() => pickerOpen = false" tabindex="-1"></button>
-                            <div class="absolute left-0 right-0 top-full z-40 mt-1 max-h-80 overflow-y-auto rounded-xl border border-line bg-surface shadow-lg py-1"
+                            <div class="absolute left-0 right-0 top-full z-40 mt-1 max-h-80 overflow-y-auto panel py-1"
                                  role="listbox">
                                 @if (RecentlyOpened.Count > 0)
                                 {
@@ -171,9 +171,9 @@
                         </li>
                         <li class="hidden md:block pt-2">
                             <button type="button" @onclick="() => ToggleFolder(folder)"
-                                    class="w-full flex items-center gap-1.5 px-3 py-1 rounded-lg text-left hover:bg-surface-raised transition"
+                                    class="w-full flex items-center gap-1.5 px-3 py-1 rounded text-left hover:bg-surface-raised transition"
                                     aria-expanded="@IsFolderOpen(folder)" title="@folder.Label">
-                                <svg class="w-3 h-3 text-content-subtle shrink-0 transition-transform @(IsFolderOpen(folder) ? "rotate-90" : "")"
+                                <svg class="w-3 h-3 text-content-subtle shrink-0 transition-transform @(IsFolderOpen(folder) ?"rotate-90" : "")"
                                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
                                 <span class="eyebrow">@folder.Label</span>
@@ -237,7 +237,7 @@
     @if (Auth.IsSignedIn)
     {
         <div class="border-t border-line px-3 py-3">
-            <div class="@(IsExpanded ? "hidden md:block" : "hidden") mb-3">
+            <div class="@(IsExpanded ?"hidden md:block" : "hidden") mb-3">
                 <p class="eyebrow mb-1">Signed in as</p>
                 <p class="text-content text-sm font-medium truncate" title="@Auth.CurrentUser!.Email">@Auth.CurrentUser.DisplayName</p>
                 <p class="text-xs text-content-subtle truncate" title="@Auth.CurrentUser.Email">@Auth.CurrentUser.Email</p>
@@ -257,7 +257,7 @@
     // full list so the two can never drift apart.
     private RenderFragment<Project> ProjectOption => candidate =>
         @<button type="button" role="option" aria-selected="@IsCurrent(candidate)"
-                 class="w-full text-left px-3 py-2 text-sm transition @(IsCurrent(candidate) ? "bg-surface-raised text-content font-semibold" : "text-content-muted hover:text-content hover:bg-surface-raised")"
+                 class="w-full text-left px-3 py-2 text-sm transition @(IsCurrent(candidate) ?"bg-surface-raised text-content font-semibold" : "text-content-muted hover:text-content hover:bg-surface-raised")"
                  @onclick="() => PickProject(candidate)">
             <span class="font-mono text-xs text-content-subtle mr-2">@candidate.Reference</span>@candidate.Name
         </button>;

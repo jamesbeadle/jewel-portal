@@ -40,7 +40,7 @@
     {
         <p class="text-xs text-warning">@(UserDirectory.IsLoaded ? "Pick the person the KPI is about before staging." : "Waiting for the people list…")</p>
     }
-    <button type="button" class="@(CanStage ? "btn-primary" : "btn-primary opacity-50 cursor-not-allowed")" disabled="@(!CanStage)"
+    <button type="button" class="@(CanStage ?"btn-primary" : "btn-primary opacity-50 cursor-not-allowed")" disabled="@(!CanStage)"
             title="@(CanStage ? "Line up the KPI mark for this email's Apply" : "Pick the person first")"
             @onclick="StageAsync">Stage action</button>
 </div>

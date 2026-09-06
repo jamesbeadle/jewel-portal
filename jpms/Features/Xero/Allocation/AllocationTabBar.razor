@@ -4,7 +4,7 @@
    suggested by its Xero tracking — sits in that project's tab, so people working a specific
    project approve just their own costs. Dropdown picks alone don't move rows; Set/Allocate
    do. "Unallocated" keeps only the lines nothing points at a project yet. *@
-<div class="inline-flex flex-wrap rounded-lg border border-line overflow-hidden">
+<div class="inline-flex flex-wrap rounded border border-line overflow-hidden">
     <button class="@StatusClass(XeroAllocationStatus.Unallocated)" @onclick="() => OnSwitchStatus.InvokeAsync(XeroAllocationStatus.Unallocated)">
         Unallocated (@UnassignedCount)
     </button>

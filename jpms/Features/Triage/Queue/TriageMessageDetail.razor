@@ -40,7 +40,7 @@
    scroll out of sight (decision 2026-08-12; the routing itself lives in Document Control). *@
 @if (Detail is not null && Detail.Attachments.Count > 0)
 {
-    <div class="rounded-lg bg-surface-raised border border-line p-3">
+    <div class="rounded bg-surface-raised border border-line p-3">
         <div class="flex items-center justify-between gap-3 mb-2">
             <p class="eyebrow">
                 @Detail.Attachments.Count attachment@(Detail.Attachments.Count == 1 ? "" : "s")
@@ -100,7 +100,7 @@ else if (Selected.HasAttachments && Detail is not null)
     <p class="text-xs text-content-subtle italic">This email has attachments, but their names couldn't be retrieved.</p>
 }
 
-<div class="rounded-lg bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
+<div class="rounded bg-surface-raised border border-line p-3 max-h-[28rem] overflow-y-auto">
     @if (DetailLoading)
     {
         <p class="text-sm text-content-subtle italic">Loading message…</p>
@@ -123,7 +123,7 @@ else if (Selected.HasAttachments && Detail is not null)
    email so "did we answer this?" never needs Outlook, and another reply can follow. *@
 @if (SentReplies.Count > 0)
 {
-    <div class="rounded-lg border border-positive/30 bg-positive/5 p-3 space-y-1.5">
+    <div class="rounded border border-positive/30 bg-positive/5 p-3 space-y-1.5">
         <p class="text-sm font-medium text-positive">Replies sent · @SentReplies.Count</p>
         @foreach (var sent in SentReplies)
         {
@@ -156,7 +156,7 @@ else if (Selected.HasAttachments && Detail is not null)
     {
         @* The thread as TABS: one numbered chip per email (oldest → newest), the open one
            highlighted — click a tab and the content above switches to that email. *@
-        <div class="rounded-lg bg-surface-raised border border-line px-3 py-2">
+        <div class="rounded bg-surface-raised border border-line px-3 py-2">
             <div class="flex flex-wrap items-center gap-1.5">
                 <span class="eyebrow mr-1">
                     Thread · email @ThreadPositionOfSelected of @Thread.Count

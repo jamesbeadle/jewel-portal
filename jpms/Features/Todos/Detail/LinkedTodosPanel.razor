@@ -35,7 +35,7 @@
                     <a href="@($"/todos/{item.TodoItemId}")" @key="item.TodoItemId" title="Open this to-do"
                        class="btn-secondary">
                         <div class="flex items-center justify-between gap-2">
-                            <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
+                            <p class="truncate text-sm @(item.IsComplete ?"text-content-subtle line-through" : "text-content")">
                                 <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                             </p>
                             <Pill Tone="@TodoStatus.Tone(item)" Class="shrink-0">@TodoStatus.Label(item)</Pill>

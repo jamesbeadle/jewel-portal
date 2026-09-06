@@ -19,7 +19,7 @@
    despite a folder having been selected. *@
 
 <EditForm Model="this" OnValidSubmit="HandleUpload"
-      class="rounded-2xl border border-line bg-surface p-5 space-y-3">
+      class="border border-line bg-surface p-5 space-y-3">
 
     <div>
         <h3 class="text-sm font-semibold text-content">Add documents to the register</h3>
@@ -31,19 +31,19 @@
 
     <div class="inline-flex gap-2">
         <button type="button" @onclick="() => SetMode(isRevision: false)"
-                class="chip @(!isRevision ? "chip-active" : "")">
+                class="chip @(!isRevision ?"chip-active" : "")">
             New document
         </button>
         <button type="button" @onclick="() => SetMode(isRevision: true)" disabled="@(ExistingDrawings.Count == 0 || IsBulk)"
                 title="@(IsBulk ? "A revision is one file into one document — reduce the selection to one file first." : null)"
-                class="chip @(isRevision ? "chip-active" : "")">
+                class="chip @(isRevision ?"chip-active" : "")">
             Revision of existing document
         </button>
     </div>
 
     @* One instance across every mode — hidden, not removed, in revision mode (a revision lands
        in its drawing's folder), so the chosen folder survives single/bulk/revision switches. *@
-    <div class="@(isRevision ? "hidden" : null)">
+    <div class="@(isRevision ?"hidden" : null)">
         <DrawingFolderPicker @ref="folderPicker" ProjectId="@ProjectId" InitialFolderId="@InitialFolderId" />
     </div>
 
@@ -71,7 +71,7 @@
            fires dragenter on the child BEFORE dragleave on the zone, so a boolean flips to false
            while the pointer is still inside — the "sometimes doesn't highlight" flicker. The
            count only reaches zero when the drag has actually left (or dropped). *@
-        <div class="relative rounded-xl border-2 border-dashed px-4 py-6 text-center transition @(IsDragOver ? "border-accent bg-surface-raised" : "border-line-strong")"
+        <div class="relative border-2 border-dashed px-4 py-6 text-center transition @(IsDragOver ?"border-accent bg-surface-raised" : "border-line-strong")"
              @ondragenter="() => dragDepth++"
              @ondragleave="() => dragDepth = Math.Max(0, dragDepth - 1)"
              @ondrop="() => dragDepth = 0"
@@ -85,7 +85,7 @@
                 var isActive = generation == ActiveGeneration;
                 <InputFile @key="generation" OnChange="OnFilesSelected" multiple="@(!isRevision)"
                            disabled="@(busy || unpacking is not null || !isActive)"
-                           class="@(isActive ? "absolute inset-0 h-full w-full opacity-0 cursor-pointer" : "hidden")" />
+                           class="@(isActive ?"absolute inset-0 h-full w-full opacity-0 cursor-pointer" : "hidden")" />
             }
             <p class="text-sm text-content-muted pointer-events-none">
                 @(unpacking is not null
@@ -100,7 +100,7 @@
 
         @if (selectedFiles.Count == 1)
         {
-            <p class="mt-2 flex items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm text-content">
+            <p class="mt-2 flex items-center gap-2 rounded border border-line bg-surface-raised px-3 py-2 text-sm text-content">
                 <span class="eyebrow shrink-0">Original file</span>
                 <span class="flex-1 min-w-0 font-medium break-all">@selectedFiles[0].Name</span>
                 <span class="text-content-subtle shrink-0">@FormatSize(selectedFiles[0].Size)</span>
@@ -112,7 +112,7 @@
         }
         else if (IsBulk)
         {
-            <div class="mt-2 rounded-lg border border-line bg-surface-raised">
+            <div class="mt-2 rounded border border-line bg-surface-raised">
                 <div class="flex items-center justify-between px-3 py-2 border-b border-line">
                     <span class="eyebrow">@selectedFiles.Count files · @FormatSize(selectedFiles.Sum(file => file.Size))</span>
                     <button type="button" @onclick="ClearSelection" disabled="@busy"

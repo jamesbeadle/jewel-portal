@@ -5,10 +5,10 @@
     Purely presentational: the hosting panel owns loading, posting and the reply state.
 *@
 
-<div class="rounded-lg border px-4 py-3 @(IsInternal ? "border-warning/40 bg-warning/5" : "border-line bg-surface-raised")">
+<div class="rounded border px-4 py-3 @(IsInternal ?"border-warning/40 bg-warning/5" : "border-line bg-surface-raised")">
     <div class="flex items-start justify-between gap-3 mb-2">
         <div class="flex items-center gap-2.5 min-w-0">
-            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold @(IsInternal ? "bg-warning/15 text-warning" : "bg-surface text-content-muted border border-line")"
+            <span class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold @(IsInternal ?"bg-warning/15 text-warning" : "bg-surface text-content-muted border border-line")"
                   aria-hidden="true">@Initials()</span>
             <span class="text-sm font-semibold text-content truncate">@AuthorLabel()</span>
         </div>

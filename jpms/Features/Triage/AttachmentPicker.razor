@@ -33,7 +33,7 @@
     }
 
     <div class="flex flex-wrap items-center gap-2 text-xs">
-        <label class="inline-flex items-center gap-1 rounded-lg border border-line px-2.5 py-1.5 text-content-muted hover:text-content hover:border-line-strong cursor-pointer">
+        <label class="inline-flex items-center gap-1 rounded border border-line px-2.5 py-1.5 text-content-muted hover:text-content hover:border-line-strong cursor-pointer">
             📎 Attach files
             <InputFile OnChange="OnFilesPicked" multiple class="hidden" />
         </label>
@@ -52,7 +52,7 @@
 
     @if (openPanel != Panel.None)
     {
-        <div class="rounded-lg border border-line bg-surface-raised p-3 space-y-2">
+        <div class="rounded border border-line bg-surface-raised p-3 space-y-2">
             @if (openPanel is Panel.Drawings or Panel.Photos or Panel.Records)
             {
                 <div>

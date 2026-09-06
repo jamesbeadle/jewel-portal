@@ -78,7 +78,7 @@
 
             @if (IsClosed)
             {
-                <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mb-6">
+                <p class="rounded bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mb-6">
                     Closed@(package.ClosedAt is { } closedAt ? $" on {closedAt.LocalDateTime:d MMM yyyy}" : "") — the tender ended with no winner selected. Reopen it to continue.
                 </p>
             }

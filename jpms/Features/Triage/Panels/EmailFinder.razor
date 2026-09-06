@@ -52,7 +52,7 @@
                 {
                     var alreadyTagged = IsAlreadyTagged(email);
                     <li @key="email.Id"
-                        class="rounded-lg border px-3 py-2 @(alreadyTagged ? "border-line bg-surface-raised opacity-60" : selected.Contains(email.Id) ? "border-accent bg-accent/5 cursor-pointer" : "border-line bg-surface hover:border-line-strong cursor-pointer")"
+                        class="rounded border px-3 py-2 @(alreadyTagged ?"border-line bg-surface-raised opacity-60" : selected.Contains(email.Id) ? "border-accent bg-accent/5 cursor-pointer" : "border-line bg-surface hover:border-line-strong cursor-pointer")"
                         @onclick="() => Toggle(email, alreadyTagged)">
                         <div class="flex items-start gap-2.5">
                             <input type="checkbox" class="mt-1 shrink-0" checked="@selected.Contains(email.Id)"

@@ -32,7 +32,7 @@
 <LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="@LoadingLabel">
 @if (sentNote is not null)
 {
-    <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+    <div class="rounded border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
         <p class="text-sm text-content">@sentNote</p>
         <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss"
                 @onclick="() => sentNote = null">✕</button>

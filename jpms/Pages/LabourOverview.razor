@@ -74,7 +74,7 @@
         @foreach (var (key, label) in Views)
         {
             <button type="button"
-                    class="@(view == key ? "btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
+                    class="@(view == key ?"btn-secondary bg-surface-raised text-content" : "btn-secondary text-content-subtle")"
                     @onclick="() => view = key">@label</button>
         }
     </div>

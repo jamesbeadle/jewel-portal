@@ -27,7 +27,7 @@
     <tbody>
         @foreach (var record in Records)
         {
-            <tr class="align-top @(CanOpen ? "is-clickable cursor-pointer" : "")" @onclick="() => Open(record)">
+            <tr class="align-top @(CanOpen ?"is-clickable cursor-pointer" : "")" @onclick="() => Open(record)">
                 @if (SelectionEnabled)
                 {
                     <td class="pr-1 w-8" @onclick:stopPropagation="true">
@@ -62,7 +62,7 @@
                 <td class="text-right hidden md:table-cell whitespace-nowrap">
                     @if (record.DaysOutstanding is int days)
                     {
-                        <span class="@(record.IsOverdue ? "text-negative font-semibold" : "text-content-muted")">@days</span>
+                        <span class="@(record.IsOverdue ?"text-negative font-semibold" : "text-content-muted")">@days</span>
                     }
                     else
                     {
@@ -111,7 +111,7 @@
 {
     <button type="button" class="fixed inset-0 z-40 cursor-default" aria-hidden="true" tabindex="-1"
             @onclick="CloseStatusMenu"></button>
-    <div class="fixed z-50 w-48 rounded-lg border border-line bg-surface shadow-lg overflow-hidden"
+    <div class="fixed z-50 w-48 rounded border border-line bg-surface overflow-hidden"
          style="@StatusMenuStyle" role="menu">
         <ul class="divide-y divide-line">
             @foreach (var option in StatusOptions)
@@ -120,7 +120,7 @@
                 var isCurrent = status == menuRecord.Status;
                 <li>
                     <button type="button" role="menuitem"
-                            class="w-full text-left px-3 py-2 text-sm transition @(isCurrent ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
+                            class="w-full text-left px-3 py-2 text-sm transition @(isCurrent ?"text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
                             disabled="@isCurrent"
                             title="@StatusHint(status)"
                             @onclick="() => PickStatus(menuRecord, status)">

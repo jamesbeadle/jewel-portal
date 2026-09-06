@@ -48,7 +48,7 @@
 
         @* ---- Document-type explainer ----------------------------------------------------------
            Red is reserved for what can genuinely hurt: quoting-stage money treated as approved. *@
-        <div class="rounded-xl border border-line bg-surface px-4 py-3 mb-4">
+        <div class="panel px-4 py-3 mb-4">
             <p class="text-sm font-medium text-content mb-1">Variation — one document, four stages</p>
             <p class="text-sm text-content-muted">
                 When every requirement of a specific group has been identified and costed, the request becomes a
@@ -66,7 +66,7 @@
             </Notice>
             @if (UnlinkedRows.Count > 0)
             {
-                <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mt-2">
+                <p class="rounded bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mt-2">
                     @UnlinkedRows.Count historic variation@(UnlinkedRows.Count == 1 ? " isn't" : "s aren't") linked back
                     to a request yet — open a variation and attach the RFI it was raised from in its
                     <span class="font-medium text-content">Originating request</span> panel, or open the RFI
@@ -118,7 +118,7 @@
            normal approve step then writes the VO to the valuation and CVR. *@
         @if (OpenRequests.Count > 0 || ReviewedRequests.Count > 0)
         {
-            <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+            <div class="panel overflow-hidden mb-6">
                 <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
                     <h3 class="text-sm font-medium text-content-muted">Subcontractor variation requests</h3>
                     <span class="text-xs text-content-subtle">@OpenRequests.Count awaiting review</span>
@@ -294,14 +294,14 @@
                                         </Pill>
                                         @if (variationStatusMenuId == order.VariationOrderId)
                                         {
-                                            <div class="absolute left-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden">
+                                            <div class="absolute left-0 mt-2 w-64 rounded border border-line bg-surface z-30 overflow-hidden">
                                                 <ul class="divide-y divide-line">
                                                     @foreach (var choice in statusChoices)
                                                     {
                                                         var pick = choice;
                                                         <li>
                                                             <button type="button"
-                                                                    class="w-full text-left px-3 py-2 text-sm transition @(pick.IsCurrent ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
+                                                                    class="w-full text-left px-3 py-2 text-sm transition @(pick.IsCurrent ?"text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
                                                                     disabled="@pick.IsCurrent"
                                                                     title="@pick.Hint"
                                                                     @onclick="() => PickVariationStatus(pick)">
@@ -334,7 +334,7 @@
                                 }
                                 @if (CanIssueWorkOrder(order))
                                 {
-                                    <button type="button" class="@(issued.Count > 0 ? "block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
+                                    <button type="button" class="@(issued.Count > 0 ?"block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
                                             title="@(issued.Count > 0 ? "Issue a further work order for this variation" : "Issue the work order instructing this variation")"
                                             disabled="@requestBusy" @onclick="() => IssueWorkOrder(order.VariationOrderId)">
                                         @(issued.Count > 0 ? "Issue another" : "Issue WO")

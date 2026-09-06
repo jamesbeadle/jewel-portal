@@ -28,7 +28,7 @@
     }
     else
     {
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
             Tick the report lines this package covers — each becomes a line item carrying the
             report's cost code, description, unit and quantity (trade defaults to the package's
             own). Sale values are internal figures shown for context only — they are not saved
@@ -77,7 +77,7 @@
                     @foreach (var line in group)
                     {
                         var hasCostCode = !string.IsNullOrWhiteSpace(line.CostCode);
-                        <tr class="@(hasCostCode ? "" : "opacity-60")">
+                        <tr class="@(hasCostCode ?"" : "opacity-60")">
                             <td>
                                 <input type="checkbox" checked="@selection.Contains(line.ValuationLineItemId)"
                                        disabled="@(Busy || !hasCostCode)"

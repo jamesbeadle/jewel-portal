@@ -9,7 +9,7 @@
 
 @if (lines.Count == 0)
 {
-    <div class="rounded-xl border border-line bg-surface px-3 py-6 text-center text-content-subtle italic">
+    <div class="panel px-3 py-6 text-center text-content-subtle italic">
         No lines yet. Add contract works, provisional sums, contingency and variation lines to build the report.
     </div>
 }
@@ -24,7 +24,7 @@ else
         @foreach (var valuationSection in Sections)
         {
             var isOpen = IsExpanded(valuationSection.Type);
-            <div class="rounded-xl border border-line bg-surface overflow-hidden">
+            <div class="panel overflow-hidden">
                 <ValuationSectionHeader Title="@valuationSection.Title" LineCount="valuationSection.Lines.Count" Amount="valuationSection.Amount"
                                         IsOpen="isOpen" OnToggle="() => Toggle(valuationSection.Type)"
                                         ShowClaim="SelectedClaim is not null"
@@ -81,13 +81,13 @@ else
                                         @if (row.RollUp is { } rollUp)
                                         {
                                             var isRollUpOpen = IsRollUpOpen(rollUp);
-                                            <tr class="@(rollUp.CountsTowardTotals ? "bg-surface-raised" : "bg-surface-raised opacity-60")">
+                                            <tr class="@(rollUp.CountsTowardTotals ?"bg-surface-raised" : "bg-surface-raised opacity-60")">
                                                 <td class="sticky left-0 z-10 bg-surface font-mono text-xs text-content-subtle whitespace-nowrap">@rollUp.VariationRef</td>
                                                 <td class="sticky left-[72px] z-10 bg-surface text-content">
                                                     <button type="button" @onclick="() => ToggleRollUp(rollUp)" aria-expanded="@isRollUpOpen"
                                                             title="@(isRollUpOpen ? "Hide this row's lines" : "Show this row's lines")"
                                                             class="flex items-start gap-1.5 text-left">
-                                                        <svg class="@(isRollUpOpen ? "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle transition-transform")"
+                                                        <svg class="@(isRollUpOpen ?"w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle transition-transform")"
                                                              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                                              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                             <path d="M9 6l6 6-6 6" />
@@ -130,7 +130,7 @@ else
                                                             <span class="inline-flex items-baseline gap-1.5 justify-end">
                                                                 <button type="button" title="Set the same % complete on every line in this row — open the row to set lines individually"
                                                                         @onclick="() => StartRollUpEdit(rollUp)"
-                                                                        class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(RollUpPercent(rollUp) == 0m ? "text-content-muted" : "text-content")">
+                                                                        class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(RollUpPercent(rollUp) == 0m ?"text-content-muted" : "text-content")">
                                                                     @Pct(RollUpPercent(rollUp))
                                                                 </button>
                                                                 @if (ShowRollUpDelta(rollUp))
@@ -185,7 +185,7 @@ else
                                                 </tr>
                                             }
                                         }
-                                        <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
+                                        <tr class="@(line.CountsTowardTotals ?"" : "opacity-60")">
                                             <td class="sticky left-0 z-10 bg-surface font-mono text-xs text-content-subtle whitespace-nowrap">
                                                 <div>@(row.IsDetail ? "↳ " : "")@CodeFor(line)</div>
                                                 @* The client's own item number for the line — how the contract document reads. *@
@@ -278,7 +278,7 @@ else
                                                            value="@BulkValueFor(line)"
                                                            @oninput="@(e => SetBulkValue(line, e.Value?.ToString() ?? ""))"
                                                            aria-label="Percent complete"
-                                                           class="field w-16 text-right px-2 py-1 focus:outline-none focus:ring-2 @(bulkErrorLines.Contains(line.ValuationLineItemId) ? "ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
+                                                           class="field w-16 text-right px-2 py-1 focus:outline-none focus:ring-2 @(bulkErrorLines.Contains(line.ValuationLineItemId) ?"ring-2 ring-negative border-negative" : "focus:ring-accent focus:border-accent")" />
                                                 }
                                                 else if (CanEditEntries && line.CountsTowardTotals)
                                                 {
@@ -311,7 +311,7 @@ else
                                                         <span class="inline-flex items-baseline gap-1.5 justify-end">
                                                             <button type="button" title="Edit % complete"
                                                                     @onclick="() => StartEdit(line)"
-                                                                    class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(PercentFor(line) == 0m ? "text-content-muted" : "text-content")">
+                                                                    class="underline decoration-dotted underline-offset-2 hover:decoration-solid @(PercentFor(line) == 0m ?"text-content-muted" : "text-content")">
                                                                 @Pct(PercentFor(line))
                                                             </button>
                                                             @if (ShowDelta(line))

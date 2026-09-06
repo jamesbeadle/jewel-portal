@@ -200,8 +200,8 @@ public partial class RequestForm : IDisposable
 
     private string KindButtonClass(RequestType option) =>
         kind == option
-            ? "px-3 py-1.5 rounded-lg text-sm font-medium bg-accent/15 border border-accent text-content"
-            : "px-3 py-1.5 rounded-lg text-sm font-medium bg-surface-raised border border-line text-content-muted hover:text-content";
+            ? "px-3 py-1.5 rounded text-sm font-medium bg-accent/15 border border-accent text-content"
+            : "px-3 py-1.5 rounded text-sm font-medium bg-surface-raised border border-line text-content-muted hover:text-content";
 
     private void OnStatusChanged(ChangeEventArgs e)
     {

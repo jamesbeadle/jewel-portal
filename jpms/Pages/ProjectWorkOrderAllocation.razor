@@ -22,19 +22,19 @@
 
         @* ── Headline figures ─────────────────────────────────────────────── *@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
+            <div class="panel px-4 py-3">
                 <p class="eyebrow">Cost of sales</p>
                 <p class="text-lg font-semibold text-content">@Money(AllLines.Sum(line => line.Net))</p>
             </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
+            <div class="panel px-4 py-3">
                 <p class="eyebrow">Linked to work orders</p>
                 <p class="text-lg font-semibold text-content">@Money(AllLines.Sum(line => line.LinkedTotal))</p>
             </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
+            <div class="panel px-4 py-3">
                 <p class="eyebrow">Not linked</p>
-                <p class="text-lg font-semibold @(UnlinkedTotal == 0m ? "text-content" : "text-negative")">@Money(UnlinkedTotal)</p>
+                <p class="text-lg font-semibold @(UnlinkedTotal == 0m ?"text-content" : "text-negative")">@Money(UnlinkedTotal)</p>
             </div>
-            <div class="rounded-xl border border-line bg-surface px-4 py-3">
+            <div class="panel px-4 py-3">
                 <p class="eyebrow">Orders fully invoiced</p>
                 <p class="text-lg font-semibold text-content">@(summaries.Count(s => s.InvoicingStatus is WorkOrderInvoicingStatus.FullyInvoiced or WorkOrderInvoicingStatus.OverInvoiced)) of @summaries.Count</p>
             </div>
@@ -95,7 +95,7 @@
                             <td class="text-right whitespace-nowrap @(summary.RemainingToInvoice < 0m ?"text-negative font-medium" : "text-content")">@Money(summary.RemainingToInvoice)</td>
                             <td>
                                 <div class="h-1.5 rounded-full bg-surface-raised border border-line overflow-hidden" title="@ProgressTitle(summary)">
-                                    <div class="h-full @(summary.InvoicingStatus == WorkOrderInvoicingStatus.OverInvoiced ? "bg-negative/80" : "bg-accent")"
+                                    <div class="h-full @(summary.InvoicingStatus == WorkOrderInvoicingStatus.OverInvoiced ?"bg-negative/80" : "bg-accent")"
                                          style="width: @(ProgressPercent(summary))%"></div>
                                 </div>
                             </td>
@@ -178,7 +178,7 @@
                 {
                     <button type="button"
                             class="@(queueFilter == filter
-                                       ? "rounded-full border border-accent px-2.5 py-0.5 text-content font-medium"
+                                       ?"rounded-full border border-accent px-2.5 py-0.5 text-content font-medium"
                                        : "rounded-full border border-line px-2.5 py-0.5 text-content-subtle hover:text-content")"
                             @onclick="() => queueFilter = filter">@label</button>
                 }

@@ -8,6 +8,18 @@ missing.
 **Marks.** ✅ a real reusable component is rendered · ⚠️ hand-rolled markup that recurs across
 views (extract it) · 🔒 one-off markup local to that view.
 
+## Where it stands (2026-09-06)
+
+The Stage 1 rounds (`docs/ui/stage-1-components.md`) built and rolled out the spine below: every
+⚠️ for AuthGate, Header, AlertBanner, StatusPill, EmptyState, SearchInput, ChipTabs/SegmentedTabs
+(as `TabRow`/`FilterChips`), RecordsTable (the shell + skin), FormField and InlineConfirm is now a
+real component — `Page`, `PageHeader`, `Notice`, `Pill`, `EmptyState`, `SearchInput`, `TabRow`,
+`FilterChips`, `RecordsTable`, `FormField`, `Checkbox`, `SectionHeader`, `StatTile`,
+`ConfirmDialog`, `InlineConfirm`. The per-view trees below describe the views as they were
+surveyed on 2026-09-03 and are kept as the map; read a ⚠️ in them as "was hand-rolled, now the
+named component". Still open: `KeyValueList`, `LedgerStatementRow`, `StatusTransitionMenu`,
+numbered `Pagination`, the generic column-model table, `PageLoadScope`, `NoticeService`.
+
 ## The five duplications worth fixing first
 
 | Pattern | Where it stands |

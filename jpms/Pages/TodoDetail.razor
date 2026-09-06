@@ -45,7 +45,7 @@
         {
             <PageHeader Eyebrow="@item.Reference">
                 <TitleContent>
-                    <span class="@(item.IsComplete ? "text-content-subtle line-through" : "")">@item.Title</span>
+                    <span class="@(item.IsComplete ?"text-content-subtle line-through" : "")">@item.Title</span>
                     <Pill Tone="@TodoStatus.Tone(item)" Class="shrink-0 ml-3 align-middle">@TodoStatus.Label(item)</Pill>
                 </TitleContent>
                 <Actions>

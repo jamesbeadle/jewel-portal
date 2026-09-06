@@ -68,7 +68,7 @@
         <div class="space-y-1 max-h-96 overflow-y-auto">
             @foreach (var place in results)
             {
-                <label class="flex items-start gap-2.5 rounded-lg border border-line bg-surface px-3 py-2.5 cursor-pointer hover:border-line-strong">
+                <label class="flex items-start gap-2.5 rounded border border-line bg-surface px-3 py-2.5 cursor-pointer hover:border-line-strong">
                     <input type="checkbox" class="mt-1" checked="@selection.ContainsKey(place.PlaceId)"
                            @onchange="e => TogglePlace(place, e)" />
                     <span class="min-w-0">

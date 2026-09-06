@@ -13,7 +13,7 @@
     @foreach (var item in Items)
     {
         var active = IsActive(item.Key);
-        <button type="button" class="chip @(active ? "chip-active" : "")" title="@item.Title"
+        <button type="button" class="chip @(active ?"chip-active" : "")" title="@item.Title"
                 aria-pressed="@(active ? "true" : "false")" disabled="@Disabled"
                 @onclick="() => Pick(item.Key)">
             @item.Label

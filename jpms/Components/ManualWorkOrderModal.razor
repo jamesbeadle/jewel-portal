@@ -27,13 +27,13 @@
                        DraftTickLocked="@(createdOrder is not null)" OnChanged="HandleFormChanged" />
 
         @* ── Attachments: record keeping only — never sent to the supplier ───── *@
-        <div class="rounded-lg border border-line bg-surface p-3">
+        <div class="rounded border border-line bg-surface p-3">
             <div class="flex items-center justify-between gap-3 mb-1">
                 <p class="eyebrow"
                    title="Kept on the order for the office's records — the quote it rests on, a signed copy, photos. Never emailed to the supplier and never printed on the purchase order">
                     Attachments — record keeping
                 </p>
-                <label class="btn-secondary text-xs cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                <label class="btn-secondary text-xs cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
                     Add files
                     <InputFile OnChange="OnAttachmentFilesSelected" multiple class="hidden" />
                 </label>
@@ -84,7 +84,7 @@
            Packages section. *@
         @if (!IsEditing && !FormSaveAsDraft)
         {
-        <div class="rounded-lg border border-line bg-surface p-3">
+        <div class="rounded border border-line bg-surface p-3">
             <label class="flex w-fit items-center gap-2 text-sm text-content cursor-pointer select-none mb-2">
                 <input type="checkbox" class="cursor-pointer align-middle" disabled="@busy" @bind="createPackage" />
                 Create a reconciliation package with this order
@@ -111,7 +111,7 @@
                         var salesLine = entry.Line;
                         var picked = pickedAmounts.ContainsKey(salesLine.ValuationLineItemId);
                         var exhausted = !picked && entry.Available == 0m;
-                        <div class="flex items-center gap-2 text-sm @(exhausted ? "opacity-50" : "")">
+                        <div class="flex items-center gap-2 text-sm @(exhausted ?"opacity-50" : "")">
                             <input type="checkbox" class="cursor-pointer" disabled="@(busy || exhausted)"
                                    title="@(exhausted ? "Fully assigned to other packages" : "")"
                                    checked="@picked"
@@ -136,11 +136,11 @@
                         </div>
                     }
                 </div>
-                <div class="rounded-lg border border-line bg-surface-raised px-3 py-2 mt-2 text-sm flex flex-wrap items-center gap-x-6 gap-y-1">
+                <div class="rounded border border-line bg-surface-raised px-3 py-2 mt-2 text-sm flex flex-wrap items-center gap-x-6 gap-y-1">
                     <span class="text-content-muted">Sales <span class="text-content font-medium">@Money(SalesTotal)</span></span>
                     <span class="text-content-muted">Target cost (÷@DivisorText) <span class="text-content font-medium">@Money(TargetTotal)</span></span>
                     <span class="text-content-muted">Order value <span class="text-content font-medium">@Money(OrderTotal)</span></span>
-                    <span class="@(Difference < 0m ? "text-negative" : "text-content-muted")"
+                    <span class="@(Difference < 0m ?"text-negative" : "text-content-muted")"
                           title="Target cost less the order's value — a large gap either way suggests the scope on the two sides doesn't match yet">
                         Difference <span class="font-medium">@Money(Difference)</span>
                     </span>

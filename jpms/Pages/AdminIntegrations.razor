@@ -36,7 +36,7 @@
         <div class="max-w-2xl">
             @if (callbackNote is not null)
             {
-                <p class="mb-4 rounded-lg px-3 py-2 text-sm @(callbackFailed ? "bg-negative/10 border border-negative/30 text-negative" : "bg-positive/10 border border-positive/30 text-positive")">
+                <p class="mb-4 rounded px-3 py-2 text-sm @(callbackFailed ?"bg-negative/10 border border-negative/30 text-negative" : "bg-positive/10 border border-positive/30 text-positive")">
                     @callbackNote
                 </p>
             }

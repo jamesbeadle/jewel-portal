@@ -12,7 +12,7 @@
         <MetaCell Label="Response due" Value="@Date(Record.ResponseDue)" />
         <div>
             <p class="eyebrow mb-0.5">Days outstanding</p>
-            <p class="@(Record.IsOverdue ? "text-negative font-semibold" : "text-content")">@(Record.DaysOutstanding is int d ? d.ToString() : "—")</p>
+            <p class="@(Record.IsOverdue ?"text-negative font-semibold" : "text-content")">@(Record.DaysOutstanding is int d ? d.ToString() : "—")</p>
         </div>
         @* A closed record always shows its Closed fact — a legacy close with no recorded
            date surfaces as a dash rather than hiding, so the gap is visible and fixable

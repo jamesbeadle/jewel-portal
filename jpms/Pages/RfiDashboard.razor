@@ -88,7 +88,7 @@
                         <td class="text-right hidden md:table-cell whitespace-nowrap">
                             @if (record.DaysOutstanding is int days)
                             {
-                                <span class="@(record.IsOverdue ? "text-negative font-semibold" : "text-content-muted")">@days</span>
+                                <span class="@(record.IsOverdue ?"text-negative font-semibold" : "text-content-muted")">@days</span>
                             }
                             else
                             {
@@ -185,8 +185,8 @@
 
     private string StatusViewClass(StatusView view) =>
         view == statusView
-            ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
-            : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+            ? "px-3 py-1.5 rounded bg-accent text-accent-ink font-medium"
+            : "px-3 py-1.5 rounded text-content-muted hover:text-content hover:bg-surface-raised";
 
     private string ProjectName(string projectId) =>
         ProjectsReadModel.Find(projectId)?.Name ?? projectId;

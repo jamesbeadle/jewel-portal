@@ -54,22 +54,22 @@
                                 <span class="ml-auto flex items-center gap-1">
                                     <button type="button" title="Upload documents into this folder" aria-label="Upload documents into this folder"
                                             @onclick="() => OnUploadToFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
-                                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
+                                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface transition">
                                         <ActionIcon Name="upload" Class="w-3.5 h-3.5" />
                                     </button>
                                     <button type="button" title="New sub-folder" aria-label="New sub-folder"
                                             @onclick="() => OnCreateSubFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
-                                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
+                                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface transition">
                                         <ActionIcon Name="plus" Class="w-3.5 h-3.5" />
                                     </button>
                                     <button type="button" title="Rename folder" aria-label="Rename folder"
                                             @onclick="() => OnRenameFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
-                                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface transition">
+                                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface transition">
                                         <ActionIcon Name="pencil" Class="w-3.5 h-3.5" />
                                     </button>
                                     <button type="button" title="Delete folder (its documents and sub-folders move up a level)" aria-label="Delete folder"
                                             @onclick="() => OnDeleteFolder.InvokeAsync(folder)" @onclick:stopPropagation="true"
-                                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-negative/10 transition">
+                                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-negative hover:bg-negative/10 transition">
                                         <ActionIcon Name="trash" Class="w-3.5 h-3.5" />
                                     </button>
                                 </span>

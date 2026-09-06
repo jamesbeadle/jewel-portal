@@ -36,7 +36,7 @@
     }
     else if (!Snapshot.IsConfigured)
     {
-        <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+        <div class="panel-raised px-5 py-4 text-sm text-content-muted">
             Xero isn't connected yet. Add the custom connection's credentials as the
             <span class="font-mono text-content">Xero__ClientId</span> and
             <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
@@ -44,7 +44,7 @@
     }
     else if (Snapshot.Error is not null)
     {
-        <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+        <div class="panel-raised px-5 py-4 text-sm text-content-muted">
             <p class="text-content font-medium mb-1">Xero returned an error</p>
             <p>@Snapshot.Error</p>
         </div>
@@ -57,7 +57,7 @@
     {
         @if (Snapshot.Truncated)
         {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted mb-6">
+            <div class="panel-raised px-5 py-4 text-sm text-content-muted mb-6">
                 <p class="text-content font-medium mb-1">Fetch cap reached — totals are incomplete</p>
                 <p>
                     Xero holds more records since @FromDateText than the API's page cap allows.
@@ -67,7 +67,7 @@
         }
 
         <div class="mb-6 flex items-center justify-between gap-4 flex-wrap">
-            <div class="inline-flex rounded-lg border border-line overflow-hidden">
+            <div class="inline-flex rounded border border-line overflow-hidden">
                 <button class="@TabClass(View.Transactions)" @onclick="() => activeView = View.Transactions">Transactions</button>
                 <button class="@TabClass(View.BySite)" @onclick="() => activeView = View.BySite">Site × cost code</button>
             </div>

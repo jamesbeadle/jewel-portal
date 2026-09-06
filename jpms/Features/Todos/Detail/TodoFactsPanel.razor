@@ -18,7 +18,7 @@
                               Options="@AssigneeOptions" Busy="@Busy" Reassign="@Reassign" />
             <div>
                 <dt class="eyebrow">Due</dt>
-                <dd class="mt-0.5 @(IsOverdue ? "text-negative font-medium" : "text-content")">
+                <dd class="mt-0.5 @(IsOverdue ?"text-negative font-medium" : "text-content")">
                     @(Item.DueAt is null ? "—" : DateText(Item.DueAt.Value))@(IsOverdue ? " (overdue)" : "")
                 </dd>
             </div>

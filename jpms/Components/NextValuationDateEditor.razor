@@ -43,7 +43,7 @@
             </p>
         </div>
 
-        <label class="flex items-start gap-2 cursor-pointer select-none rounded-lg border border-line bg-surface-raised px-3 py-2">
+        <label class="flex items-start gap-2 cursor-pointer select-none rounded border border-line bg-surface-raised px-3 py-2">
             <input type="checkbox" class="mt-0.5" @bind="calculate" />
             <span>
                 <span class="block text-sm font-medium text-content">Calculate date</span>
@@ -70,7 +70,7 @@
                 </div>
             </div>
 
-            <div class="rounded-lg border border-line bg-surface-raised px-3 py-2 space-y-2">
+            <div class="rounded border border-line bg-surface-raised px-3 py-2 space-y-2">
                 <label class="flex items-center gap-2 cursor-pointer select-none">
                     <input type="checkbox" @bind="snapToWeekday" />
                     <span class="text-sm text-content">Snap to a weekday of the month</span>
@@ -108,7 +108,7 @@
             </div>
         }
 
-        <div class="rounded-lg border border-line bg-surface-raised px-3 py-2">
+        <div class="rounded border border-line bg-surface-raised px-3 py-2">
             <p class="eyebrow mb-0.5">Next valuation date</p>
             <p class="text-sm font-medium text-content">
                 @(Result?.ToString("dddd d MMMM yyyy") ?? "Pick a base date")

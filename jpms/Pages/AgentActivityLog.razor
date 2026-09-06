@@ -73,7 +73,7 @@
                         <tbody>
                             @foreach (var row in rows)
                             {
-                                <tr class="@(string.IsNullOrWhiteSpace(row.Route) ? "" : "is-clickable")"
+                                <tr class="@(string.IsNullOrWhiteSpace(row.Route) ?"" : "is-clickable")"
                                     @onclick="() => Open(row)">
                                     <td class="whitespace-nowrap">@row.OccurredAt.ToLocalTime().ToString("dd MMM HH:mm")</td>
                                     <td class="text-content">@row.AgentKey</td>
@@ -81,7 +81,7 @@
                                         <span class="block truncate max-w-[14rem]" title="@row.ActorEmail">@row.ActorEmail</span>
                                         @if (row.IsAutonomous)
                                         {
-                                            <span class="mt-0.5 inline-block rounded-md bg-surface-raised border border-line px-1.5 py-0.5 text-xs text-content-subtle">unattended</span>
+                                            <span class="mt-0.5 inline-block rounded bg-surface-raised border border-line px-1.5 py-0.5 text-xs text-content-subtle">unattended</span>
                                         }
                                     </td>
                                     <td>
@@ -182,7 +182,7 @@
 
     private static string OutcomeClass(AgentOutcome outcome)
     {
-        var baseClass = "inline-block rounded-md px-2 py-0.5 text-xs font-medium";
+        var baseClass = "inline-block rounded px-2 py-0.5 text-xs font-medium";
         return outcome switch
         {
             AgentOutcome.Ok => $"{baseClass} bg-accent/10 text-accent",

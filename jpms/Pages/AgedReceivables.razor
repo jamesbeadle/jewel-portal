@@ -40,7 +40,7 @@
     }
     else if (!Snapshot.IsConfigured)
     {
-        <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+        <div class="panel-raised px-5 py-4 text-sm text-content-muted">
             Xero isn't connected yet. Add the custom connection's credentials as the
             <span class="font-mono text-content">Xero__ClientId</span> and
             <span class="font-mono text-content">Xero__ClientSecret</span> app settings on the API, then reload.
@@ -48,7 +48,7 @@
     }
     else if (Snapshot.Error is not null)
     {
-        <div class="rounded-xl border border-line bg-surface-raised px-5 py-4 text-sm text-content-muted">
+        <div class="panel-raised px-5 py-4 text-sm text-content-muted">
             <p class="text-content font-medium mb-1">Xero returned an error</p>
             <p>@Snapshot.Error</p>
         </div>
@@ -57,26 +57,26 @@
     {
         @if (Snapshot.Truncated)
         {
-            <div class="rounded-xl border border-line bg-surface-raised px-5 py-3 text-sm text-content-muted mb-6">
+            <div class="panel-raised px-5 py-3 text-sm text-content-muted mb-6">
                 Xero holds more outstanding invoices than the read's page cap could fetch — these totals are
                 incomplete. Raise the <span class="font-mono text-content">Xero__MaxPages</span> app setting.
             </div>
         }
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
-            <div class="rounded-xl border border-line bg-surface px-5 py-4">
+            <div class="panel px-5 py-4">
                 <p class="eyebrow mb-1">Total receivables</p>
                 <p class="text-2xl font-semibold text-content">@Money(GrandTotal)</p>
                 <p class="text-xs text-content-subtle mt-1">@Invoices.Count @(Invoices.Count == 1 ? "invoice" : "invoices") outstanding · fetched @FetchedText</p>
             </div>
-            <div class="rounded-xl border border-line bg-surface px-5 py-4">
+            <div class="panel px-5 py-4">
                 <p class="eyebrow mb-1">Of which draft</p>
                 <p class="text-2xl font-semibold text-content">@Money(DraftTotal)</p>
                 <p class="text-xs text-content-subtle mt-1">@DraftCount still being prepared — not in Xero's own report</p>
             </div>
-            <div class="rounded-xl border border-line bg-surface px-5 py-4">
+            <div class="panel px-5 py-4">
                 <p class="eyebrow mb-1">Overdue</p>
-                <p class="text-2xl font-semibold @(OverdueTotal > 0 ? "text-negative" : "text-content")">@Money(OverdueTotal)</p>
+                <p class="text-2xl font-semibold @(OverdueTotal > 0 ?"text-negative" : "text-content")">@Money(OverdueTotal)</p>
                 <p class="text-xs text-content-subtle mt-1">everything past the Current column</p>
             </div>
         </div>
@@ -85,7 +85,7 @@
             <h2 class="text-sm font-semibold text-content">By client</h2>
             @* Xero's report offers the same choice; due date is its default. Recomputed
                locally — no refetch. *@
-            <div class="inline-flex rounded-lg border border-line overflow-hidden text-xs font-medium">
+            <div class="inline-flex rounded border border-line overflow-hidden text-xs font-medium">
                 <button type="button" class="@BasisClass(ReceivablesAgeBasis.DueDate)"
                         @onclick="() => SetBasis(ReceivablesAgeBasis.DueDate)">Age by due date</button>
                 <button type="button" class="@BasisClass(ReceivablesAgeBasis.InvoiceDate)"
@@ -117,7 +117,7 @@
                         <tr class="cursor-pointer hover:bg-surface-raised transition" @onclick="() => ToggleExpanded(row.Client)">
                             <td class="text-content font-medium whitespace-nowrap">
                                 <span class="inline-flex items-center gap-2">
-                                    <svg class="w-3.5 h-3.5 text-content-subtle shrink-0 transition-transform @(isExpanded ? "rotate-90" : "")"
+                                    <svg class="w-3.5 h-3.5 text-content-subtle shrink-0 transition-transform @(isExpanded ?"rotate-90" : "")"
                                          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
                                     @row.Client

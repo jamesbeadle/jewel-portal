@@ -85,7 +85,7 @@
                         <div><p class="text-xl font-medium text-content">@funnel.Leads</p><p class="text-xs text-content-subtle">leads</p></div>
                         <div><p class="text-xl font-medium text-content">@funnel.Engaged</p><p class="text-xs text-content-subtle">engaged</p></div>
                         <div><p class="text-xl font-medium text-content">@funnel.Proposals</p><p class="text-xs text-content-subtle">proposals</p></div>
-                        <div><p class="text-xl font-medium @(funnel.Won > 0 ? "text-positive" : "text-content")">@funnel.Won</p><p class="text-xs text-content-subtle">won</p></div>
+                        <div><p class="text-xl font-medium @(funnel.Won > 0 ?"text-positive" : "text-content")">@funnel.Won</p><p class="text-xs text-content-subtle">won</p></div>
                     </div>
                     <p class="text-xs text-content-subtle mt-3">
                         @(funnel.PipelineValue > 0 ? $"{WholeMoney(funnel.PipelineValue)} open" : "No open value")

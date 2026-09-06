@@ -38,7 +38,7 @@
         @* The count strip: only the things that are late, waiting or need a decision. A zero is
            worth showing — "nothing overdue" is information — but a metric that doesn't apply to
            this role is left out entirely rather than rendered as a dash. *@
-        <div class="grid grid-cols-2 @(Tiles.Count >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3") gap-3 md:gap-4 mb-8">
+        <div class="grid grid-cols-2 @(Tiles.Count >= 4 ?"lg:grid-cols-4" : "lg:grid-cols-3") gap-3 md:gap-4 mb-8">
             @foreach (var tile in Tiles)
             {
                 <a href="@tile.Href" class="panel p-5 hover:border-line-strong hover:bg-surface-raised transition">

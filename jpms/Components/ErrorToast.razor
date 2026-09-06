@@ -18,7 +18,7 @@
 
 @if (Reporter.Current is { } report)
 {
-    <div class="fixed top-0 left-0 right-0 z-[60] bg-negative-strong text-negative-ink shadow-lg shadow-black/40"
+    <div class="fixed top-0 left-0 right-0 z-[60] bg-negative-strong text-negative-ink shadow-black/40"
          role="alert" aria-live="assertive">
         <div class="px-4 py-3 flex items-start gap-3">
 
@@ -49,18 +49,18 @@
 
                 @if (expanded)
                 {
-                    <pre class="mt-2 max-h-56 overflow-auto rounded-lg bg-black/25 p-3 text-xs leading-relaxed font-mono whitespace-pre-wrap break-words">@report.ToPlainText()</pre>
+                    <pre class="mt-2 max-h-56 overflow-auto rounded bg-black/25 p-3 text-xs leading-relaxed font-mono whitespace-pre-wrap break-words">@report.ToPlainText()</pre>
                 }
             </div>
 
             <div class="flex items-center gap-2 shrink-0">
                 <button type="button" @onclick="Copy"
                         title="Copy the full report so you can send it on"
-                        class="rounded-lg bg-black/20 hover:bg-black/30 px-3 py-1.5 text-xs font-medium transition">
+                        class="rounded bg-black/20 hover:bg-black/30 px-3 py-1.5 text-xs font-medium transition">
                     @(copied ? "Copied" : "Copy report")
                 </button>
                 <button type="button" @onclick="Dismiss" aria-label="Dismiss this error"
-                        class="grid place-items-center w-7 h-7 rounded-lg hover:bg-black/25 transition">
+                        class="grid place-items-center w-7 h-7 rounded hover:bg-black/25 transition">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
                         <path d="M6 6l12 12M18 6L6 18" />

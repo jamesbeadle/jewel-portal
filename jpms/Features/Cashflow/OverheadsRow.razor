@@ -22,7 +22,7 @@
             <input type="number" min="0" step="500" value="@(isOverridden ? overridden : Default)"
                    @onchange="args => OnMonthChanged.InvokeAsync((overheadsMonth, args))"
                    title="@(isOverridden ? "Edited for this month — clear it to return to the default" : "The default — edit to override this month only")"
-                   class="w-20 rounded border bg-surface-field px-1.5 py-0.5 text-xs text-content text-right @(isOverridden ? "border-accent" : "border-line-strong")" />
+                   class="w-20 rounded border bg-surface-field px-1.5 py-0.5 text-xs text-content text-right @(isOverridden ?"border-accent" : "border-line-strong")" />
         </td>
     }
     <td class="px-3 py-2.5 text-right border-l border-line text-content-faint">—</td>

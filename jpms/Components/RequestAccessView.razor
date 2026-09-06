@@ -5,7 +5,7 @@
 <section class="max-w-md mx-auto px-4 py-12 md:py-16">
 
     <div class="text-center mb-8">
-        <span class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-warning/10 text-warning text-xl mb-5" aria-hidden="true">!</span>
+        <span class="inline-flex items-center justify-center w-14 h-14 bg-warning/10 text-warning text-xl mb-5" aria-hidden="true">!</span>
         <p class="eyebrow mb-2">No account yet</p>
         <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight mb-3">You're signed in, but you don't have JPMS access</h1>
         <p class="text-base text-content-muted leading-relaxed">
@@ -16,7 +16,7 @@
 
     @if (isSubmitted)
     {
-        <div class="rounded-2xl border border-positive/30 bg-positive/10 p-6 text-center">
+        <div class="border border-positive/30 bg-positive/10 p-6 text-center">
             <p class="text-sm font-medium text-positive mb-1">Request submitted</p>
             <p class="text-sm text-positive leading-relaxed">
                 Thanks. An administrator will be in touch once your account has been approved.
@@ -29,7 +29,7 @@
     }
     else
     {
-        <div class="rounded-2xl border border-line bg-surface p-6">
+        <div class="border border-line bg-surface p-6">
             <dl class="grid grid-cols-1 gap-3 mb-5 text-sm">
                 <div class="flex justify-between gap-3">
                     <dt class="text-content-subtle">Name</dt>

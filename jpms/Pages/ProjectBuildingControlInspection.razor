@@ -61,7 +61,7 @@
             }
 
             @* ---- Details: the official dates lead; Created is a secondary fact. ---- *@
-            <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+            <section class="panel p-5 mb-5">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                     <div>
                         <FormField Label="Booked for">
@@ -107,10 +107,10 @@
             </section>
 
             @* ---- Photos. ---- *@
-            <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+            <section class="panel p-5 mb-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Photos</h3>
-                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
                         + Add photos
                         <InputFile OnChange="e => UploadAsync(inspection, e, BuildingControlAttachmentKind.Photo)" multiple accept="image/*" class="hidden" />
                     </label>
@@ -127,7 +127,7 @@
                             <figure @key="photo.BuildingControlAttachmentId" class="group relative">
                                 <a href="@Attachments.FileUrl(photo.BuildingControlAttachmentId, isInline: true)" target="_blank" rel="noopener">
                                     <img src="@Attachments.FileUrl(photo.BuildingControlAttachmentId, isInline: true)" alt="@photo.DisplayName"
-                                         class="w-full h-28 object-cover rounded-lg border border-line" loading="lazy" />
+                                         class="w-full h-28 object-cover rounded border border-line" loading="lazy" />
                                 </a>
                                 <button type="button" title="Remove photo"
                                         class="absolute top-1 right-1 hidden group-hover:flex items-center justify-center w-6 h-6 rounded-full bg-surface/90 text-content-subtle hover:text-negative text-xs"
@@ -139,10 +139,10 @@
             </section>
 
             @* ---- Documents: the inspector's site report and anything else that isn't a photo. ---- *@
-            <section class="rounded-xl border border-line bg-surface p-5 mb-5">
+            <section class="panel p-5 mb-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Documents</h3>
-                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+                    <label class="text-xs text-accent hover:underline cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
                         + Add files
                         <InputFile OnChange="e => UploadAsync(inspection, e, kind: null)" multiple class="hidden" />
                     </label>
@@ -159,7 +159,7 @@
                     <ul class="space-y-2">
                         @foreach (var file in Documents)
                         {
-                            <li class="rounded-lg border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                            <li class="rounded border border-line bg-surface px-4 py-3 flex flex-wrap items-center justify-between gap-2">
                                 <div class="min-w-0">
                                     <a class="text-sm font-medium text-content hover:underline"
                                        href="@Attachments.FileUrl(file.BuildingControlAttachmentId)" download>@file.DisplayName</a>
@@ -175,7 +175,7 @@
             </section>
 
             @* ---- Correspondence, read live by the JPMS/BCI-#### tag. ---- *@
-            <section class="rounded-xl border border-line bg-surface p-5">
+            <section class="panel p-5">
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="eyebrow">Correspondence</h3>
                     <div class="flex items-center gap-3">
@@ -190,7 +190,7 @@
                 <LoadGate IsLoading="@(emails is null && !emailsFailed)" Prominent="true" Label="Loading correspondence">
                 @if (sentNote is not null)
                 {
-                    <div class="rounded-lg border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
+                    <div class="rounded border border-positive/40 bg-positive/5 px-3 py-2 mb-3 flex items-center justify-between gap-2">
                         <p class="text-sm text-content">@sentNote</p>
                         <button type="button" class="text-content-subtle hover:text-content text-xs" title="Dismiss" @onclick="() => sentNote = null">✕</button>
                     </div>

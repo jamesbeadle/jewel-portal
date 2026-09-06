@@ -96,7 +96,7 @@
                                     }
                                     else
                                     {
-                                        <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium @(item.Coverage == BidPackageLineCoverage.Variation ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted")">@CoverageLabel(item)</span>
+                                        <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium @(item.Coverage == BidPackageLineCoverage.Variation ?"border-accent/30 bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted")">@CoverageLabel(item)</span>
                                     }
                                 </td>
                                 @if (CanEdit)

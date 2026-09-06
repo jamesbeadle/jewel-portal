@@ -31,7 +31,7 @@ else
                         <div class="flex items-center gap-2">
                             @if (rfi.DaysOutstanding is int days)
                             {
-                                <span class="text-xs @(rfi.IsOverdue ? "text-negative font-semibold" : "text-content-subtle")"
+                                <span class="text-xs @(rfi.IsOverdue ?"text-negative font-semibold" : "text-content-subtle")"
                                       title="Days outstanding since raised">@days d outstanding</span>
                             }
                             <Pill Tone="@rfi.Status.ToTone()">@rfi.Status.DisplayName()</Pill>

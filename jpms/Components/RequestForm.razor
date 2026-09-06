@@ -23,7 +23,7 @@
     {
         @* General requests are sunset (2026-08-14): hosts that lock the form to RFI never offer
            the kind toggle — the manual entry is an official RFI, full stop. *@
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
             Raised as an official <span class="font-medium text-content">RFI</span> — takes the project's
             next RFI number automatically; edit the reference only to back-fill a legacy RFI.
         </p>
@@ -40,7 +40,7 @@
                         class="@KindButtonClass(RequestType.Rfi)"
                         @onclick="() => SetKind(RequestType.Rfi)">Official RFI</button>
             </div>
-            <p class="mt-2 rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
+            <p class="mt-2 rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-subtle">
                 @if (kind == RequestType.General)
                 {
                     <text>Auto-numbered REQ-####. Promote it to an official RFI from the request once it's created.</text>
@@ -87,7 +87,7 @@
                     <button type="button" class="btn-secondary text-xs" disabled="@Busy" @onclick="OpenDrawingPicker">
                         Attach drawings@(selectedRevisions.Count > 0 ? $" ({selectedRevisions.Count})" : "")
                     </button>
-                    <label class="btn-secondary text-xs cursor-pointer @(Busy ? "opacity-50 pointer-events-none" : "")">
+                    <label class="btn-secondary text-xs cursor-pointer @(Busy ?"opacity-50 pointer-events-none" : "")">
                         Attach images@(pendingFiles.Count > 0 ? $" ({pendingFiles.Count})" : "")
                         @* Deliberately no `capture`: forcing the camera on mobile removes the photo
                            library, and site photos are as often taken earlier as taken now. *@

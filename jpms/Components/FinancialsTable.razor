@@ -40,7 +40,7 @@
    code / name) are sticky on both axes and sit above everything else. `isolate` traps
    the cells' z-10/20/30 in a local stacking context so they never paint over the app
    header (sticky z-30 in MainLayout) when the page scrolls under it. *@
-<div @ref="scrollerRef" class="isolate rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
+<div @ref="scrollerRef" class="isolate panel overflow-x-auto overflow-y-auto max-h-[85vh]">
     <table class="data-table">
         <thead>
             <tr>
@@ -220,7 +220,7 @@
 
                     <td class="text-right whitespace-nowrap">
                         <button type="button"
-                                class="text-xs font-medium underline underline-offset-4 @(allLocked ? "text-content" : "text-content-subtle hover:text-content")"
+                                class="text-xs font-medium underline underline-offset-4 @(allLocked ?"text-content" : "text-content-subtle hover:text-content")"
                                 title="@LockTitle(reportLine, allLocked, anyLocked)"
                                 @onclick="() => OnFinalisationToggled.InvokeAsync((reportLine.CostCodes, !allLocked))">
                             @(allLocked ? "Unlock" : anyLocked ? "Lock all" : "Lock")

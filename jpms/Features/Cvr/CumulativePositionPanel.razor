@@ -10,7 +10,7 @@
    mapped project), then ask the page to re-read the stored rows; a sync that completes but
    reports an error (e.g. a renamed tracking option) is shown inline — it is an answer, not a
    toast. *@
-<div class="rounded-xl border border-line bg-surface p-5 mt-6">
+<div class="panel p-5 mt-6">
     <div class="flex items-start justify-between gap-x-6 gap-y-2 flex-wrap">
         <div>
             <p class="eyebrow">
@@ -34,7 +34,7 @@
     }
     @if (syncNotice is not null)
     {
-        <p class="rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 text-sm text-warning mt-4">@syncNotice</p>
+        <p class="rounded bg-warning/10 border border-warning/30 px-3 py-2 text-sm text-warning mt-4">@syncNotice</p>
     }
     @* The sync's built-in acceptance test: each project's stored months summed against Xero's
        whole-range site P&L on the same pull. Mismatches are named with the figures; a clean

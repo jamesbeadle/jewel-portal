@@ -16,11 +16,11 @@
         <div class="min-w-0 grow">
             @if (Title is not null)
             {
-                <p class="font-medium @(ChildContent is not null ? "mb-1" : "")">@Title</p>
+                <p class="font-medium @(ChildContent is not null ?"mb-1" : "")">@Title</p>
             }
             @if (ChildContent is not null)
             {
-                <div class="@(Title is not null ? "text-content-muted" : "")">@ChildContent</div>
+                <div class="@(Title is not null ?"text-content-muted" : "")">@ChildContent</div>
             }
         </div>
         @if (Dismissible)

@@ -51,7 +51,7 @@
 
             @if (partyContacts.Count > 0)
             {
-                <div class="border border-line rounded-lg overflow-hidden mb-4">
+                <div class="border border-line rounded overflow-hidden mb-4">
                     <table class="data-table data-table-dense">
                         <thead>
                             <tr>
@@ -106,7 +106,7 @@
         }
         else
         {
-            <div class="border border-line rounded-lg overflow-hidden mb-3">
+            <div class="border border-line rounded overflow-hidden mb-3">
                 <table class="data-table data-table-dense">
                     <thead>
                         <tr>
@@ -121,7 +121,7 @@
                     <tbody>
                         @foreach (var contact in adHocContacts)
                         {
-                            <tr class="border-b border-line last:border-0 @(contact.ContactId == editingContactId ? "bg-surface-raised" : null)">
+                            <tr class="border-b border-line last:border-0 @(contact.ContactId == editingContactId ?"bg-surface-raised" : null)">
                                 <td class="text-content">@contact.Name</td>
                                 <td>@contact.Email</td>
                                 <td>@(contact.Organisation ?? "—")</td>

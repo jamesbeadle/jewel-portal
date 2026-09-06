@@ -32,7 +32,7 @@
                        value="@(row.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
                        @onchange="e => SetAmount(row, e.Value?.ToString())" />
                 <button type="button" aria-label="Remove row" disabled="@(Rows.Count <= 2)"
-                        class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40"
+                        class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-40"
                         @onclick="() => { if (Rows.Count > 2) Rows.Remove(row); }">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                          stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -45,7 +45,7 @@
                 @onclick="() => Rows.Add(new XeroSplitDraft { ProjectId = Rows.LastOrDefault()?.ProjectId ?? string.Empty })">+ Add row</button>
     </div>
 
-    <p class="text-sm @(Remaining == 0m ? "text-content-muted" : "text-negative")">
+    <p class="text-sm @(Remaining == 0m ?"text-content-muted" : "text-negative")">
         @Money(Assigned) of @Money(Net) assigned
         @(Remaining == 0m ? "— fully assigned." : $"— {Money(Remaining)} remaining.")
     </p>

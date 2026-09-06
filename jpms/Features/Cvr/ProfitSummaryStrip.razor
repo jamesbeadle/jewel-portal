@@ -28,7 +28,7 @@
     <StatTile Label="Biggest swing vs the deal" IsLoading="@(swing is null)" LoadingLabel="Loading biggest swing"
                 Title="The project whose forecast profit sits furthest from its budgeted profit — the number to ask about first.">
         <p class="text-2xl font-semibold @ProfitClass(swing!.Value.Row.ForecastSwing)">@swing.Value.Project.Name</p>
-        <p class="text-xs mt-1 @(swing.Value.Row.ForecastSwing < 0m ? "text-negative" : "text-positive")">
+        <p class="text-xs mt-1 @(swing.Value.Row.ForecastSwing < 0m ?"text-negative" : "text-positive")">
             @(swing.Value.Row.ForecastSwing < 0m ? "▼" : "▲") @MoneyCompact(Math.Abs(swing.Value.Row.ForecastSwing)) forecast vs budgeted profit
         </p>
     </StatTile>

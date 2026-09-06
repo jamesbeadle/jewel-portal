@@ -30,7 +30,7 @@
                 title="Save the proposed project and cost centre on the line — it stays disputed"
                 disabled="@(Busy || string.IsNullOrEmpty(ProjectValue))"
                 @onclick="() => OnSaveCoding.InvokeAsync()">Save</button>
-        <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface ml-2 disabled:opacity-40 align-middle"
+        <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface ml-2 disabled:opacity-40 align-middle"
                 title="Resolve the dispute — the line returns to the allocation queue keeping the coding set here"
                 disabled="@Busy"
                 @onclick="() => OnResolve.InvokeAsync()">Return to allocation</button>

@@ -4,7 +4,7 @@
    resolves the drawing by code from the register). Used on the drawing detail page. Only the
    file is required — the revision label and issuer can be added later. *@
 <EditForm Model="this" OnValidSubmit="HandleUpload"
-      class="rounded-2xl border border-line bg-surface p-5 space-y-3">
+      class="border border-line bg-surface p-5 space-y-3">
 
     <div>
         <FormField Label="New version file" Required>
@@ -12,7 +12,7 @@
         </FormField>
         @if (selectedFile is not null)
         {
-            <p class="mt-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm text-content">
+            <p class="mt-2 rounded border border-line bg-surface-raised px-3 py-2 text-sm text-content">
                 <span class="eyebrow mr-2">Original file</span>
                 <span class="font-medium break-all">@selectedFile.Name</span>
                 <span class="text-content-subtle"> · @FormatSize(selectedFile.Size)</span>

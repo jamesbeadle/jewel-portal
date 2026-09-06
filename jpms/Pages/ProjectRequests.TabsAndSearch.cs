@@ -156,8 +156,8 @@ public partial class ProjectRequests
 
     private string StatusViewClass(StatusView view) =>
         view == statusView
-            ? "px-3 py-1.5 rounded-md bg-accent text-accent-ink font-medium"
-            : "px-3 py-1.5 rounded-md text-content-muted hover:text-content hover:bg-surface-raised";
+            ? "px-3 py-1.5 rounded bg-accent text-accent-ink font-medium"
+            : "px-3 py-1.5 rounded text-content-muted hover:text-content hover:bg-surface-raised";
 
     private string HrefFor(string slug) =>
         slug == "rfis" ? $"/projects/{ProjectId}/requests" : $"/projects/{ProjectId}/requests/{slug}";

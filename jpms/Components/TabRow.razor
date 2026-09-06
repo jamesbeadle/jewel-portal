@@ -14,7 +14,7 @@
         @foreach (var tab in Items)
         {
             <li>
-                <a href="@tab.Href" class="tab @(tab.Key == ActiveKey ? "tab-active" : "")" title="@tab.Title"
+                <a href="@tab.Href" class="tab @(tab.Key == ActiveKey ?"tab-active" : "")" title="@tab.Title"
                    aria-current="@(tab.Key == ActiveKey ? "page" : null)">
                     @tab.Label
                     @if (tab.Count is { } count)

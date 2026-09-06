@@ -58,7 +58,7 @@
                 <tbody>
                     @foreach (var package in Packages)
                     {
-                        <tr class="hover:bg-surface-raised @(package.Status == BidPackageStatus.Closed ? "opacity-60" : "")">
+                        <tr class="hover:bg-surface-raised @(package.Status == BidPackageStatus.Closed ?"opacity-60" : "")">
                             <td>
                                 <a class="text-content font-medium hover:underline underline-offset-4"
                                    href="@($"/projects/{ProjectId}/bid-package-invites/{package.BidPackageId}")">@package.Title</a>
@@ -203,7 +203,7 @@
                         {
                             var index = i;
                             var suggestion = suggestions[index];
-                            <label class="flex items-start gap-3 rounded-xl border border-line bg-surface-raised px-4 py-3 cursor-pointer @(selectedSuggestions.Contains(index) ? "border-accent/40" : "")">
+                            <label class="flex items-start gap-3 panel-raised px-4 py-3 cursor-pointer @(selectedSuggestions.Contains(index) ?"border-accent/40" : "")">
                                 <input type="checkbox" class="mt-1"
                                        checked="@selectedSuggestions.Contains(index)"
                                        @onchange="e => ToggleSuggestion(index, e.Value is true)" />

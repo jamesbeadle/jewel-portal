@@ -9,7 +9,7 @@
     <summary class="text-xs font-medium text-content-subtle cursor-pointer select-none">
         Rejected work orders (@Orders.Count)
     </summary>
-    <ul class="mt-2 text-sm divide-y divide-line rounded-xl border border-line bg-surface">
+    <ul class="mt-2 text-sm divide-y divide-line panel">
         @foreach (var detail in Orders)
         {
             <li class="px-4 py-2 flex items-center gap-3">
@@ -18,7 +18,7 @@
                 <span class="text-content-subtle">@detail.SubcontractorName</span>
                 <span class="ml-auto text-content-subtle line-through">@Money(detail.Order.Value)</span>
                 <DropdownMenu Label="Actions" WidthClass="w-72" Disabled="@Busy"
-                              ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
+                              ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:border-line-strong transition"
                               Class="inline-block text-left"
                               Items="MenuItems(detail)" />
             </li>

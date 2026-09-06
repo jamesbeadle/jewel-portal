@@ -18,7 +18,7 @@
        Class="max-w-3xl w-full">
     @if (Snapshot is { } snapshot)
     {
-        <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+        <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
             Nothing sends from here — this creates a draft in the shared mailbox with the frozen
             report attached as a PDF, addressed to the project's client and architect contacts,
             for you to review and send from Outlook. The snapshot is immutable, so the attachment
@@ -27,7 +27,7 @@
 
         @if (snapshot.IsSuperseded)
         {
-            <p class="rounded-lg bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-content mb-3">
+            <p class="rounded bg-warning/10 border border-warning/30 px-3 py-2 text-xs text-content mb-3">
                 A later snapshot has superseded this one — check you're not sending figures the
                 client has already had corrected.
             </p>

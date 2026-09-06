@@ -1,7 +1,7 @@
 @inject IProgressStore ProgressStore
 
 <EditForm Model="this" OnValidSubmit="HandleSubmit"
-      class="rounded-2xl border border-line bg-surface p-5 space-y-3">
+      class="border border-line bg-surface p-5 space-y-3">
 
     <div>
         <FormField Label="Report title" Required>
@@ -58,8 +58,8 @@
                     var order = selectedIds.IndexOf(update.ProgressUpdateId);
                     <li>
                         <button type="button" @onclick="() => Toggle(update.ProgressUpdateId)"
-                                class="w-full flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition @(order >= 0 ? "border-accent bg-accent/5" : "border-line hover:bg-surface-raised")">
-                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold shrink-0 @(order >= 0 ? "bg-accent text-accent-ink" : "bg-surface-raised text-content-subtle border border-line-strong")">
+                                class="w-full flex items-center gap-3 rounded border px-3 py-2 text-left transition @(order >= 0 ?"border-accent bg-accent/5" : "border-line hover:bg-surface-raised")">
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold shrink-0 @(order >= 0 ?"bg-accent text-accent-ink" : "bg-surface-raised text-content-subtle border border-line-strong")">
                                 @(order >= 0 ? (order + 1).ToString() : "+")
                             </span>
                             <span class="min-w-0">

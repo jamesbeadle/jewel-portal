@@ -63,13 +63,13 @@
         }
         else
         {
-            <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40 align-middle"
+            <button class="text-xs font-medium rounded px-2.5 py-1 bg-content text-surface disabled:opacity-40 align-middle"
                     title="@MarkCoverHint(Line)"
                     disabled="@(Busy || !CanMarkCover(Line))"
                     @onclick="() => OnMarkCover.InvokeAsync()">Mark as settlement@(SettlementMonthOf(Line) is { } month ? $" · {month:MMM yyyy}" : "")</button>
         }
         <DropdownMenu Label="More" WidthClass="w-72" Disabled="@Busy"
-                      ToggleClass="inline-flex items-center gap-1 rounded-lg border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:text-content transition"
+                      ToggleClass="inline-flex items-center gap-1 rounded border border-line bg-surface px-2.5 py-1 text-xs text-content-muted hover:text-content transition"
                       Class="inline-block text-left ml-2 align-middle whitespace-normal"
                       Items="MenuItems"
                       OnOpenChanged="open => OnMenuOpenChanged.InvokeAsync(open)" />

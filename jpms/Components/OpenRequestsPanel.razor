@@ -55,7 +55,7 @@
                             </span>
                         </span>
                         <span class="text-right shrink-0">
-                            <span class="block text-sm font-semibold @(request.IsOverdue ? "text-negative" : "text-content")">
+                            <span class="block text-sm font-semibold @(request.IsOverdue ?"text-negative" : "text-content")">
                                 @(request.DaysOutstanding is int days ? $"{days}d" : "—")
                             </span>
                             <span class="block text-xs text-content-subtle">@request.Status.DisplayName()</span>

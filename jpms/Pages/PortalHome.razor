@@ -63,7 +63,7 @@
             </Notice>
         }
 
-        <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+        <div class="panel overflow-hidden mb-6">
             <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
                 <h2 class="text-sm font-medium text-content-muted">Your compliance documents</h2>
                 <span class="text-xs text-content-subtle">@CurrentDocuments.Count on file</span>
@@ -133,7 +133,7 @@
         </div>
 
         @* Upload: re-uploading an existing kind supersedes the old version (kept as history). *@
-        <div class="rounded-xl border border-line bg-surface p-5 mb-6">
+        <div class="panel p-5 mb-6">
             <h2 class="text-sm font-semibold text-content mb-3">Upload a document</h2>
             @if (uploadError is not null)
             {
@@ -178,7 +178,7 @@
             </button>
         </div>
 
-        <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+        <div class="panel overflow-hidden mb-6">
             <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
                 <h2 class="text-sm font-medium text-content-muted">Your work orders</h2>
                 <span class="text-xs text-content-subtle">@WorkOrders.Count work order@(WorkOrders.Count == 1 ? "" : "s")</span>
@@ -216,7 +216,7 @@
                                 </div>
                             </div>
                             <p class="mt-2 text-xs">
-                                <a class="underline underline-offset-2 @(NeedsAcceptance(workOrder) ? "text-warning font-medium" : "text-content-subtle") hover:text-content"
+                                <a class="underline underline-offset-2 @(NeedsAcceptance(workOrder) ?"text-warning font-medium" : "text-content-subtle") hover:text-content"
                                    href="@($"/portal/work-orders/{workOrder.Order.WorkOrderId}")">
                                     @(NeedsAcceptance(workOrder) ? "View & accept purchase order →" : "View purchase order →")
                                 </a>
@@ -242,7 +242,7 @@
             }
         </div>
 
-        <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
+        <div class="panel overflow-hidden mb-6">
             <header class="px-5 py-3 border-b border-line bg-surface-raised flex items-center justify-between">
                 <h2 class="text-sm font-medium text-content-muted">Your variation requests</h2>
                 <span class="text-xs text-content-subtle">@VariationRequests.Count request@(VariationRequests.Count == 1 ? "" : "s")</span>
@@ -291,7 +291,7 @@
 
         @* Raise a variation: the request goes to JBB for review; acceptance runs the commercial
            approval pipeline and, when approved, a NEW work order is issued (never an uplift). *@
-        <div class="rounded-xl border border-line bg-surface p-5">
+        <div class="panel p-5">
             <h2 class="text-sm font-semibold text-content mb-1">Raise a variation</h2>
             <p class="text-xs text-content-subtle mb-3">
                 Propose and price a change against one of your work orders. JBB will review it; if

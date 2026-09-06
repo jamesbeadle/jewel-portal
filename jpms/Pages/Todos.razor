@@ -175,7 +175,7 @@
 
         @if (addedNote is not null)
         {
-            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mb-3">
+            <p class="rounded bg-surface-raised border border-line px-3 py-2 text-sm text-content-muted mb-3">
                 @addedNote
                 @if (addedNoteHref is not null)
                 {
@@ -232,20 +232,20 @@
                         @foreach (var item in visible)
                         {
                             <button type="button" @key="item.TodoItemId" title="Open this item"
-                                    class="w-full rounded-lg border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
+                                    class="w-full rounded border border-line px-3 py-2 text-left hover:border-line-strong hover:bg-surface-raised"
                                     @onclick="() => OpenItem(item)">
-                                <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
+                                <p class="truncate text-sm @(item.IsComplete ?"text-content-subtle line-through" : "text-content")">
                                     <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                                 </p>
                                 <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
-                                    <span class="whitespace-nowrap @(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
+                                    <span class="whitespace-nowrap @(IsGeneral(item) ?"text-accent font-medium" : "")">@ScopeLabel(item)</span>
                                     @if (item.IsInProgress)
                                     {
                                         <Pill Tone="Tone.Warning" Title="Started — still open until it's marked done">In progress</Pill>
                                     }
                                     @if (item.DueAt is not null)
                                     {
-                                        <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @DateText(item.DueAt.Value)</span>
+                                        <span class="whitespace-nowrap @(IsOverdue(item) ?"text-negative font-medium" : "")">Due @DateText(item.DueAt.Value)</span>
                                     }
                                     <TodoAssigneeBadge Item="item" />
                                     @if (item.CompletedAt is not null)

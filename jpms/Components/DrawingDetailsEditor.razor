@@ -16,7 +16,7 @@
         @if (CanEdit)
         {
             <button type="button" title="Edit code and title" aria-label="Edit code and title" @onclick="BeginEdit"
-                    class="mt-1 inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised transition">
+                    class="mt-1 inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface-raised transition">
                 <ActionIcon Name="pencil" Class="w-3.5 h-3.5" />
             </button>
         }
@@ -24,7 +24,7 @@
 }
 else
 {
-    <div class="rounded-xl border border-line bg-surface p-4 space-y-3 max-w-xl">
+    <div class="panel p-4 space-y-3 max-w-xl">
         <div>
             <FormField Label="Document code">
             <input type="text" @bind="code" placeholder="A-100" class="field" />

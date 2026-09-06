@@ -29,7 +29,7 @@
                 <ExportToExcelButton FileName="@($"{Heading} · Contract sales value")"
                                      BuildWorkbook="BuildExportWorkbook" />
             </div>
-            <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
+            <div class="rounded border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
                 <table class="data-table data-table-dense">
                     <thead>
                         <tr>
@@ -86,7 +86,7 @@
 
             @if (NonCountingLines.Count > 0)
             {
-                <div class="rounded-lg border border-line overflow-x-auto">
+                <div class="rounded border border-line overflow-x-auto">
                     <p class="px-4 pt-3 pb-1 eyebrow">
                         Recorded but not priced into the total
                     </p>

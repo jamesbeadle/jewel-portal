@@ -8,7 +8,7 @@
     <td class="px-4 py-2.5">
         <button type="button" class="text-left" @onclick="() => OnToggle.InvokeAsync(Row.Category)"
                 title="@(Expanded ? "Collapse the per-project lines" : "Expand to one line per project")">
-            <span class="inline-block w-3 text-content-subtle transition-transform @(Expanded ? "rotate-90" : "")">▸</span>
+            <span class="inline-block w-3 text-content-subtle transition-transform @(Expanded ?"rotate-90" : "")">▸</span>
             <span class="text-content font-medium hover:text-accent">@Row.Label</span>
         </button>
         <span class="block pl-3 text-xs text-content-faint">@Row.Source</span>

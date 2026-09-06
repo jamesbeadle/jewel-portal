@@ -165,7 +165,7 @@
                bank position over time. ── *@
             @if (IsDirector && forecast.Closing.Length > 1)
             {
-                <div class="rounded-xl border border-line bg-surface px-5 py-4 mb-6">
+                <div class="panel px-5 py-4 mb-6">
                     <p class="eyebrow mb-2">Closing bank balance by month</p>
                     <ForecastBalanceChart Axis="forecast.Axis" Closing="forecast.Closing"
                                           MinIndex="forecast.MinIndex"

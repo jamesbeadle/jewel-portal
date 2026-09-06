@@ -19,7 +19,7 @@
     {
         var cellIndex = index;
         var members = Slice.Entries.Where(row => row.WeekIndex == cellIndex).ToList();
-        <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == View.WeekStarts.Count ? "border-l border-line" : "")">
+        <td class="px-1 py-1.5 text-right whitespace-nowrap @(cellIndex == View.WeekStarts.Count ?"border-l border-line" : "")">
             @if (members.Count > 0)
             {
                 var busy = CellBusy(members);
@@ -34,7 +34,7 @@
                     <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
                             title="Pay this cell's bills a week earlier" disabled="@(busy || cellIndex == 0)"
                             @onclick="() => OnMoveCell.InvokeAsync((Slice, cellIndex, Math.Min(cellIndex, View.WeekStarts.Count) - 1))">‹</button>
-                    <span class="@(anyMoved ? "text-accent font-medium" : "text-content")">@(anyMoved ? "‣ " : "")@CellAmount(members.Sum(row => row.Amount))</span>
+                    <span class="@(anyMoved ?"text-accent font-medium" : "text-content")">@(anyMoved ? "‣ " : "")@CellAmount(members.Sum(row => row.Amount))</span>
                     <button type="button" class="w-5 h-5 inline-flex items-center justify-center rounded text-content-subtle hover:text-content hover:bg-surface-raised disabled:opacity-30"
                             title="Pay this cell's bills a week later" disabled="@(busy || cellIndex >= View.WeekStarts.Count - 1)"
                             @onclick="() => OnMoveCell.InvokeAsync((Slice, cellIndex, cellIndex + 1))">›</button>

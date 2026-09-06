@@ -38,7 +38,7 @@
         <div class="space-y-1.5">
             @if (CurrentReplyPending)
             {
-                <div class="flex items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-3 py-2">
+                <div class="flex items-center justify-between gap-3 rounded border border-accent/40 bg-accent/5 px-3 py-2">
                     <p class="text-sm text-content min-w-0">
                         <span class="text-sm font-medium text-accent mr-2">@(CurrentReplyIsForward ? "→ forward · open email" : "↩ reply · open email")</span>
                         <span class="text-content-muted truncate" title="@CurrentReplySubject">@CurrentReplySubject</span>
@@ -55,7 +55,7 @@
             {
                 var entry = reply;
                 var isEditing = ReferenceEquals(editing, entry);
-                <div @key="entry" class="rounded-lg border border-accent/40 bg-accent/5 px-3 py-2 space-y-1">
+                <div @key="entry" class="rounded border border-accent/40 bg-accent/5 px-3 py-2 space-y-1">
                     <div class="flex items-center justify-between gap-3">
                         <p class="text-sm text-content min-w-0">
                             <span class="text-sm font-medium text-accent mr-2">@(entry.IsForward ? "→ forward" : "↩ reply")</span>
@@ -103,7 +103,7 @@
     }
     else if (ComposeAnchor is null)
     {
-        <div class="rounded-lg bg-surface-raised border border-line p-5 text-center">
+        <div class="rounded bg-surface-raised border border-line p-5 text-center">
             <p class="text-sm text-content">Nothing is lined up to send.</p>
             <p class="text-xs text-content-subtle mt-1">
                 Write a reply under the open email, or press Reply or Forward on an older email in

@@ -43,6 +43,68 @@
   `ShowIncludeAllRows`/`IncludeAllLabel` and it offers the current-view / include-all choice as a
   menu. Never wrap a toolbar in a LoadGate; pass `Disabled`/`Busy` to the buttons instead.
 
+## Shared components (jpms) — the look lives in components, never in a view
+
+The Open Book Figma is the design (`docs/ui/open-book-design-rules.md`; tokens in
+`jpms/tailwind.config.js`, recipes in `jpms/Styles/app.tailwind.css`, the short form in
+`jpms/DESIGN-SYSTEM.md`). A view composes the components below and never re-types their class
+strings; when a view needs a look none of them gives, the answer is a new shared component with
+its rule written here, not a one-off div. `jpms/DESIGN-SYSTEM.md` §5 has the lint grep that
+finds drift.
+
+- **`Page`** wraps every routed view except the landing page: the signed-in + approved gate and
+  the one content gutter. `CanAccess`/`AccessDeniedMessage` is the page's own role check; `Bare`
+  is for a full-bleed workspace (the Control Centre). No page types `<section class="px-…">` or
+  the `sessionReady`/`RequestAccessView` preamble.
+- **`PageHeader`** is the page's one header, directly inside `Page`. The top bar (`PageHeading`,
+  fed by `PageContext.LabelFor`) IS the page title, exactly as the Figma puts it — so a register
+  page gives no `Title`, only the subtitle/count strapline and the actions. A record page's
+  `Title` is the record (reference as `Eyebrow`). `Primary` holds the ONE `btn-primary` on the
+  page; everything else goes in `Actions` (a `Toolbar`, `SearchInput`, `FilterChips`). Every
+  route must answer `PageContext.LabelFor` — add a fallback there before shipping a new route.
+- **`SectionHeader`** titles an un-boxed region (18/Semi + its `Actions`); **`Panel`** is the boxed
+  one (`Title` + `HeaderActions` + `IsLoading`). `class="panel"` is not written in pages.
+- **`Notice`** is the only message box: a fact ABOUT an action or a state, in a `Tone`
+  (`Tone.cs`: Negative / Warning / Positive / Info / Muted). Field validation (400/409/422)
+  stays next to the field as `FormField Error="…"`; the app-wide error is `ErrorToast`. No
+  hand-rolled `rounded … bg-negative/10` box, and no raw Tailwind colour (`amber-*`, `red-*`,
+  `emerald-*`) anywhere — `warning` is a token.
+- **`Pill`** is every status badge. A view never picks a status colour: it maps the enum to a
+  `Tone` in `StatusTones.cs` (`status.ToTone()`) and that mapping is the status vocabulary.
+  Domain badges (`ComplianceStatusPill`, `LeadStagePill`, `StatusPill`…) are one-line `Pill`
+  wrappers. With `OnClick` a Pill is the status's transition menu trigger.
+- **`FormField`** wraps every labelled control — label (14/Med white), the control wearing the
+  `field` class, `Hint`, `Error`, `Required`. No bare `<label>` over an input, select, textarea
+  or picker. **`Checkbox`** for a labelled tick; native checkboxes and radios get the Figma box
+  from the base stylesheet.
+- **`RecordsTable`** is a list of records: it owns the panel, the scroll box, `IsLoading` and
+  `IsEmpty`/`EmptyMessage`; the view writes the `<thead>`/`<tbody>` inside it. Every `<table>`
+  wears `data-table` (sticky header, canvas header row, 48px rows; `data-table-dense` for long
+  registers); cells carry only alignment/width classes — never padding, background or colour.
+  A clickable row is `tr.is-clickable`, a totals row is `<tfoot>`. `SortableColumnHeader` is the
+  header cell of any sortable column. Dates render through `DateText`/`DateTimeText`
+  (`DateFormats.cs`, global using), money through `Money`/`WholeMoney`.
+- **`TabRow`** (links, underline) switches sibling views by navigating or by pane; **`FilterChips`**
+  (buttons, pills) narrows the rows on screen. The difference is visible on purpose. A page never
+  defines a `*TabClass`/`*ChipClass` helper — the classes are `tab`/`tab-active` and
+  `chip`/`chip-active` and only these two components (and `WorkspaceSectionNav`/`RecordTabBar`)
+  render them.
+- **`SearchInput`** is every search box (debounced, Escape clears). **`StatTile`** is every
+  labelled figure (`IsLoading`, never a placeholder zero); `MetricStat` the un-boxed headline
+  figure with delta. **`EmptyState`** is every "No … yet" line, rendered only once its region has
+  loaded.
+- **`ConfirmDialog`** (a `Modal` preset, `Danger` for the irreversible) and **`InlineConfirm`**
+  (the two-click armed button, disarms on blur or after 5s) are the only ways to confirm; a
+  page never holds its own `confirming*`/`*Armed` bool.
+- **Buttons**: `btn-primary` once per view or dialog footer; `btn-secondary` (grey outline, white
+  text) for everything else, `text-negative` on it for destructive; `btn-lg` in dialog footers
+  (a `Modal` footer upsizes automatically); `btn-icon` inside a `Toolbar`. Never a hand-rolled
+  button class string, never a green outline, never a red fill.
+- **Shape and type**: corners are `rounded` (4px) on controls, `rounded-lg` on the modal only,
+  none on panels/cards/tables; no shadows except the modal (and the dropdown until its Figma
+  frame is read); nothing below `text-xs`; no `uppercase`/`tracking-*` — a label is the `eyebrow`
+  class (14/Med G5) or `FormField`'s label.
+
 ## Loading states (jpms)
 
 - **Never render a figure, a row count or an empty state from a store that has not loaded.** A `0`

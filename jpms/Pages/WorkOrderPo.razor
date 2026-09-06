@@ -183,7 +183,7 @@
         <Modal IsOpen="showEmailModal" Title="@($"Email work order {Title2} to {Detail.SubcontractorName}")" ShowFooter="true"
                ConfirmLabel="@(emailBusy ? "Drafting…" : "Create draft in mailbox")" ConfirmDisabled="@emailBusy" CancelLabel="Cancel"
                OnCancel="CloseEmailModal" OnConfirm="ConfirmEmailDraftAsync" Class="max-w-3xl w-full">
-            <p class="rounded-lg bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
+            <p class="rounded bg-surface-raised border border-line px-3 py-2 text-xs text-content-muted mb-3">
                 Nothing sends from here — this creates a draft in the shared mailbox, addressed to the supplier's
                 directory email, for you to review and send from Outlook. Print the purchase order to PDF first if
                 you want to attach it before sending.

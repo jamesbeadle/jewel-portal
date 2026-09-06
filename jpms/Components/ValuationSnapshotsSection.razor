@@ -5,11 +5,11 @@
    captures behind invoice submissions/issues plus on-demand period-end records. Immutable
    once taken: view or delete, never edit; an amended submission produces a NEW snapshot
    and flags the old one superseded. *@
-<div class="rounded-xl border border-line bg-surface overflow-hidden">
+<div class="panel overflow-hidden">
     <div class="w-full flex items-center gap-3 px-4 py-3 hover:bg-surface-raised/60 transition">
         <button type="button" @onclick="Toggle" aria-expanded="@isOpen"
                 class="flex items-center gap-3 text-left grow min-w-0">
-            <svg class="@(isOpen ? "w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
+            <svg class="@(isOpen ?"w-4 h-4 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-4 h-4 shrink-0 text-content-subtle transition-transform")"
                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M9 6l6 6-6 6" />
@@ -60,7 +60,7 @@
                     <tbody>
                         @foreach (var snapshot in Snapshots)
                         {
-                            <tr class="@(snapshot.IsSuperseded ? "opacity-60" : "")">
+                            <tr class="@(snapshot.IsSuperseded ?"opacity-60" : "")">
                                 <td class="whitespace-nowrap">@DateTimeText(snapshot.TakenAt)</td>
                                 <td class="text-content">
                                     @snapshot.Label

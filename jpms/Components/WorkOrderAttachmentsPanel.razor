@@ -11,7 +11,7 @@
     <HeaderActions>
         @if (CanEdit)
         {
-            <label class="btn-secondary text-xs cursor-pointer @(busy ? "opacity-50 pointer-events-none" : "")">
+            <label class="btn-secondary text-xs cursor-pointer @(busy ?"opacity-50 pointer-events-none" : "")">
                 @(uploading ? "Uploading…" : "Add files")
                 <InputFile OnChange="OnFilesSelected" multiple class="hidden" />
             </label>
@@ -37,7 +37,7 @@
     }
     else
     {
-        <ul class="divide-y divide-line rounded-lg border border-line bg-surface">
+        <ul class="divide-y divide-line rounded border border-line bg-surface">
             @foreach (var item in items)
             {
                 var attachment = item;

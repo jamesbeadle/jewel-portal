@@ -21,7 +21,7 @@
                 <div class="space-y-3 max-h-[45vh] overflow-y-auto pr-1">
                     @foreach (var message in thread)
                     {
-                        <div class="rounded-lg border border-line px-3 py-2">
+                        <div class="rounded border border-line px-3 py-2">
                             <span class="block text-xs text-content-subtle">
                                 @message.Author · @DateTimeText(message.SentAtUtc.ToLocalTime())
                             </span>
@@ -43,7 +43,7 @@
                 <textarea class="field grow"
                           rows="3" placeholder="Reply…"
                           value="@Message" @oninput="e => MessageChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"></textarea>
-                <button class="text-sm font-medium rounded-lg px-3 py-2 bg-content text-surface disabled:opacity-50"
+                <button class="text-sm font-medium rounded px-3 py-2 bg-content text-surface disabled:opacity-50"
                         disabled="@(Busy || string.IsNullOrWhiteSpace(Message))"
                         @onclick="() => OnSend.InvokeAsync()">Send</button>
             </div>

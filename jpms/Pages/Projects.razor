@@ -31,7 +31,7 @@
 
     <div class="mb-3 flex items-center justify-end gap-4">
         @* Where the dashboard's "Valuations overdue" tile lands: the same rows it counted. *@
-        <label class="flex items-center gap-2 text-sm cursor-pointer select-none @(overdueValuationsOnly ? "text-negative font-medium" : "text-content-muted")">
+        <label class="flex items-center gap-2 text-sm cursor-pointer select-none @(overdueValuationsOnly ?"text-negative font-medium" : "text-content-muted")">
             <input type="checkbox" checked="@overdueValuationsOnly" @onchange="e => overdueValuationsOnly = (bool)e.Value!" />
             <span>Overdue valuations only@(OverdueValuationCount > 0 ? $" ({OverdueValuationCount})" : "")</span>
         </label>

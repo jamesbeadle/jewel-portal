@@ -24,7 +24,7 @@
         }
         else
         {
-            <p class="text-2xl font-semibold @(low.Closing[low.MinIndex] < 0m ? "text-negative" : "text-content")">@Money(low.Closing[low.MinIndex])</p>
+            <p class="text-2xl font-semibold @(low.Closing[low.MinIndex] < 0m ?"text-negative" : "text-content")">@Money(low.Closing[low.MinIndex])</p>
             <p class="text-xs text-content-subtle mt-1">@MonthLabel(low.Axis[low.MinIndex]) — the month to plan for</p>
         }
     </StatTile>
@@ -51,7 +51,7 @@
         else
         {
             var horizonEnd = view.Closing[^1] + view.LaterNet;
-            <p class="text-2xl font-semibold @(horizonEnd < 0m ? "text-negative" : "text-content")">@Money(horizonEnd)</p>
+            <p class="text-2xl font-semibold @(horizonEnd < 0m ?"text-negative" : "text-content")">@Money(horizonEnd)</p>
             <p class="text-xs text-content-subtle mt-1">after @MonthLabel(view.Axis[^1]) incl. later retention releases</p>
         }
     </StatTile>

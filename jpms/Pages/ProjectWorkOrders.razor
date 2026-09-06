@@ -27,11 +27,11 @@
             <div class="inline-flex gap-2"
                  title="Group the table by cost centre or by supplier — your choice is remembered">
                 <button type="button" @onclick="() => SetGroupingAsync(bySupplier: false)"
-                        class="chip @(!groupBySupplier ? "chip-active" : "")">
+                        class="chip @(!groupBySupplier ?"chip-active" : "")">
                     Cost centre
                 </button>
                 <button type="button" @onclick="() => SetGroupingAsync(bySupplier: true)"
-                        class="chip @(groupBySupplier ? "chip-active" : "")">
+                        class="chip @(groupBySupplier ?"chip-active" : "")">
                     Supplier
                 </button>
             </div>

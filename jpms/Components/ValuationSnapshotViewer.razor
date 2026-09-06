@@ -17,7 +17,7 @@
 {
     @if (loadFailed)
     {
-        <p class="rounded-lg bg-negative/10 px-4 py-3 text-sm text-negative">Couldn't load the snapshot. Close and try again.</p>
+        <p class="rounded bg-negative/10 px-4 py-3 text-sm text-negative">Couldn't load the snapshot. Close and try again.</p>
     }
     else
     {
@@ -63,7 +63,7 @@ else
         {
             @if (valuationSection.Lines.Count > 0)
             {
-                <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                <div class="panel overflow-hidden">
                     <div class="flex items-center gap-3 px-4 py-3 bg-surface-raised/60">
                         <span class="font-semibold text-content whitespace-nowrap">@valuationSection.Title</span>
                         <span class="text-xs text-content-subtle whitespace-nowrap">
@@ -103,13 +103,13 @@ else
                                     @if (row.RollUp is { } rollUp)
                                     {
                                         var isRollUpOpen = IsRollUpOpen(rollUp);
-                                        <tr class="@(rollUp.CountsTowardTotals ? "bg-surface-raised" : "bg-surface-raised opacity-60")">
+                                        <tr class="@(rollUp.CountsTowardTotals ?"bg-surface-raised" : "bg-surface-raised opacity-60")">
                                             <td class="font-mono text-xs text-content-subtle whitespace-nowrap">@rollUp.VariationRef</td>
                                             <td class="text-content">
                                                 <button type="button" @onclick="() => ToggleRollUp(rollUp)" aria-expanded="@isRollUpOpen"
                                                         title="@(isRollUpOpen ? "Hide this row's lines" : "Show this row's lines")"
                                                         class="flex items-start gap-1.5 text-left">
-                                                    <svg class="@(isRollUpOpen ? "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle transition-transform")"
+                                                    <svg class="@(isRollUpOpen ?"w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle rotate-90 transition-transform" : "w-3.5 h-3.5 mt-1 shrink-0 text-content-subtle transition-transform")"
                                                          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                                          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                                                         <path d="M9 6l6 6-6 6" />
@@ -142,7 +142,7 @@ else
                                             </tr>
                                         }
                                     }
-                                    <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
+                                    <tr class="@(line.CountsTowardTotals ?"" : "opacity-60")">
                                         <td class="font-mono text-xs text-content-subtle whitespace-nowrap">
                                             <div>@(row.IsDetail ? "↳ " : "")@CodeFor(line)</div>
                                             @* The client's item number frozen at capture — how the contract document reads. *@
@@ -177,7 +177,7 @@ else
         }
     </div>
 
-    <div class="mt-4 rounded-xl border border-line bg-surface-raised p-5">
+    <div class="mt-4 panel-raised p-5">
         <h3 class="text-sm font-semibold text-content mb-3">Valuation summary — @snapshot.Label</h3>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm max-w-2xl">
             <SummaryRow Label="Original contract sum" Value="@Money(snapshot.ContractSum)" />
@@ -200,7 +200,7 @@ else
        claim it was frozen from, read back live from the mailbox — the same record-agnostic
        mechanism as the variation page's Communications. Reading only: tagging (and replying
        from a record) stays in the Control Centre, where the pathway guards live. *@
-    <div class="mt-4 rounded-xl border border-line bg-surface p-5">
+    <div class="mt-4 panel p-5">
         <h3 class="text-sm font-semibold text-content mb-3">Correspondence</h3>
         @* One gate for the region; a failed fetch opens it and says so (never pulses forever). *@
         <LoadGate IsLoading="@(emails is null && emailsError is null)" Label="Loading correspondence">

@@ -18,7 +18,7 @@
    being truncated; it's capped to the viewport so it can't run off the edge. *@
 <div class="relative @WidthClass" @ref="wrapperRef" @onfocusout="Close">
     <input @ref="inputRef" type="text" disabled="@Disabled" autocomplete="off"
-           class="w-full rounded-lg pr-6 text-sm placeholder:text-content-subtle disabled:opacity-40 @InputClass @(HasValue || isOpen ? "text-content" : "text-content-subtle")"
+           class="w-full rounded pr-6 text-sm placeholder:text-content-subtle disabled:opacity-40 @InputClass @(HasValue || isOpen ?"text-content" : "text-content-subtle")"
            style="text-overflow:ellipsis"
            value="@DisplayText" placeholder="@InputPlaceholder"
            @onclick="OpenAsync" @oninput="OnInput" @onkeydown="OnKeyDown" />
@@ -26,7 +26,7 @@
           style="position:absolute;right:.5rem;top:50%;transform:translateY(-50%);pointer-events:none">▾</span>
     @if (isOpen)
     {
-        <div class="rounded-lg border border-line bg-surface-raised shadow-lg overflow-y-auto max-h-56 py-1"
+        <div class="rounded border border-line bg-surface-raised overflow-y-auto max-h-56 py-1"
              style="@popupStyle" @onmousedown:preventDefault="true">
             @{ var index = 0; }
             @* Selection happens on mousedown, not click: click only fires on

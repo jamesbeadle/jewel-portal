@@ -9,7 +9,7 @@
     var status = ValuationDue.Of(Project);
     <span class="whitespace-nowrap @(status switch
                  {
-                     ValuationDue.Status.Overdue => "text-negative",
+                     ValuationDue.Status.Overdue =>"text-negative",
                      ValuationDue.Status.DueSoon => "text-warning",
                      _ => "text-content",
                  })">@DateText(date)</span>

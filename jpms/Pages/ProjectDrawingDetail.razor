@@ -219,7 +219,7 @@
                     }
                     else if (IsImage(PreviewRevision))
                     {
-                        <div class="rounded-xl border border-line bg-surface overflow-hidden">
+                        <div class="panel overflow-hidden">
                             <header class="px-4 py-2.5 border-b border-line bg-surface-raised flex items-center justify-between gap-3">
                                 <span class="text-xs text-content-muted font-medium truncate">
                                     Showing @DrawingNaming.RevisionText(PreviewRevision.RevisionLabel) · @PreviewRevision.FileName
@@ -233,7 +233,7 @@
                     }
                     else
                     {
-                        <div class="rounded-xl border border-line bg-surface p-8 text-center text-sm text-content-subtle">
+                        <div class="panel p-8 text-center text-sm text-content-subtle">
                             This file type can't be previewed inline.
                             <a href="@FileUrl(PreviewRevision, inline: false)" target="_blank" rel="noopener"
                                class="text-accent hover:underline underline-offset-2">Download @PreviewRevision.FileName</a>.

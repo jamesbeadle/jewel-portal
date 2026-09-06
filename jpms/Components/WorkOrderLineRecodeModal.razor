@@ -39,7 +39,7 @@
                            value="@row.AmountText"
                            @onchange="e => SetRowAmount(rowIndex, e.Value?.ToString())" />
                     <button type="button" aria-label="Remove this part" disabled="@(busy || rows.Count == 1)"
-                            class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-negative hover:bg-surface-raised"
+                            class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-negative hover:bg-surface-raised"
                             @onclick="() => rows.RemoveAt(rowIndex)">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                              stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -53,9 +53,9 @@
             + Add another cost centre
         </button>
 
-        <div class="rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm flex items-center justify-between gap-4">
+        <div class="rounded border border-line bg-surface-raised px-3 py-2 text-sm flex items-center justify-between gap-4">
             <span class="text-content-muted">Allocated @MoneyExact(AllocatedTotal) of @MoneyExact(LineTotal)</span>
-            <span class="@(Remainder == 0m ? "text-content-subtle" : "text-negative font-medium")">
+            <span class="@(Remainder == 0m ?"text-content-subtle" : "text-negative font-medium")">
                 @MoneyExact(Remainder) unaccounted
             </span>
         </div>

@@ -6,7 +6,7 @@
    Actions menu is open the overflow cap is lifted: the menu positions absolutely inside this
    container, so with the overflow active its bottom entries would be cut off at the
    container's edge (same fix as the valuation invoices table). *@
-<div class="rounded-xl border border-line bg-surface @(openRowMenuKey is null ? "overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
+<div class="panel @(openRowMenuKey is null ?"overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
     <table class="data-table">
         <thead>
             <tr>

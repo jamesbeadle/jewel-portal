@@ -39,7 +39,7 @@
             }
             else
             {
-            <div class="rounded-xl border border-line bg-surface mb-4">
+            <div class="panel mb-4">
 
                 @* ── The claim, and the cash already allocated against it ── *@
                 <div class="flex items-baseline justify-between gap-4 px-4 py-3">
@@ -117,10 +117,10 @@
                         }
                     </div>
                     <span class="inline-flex items-center gap-1.5">
-                        <span class="text-base font-semibold @(BillsUnpaid == 0m ? "text-content" : "text-negative") whitespace-nowrap">@Money(-BillsUnpaid)</span>
+                        <span class="text-base font-semibold @(BillsUnpaid == 0m ?"text-content" : "text-negative") whitespace-nowrap">@Money(-BillsUnpaid)</span>
                         <button type="button" aria-label="View the unpaid invoices behind this figure"
                                 title="The transactions behind this figure — every allocated purchase line not yet paid in Xero, with Excel export for reconciling"
-                                class="inline-flex items-center justify-center w-7 h-7 rounded-md text-content-subtle hover:text-content hover:bg-surface-raised"
+                                class="inline-flex items-center justify-center w-7 h-7 rounded text-content-subtle hover:text-content hover:bg-surface-raised"
                                 @onclick="() => showUnpaidInvoices = true">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                  stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></svg>
@@ -141,7 +141,7 @@
                 <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
                     <p class="text-sm font-semibold text-content"
                        title="Left to claim, less cost centre drawdowns, uninvoiced work orders and unpaid purchase invoices, plus the first retention release — the net cash movement between now and practical completion">Practical completion cashflow</p>
-                    <p class="text-xl font-semibold @(PracticalCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(PracticalCompletionCashflow)</p>
+                    <p class="text-xl font-semibold @(PracticalCompletionCashflow < 0m ?"text-negative" : "text-positive") whitespace-nowrap">@Money(PracticalCompletionCashflow)</p>
                 </div>
 
                 @* ── Retention release 2 — the balance after the defects period ── *@
@@ -157,7 +157,7 @@
                 <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
                     <p class="text-sm font-semibold text-content"
                        title="Practical completion cashflow plus the final retention release — the project's net cash movement to the end of the defects period">Project completion cashflow</p>
-                    <p class="text-xl font-semibold @(ProjectCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(ProjectCompletionCashflow)</p>
+                    <p class="text-xl font-semibold @(ProjectCompletionCashflow < 0m ?"text-negative" : "text-positive") whitespace-nowrap">@Money(ProjectCompletionCashflow)</p>
                 </div>
             </div>
 
@@ -167,7 +167,7 @@
                unlike the dashed potential card: overspends are real figures, not maybes. ── *@
             @if (AvailableToBuyBack != 0m)
             {
-            <div class="rounded-xl border border-line bg-surface mb-4">
+            <div class="panel mb-4">
                 <div class="flex items-baseline justify-between gap-4 px-4 py-3">
                     <div>
                         <p class="text-sm text-content"
@@ -179,7 +179,7 @@
                 <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t-2 border-line">
                     <p class="text-sm font-semibold text-content"
                        title="Project completion cashflow plus every overspend bought back — the position if the full buy back is achieved.">Position with overspends bought back</p>
-                    <p class="text-xl font-semibold @(PositionWithOverspendsBoughtBack < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(PositionWithOverspendsBoughtBack)</p>
+                    <p class="text-xl font-semibold @(PositionWithOverspendsBoughtBack < 0m ?"text-negative" : "text-positive") whitespace-nowrap">@Money(PositionWithOverspendsBoughtBack)</p>
                 </div>
             </div>
             }
@@ -189,7 +189,7 @@
                The generous top margin is deliberate — the gap itself says "not part of the statement". ── *@
             @if (PendingVariations.Count > 0)
             {
-            <div class="rounded-xl border border-dashed border-line bg-surface mt-10 mb-4">
+            <div class="border border-dashed border-line bg-surface mt-10 mb-4">
                 <div class="px-4 py-3">
                     <p class="text-sm font-semibold text-content"
                        title="Variation orders not yet decided — quoting, issued, or awaiting an Architect's Instruction — at their estimated values. Approved variations are already inside the project claim; rejected ones are gone.">Potential — unapproved variations</p>
@@ -217,7 +217,7 @@
                 <div class="flex items-baseline justify-between gap-4 px-4 py-3 border-t border-line">
                     <p class="text-sm font-semibold text-content"
                        title="Project completion cashflow plus every unapproved variation at its estimate — if all of them are approved and claimed. The costs to deliver them are not yet in the drawdowns, so treat this as the upper bound of the upside.">Potential project completion cashflow</p>
-                    <p class="text-lg font-semibold @(PotentialProjectCompletionCashflow < 0m ? "text-negative" : "text-positive") whitespace-nowrap">@Money(PotentialProjectCompletionCashflow)</p>
+                    <p class="text-lg font-semibold @(PotentialProjectCompletionCashflow < 0m ?"text-negative" : "text-positive") whitespace-nowrap">@Money(PotentialProjectCompletionCashflow)</p>
                 </div>
             </div>
             }
@@ -227,7 +227,7 @@
 
         @* ── The notes are static copy, so they render immediately — no gate (never gate a line
            of text); the jewel next door is the only loading mark on this screen. ── *@
-        <aside class="rounded-xl border border-line bg-surface px-4 py-4 space-y-3">
+        <aside class="panel px-4 py-4 space-y-3">
             <h3 class="eyebrow">Where these figures come from</h3>
             <p class="text-xs text-content-subtle">
                 <span class="font-semibold text-content">Project claim</span> is the valuation
