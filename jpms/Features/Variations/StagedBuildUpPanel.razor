@@ -58,16 +58,19 @@
         </summary>
         <div class="mt-3 space-y-3">
             <div>
-                <label class="eyebrow block mb-1">Commercial basis</label>
+                <FormField Label="Commercial basis">
                 <textarea class="field min-h-[4rem]" value="@commercialBasis" @oninput="e => commercialBasis = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
             <div>
-                <label class="eyebrow block mb-1">Programme impact</label>
+                <FormField Label="Programme impact">
                 <textarea class="field min-h-[4rem]" value="@programmeImpact" @oninput="e => programmeImpact = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
             <div>
-                <label class="eyebrow block mb-1">Exclusions</label>
+                <FormField Label="Exclusions">
                 <textarea class="field min-h-[4rem]" value="@exclusions" @oninput="e => exclusions = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
         </div>
     </details>

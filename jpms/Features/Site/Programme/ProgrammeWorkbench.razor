@@ -73,16 +73,19 @@
             <p class="text-sm font-semibold text-content">Add a programme task</p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div class="md:col-span-1">
-                    <label class="block eyebrow mb-1">Title</label>
+                    <FormField Label="Title">
                     <input class="field" @bind="newTaskTitle" placeholder="e.g. Groundworks — main house" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block eyebrow mb-1">Planned start</label>
+                    <FormField Label="Planned start">
                     <input type="date" class="field" @bind="newTaskStart" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block eyebrow mb-1">Planned end</label>
+                    <FormField Label="Planned end">
                     <input type="date" class="field" @bind="newTaskEnd" />
+                    </FormField>
                 </div>
             </div>
             <div class="flex gap-2">
@@ -97,7 +100,7 @@
             <p class="text-sm font-semibold text-content">Add a dependency <span class="font-normal text-content-subtle">— finish-to-start: the successor starts after the predecessor finishes (plus lag)</span></p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                    <label class="block eyebrow mb-1">Predecessor</label>
+                    <FormField Label="Predecessor">
                     <select class="field" @bind="linkPredecessorId">
                         <option value="">Select task…</option>
                         @foreach (var task in Tasks)
@@ -105,9 +108,10 @@
                             <option value="@task.ProgrammeTaskId">@task.Title</option>
                         }
                     </select>
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block eyebrow mb-1">Successor</label>
+                    <FormField Label="Successor">
                     <select class="field" @bind="linkSuccessorId">
                         <option value="">Select task…</option>
                         @foreach (var task in Tasks)
@@ -115,10 +119,12 @@
                             <option value="@task.ProgrammeTaskId">@task.Title</option>
                         }
                     </select>
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block eyebrow mb-1">Lag (days)</label>
+                    <FormField Label="Lag (days)">
                     <input type="number" class="field" @bind="linkLagDays" />
+                    </FormField>
                 </div>
             </div>
             <div class="flex gap-2">
@@ -132,8 +138,9 @@
         <div class="panel p-4 mb-5 space-y-3">
             <p class="text-sm font-semibold text-content">Take a baseline <span class="font-normal text-content-subtle">— snapshots every task's dates as the yardstick movement is measured against</span></p>
             <div>
-                <label class="block eyebrow mb-1">Label</label>
+                <FormField Label="Label">
                 <input class="field" @bind="baselineLabel" placeholder="e.g. Contract programme rev A" />
+                </FormField>
             </div>
             <div class="flex gap-2">
                 <button type="button" class="btn-primary" disabled="@(busy || Tasks.Count == 0 || string.IsNullOrWhiteSpace(baselineLabel))" @onclick="TakeBaselineAsync">Take baseline</button>

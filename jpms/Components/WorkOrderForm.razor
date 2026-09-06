@@ -21,8 +21,8 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-            <label class="block eyebrow mb-1">Subcontractor</label>
-            <select class="w-full bg-surface border border-line-strong rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+            <FormField Label="Subcontractor">
+            <select class="field"
                     disabled="@Busy" @onchange="e => SetSubcontractorAsync(e.Value?.ToString())">
                 <option value="" selected="@(subcontractorId == "")">Choose a subcontractor…</option>
                 @foreach (var sub in SortedSubcontractors)
@@ -30,28 +30,30 @@
                     <option value="@sub.SubcontractorId" selected="@(subcontractorId == sub.SubcontractorId)">@sub.CompanyName</option>
                 }
             </select>
+            </FormField>
             @if (assistantSupplierNote is not null)
             {
                 <p class="text-xs text-negative mt-1">@assistantSupplierNote</p>
             }
         </div>
         <div>
-            <label class="block eyebrow mb-1">Order title</label>
+            <FormField Label="Order title">
             <input type="text" maxlength="256" placeholder="e.g. Groundworks package — BVMH"
-                   class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                   class="field"
                    disabled="@Busy" @bind="title" @bind:event="oninput" @bind:after="NotifyChangedAsync" />
+            </FormField>
         </div>
     </div>
     <div>
-        <label class="block eyebrow mb-1">Scope</label>
+        <FormField Label="Scope" Hint="Prints in the purchase order's "Works Order info" section exactly as typed — each line keeps its own line, aligned left.">
         @* Prints as typed (line breaks kept — the sheet renders it pre-wrap) in the PO's
            "Works Order info" section, so an itemised breakdown can sit one charge per line,
            lined up on the left, the way accounts lay it out in email. Grown from rows="2"
            (2026-08-13): two rows invited one-line scopes and hid that multi-line lists work. *@
         <textarea rows="6" maxlength="4000" placeholder="What the order instructs (optional) — line breaks print as typed, e.g.&#10;£350 - Urgent delivery surcharge&#10;£1,540 - Floor protection"
-                  class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                  class="field"
                   disabled="@Busy" @bind="scope" @bind:event="oninput" @bind:after="NotifyChangedAsync"></textarea>
-        <p class="text-xs text-content-subtle mt-1">Prints in the purchase order's "Works Order info" section exactly as typed — each line keeps its own line, aligned left.</p>
+        </FormField>
     </div>
 
     @* ── Programme: printed in the purchase order's Programme section ──── *@
@@ -60,23 +62,26 @@
            title="Printed in the purchase order's Programme section — leave everything empty to omit it">Programme</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-                <label class="block eyebrow mb-1">Start date</label>
+                <FormField Label="Start date">
                 <input type="date"
-                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                       class="field"
                        disabled="@Busy" @bind="programmeStart" />
+                </FormField>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Target completion</label>
+                <FormField Label="Target completion">
                 <input type="date"
-                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                       class="field"
                        disabled="@Busy" @bind="targetCompletion" />
+                </FormField>
             </div>
         </div>
         <div class="mt-3">
-            <label class="block eyebrow mb-1">Programme notes</label>
+            <FormField Label="Programme notes">
             <textarea rows="2" maxlength="2000" placeholder="e.g. Weekly programme duration 1st &amp; 2nd fix phases (optional)"
-                      class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                      class="field"
                       disabled="@Busy" @bind="programmeNotes" @bind:event="oninput"></textarea>
+            </FormField>
         </div>
     </div>
 
@@ -98,7 +103,7 @@
                                   InputClass="bg-surface border border-line px-2 py-1.5"
                                   Value="@line.CostCode" ValueChanged="value => SetLineCode(line, value)" />
                     <input type="text" maxlength="256" placeholder="What this line covers" disabled="@Busy"
-                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
+                           class="field flex-1"
                            value="@line.Title"
                            @onchange="e => SetLineTitle(line, e.Value?.ToString())" />
                     @* The measured breakdown — optional, but qty and rate come as a pair. When
@@ -106,22 +111,22 @@
                        printed Qty/Unit, Unit Cost and Price columns can never disagree. *@
                     <input type="number" step="any" min="0" placeholder="Qty" disabled="@Busy"
                            title="How many of the unit — 14 for 14 m2. Leave qty and rate empty for a lump-sum line"
-                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-20"
+                           class="field text-right w-20"
                            value="@line.QuantityText"
                            @onchange="e => SetLineQuantity(line, e.Value?.ToString())" />
                     <input type="text" maxlength="32" placeholder="Unit" disabled="@Busy"
                            title="The measure — m2, m, no., day"
-                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm w-20"
+                           class="field w-20"
                            value="@line.Unit"
                            @onchange="e => SetLineUnit(line, e.Value?.ToString())" />
                     <input type="number" step="any" placeholder="Rate £" disabled="@Busy"
                            title="The cost per unit, net of VAT — 54.00 for £54.00/m2"
-                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-24"
+                           class="field text-right w-24"
                            value="@line.UnitCostText"
                            @onchange="e => SetLineUnitCost(line, e.Value?.ToString())" />
                     <input type="number" step="any" placeholder="Amount £" disabled="@(Busy || IsMeasured(line))"
                            title="@(IsMeasured(line) ? "Quantity × rate — edit those to change it" : line.PaidToDate != 0m ? $"{Money(line.PaidToDate)} already paid against this line — the amount can't drop below that" : "")"
-                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-32"
+                           class="field text-right w-32"
                            value="@line.AmountText"
                            @onchange="e => SetLineAmount(line, e.Value?.ToString())" />
                     <button type="button" aria-label="Remove this line"
@@ -136,7 +141,7 @@
                 @* The longer detail printed in the PO items table's Description column — optional. *@
                 <textarea rows="2" maxlength="1024" placeholder="Description — the full detail printed on the purchase order (optional)"
                           disabled="@Busy"
-                          class="w-full bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm placeholder:text-content-subtle"
+                          class="field"
                           value="@line.Description"
                           @onchange="e => SetLineDescription(line, e.Value?.ToString())"></textarea>
                 </div>
@@ -162,7 +167,7 @@
         {
             <div class="mt-2 flex items-center gap-2">
                 <input type="number" step="any" min="0" max="100" placeholder="%" disabled="@Busy"
-                       class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-24"
+                       class="field text-right w-24"
                        value="@depositPercentText"
                        @onchange="e => SetDepositPercent(e.Value?.ToString())" />
                 <span class="text-sm text-content-muted">% of the order value</span>

@@ -11,7 +11,7 @@
    parent re-render skips it — without the subscription it could sit on "Loading folders…" (or a
    stale option list) after the folders had actually landed. *@
 <div>
-    <label class="block eyebrow mb-1">Folder</label>
+    <FormField Label="Folder">
     <select @bind="selectedFolderId" disabled="@(!IsEnabled)" class="field">
         @if (!HasProject)
         {
@@ -28,6 +28,7 @@
             <option value="@NewFolderOption">+ New folder…</option>
         }
     </select>
+    </FormField>
     @if (IsCreatingFolder)
     {
         <div class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">

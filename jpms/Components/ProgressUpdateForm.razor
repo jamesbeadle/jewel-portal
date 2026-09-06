@@ -4,8 +4,9 @@
       class="rounded-2xl border border-line bg-surface p-5 space-y-3">
 
     <div>
-        <label class="block eyebrow mb-1">Photos *</label>
+        <FormField Label="Photos" Required>
         <InputFile OnChange="OnFilesSelected" multiple accept="image/*" class="w-full text-sm text-content-muted" />
+        </FormField>
         @if (selectedFiles.Count > 0)
         {
             <p class="text-xs text-content-subtle mt-1">
@@ -15,20 +16,23 @@
     </div>
 
     <div>
-        <label class="block eyebrow mb-1">Title *</label>
+        <FormField Label="Title" Required>
         <input type="text" @bind="title" required placeholder="First-fix carpentry complete to first floor"
                class="field" />
+        </FormField>
     </div>
 
     <div>
-        <label class="block eyebrow mb-1">Description</label>
+        <FormField Label="Description">
         <textarea @bind="description" rows="3" placeholder="What the photos show, which areas, any context worth giving the client…"
                   class="field"></textarea>
+        </FormField>
     </div>
 
     <div>
-        <label class="block eyebrow mb-1">Date of works</label>
+        <FormField Label="Date of works">
         <input type="date" @bind="workDate" class="field" />
+        </FormField>
     </div>
 
     <div class="rounded-xl border border-line p-3 space-y-3">
@@ -36,33 +40,40 @@
             Weather conditions <span class="normal-case font-normal tracking-normal">— optional, printed on the client report</span>
         </p>
         <div>
-            <label class="block eyebrow mb-1">Summary</label>
+            <FormField Label="Summary">
             <input type="text" @bind="weatherSummary" placeholder="Partly cloudy with showers" class="field" />
+            </FormField>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
-                <label class="block eyebrow mb-1">High (°C)</label>
+                <FormField Label="High (°C)">
                 <input type="number" @bind="weatherTempHighC" class="field" />
+                </FormField>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Low (°C)</label>
+                <FormField Label="Low (°C)">
                 <input type="number" @bind="weatherTempLowC" class="field" />
+                </FormField>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Wind (mph)</label>
+                <FormField Label="Wind (mph)">
                 <input type="number" min="0" @bind="weatherWindMph" class="field" />
+                </FormField>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Humidity (%)</label>
+                <FormField Label="Humidity (%)">
                 <input type="number" min="0" max="100" @bind="weatherHumidityPercent" class="field" />
+                </FormField>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Precip (inches)</label>
+                <FormField Label="Precip (inches)">
                 <input type="number" min="0" step="0.01" @bind="weatherPrecipInches" class="field" />
+                </FormField>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Observed at</label>
+                <FormField Label="Observed at">
                 <input type="datetime-local" @bind="weatherObservedAt" class="field" />
+                </FormField>
             </div>
         </div>
     </div>

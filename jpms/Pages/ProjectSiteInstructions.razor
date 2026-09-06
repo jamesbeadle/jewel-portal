@@ -43,20 +43,23 @@
                 <div class="space-y-3">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="block eyebrow mb-1">Title *</label>
+                            <FormField Label="Title" Required>
                             <input type="text" class="field" maxlength="256" placeholder="What the instruction is about"
                                    value="@formTitle" @oninput="e => formTitle = e.Value?.ToString() ?? string.Empty" />
+                            </FormField>
                         </div>
                         <div>
-                            <label class="block eyebrow mb-1">Location</label>
+                            <FormField Label="Location">
                             <input type="text" class="field" maxlength="256" placeholder="Where on site it applies — room, area, level, elevation"
                                    value="@formLocation" @oninput="e => formLocation = e.Value?.ToString() ?? string.Empty" />
+                            </FormField>
                         </div>
                     </div>
                     <div>
-                        <label class="block eyebrow mb-1">Instruction *</label>
+                        <FormField Label="Instruction" Required>
                         <textarea class="field" rows="6" maxlength="4000" placeholder="What site is to do — as the instruction should read on site"
                                   value="@formInstruction" @oninput="e => formInstruction = e.Value?.ToString() ?? string.Empty"></textarea>
+                        </FormField>
                     </div>
                     <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"
                             disabled="@(!FormReady || busy)"

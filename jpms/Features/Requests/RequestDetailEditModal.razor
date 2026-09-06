@@ -15,8 +15,9 @@
         }
 
         <div>
-            <label class="block eyebrow mb-1">Detail</label>
+            <FormField Label="Detail">
             <textarea class="field" rows="6" value="@description" @oninput="e => description = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
         </div>
     </div>
 </Modal>

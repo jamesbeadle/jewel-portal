@@ -13,7 +13,7 @@
             disabled="@(Busy || string.IsNullOrEmpty(ProjectId))"
             @onclick="() => OnSetProject.InvokeAsync()">Set selected</button>
     <span class="text-content-subtle">·</span>
-    <select class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm"
+    <select class="field"
             value="@Bucket" @onchange="e => BucketChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)">
         <option value="">Bucket…</option>
         @foreach (var bucket in XeroBuckets.All)

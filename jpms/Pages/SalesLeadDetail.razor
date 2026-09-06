@@ -239,15 +239,17 @@
             @if (moveTo == LeadStage.Lost)
             {
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-content mb-1">Why *</label>
+                    <FormField Label="Why" Required>
                     <input type="text" class="field w-full" maxlength="1024" placeholder="Went with another builder; not going ahead; budget"
                            value="@lostReason" @oninput="e => lostReason = e.Value?.ToString() ?? string.Empty" />
+                    </FormField>
                 </div>
             }
             <div>
-                <label class="block text-sm font-medium text-content mb-1">Note</label>
+                <FormField Label="Note">
                 <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Optional — goes on the timeline with the move"
                           value="@moveNote" @oninput="e => moveNote = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
         </Modal>
 
@@ -267,24 +269,28 @@
             }
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-content mb-1">Project reference *</label>
+                    <FormField Label="Project reference" Required>
                     <input type="text" class="field w-full" maxlength="64" placeholder="e.g. JBB-2026-014"
                            value="@projectReference" @oninput="e => projectReference = e.Value?.ToString() ?? string.Empty" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-content mb-1">Project name *</label>
+                    <FormField Label="Project name" Required>
                     <input type="text" class="field w-full" maxlength="256"
                            value="@projectName" @oninput="e => projectName = e.Value?.ToString() ?? string.Empty" />
+                    </FormField>
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-content mb-1">Project manager</label>
+                    <FormField Label="Project manager">
                     <input type="email" class="field w-full" maxlength="256" placeholder="@($"Blank = the lead's owner ({lead.OwnerEmail})")"
                            value="@projectManagerEmail" @oninput="e => projectManagerEmail = e.Value?.ToString() ?? string.Empty" />
+                    </FormField>
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-content mb-1">Note</label>
+                    <FormField Label="Note">
                     <textarea class="field w-full" rows="2" maxlength="4000" placeholder="Optional — goes on the timeline"
                               value="@winNote" @oninput="e => winNote = e.Value?.ToString() ?? string.Empty"></textarea>
+                    </FormField>
                 </div>
             </div>
         </Modal>
@@ -301,22 +307,25 @@
             }
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-content mb-1">What</label>
+                    <FormField Label="What">
                     <select class="field w-full" value="@logKind" @onchange="e => logKind = Enum.Parse<LeadActivityKind>(e.Value?.ToString() ?? nameof(LeadActivityKind.Note))">
                         @foreach (var kind in LeadActivityKindExtensions.Loggable)
                         {
                             <option value="@kind">@kind.DisplayName()</option>
                         }
                     </select>
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-content mb-1">When</label>
+                    <FormField Label="When">
                     <input type="datetime-local" class="field w-full" value="@logWhen" @onchange="e => logWhen = e.Value?.ToString() ?? string.Empty" />
+                    </FormField>
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-content mb-1">What happened *</label>
+                    <FormField Label="What happened" Required>
                     <textarea class="field w-full" rows="4" maxlength="4000" placeholder="Who you spoke to, what was said, what happens next"
                               value="@logSummary" @oninput="e => logSummary = e.Value?.ToString() ?? string.Empty"></textarea>
+                    </FormField>
                 </div>
             </div>
         </Modal>

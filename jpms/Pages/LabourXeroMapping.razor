@@ -54,24 +54,24 @@
         else
         {
             <div class="flex flex-wrap items-end gap-2 mb-4">
-                <label class="block text-sm text-content-muted">Project
-                    <select class="field mt-1" @bind="siteProjectId">
+                <FormField Label="Project">
+                    <select class="field" @bind="siteProjectId">
                         <option value="">Project…</option>
                         @foreach (var project in Projects.Current ?? Array.Empty<Project>())
                         {
                             <option value="@project.ProjectId">@project.Name</option>
                         }
                     </select>
-                </label>
-                <label class="block text-sm text-content-muted">Xero Sites option
-                    <select class="field mt-1" @bind="siteOptionName" disabled="@(SiteOptions().Count == 0)">
+                </FormField>
+                <FormField Label="Xero Sites option">
+                    <select class="field" @bind="siteOptionName" disabled="@(SiteOptions().Count == 0)">
                         <option value="">@(SiteOptions().Count == 0 ? "Loading options…" : "Sites option…")</option>
                         @foreach (var option in SiteOptions())
                         {
                             <option value="@option.Name">@option.Name</option>
                         }
                     </select>
-                </label>
+                </FormField>
                 <button type="button" class="btn-secondary" disabled="@isSaving" @onclick="SaveSiteMappingAsync">Set mapping</button>
             </div>
 
@@ -114,24 +114,24 @@
         else
         {
             <div class="flex flex-wrap items-end gap-2 mb-4">
-                <label class="block text-sm text-content-muted">Cost code
-                    <select class="field mt-1" @bind="codeCostCode">
+                <FormField Label="Cost code">
+                    <select class="field" @bind="codeCostCode">
                         <option value="">Cost code…</option>
                         @foreach (var centre in CostCenters.Alphabetical.Where(centre => centre.IsActive))
                         {
                             <option value="@centre.Code">@centre.Code — @centre.Name</option>
                         }
                     </select>
-                </label>
-                <label class="block text-sm text-content-muted">Labour account
+                </FormField>
+                <FormField Label="Labour account">
                     <input class="field mt-1 w-28" @bind="codeLabourAccount" placeholder="e.g. 310" />
-                </label>
-                <label class="block text-sm text-content-muted">Materials account
+                </FormField>
+                <FormField Label="Materials account">
                     <input class="field mt-1 w-28" @bind="codeMaterialsAccount" placeholder="e.g. 312" />
-                </label>
-                <label class="block text-sm text-content-muted">Travel account
+                </FormField>
+                <FormField Label="Travel account">
                     <input class="field mt-1 w-28" @bind="codeTravelAccount" placeholder="e.g. 493" />
-                </label>
+                </FormField>
                 <button type="button" class="btn-secondary" disabled="@isSaving" @onclick="SaveCodeMappingAsync">Set mapping</button>
             </div>
             <p class="text-xs text-content-subtle mb-4">

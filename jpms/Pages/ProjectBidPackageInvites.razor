@@ -82,10 +82,11 @@
            ConfirmLabel="@(busy ? "Creating…" : "Create package")"
            ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(createTitle) || string.IsNullOrWhiteSpace(createTrade))" CancelLabel="Cancel"
            OnCancel="CloseCreateModal" OnConfirm="ConfirmCreate" Class="max-w-lg w-full">
-        <label class="block eyebrow mb-1">Title</label>
+        <FormField Label="Title">
         <input class="field mb-3" placeholder="e.g. Ground-floor electrical works" @bind="createTitle" @bind:event="oninput" />
+        </FormField>
 
-        <label class="block eyebrow mb-1">Trade</label>
+        <FormField Label="Trade">
         @* The curated trade list (Admin → Trades), not free text — packages carry the same trade
            names the directory filters on. Loading convention: a control is never gated — it
            renders disabled with a "Loading…" placeholder until the list has landed. *@
@@ -103,6 +104,7 @@
                 }
             }
         </select>
+        </FormField>
         @if (SubcontractorStore.TradesLoaded && SubcontractorStore.Trades().Count == 0)
         {
             <p class="text-xs text-content-subtle -mt-2 mb-3">No trades yet — an administrator can add them under Admin → Trades.</p>
@@ -167,7 +169,7 @@
             }
             else if (suggestions is null)
             {
-                <label class="block eyebrow mb-1">Model</label>
+                <FormField Label="Model">
                 @* Same cost lever as the chat panel: only a tier KEY leaves the browser — the
                    server maps it to a model id, and unknown keys degrade to cheap. *@
                 <select class="field mb-1" @bind="suggestModelKey" aria-label="Model">
@@ -176,6 +178,7 @@
                         <option value="@choice.Key">@choice.DisplayName</option>
                     }
                 </select>
+                </FormField>
                 <p class="text-xs text-content-subtle">@SuggestModelHint</p>
             }
             else

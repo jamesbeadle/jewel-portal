@@ -103,9 +103,10 @@
         <FormField Label="Title" Value="@draftTitle" OnChange="v => draftTitle = v" Required="true" />
 
         <div>
-            <label class="block eyebrow mb-1">Note *</label>
+            <FormField Label="Note" Required>
             <textarea class="field" rows="6" placeholder="The information itself — e.g. Front gate code 4482#, changes first Monday of the month."
                       value="@draftBody" @oninput="OnDraftBodyInput"></textarea>
+            </FormField>
         </div>
     </div>
 

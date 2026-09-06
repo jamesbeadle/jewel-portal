@@ -19,7 +19,7 @@
             <span>Note</span>
         </label>
     </div>
-    <textarea class="w-full rounded-md bg-surface border border-line px-2 py-1.5 text-sm" rows="3"
+    <textarea class="field" rows="3"
               placeholder="@Placeholder" disabled="@Busy" maxlength="400" @bind="note" @bind:event="oninput"></textarea>
     <div class="flex items-center gap-2">
         <button type="button" class="btn-primary text-xs px-2 py-1" disabled="@(Busy || !CanSave)" @onclick="SaveAsync">Save</button>

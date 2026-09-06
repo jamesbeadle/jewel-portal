@@ -161,22 +161,24 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                     <div>
-                        <label class="block eyebrow mb-1">Role</label>
+                        <FormField Label="Role">
                         <select class="field" @bind="formRole">
                             @foreach (var role in RoleOptions)
                             {
                                 <option value="@((int)role)">@role.DisplayName()</option>
                             }
                         </select>
+                        </FormField>
                     </div>
                     <div>
-                        <label class="block eyebrow mb-1">Routing</label>
+                        <FormField Label="Routing">
                         <select class="field" @bind="formRouting">
                             <option value="@((int)CorrespondenceRouting.None)">Off — contact list only</option>
                             <option value="@((int)CorrespondenceRouting.To)">To</option>
                             <option value="@((int)CorrespondenceRouting.Cc)">CC</option>
                             <option value="@((int)CorrespondenceRouting.Bcc)">BCC</option>
                         </select>
+                        </FormField>
                     </div>
                     <div class="flex gap-2">
                         <button type="button" class="btn-secondary" disabled="@busy" @onclick="SaveContactAsync">

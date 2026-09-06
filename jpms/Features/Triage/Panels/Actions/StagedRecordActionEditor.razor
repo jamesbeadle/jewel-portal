@@ -28,8 +28,9 @@
         }
         <FormField Label="Subject" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
         <div>
-            <label class="block eyebrow mb-1">Detail</label>
+            <FormField Label="Detail">
             <textarea class="field" rows="4" value="@Create.Description" @oninput="e => { Create.Description = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }"></textarea>
+            </FormField>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField Label="Drawing / detail ref" Value="@Create.DrawingRef" OnChange="v => { Create.DrawingRef = v; NotifyCreate(); }" />
@@ -59,7 +60,7 @@ else if (Kind == StagedRecordKind.WorkOrder)
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-                <label class="block eyebrow mb-1">Subcontractor *</label>
+                <FormField Label="Subcontractor" Required>
                 <select class="field" disabled="@(Subcontractors.Current is null)"
                         @onchange="e => SetWorkOrder(c => c.SubcontractorId = e.Value?.ToString() ?? string.Empty)">
                     @if (Subcontractors.Current is null)
@@ -75,6 +76,7 @@ else if (Kind == StagedRecordKind.WorkOrder)
                         }
                     }
                 </select>
+                </FormField>
                 @if (senderMatchedCompany is { } matched && Create.SubcontractorId != "" && StagedCreate is null)
                 {
                     <p class="text-xs text-content-subtle mt-1">Matched to the sender — @matched</p>
@@ -83,9 +85,10 @@ else if (Kind == StagedRecordKind.WorkOrder)
             <FormField Label="Order title" Value="@Create.Title" OnChange="v => SetWorkOrder(c => c.Title = v)" Required="true" />
         </div>
         <div>
-            <label class="block eyebrow mb-1">Scope</label>
+            <FormField Label="Scope">
             <textarea class="field" rows="2" maxlength="4000" placeholder="What the order instructs (optional)"
                       value="@Create.Scope" @oninput="e => SetWorkOrder(c => c.Scope = e.Value?.ToString() ?? string.Empty)"></textarea>
+            </FormField>
         </div>
 
         @* Programme — printed in the purchase order's Programme section; all optional. *@
@@ -97,9 +100,10 @@ else if (Kind == StagedRecordKind.WorkOrder)
                 <FormField Label="Target completion" Value="@Create.TargetCompletion" OnChange="v => SetWorkOrder(c => c.TargetCompletion = v)" InputType="date" />
             </div>
             <div>
-                <label class="block eyebrow mb-1">Programme notes</label>
+                <FormField Label="Programme notes">
                 <textarea class="field" rows="2" maxlength="2000" placeholder="e.g. Weekly programme duration 1st &amp; 2nd fix phases (optional)"
                           value="@Create.ProgrammeNotes" @oninput="e => SetWorkOrder(c => c.ProgrammeNotes = e.Value?.ToString() ?? string.Empty)"></textarea>
+                </FormField>
             </div>
         </div>
 
@@ -119,11 +123,11 @@ else if (Kind == StagedRecordKind.WorkOrder)
                                           InputClass="bg-surface border border-line px-2 py-1.5"
                                           Value="@line.CostCode" ValueChanged="v => SetWorkOrder(_ => line.CostCode = v)" />
                             <input type="text" maxlength="256" placeholder="What this line covers"
-                                   class="bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm flex-1"
+                                   class="field flex-1"
                                    value="@line.Title"
                                    @onchange="e => SetWorkOrder(_ => line.Title = e.Value?.ToString() ?? string.Empty)" />
                             <input type="number" step="any" placeholder="Amount £"
-                                   class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-28"
+                                   class="field text-right w-28"
                                    value="@line.AmountText"
                                    @onchange="e => SetWorkOrder(_ => line.AmountText = e.Value?.ToString() ?? string.Empty)" />
                             <button type="button" aria-label="Remove this line" disabled="@(Create.Lines.Count == 1)"
@@ -134,7 +138,7 @@ else if (Kind == StagedRecordKind.WorkOrder)
                             </button>
                         </div>
                         <textarea rows="2" maxlength="1024" placeholder="Description — the full detail printed on the purchase order (optional)"
-                                  class="w-full bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm placeholder:text-content-subtle"
+                                  class="field"
                                   value="@line.Description"
                                   @onchange="e => SetWorkOrder(_ => line.Description = e.Value?.ToString() ?? string.Empty)"></textarea>
                     </div>
@@ -161,7 +165,7 @@ else if (Kind == StagedRecordKind.WorkOrder)
             {
                 <div class="mt-2 flex items-center gap-2">
                     <input type="number" step="any" min="0" max="100" placeholder="%"
-                           class="bg-surface border border-line rounded-lg px-2 py-1.5 text-right text-content text-sm w-24"
+                           class="field text-right w-24"
                            value="@Create.DepositPercentText"
                            @onchange="e => SetWorkOrder(c => c.DepositPercentText = e.Value?.ToString() ?? string.Empty)" />
                     <span class="text-sm text-content-muted">% of the order value</span>
@@ -269,14 +273,16 @@ else if (Kind == StagedRecordKind.SiteInstruction)
 
         <FormField Label="Title" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
         <div>
-            <label class="block eyebrow mb-1">Instruction *</label>
+            <FormField Label="Instruction" Required>
             <textarea class="field" rows="6" maxlength="4000" placeholder="What site is to do — in your words, as the instruction should read on site"
                       value="@Create.Description" @oninput="e => { Create.Description = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }"></textarea>
+            </FormField>
         </div>
         <div>
-            <label class="block eyebrow mb-1">Location</label>
+            <FormField Label="Location">
             <input type="text" class="field" maxlength="256" placeholder="Where on site it applies — room, area, level, elevation (optional)"
                    value="@Create.SiteInstructionLocation" @oninput="e => { Create.SiteInstructionLocation = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }" />
+            </FormField>
         </div>
 
         @if (StagedCreate is not null && Create.SiteInstructionProblem is { } siteInstructionProblem)
@@ -292,19 +298,22 @@ else if (Kind == StagedRecordKind.Inventory)
 
         <FormField Label="Product name" Value="@Create.Title" OnChange="v => { Create.Title = v; NotifyCreate(); }" Required="true" />
         <div>
-            <label class="block eyebrow mb-1">Product details</label>
+            <FormField Label="Product details">
             <textarea class="field" rows="3" maxlength="2048" placeholder="What the product is — make, spec, sizes, quantities as described in the email"
                       value="@Create.Description" @oninput="e => { Create.Description = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }"></textarea>
+            </FormField>
         </div>
         <div>
-            <label class="block eyebrow mb-1">Location</label>
+            <FormField Label="Location">
             <input type="text" class="field" maxlength="256" placeholder="Where it's kept — site, container, store room"
                    value="@Create.InventoryLocation" @oninput="e => { Create.InventoryLocation = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }" />
+            </FormField>
         </div>
         <div>
-            <label class="block eyebrow mb-1">Location details</label>
+            <FormField Label="Location details">
             <textarea class="field" rows="2" maxlength="2048" placeholder="Anything that helps find it — shelf, bay, who holds the key (optional)"
                       value="@Create.InventoryLocationDetails" @oninput="e => { Create.InventoryLocationDetails = e.Value?.ToString() ?? string.Empty; NotifyCreate(); }"></textarea>
+            </FormField>
         </div>
 
         @if (StagedCreate is not null && Create.InventoryProblem is { } inventoryProblem)
@@ -319,20 +328,23 @@ else
         <p class="text-xs text-content-subtle">The defect is raised (numbered DEF-####) and this email is tagged to it on apply — it appears on the project's Defects tab, where its status is worked to Verified.</p>
 
         <div>
-            <label class="block eyebrow mb-1">Location</label>
+            <FormField Label="Location">
             <input type="text" class="field" maxlength="256" placeholder="Room, area or feature"
                    value="@Create.DefectLocation" @oninput="e => SetDefect(c => c.DefectLocation = e.Value?.ToString() ?? string.Empty)" />
+            </FormField>
         </div>
         <div>
-            <label class="block eyebrow mb-1">Description *</label>
+            <FormField Label="Description" Required>
             <textarea class="field" rows="3" maxlength="1024" placeholder="What's wrong and what putting it right needs"
                       value="@Create.Description" @oninput="e => SetDefect(c => c.Description = e.Value?.ToString() ?? string.Empty)"></textarea>
+            </FormField>
         </div>
         <div>
-            <label class="block eyebrow mb-1">Assigned to</label>
+            <FormField Label="Assigned to">
             <input type="text" class="field" maxlength="256" placeholder="Who the fix is chased with — an email address"
                    autocomplete="off" data-lpignore="true" data-1p-ignore data-bwignore data-form-type="other"
                    value="@Create.DefectAssignedTo" @oninput="e => SetDefect(c => c.DefectAssignedTo = e.Value?.ToString() ?? string.Empty)" />
+            </FormField>
             @if (defectAssigneeFromSender && Create.DefectAssignedTo != "")
             {
                 <p class="text-xs text-content-subtle mt-1">Pre-filled from the sender</p>

@@ -24,55 +24,63 @@
     }
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Name *</label>
+            <FormField Label="Name" Required>
             <input type="text" class="field w-full" maxlength="256" placeholder="e.g. Farnham postcodes — build before the price rise"
                    value="@name" @oninput="e => name = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">Who it targets</label>
+            <FormField Label="Who it targets">
             <select class="field w-full" value="@audience" @onchange="e => audience = Enum.Parse<SalesAudience>(e.Value?.ToString() ?? nameof(SalesAudience.Homeowners))">
                 @foreach (var option in Enum.GetValues<SalesAudience>())
                 {
                     <option value="@option">@option.DisplayName()</option>
                 }
             </select>
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">How they are reached</label>
+            <FormField Label="How they are reached">
             <select class="field w-full" value="@channel" @onchange="e => channel = Enum.Parse<SalesChannel>(e.Value?.ToString() ?? nameof(SalesChannel.Mixed))">
                 @foreach (var option in Enum.GetValues<SalesChannel>())
                 {
                     <option value="@option">@option.DisplayName()</option>
                 }
             </select>
+            </FormField>
         </div>
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Where</label>
+            <FormField Label="Where">
             <input type="text" class="field w-full" maxlength="512" placeholder="Postcodes, towns, a radius — e.g. GU9, GU10, RH12; practices within 25 miles"
                    value="@targetArea" @oninput="e => targetArea = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Hypothesis — why these people, why now</label>
+            <FormField Label="Hypothesis — why these people, why now">
             <textarea class="field w-full" rows="4" maxlength="4000"
                       placeholder="e.g. House prices in these postcodes will rise faster than the county over the next 3–5 years as the station upgrade lands; an owner who extends now captures the gain on a bigger house."
                       value="@hypothesis" @oninput="e => hypothesis = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
         </div>
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Evidence — the data and findings behind it</label>
+            <FormField Label="Evidence — the data and findings behind it">
             <textarea class="field w-full" rows="4" maxlength="4000"
                       placeholder="What backs it and where it came from: Land Registry price-paid trends, planning applications granted, infrastructure announcements, Companies House, what architects told us…"
                       value="@evidence" @oninput="e => evidence = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
         </div>
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Proposition — what we say to them</label>
+            <FormField Label="Proposition — what we say to them">
             <textarea class="field w-full" rows="2" maxlength="1024"
                       placeholder="e.g. Building now is the investment that pays twice: a better home, and the gain when prices move."
                       value="@proposition" @oninput="e => proposition = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
         </div>
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Owner *</label>
+            <FormField Label="Owner" Required>
             <SearchSelect Options="@OwnerOptions" Value="@ownerEmail" ValueChanged="v => ownerEmail = v"
                           Placeholder="Who is running it" WidthClass="w-full" InputClass="field" />
+            </FormField>
         </div>
     </div>
 </Modal>

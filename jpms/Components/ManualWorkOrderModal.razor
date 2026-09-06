@@ -92,10 +92,11 @@
             @if (createPackage)
             {
                 <div class="mb-2">
-                    <label class="block eyebrow mb-1">Package name</label>
+                    <FormField Label="Package name">
                     <input type="text" maxlength="128" placeholder="e.g. BVMH groundworks &amp; civils"
-                           class="w-full md:w-1/2 rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
+                           class="field"
                            disabled="@busy" @bind="packageName" @bind:event="oninput" />
+                    </FormField>
                 </div>
                 <div class="flex items-center justify-between gap-2 mb-2">
                     <p class="eyebrow"
@@ -103,7 +104,7 @@
                         Sales side — valuation lines
                     </p>
                     <input type="search" placeholder="Search…"
-                           class="bg-surface border border-line rounded-lg px-2 py-1 text-xs text-content placeholder:text-content-subtle w-36"
+                           class="field text-xs w-36"
                            @bind="lineSearch" @bind:event="oninput" />
                 </div>
                 <div class="overflow-y-auto max-h-60 space-y-1">
@@ -123,7 +124,7 @@
                                 @if (picked)
                                 {
                                     <input type="number" step="any"
-                                           class="bg-surface border border-line rounded-lg px-2 py-0.5 text-right text-content text-xs w-24"
+                                           class="field text-right text-xs w-24"
                                            title="@($"This package's share — {Money(entry.Available)} of the line's {Money(salesLine.LineAmount)} is available")"
                                            disabled="@busy"
                                            value="@pickedAmounts[salesLine.ValuationLineItemId]"

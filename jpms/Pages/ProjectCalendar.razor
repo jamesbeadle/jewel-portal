@@ -175,13 +175,14 @@
             <FormField Label="Title" Value="@fTitle" OnChange="v => fTitle = v" Required="true" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block eyebrow mb-1">Kind</label>
+                    <FormField Label="Kind">
                     <select class="field" value="@((int)fKind)" @onchange="OnKindChanged">
                         @foreach (var kind in CalendarEventKinds.All)
                         {
                             <option value="@((int)kind)">@CalendarEventKinds.Label(kind)</option>
                         }
                     </select>
+                    </FormField>
                 </div>
                 <FormField Label="Start time" Value="@fStartTime" OnChange="v => fStartTime = v" InputType="time" />
             </div>
@@ -190,9 +191,10 @@
                 <FormField Label="End date (multi-day)" Value="@fEndDate" OnChange="v => fEndDate = v" InputType="date" />
             </div>
             <div>
-                <label class="block eyebrow mb-1">Notes</label>
+                <FormField Label="Notes">
                 <textarea class="field" rows="3" maxlength="4096" placeholder="Detail and who's attending"
                           value="@fNotes" @oninput="e => fNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
             <label class="flex items-center gap-2 text-sm text-content cursor-pointer">
                 <input type="checkbox" checked="@fClientVisible" @onchange="e => fClientVisible = e.Value is true" />

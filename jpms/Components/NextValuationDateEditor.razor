@@ -33,8 +33,9 @@
         }
 
         <div>
-            <label class="block eyebrow mb-1">Base date</label>
+            <FormField Label="Base date">
             <input type="date" class="field" @bind="baseDate" />
+            </FormField>
             <p class="text-xs text-content-subtle mt-1">
                 @(calculate
                     ? "The starting point the calculation adjusts from — usually the current or last valuation date."
@@ -54,16 +55,18 @@
         {
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block eyebrow mb-1">Add</label>
+                    <FormField Label="Add">
                     <input type="number" class="field" @bind="amount" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block eyebrow mb-1">Unit</label>
+                    <FormField Label="Unit">
                     <select class="field" @bind="unit">
                         <option value="@Unit.Days">Days</option>
                         <option value="@Unit.Weeks">Weeks</option>
                         <option value="@Unit.Months">Months</option>
                     </select>
+                    </FormField>
                 </div>
             </div>
 
@@ -76,7 +79,7 @@
                 {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block eyebrow mb-1">Occurrence</label>
+                            <FormField Label="Occurrence">
                             <select class="field" @bind="occurrence">
                                 <option value="1">First</option>
                                 <option value="2">Second</option>
@@ -84,9 +87,10 @@
                                 <option value="4">Fourth</option>
                                 <option value="5">Last</option>
                             </select>
+                            </FormField>
                         </div>
                         <div>
-                            <label class="block eyebrow mb-1">Weekday</label>
+                            <FormField Label="Weekday">
                             <select class="field" @bind="weekday">
                                 <option value="@DayOfWeek.Monday">Monday</option>
                                 <option value="@DayOfWeek.Tuesday">Tuesday</option>
@@ -96,6 +100,7 @@
                                 <option value="@DayOfWeek.Saturday">Saturday</option>
                                 <option value="@DayOfWeek.Sunday">Sunday</option>
                             </select>
+                            </FormField>
                         </div>
                     </div>
                     <p class="text-xs text-content-subtle">Takes the chosen weekday within the month the date lands in — e.g. Last / Thursday gives the last Thursday of that month.</p>

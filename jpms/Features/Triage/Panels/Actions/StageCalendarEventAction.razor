@@ -13,45 +13,51 @@
     </p>
 
     <div>
-        <label class="block eyebrow mb-1">Title *</label>
+        <FormField Label="Title" Required>
         <input type="text" class="field" maxlength="256" placeholder="What's happening — Structural engineer site visit"
                value="@Draft.Title" @oninput="e => SetTitle(e.Value?.ToString() ?? string.Empty)" />
+        </FormField>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-            <label class="block eyebrow mb-1">Kind</label>
+            <FormField Label="Kind">
             <select class="field" value="@((int)Draft.Kind)" @onchange="OnKindChanged">
                 @foreach (var kind in CalendarEventKinds.All)
                 {
                     <option value="@((int)kind)">@CalendarEventKinds.Label(kind)</option>
                 }
             </select>
+            </FormField>
         </div>
         <div>
-            <label class="block eyebrow mb-1">Start time</label>
+            <FormField Label="Start time">
             <input type="time" class="field"
                    value="@Draft.StartTime" @onchange="e => Set(draft => draft.StartTime = e.Value?.ToString() ?? string.Empty)" />
+            </FormField>
         </div>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-            <label class="block eyebrow mb-1">Date *</label>
+            <FormField Label="Date" Required>
             <input type="date" class="field"
                    value="@Draft.Date" @onchange="e => Set(draft => draft.Date = e.Value?.ToString() ?? string.Empty)" />
+            </FormField>
         </div>
         <div>
-            <label class="block eyebrow mb-1">End date (multi-day)</label>
+            <FormField Label="End date (multi-day)">
             <input type="date" class="field"
                    value="@Draft.EndDate" @onchange="e => Set(draft => draft.EndDate = e.Value?.ToString() ?? string.Empty)" />
+            </FormField>
         </div>
     </div>
 
     <div>
-        <label class="block eyebrow mb-1">Notes</label>
+        <FormField Label="Notes">
         <textarea class="field" rows="2" maxlength="4096" placeholder="Detail and who's attending"
                   value="@Draft.Notes" @oninput="e => Set(draft => draft.Notes = e.Value?.ToString() ?? string.Empty)"></textarea>
+        </FormField>
     </div>
 
     <label class="flex items-center gap-2 text-sm text-content cursor-pointer">

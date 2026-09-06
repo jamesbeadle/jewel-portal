@@ -51,14 +51,14 @@
                 @if (!ClaimReady)
                 {
                     <select disabled
-                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content-subtle">
+                            class="field">
                         <option>Loading claims…</option>
                     </select>
                 }
                 else if (Claims.Count > 0)
                 {
                     <select @bind="selectedClaimId"
-                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+                            class="field">
                         @foreach (var claim in Claims)
                         {
                             <option value="@claim.ValuationClaimId">@claim.DisplayName — @claim.Status.DisplayName() (@claim.ClaimDate.ToString("dd MMM yyyy"))</option>
@@ -288,17 +288,19 @@
                Class="max-w-lg">
             <div class="space-y-3">
                 <div>
-                    <label class="block eyebrow mb-1">Period name</label>
+                    <FormField Label="Period name">
                     <input type="text" @bind="newClaimName" placeholder="e.g. June 2026"
-                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                           class="field" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block eyebrow mb-1">Claim date</label>
+                    <FormField Label="Claim date">
                     <input type="date" @bind="newClaimDate"
-                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                           class="field" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block eyebrow mb-1">Retention</label>
+                    <label class="block text-sm font-medium text-content mb-1">Retention</label>
                     @* Read-only: the claim stamps its retention from the project's terms when it
                        starts — the completion date decides whether the release % applies. *@
                     @* "No terms recorded" is advice to go and record some, so it waits until the

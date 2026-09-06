@@ -44,10 +44,11 @@
         <div class="space-y-4">
             <FormField Label="Group name" Value="@formName" OnChange="value => formName = value" Required="true" />
             <div>
-                <label class="block eyebrow mb-1">Suppliers in this group *</label>
+                <FormField Label="Suppliers in this group" Required>
                 <input type="text" placeholder="Filter suppliers…" value="@memberFilter"
                        @oninput="args => memberFilter = (string)args.Value!"
-                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content mb-2" />
+                       class="field mb-2" />
+                </FormField>
                 <div class="max-h-64 overflow-y-auto rounded-lg border border-line divide-y divide-line/50">
                     @foreach (var supplierName in SupplierNameChoices())
                     {

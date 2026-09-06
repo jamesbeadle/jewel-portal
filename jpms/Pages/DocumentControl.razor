@@ -177,7 +177,7 @@
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block eyebrow mb-1">Project *</label>
+                                        <FormField Label="Project" Required>
                                         <select class="field" value="@filingProjectId" @onchange="OnFilingProjectChanged">
                                             <option value="">Select a project…</option>
                                             @foreach (var project in ProjectOptions)
@@ -185,11 +185,12 @@
                                                 <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                                             }
                                         </select>
+                                        </FormField>
                                     </div>
                                     @if (drawingIsRevision)
                                     {
                                         <div>
-                                            <label class="block eyebrow mb-1">Existing document *</label>
+                                            <FormField Label="Existing document" Required>
                                             <select class="field" @bind="drawingId" disabled="@string.IsNullOrWhiteSpace(filingProjectId)">
                                                 @if (string.IsNullOrWhiteSpace(filingProjectId))
                                                 {
@@ -212,6 +213,7 @@
                                                     }
                                                 }
                                             </select>
+                                            </FormField>
                                         </div>
                                     }
                                     else
@@ -244,7 +246,7 @@
                                 </p>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block eyebrow mb-1">Project *</label>
+                                        <FormField Label="Project" Required>
                                         <select class="field" value="@filingProjectId" @onchange="OnFilingProjectChanged">
                                             <option value="">Select a project…</option>
                                             @foreach (var project in ProjectOptions)
@@ -252,9 +254,10 @@
                                                 <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                                             }
                                         </select>
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="block eyebrow mb-1">Valuation claim</label>
+                                        <FormField Label="Valuation claim">
                                         <select class="field" @bind="certificateClaimId" disabled="@string.IsNullOrWhiteSpace(filingProjectId)">
                                             @if (string.IsNullOrWhiteSpace(filingProjectId))
                                             {
@@ -277,14 +280,16 @@
                                                 }
                                             }
                                         </select>
+                                        </FormField>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <FormField Label="Certificate number" Value="@certificateNumber" OnChange="v => certificateNumber = v" Required="true" />
                                     <FormField Label="Certified amount (£)" Value="@certificateAmountText" OnChange="v => certificateAmountText = v" />
                                     <div>
-                                        <label class="block eyebrow mb-1">Issued date *</label>
+                                        <FormField Label="Issued date" Required>
                                         <input type="date" class="field" @bind="certificateIssuedDate" />
+                                        </FormField>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3">
@@ -302,20 +307,22 @@
                                 </p>
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
-                                        <label class="block eyebrow mb-1">Subcontractor *</label>
+                                        <FormField Label="Subcontractor" Required>
                                         <SearchSelect Options="SubcontractorOptions" Value="@subcontractorId"
                                                       ValueChanged="v => subcontractorId = v"
                                                       Placeholder="Search subcontractors…" WidthClass="w-full"
                                                       InputClass="field" />
+                                        </FormField>
                                     </div>
                                     <div>
-                                        <label class="block eyebrow mb-1">Kind *</label>
+                                        <FormField Label="Kind" Required>
                                         @* Free text with suggestions — the same shape as the portal upload, so
                                            "Insurance" filed here and "Public liability insurance" uploaded there
                                            can be steered to ONE spelling per kind (matching is case-insensitive
                                            server-side; a different spelling starts a separate version history). *@
                                         <input class="field" list="doc-control-subbie-kinds" placeholder="RAMS, Insurance, Drawings / Specifications…"
                                                @bind="subcontractorKind" @bind:event="oninput" />
+                                        </FormField>
                                         <datalist id="doc-control-subbie-kinds">
                                             @foreach (var kind in SubcontractorDocumentKinds)
                                             {
@@ -324,8 +331,9 @@
                                         </datalist>
                                     </div>
                                     <div>
-                                        <label class="block eyebrow mb-1">Expiry date</label>
+                                        <FormField Label="Expiry date">
                                         <input type="date" class="field" @bind="subcontractorExpiry" />
+                                        </FormField>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-3">

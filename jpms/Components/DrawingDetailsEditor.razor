@@ -26,12 +26,14 @@ else
 {
     <div class="rounded-xl border border-line bg-surface p-4 space-y-3 max-w-xl">
         <div>
-            <label class="block eyebrow mb-1">Document code</label>
+            <FormField Label="Document code">
             <input type="text" @bind="code" placeholder="A-100" class="field" />
+            </FormField>
         </div>
         <div>
-            <label class="block eyebrow mb-1">Title</label>
+            <FormField Label="Title">
             <input type="text" @bind="title" placeholder="@(Drawing.LatestFileName ?? "Ground floor plan")" class="field" />
+            </FormField>
         </div>
         @if (error is not null)
         {

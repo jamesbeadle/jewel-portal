@@ -11,12 +11,13 @@
         <p class="text-sm text-content mb-1 font-medium">@Line.Description</p>
         <p class="text-xs text-content-subtle mb-4">A line is covered by a cost centre (the contract-side home its committed value charges to) or a variation order — never both.</p>
 
-        <label class="block eyebrow mb-1">Covered by</label>
+        <FormField Label="Covered by">
         <select class="field" @bind="coverage">
             <option value="@BidPackageLineCoverage.Unassigned">Not linked</option>
             <option value="@BidPackageLineCoverage.ContractLine">Cost centre</option>
             <option value="@BidPackageLineCoverage.Variation">Variation order</option>
         </select>
+        </FormField>
 
         @if (coverage == BidPackageLineCoverage.ContractLine)
         {

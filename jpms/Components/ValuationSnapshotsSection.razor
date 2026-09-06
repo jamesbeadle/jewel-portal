@@ -112,9 +112,10 @@
         {
             <div class="border-t border-line px-4 py-3 flex flex-wrap items-end gap-3">
                 <div class="grow max-w-sm">
-                    <label class="block eyebrow mb-1">Label</label>
+                    <FormField Label="Label">
                     <input type="text" @bind="newLabel"
-                           class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                           class="field" />
+                    </FormField>
                 </div>
                 <button type="button" disabled="@busy" @onclick="TakeAsync"
                         title="Freeze the report exactly as it stands — every line and the summary footer"

@@ -74,7 +74,7 @@
                                loading placeholder until the folder list has landed (never gate a control). *@
                             <select value="@(drawing.DrawingFolderId ?? "")" disabled="@(!FoldersReady || moveBusy)"
                                     @onchange="MoveToFolderAsync"
-                                    class="rounded-lg border border-line-strong bg-surface px-2 py-1 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent disabled:opacity-60">
+                                    class="field">
                                 @if (!FoldersReady)
                                 {
                                     <option value="">Loading…</option>

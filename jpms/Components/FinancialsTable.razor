@@ -4,7 +4,7 @@
 
 <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
     <div class="flex flex-wrap items-center gap-4">
-        <input class="text-sm bg-surface border border-line rounded-lg px-3 py-1.5 text-content placeholder:text-content-subtle w-64"
+        <input class="field w-64"
                placeholder="Search cost centre or code…"
                value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
         <label class="flex w-fit items-center gap-2 text-sm text-content-subtle cursor-pointer select-none">
@@ -209,8 +209,7 @@
 
                     <td class="px-4 py-3 text-right">
                         <input type="number" min="0" max="100" step="1"
-                               class="w-20 rounded-md border border-line bg-surface px-2 py-1 text-right text-sm text-content
-                                      focus:outline-none focus:border-line-strong"
+                               class="field w-20 text-right"
                                title="@(reportLine.IsGroup
                                           ? "Cost-side completion — writes this percentage to every centre in the roll-up"
                                           : "Cost-side completion for this cost centre (0–100)")"

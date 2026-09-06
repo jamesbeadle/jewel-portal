@@ -19,13 +19,14 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" Required="true" />
             <div>
-                <label class="block eyebrow mb-1">Status</label>
+                <FormField Label="Status">
                 <select class="field" value="@((int)status)" @onchange="OnStatusChanged">
                     @foreach (var option in StatusOptions)
                     {
                         <option value="@((int)option)">@option.DisplayName()</option>
                     }
                 </select>
+                </FormField>
             </div>
         </div>
 

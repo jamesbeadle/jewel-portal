@@ -53,7 +53,7 @@
             <h3 class="text-sm font-semibold text-content">Work orders</h3>
             <input type="search" placeholder="Search supplier or title…"
                    title="Filters both tables — the work orders and the invoice lines below — so a supplier's orders and unlinked bills line up"
-                   class="bg-surface border border-line rounded-lg px-2.5 py-1 text-sm text-content placeholder:text-content-subtle w-64"
+                   class="field w-64"
                    @bind="orderSearch" @bind:event="oninput" />
             @if (!string.IsNullOrWhiteSpace(orderSearch))
             {
@@ -253,7 +253,7 @@
                                         <span class="inline-flex items-center gap-1.5">
                                             @* Keyed on a nonce so a failed save recreates the element — otherwise the
                                                browser keeps showing the picked work order even though it didn't stick. *@
-                                            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-64"
+                                            <select class="field w-64"
                                                     @key="@($"{line.XeroLedgerLineId}|{revertNonce}")"
                                                     disabled="@busyLineIds.Contains(line.XeroLedgerLineId)"
                                                     title="The work order this invoice line pays against — options that can't take the line's value are disabled"

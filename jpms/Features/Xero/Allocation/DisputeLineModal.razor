@@ -21,7 +21,7 @@
                 <label class="block eyebrow mb-1.5">
                     Why is this disputed?
                 </label>
-                <textarea class="w-full bg-surface border border-line rounded-lg px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+                <textarea class="field"
                           rows="4" placeholder="Optional — starts the discussion, e.g. “This isn't ours / wrong site — should this be on Elm Grove?”"
                           value="@Message" @oninput='e => MessageChanged.InvokeAsync(e.Value?.ToString() ?? "")'></textarea>
             </div>

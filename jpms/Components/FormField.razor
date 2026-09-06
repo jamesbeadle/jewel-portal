@@ -1,20 +1,65 @@
-<div>
-    <label class="block text-sm font-medium text-content mb-1">
-        @Label @(Required ? "*" : "")
+@*
+    THE labelled control. Every input, select, textarea, picker or upload in a form sits inside
+    one of these: the label (Figma: 14/Med white, 4px above the control), the control itself,
+    then an optional hint (12px, subtle) and the field's own validation error (14px, negative —
+    the 400/409/422 answer that belongs next to the field, never in a Notice).
+
+    Two ways to use it:
+      <FormField Label="Reference" Required><input class="field" @bind="reference" /></FormField>
+      <FormField Label="Name" Value="@name" OnChange="v => name = v" />   — the plain text shortcut.
+    The control inside wears the `field` class (Styles/app.tailwind.css); FormField never styles
+    the control itself, so any control — SearchSelect, RecipientInput, a date input — fits.
+*@
+
+<div class="@Class">
+    <label class="block text-sm font-medium text-content mb-1" for="@Id">
+        @Label@if (Required) { <span class="text-content-subtle" aria-hidden="true"> *</span> }
     </label>
-    <input type="@InputType"
-           value="@Value"
-           @oninput="HandleInput"
-           required="@Required"
-           class="field" />
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <input type="@InputType"
+               id="@Id"
+               value="@Value"
+               @oninput="HandleInput"
+               required="@Required"
+               placeholder="@Placeholder"
+               disabled="@Disabled"
+               class="field" />
+    }
+    @if (Error is not null)
+    {
+        <p class="text-sm text-negative mt-1" role="alert">@Error</p>
+    }
+    else if (Hint is not null)
+    {
+        <p class="text-xs text-content-subtle mt-1">@Hint</p>
+    }
 </div>
 
 @code {
     [Parameter, EditorRequired] public string Label { get; set; } = "";
-    [Parameter, EditorRequired] public string Value { get; set; } = "";
+    [Parameter] public bool Required { get; set; }
+    /// <summary>A line under the control saying what goes in it, or what happens to it.</summary>
+    [Parameter] public string? Hint { get; set; }
+    /// <summary>This field's validation error. Replaces the hint while set.</summary>
+    [Parameter] public string? Error { get; set; }
+    /// <summary>The control. Omit to get the plain text input driven by Value/OnChange.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>Layout only — grid span, margin.</summary>
+    [Parameter] public string Class { get; set; } = "";
+    /// <summary>The control's id, so the label focuses it. Optional.</summary>
+    [Parameter] public string? Id { get; set; }
+
+    // The plain-text shortcut.
+    [Parameter] public string Value { get; set; } = "";
     [Parameter] public EventCallback<string> OnChange { get; set; }
     [Parameter] public string InputType { get; set; } = "text";
-    [Parameter] public bool Required { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public bool Disabled { get; set; }
 
     private Task HandleInput(ChangeEventArgs args) =>
         OnChange.InvokeAsync(args.Value?.ToString() ?? "");

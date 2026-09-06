@@ -86,7 +86,7 @@
             </p>
 
             <div class="mb-4 flex flex-wrap items-center gap-2">
-                <input class="text-sm bg-surface border border-line rounded-lg px-3 py-1.5 text-content placeholder:text-content-subtle w-64"
+                <input class="field w-64"
                        placeholder="Search supplier, number, reference…"
                        value="@search" @oninput="e => search = e.Value?.ToString() ?? string.Empty" />
                 @foreach (var status in Statuses)

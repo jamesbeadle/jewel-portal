@@ -193,8 +193,9 @@
                     }
                     <p class="text-sm text-content truncate" title="@editing.Subject">@editing.Subject</p>
                     <div class="space-y-1">
-                        <label class="eyebrow">Filed under</label>
+                        <FormField Label="Filed under">
                         <KpiPersonPicker Value="@editPerson" ValueChanged="v => editPerson = v" />
+                        </FormField>
                     </div>
                     <div class="space-y-1">
                         <label class="eyebrow">Note <span class="font-normal normal-case">(optional)</span></label>
@@ -221,9 +222,10 @@
                     users are already offered by name and need no adding.
                 </p>
                 <div class="space-y-1">
-                    <label class="eyebrow">Name</label>
+                    <FormField Label="Name">
                     <input class="field w-full" placeholder="e.g. James Clark" @bind="newPersonName" @bind:event="oninput"
                            @onkeydown="@(e => { if (e.Key == "Enter") _ = AddPersonAsync(); })" />
+                    </FormField>
                 </div>
             </div>
         </Modal>

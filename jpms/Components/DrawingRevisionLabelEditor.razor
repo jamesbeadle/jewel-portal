@@ -18,7 +18,7 @@ else
 {
     <span class="inline-flex items-center gap-1.5 align-middle">
         <input type="text" @bind="label" placeholder="A" maxlength="16"
-               class="w-16 rounded-md border border-line-strong bg-surface px-2 py-0.5 text-sm font-normal text-content focus:outline-none focus:ring-2 focus:ring-accent" />
+               class="field w-16" />
         <button type="button" disabled="@busy" @onclick="SaveAsync"
                 class="rounded-md bg-accent text-accent-ink text-xs font-medium px-2 py-1 hover:bg-accent-hover transition disabled:opacity-60">
             @(busy ? "Saving…" : "Save")

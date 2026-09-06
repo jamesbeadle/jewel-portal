@@ -58,18 +58,22 @@
         </Notice>
     }
 
-    <label class="block eyebrow mb-1">To</label>
+    <FormField Label="To">
     <input class="field mb-1" @bind="to" placeholder="Leave empty — the projects mailbox addresses itself, recipients stay in BCC" />
+    </FormField>
     <p class="text-xs text-content-subtle mb-3">Semicolon-separated addresses. Empty means the projects mailbox is the visible addressee — the norm for a BCC'd invite.</p>
 
-    <label class="block eyebrow mb-1">Cc</label>
+    <FormField Label="Cc">
     <input class="field mb-3" @bind="cc" placeholder="Optional — internal people to copy in" />
+    </FormField>
 
-    <label class="block eyebrow mb-1">Bcc — the tender list</label>
+    <FormField Label="Bcc — the tender list">
     <textarea class="field mb-3" rows="2" @bind="bcc"></textarea>
+    </FormField>
 
-    <label class="block eyebrow mb-1">Subject</label>
+    <FormField Label="Subject">
     <input class="field mb-3" @bind="subject" />
+    </FormField>
 
     <div class="flex items-center justify-between mb-1">
         <label class="block eyebrow">Message</label>

@@ -116,24 +116,28 @@
                             </div>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <div>
-                                    <label class="block eyebrow mb-1">Drawing ref</label>
+                                    <FormField Label="Drawing ref">
                                     <textarea class="field" rows="2" value="@row.DrawingRef" @oninput="e => row.DrawingRef = e.Value?.ToString() ?? string.Empty"
                                               placeholder="Dwg 1986_111 Rev D&#10;SD8, SD3"></textarea>
+                                    </FormField>
                                 </div>
                                 <div>
-                                    <label class="block eyebrow mb-1">Member / area</label>
+                                    <FormField Label="Member / area">
                                     <textarea class="field" rows="2" value="@row.MemberArea" @oninput="e => row.MemberArea = e.Value?.ToString() ?? string.Empty"
                                               placeholder="West Elevation — lead valley gutter"></textarea>
+                                    </FormField>
                                 </div>
                             </div>
                             <div>
-                                <label class="block eyebrow mb-1">Query</label>
+                                <FormField Label="Query">
                                 <textarea class="field" rows="3" value="@row.Query" @oninput="e => row.Query = e.Value?.ToString() ?? string.Empty"
                                           placeholder="Please confirm…"></textarea>
+                                </FormField>
                             </div>
                             <div>
-                                <label class="block eyebrow mb-1">Response (when received)</label>
+                                <FormField Label="Response (when received)">
                                 <textarea class="field" rows="2" value="@row.Response" @oninput="e => row.Response = e.Value?.ToString() ?? string.Empty"></textarea>
+                                </FormField>
                             </div>
                         </div>
                     }
@@ -142,19 +146,22 @@
             </div>
 
             <div>
-                <label class="block eyebrow mb-1">Basis of queries</label>
+                <FormField Label="Basis of queries">
                 <textarea class="field" rows="2" value="@basis" @oninput="e => basis = e.Value?.ToString() ?? string.Empty"
                           placeholder="Architect's email ref…, site inspection observations, drawings…"></textarea>
+                </FormField>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Response / action required</label>
+                <FormField Label="Response / action required">
                 <textarea class="field" rows="3" value="@responseAction" @oninput="e => responseAction = e.Value?.ToString() ?? string.Empty"
                           placeholder="Please provide written confirmation / instruction on the items above…"></textarea>
+                </FormField>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Impact if not received by the required date</label>
+                <FormField Label="Impact if not received by the required date">
                 <textarea class="field" rows="2" value="@impact" @oninput="e => impact = e.Value?.ToString() ?? string.Empty"
                           placeholder="Works cannot proceed, risking programme delay while scaffold remains in place…"></textarea>
+                </FormField>
             </div>
 
             <div class="flex flex-wrap gap-2">

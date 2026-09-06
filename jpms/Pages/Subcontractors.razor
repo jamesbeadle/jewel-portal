@@ -82,11 +82,12 @@
         @* Filters: category + free-text search across all types *@
         <div class="flex flex-wrap items-end gap-3 mb-5">
             <div class="grow min-w-[14rem]">
-                <label class="eyebrow block mb-1">Search</label>
+                <FormField Label="Search">
                 <input class="field" placeholder="Company, trade, contact, town…" value="@search" @oninput="OnSearchInput" />
+                </FormField>
             </div>
             <div>
-                <label class="eyebrow block mb-1">Type</label>
+                <FormField Label="Type">
                 <select class="field" value="@categoryFilter" @onchange="OnCategoryChanged">
                     <option value="">All types</option>
                     @foreach (var c in AllCategories)
@@ -94,6 +95,7 @@
                         <option value="@c">@Label(c)</option>
                     }
                 </select>
+                </FormField>
             </div>
             @* The live result count sits with the filters that produce it. Rendered only once the
                store has loaded — a line of text simply doesn't appear until the figure is known. *@

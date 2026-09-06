@@ -17,29 +17,32 @@
     </p>
 
     <div>
-        <label class="block eyebrow mb-1">Stage *</label>
+        <FormField Label="Stage" Required>
         <input type="text" class="field" maxlength="256" placeholder="What's being inspected — Foundations, Drainage, Steel frame…"
                value="@Draft.StageName" @oninput="e => Set(draft => draft.StageName = e.Value?.ToString() ?? string.Empty)" />
+        </FormField>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-            <label class="block eyebrow mb-1">Booked for</label>
+            <FormField Label="Booked for" Hint="Blank = planned, not yet booked.">
             <input type="date" class="field"
                    value="@Draft.BookedFor" @onchange="e => Set(draft => draft.BookedFor = e.Value?.ToString() ?? string.Empty)" />
-            <p class="text-xs text-content-subtle mt-1">Blank = planned, not yet booked.</p>
+            </FormField>
         </div>
         <div>
-            <label class="block eyebrow mb-1">Inspector</label>
+            <FormField Label="Inspector">
             <input type="text" class="field" maxlength="256" placeholder="Who's coming out"
                    value="@Draft.InspectorName" @oninput="e => Set(draft => draft.InspectorName = e.Value?.ToString() ?? string.Empty)" />
+            </FormField>
         </div>
     </div>
 
     <div>
-        <label class="block eyebrow mb-1">Notes</label>
+        <FormField Label="Notes">
         <textarea class="field" rows="2" maxlength="2048" placeholder="Anything the visit hangs on — access, what must be open for inspection"
                   value="@Draft.OutcomeNotes" @oninput="e => Set(draft => draft.OutcomeNotes = e.Value?.ToString() ?? string.Empty)"></textarea>
+        </FormField>
     </div>
 
     @if (StagedCreate is not null && Draft.Problem is { } problem)

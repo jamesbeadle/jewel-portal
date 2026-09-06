@@ -14,9 +14,10 @@
     }
     <div class="flex flex-wrap items-end gap-3 mb-4">
         <div class="grow min-w-[14rem]">
-            <label class="eyebrow block mb-1">Search</label>
+            <FormField Label="Search">
             <input class="field" placeholder="Supplier name, email, town…" value="@search"
                    @oninput="args => search = args.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <button type="button" class="btn-secondary shrink-0" disabled="@loading"
                 title="Re-read the contact list from Xero"

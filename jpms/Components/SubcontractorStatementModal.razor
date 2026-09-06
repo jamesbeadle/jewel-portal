@@ -103,11 +103,13 @@
         }
         else
         {
-            <label class="block eyebrow mb-1">Subject</label>
+            <FormField Label="Subject">
             <input class="field mb-3" @bind="subject" />
+            </FormField>
 
-            <label class="block eyebrow mb-1">Cover note (HTML) — the statement itself travels as the attached PDF</label>
+            <FormField Label="Cover note (HTML) — the statement itself travels as the attached PDF">
             <textarea class="field font-mono text-xs" rows="10" @bind="htmlBody"></textarea>
+            </FormField>
         }
 
         @if (error is not null)

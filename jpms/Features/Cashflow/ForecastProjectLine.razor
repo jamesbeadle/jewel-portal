@@ -20,12 +20,12 @@
                 <input type="date" value="@(Project.NextExpectedValuationDate?.ToString("yyyy-MM-dd"))"
                        @onchange="args => OnNextValuationChanged.InvokeAsync((Project, args))"
                        title="The full date matters: each valuation is paid the contract's payment terms after this day of the month, so cash lands on payment dates"
-                       class="rounded border border-line-strong bg-surface-field px-1 py-0.5 text-xs text-content mx-1" />
+                       class="field text-xs" />
                 · expects
                 <input type="number" min="0" step="1000" placeholder="even"
                        value="@(Project.ExpectedMonthlyValuation?.ToString("0"))"
                        @onchange="args => OnMonthlyValuationChanged.InvokeAsync((Project, args))"
-                       class="w-20 rounded border border-line-strong bg-surface-field px-1 py-0.5 text-xs text-content mx-1" />
+                       class="field w-20 text-xs" />
                 £/month · blank = spread evenly to practical completion
             </span>
         }

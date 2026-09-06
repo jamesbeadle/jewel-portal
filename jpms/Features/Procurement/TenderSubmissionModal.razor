@@ -61,7 +61,7 @@
         </Notice>
     }
 
-    <label class="block eyebrow mb-1">Subcontractor</label>
+    <FormField Label="Subcontractor">
     <select class="field mb-3" @bind="subcontractorId">
         <option value="">Select the subcontractor…</option>
         @foreach (var recipient in Recipients)
@@ -70,6 +70,7 @@
             <option value="@recipient.SubcontractorId">@(sub?.CompanyName ?? recipient.SubcontractorId)</option>
         }
     </select>
+    </FormField>
     @if (sourceEmail is not null && !string.IsNullOrWhiteSpace(subcontractorNote))
     {
         <p class="text-xs text-content-subtle -mt-2 mb-3">@subcontractorNote</p>
@@ -109,7 +110,8 @@
         <p class="text-sm text-content font-medium">Total: @drafts.Sum(d => d.Total).ToString("£#,##0.00")</p>
     </div>
 
-    <label class="block eyebrow mb-1">Notes (exclusions, caveats, lead times)</label>
+    <FormField Label="Notes (exclusions, caveats, lead times)">
     <textarea class="field" rows="3" @bind="notes"></textarea>
+    </FormField>
     }
 </Modal>

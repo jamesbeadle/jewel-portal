@@ -71,7 +71,7 @@
         {
             <select value="" @onchange="AddRole" disabled="@busy"
                     aria-label="@($"Add a role to {User.DisplayName}")"
-                    class="rounded-full border border-dashed border-line-strong bg-transparent px-2 py-0.5 text-xs text-content-subtle hover:text-content hover:border-content-subtle focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50">
+                    class="field text-xs">
                 <option value="">+ Add role</option>
                 @foreach (var role in AddableRoles)
                 {
@@ -118,7 +118,7 @@
             </p>
             <div class="flex items-stretch gap-2">
                 <input readonly value="@resetLink"
-                       class="flex-1 min-w-0 rounded-lg border border-line-strong bg-surface px-2 py-1.5 text-xs text-content-muted" />
+                       class="field flex-1 min-w-0 text-xs" />
                 <button type="button" @onclick="CopyResetLink"
                         class="rounded-lg bg-accent text-accent-ink font-medium text-xs px-3 py-1.5 hover:bg-accent-hover transition">
                     @(copied ? "Copied" : "Copy")

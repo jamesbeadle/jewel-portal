@@ -42,7 +42,7 @@ else if (DisputeOpen)
         {
             <Notice Tone="Tone.Negative">@DisputeError</Notice>
         }
-        <textarea class="w-full min-h-[4.5rem] rounded-lg bg-surface border border-line px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+        <textarea class="field min-h-[4.5rem]"
                   placeholder="Why is this disputed? (optional — the discussion continues on the Disputed tab)"
                   value="@DisputeMessage" @oninput='e => DisputeMessageChanged.InvokeAsync(e.Value?.ToString() ?? "")'></textarea>
     </div>
@@ -90,7 +90,7 @@ else
             @* Choosing a bucket arms the primary button above as "Allocate to
                <bucket>"; picking a project or cost centre disarms it again. *@
             <span class="eyebrow w-16">Or</span>
-            <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
+            <select class="field w-52"
                     title="Send this line to a bucket instead of a project — no project, no cost centre"
                     value="@ArmedBucket"
                     @onchange="e => OnBucketPicked.InvokeAsync(e.Value?.ToString())">

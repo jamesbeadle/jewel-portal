@@ -37,7 +37,7 @@
             <p class="text-xs text-content-subtle">Promoting mints the RFI reference and creates the official document — use <span class="text-content font-medium">Promote to RFI</span> at the top of the page. No email is drafted by promotion; when you are ready to issue, the Email button appears in its place.</p>
         }
         <div>
-            <label class="eyebrow block mb-1">Issued to</label>
+            <FormField Label="Issued to" Hint="The email an RFI is issued to comes from this party — a client directly, or an architect acting on the client's behalf.">
             <select class="field" value="@PartySelectionValue" @onchange="OnPartySelected" disabled="@Busy">
                 <option value="">— None —</option>
                 @if (Clients.Count > 0)
@@ -59,13 +59,13 @@
                     </optgroup>
                 }
             </select>
-            <p class="text-xs text-content-subtle mt-1">The email an RFI is issued to comes from this party — a client directly, or an architect acting on the client's behalf.</p>
+            </FormField>
         </div>
 
         @if (Record.PartyKind == PartyKind.Architect && !string.IsNullOrEmpty(Record.PartyId))
         {
             <div>
-                <label class="eyebrow block mb-1">On behalf of client</label>
+                <FormField Label="On behalf of client" Hint="Optional: the client this architect is acting for.">
                 <select class="field" value="@(Record.OnBehalfOfClientId ?? "")" @onchange="e => OnBehalfPicked.InvokeAsync(NullIfBlank(e.Value?.ToString()))" disabled="@Busy">
                     <option value="">— Not recorded —</option>
                     @foreach (var client in Clients)
@@ -73,7 +73,7 @@
                         <option value="@client.ClientId">@client.Name</option>
                     }
                 </select>
-                <p class="text-xs text-content-subtle mt-1">Optional: the client this architect is acting for.</p>
+                </FormField>
             </div>
         }
 

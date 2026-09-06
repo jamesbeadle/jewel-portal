@@ -36,7 +36,7 @@
                     </button>
                 </div>
                 <input type="search" placeholder="Search by supplier…"
-                       class="bg-surface border border-line rounded-lg px-3 py-1.5 text-sm text-content placeholder:text-content-subtle w-52 focus:outline-none focus:border-accent"
+                       class="field w-52"
                        @bind="supplierSearch" @bind:event="oninput" />
                 <ExportToExcelButton FileName="Work orders"
                                      Disabled="@(LiveOrders.Count == 0)"

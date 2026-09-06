@@ -18,8 +18,9 @@
 
 <div class="space-y-3">
     <div class="space-y-1">
-        <label class="eyebrow">Filed under</label>
+        <FormField Label="Filed under">
         <KpiPersonPicker @ref="picker" Value="@person" ValueChanged="OnPersonChanged" />
+        </FormField>
         @if (matchedFrom is not null && person is { Email: not null } && person.Email == matchedEmail)
         {
             <p class="text-xs text-content-subtle">Matched from the email's @matchedFrom — change it if the KPI is about someone else.</p>

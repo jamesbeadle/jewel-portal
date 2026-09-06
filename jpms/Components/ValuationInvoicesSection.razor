@@ -194,17 +194,19 @@
         {
             <div class="border-t border-line px-4 py-3 flex flex-wrap items-end gap-3">
                 <div>
-                    <label class="block eyebrow mb-1">Period month</label>
+                    <FormField Label="Period month">
                     @* Explicit value/@onchange rather than @bind: Razor special-cases @bind on
                        type="month" to expect a DateTime, but the month travels as a "yyyy-MM"
                        string (see ParseMonth). *@
                     <input type="month" value="@newMonth" @onchange="e => newMonth = e.Value?.ToString() ?? newMonth"
-                           class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                           class="field" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="block eyebrow mb-1">Amount £</label>
+                    <FormField Label="Amount £">
                     <input type="number" step="any" min="0" @bind="newAmount"
-                           class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-40 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                           class="field w-40" />
+                    </FormField>
                 </div>
                 <label class="flex items-center gap-2 text-sm text-content-subtle cursor-pointer select-none pb-2.5"
                        title="Backdated historic entry: recorded directly as issued (and paid, if a paid amount is given) so it counts toward certified to date immediately">
@@ -214,14 +216,16 @@
                 @if (newIsHistoric)
                 {
                     <div>
-                        <label class="block eyebrow mb-1">Paid £ (blank = full, 0 = unpaid)</label>
+                        <FormField Label="Paid £ (blank = full, 0 = unpaid)">
                         <input type="number" step="any" min="0" @bind="newPaidAmount" placeholder="Full amount"
-                               class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-36 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                               class="field w-36" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="block eyebrow mb-1">Note (optional)</label>
+                        <FormField Label="Note (optional)">
                         <input type="text" @bind="newNote" placeholder="e.g. old system ref"
-                               class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-48 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                               class="field w-48" />
+                        </FormField>
                     </div>
                 }
                 <button type="button" disabled="@busy" @onclick="AddAsync"
@@ -286,9 +290,10 @@
                 </p>
             }
             <div>
-                <label class="block eyebrow mb-1">Period month</label>
+                <FormField Label="Period month">
                 <input type="month" value="@editMonth" @onchange="e => editMonth = e.Value?.ToString() ?? editMonth"
-                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
+                       class="field" />
+                </FormField>
             </div>
             <FormField Label="Amount (£)" Value="@editAmount" OnChange="v => editAmount = v" InputType="number" />
             @if (editInvoice.IsManual)

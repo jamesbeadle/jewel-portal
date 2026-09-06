@@ -50,20 +50,21 @@
     @if (isRevision)
     {
         <div>
-            <label class="block eyebrow mb-1">Existing document *</label>
+            <FormField Label="Existing document" Required>
             <select @bind="selectedDrawingId"
-                    class="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+                    class="field">
                 <option value="">Select a document…</option>
                 @foreach (var drawing in ExistingDrawings)
                 {
                     <option value="@drawing.DrawingId">@DrawingNaming.Label(drawing)</option>
                 }
             </select>
+            </FormField>
         </div>
     }
 
     <div>
-        <label class="block eyebrow mb-1">
+        <label class="block text-sm font-medium text-content mb-1">
             @(isRevision ? "Document file *" : "Document files *")
         </label>
         @* Drag highlight is a DEPTH COUNTER, not a boolean: dragging across the zone's children
@@ -139,31 +140,34 @@
     @if (!isRevision && !IsBulk)
     {
         <div>
-            <label class="block eyebrow mb-1">Document code</label>
+            <FormField Label="Document code">
             <input type="text" @bind="drawingCode" placeholder="A-100 (optional)"
                    class="field" />
+            </FormField>
         </div>
 
         <div>
-            <label class="block eyebrow mb-1">Title</label>
+            <FormField Label="Title" Hint="Leave blank and the register shows the original file name instead.">
             <input type="text" @bind="title" placeholder="Garden, shed, … (optional)"
                    class="field" />
-            <p class="text-xs text-content-subtle mt-1">Leave blank and the register shows the original file name instead.</p>
+            </FormField>
         </div>
     }
 
     @if (!IsBulk)
     {
         <div>
-            <label class="block eyebrow mb-1">Revision</label>
+            <FormField Label="Revision">
             <input type="text" @bind="revisionLabel" placeholder="A (optional)"
                    class="field" />
+            </FormField>
         </div>
 
         <div>
-            <label class="block eyebrow mb-1">Issued by</label>
+            <FormField Label="Issued by">
             <input type="email" @bind="issuedBy" placeholder="architect@example.com (optional)"
                    class="field" />
+            </FormField>
         </div>
     }
 

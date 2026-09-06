@@ -269,9 +269,10 @@
                     <text> The current plan is replaced.</text>
                 }
             </p>
-            <label class="block text-sm font-medium text-content mb-1">Steer (optional)</label>
+            <FormField Label="Steer (optional)">
             <textarea class="field w-full" rows="3" maxlength="2000" placeholder="e.g. keep it to one mailing and one follow-up call; assume a £3k budget; we have two people for two days a month"
                       value="@guidance" @oninput="e => guidance = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
         </Modal>
     }
 </Page>

@@ -64,30 +64,35 @@
             <section class="rounded-xl border border-line bg-surface p-5 mb-5">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                     <div>
-                        <label class="block eyebrow mb-1">Booked for</label>
+                        <FormField Label="Booked for">
                         <input type="date" class="field" value="@editBookedFor" disabled="@busy"
                                @onchange="e => editBookedFor = e.Value?.ToString() ?? string.Empty" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="block eyebrow mb-1">Inspected</label>
+                        <FormField Label="Inspected">
                         <input type="date" class="field" value="@editInspectedAt" disabled="@busy"
                                @onchange="e => editInspectedAt = e.Value?.ToString() ?? string.Empty" />
+                        </FormField>
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block eyebrow mb-1">Inspector</label>
+                        <FormField Label="Inspector">
                         <input type="text" class="field" maxlength="256" placeholder="Who carried out the visit"
                                value="@editInspectorName" @oninput="e => editInspectorName = e.Value?.ToString() ?? string.Empty" />
+                        </FormField>
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="block eyebrow mb-1">Outcome / actions required</label>
+                    <FormField Label="Outcome / actions required">
                     <textarea class="field" rows="2" maxlength="2048" placeholder="The inspector's outcome — passed subject to…, actions before re-inspection…"
                               value="@editOutcomeNotes" @oninput="e => editOutcomeNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+                    </FormField>
                 </div>
                 <div class="mb-3">
-                    <label class="block eyebrow mb-1">Stage name</label>
+                    <FormField Label="Stage name">
                     <input type="text" class="field" maxlength="256"
                            value="@editStageName" @oninput="e => editStageName = e.Value?.ToString() ?? string.Empty" />
+                    </FormField>
                 </div>
                 <div class="flex items-center justify-between">
                     <button type="button" class="rounded-lg bg-accent text-accent-ink font-medium text-sm px-3 py-2 hover:bg-accent-hover transition disabled:opacity-50"

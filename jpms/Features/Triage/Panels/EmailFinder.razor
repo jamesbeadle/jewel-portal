@@ -23,7 +23,7 @@
     <div class="flex gap-2">
         <input @bind="query" @bind:event="oninput" @onkeydown="SearchOnEnter"
                placeholder="Search the projects mailbox — sender, subject, wording…"
-               class="grow rounded-lg border border-line bg-surface-field px-3 py-2 text-sm text-content placeholder:text-content-faint focus:outline-none focus:border-line-strong" />
+               class="field grow" />
         <button type="button" class="btn-primary shrink-0" disabled="@(searching || string.IsNullOrWhiteSpace(query))"
                 @onclick="SearchAsync">
             @(searching ? "Searching…" : "Search")

@@ -155,8 +155,9 @@
 
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="block eyebrow mb-1">Cash up front deposit %</label>
+                <FormField Label="Cash up front deposit %">
                 <input type="number" step="0.5" class="field" @bind="depositPercent" />
+                </FormField>
                 <p class="text-xs text-content-subtle mt-1">
                     Received from the client before works start and released back to them
                     against each valuation's contract-side works — every claim's payment due
@@ -164,8 +165,9 @@
                 </p>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Released before tracking (£)</label>
+                <FormField Label="Released before tracking (£)">
                 <input type="number" step="0.01" class="field" @bind="depositReleasedOpening" />
+                </FormField>
                 <p class="text-xs text-content-subtle mt-1">
                     Deposit releases already made or settled before the portal began
                     deducting them — excluded from future claim deductions. Leave 0 for a
@@ -176,27 +178,30 @@
 
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="block eyebrow mb-1">Retention %</label>
+                <FormField Label="Retention %">
                 <input type="number" step="0.5" class="field" @bind="retentionPercent" />
+                </FormField>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Released at completion %</label>
+                <FormField Label="Released at completion %">
                 <input type="number" step="0.5" class="field" @bind="completionReleasePercent" />
+                </FormField>
             </div>
         </div>
 
         <div class="grid grid-cols-2 gap-4">
             <div>
-                <label class="block eyebrow mb-1">Defects period</label>
+                <FormField Label="Defects period">
                 <select class="field" @bind="defectsPeriodMonths">
                     <option value="6">6 months</option>
                     <option value="12">12 months</option>
                 </select>
+                </FormField>
             </div>
             <div>
-                <label class="block eyebrow mb-1">Practical completion</label>
+                <FormField Label="Practical completion" Hint="Planned or achieved — anchors both release due dates. Leave empty if unknown.">
                 <input type="date" class="field" @bind="practicalCompletionDate" />
-                <p class="text-xs text-content-subtle mt-1">Planned or achieved — anchors both release due dates. Leave empty if unknown.</p>
+                </FormField>
             </div>
         </div>
     </div>
@@ -217,8 +222,9 @@
         </p>
 
         <div>
-            <label class="block eyebrow mb-1">Amount released (ex VAT)</label>
+            <FormField Label="Amount released (ex VAT)">
             <input type="number" step="0.01" class="field" @bind="confirmAmount" />
+            </FormField>
         </div>
     </div>
 </Modal>

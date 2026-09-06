@@ -70,9 +70,9 @@
                             </div>
                         </div>
                         <div class="flex flex-wrap items-end gap-2 mt-3">
-                            <label class="block text-sm text-content-muted">Type your full name to sign
+                            <FormField Label="Type your full name to sign">
                                 <input class="field mt-1 w-64" @bind="TypedNameFor(row.PolicySignOffId).Value" placeholder="Your name, exactly" />
-                            </label>
+                            </FormField>
                             <button type="button" class="btn-primary" disabled="@isSigning"
                                     @onclick="() => SignAsync(row)">Sign</button>
                         </div>
@@ -166,15 +166,15 @@
            OnCancel="() => publishOpen = false" OnConfirm="PublishAsync">
         <p class="text-xs text-content-subtle mb-3">Publishing the same title again supersedes it as a new revision — everyone signs afresh.</p>
         <div class="space-y-3">
-            <label class="block text-sm text-content-muted">Title
-                <input class="field mt-1" @bind="publishTitle" placeholder="e.g. Staff Handbook 2026" />
-            </label>
-            <label class="block text-sm text-content-muted">Summary / body (what they are agreeing to)
+            <FormField Label="Title">
+                <input class="field" @bind="publishTitle" placeholder="e.g. Staff Handbook 2026" />
+            </FormField>
+            <FormField Label="Summary / body (what they are agreeing to)">
                 <textarea class="field mt-1 min-h-32" @bind="publishSummary"></textarea>
-            </label>
-            <label class="block text-sm text-content-muted">Recipients — one email per line
+            </FormField>
+            <FormField Label="Recipients — one email per line">
                 <textarea class="field mt-1 min-h-24" @bind="publishRecipients" placeholder="name@jewelgroup.co.uk"></textarea>
-            </label>
+            </FormField>
             @if (publishError is not null)
             {
                 <Notice Tone="Tone.Negative">@publishError</Notice>

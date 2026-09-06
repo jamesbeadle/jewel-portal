@@ -2,7 +2,7 @@
     <p class="eyebrow mb-2">Assign a role</p>
     <div class="flex flex-wrap items-center gap-2">
         <select @bind="selectedRole"
-                class="rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
+                class="field">
             @foreach (var role in AllRoles)
             {
                 <option value="@role">@role.DisplayName()</option>

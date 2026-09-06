@@ -18,17 +18,19 @@
         <FormField Label="Title *" Value="@title" OnChange="v => title = v" />
 
         <div>
-            <label class="@LabelClass">Amendment date</label>
+            <FormField Label="Amendment date">
             <input type="date" class="field" @bind="amendmentDate" />
+            </FormField>
             <p class="text-xs text-content-subtle mt-1">
                 The date the amendment was made — the deed's own date, not the upload date.
             </p>
         </div>
 
         <div>
-            <label class="@LabelClass">Notes</label>
+            <FormField Label="Notes">
             <textarea class="field" rows="3" @bind="notes"
                       placeholder="What this amendment changed, in a sentence or two."></textarea>
+            </FormField>
             <p class="text-xs text-content-subtle mt-1">
                 If it changed a term — the sum, a date, a rate — edit the contract terms too:
                 they are what everything downstream reads.

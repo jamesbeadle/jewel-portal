@@ -27,7 +27,7 @@
                 <SearchSelect Options="@CostCenterOptions" WidthClass="grow min-w-0"
                               Value="@row.Code"
                               ValueChanged="value => row.Code = value ?? string.Empty" />
-                <input class="w-32 bg-surface border border-line rounded-lg px-2 py-1.5 text-content text-sm text-right"
+                <input class="field w-32 text-right"
                        type="number" step="0.01" min="0" placeholder="0.00"
                        value="@(row.Amount?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))"
                        @onchange="e => SetAmount(row, e.Value?.ToString())" />

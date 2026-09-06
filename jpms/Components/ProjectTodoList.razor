@@ -303,15 +303,17 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block eyebrow mb-1">Assigned to</label>
+                <FormField Label="Assigned to">
                 <TodoAssigneeSelect Options="@AssigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v" />
+                </FormField>
             </div>
             <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
         </div>
 
         <div>
-            <label class="block eyebrow mb-1">Notes</label>
+            <FormField Label="Notes">
             <textarea class="field" rows="2" value="@newNotes" @oninput="OnNewNotesInput"></textarea>
+            </FormField>
         </div>
     </div>
 </Modal>

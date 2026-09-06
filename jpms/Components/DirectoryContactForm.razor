@@ -15,18 +15,20 @@
         <Notice Tone="Tone.Negative">@error</Notice>
     }
     <div>
-        <label class="eyebrow block mb-1">Company name</label>
+        <FormField Label="Company name">
         <input class="field" @bind="company" />
+        </FormField>
     </div>
     <div class="grid grid-cols-2 gap-3">
         <div>
-            <label class="eyebrow block mb-1">Type</label>
+            <FormField Label="Type">
             <select class="field" @bind="category">
                 @foreach (var option in AllCategories)
                 {
                     <option value="@option">@CategoryLabel(option)</option>
                 }
             </select>
+            </FormField>
         </div>
         <div>
             <label class="eyebrow block mb-1">Trades</label>
@@ -62,46 +64,55 @@
     </div>
     <div class="grid grid-cols-2 gap-3">
         <div>
-            <label class="eyebrow block mb-1">Contact name</label>
+            <FormField Label="Contact name">
             <input class="field" @bind="contact" />
+            </FormField>
         </div>
         <div>
-            <label class="eyebrow block mb-1">Email</label>
+            <FormField Label="Email">
             <input class="field" @bind="email" />
+            </FormField>
         </div>
     </div>
     <div class="grid grid-cols-2 gap-3">
         <div>
-            <label class="eyebrow block mb-1">Phone</label>
+            <FormField Label="Phone">
             <input class="field" @bind="phone" />
+            </FormField>
         </div>
         <div>
-            <label class="eyebrow block mb-1">Mobile</label>
+            <FormField Label="Mobile">
             <input class="field" @bind="mobile" />
+            </FormField>
         </div>
     </div>
     <div>
-        <label class="eyebrow block mb-1">Address line</label>
+        <FormField Label="Address line">
         <input class="field" placeholder="Street address, printed on purchase orders" @bind="addressLine" />
+        </FormField>
     </div>
     <div class="grid grid-cols-2 gap-3">
         <div>
-            <label class="eyebrow block mb-1">Town</label>
+            <FormField Label="Town">
             <input class="field" @bind="town" />
+            </FormField>
         </div>
         <div>
-            <label class="eyebrow block mb-1">County</label>
+            <FormField Label="County">
             <input class="field" @bind="county" />
+            </FormField>
         </div>
     </div>
     <div class="grid grid-cols-2 gap-3">
         <div>
-            <label class="eyebrow block mb-1">Postcode</label>
+            <FormField Label="Postcode">
             <input class="field" @bind="postcode" />
+            </FormField>
         </div>
         <div>
-            <label class="eyebrow block mb-1">Website</label>
+            <FormField Label="Website">
             <input class="field" @bind="website" />
+            </FormField>
         </div>
     </div>
 </div>

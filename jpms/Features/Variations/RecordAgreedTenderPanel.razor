@@ -12,7 +12,7 @@
         <p class="text-xs text-negative">@error</p>
     }
     <div>
-        <label class="eyebrow block mb-1">Subcontractor</label>
+        <FormField Label="Subcontractor">
         <select class="field" value="@subcontractorId" @onchange="e => subcontractorId = e.Value?.ToString() ?? string.Empty">
             <option value="">— Choose —</option>
             @foreach (var sub in Subcontractors.All())
@@ -20,6 +20,7 @@
                 <option value="@sub.SubcontractorId">@sub.CompanyName</option>
             }
         </select>
+        </FormField>
     </div>
     <FormField Label="Agreed value (£)" Value="@valueText" OnChange="v => valueText = v" InputType="number" />
     <button type="button" class="btn-primary w-full" disabled="@(Busy || recording)" @onclick="RecordAsync">Record agreed tender</button>

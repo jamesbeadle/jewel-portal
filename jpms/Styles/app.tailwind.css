@@ -36,6 +36,25 @@
         background-color: theme('colors.surface.field');
         border-radius: 9999px;
     }
+
+    /* The Figma checkbox and radio, applied to every native control at the base layer so no
+       view has to remember: 16px, 4px radius (full on radios), Table-Seperator border on the
+       field fill, the accent for the tick. Disabled fades. */
+    input[type="checkbox"], input[type="radio"] {
+        @apply w-4 h-4 shrink-0 border border-line-strong bg-surface-field accent-accent cursor-pointer align-middle;
+    }
+
+    input[type="checkbox"] {
+        @apply rounded;
+    }
+
+    input[type="radio"] {
+        @apply rounded-full;
+    }
+
+    input[type="checkbox"]:disabled, input[type="radio"]:disabled {
+        @apply opacity-50 cursor-not-allowed;
+    }
 }
 
 @layer components {

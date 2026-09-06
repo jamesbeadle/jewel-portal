@@ -26,61 +26,71 @@
     }
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-            <label class="block text-sm font-medium text-content mb-1">Contact name</label>
+            <FormField Label="Contact name">
             <input type="text" class="field w-full" maxlength="256" placeholder="Who we would be talking to"
                    value="@contactName" @oninput="e => contactName = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">Company / practice</label>
+            <FormField Label="Company / practice">
             <input type="text" class="field w-full" maxlength="256" placeholder="Blank for a private homeowner"
                    value="@companyName" @oninput="e => companyName = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">Email</label>
+            <FormField Label="Email">
             <input type="email" class="field w-full" maxlength="256"
                    value="@contactEmail" @oninput="e => contactEmail = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">Phone</label>
+            <FormField Label="Phone">
             <input type="tel" class="field w-full" maxlength="64"
                    value="@contactPhone" @oninput="e => contactPhone = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">Who they are</label>
+            <FormField Label="Who they are">
             <select class="field w-full" value="@prospectKind" @onchange="e => prospectKind = Enum.Parse<LeadProspectKind>(e.Value?.ToString() ?? nameof(LeadProspectKind.Homeowner))">
                 @foreach (var kind in Enum.GetValues<LeadProspectKind>())
                 {
                     <option value="@kind">@kind.DisplayName()</option>
                 }
             </select>
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">Estimated value (£)</label>
+            <FormField Label="Estimated value (£)">
             <input type="number" class="field w-full" min="0" step="1000" placeholder="Rough, if known"
                    value="@estimatedValueText" @oninput="e => estimatedValueText = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Property / site address</label>
+            <FormField Label="Property / site address">
             <input type="text" class="field w-full" maxlength="512" placeholder="Where the work would be"
                    value="@propertyAddress" @oninput="e => propertyAddress = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">Postcode</label>
+            <FormField Label="Postcode">
             <input type="text" class="field w-full" maxlength="16" placeholder="e.g. GU10 1AA"
                    value="@postcode" @oninput="e => postcode = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">Owner *</label>
+            <FormField Label="Owner" Required>
             <SearchSelect Options="@OwnerOptions" Value="@ownerEmail" ValueChanged="v => ownerEmail = v"
                           Placeholder="Who is working it" WidthClass="w-full" InputClass="field" />
+            </FormField>
         </div>
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">The possible work, in a line</label>
+            <FormField Label="The possible work, in a line">
             <input type="text" class="field w-full" maxlength="512" placeholder="e.g. rear extension and loft conversion; new build on the plot next door"
                    value="@summary" @oninput="e => summary = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
         </div>
         <div>
-            <label class="block text-sm font-medium text-content mb-1">How we found them</label>
+            <FormField Label="How we found them">
             <select class="field w-full" value="@source" disabled="@(FixedStrategyId is not null)"
                     @onchange="e => source = Enum.Parse<LeadSource>(e.Value?.ToString() ?? nameof(LeadSource.Manual))">
                 @foreach (var option in Enum.GetValues<LeadSource>())
@@ -88,6 +98,7 @@
                     <option value="@option">@option.DisplayName()</option>
                 }
             </select>
+            </FormField>
         </div>
         <div>
             <label class="block text-sm font-medium text-content mb-1">Strategy</label>
@@ -105,19 +116,21 @@
         @if (Existing is null)
         {
             <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-content mb-1">Starting stage</label>
+                <FormField Label="Starting stage">
                 <select class="field w-full" value="@stage" @onchange="e => stage = Enum.Parse<LeadStage>(e.Value?.ToString() ?? nameof(LeadStage.New))">
                     @foreach (var option in LeadStageExtensions.Ladder.Where(s => s != LeadStage.Won && s != LeadStage.Lost))
                     {
                         <option value="@option">@option.DisplayName() — @option.Meaning()</option>
                     }
                 </select>
+                </FormField>
             </div>
         }
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Notes</label>
+            <FormField Label="Notes">
             <textarea class="field w-full" rows="4" maxlength="4000" placeholder="Anything worth knowing — how they came up, what they said, who else is involved"
                       value="@notes" @oninput="e => notes = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
         </div>
     </div>
 </Modal>

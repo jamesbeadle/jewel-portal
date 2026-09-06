@@ -86,13 +86,14 @@
                 <FormField Label="Email" Value="@newEmail" OnChange="v => newEmail = v" InputType="email" Required="true" />
                 <FormField Label="Job title" Value="@newJobTitle" OnChange="v => newJobTitle = v" />
                 <div>
-                    <label class="block eyebrow mb-1">Routing</label>
+                    <FormField Label="Routing">
                     <select class="field" @bind="newRouting">
                         <option value="@((int)CorrespondenceRouting.Cc)">CC — copied on every issue</option>
                         <option value="@((int)CorrespondenceRouting.Bcc)">BCC — blind-copied</option>
                         <option value="@((int)CorrespondenceRouting.To)">To — addressed directly</option>
                         <option value="@((int)CorrespondenceRouting.None)">Off — on the book only</option>
                     </select>
+                    </FormField>
                 </div>
             </div>
             <button type="button" class="btn-secondary" disabled="@busy" @onclick="AddAsync">

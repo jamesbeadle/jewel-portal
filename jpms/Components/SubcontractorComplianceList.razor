@@ -90,9 +90,10 @@
     <div class="space-y-3">
         <div class="grid gap-3 sm:grid-cols-2">
             <div>
-                <label class="eyebrow block mb-1">Document type *</label>
+                <FormField Label="Document type" Required>
                 <input class="field w-full" list="compliance-add-kinds" placeholder="e.g. Public liability insurance"
                        @bind="addKind" @bind:event="oninput" />
+                </FormField>
                 <datalist id="compliance-add-kinds">
                     @foreach (var kind in SuggestedKinds)
                     {
@@ -101,13 +102,15 @@
                 </datalist>
             </div>
             <div>
-                <label class="eyebrow block mb-1">Expiry date</label>
+                <FormField Label="Expiry date">
                 <input type="date" class="field w-full" @bind="addExpiry" />
+                </FormField>
             </div>
         </div>
         <div>
-            <label class="eyebrow block mb-1">File *</label>
+            <FormField Label="File" Required>
             <InputFile OnChange="OnAddFileSelected" class="w-full text-sm text-content-muted" />
+            </FormField>
             @if (addFile is not null)
             {
                 <p class="text-xs text-content-subtle mt-1">@addFile.Name · @FormatSize(addFile.Size)</p>

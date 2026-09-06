@@ -56,7 +56,7 @@
             @if (openPanel is Panel.Drawings or Panel.Photos or Panel.Records)
             {
                 <div>
-                    <label class="block eyebrow mb-1">Project</label>
+                    <FormField Label="Project">
                     <select class="field" value="@panelProjectId" @onchange="OnPanelProjectChanged">
                         <option value="">Select a project…</option>
                         @foreach (var project in Projects)
@@ -64,6 +64,7 @@
                             <option value="@project.ProjectId">@project.Reference — @project.Name</option>
                         }
                     </select>
+                    </FormField>
                 </div>
             }
 

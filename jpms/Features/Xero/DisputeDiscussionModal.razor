@@ -40,7 +40,7 @@
                 <Notice Tone="Tone.Negative">@Error</Notice>
             }
             <div class="flex items-start gap-2">
-                <textarea class="grow bg-surface border border-line rounded-lg px-3 py-2 text-sm text-content placeholder:text-content-subtle"
+                <textarea class="field grow"
                           rows="3" placeholder="Reply…"
                           value="@Message" @oninput="e => MessageChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"></textarea>
                 <button class="text-sm font-medium rounded-lg px-3 py-2 bg-content text-surface disabled:opacity-50"

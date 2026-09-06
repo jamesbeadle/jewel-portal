@@ -177,14 +177,16 @@
             <FormField Label="Issued by (architect's email)" Value="@formIssuedBy" OnChange="v => formIssuedBy = v" />
 
             <div>
-                <label class="block eyebrow mb-1">Notes</label>
+                <FormField Label="Notes">
                 <textarea class="field" rows="3" value="@formNotes"
                           @oninput="e => formNotes = e.Value?.ToString() ?? string.Empty"></textarea>
+                </FormField>
             </div>
 
             <div>
-                <label class="block eyebrow mb-1">Document</label>
+                <FormField Label="Document">
                 <InputFile OnChange="OnInstructionFileSelected" accept=".pdf,image/*,.doc,.docx" class="text-sm" />
+                </FormField>
                 <p class="mt-1 text-xs text-content-subtle">
                     @(formFile is null
                         ? "Optional — file the row now and attach the document when it arrives."
@@ -195,7 +197,7 @@
             @if (VariationOptions.Count > 0)
             {
                 <div>
-                    <label class="block eyebrow mb-1">Covers these variations</label>
+                    <label class="block text-sm font-medium text-content mb-1">Covers these variations</label>
                     <p class="text-xs text-content-subtle mb-2">
                         Variations waiting on an instruction are listed first — linking one here saves going back for it.
                     </p>

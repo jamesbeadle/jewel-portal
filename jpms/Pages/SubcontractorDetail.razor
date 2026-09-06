@@ -164,12 +164,14 @@
             }
             <div class="grid grid-cols-2 md:grid-cols-5 gap-2 items-end">
                 <div>
-                    <label class="eyebrow block mb-1">Name</label>
+                    <FormField Label="Name">
                     <input class="field" @bind="cName" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="eyebrow block mb-1">Purpose</label>
+                    <FormField Label="Purpose">
                     <input class="field" list="contact-purposes" placeholder="e.g. Accounts" @bind="cPurpose" />
+                    </FormField>
                     <datalist id="contact-purposes">
                         <option value="Accounts" />
                         <option value="Projects" />
@@ -178,12 +180,14 @@
                     </datalist>
                 </div>
                 <div>
-                    <label class="eyebrow block mb-1">Email</label>
+                    <FormField Label="Email">
                     <input class="field" @bind="cEmail" />
+                    </FormField>
                 </div>
                 <div>
-                    <label class="eyebrow block mb-1">Phone</label>
+                    <FormField Label="Phone">
                     <input class="field" @bind="cPhone" />
+                    </FormField>
                 </div>
                 <div class="flex gap-2">
                     <button type="button" class="btn-secondary" disabled="@contactBusy" @onclick="SaveContact">
@@ -265,8 +269,9 @@
             }
             <div class="space-y-3">
                 <div>
-                    <label class="eyebrow block mb-1">Company name</label>
+                    <FormField Label="Company name">
                     <input class="field" @bind="eCompany" />
+                    </FormField>
                     <p class="text-xs text-content-subtle mt-1">
                         Set this to the supplier's exact name in Xero so their purchase invoices match
                         this company's work orders on the WO Allocation tab.
@@ -274,22 +279,26 @@
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="eyebrow block mb-1">Contact name</label>
+                        <FormField Label="Contact name">
                         <input class="field" @bind="eContact" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="eyebrow block mb-1">Email</label>
+                        <FormField Label="Email">
                         <input class="field" @bind="eEmail" />
+                        </FormField>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="eyebrow block mb-1">Phone</label>
+                        <FormField Label="Phone">
                         <input class="field" @bind="ePhone" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="eyebrow block mb-1">Payment terms (days)</label>
+                        <FormField Label="Payment terms (days)">
                         <input class="field" type="number" min="0" max="365" @bind="eTermsDays" />
+                        </FormField>
                         <p class="text-xs text-content-subtle mt-1">
                             Printed on this company's purchase orders ("@(eTermsDays) day terms").
                             Every company starts on 30 days.
@@ -297,8 +306,9 @@
                     </div>
                 </div>
                 <div>
-                    <label class="eyebrow block mb-1">Address line</label>
+                    <FormField Label="Address line">
                     <input class="field" @bind="eAddressLine" />
+                    </FormField>
                     <p class="text-xs text-content-subtle mt-1">
                         With the town, county and postcode this prints letter-style at the top of
                         the company's purchase orders.
@@ -306,16 +316,19 @@
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                     <div>
-                        <label class="eyebrow block mb-1">Town</label>
+                        <FormField Label="Town">
                         <input class="field" @bind="eTown" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="eyebrow block mb-1">County</label>
+                        <FormField Label="County">
                         <input class="field" @bind="eCounty" />
+                        </FormField>
                     </div>
                     <div>
-                        <label class="eyebrow block mb-1">Postcode</label>
+                        <FormField Label="Postcode">
                         <input class="field" @bind="ePostcode" />
+                        </FormField>
                     </div>
                 </div>
             </div>
