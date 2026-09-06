@@ -8,7 +8,7 @@
     @if (Card.Chart is null)
     {
         <div class="flex items-center justify-center min-h-[170px]">
-            <p class="text-[11px] text-content-subtle text-center leading-relaxed max-w-[240px]">
+            <p class="text-xs text-content-subtle text-center leading-relaxed max-w-[240px]">
                 <span class="block text-warning mb-1">@Card.Project.Name ⚠</span>
                 @Card.Unavailable
             </p>
@@ -19,7 +19,7 @@
         var chart = Card.Chart!;
         <div class="flex items-baseline justify-between gap-2">
             <span class="text-[12.5px] font-medium text-content">@Card.Project.Name</span>
-            <span class="text-[10px] text-content-faint whitespace-nowrap">@chart.RangeLabel</span>
+            <span class="text-xs text-content-faint whitespace-nowrap">@chart.RangeLabel</span>
         </div>
         <div class="relative h-[110px] mt-2">
             <div class="absolute inset-x-0 bottom-0 border-t border-line"></div>
@@ -46,11 +46,11 @@
         <div class="flex items-baseline justify-between gap-2 mt-2 flex-wrap">
             <span class="text-sm font-semibold @ProfitClass(chart.GrossProfit)">
                 @MoneyCompact(chart.GrossProfit)
-                <span class="text-[10.5px] font-normal text-content-faint ml-1">cum. profit@(chart.Margin is decimal cumMargin ? $" · {Pct(cumMargin)}" : "")</span>
+                <span class="text-xs font-normal text-content-faint ml-1">cum. profit@(chart.Margin is decimal cumMargin ? $" · {Pct(cumMargin)}" : "")</span>
             </span>
             @if (chart.Warning is not null)
             {
-                <span class="text-[10px] text-warning">⚠ @chart.Warning</span>
+                <span class="text-xs text-warning">⚠ @chart.Warning</span>
             }
         </div>
     }

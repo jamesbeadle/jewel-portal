@@ -72,7 +72,7 @@
                             @onclick="() => OpenEdit(note)">
                         <p class="truncate text-sm font-medium text-content">@note.Title</p>
                         <p class="mt-0.5 text-sm text-content-muted whitespace-pre-wrap line-clamp-3">@note.Body</p>
-                        <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                        <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                             @if (note.UpdatedAt is not null)
                             {
                                 <span class="truncate">Updated @note.UpdatedAt.Value.LocalDateTime.ToString("d MMM yyyy") by @(note.UpdatedByEmail ?? "")</span>
@@ -103,7 +103,7 @@
         <FormField Label="Title" Value="@draftTitle" OnChange="v => draftTitle = v" Required="true" />
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Note *</label>
+            <label class="block eyebrow mb-1">Note *</label>
             <textarea class="field" rows="6" placeholder="The information itself — e.g. Front gate code 4482#, changes first Monday of the month."
                       value="@draftBody" @oninput="OnDraftBodyInput"></textarea>
         </div>

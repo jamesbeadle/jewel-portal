@@ -15,12 +15,12 @@
         else
         {
             <span class="text-content-muted">@Entry.Label</span>
-            <button type="button" class="ml-1.5 text-[11px] text-content-faint hover:text-negative align-middle disabled:opacity-30"
+            <button type="button" class="ml-1.5 text-xs text-content-faint hover:text-negative align-middle disabled:opacity-30"
                     title="Don't count this entry — a direct debit or manual item already covers it. It parks, struck through, at the foot of this band."
                     disabled="@Excluding"
                     @onclick="() => OnExclude.InvokeAsync(Entry)">⊘</button>
         }
-        <span class="block text-[11px] text-content-faint">
+        <span class="block text-xs text-content-faint">
             @Entry.Detail@(Entry.NaturalDueOn is { } due ? $" · due {due.UtcDateTime:d MMM}" : " · no due date")@(Entry.ExpectedOn is { } expected ? $" · expected {expected.UtcDateTime:d MMM}" : "")
         </span>
     </td>

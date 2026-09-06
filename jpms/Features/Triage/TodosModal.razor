@@ -17,7 +17,7 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
+                    <label class="block eyebrow mb-1">Assigned to</label>
                     @if (row.Assignees.Count > 0)
                     {
                         <div class="flex flex-wrap gap-1 mb-1.5">
@@ -48,7 +48,7 @@
             </div>
 
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Detail</label>
+                <label class="block eyebrow mb-1">Detail</label>
                 <textarea class="field" rows="5" value="@row.Notes" @oninput="e => { row.Notes = e.Value?.ToString() ?? string.Empty; Notify(); }"></textarea>
             </div>
 

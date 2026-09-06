@@ -64,28 +64,28 @@
             <section class="rounded-xl border border-line bg-surface p-5 mb-5">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Booked for</label>
+                        <label class="block eyebrow mb-1">Booked for</label>
                         <input type="date" class="field" value="@editBookedFor" disabled="@busy"
                                @onchange="e => editBookedFor = e.Value?.ToString() ?? string.Empty" />
                     </div>
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Inspected</label>
+                        <label class="block eyebrow mb-1">Inspected</label>
                         <input type="date" class="field" value="@editInspectedAt" disabled="@busy"
                                @onchange="e => editInspectedAt = e.Value?.ToString() ?? string.Empty" />
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Inspector</label>
+                        <label class="block eyebrow mb-1">Inspector</label>
                         <input type="text" class="field" maxlength="256" placeholder="Who carried out the visit"
                                value="@editInspectorName" @oninput="e => editInspectorName = e.Value?.ToString() ?? string.Empty" />
                     </div>
                 </div>
                 <div class="mb-3">
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Outcome / actions required</label>
+                    <label class="block eyebrow mb-1">Outcome / actions required</label>
                     <textarea class="field" rows="2" maxlength="2048" placeholder="The inspector's outcome — passed subject to…, actions before re-inspection…"
                               value="@editOutcomeNotes" @oninput="e => editOutcomeNotes = e.Value?.ToString() ?? string.Empty"></textarea>
                 </div>
                 <div class="mb-3">
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Stage name</label>
+                    <label class="block eyebrow mb-1">Stage name</label>
                     <input type="text" class="field" maxlength="256"
                            value="@editStageName" @oninput="e => editStageName = e.Value?.ToString() ?? string.Empty" />
                 </div>

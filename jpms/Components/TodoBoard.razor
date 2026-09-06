@@ -52,8 +52,8 @@
 
             <div class="flex items-center gap-2 mb-2 px-0.5">
                 <span class="h-2 w-2 rounded-full @(done ? "bg-positive" : "bg-info")" aria-hidden="true"></span>
-                <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">@(done ? "Done" : "Open")</h3>
-                <span class="text-[11px] text-content-subtle">@all.Count</span>
+                <h3 class="eyebrow">@(done ? "Done" : "Open")</h3>
+                <span class="text-xs text-content-subtle">@all.Count</span>
             </div>
 
             <div class="space-y-2 flex-1 @(Compact ? "min-h-[5rem]" : "min-h-[7rem]")">
@@ -75,13 +75,13 @@
                             @ondragend="() => dragging = null">
                         @* The assignee role's accent, worn on the card's leading edge. *@
                         <span class="absolute inset-y-0 left-0 w-1.5 rounded-l-lg @StripeClass(item)" aria-hidden="true"></span>
-                        <p class="font-mono text-[11px] leading-4 @(item.IsComplete ? "text-content-subtle line-through" : "text-content-muted")">@item.Reference</p>
+                        <p class="font-mono text-xs leading-4 @(item.IsComplete ? "text-content-subtle line-through" : "text-content-muted")">@item.Reference</p>
                         <p class="mt-0.5 text-sm font-medium leading-snug break-words @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">@item.Title</p>
-                        <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 overflow-hidden text-[11px] text-content-subtle">
+                        <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 overflow-hidden text-xs text-content-subtle">
                             @if (Scope is not null && Scope(item) is ScopeChip chip)
                             {
                                 <span title="@chip.Title"
-                                      class="inline-flex min-w-0 max-w-[14rem] items-center rounded border px-1.5 text-[10px] font-mono leading-4 whitespace-nowrap @(chip.Emphasis ? "border-accent/40 text-accent" : "border-line bg-surface-raised text-content-muted")"><span class="truncate">@chip.Label</span></span>
+                                      class="inline-flex min-w-0 max-w-[14rem] items-center rounded border px-1.5 text-xs font-mono leading-4 whitespace-nowrap @(chip.Emphasis ? "border-accent/40 text-accent" : "border-line bg-surface-raised text-content-muted")"><span class="truncate">@chip.Label</span></span>
                             }
                             @if (item.IsInProgress)
                             {
@@ -107,7 +107,7 @@
                        click away without the column opening at full length. *@
                     @if (DoneCapFixed)
                     {
-                        <p class="text-[11px] text-content-subtle px-0.5">Showing @shown.Count of @all.Count done items.</p>
+                        <p class="text-xs text-content-subtle px-0.5">Showing @shown.Count of @all.Count done items.</p>
                     }
                     else
                     {

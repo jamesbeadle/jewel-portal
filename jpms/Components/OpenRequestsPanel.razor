@@ -18,10 +18,10 @@
             <h2 class="text-sm font-semibold text-content">@Title</h2>
             @if (Register.Current is not null && Outstanding.Count > 0)
             {
-                <span class="text-[11px] text-content-subtle">@Outstanding.Count open</span>
+                <span class="text-xs text-content-subtle">@Outstanding.Count open</span>
                 @if (OverdueCount > 0)
                 {
-                    <span class="text-[11px] font-medium text-negative">@OverdueCount overdue</span>
+                    <span class="text-xs font-medium text-negative">@OverdueCount overdue</span>
                 }
             }
         </div>
@@ -58,7 +58,7 @@
                             <span class="block text-sm font-semibold @(request.IsOverdue ? "text-negative" : "text-content")">
                                 @(request.DaysOutstanding is int days ? $"{days}d" : "—")
                             </span>
-                            <span class="block text-[11px] text-content-subtle">@request.Status.DisplayName()</span>
+                            <span class="block text-xs text-content-subtle">@request.Status.DisplayName()</span>
                         </span>
                     </a>
                 </li>

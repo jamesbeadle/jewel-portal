@@ -20,7 +20,7 @@
             <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Order</th>
                             @if (ShowCentreColumn)
                             {
@@ -39,10 +39,10 @@
                         {
                             var remaining = entry.Line.LineTotal - entry.Line.PaidToDate;
                             <tr>
-                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@entry.Order.Title">@entry.Order.Reference</td>
+                                <td class="px-4 py-2.5 font-mono text-xs text-content-subtle whitespace-nowrap" title="@entry.Order.Title">@entry.Order.Reference</td>
                                 @if (ShowCentreColumn)
                                 {
-                                    <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@entry.Line.CostCode</td>
+                                    <td class="px-4 py-2.5 font-mono text-xs text-content-subtle whitespace-nowrap">@entry.Line.CostCode</td>
                                 }
                                 <td class="px-4 py-2.5 text-content whitespace-nowrap">@entry.SupplierName</td>
                                 <td class="px-4 py-2.5 text-content-muted" title="@entry.Line.Description">@entry.Line.Title</td>

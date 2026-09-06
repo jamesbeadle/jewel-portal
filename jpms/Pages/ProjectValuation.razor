@@ -114,7 +114,7 @@
                         @foreach (var step in StepsFor(s))
                         {
                             <li class="flex items-center gap-1.5">
-                                <span class="w-4 h-4 rounded-full inline-flex items-center justify-center text-[10px] @(step.Done ? "bg-accent text-accent-ink" : step.Current ? "border border-accent text-accent" : "border border-line text-content-subtle")">
+                                <span class="w-4 h-4 rounded-full inline-flex items-center justify-center text-xs @(step.Done ? "bg-accent text-accent-ink" : step.Current ? "border border-accent text-accent" : "border border-line text-content-subtle")">
                                     @(step.Done ? "✓" : step.Index.ToString())
                                 </span>
                                 <span class="@(step.Current ? "text-content font-medium" : step.Done ? "text-content-muted" : "text-content-subtle")">@step.Label</span>
@@ -288,17 +288,17 @@
                Class="max-w-lg">
             <div class="space-y-3">
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period name</label>
+                    <label class="block eyebrow mb-1">Period name</label>
                     <input type="text" @bind="newClaimName" placeholder="e.g. June 2026"
                            class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Claim date</label>
+                    <label class="block eyebrow mb-1">Claim date</label>
                     <input type="date" @bind="newClaimDate"
                            class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Retention</label>
+                    <label class="block eyebrow mb-1">Retention</label>
                     @* Read-only: the claim stamps its retention from the project's terms when it
                        starts — the completion date decides whether the release % applies. *@
                     @* "No terms recorded" is advice to go and record some, so it waits until the

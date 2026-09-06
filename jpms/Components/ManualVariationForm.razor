@@ -34,7 +34,7 @@
     <FormField Label="Title" Value="@title" OnChange="v => Set(ref title, v)" Required="true" />
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+        <label class="block eyebrow mb-1">Description</label>
         <textarea class="field" rows="3" value="@description" @oninput="OnDescriptionInput"
                   placeholder="What the variation covers…"></textarea>
     </div>
@@ -47,19 +47,19 @@
     @* The official document's narrative sections — printed on the VO sheet when it is downloaded
        or emailed. All optional here: the wording is editable on the variation page at every stage. *@
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</label>
+        <label class="block eyebrow mb-1">Commercial basis</label>
         <textarea class="field" rows="3" value="@commercialBasis" @oninput="e => Set(ref commercialBasis, e.Value?.ToString() ?? string.Empty)"
                   placeholder="What the price is based on — tender-face position, rate basis, OH&amp;P…"></textarea>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</label>
+        <label class="block eyebrow mb-1">Programme impact</label>
         <textarea class="field" rows="3" value="@programmeImpact" @oninput="e => Set(ref programmeImpact, e.Value?.ToString() ?? string.Empty)"
                   placeholder="Effect on the programme — procurement, mobilisation, works duration…"></textarea>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</label>
+        <label class="block eyebrow mb-1">Exclusions</label>
         <textarea class="field" rows="3" value="@exclusions" @oninput="e => Set(ref exclusions, e.Value?.ToString() ?? string.Empty)"
                   placeholder="What this variation expressly does not price…"></textarea>
     </div>

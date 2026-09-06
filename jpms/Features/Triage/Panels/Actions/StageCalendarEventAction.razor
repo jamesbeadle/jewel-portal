@@ -13,14 +13,14 @@
     </p>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title *</label>
+        <label class="block eyebrow mb-1">Title *</label>
         <input type="text" class="field" maxlength="256" placeholder="What's happening — Structural engineer site visit"
                value="@Draft.Title" @oninput="e => SetTitle(e.Value?.ToString() ?? string.Empty)" />
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Kind</label>
+            <label class="block eyebrow mb-1">Kind</label>
             <select class="field" value="@((int)Draft.Kind)" @onchange="OnKindChanged">
                 @foreach (var kind in CalendarEventKinds.All)
                 {
@@ -29,7 +29,7 @@
             </select>
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Start time</label>
+            <label class="block eyebrow mb-1">Start time</label>
             <input type="time" class="field"
                    value="@Draft.StartTime" @onchange="e => Set(draft => draft.StartTime = e.Value?.ToString() ?? string.Empty)" />
         </div>
@@ -37,19 +37,19 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Date *</label>
+            <label class="block eyebrow mb-1">Date *</label>
             <input type="date" class="field"
                    value="@Draft.Date" @onchange="e => Set(draft => draft.Date = e.Value?.ToString() ?? string.Empty)" />
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">End date (multi-day)</label>
+            <label class="block eyebrow mb-1">End date (multi-day)</label>
             <input type="date" class="field"
                    value="@Draft.EndDate" @onchange="e => Set(draft => draft.EndDate = e.Value?.ToString() ?? string.Empty)" />
         </div>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+        <label class="block eyebrow mb-1">Notes</label>
         <textarea class="field" rows="2" maxlength="4096" placeholder="Detail and who's attending"
                   value="@Draft.Notes" @oninput="e => Set(draft => draft.Notes = e.Value?.ToString() ?? string.Empty)"></textarea>
     </div>

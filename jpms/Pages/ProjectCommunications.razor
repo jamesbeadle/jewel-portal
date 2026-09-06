@@ -151,9 +151,9 @@
                         <div class="flex flex-wrap items-center gap-1 mt-2">
                             @foreach (var link in item.Links)
                             {
-                                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent"
+                                <span class="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent"
                                       title="@link.Tag">
-                                    <span class="uppercase tracking-wide">@TypeLabel(link.Type)</span>
+                                    <span class="">@TypeLabel(link.Type)</span>
                                     <span class="font-mono">@link.Reference</span>
                                     @if (!string.IsNullOrWhiteSpace(link.Title) && link.Title != link.Reference)
                                     {
@@ -189,7 +189,7 @@
                                another record" trio minus the project pick. Cross-pathway links file the
                                thread under both pathways, exactly as the Control Centre does. *@
                             <div class="mt-3 rounded-lg border border-line bg-surface-raised p-3 space-y-2">
-                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Add a tag</p>
+                                <p class="eyebrow">Add a tag</p>
                                 @if (tagError is not null)
                                 {
                                     <Notice Tone="Tone.Negative">@tagError</Notice>

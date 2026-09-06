@@ -27,14 +27,14 @@
 
             <form @onsubmit="HandleSubmit" @onsubmit:preventDefault="true" class="w-full space-y-4">
                 <div>
-                    <label for="email" class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Email</label>
+                    <label for="email" class="block eyebrow mb-1">Email</label>
                     <input id="email" type="email" autocomplete="username"
                            value="@email" @oninput="e => email = e.Value?.ToString() ?? string.Empty"
                            class="w-full rounded-lg border border-line bg-surface-raised px-3 py-2.5 text-sm text-content placeholder:text-content-faint focus:outline-none focus:ring-2 focus:ring-accent focus:border-line-strong" />
                 </div>
                 <div>
                     <div class="flex items-baseline justify-between gap-3 mb-1">
-                        <label for="password" class="block text-xs uppercase tracking-wider text-content-subtle font-semibold">Password</label>
+                        <label for="password" class="block eyebrow">Password</label>
                         <a href="/forgot-password" class="text-xs font-medium text-accent hover:text-accent-hover">Forgot password?</a>
                     </div>
                     <input id="password" type="password" autocomplete="current-password"
@@ -58,7 +58,7 @@
             </p>
         </div>
 
-        <p class="shrink-0 max-w-md mx-auto text-center text-[11px] text-content-subtle leading-relaxed">
+        <p class="shrink-0 max-w-md mx-auto text-center text-xs text-content-subtle leading-relaxed">
             <span class="text-content-muted font-medium">Jewel Project Management System</span> is the
             operational backbone for Jewel Bespoke Build and its clients — carrying every job from first lead
             through drawings, procurement, site delivery and commercial valuations to final account, with

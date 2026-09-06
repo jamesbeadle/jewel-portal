@@ -17,7 +17,7 @@
                 @foreach (var entry in Entries)
                 {
                     <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
-                        <span class="text-[11px] text-content-subtle whitespace-nowrap w-16 shrink-0"
+                        <span class="text-xs text-content-subtle whitespace-nowrap w-16 shrink-0"
                               title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
                         @if (Href(entry) is { } href)
                         {
@@ -28,7 +28,7 @@
                             <span class="font-mono text-xs text-content-muted whitespace-nowrap">@TriageEmailDisplay.Dash(entry.RecordReference)</span>
                         }
                         <span class="text-xs text-content-muted truncate">@entry.Detail</span>
-                        <span class="text-[11px] text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@Meta(entry)</span>
+                        <span class="text-xs text-content-subtle whitespace-nowrap ml-auto hidden md:inline">@Meta(entry)</span>
                     </div>
                 }
             </div>

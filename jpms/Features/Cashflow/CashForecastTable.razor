@@ -8,7 +8,7 @@
 <div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
     <table class="w-full text-sm border-collapse">
         <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+            <tr class="text-left eyebrow">
                 <th class="px-4 py-3 min-w-[230px]"></th>
                 @foreach (var month in Forecast.Axis)
                 {
@@ -22,7 +22,7 @@
         </thead>
         <tbody>
             <tr class="border-b border-line">
-                <td colspan="@(Forecast.Axis.Length + 3)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash in</td>
+                <td colspan="@(Forecast.Axis.Length + 3)" class="px-4 pt-4 pb-2 eyebrow">Cash in</td>
             </tr>
             @foreach (var row in ForecastRows.In)
             {
@@ -30,7 +30,7 @@
                                      OnNextValuationChanged="OnNextValuationChanged" OnMonthlyValuationChanged="OnMonthlyValuationChanged" />
             }
             <tr class="border-b border-line">
-                <td colspan="@(Forecast.Axis.Length + 3)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash out</td>
+                <td colspan="@(Forecast.Axis.Length + 3)" class="px-4 pt-4 pb-2 eyebrow">Cash out</td>
             </tr>
             @foreach (var row in ForecastRows.Out)
             {
@@ -43,7 +43,7 @@
             <tr class="border-t-2 border-line border-b border-line font-medium">
                 <td class="px-4 py-2.5">
                     <span class="text-content font-medium">Project movement</span>
-                    <span class="block text-[11px] text-content-faint font-normal">cash in less cash out for the projects ticked — before company overheads</span>
+                    <span class="block text-xs text-content-faint font-normal">cash in less cash out for the projects ticked — before company overheads</span>
                 </td>
                 @for (var index = 0; index < Forecast.Axis.Length; index++)
                 {
@@ -59,7 +59,7 @@
             <tr class="border-t-2 border-line border-b border-line font-semibold">
                 <td class="px-4 py-3 text-content">
                     Net movement
-                    <span class="block text-[11px] text-content-faint font-normal">project movement less company overheads</span>
+                    <span class="block text-xs text-content-faint font-normal">project movement less company overheads</span>
                 </td>
                 @for (var index = 0; index < Forecast.Axis.Length; index++)
                 {

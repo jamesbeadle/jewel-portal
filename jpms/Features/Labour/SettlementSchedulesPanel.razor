@@ -55,7 +55,7 @@
         {
             <table class="w-full text-sm mt-3">
                 <thead>
-                    <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                    <tr class="text-left eyebrow border-b border-line">
                         <th class="px-5 py-3">Worker</th>
                         <th class="px-2 py-3 text-right">Gross</th>
                         <th class="px-2 py-3 text-right">CIS</th>
@@ -134,7 +134,7 @@
                 <div class="rounded-lg border border-line px-3 py-2 text-sm">
                     <p class="text-content">
                         <span class="font-medium">@row.WorkerName</span>
-                        <span class="ml-2 text-[11px] font-semibold rounded-full px-2 py-0.5 @PlanPillClass(row.Outcome)">@CodingOutcomeLabel(row.Outcome)</span>
+                        <span class="ml-2 text-xs font-semibold rounded-full px-2 py-0.5 @PlanPillClass(row.Outcome)">@CodingOutcomeLabel(row.Outcome)</span>
                     </p>
                     <p class="text-content-muted text-xs mt-1">@row.Detail</p>
                 </div>

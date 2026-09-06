@@ -50,7 +50,7 @@
     @if (isRevision)
     {
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing document *</label>
+            <label class="block eyebrow mb-1">Existing document *</label>
             <select @bind="selectedDrawingId"
                     class="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent">
                 <option value="">Select a document…</option>
@@ -63,7 +63,7 @@
     }
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
+        <label class="block eyebrow mb-1">
             @(isRevision ? "Document file *" : "Document files *")
         </label>
         @* Drag highlight is a DEPTH COUNTER, not a boolean: dragging across the zone's children
@@ -100,7 +100,7 @@
         @if (selectedFiles.Count == 1)
         {
             <p class="mt-2 flex items-center gap-2 rounded-lg border border-line bg-surface-raised px-3 py-2 text-sm text-content">
-                <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold shrink-0">Original file</span>
+                <span class="eyebrow shrink-0">Original file</span>
                 <span class="flex-1 min-w-0 font-medium break-all">@selectedFiles[0].Name</span>
                 <span class="text-content-subtle shrink-0">@FormatSize(selectedFiles[0].Size)</span>
                 <button type="button" @onclick="() => RemoveFile(selectedFiles[0])" disabled="@busy" aria-label="Remove @selectedFiles[0].Name"
@@ -113,7 +113,7 @@
         {
             <div class="mt-2 rounded-lg border border-line bg-surface-raised">
                 <div class="flex items-center justify-between px-3 py-2 border-b border-line">
-                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">@selectedFiles.Count files · @FormatSize(selectedFiles.Sum(file => file.Size))</span>
+                    <span class="eyebrow">@selectedFiles.Count files · @FormatSize(selectedFiles.Sum(file => file.Size))</span>
                     <button type="button" @onclick="ClearSelection" disabled="@busy"
                             class="text-xs text-content-muted hover:text-content transition disabled:opacity-50">
                         Clear all
@@ -139,13 +139,13 @@
     @if (!isRevision && !IsBulk)
     {
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Document code</label>
+            <label class="block eyebrow mb-1">Document code</label>
             <input type="text" @bind="drawingCode" placeholder="A-100 (optional)"
                    class="field" />
         </div>
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <label class="block eyebrow mb-1">Title</label>
             <input type="text" @bind="title" placeholder="Garden, shed, … (optional)"
                    class="field" />
             <p class="text-xs text-content-subtle mt-1">Leave blank and the register shows the original file name instead.</p>
@@ -155,13 +155,13 @@
     @if (!IsBulk)
     {
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Revision</label>
+            <label class="block eyebrow mb-1">Revision</label>
             <input type="text" @bind="revisionLabel" placeholder="A (optional)"
                    class="field" />
         </div>
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Issued by</label>
+            <label class="block eyebrow mb-1">Issued by</label>
             <input type="email" @bind="issuedBy" placeholder="architect@example.com (optional)"
                    class="field" />
         </div>

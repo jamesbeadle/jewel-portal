@@ -31,7 +31,7 @@
                 @* The approve warning: releasing the draft emails its purchase order there and then. *@
                 @if (pending == DraftDecision.Approve)
                 {
-                    <span class="text-[11px] @(SupplierEmailFor(detail) is null ? "text-warning" : "text-content-subtle")"
+                    <span class="text-xs @(SupplierEmailFor(detail) is null ? "text-warning" : "text-content-subtle")"
                           title="Approving releases the order — the purchase-order email is sent from the projects mailbox the moment the number is minted">
                         @(SupplierEmailFor(detail) is { } supplierEmail
                             ? $"PO will be emailed to {supplierEmail}"

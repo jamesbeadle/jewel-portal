@@ -84,7 +84,7 @@
                                         </select>
                                         @if (overridden)
                                         {
-                                            <span class="ml-2 text-[10px] uppercase tracking-wide text-content-subtle" title="This project overrides the contact's default routing">overridden</span>
+                                            <span class="ml-2 eyebrow" title="This project overrides the contact's default routing">overridden</span>
                                         }
                                     </td>
                                 </tr>
@@ -161,7 +161,7 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Role</label>
+                        <label class="block eyebrow mb-1">Role</label>
                         <select class="field" @bind="formRole">
                             @foreach (var role in RoleOptions)
                             {
@@ -170,7 +170,7 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Routing</label>
+                        <label class="block eyebrow mb-1">Routing</label>
                         <select class="field" @bind="formRouting">
                             <option value="@((int)CorrespondenceRouting.None)">Off — contact list only</option>
                             <option value="@((int)CorrespondenceRouting.To)">To</option>

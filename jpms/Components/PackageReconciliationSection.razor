@@ -51,7 +51,7 @@
         <div class="rounded-xl border border-line bg-surface overflow-x-auto">
             <table class="w-full text-sm border-collapse">
                 <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                    <tr class="text-left eyebrow">
                         <th class="px-4 py-3 min-w-[180px]">Package</th>
                         <th class="px-4 py-3 text-right whitespace-nowrap">Sales Value</th>
                         <th class="px-4 py-3 text-right whitespace-nowrap">Claimed</th>
@@ -69,7 +69,7 @@
                         <tr>
                             <td class="px-4 py-3 whitespace-nowrap">
                                 <span class="text-content font-medium">@row.Name</span>
-                                <span class="ml-2 text-[11px] text-content-subtle">@row.WorkOrderCount WO · @row.SalesLineCount lines@(row.CostLineCount > 0 ? $" · {row.CostLineCount} invoices" : "")</span>
+                                <span class="ml-2 text-xs text-content-subtle">@row.WorkOrderCount WO · @row.SalesLineCount lines@(row.CostLineCount > 0 ? $" · {row.CostLineCount} invoices" : "")</span>
                                 @if (row.IsLocked)
                                 {
                                     <Pill Tone="Tone.Muted" Class="ml-2" Title="@($"Locked {row.LockedAt?.ToString("dd MMM yyyy")} — figures frozen; profit / loss realised against actual invoiced cost")">Locked</Pill>
@@ -147,7 +147,7 @@
         {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
                 <div class="rounded-lg border border-line bg-surface p-3">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1.5">Work orders in no package</p>
+                    <p class="eyebrow mb-1.5">Work orders in no package</p>
                     @if (UnpackagedOrders.Count == 0)
                     {
                         <p class="text-sm text-content-subtle italic">Every work order is packaged.</p>
@@ -157,14 +157,14 @@
                         @foreach (var detail in UnpackagedOrders)
                         {
                             <p class="text-sm text-content-muted">
-                                <span class="font-mono text-[11px] text-content-subtle">@($"WO-{detail.Order.Number:0000}")</span>
+                                <span class="font-mono text-xs text-content-subtle">@($"WO-{detail.Order.Number:0000}")</span>
                                 @detail.SubcontractorName · @WholeMoney(detail.Lines.Sum(line => line.LineTotal))
                             </p>
                         }
                     }
                 </div>
                 <div class="rounded-lg border border-line bg-surface p-3">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1.5">Sales value not yet in a package</p>
+                    <p class="eyebrow mb-1.5">Sales value not yet in a package</p>
                     @if (LinesWithRemaining.Count == 0)
                     {
                         <p class="text-sm text-content-subtle italic">Every sales line is fully assigned.</p>
@@ -174,7 +174,7 @@
                         @foreach (var entry in LinesWithRemaining.Take(30))
                         {
                             <p class="text-sm text-content-muted" title="@entry.Line.Description">
-                                <span class="font-mono text-[11px] text-content-subtle">@entry.Line.CostCode</span>
+                                <span class="font-mono text-xs text-content-subtle">@entry.Line.CostCode</span>
                                 @Truncate(entry.Line.Description, 44) · @WholeMoney(entry.Remaining) remaining
                             </p>
                         }

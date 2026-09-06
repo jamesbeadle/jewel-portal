@@ -30,7 +30,7 @@
             <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Date</th>
                             @if (ShowCentreColumn)
                             {
@@ -52,7 +52,7 @@
                                 <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
                                 @if (ShowCentreColumn)
                                 {
-                                    <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@entry.CostCode</td>
+                                    <td class="px-4 py-2.5 font-mono text-xs text-content-subtle whitespace-nowrap">@entry.CostCode</td>
                                 }
                                 <td class="px-4 py-2.5 text-content">@line.Supplier</td>
                                 <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
@@ -60,7 +60,7 @@
                                     @line.Description
                                     @if (line.IsSplit)
                                     {
-                                        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                        <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5"
                                               title="This centre's share of a line split across several cost centres">Split</span>
                                     }
                                 </td>
@@ -176,7 +176,7 @@
                    to the order's line values. Negative rows are this centre's spend moving out;
                    positive rows arrive via orders coded here. *@
                 <div class="rounded-lg border border-line overflow-x-auto">
-                    <p class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                    <p class="px-4 pt-3 pb-1 eyebrow">
                         Moved via work orders — linked spend follows the order's cost centres
                     </p>
                     <table class="w-full text-sm border-collapse">

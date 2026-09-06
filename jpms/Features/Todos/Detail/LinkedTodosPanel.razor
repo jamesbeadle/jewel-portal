@@ -40,7 +40,7 @@
                             </p>
                             <Pill Tone="@TodoStatus.Tone(item)" Class="shrink-0">@TodoStatus.Label(item)</Pill>
                         </div>
-                        <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                        <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                             <span class="whitespace-nowrap">@ScopeLabel(item)</span>
                             @if (TodoAssigneePicker.Label(item) is string assigneeLabel)
                             {

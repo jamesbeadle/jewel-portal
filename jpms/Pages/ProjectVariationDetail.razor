@@ -67,11 +67,11 @@
                        the "return to quoting" repair. Rejected is terminal — no menu once reached. *@
                     <div class="relative">
                         <button type="button"
-                                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium bg-surface-raised text-content-muted"
+                                class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium bg-surface-raised text-content-muted"
                                 title="Change status"
                                 disabled="@busy"
                                 @onclick="() => orderStatusMenuOpen = !orderStatusMenuOpen">
-                            @order.Status.DisplayName() <span class="text-[9px]" aria-hidden="true">▾</span>
+                            @order.Status.DisplayName() <span class="text-xs" aria-hidden="true">▾</span>
                         </button>
                         @if (orderStatusMenuOpen)
                         {
@@ -157,7 +157,7 @@
             @if (linkedInstructions.Count > 0)
             {
                 <div class="rounded-lg bg-surface-raised border border-line px-3 py-2 mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Architect's Instruction</span>
+                    <span class="eyebrow">Architect's Instruction</span>
                     @foreach (var instruction in linkedInstructions)
                     {
                         <a href="@($"/projects/{ProjectId}/architect-instructions")"

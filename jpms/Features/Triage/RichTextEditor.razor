@@ -45,7 +45,7 @@
                 title="Bulleted list" @onclick='() => ExecAsync("insertUnorderedList")' @onmousedown:preventDefault>•&nbsp;List</button>
         <button type="button" tabindex="-1" class="px-2 py-0.5 rounded text-sm text-content-muted hover:text-content hover:bg-surface"
                 title="Numbered list" @onclick='() => ExecAsync("insertOrderedList")' @onmousedown:preventDefault>1.&nbsp;List</button>
-        <span class="ml-auto text-[11px] text-content-faint pr-1">Paste images straight into the text</span>
+        <span class="ml-auto text-xs text-content-faint pr-1">Paste images straight into the text</span>
     </div>
     <div @ref="editor" contenteditable="true" spellcheck="true" lang="en-GB" data-placeholder="@Placeholder"
          class="jpms-rich-editor px-3 py-2 text-sm text-content focus:outline-none overflow-y-auto"

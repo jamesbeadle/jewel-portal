@@ -98,7 +98,7 @@
             <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                 <table class="w-full text-sm">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Date</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Supplier</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Number</th>
@@ -119,7 +119,7 @@
                                     @(transaction.Number ?? "—")
                                     @if (IsCreditNote(transaction))
                                     {
-                                        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5">Credit note</span>
+                                        <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5">Credit note</span>
                                     }
                                 </td>
                                 <td class="px-4 py-3 text-content-muted">@DistinctText(transaction.Lines.Select(l => l.Site))</td>
@@ -144,7 +144,7 @@
                                         {
                                             <table class="w-full text-xs">
                                                 <thead>
-                                                    <tr class="text-left text-[10px] uppercase tracking-wider text-content-subtle">
+                                                    <tr class="text-left text-xs text-content-subtle">
                                                         <th class="px-2 py-1.5">Description</th>
                                                         <th class="px-2 py-1.5">Account</th>
                                                         <th class="px-2 py-1.5">Site</th>
@@ -195,7 +195,7 @@
             <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                 <table class="w-full text-sm">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Site / cost code</th>
                             @foreach (var year in Years)
                             {

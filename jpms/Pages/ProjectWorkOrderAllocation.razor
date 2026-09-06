@@ -23,19 +23,19 @@
         @* ── Headline figures ─────────────────────────────────────────────── *@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cost of sales</p>
+                <p class="eyebrow">Cost of sales</p>
                 <p class="text-lg font-semibold text-content">@Money(AllLines.Sum(line => line.Net))</p>
             </div>
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Linked to work orders</p>
+                <p class="eyebrow">Linked to work orders</p>
                 <p class="text-lg font-semibold text-content">@Money(AllLines.Sum(line => line.LinkedTotal))</p>
             </div>
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Not linked</p>
+                <p class="eyebrow">Not linked</p>
                 <p class="text-lg font-semibold @(UnlinkedTotal == 0m ? "text-content" : "text-negative")">@Money(UnlinkedTotal)</p>
             </div>
             <div class="rounded-xl border border-line bg-surface px-4 py-3">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Orders fully invoiced</p>
+                <p class="eyebrow">Orders fully invoiced</p>
                 <p class="text-lg font-semibold text-content">@(summaries.Count(s => s.InvoicingStatus is WorkOrderInvoicingStatus.FullyInvoiced or WorkOrderInvoicingStatus.OverInvoiced)) of @summaries.Count</p>
             </div>
         </div>
@@ -73,7 +73,7 @@
             <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh] mb-6">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 w-[90px]">Order</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 min-w-[180px]">Supplier</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Title</th>
@@ -88,7 +88,7 @@
                         @foreach (var summary in FilteredSummaries)
                         {
                             <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => ToggleOrder(summary.WorkOrderId)">
-                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+                                <td class="px-4 py-2.5 font-mono text-xs text-content-subtle whitespace-nowrap">
                                     <span class="inline-block w-4">@(expandedOrderIds.Contains(summary.WorkOrderId) ? "▾" : "▸")</span>@($"WO-{summary.Number:0000}")
                                 </td>
                                 <td class="px-4 py-2.5 whitespace-nowrap">@summary.SubcontractorName</td>
@@ -117,7 +117,7 @@
                                         {
                                             <table class="w-full text-sm border-collapse">
                                                 <thead>
-                                                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold border-b border-line">
+                                                    <tr class="text-left eyebrow border-b border-line">
                                                         <th class="px-3 py-2 whitespace-nowrap">Date</th>
                                                         <th class="px-3 py-2">Supplier</th>
                                                         <th class="px-3 py-2 whitespace-nowrap">Invoice</th>
@@ -139,11 +139,11 @@
                                                                 @line.Description
                                                                 @if (linked.Slice != line.Net)
                                                                 {
-                                                                    <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                                                    <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5"
                                                                           title="@($"This order's share of a {MoneyExact(line.Net)} line split across several work orders")">Split</span>
                                                                 }
                                                             </td>
-                                                            <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
+                                                            <td class="px-3 py-2 font-mono text-xs text-content-subtle whitespace-nowrap">@line.CostCode</td>
                                                             <td class="px-3 py-2 text-right whitespace-nowrap @(linked.Slice < 0m ? "text-negative" : "")"
                                                                 title="@(linked.Slice == line.Net ? "" : $"Line total {MoneyExact(line.Net)}")">@MoneyExact(linked.Slice)</td>
                                                             <td class="px-3 py-2 text-right whitespace-nowrap">
@@ -203,7 +203,7 @@
             <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Date</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Supplier</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Invoice</th>
@@ -224,11 +224,11 @@
                                     @line.Description
                                     @if (line.IsSplit)
                                     {
-                                        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                        <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5"
                                               title="This centre's share of a line split across several cost centres">Split</span>
                                     }
                                 </td>
-                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
+                                <td class="px-4 py-2.5 font-mono text-xs text-content-subtle whitespace-nowrap">@line.CostCode</td>
                                 <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0m ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
                                 <td class="px-4 py-2.5 whitespace-nowrap">
                                     @if (line.IsSplit)
@@ -333,6 +333,6 @@
             WorkOrderInvoicingStatus.FullyInvoiced => ("Fully invoiced", "border-line text-positive"),
             _ => ("Over invoiced", "border-line text-negative")
         };
-        <span class="inline-block rounded-full border px-2 py-0.5 text-[11px] @classes" title="@ProgressTitle(summary)">@label</span>
+        <span class="inline-block rounded-full border px-2 py-0.5 text-xs @classes" title="@ProgressTitle(summary)">@label</span>
     };
 }

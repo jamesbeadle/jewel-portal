@@ -15,7 +15,7 @@
        Class="max-w-6xl">
     <div class="space-y-4">
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Package name</label>
+            <label class="block eyebrow mb-1">Package name</label>
             <input type="text" maxlength="128" placeholder="e.g. BVMH groundworks & civils"
                    class="w-full md:w-1/2 rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
                    @bind="name" @bind:event="oninput" />
@@ -25,7 +25,7 @@
             @* ── Cost side: the sub's work orders ─────────────────────────── *@
             <div class="rounded-lg border border-line bg-surface p-3">
                 <div class="flex items-center justify-between gap-2 mb-2">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cost side — work orders</p>
+                    <p class="eyebrow">Cost side — work orders</p>
                     <input type="search" placeholder="Search…"
                            class="bg-surface border border-line rounded-lg px-2 py-1 text-xs text-content placeholder:text-content-subtle w-36"
                            @bind="orderSearch" @bind:event="oninput" />
@@ -41,7 +41,7 @@
                             <input type="checkbox" class="cursor-pointer" disabled="@taken"
                                    checked="@selectedOrderIds.Contains(order.WorkOrderId)"
                                    @onchange="() => ToggleOrder(order.WorkOrderId)" />
-                            <span class="font-mono text-[11px] text-content-subtle">@($"WO-{order.Number:0000}")</span>
+                            <span class="font-mono text-xs text-content-subtle">@($"WO-{order.Number:0000}")</span>
                             <span class="text-content truncate">@detail.SubcontractorName</span>
                             <span class="ml-auto text-content-muted whitespace-nowrap">@Money(CommittedOf(detail))</span>
                         </label>
@@ -52,7 +52,7 @@
             @* ── Sales side: the valuation lines that priced the scope ─────── *@
             <div class="rounded-lg border border-line bg-surface p-3">
                 <div class="flex items-center justify-between gap-2 mb-2">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                    <p class="eyebrow"
                        title="Tick a line to take its full remaining value; edit the amount for a partial share when a client line covers more than one sub">
                         Sales side — valuation lines
                     </p>
@@ -71,7 +71,7 @@
                                    title="@(exhausted ? "Fully assigned to other packages" : "")"
                                    checked="@picked"
                                    @onchange="() => ToggleLine(entry)" />
-                            <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</span>
+                            <span class="font-mono text-xs text-content-subtle whitespace-nowrap">@line.CostCode</span>
                             <span class="text-content-muted truncate" title="@line.Description">@line.Description</span>
                             <span class="ml-auto flex items-center gap-1.5 whitespace-nowrap">
                                 @if (picked)
@@ -98,7 +98,7 @@
              e.g. roofing supplies alongside the roofer's labour-only order). ───── *@
         <div class="rounded-lg border border-line bg-surface p-3">
             <div class="flex items-center justify-between gap-2 mb-2">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                <p class="eyebrow"
                    title="Tick an invoice line to take its full non-work-order remainder; edit the amount for a partial share. Spend already linked to a work order arrives through the order — only the unlinked remainder is offered here.">
                     Cost side — direct purchase invoices (not linked to a work order)
                 </p>
@@ -128,7 +128,7 @@
                                    checked="@picked"
                                    @onchange="() => ToggleCostLine(entry)" />
                             <span class="text-content-subtle text-xs whitespace-nowrap">@(costLine.Date?.ToString("dd MMM yy") ?? "—")</span>
-                            <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap">@costLine.CostCode</span>
+                            <span class="font-mono text-xs text-content-subtle whitespace-nowrap">@costLine.CostCode</span>
                             <span class="text-content truncate whitespace-nowrap">@costLine.Supplier</span>
                             <span class="text-content-muted truncate" title="@costLine.Description">@costLine.InvoiceNumber</span>
                             <span class="ml-auto flex items-center gap-1.5 whitespace-nowrap">

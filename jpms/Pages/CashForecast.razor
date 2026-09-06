@@ -166,7 +166,7 @@
             @if (IsDirector && forecast.Closing.Length > 1)
             {
                 <div class="rounded-xl border border-line bg-surface px-5 py-4 mb-6">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Closing bank balance by month</p>
+                    <p class="eyebrow mb-2">Closing bank balance by month</p>
                     <ForecastBalanceChart Axis="forecast.Axis" Closing="forecast.Closing"
                                           MinIndex="forecast.MinIndex"
                                           HighReference="@(BankSnapshot?.TotalCash ?? 0m)" />
@@ -196,7 +196,7 @@
             @* ════════════════════════ the divider ════════════════════════ *@
             <div class="flex items-center gap-4 mb-6">
                 <div class="h-px bg-line flex-1"></div>
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold whitespace-nowrap">Position to completion — the former Cash Summary</p>
+                <p class="eyebrow whitespace-nowrap">Position to completion — the former Cash Summary</p>
                 <div class="h-px bg-line flex-1"></div>
             </div>
             <p class="text-xs text-content-subtle mb-4 max-w-4xl">

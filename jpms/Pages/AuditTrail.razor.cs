@@ -166,7 +166,7 @@ public partial class AuditTrail
 
     private static string PathwayChipClass(string pathway)
     {
-        const string baseClass = "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ";
+        const string baseClass = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ";
         return pathway switch
         {
             "Client"        => baseClass + "bg-accent/10 text-accent",

@@ -69,7 +69,7 @@
             {
                 @* Person-by-person approval: filter to one worker, select all, code, approve. *@
                 <div class="flex flex-wrap items-center gap-2 px-5 py-3 border-b border-line/60">
-                    <label class="text-xs uppercase tracking-wide text-content-subtle" for="labour-worker-filter">Worker</label>
+                    <label class="eyebrow" for="labour-worker-filter">Worker</label>
                     <select id="labour-worker-filter" class="field" value="@workerFilter" @onchange="@(args => SetWorkerFilter((string?)args.Value))">
                         <option value="">All workers</option>
                         @foreach (var name in WeekWorkerNames(weekAll))
@@ -91,7 +91,7 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="text-left text-xs uppercase tracking-wide text-content-subtle border-b border-line">
+                            <tr class="text-left eyebrow border-b border-line">
                                 <th class="px-5 py-3"><input type="checkbox" checked="@AllSubmittedSelected(week)" @onchange="@(args => ToggleAll(week, (bool)args.Value!))" /></th>
                                 <th class="px-2 py-3">Worker</th>
                                 <th class="px-2 py-3">Day</th>

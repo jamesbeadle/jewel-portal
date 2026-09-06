@@ -24,7 +24,7 @@
     <div class="flex items-center gap-2">
         <button type="button" class="btn-primary text-xs px-2 py-1" disabled="@(Busy || !CanSave)" @onclick="SaveAsync">Save</button>
         <button type="button" class="btn-neutral text-xs px-2 py-1" disabled="@Busy" @onclick="() => OnCancel.InvokeAsync()">Cancel</button>
-        <span class="text-[11px] text-content-subtle">@Hint</span>
+        <span class="text-xs text-content-subtle">@Hint</span>
     </div>
 </div>
 

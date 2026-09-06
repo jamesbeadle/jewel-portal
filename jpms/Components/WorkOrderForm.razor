@@ -21,7 +21,7 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subcontractor</label>
+            <label class="block eyebrow mb-1">Subcontractor</label>
             <select class="w-full bg-surface border border-line-strong rounded-lg px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
                     disabled="@Busy" @onchange="e => SetSubcontractorAsync(e.Value?.ToString())">
                 <option value="" selected="@(subcontractorId == "")">Choose a subcontractor…</option>
@@ -36,14 +36,14 @@
             }
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Order title</label>
+            <label class="block eyebrow mb-1">Order title</label>
             <input type="text" maxlength="256" placeholder="e.g. Groundworks package — BVMH"
                    class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
                    disabled="@Busy" @bind="title" @bind:event="oninput" @bind:after="NotifyChangedAsync" />
         </div>
     </div>
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope</label>
+        <label class="block eyebrow mb-1">Scope</label>
         @* Prints as typed (line breaks kept — the sheet renders it pre-wrap) in the PO's
            "Works Order info" section, so an itemised breakdown can sit one charge per line,
            lined up on the left, the way accounts lay it out in email. Grown from rows="2"
@@ -56,24 +56,24 @@
 
     @* ── Programme: printed in the purchase order's Programme section ──── *@
     <div class="rounded-lg border border-line bg-surface p-3">
-        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2"
+        <p class="eyebrow mb-2"
            title="Printed in the purchase order's Programme section — leave everything empty to omit it">Programme</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Start date</label>
+                <label class="block eyebrow mb-1">Start date</label>
                 <input type="date"
                        class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
                        disabled="@Busy" @bind="programmeStart" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Target completion</label>
+                <label class="block eyebrow mb-1">Target completion</label>
                 <input type="date"
                        class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
                        disabled="@Busy" @bind="targetCompletion" />
             </div>
         </div>
         <div class="mt-3">
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme notes</label>
+            <label class="block eyebrow mb-1">Programme notes</label>
             <textarea rows="2" maxlength="2000" placeholder="e.g. Weekly programme duration 1st &amp; 2nd fix phases (optional)"
                       class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
                       disabled="@Busy" @bind="programmeNotes" @bind:event="oninput"></textarea>
@@ -82,7 +82,7 @@
 
     @* ── Priced lines: each carries its own cost centre ────────────────── *@
     <div class="rounded-lg border border-line bg-surface p-3">
-        <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2"
+        <p class="eyebrow mb-2"
            title="Each line lands on its own cost centre — the order's value is their sum">Priced lines</p>
         <div class="space-y-2">
             @for (var index = 0; index < lines.Count; index++)

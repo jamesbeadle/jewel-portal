@@ -73,15 +73,15 @@
             <p class="text-sm font-semibold text-content">Add a programme task</p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div class="md:col-span-1">
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+                    <label class="block eyebrow mb-1">Title</label>
                     <input class="field" @bind="newTaskTitle" placeholder="e.g. Groundworks — main house" />
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Planned start</label>
+                    <label class="block eyebrow mb-1">Planned start</label>
                     <input type="date" class="field" @bind="newTaskStart" />
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Planned end</label>
+                    <label class="block eyebrow mb-1">Planned end</label>
                     <input type="date" class="field" @bind="newTaskEnd" />
                 </div>
             </div>
@@ -97,7 +97,7 @@
             <p class="text-sm font-semibold text-content">Add a dependency <span class="font-normal text-content-subtle">— finish-to-start: the successor starts after the predecessor finishes (plus lag)</span></p>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Predecessor</label>
+                    <label class="block eyebrow mb-1">Predecessor</label>
                     <select class="field" @bind="linkPredecessorId">
                         <option value="">Select task…</option>
                         @foreach (var task in Tasks)
@@ -107,7 +107,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Successor</label>
+                    <label class="block eyebrow mb-1">Successor</label>
                     <select class="field" @bind="linkSuccessorId">
                         <option value="">Select task…</option>
                         @foreach (var task in Tasks)
@@ -117,7 +117,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Lag (days)</label>
+                    <label class="block eyebrow mb-1">Lag (days)</label>
                     <input type="number" class="field" @bind="linkLagDays" />
                 </div>
             </div>
@@ -132,7 +132,7 @@
         <div class="panel p-4 mb-5 space-y-3">
             <p class="text-sm font-semibold text-content">Take a baseline <span class="font-normal text-content-subtle">— snapshots every task's dates as the yardstick movement is measured against</span></p>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Label</label>
+                <label class="block eyebrow mb-1">Label</label>
                 <input class="field" @bind="baselineLabel" placeholder="e.g. Contract programme rev A" />
             </div>
             <div class="flex gap-2">
@@ -142,7 +142,7 @@
             @if (Baselines.Count > 0)
             {
                 <div class="pt-3 border-t border-line">
-                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Baselines taken</p>
+                    <p class="eyebrow mb-2">Baselines taken</p>
                     <ul class="space-y-1.5">
                         @foreach (var baselineEntry in Baselines)
                         {

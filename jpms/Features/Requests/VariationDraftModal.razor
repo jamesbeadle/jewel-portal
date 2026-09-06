@@ -24,7 +24,7 @@
         </div>
 
         <div class="">
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope description</label>
+            <label class="block eyebrow mb-1">Scope description</label>
             <textarea class="field" rows="6" value="@Description" @oninput="e => DescriptionChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"></textarea>
         </div>
 
@@ -35,7 +35,7 @@
         @if (Lines.Count > 0)
         {
             <div class="">
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Suggested scope lines</label>
+                <label class="block eyebrow mb-1">Suggested scope lines</label>
                 <p class="text-xs text-content-subtle mb-2">
                     Ticked lines become the variation's scope, held as a draft bid package (@PackageTrade)@(HasRfq ? " ready to send to subcontractors" : " — send it out to subcontractors later, or price it yourselves"). Every ticked line needs a cost centre — that's the cost code its committed value lands on. Untick any line you don't want; untick them all to raise the variation on its own.
                 </p>

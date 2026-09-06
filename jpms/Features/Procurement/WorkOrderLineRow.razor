@@ -5,11 +5,11 @@
    supplier (whichever the group isn't), its status and invoicing/payment badges, its money,
    and its Actions menu — or, once Cancel… has been chosen, the inline confirm pair. *@
 <tr>
-    <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@Entry.Detail.Order.Title">@Entry.Detail.Order.Reference</td>
+    <td class="px-3 py-2 font-mono text-xs text-content-subtle whitespace-nowrap" title="@Entry.Detail.Order.Title">@Entry.Detail.Order.Reference</td>
     @if (GroupBySupplier)
     {
         <td class="px-3 py-2 whitespace-nowrap">
-            <span class="font-mono text-[11px] text-content-subtle mr-1.5">@CostCode</span>@CostCentreName
+            <span class="font-mono text-xs text-content-subtle mr-1.5">@CostCode</span>@CostCentreName
         </td>
     }
     else

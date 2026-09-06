@@ -327,7 +327,7 @@ public partial class ProjectCommunications
 
     private static string BucketChipClass(string pathway)
     {
-        const string baseClass = "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ";
+        const string baseClass = "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ";
         return pathway switch
         {
             "Client"        => baseClass + "bg-accent/10 text-accent",

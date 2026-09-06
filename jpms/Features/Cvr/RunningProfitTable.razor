@@ -9,7 +9,7 @@
 <div class="overflow-x-auto">
     <table class="w-full text-sm" style="border-collapse:separate;border-spacing:3px">
         <thead>
-            <tr class="text-[10px] uppercase tracking-wider text-content-subtle font-medium">
+            <tr class="eyebrow">
                 <th class="text-left py-1.5 px-2">Project</th>
                 @foreach (var month in Movement.Months)
                 {
@@ -25,7 +25,7 @@
                 <tr>
                     <td class="text-left whitespace-nowrap py-2 pr-3">
                         <span class="text-content">@row.Project.Name</span>
-                        <span class="block font-mono text-[9px] text-content-faint">@row.Project.Reference</span>
+                        <span class="block font-mono text-xs text-content-faint">@row.Project.Reference</span>
                     </td>
                     @for (var index = 0; index < row.MonthCells.Count; index++)
                     {
@@ -44,7 +44,7 @@
                                 n/a
                                 @if (!cell.Own.Empty)
                                 {
-                                    <span class="block text-[10px] font-normal mt-0.5">@SignedMoneyCompact(cell.Own.Profit)</span>
+                                    <span class="block text-xs font-normal mt-0.5">@SignedMoneyCompact(cell.Own.Profit)</span>
                                 }
                             </td>
                         }
@@ -55,7 +55,7 @@
                                 title="@(RunningCellHover(cellMonth, cell) + AccrualHover(row.Project.ProjectId, cellMonth))">
                                 <span class="font-medium @ProfitClass(runningLevel)">@PctCell(runningLevel)</span>@if (AccrualOwnFor(row.Project.ProjectId, cellMonth) > 0m)
                                 {<span class="text-warning ml-0.5" aria-hidden="true">•</span>}
-                                <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(move)@(cell.Own.Empty ? "" : $" · {SignedMoneyCompact(cell.Own.Profit)}")</span>
+                                <span class="block text-xs font-normal text-content-muted mt-0.5">@MovementPrint(move)@(cell.Own.Empty ? "" : $" · {SignedMoneyCompact(cell.Own.Profit)}")</span>
                             </td>
                         }
                     }
@@ -65,14 +65,14 @@
                     </td>
                     <td class="text-center rounded-md py-2 px-3 text-xs font-semibold whitespace-nowrap border border-line bg-surface-raised @ProfitClass(row.RunningPercent ?? 0m)">
                         @(row.RunningPercent is decimal runningPct ? PctCell(runningPct) : "—")
-                        <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(row.PositionMoney)</span>
+                        <span class="block font-normal text-xs text-content-subtle mt-0.5">@MoneyCompact(row.PositionMoney)</span>
                         @if (AccrualToDateFor(row.Project.ProjectId) is > 0m and var accruedToDate)
                         {
-                            <span class="block font-normal text-[10px] text-warning mt-0.5">incl. @MoneyCompact(accruedToDate) accrued</span>
+                            <span class="block font-normal text-xs text-warning mt-0.5">incl. @MoneyCompact(accruedToDate) accrued</span>
                         }
                         @if (row.Stale)
                         {
-                            <span class="block font-normal text-[10px] text-warning mt-0.5">⚠ no movement 6 mo</span>
+                            <span class="block font-normal text-xs text-warning mt-0.5">⚠ no movement 6 mo</span>
                         }
                     </td>
                 </tr>
@@ -82,7 +82,7 @@
                 <tr class="font-semibold">
                     <td class="text-left py-2.5 pr-3 border-t border-line text-content">
                         All jobs with Xero data
-                        <span class="block font-normal text-[9px] text-content-faint">combined margin — total profit over total invoiced</span>
+                        <span class="block font-normal text-xs text-content-faint">combined margin — total profit over total invoiced</span>
                     </td>
                     @for (var index = 0; index < Movement.ColumnTotals.Count; index++)
                     {
@@ -93,7 +93,7 @@
                             @if (total.Running is decimal totalPct)
                             {
                                 <span class="@ProfitClass(totalPct)">@PctCell(totalPct)</span>
-                                <span class="block text-[10px] font-normal text-content-muted mt-0.5">@MovementPrint(totalMove)@(total.Own.Empty ? "" : $" · {SignedMoneyCompact(total.Own.Profit)}")</span>
+                                <span class="block text-xs font-normal text-content-muted mt-0.5">@MovementPrint(totalMove)@(total.Own.Empty ? "" : $" · {SignedMoneyCompact(total.Own.Profit)}")</span>
                             }
                             else
                             {
@@ -107,10 +107,10 @@
                     </td>
                     <td class="text-center py-2.5 px-2 text-xs border-t border-line whitespace-nowrap @ProfitClass(Movement.TotalRunningPercent ?? 0m)">
                         @(Movement.TotalRunningPercent is decimal totalRunningPct ? PctCell(totalRunningPct) : "—")
-                        <span class="block font-normal text-[10px] text-content-subtle mt-0.5">@MoneyCompact(Movement.TotalPositionMoney)</span>
+                        <span class="block font-normal text-xs text-content-subtle mt-0.5">@MoneyCompact(Movement.TotalPositionMoney)</span>
                         @if (Movement.Rows.Sum(gridRow => AccrualToDateFor(gridRow.Project.ProjectId)) is > 0m and var totalAccrued)
                         {
-                            <span class="block font-normal text-[10px] text-warning mt-0.5">incl. @MoneyCompact(totalAccrued) accrued</span>
+                            <span class="block font-normal text-xs text-warning mt-0.5">incl. @MoneyCompact(totalAccrued) accrued</span>
                         }
                     </td>
                 </tr>

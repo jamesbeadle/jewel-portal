@@ -24,11 +24,11 @@
     <div class="panel p-4 mb-5 space-y-3">
         <p class="text-sm font-semibold text-content">Raise a Notice of Delay</p>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <label class="block eyebrow mb-1">Title</label>
             <input class="field" @bind="nodTitle" placeholder="e.g. Delay to steel delivery — structural frame" />
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <label class="block eyebrow mb-1">Description</label>
             <textarea class="field" rows="3" @bind="nodDescription" placeholder="The cause of delay, the works affected and the expected programme impact."></textarea>
         </div>
         <div class="flex gap-2">
@@ -42,15 +42,15 @@ else if (openForm == Form.Eot)
     <div class="panel p-4 mb-5 space-y-3">
         <p class="text-sm font-semibold text-content">Raise an Extension of Time</p>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <label class="block eyebrow mb-1">Title</label>
             <input class="field" @bind="eotTitle" placeholder="e.g. EOT — 10 working days, steel delivery delay" />
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <label class="block eyebrow mb-1">Description</label>
             <textarea class="field" rows="3" @bind="eotDescription" placeholder="The extension sought and the grounds for it."></textarea>
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Arises from Notice of Delay (optional)</label>
+            <label class="block eyebrow mb-1">Arises from Notice of Delay (optional)</label>
             <select class="field" @bind="eotRelatedNodId">
                 <option value="">No related NOD</option>
                 @foreach (var nod in Nods)
@@ -70,33 +70,33 @@ else if (openForm == Form.Lad)
     <div class="panel p-4 mb-5 space-y-3">
         <p class="text-sm font-semibold text-content">Record a Liquidated Damages claim</p>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+            <label class="block eyebrow mb-1">Title</label>
             <input class="field" @bind="ladTitle" placeholder="e.g. LADs notice — completion overrun" />
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <label class="block eyebrow mb-1">Description</label>
             <textarea class="field" rows="3" @bind="ladDescription" placeholder="The client's notice and the completion date it's claimed against."></textarea>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period from</label>
+                <label class="block eyebrow mb-1">Period from</label>
                 <input type="date" class="field" @bind="ladPeriodFrom" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period to</label>
+                <label class="block eyebrow mb-1">Period to</label>
                 <input type="date" class="field" @bind="ladPeriodTo" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Days claimed</label>
+                <label class="block eyebrow mb-1">Days claimed</label>
                 <input type="number" min="0" class="field" @bind="ladDaysClaimed" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Rate / week (£)</label>
+                <label class="block eyebrow mb-1">Rate / week (£)</label>
                 <input type="number" min="0" step="0.01" class="field" @bind="ladRatePerWeek" />
             </div>
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount claimed (£)</label>
+            <label class="block eyebrow mb-1">Amount claimed (£)</label>
             <input type="number" min="0" step="0.01" class="field" @bind="ladAmount" />
         </div>
         <div class="flex gap-2">

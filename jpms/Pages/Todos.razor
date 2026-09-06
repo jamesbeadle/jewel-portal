@@ -198,7 +198,7 @@
                     <h2 class="text-sm font-semibold text-content">@(boardView ? "To-do board" : "To-do list")</h2>
                     @if (items.Count > 0)
                     {
-                        <span class="text-[11px] text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
+                        <span class="text-xs text-content-subtle">@items.Count(i => i.IsComplete) of @items.Count done</span>
                     }
                 </div>
                 <p class="text-xs text-content-subtle mb-4">
@@ -238,7 +238,7 @@
                                 <p class="truncate text-sm @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">
                                     <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                                 </p>
-                                <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                                <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                                     <span class="whitespace-nowrap @(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
                                     @if (item.IsInProgress)
                                     {
@@ -268,7 +268,7 @@
                    rather than silently overriding the filters: they were picked on purpose. *@
                 @if (HiddenMatchCount > 0)
                 {
-                    <p class="text-[11px] text-content-subtle mt-2">
+                    <p class="text-xs text-content-subtle mt-2">
                         @HiddenMatchCount matching to-do@(HiddenMatchCount == 1 ? " is" : "s are") hidden by the project/assignee filters.
                     </p>
                 }
@@ -299,7 +299,7 @@
            lands rather than gated behind a spinner. SearchSelect's own blank row IS the
            company-wide/"pick one" entry — nothing is prepended to the options. *@
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project</label>
+            <label class="block eyebrow mb-1">Project</label>
             <SearchSelect Options="@ProjectOptions" Value="@newProject" ValueChanged="v => newProject = v"
                           Placeholder="@ProjectPickerPlaceholder" WidthClass="w-full"
                           Disabled="@(!filtersReady || projectsFailed)" />
@@ -317,14 +317,14 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Assigned to</label>
+                <label class="block eyebrow mb-1">Assigned to</label>
                 <TodoAssigneeSelect Options="@assigneeOptions" Value="@newAssignee" ValueChanged="v => newAssignee = v" />
             </div>
             <FormField Label="Due" Value="@newDue" OnChange="v => newDue = v" InputType="date" />
         </div>
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+            <label class="block eyebrow mb-1">Notes</label>
             <textarea class="field" rows="2" value="@newNotes" @oninput="OnNewNotesInput"></textarea>
         </div>
     </div>

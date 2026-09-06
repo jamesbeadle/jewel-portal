@@ -9,14 +9,14 @@
         <thead class="bg-surface-raised border-b border-line">
             @* The three bands, each with where its figures come from — the
                accountant reads the provenance before the numbers. *@
-            <tr class="text-left text-[10px] uppercase tracking-widest text-content-subtle font-semibold border-b border-line">
+            <tr class="text-left text-xs font-medium text-content-subtle border-b border-line">
                 <th class="px-4 pt-3 pb-2"></th>
                 <th class="px-4 pt-3 pb-2 border-l border-line">The deal <span class="normal-case tracking-normal font-normal text-content-faint ml-1">initial contract</span></th>
                 <th class="px-4 pt-3 pb-2 border-l border-line" colspan="3">Current position <span class="normal-case tracking-normal font-normal text-content-faint ml-1">valuations + allocated Xero cost · certified basis</span></th>
                 <th class="px-4 pt-3 pb-2 border-l border-line" colspan="3">To finish <span class="normal-case tracking-normal font-normal text-content-faint ml-1">today → completion</span></th>
                 <th class="px-4 pt-3 pb-2 border-l border-line" colspan="3">Forecast at completion <span class="normal-case tracking-normal font-normal text-content-faint ml-1">contract + variations · Financials tab</span></th>
             </tr>
-            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+            <tr class="text-left eyebrow">
                 <th class="px-4 py-3 min-w-[240px]"><SortableColumnHeader Column="project" Label="Project" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
                 <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Initial contract sum less its target cost — the sum with the assumed markup backed out, the same rule as the Financials tab. The percentage is the margin on the initial sum."><SortableColumnHeader Column="budgeted" Label="Budgeted profit" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>
                 <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Issued and paid valuation invoices to date. The memo shows the retention the client still holds — earned once certified, released on the cash pages."><SortableColumnHeader Column="certified" Label="Certified" ActiveColumn="@SortColumn" Descending="SortDescending" OnSort="OnSort" /></th>

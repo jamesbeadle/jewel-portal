@@ -4,12 +4,12 @@
     <h2 class="text-sm font-medium text-content-muted mb-3">Raise a defect</h2>
     <form @onsubmit="HandleRaise" @onsubmit:preventDefault="true" class="space-y-3">
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Location</label>
+            <label class="block eyebrow mb-1">Location</label>
             <input type="text" @bind="location" required placeholder="Room, area or feature"
                    class="field" />
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+            <label class="block eyebrow mb-1">Description</label>
             <textarea @bind="description" required rows="3"
                       class="field"></textarea>
         </div>

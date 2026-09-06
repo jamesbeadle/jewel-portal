@@ -66,17 +66,17 @@
 
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-6">
             <div class="rounded-xl border border-line bg-surface px-5 py-4">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Total payables</p>
+                <p class="eyebrow mb-1">Total payables</p>
                 <p class="text-2xl font-semibold text-content">@Money(GrandTotal)</p>
                 <p class="text-xs text-content-subtle mt-1">@Bills.Count @(Bills.Count == 1 ? "bill" : "bills") outstanding · fetched @FetchedText</p>
             </div>
             <div class="rounded-xl border border-line bg-surface px-5 py-4">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Of which draft</p>
+                <p class="eyebrow mb-1">Of which draft</p>
                 <p class="text-2xl font-semibold text-content">@Money(DraftTotal)</p>
                 <p class="text-xs text-content-subtle mt-1">@DraftCount awaiting coding — not in Xero's own report</p>
             </div>
             <div class="rounded-xl border border-line bg-surface px-5 py-4">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Overdue</p>
+                <p class="eyebrow mb-1">Overdue</p>
                 <p class="text-2xl font-semibold @(OverdueTotal > 0 ? "text-negative" : "text-content")">@Money(OverdueTotal)</p>
                 <p class="text-xs text-content-subtle mt-1">everything past the Current column</p>
             </div>
@@ -103,7 +103,7 @@
             <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[70vh]">
                 <table class="w-full text-sm">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Supplier</th>
                             @foreach (var label in AgedPayablesMaths.BucketLabels)
                             {
@@ -125,7 +125,7 @@
                                         @row.Supplier
                                         @if (row.DraftTotal != 0)
                                         {
-                                            <span class="text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5 text-content-subtle"
+                                            <span class="text-xs font-medium border border-line rounded px-1.5 py-0.5 text-content-subtle"
                                                   title="Includes draft bills awaiting coding — not in Xero's own aged payables">Incl. draft</span>
                                         }
                                     </span>
@@ -148,11 +148,11 @@
                                             @(bill.Number ?? bill.Reference ?? "—")
                                             @if (bill.IsCreditNote)
                                             {
-                                                <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5">Credit</span>
+                                                <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5">Credit</span>
                                             }
                                             @if (bill.IsDraft)
                                             {
-                                                <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                                <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5"
                                                       title="Draft in Xero — awaiting coding through the portal; not in Xero's own aged payables">Draft</span>
                                             }
                                             <span class="block text-xs text-content-subtle">

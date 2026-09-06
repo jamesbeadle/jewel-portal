@@ -9,7 +9,7 @@
         <div class="flex flex-col gap-1.5">
             <div class="flex items-center gap-2 whitespace-nowrap">
                 <a href="@($"/projects/{Project.ProjectId}/financials")" class="hover:underline underline-offset-4">
-                    <span class="font-mono text-[11px] text-content-subtle mr-2">@Project.Reference</span>
+                    <span class="font-mono text-xs text-content-subtle mr-2">@Project.Reference</span>
                     <span class="text-content font-medium">@Project.Name</span>
                 </a>
                 <ProjectStageBadge Stage="Project.Stage" />
@@ -20,7 +20,7 @@
                     <div class="h-1 w-32 rounded-full bg-line overflow-hidden">
                         <div class="h-full rounded-full bg-content-faint" style="width:@(Pc(Math.Clamp((double)complete * 100d, 0d, 100d)))%"></div>
                     </div>
-                    <span class="text-[10px] text-content-subtle">@($"{complete * 100m:0}%") complete</span>
+                    <span class="text-xs text-content-subtle">@($"{complete * 100m:0}%") complete</span>
                 </div>
             }
             @if (Row.CertifiedToDate == 0m && Row.ActualCostOfSales > 0m)

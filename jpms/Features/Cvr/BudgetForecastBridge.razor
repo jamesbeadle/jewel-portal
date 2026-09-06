@@ -6,7 +6,7 @@
    Forecast − Budgeted. The page skips it while every figure is zero — a chart of nothing is a
    conditional region, not a gate. *@
 <div class="rounded-xl border border-line bg-surface p-5 mb-6">
-    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+    <p class="eyebrow">
         Budget → forecast bridge
         <span class="normal-case tracking-normal font-normal text-content-faint ml-2">— @Bridge.Note</span>
     </p>
@@ -30,8 +30,8 @@
         @foreach (var bar in Bridge.Bars)
         {
             <div class="text-center">
-                <p class="text-[10px] uppercase tracking-wider text-content-muted font-medium">@bar.Label</p>
-                <p class="text-[10px] text-content-subtle">@bar.Sub</p>
+                <p class="text-xs text-content-muted font-medium">@bar.Label</p>
+                <p class="text-xs text-content-subtle">@bar.Sub</p>
             </div>
         }
     </div>

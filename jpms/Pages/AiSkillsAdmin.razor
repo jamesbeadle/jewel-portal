@@ -138,7 +138,7 @@
                         <span class="block text-xs font-medium text-content-muted mb-1">Skill key</span>
                         <input class="field w-full" @bind="editing.SkillKey" disabled="@(!isNew)"
                                placeholder="nigel-commercial-doctrine" />
-                        <span class="block mt-1 text-[11px] text-content-subtle">
+                        <span class="block mt-1 text-xs text-content-subtle">
                             Lowercase, hyphenated. Fixed once created — saves become new versions.
                         </span>
                     </label>
@@ -151,7 +151,7 @@
                                 <option value="@agent.Key">@agent.DisplayName (@agent.Key)</option>
                             }
                         </select>
-                        <span class="block mt-1 text-[11px] text-content-subtle">
+                        <span class="block mt-1 text-xs text-content-subtle">
                             Which agent works from this skill. Shared is for house-wide knowledge.
                         </span>
                     </label>

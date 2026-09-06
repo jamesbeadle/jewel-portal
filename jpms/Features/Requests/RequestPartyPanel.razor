@@ -80,7 +80,7 @@
         @if (RecipientPreview is not null)
         {
             <div class="rounded-lg bg-surface-raised border border-line px-3 py-2 space-y-1">
-                <p class="text-[10px] uppercase tracking-wide font-semibold text-content-subtle">Draft will be addressed to</p>
+                <p class="eyebrow">Draft will be addressed to</p>
                 @if (RecipientPreview.To.Count == 0)
                 {
                     <p class="text-xs text-negative">No correspondent resolves — link a party or set a project contact's routing to To.</p>
@@ -97,7 +97,7 @@
                 {
                     <p class="text-xs text-content"><span class="font-medium">BCC:</span> @RecipientLine(RecipientPreview.Bcc)</p>
                 }
-                <p class="text-[10px] text-content-subtle">From the project's correspondence profile (Setup tab). BCC never appears on the document or the shared trail.</p>
+                <p class="text-xs text-content-subtle">From the project's correspondence profile (Setup tab). BCC never appears on the document or the shared trail.</p>
             </div>
         }
         </div>

@@ -18,7 +18,7 @@
 
 <div class="space-y-3">
     <div class="space-y-1">
-        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Filed under</label>
+        <label class="eyebrow">Filed under</label>
         <KpiPersonPicker @ref="picker" Value="@person" ValueChanged="OnPersonChanged" />
         @if (matchedFrom is not null && person is { Email: not null } && person.Email == matchedEmail)
         {
@@ -26,7 +26,7 @@
         }
     </div>
     <div class="space-y-1">
-        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Note <span class="font-normal normal-case">(optional)</span></label>
+        <label class="eyebrow">Note <span class="font-normal normal-case">(optional)</span></label>
         <textarea class="field w-full" rows="2" placeholder="Why this is a KPI — e.g. handled the client's complaint same day"
                   @bind="note" @bind:event="oninput"></textarea>
     </div>

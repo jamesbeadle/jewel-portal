@@ -94,7 +94,7 @@
                                     <button type="button" class="inline-flex items-center gap-1.5 rounded-full border border-line text-content-muted px-3 py-1 text-xs font-medium transition hover:border-accent hover:text-accent"
                                             title="@($"Only {person.Name}'s KPI emails")" @onclick="() => personFilter = person.PersonId">
                                         <span>@person.Name</span>
-                                        <span class="min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-[10px] font-semibold inline-flex items-center justify-center leading-none">@person.Count</span>
+                                        <span class="min-w-[1.1rem] h-[1.1rem] px-0.5 rounded-full bg-accent text-accent-ink text-xs font-semibold inline-flex items-center justify-center leading-none">@person.Count</span>
                                     </button>
                                 }
                             </div>
@@ -102,7 +102,7 @@
                         <div class="rounded-xl border border-line bg-surface overflow-x-auto">
                             <table class="w-full text-sm">
                                 <thead class="bg-surface-raised border-b border-line">
-                                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                    <tr class="text-left eyebrow">
                                         <th class="px-4 py-3">Ref</th>
                                         <th class="px-4 py-3">Person</th>
                                         <th class="px-4 py-3">Email</th>
@@ -121,7 +121,7 @@
                                                 <span class="text-content font-medium">@kpi.PersonName</span>
                                                 @if (kpi.PersonEmail is null)
                                                 {
-                                                    <span class="ml-1 text-[10px] uppercase tracking-wider text-content-subtle" title="Added by name — no portal login">no login</span>
+                                                    <span class="ml-1 text-xs text-content-subtle" title="Added by name — no portal login">no login</span>
                                                 }
                                             </td>
                                             <td class="px-4 py-2.5 min-w-0">
@@ -193,11 +193,11 @@
                     }
                     <p class="text-sm text-content truncate" title="@editing.Subject">@editing.Subject</p>
                     <div class="space-y-1">
-                        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Filed under</label>
+                        <label class="eyebrow">Filed under</label>
                         <KpiPersonPicker Value="@editPerson" ValueChanged="v => editPerson = v" />
                     </div>
                     <div class="space-y-1">
-                        <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Note <span class="font-normal normal-case">(optional)</span></label>
+                        <label class="eyebrow">Note <span class="font-normal normal-case">(optional)</span></label>
                         <textarea class="field w-full" rows="3" @bind="editNote" @bind:event="oninput"></textarea>
                     </div>
                 </div>
@@ -221,7 +221,7 @@
                     users are already offered by name and need no adding.
                 </p>
                 <div class="space-y-1">
-                    <label class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Name</label>
+                    <label class="eyebrow">Name</label>
                     <input class="field w-full" placeholder="e.g. James Clark" @bind="newPersonName" @bind:event="oninput"
                            @onkeydown="@(e => { if (e.Key == "Enter") _ = AddPersonAsync(); })" />
                 </div>

@@ -57,11 +57,11 @@
         @foreach (var group in LineItems.GroupBy(item => item.Trade).OrderBy(g => g.Key))
         {
             <div class="mb-4">
-                <p class="text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">@(string.IsNullOrWhiteSpace(group.Key) ? "Unspecified" : group.Key)</p>
+                <p class="eyebrow mb-1">@(string.IsNullOrWhiteSpace(group.Key) ? "Unspecified" : group.Key)</p>
                 <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                     <table class="w-full text-sm">
                         <thead class="bg-surface-raised border-b border-line">
-                            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                            <tr class="text-left eyebrow">
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Description</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 hidden sm:table-cell">Unit</th>
                                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Qty</th>
@@ -97,7 +97,7 @@
                                         }
                                         else
                                         {
-                                            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium @(item.Coverage == BidPackageLineCoverage.Variation ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted")">@CoverageLabel(item)</span>
+                                            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium @(item.Coverage == BidPackageLineCoverage.Variation ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-surface-raised text-content-muted")">@CoverageLabel(item)</span>
                                         }
                                     </td>
                                     @if (CanEdit)

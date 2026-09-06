@@ -57,7 +57,7 @@
                 <div class="grid grid-cols-7 border-b border-line">
                     @foreach (var dayName in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
                     {
-                        <div class="px-2 py-2 text-xs uppercase tracking-wider text-content-subtle font-semibold text-center">@dayName</div>
+                        <div class="px-2 py-2 eyebrow text-center">@dayName</div>
                     }
                 </div>
                 @foreach (var week in CalendarMaths.Weeks(year, month))
@@ -129,7 +129,7 @@
                         @foreach (var group in upcoming.GroupBy(e => AgendaDay(e)))
                         {
                             <div class="border-b border-line last:border-0 px-4 py-3">
-                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1.5">
+                                <p class="eyebrow mb-1.5">
                                     @group.Key.ToDateTime(TimeOnly.MinValue).ToString("ddd dd MMM")@(group.Key == Today ? " · Today" : "")
                                 </p>
                                 <div class="space-y-1">
@@ -175,7 +175,7 @@
             <FormField Label="Title" Value="@fTitle" OnChange="v => fTitle = v" Required="true" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Kind</label>
+                    <label class="block eyebrow mb-1">Kind</label>
                     <select class="field" value="@((int)fKind)" @onchange="OnKindChanged">
                         @foreach (var kind in CalendarEventKinds.All)
                         {
@@ -190,7 +190,7 @@
                 <FormField Label="End date (multi-day)" Value="@fEndDate" OnChange="v => fEndDate = v" InputType="date" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                <label class="block eyebrow mb-1">Notes</label>
                 <textarea class="field" rows="3" maxlength="4096" placeholder="Detail and who's attending"
                           value="@fNotes" @oninput="e => fNotes = e.Value?.ToString() ?? string.Empty"></textarea>
             </div>
@@ -203,7 +203,7 @@
             @if (editingId is not null)
             {
                 <div class="pt-2 border-t border-line">
-                    <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Linked mail</p>
+                    <p class="eyebrow mb-2">Linked mail</p>
                     @if (linkedEmails is null)
                     {
                         <p class="text-sm text-content-subtle italic">Loading emails…</p>

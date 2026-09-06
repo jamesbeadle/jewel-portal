@@ -9,11 +9,11 @@
     <div class="min-w-[720px]">
         @* Month header *@
         <div class="grid grid-cols-[240px_1fr] border-b border-line-strong pb-1 mb-1">
-            <div class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Task</div>
+            <div class="eyebrow">Task</div>
             <div class="relative h-5">
                 @foreach (var month in MonthMarks)
                 {
-                    <span class="absolute top-0 text-[10px] text-content-subtle border-l border-line pl-1" style="@month.Style">@month.Label</span>
+                    <span class="absolute top-0 text-xs text-content-subtle border-l border-line pl-1" style="@month.Style">@month.Label</span>
                 }
             </div>
         </div>
@@ -27,7 +27,7 @@
                         <button type="button" class="text-sm text-content text-left truncate hover:text-accent" title="Edit task" @onclick="() => BeginEdit(task)">@task.Title</button>
                         @if (slip > 0)
                         {
-                            <span class="inline-flex items-center rounded bg-negative/15 px-1.5 py-0.5 text-[10px] text-negative shrink-0">+@slip d</span>
+                            <span class="inline-flex items-center rounded bg-negative/15 px-1.5 py-0.5 text-xs text-negative shrink-0">+@slip d</span>
                         }
                     </div>
                     @if (PredecessorsOf(task.ProgrammeTaskId).Any())
@@ -67,19 +67,19 @@
                 <div class="bg-surface-raised border border-line rounded-lg p-4 my-2 space-y-3">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+                            <label class="block eyebrow mb-1">Title</label>
                             <input class="field" @bind="editTitle" />
                         </div>
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Planned start</label>
+                            <label class="block eyebrow mb-1">Planned start</label>
                             <input type="date" class="field" @bind="editStart" />
                         </div>
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Planned end</label>
+                            <label class="block eyebrow mb-1">Planned end</label>
                             <input type="date" class="field" @bind="editEnd" />
                         </div>
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Progress (%)</label>
+                            <label class="block eyebrow mb-1">Progress (%)</label>
                             <input type="number" min="0" max="100" class="field" @bind="editProgress" />
                         </div>
                     </div>

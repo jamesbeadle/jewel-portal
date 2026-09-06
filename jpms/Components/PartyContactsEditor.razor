@@ -86,7 +86,7 @@
                 <FormField Label="Email" Value="@newEmail" OnChange="v => newEmail = v" InputType="email" Required="true" />
                 <FormField Label="Job title" Value="@newJobTitle" OnChange="v => newJobTitle = v" />
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Routing</label>
+                    <label class="block eyebrow mb-1">Routing</label>
                     <select class="field" @bind="newRouting">
                         <option value="@((int)CorrespondenceRouting.Cc)">CC — copied on every issue</option>
                         <option value="@((int)CorrespondenceRouting.Bcc)">BCC — blind-copied</option>

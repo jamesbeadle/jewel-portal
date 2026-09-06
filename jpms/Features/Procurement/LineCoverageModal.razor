@@ -11,7 +11,7 @@
         <p class="text-sm text-content mb-1 font-medium">@Line.Description</p>
         <p class="text-xs text-content-subtle mb-4">A line is covered by a cost centre (the contract-side home its committed value charges to) or a variation order — never both.</p>
 
-        <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Covered by</label>
+        <label class="block eyebrow mb-1">Covered by</label>
         <select class="field" @bind="coverage">
             <option value="@BidPackageLineCoverage.Unassigned">Not linked</option>
             <option value="@BidPackageLineCoverage.ContractLine">Cost centre</option>
@@ -20,7 +20,7 @@
 
         @if (coverage == BidPackageLineCoverage.ContractLine)
         {
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Cost centre</label>
+            <label class="block eyebrow mt-3 mb-1">Cost centre</label>
             <select class="field" @bind="costCode">
                 <option value="">Select a cost centre…</option>
                 @foreach (var centre in CostCentres)
@@ -31,7 +31,7 @@
         }
         else if (coverage == BidPackageLineCoverage.Variation)
         {
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mt-3 mb-1">Variation order</label>
+            <label class="block eyebrow mt-3 mb-1">Variation order</label>
             @if (Variations.Count == 0)
             {
                 <p class="text-sm text-content-subtle italic">No variation orders on this project yet.</p>

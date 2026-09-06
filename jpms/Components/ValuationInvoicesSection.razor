@@ -31,16 +31,16 @@
             @if (AwaitingApproval > 0)
             {
                 <span class="text-sm">
-                    <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Awaiting approval</span>
+                    <span class="eyebrow mr-1.5">Awaiting approval</span>
                     <span class="text-content-muted">@Money(AwaitingApproval)</span>
                 </span>
             }
             <span class="text-sm">
-                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Paid</span>
+                <span class="eyebrow mr-1.5">Paid</span>
                 <span class="text-content-muted">@Money(TotalPaid)</span>
             </span>
             <span class="text-sm">
-                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Invoiced</span>
+                <span class="eyebrow mr-1.5">Invoiced</span>
                 <span class="text-content font-medium">@Money(InvoicedToDate)</span>
             </span>
         </span>
@@ -70,7 +70,7 @@
             <div class="border-t border-line @(openMenuId is null ? "overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-[100px]">Ref</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Period</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
@@ -87,7 +87,7 @@
                         @foreach (var invoice in invoices)
                         {
                             <tr class="@(invoice.Status == ValuationInvoiceStatus.Cancelled ? "opacity-50" : "")">
-                                <td class="px-3 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+                                <td class="px-3 py-2 font-mono text-xs text-content-subtle whitespace-nowrap">
                                     @invoice.DisplayNumber
                                     @if (invoice.IsManual)
                                     {
@@ -194,7 +194,7 @@
         {
             <div class="border-t border-line px-4 py-3 flex flex-wrap items-end gap-3">
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period month</label>
+                    <label class="block eyebrow mb-1">Period month</label>
                     @* Explicit value/@onchange rather than @bind: Razor special-cases @bind on
                        type="month" to expect a DateTime, but the month travels as a "yyyy-MM"
                        string (see ParseMonth). *@
@@ -202,7 +202,7 @@
                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amount £</label>
+                    <label class="block eyebrow mb-1">Amount £</label>
                     <input type="number" step="any" min="0" @bind="newAmount"
                            class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-40 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                 </div>
@@ -214,12 +214,12 @@
                 @if (newIsHistoric)
                 {
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Paid £ (blank = full, 0 = unpaid)</label>
+                        <label class="block eyebrow mb-1">Paid £ (blank = full, 0 = unpaid)</label>
                         <input type="number" step="any" min="0" @bind="newPaidAmount" placeholder="Full amount"
                                class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-36 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                     </div>
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Note (optional)</label>
+                        <label class="block eyebrow mb-1">Note (optional)</label>
                         <input type="text" @bind="newNote" placeholder="e.g. old system ref"
                                class="rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content w-48 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                     </div>
@@ -286,7 +286,7 @@
                 </p>
             }
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period month</label>
+                <label class="block eyebrow mb-1">Period month</label>
                 <input type="month" value="@editMonth" @onchange="e => editMonth = e.Value?.ToString() ?? editMonth"
                        class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
             </div>

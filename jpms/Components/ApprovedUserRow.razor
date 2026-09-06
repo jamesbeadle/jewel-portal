@@ -26,7 +26,7 @@
         <div class="flex items-center gap-3 shrink-0">
             @if (IsCurrentUser)
             {
-                <span class="text-[11px] text-content-faint" title="You can't change your own roles or access here.">You</span>
+                <span class="text-xs text-content-faint" title="You can't change your own roles or access here.">You</span>
             }
             else
             {
@@ -46,7 +46,7 @@
     <div class="mt-2 flex flex-wrap items-center gap-1.5">
         @foreach (var role in EditableRoles)
         {
-            <span class="inline-flex items-center gap-1 rounded-full border border-line-strong bg-surface-field pl-2 pr-1 py-0.5 text-[11px] text-content-muted">
+            <span class="inline-flex items-center gap-1 rounded-full border border-line-strong bg-surface-field pl-2 pr-1 py-0.5 text-xs text-content-muted">
                 <span class="w-1.5 h-1.5 rounded-full @role.AccentDotClass()"></span>
                 @role.DisplayName()
                 @if (CanEdit)
@@ -64,14 +64,14 @@
 
         @if (EditableRoles.Count == 0)
         {
-            <span class="text-[11px] text-content-faint italic">No roles — they can sign in but will see nothing.</span>
+            <span class="text-xs text-content-faint italic">No roles — they can sign in but will see nothing.</span>
         }
 
         @if (CanEdit && AddableRoles.Count > 0)
         {
             <select value="" @onchange="AddRole" disabled="@busy"
                     aria-label="@($"Add a role to {User.DisplayName}")"
-                    class="rounded-full border border-dashed border-line-strong bg-transparent px-2 py-0.5 text-[11px] text-content-subtle hover:text-content hover:border-content-subtle focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50">
+                    class="rounded-full border border-dashed border-line-strong bg-transparent px-2 py-0.5 text-xs text-content-subtle hover:text-content hover:border-content-subtle focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50">
                 <option value="">+ Add role</option>
                 @foreach (var role in AddableRoles)
                 {
@@ -82,7 +82,7 @@
 
         @if (busy)
         {
-            <span class="inline-flex items-center gap-1.5 text-[11px] text-content-subtle">
+            <span class="inline-flex items-center gap-1.5 text-xs text-content-subtle">
                 <JewelIcon Class="w-3 h-3 animate-jewel-pulse" />
                 Saving
             </span>
@@ -95,7 +95,7 @@
            role edits it IS allowed on your own row — the worst a misclick can do is put you back
            in your own role, which is no lock-out. Their "own role" is the first assigned role
            that isn't Administrator (HomeRoleSelection — the same rule the API applies). *@
-        <label class="mt-2 inline-flex items-start gap-2 text-[11px] text-content-subtle cursor-pointer select-none"
+        <label class="mt-2 inline-flex items-start gap-2 text-xs text-content-subtle cursor-pointer select-none"
                title="@($"When ticked, switching Viewing as to another role lasts 2 hours; after that {User.DisplayName} is asked and defaults back to {ownRole}. When unticked, a switch sticks until changed by hand.")">
             <input type="checkbox" class="cursor-pointer mt-0.5" checked="@revertToOwnRole"
                    @onchange="ToggleRevert" disabled="@busy" />
@@ -118,7 +118,7 @@
             </p>
             <div class="flex items-stretch gap-2">
                 <input readonly value="@resetLink"
-                       class="flex-1 min-w-0 rounded-lg border border-line-strong bg-surface px-2 py-1.5 text-[11px] text-content-muted" />
+                       class="flex-1 min-w-0 rounded-lg border border-line-strong bg-surface px-2 py-1.5 text-xs text-content-muted" />
                 <button type="button" @onclick="CopyResetLink"
                         class="rounded-lg bg-accent text-accent-ink font-medium text-xs px-3 py-1.5 hover:bg-accent-hover transition">
                     @(copied ? "Copied" : "Copy")

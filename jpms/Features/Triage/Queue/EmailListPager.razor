@@ -13,7 +13,7 @@
         {
             <span></span>
         }
-        <span class="text-[11px] text-content-subtle">Page @(PageIndex + 1) / @PageCount · @Total email@(Total == 1 ? "" : "s")</span>
+        <span class="text-xs text-content-subtle">Page @(PageIndex + 1) / @PageCount · @Total email@(Total == 1 ? "" : "s")</span>
         @if (HasNext)
         {
             <button type="button" class="btn-secondary text-xs px-2.5 py-1.5" @onclick="() => OnNext.InvokeAsync()">Next</button>

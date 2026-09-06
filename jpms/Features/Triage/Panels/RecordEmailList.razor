@@ -19,7 +19,7 @@
 else if (emails.Count > 0)
 {
     <div class="panel p-4">
-        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">
+        <p class="eyebrow mb-2">
             Correspondence · @emails.Count
         </p>
         <CorrespondenceThreadList Emails="emails" ExcludeTag="@ExcludeTag" OnPreview="OnPreview" OnReply="OnReply" OnForward="OnForward" />

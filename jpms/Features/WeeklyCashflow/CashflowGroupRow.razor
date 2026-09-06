@@ -11,7 +11,7 @@
     <td class="pl-9 pr-4 py-1.5">
         <button type="button" class="flex items-center gap-1.5 text-left w-full" @onclick="() => OnToggle.InvokeAsync(Slice.Group.SupplierGroupId)"
                 title="@ToggleTitle">
-            <span class="text-content-subtle text-[10px]">@(Open ? "▾" : "▸")</span>
+            <span class="text-content-subtle text-xs">@(Open ? "▾" : "▸")</span>
             <span class="text-content font-medium">@Slice.Group.Name</span>
         </button>
     </td>

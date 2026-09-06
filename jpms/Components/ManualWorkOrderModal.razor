@@ -29,7 +29,7 @@
         @* ── Attachments: record keeping only — never sent to the supplier ───── *@
         <div class="rounded-lg border border-line bg-surface p-3">
             <div class="flex items-center justify-between gap-3 mb-1">
-                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                <p class="eyebrow"
                    title="Kept on the order for the office's records — the quote it rests on, a signed copy, photos. Never emailed to the supplier and never printed on the purchase order">
                     Attachments — record keeping
                 </p>
@@ -92,13 +92,13 @@
             @if (createPackage)
             {
                 <div class="mb-2">
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Package name</label>
+                    <label class="block eyebrow mb-1">Package name</label>
                     <input type="text" maxlength="128" placeholder="e.g. BVMH groundworks &amp; civils"
                            class="w-full md:w-1/2 rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:border-accent"
                            disabled="@busy" @bind="packageName" @bind:event="oninput" />
                 </div>
                 <div class="flex items-center justify-between gap-2 mb-2">
-                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold"
+                    <p class="eyebrow"
                        title="Tick a line to take its full remaining value; edit the amount for a partial share when a client line covers more than one sub">
                         Sales side — valuation lines
                     </p>
@@ -117,7 +117,7 @@
                                    title="@(exhausted ? "Fully assigned to other packages" : "")"
                                    checked="@picked"
                                    @onchange="() => ToggleSalesLine(entry)" />
-                            <span class="font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@RefTitle(salesLine)">@Ref(salesLine)</span>
+                            <span class="font-mono text-xs text-content-subtle whitespace-nowrap" title="@RefTitle(salesLine)">@Ref(salesLine)</span>
                             <span class="text-content-muted truncate" title="@DescriptionFor(salesLine)">@DescriptionFor(salesLine)</span>
                             <span class="ml-auto flex items-center gap-1.5 whitespace-nowrap">
                                 @if (picked)

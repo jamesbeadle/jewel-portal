@@ -37,7 +37,7 @@
                             @foreach (var line in SalesLines)
                             {
                                 <tr>
-                                    <td class="px-4 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap w-[90px]">@SalesRef(line)</td>
+                                    <td class="px-4 py-2 font-mono text-xs text-content-subtle whitespace-nowrap w-[90px]">@SalesRef(line)</td>
                                     <td class="px-4 py-2 text-content">@DescriptionFor(line)</td>
                                     <td class="px-4 py-2 text-right whitespace-nowrap">@Money(line.LineAmount)</td>
                                 </tr>
@@ -74,7 +74,7 @@
                             @foreach (var order in WorkOrderShares)
                             {
                                 <tr>
-                                    <td class="px-4 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap w-[90px]">@order.Detail.Order.Reference</td>
+                                    <td class="px-4 py-2 font-mono text-xs text-content-subtle whitespace-nowrap w-[90px]">@order.Detail.Order.Reference</td>
                                     <td class="px-4 py-2 whitespace-nowrap">@order.Detail.SubcontractorName</td>
                                     <td class="px-4 py-2 text-content">@order.Detail.Order.Title</td>
                                     <td class="px-4 py-2 whitespace-nowrap">
@@ -107,9 +107,9 @@
                             @foreach (var entry in XeroEntries)
                             {
                                 <tr>
-                                    <td class="px-4 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap w-[100px]">@(entry.Line.Date?.ToString("dd MMM yyyy") ?? "")</td>
+                                    <td class="px-4 py-2 font-mono text-xs text-content-subtle whitespace-nowrap w-[100px]">@(entry.Line.Date?.ToString("dd MMM yyyy") ?? "")</td>
                                     <td class="px-4 py-2 whitespace-nowrap">@entry.Line.Supplier</td>
-                                    <td class="px-4 py-2 font-mono text-[11px] text-content-subtle whitespace-nowrap">@entry.Line.InvoiceNumber</td>
+                                    <td class="px-4 py-2 font-mono text-xs text-content-subtle whitespace-nowrap">@entry.Line.InvoiceNumber</td>
                                     <td class="px-4 py-2 text-content-muted">@entry.Line.Description</td>
                                     <td class="px-4 py-2 text-right whitespace-nowrap">@Money(entry.Share)</td>
                                 </tr>

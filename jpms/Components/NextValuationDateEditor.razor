@@ -33,7 +33,7 @@
         }
 
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Base date</label>
+            <label class="block eyebrow mb-1">Base date</label>
             <input type="date" class="field" @bind="baseDate" />
             <p class="text-xs text-content-subtle mt-1">
                 @(calculate
@@ -54,11 +54,11 @@
         {
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Add</label>
+                    <label class="block eyebrow mb-1">Add</label>
                     <input type="number" class="field" @bind="amount" />
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Unit</label>
+                    <label class="block eyebrow mb-1">Unit</label>
                     <select class="field" @bind="unit">
                         <option value="@Unit.Days">Days</option>
                         <option value="@Unit.Weeks">Weeks</option>
@@ -76,7 +76,7 @@
                 {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Occurrence</label>
+                            <label class="block eyebrow mb-1">Occurrence</label>
                             <select class="field" @bind="occurrence">
                                 <option value="1">First</option>
                                 <option value="2">Second</option>
@@ -86,7 +86,7 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Weekday</label>
+                            <label class="block eyebrow mb-1">Weekday</label>
                             <select class="field" @bind="weekday">
                                 <option value="@DayOfWeek.Monday">Monday</option>
                                 <option value="@DayOfWeek.Tuesday">Tuesday</option>
@@ -104,7 +104,7 @@
         }
 
         <div class="rounded-lg border border-line bg-surface-raised px-3 py-2">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-0.5">Next valuation date</p>
+            <p class="eyebrow mb-0.5">Next valuation date</p>
             <p class="text-sm font-medium text-content">
                 @(Result?.ToString("dddd d MMMM yyyy") ?? "Pick a base date")
             </p>

@@ -47,7 +47,7 @@
                 @if (queueGroup != lastQueueGroup)
                 {
                     lastQueueGroup = queueGroup;
-                    <p class="text-xs font-semibold text-content-muted uppercase tracking-wider pt-2 pb-0.5 px-1">@queueGroup</p>
+                    <p class="text-sm font-medium text-content-subtle pt-2 pb-0.5 px-1">@queueGroup</p>
                 }
                 <TriageEmailRow Item="item"
                                 IsSelected="@(SelectedId == item.Id)"

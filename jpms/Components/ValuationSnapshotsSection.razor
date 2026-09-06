@@ -21,7 +21,7 @@
             @if (Latest is { } latest)
             {
                 <span class="text-sm whitespace-nowrap">
-                    <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Latest</span>
+                    <span class="eyebrow mr-1.5">Latest</span>
                     <span class="text-content-muted">@latest.TakenAt.ToString("dd MMM yyyy")</span>
                 </span>
             }
@@ -48,7 +48,7 @@
             <div class="border-t border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Taken</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 min-w-[200px]">Label</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Works complete £</th>
@@ -112,7 +112,7 @@
         {
             <div class="border-t border-line px-4 py-3 flex flex-wrap items-end gap-3">
                 <div class="grow max-w-sm">
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Label</label>
+                    <label class="block eyebrow mb-1">Label</label>
                     <input type="text" @bind="newLabel"
                            class="w-full rounded-lg border border-line-strong bg-surface-field px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
                 </div>

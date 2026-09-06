@@ -56,7 +56,7 @@
             @if (openPanel is Panel.Drawings or Panel.Photos or Panel.Records)
             {
                 <div>
-                    <label class="block text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-1">Project</label>
+                    <label class="block eyebrow mb-1">Project</label>
                     <select class="field" value="@panelProjectId" @onchange="OnPanelProjectChanged">
                         <option value="">Select a project…</option>
                         @foreach (var project in Projects)
@@ -147,7 +147,7 @@
                             <span class="text-content-subtle">@attachNote</span>
                         }
                     </div>
-                    <p class="text-[11px] text-content-faint">
+                    <p class="text-xs text-content-faint">
                         Tick documents (or a whole folder) and press Attach — each document's approved file is used, or its latest upload when nothing is approved.
                         Expand a drawing to tick a specific revision instead.
                     </p>
@@ -173,7 +173,7 @@
                         @foreach (var update in Progress.UpdatesFor(panelProjectId))
                         {
                             <div @key="update.ProgressUpdateId">
-                                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                                <p class="eyebrow">
                                     @update.Title@(update.WorkDate is { } wd ? $" — {wd:d MMM yyyy}" : "")
                                 </p>
                                 <div class="flex flex-wrap gap-1.5 pt-1">
@@ -244,7 +244,7 @@
                             }
                         </div>
                     }
-                    <p class="text-[11px] text-content-faint">
+                    <p class="text-xs text-content-faint">
                         Attaches the record's official PDF, rendered as the record stands when the email is sent.
                         Requests (RFI, NOD, EOT…), variation orders and tender enquiries (the PQQ response) carry official documents today.
                     </p>
@@ -258,7 +258,7 @@
                         <div>
                             @if (HasThread)
                             {
-                                <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">This email</p>
+                                <p class="eyebrow">This email</p>
                             }
                             <div class="space-y-1 pt-1">
                                 @foreach (var attachment in OriginalAttachments)
@@ -289,7 +289,7 @@
                             @foreach (var group in OtherThreadGroups)
                             {
                                 <div @key="group.MessageId">
-                                    <p class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold truncate" title="@group.Subject">
+                                    <p class="eyebrow truncate" title="@group.Subject">
                                         @ThreadGroupLabel(group)
                                     </p>
                                     <div class="space-y-1 pt-1">
@@ -305,7 +305,7 @@
                 </div>
                 @if (HasThread)
                 {
-                    <p class="text-[11px] text-content-faint">
+                    <p class="text-xs text-content-faint">
                         Files from earlier emails in this thread are attached straight from the mailbox — they don't have to have been through document triage first.
                     </p>
                 }
@@ -364,14 +364,14 @@
         {
             @if (Drawings.RevisionsFailedFor(drawing.DrawingId))
             {
-                <button type="button" class="text-[11px] text-negative hover:underline pb-1 text-left"
+                <button type="button" class="text-xs text-negative hover:underline pb-1 text-left"
                         style="@IndentStyle(depth + 1)" @onclick="() => Drawings.RetryRevisions(drawing.DrawingId)">
                     The revisions couldn't be loaded — press to try again.
                 </button>
             }
             else if (!Drawings.RevisionsLoadedFor(drawing.DrawingId))
             {
-                <p class="text-[11px] text-content-subtle pb-1" style="@IndentStyle(depth + 1)">Loading revisions…</p>
+                <p class="text-xs text-content-subtle pb-1" style="@IndentStyle(depth + 1)">Loading revisions…</p>
             }
             else
             {
@@ -379,7 +379,7 @@
                     @foreach (var revision in Drawings.RevisionsFor(drawing.DrawingId))
                     {
                         <label @key="revision.DrawingRevisionId"
-                               class="flex items-center gap-2 text-[11px] text-content-muted cursor-pointer hover:text-content">
+                               class="flex items-center gap-2 text-xs text-content-muted cursor-pointer hover:text-content">
                             <input type="checkbox" checked="@selectedRevisionsById.ContainsKey(revision.DrawingRevisionId)"
                                    @onchange="() => ToggleRevisionSelection(revision)" />
                             <span class="font-medium">@DrawingNaming.RevisionText(revision.RevisionLabel)</span>

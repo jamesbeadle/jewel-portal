@@ -64,13 +64,13 @@ else
                         </div>
                         <div class="flex items-baseline justify-between gap-2 mt-0.5">
                             <span class="text-xs text-content-subtle truncate">@(row.Number ?? row.Reference ?? row.TransactionId) · @TypeLabel(row.Type)</span>
-                            <span class="text-[11px] text-content-subtle shrink-0">@(row.Date?.ToString("d MMM yyyy") ?? "—") · @row.Status</span>
+                            <span class="text-xs text-content-subtle shrink-0">@(row.Date?.ToString("d MMM yyyy") ?? "—") · @row.Status</span>
                         </div>
                     </button>
                 }
                 @if (FilteredTransactions.Count == ResultCap)
                 {
-                    <p class="text-[11px] text-content-subtle px-1">Showing the first @ResultCap matches — narrow the search for the rest.</p>
+                    <p class="text-xs text-content-subtle px-1">Showing the first @ResultCap matches — narrow the search for the rest.</p>
                 }
             </div>
         }

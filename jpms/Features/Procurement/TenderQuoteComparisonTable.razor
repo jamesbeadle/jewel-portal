@@ -10,7 +10,7 @@
 <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
     <table class="w-full text-sm">
         <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+            <tr class="text-left eyebrow">
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Line item</th>
                 <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 hidden sm:table-cell">Qty</th>
                 @foreach (var quote in Quotes)
@@ -28,7 +28,7 @@
                         @if (sub is { IsProspect: true } && CanAddToDirectory)
                         {
                             <span class="block mt-1">
-                                <button type="button" class="btn-secondary px-2 py-0.5 text-[11px] normal-case tracking-normal font-medium" disabled="@Busy"
+                                <button type="button" class="btn-secondary px-2 py-0.5 text-xs normal-case tracking-normal font-medium" disabled="@Busy"
                                         title="This company isn't in the Directory — it was only added to this tender list. Add it if the tender's worth keeping them for."
                                         @onclick="() => OnAddToDirectory.InvokeAsync(sub!.SubcontractorId)">Add to directory</button>
                             </span>

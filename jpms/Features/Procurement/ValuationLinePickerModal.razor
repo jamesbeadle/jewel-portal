@@ -55,7 +55,7 @@
         <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[60vh]">
             <table class="w-full text-sm">
                 <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                    <tr class="text-left eyebrow">
                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2 w-8"></th>
                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Cost code</th>
                         <th class="sticky top-0 z-20 bg-surface-raised px-3 py-2">Description</th>
@@ -75,7 +75,7 @@
                                        title="Select every line shown in this section"
                                        @onchange="() => ToggleGroup(group)" />
                             </td>
-                            <td colspan="5" class="px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-content-subtle">@group.Key</td>
+                            <td colspan="5" class="px-3 py-1.5 eyebrow">@group.Key</td>
                         </tr>
                         @foreach (var line in group)
                         {

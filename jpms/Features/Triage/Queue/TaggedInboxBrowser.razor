@@ -30,7 +30,7 @@
    composes category filters with OR only, so combining them would show a union, not the
    intersection the combination looks like. *@
 <div class="flex flex-wrap items-center gap-2 mb-3">
-    <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Pathway</span>
+    <span class="eyebrow mr-1">Pathway</span>
     <button type="button" class="@PathwayFilterChipClass(null) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(null)">All</button>
     <button type="button" class="@PathwayFilterChipClass(TriagePathways.ClientBucket) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(TriagePathways.ClientBucket)">Client</button>
     <button type="button" class="@PathwayFilterChipClass(TriagePathways.SubcontractorBucket) disabled:opacity-50" disabled="@SearchActive" title="@PathwayDisabledTitle" @onclick="() => OnSetPathwayFilter.InvokeAsync(TriagePathways.SubcontractorBucket)">Subcontractor</button>
@@ -43,14 +43,14 @@
 @if (Arrived)
 {
     <div class="flex flex-wrap items-center gap-2 mb-5">
-        <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold mr-1">Filter</span>
+        <span class="eyebrow mr-1">Filter</span>
         <div class="relative">
             <button type="button"
                     class="rounded-full border border-line px-3 py-1 text-xs font-medium text-content-muted hover:text-content hover:border-line-strong transition inline-flex items-center gap-1.5 disabled:opacity-50"
                     disabled="@SearchActive" title="@PathwayDisabledTitle"
                     @onclick="() => OnToggleFilterMenu.InvokeAsync()">
                 @FilterButtonLabel
-                <span class="text-[9px] leading-none">▾</span>
+                <span class="text-xs leading-none">▾</span>
             </button>
             @if (FilterOpen)
             {

@@ -52,7 +52,7 @@
                     }
                     <span class="min-w-0 flex-1">
                         <span class="block text-content truncate" title="@attachment.DisplayName">@attachment.DisplayName</span>
-                        <span class="block text-[11px] text-content-subtle">
+                        <span class="block text-xs text-content-subtle">
                             @(attachment.Source == WorkOrderAttachmentSource.Email ? "From the triaged email" : attachment.Source == WorkOrderAttachmentSource.Chat ? "From the assistant chat" : "Uploaded")
                             @(attachment.FileSizeBytes > 0 ? $" · {Size(attachment.FileSizeBytes)}" : "")
                             · @attachment.AddedAt.LocalDateTime.ToString("d MMM yyyy")

@@ -43,7 +43,7 @@
 <div @ref="scrollerRef" class="isolate rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
     <table class="w-full text-sm border-collapse">
         <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+            <tr class="text-left eyebrow">
                 <th class="sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 w-[36px]"></th>
                 <th class="sticky left-[36px] top-0 z-30 bg-surface-raised px-4 py-3 w-[88px]"><SortableColumnHeader Column="code" Label="Code" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
                 <th class="sticky left-[124px] top-0 z-30 bg-surface-raised px-4 py-3 min-w-[200px]"><SortableColumnHeader Column="name" Label="Cost Centre" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
@@ -108,12 +108,12 @@
                     </td>
                     @if (reportLine.IsGroup)
                     {
-                        <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap"
+                        <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-xs text-content-subtle whitespace-nowrap"
                             title="@string.Join(", ", reportLine.CostCodes)">@($"{reportLine.CostCodes.Count} centres")</td>
                         <td class="sticky left-[124px] z-10 bg-surface px-4 py-3 whitespace-nowrap">
                             <span class="text-content font-medium" title="@string.Join(", ", reportLine.CostCodes)">@reportLine.Name</span>
                             <button type="button"
-                                    class="ml-2 text-[11px] text-content-subtle underline underline-offset-2 hover:text-content"
+                                    class="ml-2 text-xs text-content-subtle underline underline-offset-2 hover:text-content"
                                     title="Split this roll-up back into its cost centres"
                                     @onclick="() => OnUngroupRequested.InvokeAsync(reportLine.Key)">
                                 Ungroup
@@ -122,7 +122,7 @@
                     }
                     else
                     {
-                        <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">@reportLine.Code</td>
+                        <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-xs text-content-subtle whitespace-nowrap">@reportLine.Code</td>
                         @if (reportLine.InMaster)
                         {
                             <td class="sticky left-[124px] z-10 bg-surface px-4 py-3 text-content font-medium whitespace-nowrap">@reportLine.Name</td>
@@ -266,7 +266,7 @@
             {
                 <tr class="bg-surface-raised/40">
                     <td class="sticky left-0 z-10 bg-surface px-3 py-3"></td>
-                    <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">PKG</td>
+                    <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-xs text-content-subtle whitespace-nowrap">PKG</td>
                     <td class="sticky left-[124px] z-10 bg-surface px-4 py-3 whitespace-nowrap">
                         <span class="text-content font-medium">@package.Name</span>
                         <Pill Tone="Tone.Muted" Class="ml-2" Title="A reconciliation package: work orders matched against the valuation lines that priced their scope — manage it in the Packages section below">Package</Pill>

@@ -47,15 +47,15 @@
                         <div class="min-w-0">
                             <div class="flex items-center gap-2.5">
                                 <h2 class="text-base font-semibold text-content">@agent.DisplayName</h2>
-                                <span class="rounded-md border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-mono text-content-subtle">@agent.Key</span>
+                                <span class="rounded-md border border-line bg-surface-raised px-1.5 py-0.5 text-xs font-mono text-content-subtle">@agent.Key</span>
                                 @if (isOrchestrator)
                                 {
-                                    <span class="rounded-md bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent">FRONT OF HOUSE</span>
+                                    <span class="rounded-md bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent">FRONT OF HOUSE</span>
                                 }
                             </div>
                             <p class="mt-1.5 text-sm leading-relaxed text-content-muted max-w-3xl">@agent.Description</p>
                         </div>
-                        <div class="shrink-0 text-right text-[11px] text-content-subtle">
+                        <div class="shrink-0 text-right text-xs text-content-subtle">
                             <span class="block">Available to</span>
                             <span class="block text-content-muted">@RoleList(agent)</span>
                         </div>
@@ -65,11 +65,11 @@
                         @if (agent.Triggers.Count > 0)
                         {
                             <div>
-                                <span class="block text-[11px] font-medium text-content-subtle mb-1">Engages on</span>
+                                <span class="block text-xs font-medium text-content-subtle mb-1">Engages on</span>
                                 <div class="flex flex-wrap gap-1">
                                     @foreach (var trigger in agent.Triggers)
                                     {
-                                        <span class="rounded-md border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] text-content-muted">@trigger</span>
+                                        <span class="rounded-md border border-line bg-surface-raised px-1.5 py-0.5 text-xs text-content-muted">@trigger</span>
                                     }
                                 </div>
                             </div>
@@ -77,11 +77,11 @@
                         @if (agent.RoutePrefixes.Count > 0)
                         {
                             <div>
-                                <span class="block text-[11px] font-medium text-content-subtle mb-1">Starts automatically on</span>
+                                <span class="block text-xs font-medium text-content-subtle mb-1">Starts automatically on</span>
                                 <div class="flex flex-wrap gap-1">
                                     @foreach (var prefix in agent.RoutePrefixes)
                                     {
-                                        <span class="rounded-md border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-mono text-content-muted">…@prefix/*</span>
+                                        <span class="rounded-md border border-line bg-surface-raised px-1.5 py-0.5 text-xs font-mono text-content-muted">…@prefix/*</span>
                                     }
                                 </div>
                             </div>
@@ -89,7 +89,7 @@
                     </div>
 
                     <details class="mb-3">
-                        <summary class="cursor-pointer text-[11px] text-content-subtle hover:text-content">
+                        <summary class="cursor-pointer text-xs text-content-subtle hover:text-content">
                             Working instructions & what “done” means <span class="text-content-faint">(configuration — code-owned)</span>
                         </summary>
                         <div class="mt-2 rounded-lg border border-line bg-surface-raised px-3 py-2.5">
@@ -102,10 +102,10 @@
 
                     <div class="border-t border-line pt-3">
                         <div class="flex items-center justify-between gap-3 mb-1.5">
-                            <span class="text-[11px] font-medium text-content-subtle">
+                            <span class="text-xs font-medium text-content-subtle">
                                 Skills — the knowledge this agent works from
                             </span>
-                            <a class="text-[11px] text-content-subtle underline underline-offset-2 hover:text-content"
+                            <a class="text-xs text-content-subtle underline underline-offset-2 hover:text-content"
                                href="/admin/skills?agent=@agent.Key&new=1">Add a skill</a>
                         </div>
 
@@ -133,9 +133,9 @@
                                                     <span class="text-content-faint"> · shared</span>
                                                 }
                                             </span>
-                                            <span class="block truncate text-[11px] text-content-subtle">@skill.Description</span>
+                                            <span class="block truncate text-xs text-content-subtle">@skill.Description</span>
                                         </span>
-                                        <span class="shrink-0 text-[10px] text-content-subtle whitespace-nowrap">
+                                        <span class="shrink-0 text-xs text-content-subtle whitespace-nowrap">
                                             @(skill.Pinned ? "Pinned" : "On demand") · v@(skill.Version)
                                             @if (!skill.IsActive)
                                             {
@@ -155,7 +155,7 @@
             <div class="panel p-5 opacity-70">
                 <div class="flex items-center gap-2.5 mb-1.5">
                     <h2 class="text-base font-semibold text-content">Chaser & Mailbox Triage</h2>
-                    <span class="rounded-md border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] text-content-subtle">autonomous · not built yet</span>
+                    <span class="rounded-md border border-line bg-surface-raised px-1.5 py-0.5 text-xs text-content-subtle">autonomous · not built yet</span>
                 </div>
                 <p class="text-sm leading-relaxed text-content-muted max-w-3xl">
                     The scheduled agents: mailbox triage every five minutes and the 09:00 request
@@ -166,7 +166,7 @@
             </div>
         </div>
 
-        <p class="mt-6 text-[11px] text-content-subtle max-w-3xl">
+        <p class="mt-6 text-xs text-content-subtle max-w-3xl">
             Every hop the assistant takes is recorded against the agent in force —
             <a class="underline underline-offset-2 hover:text-content" href="/agents/activity">Agent Activity</a>
             is the run log of everything on this page.

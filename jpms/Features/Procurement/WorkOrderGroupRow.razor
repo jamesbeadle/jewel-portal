@@ -12,7 +12,7 @@
     }
     else
     {
-        <td class="px-4 py-3 font-mono text-[11px] text-content-subtle whitespace-nowrap">
+        <td class="px-4 py-3 font-mono text-xs text-content-subtle whitespace-nowrap">
             <span class="inline-block w-4 text-content-subtle">@(Expanded ? "▾" : "▸")</span>@Group.Code
         </td>
         @if (Group.InMaster)
@@ -39,7 +39,7 @@
         <td colspan="@(GroupBySupplier ? 6 : 7)" class="px-4 pb-4 pt-1 bg-surface-raised/50">
             <table class="w-full text-sm border-collapse">
                 <thead>
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold border-b border-line">
+                    <tr class="text-left eyebrow border-b border-line">
                         <th class="px-3 py-2 w-[90px]">Order</th>
                         <th class="px-3 py-2 min-w-[180px]">@(GroupBySupplier ? "Cost centre" : "Supplier")</th>
                         <th class="px-3 py-2">Line</th>

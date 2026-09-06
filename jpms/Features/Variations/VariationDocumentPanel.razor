@@ -30,19 +30,19 @@
     {
         <div class="space-y-3">
             <div>
-                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Scope of works</h4>
+                <h4 class="eyebrow mb-1">Scope of works</h4>
                 <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.Description) ? "—" : Order.Description)</p>
             </div>
             <div>
-                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</h4>
+                <h4 class="eyebrow mb-1">Commercial basis</h4>
                 <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.CommercialBasis) ? "—" : Order.CommercialBasis)</p>
             </div>
             <div>
-                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</h4>
+                <h4 class="eyebrow mb-1">Programme impact</h4>
                 <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.ProgrammeImpact) ? "—" : Order.ProgrammeImpact)</p>
             </div>
             <div>
-                <h4 class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</h4>
+                <h4 class="eyebrow mb-1">Exclusions</h4>
                 <p class="text-sm text-content-muted whitespace-pre-wrap leading-relaxed">@(string.IsNullOrWhiteSpace(Order.Exclusions) ? "—" : Order.Exclusions)</p>
             </div>
             @if (CanManage)
@@ -56,19 +56,19 @@
         @* The next download or send picks the new prose up; nothing commercial moves. *@
         <div class="space-y-3">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Commercial basis</label>
+                <label class="block eyebrow mb-1">Commercial basis</label>
                 <textarea class="field" rows="4" value="@commercialBasis"
                           @oninput="e => commercialBasis = e.Value?.ToString() ?? string.Empty"
                           placeholder="What the price is based on — tender-face position, rate basis, OH&amp;P…"></textarea>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Programme impact</label>
+                <label class="block eyebrow mb-1">Programme impact</label>
                 <textarea class="field" rows="4" value="@programmeImpact"
                           @oninput="e => programmeImpact = e.Value?.ToString() ?? string.Empty"
                           placeholder="Effect on the programme — procurement, mobilisation, works duration…"></textarea>
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Exclusions</label>
+                <label class="block eyebrow mb-1">Exclusions</label>
                 <textarea class="field" rows="4" value="@exclusions"
                           @oninput="e => exclusions = e.Value?.ToString() ?? string.Empty"
                           placeholder="What this variation expressly does not price…"></textarea>

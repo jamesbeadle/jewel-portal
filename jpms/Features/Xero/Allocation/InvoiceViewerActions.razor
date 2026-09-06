@@ -10,7 +10,7 @@
 {
     <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-4">
         <div class="flex items-center justify-between gap-2 flex-wrap">
-            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Split across cost centres</span>
+            <span class="eyebrow">Split across cost centres</span>
             <span class="flex items-center gap-2">
                 <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                         disabled="@Busy" @onclick="() => OnApplySplit.InvokeAsync()">
@@ -28,7 +28,7 @@ else if (DisputeOpen)
 {
     <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-3">
         <div class="flex items-center justify-between gap-2 flex-wrap">
-            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Dispute this cost</span>
+            <span class="eyebrow">Dispute this cost</span>
             <span class="flex items-center gap-2">
                 <button class="text-xs font-medium rounded-lg px-2.5 py-1 bg-content text-surface disabled:opacity-40"
                         disabled="@Busy" @onclick="() => OnConfirmDispute.InvokeAsync()">
@@ -53,7 +53,7 @@ else
        and cost centre, or send it to a bucket / ignore it / dispute it. *@
     <div class="rounded-lg border border-line bg-surface-raised px-4 py-3 space-y-2">
         <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16">Allocate</span>
+            <span class="eyebrow w-16">Allocate</span>
             <SearchSelect Options="@ProjectOptions" WidthClass="w-44" Placeholder="Project…"
                           Value="@ProjectValue"
                           ValueChanged="value => OnProjectPicked.InvokeAsync(value)" />
@@ -89,7 +89,7 @@ else
         <div class="flex items-center gap-2 flex-wrap">
             @* Choosing a bucket arms the primary button above as "Allocate to
                <bucket>"; picking a project or cost centre disarms it again. *@
-            <span class="text-xs uppercase tracking-wider text-content-subtle font-semibold w-16">Or</span>
+            <span class="eyebrow w-16">Or</span>
             <select class="bg-surface border border-line rounded-lg px-2 py-1 text-content text-sm w-52"
                     title="Send this line to a bucket instead of a project — no project, no cost centre"
                     value="@ArmedBucket"

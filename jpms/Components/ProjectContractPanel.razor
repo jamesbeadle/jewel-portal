@@ -85,7 +85,7 @@
             {
                 <div class="mt-3 flex flex-wrap items-end gap-3">
                     <div class="min-w-0">
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">
+                        <label class="block eyebrow mb-1">
                             @(Current is { HasDocument: true } ? "Replace document" : "Contract document")
                         </label>
                         <InputFile OnChange="OnFileSelected" disabled="@uploading" class="text-sm text-content-muted" />
@@ -176,18 +176,18 @@
             {
                 <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title</label>
+                        <label class="block eyebrow mb-1">Title</label>
                         <input type="text" class="field" @bind="amendmentTitle"
                                placeholder="e.g. Deed of Variation No. 1" />
                     </div>
                     <div>
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amendment date</label>
+                        <label class="block eyebrow mb-1">Amendment date</label>
                         <input type="date" class="field" @bind="amendmentDate" />
                     </div>
                 </div>
                 <div class="mt-3 flex flex-wrap items-end gap-3">
                     <div class="min-w-0">
-                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Amendment document</label>
+                        <label class="block eyebrow mb-1">Amendment document</label>
                         <InputFile OnChange="OnAmendmentFileSelected" disabled="@amendmentUploading" class="text-sm text-content-muted" />
                     </div>
                     <button type="button" class="btn-secondary text-xs px-2.5 py-1.5"
@@ -242,7 +242,7 @@
                     @foreach (var (label, value) in Summary(terms))
                     {
                         <div>
-                            <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">@label</dt>
+                            <dt class="eyebrow">@label</dt>
                             <dd class="text-content">@value</dd>
                         </div>
                     }

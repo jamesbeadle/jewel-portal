@@ -4,7 +4,7 @@
       class="rounded-2xl border border-line bg-surface p-5 space-y-3">
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Photos *</label>
+        <label class="block eyebrow mb-1">Photos *</label>
         <InputFile OnChange="OnFilesSelected" multiple accept="image/*" class="w-full text-sm text-content-muted" />
         @if (selectedFiles.Count > 0)
         {
@@ -15,53 +15,53 @@
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Title *</label>
+        <label class="block eyebrow mb-1">Title *</label>
         <input type="text" @bind="title" required placeholder="First-fix carpentry complete to first floor"
                class="field" />
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Description</label>
+        <label class="block eyebrow mb-1">Description</label>
         <textarea @bind="description" rows="3" placeholder="What the photos show, which areas, any context worth giving the client…"
                   class="field"></textarea>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Date of works</label>
+        <label class="block eyebrow mb-1">Date of works</label>
         <input type="date" @bind="workDate" class="field" />
     </div>
 
     <div class="rounded-xl border border-line p-3 space-y-3">
-        <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">
+        <p class="eyebrow">
             Weather conditions <span class="normal-case font-normal tracking-normal">— optional, printed on the client report</span>
         </p>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Summary</label>
+            <label class="block eyebrow mb-1">Summary</label>
             <input type="text" @bind="weatherSummary" placeholder="Partly cloudy with showers" class="field" />
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">High (°C)</label>
+                <label class="block eyebrow mb-1">High (°C)</label>
                 <input type="number" @bind="weatherTempHighC" class="field" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Low (°C)</label>
+                <label class="block eyebrow mb-1">Low (°C)</label>
                 <input type="number" @bind="weatherTempLowC" class="field" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Wind (mph)</label>
+                <label class="block eyebrow mb-1">Wind (mph)</label>
                 <input type="number" min="0" @bind="weatherWindMph" class="field" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Humidity (%)</label>
+                <label class="block eyebrow mb-1">Humidity (%)</label>
                 <input type="number" min="0" max="100" @bind="weatherHumidityPercent" class="field" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Precip (inches)</label>
+                <label class="block eyebrow mb-1">Precip (inches)</label>
                 <input type="number" min="0" step="0.01" @bind="weatherPrecipInches" class="field" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Observed at</label>
+                <label class="block eyebrow mb-1">Observed at</label>
                 <input type="datetime-local" @bind="weatherObservedAt" class="field" />
             </div>
         </div>

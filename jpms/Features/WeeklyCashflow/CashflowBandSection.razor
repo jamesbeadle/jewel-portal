@@ -19,7 +19,7 @@
             <span class="text-content-subtle mt-0.5 text-xs">@(Expanded ? "▾" : "▸")</span>
             <span>
                 <span class="text-content font-medium">@Label</span>
-                <span class="block text-[11px] text-content-faint font-normal">@Sub</span>
+                <span class="block text-xs text-content-faint font-normal">@Sub</span>
             </span>
         </button>
     </td>
@@ -71,7 +71,7 @@
         <tr class="border-b border-line/50 text-[13px]">
             <td class="pl-9 pr-4 py-1.5">
                 <span class="text-content-faint line-through">@excluded.Label</span>
-                <span class="block text-[11px] text-content-faint">
+                <span class="block text-xs text-content-faint">
                     @excluded.Detail · excluded — not counted@(ExcludedByFor(excluded.PlacementKey) is { } who ? $" · {who}" : "")
                 </span>
             </td>

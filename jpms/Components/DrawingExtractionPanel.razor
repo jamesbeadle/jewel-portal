@@ -12,7 +12,7 @@
 {
     <div class="panel p-5 mt-6">
         <div class="flex items-center justify-between gap-3 mb-3">
-            <h2 class="text-sm font-semibold text-content uppercase tracking-wider">Extracted data</h2>
+            <h2 class="text-sm font-semibold text-content">Extracted data</h2>
             @if (view is not null && !isLoading)
             {
                 <button type="button" class="text-xs text-accent hover:underline" disabled="@isLoading" @onclick="RefreshAsync">Refresh</button>
@@ -89,7 +89,7 @@
                     <div class="overflow-x-auto rounded-lg border border-line">
                         <table class="w-full text-sm">
                             <thead>
-                                <tr class="bg-surface-raised text-left text-xs uppercase tracking-wider text-content-subtle">
+                                <tr class="bg-surface-raised text-left eyebrow">
                                     <th class="px-3 py-2 font-medium">Page</th>
                                     <th class="px-3 py-2 font-medium">Type</th>
                                     <th class="px-3 py-2 font-medium">Subject</th>
@@ -129,7 +129,7 @@
                         @foreach (var textPage in view.TextPages)
                         {
                             <div class="mt-3">
-                                <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Page @textPage.Page</p>
+                                <p class="eyebrow mb-1">Page @textPage.Page</p>
                                 @if (string.IsNullOrWhiteSpace(textPage.Text))
                                 {
                                     <p class="text-xs text-content-subtle italic">

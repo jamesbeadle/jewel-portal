@@ -6,7 +6,7 @@
    for open items only. *@
 
 <div>
-    <dt class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Assigned to</dt>
+    <dt class="eyebrow">Assigned to</dt>
     @if (editing)
     {
         <TodoFactEditor Options="@Options" InitialValue="@TodoAssigneePicker.ValueFor(Item)" Assignee="true"
@@ -20,7 +20,7 @@
             <span>@(TodoAssigneePicker.Label(Item) ?? "Unassigned")</span>
             @if (ShowReassign)
             {
-                <button type="button" class="btn-secondary text-[11px] px-1.5 py-0.5" disabled="@Busy"
+                <button type="button" class="btn-secondary text-xs px-1.5 py-0.5" disabled="@Busy"
                         title="Assign this item to a different role or person"
                         @onclick="() => editing = true">Reassign</button>
             }

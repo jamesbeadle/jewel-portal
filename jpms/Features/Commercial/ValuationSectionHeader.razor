@@ -18,16 +18,16 @@
         @if (ShowClaim)
         {
             <span class="text-sm">
-                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Claimed</span>
+                <span class="eyebrow mr-1.5">Claimed</span>
                 <span class="text-content-muted">@Money(Claimed) (@Pct(ClaimedPercent))</span>
             </span>
             <span class="text-sm">
-                <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">This period</span>
+                <span class="eyebrow mr-1.5">This period</span>
                 <span class="text-content-muted">@Money(Period)</span>
             </span>
         }
         <span class="text-sm">
-            <span class="text-[11px] uppercase tracking-wider text-content-subtle mr-1.5">Total</span>
+            <span class="eyebrow mr-1.5">Total</span>
             <span class="text-content font-medium">@Money(Amount)</span>
         </span>
     </span>

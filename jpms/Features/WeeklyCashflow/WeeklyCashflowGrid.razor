@@ -9,7 +9,7 @@
 <div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
     <table class="w-full text-sm border-collapse">
         <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+            <tr class="text-left eyebrow">
                 <th class="px-4 py-3 min-w-[260px]"></th>
                 @for (var index = 0; index < View.WeekStarts.Count; index++)
                 {
@@ -21,13 +21,13 @@
         </thead>
         <tbody>
             <tr class="border-b border-line">
-                <td colspan="@(View.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash in</td>
+                <td colspan="@(View.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 eyebrow">Cash in</td>
             </tr>
             @Band(WeeklyCashflowBand.ClientReceipts, "Client invoices outstanding",
                   "one line per outstanding sales invoice in Xero, at its due week — or at the Expected date when one is set in Xero",
                   Array.Empty<GroupSlice>())
             <tr class="border-b border-line">
-                <td colspan="@(View.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">Cash out</td>
+                <td colspan="@(View.WeekStarts.Count + 2)" class="px-4 pt-4 pb-2 eyebrow">Cash out</td>
             </tr>
             @Band(WeeklyCashflowBand.SupplierBills, "Supplier bills",
                   "one line per outstanding bill in Xero — drafts included, as Aged Payables counts them; a Planned date set in Xero picks the week",
@@ -41,7 +41,7 @@
             <tr class="border-t-2 border-line border-b border-line font-semibold">
                 <td class="px-4 py-3 text-content">
                     Net movement
-                    <span class="block text-[11px] text-content-faint font-normal">cash in less cash out, per week</span>
+                    <span class="block text-xs text-content-faint font-normal">cash in less cash out, per week</span>
                 </td>
                 @for (var index = 0; index < View.WeekStarts.Count; index++)
                 {

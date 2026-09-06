@@ -38,7 +38,7 @@
             <FormField Label="Client" Value="@clientName" OnChange="v => clientName = v" Required="true" />
 
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Corresponds with</label>
+                <label class="block eyebrow mb-1">Corresponds with</label>
                 <select class="field" value="@partySelection" @onchange="OnPartyChanged">
                     <option value="">— Not assigned —</option>
                     @if (clients.Count > 0)
@@ -66,7 +66,7 @@
             @if (partySelection.StartsWith(ArchitectPrefix, StringComparison.Ordinal))
             {
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">On behalf of client</label>
+                    <label class="block eyebrow mb-1">On behalf of client</label>
                     <select class="field" value="@onBehalfOfClientId" @onchange="OnOnBehalfOfClientChanged">
                         <option value="">— Not recorded —</option>
                         @foreach (var client in clients)
@@ -80,7 +80,7 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Entity *</label>
+                    <label class="block eyebrow mb-1">Entity *</label>
                     <select class="field" value="@organisation" @onchange="OnOrganisationChanged">
                         @foreach (var option in AllOrganisations)
                         {
@@ -89,7 +89,7 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Stage *</label>
+                    <label class="block eyebrow mb-1">Stage *</label>
                     <select class="field" value="@stage" @onchange="OnStageChanged">
                         @foreach (var option in AllStages)
                         {
@@ -118,7 +118,7 @@
             @if (CanDelete)
             {
                 <div class="mt-4 pt-4 border-t border-line">
-                    <p class="text-xs uppercase tracking-wider text-negative font-semibold mb-1.5">Danger zone</p>
+                    <p class="text-sm font-medium text-negative mb-1.5">Danger zone</p>
                     @if (!deleteArmed)
                     {
                         <div class="flex items-start justify-between gap-3">

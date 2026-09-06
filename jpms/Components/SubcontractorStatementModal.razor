@@ -35,7 +35,7 @@
         <div class="rounded-xl border border-line bg-surface mb-3 overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                    <tr class="text-left eyebrow">
                         <th class="px-3 py-2">Project</th>
                         <th class="px-3 py-2 text-right">Orders</th>
                         <th class="px-3 py-2 text-right">Ordered</th>
@@ -56,7 +56,7 @@
                     {
                         <tr>
                             <td class="px-3 py-2 text-content whitespace-nowrap">
-                                <span class="font-mono text-[11px] text-content-subtle mr-1.5">@project.ProjectReference</span>@project.ProjectName
+                                <span class="font-mono text-xs text-content-subtle mr-1.5">@project.ProjectReference</span>@project.ProjectName
                             </td>
                             <td class="px-3 py-2 text-right">@project.Orders.Count</td>
                             <td class="px-3 py-2 text-right">@MoneyExact(project.Ordered)</td>
@@ -103,10 +103,10 @@
         }
         else
         {
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subject</label>
+            <label class="block eyebrow mb-1">Subject</label>
             <input class="field mb-3" @bind="subject" />
 
-            <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Cover note (HTML) — the statement itself travels as the attached PDF</label>
+            <label class="block eyebrow mb-1">Cover note (HTML) — the statement itself travels as the attached PDF</label>
             <textarea class="field font-mono text-xs" rows="10" @bind="htmlBody"></textarea>
         }
 

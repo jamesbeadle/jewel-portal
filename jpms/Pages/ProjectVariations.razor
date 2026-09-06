@@ -231,7 +231,7 @@
             <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
                 <table class="w-full text-sm">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Ref</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Title</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Request</th>
@@ -275,7 +275,7 @@
                                         @* Seeded rows predate the variation→request link. Kept quiet here — repairing
                                            the link is done deliberately on the variation itself, so the badge
                                            links through to the variation page's Originating-request panel. *@
-                                        <a class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-content-subtle hover:text-content hover:border-content-subtle transition-colors"
+                                        <a class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 py-0.5 text-xs font-medium text-content-subtle hover:text-content hover:border-content-subtle transition-colors"
                                            title="No request behind this variation yet — open it to link the RFI it was raised from"
                                            href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">No request</a>
                                     }

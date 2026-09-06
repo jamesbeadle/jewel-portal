@@ -101,7 +101,7 @@
                 <span class="text-sm text-content truncate flex-1" title="@RowHint(record)">@record.Title</span>
                 @if (!string.IsNullOrWhiteSpace(record.StatusLabel))
                 {
-                    <span class="text-[10px] uppercase tracking-wider text-content-subtle shrink-0">@record.StatusLabel</span>
+                    <span class="text-xs text-content-subtle shrink-0">@record.StatusLabel</span>
                 }
             </span>
             @* The record's detail (LinkableRecord.Summary — already clipped server-side) sits under

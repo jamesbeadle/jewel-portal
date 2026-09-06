@@ -4,42 +4,42 @@
       class="rounded-2xl border border-line bg-surface p-5 space-y-3">
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Report title *</label>
+        <label class="block eyebrow mb-1">Report title *</label>
         <input type="text" @bind="title" required placeholder="Progress report — July 2026"
                class="field" />
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period start</label>
+            <label class="block eyebrow mb-1">Period start</label>
             <input type="date" @bind="periodStart" class="field" />
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Period end</label>
+            <label class="block eyebrow mb-1">Period end</label>
             <input type="date" @bind="periodEnd" class="field" />
         </div>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Introduction</label>
+        <label class="block eyebrow mb-1">Introduction</label>
         <textarea @bind="introduction" rows="2" placeholder="A short opening the client reads first…"
                   class="field"></textarea>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Work completed</label>
+        <label class="block eyebrow mb-1">Work completed</label>
         <textarea @bind="workCompleted" rows="3" placeholder="Narrative summary of the works completed this period…"
                   class="field"></textarea>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Upcoming works</label>
+        <label class="block eyebrow mb-1">Upcoming works</label>
         <textarea @bind="upcomingWorks" rows="3" placeholder="What the client should expect next…"
                   class="field"></textarea>
     </div>
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Progress of the works — select the photo updates to include</label>
+        <label class="block eyebrow mb-1">Progress of the works — select the photo updates to include</label>
         @if (AvailableUpdates.Count == 0)
         {
             <p class="text-sm text-content-subtle italic">No progress updates recorded yet — record progress first, then build the report from it.</p>

@@ -38,7 +38,7 @@
             <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[55vh]">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Date</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Supplier</th>
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Invoice</th>
@@ -60,13 +60,13 @@
                                     @line.Supplier
                                     @if (line.IsSplit)
                                     {
-                                        <span class="ml-1.5 text-[10px] uppercase tracking-wider font-semibold border border-line rounded px-1 py-0.5"
+                                        <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5"
                                               title="This project's share of a line split across several cost centres">Split</span>
                                     }
                                 </td>
                                 <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
-                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap">@line.CostCode</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-[11px] uppercase tracking-wider text-content-subtle">
+                                <td class="px-4 py-2.5 font-mono text-xs text-content-subtle whitespace-nowrap">@line.CostCode</td>
+                                <td class="px-4 py-2.5 whitespace-nowrap eyebrow">
                                     @(string.IsNullOrEmpty(line.InvoiceStatus) ? "—" : line.InvoiceStatus)@(line.SettledFraction is > 0m and < 1m ? " · part-paid" : "")
                                 </td>
                                 <td class="px-4 py-2.5 text-right whitespace-nowrap text-content-muted">@MoneyExact(line.Net)</td>
@@ -95,7 +95,7 @@
                    counting. Deliberately outside the totals above — allocation is what
                    distributes cost to centres, and it happens on the Xero allocation screen. *@
                 <div class="rounded-lg border border-negative/40 overflow-x-auto">
-                    <p class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-negative font-semibold">
+                    <p class="px-4 pt-3 pb-1 text-xs text-negative font-semibold">
                         In Xero for this site but not yet allocated in JPMS — not counted above
                     </p>
                     <p class="px-4 pb-2 text-xs text-content-subtle">
@@ -109,7 +109,7 @@
                                     <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(bill.Date?.ToString("dd MMM yyyy") ?? "—")</td>
                                     <td class="px-4 py-2.5 text-content">@bill.Supplier</td>
                                     <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@bill.InvoiceNumber</td>
-                                    <td class="px-4 py-2.5 whitespace-nowrap text-[11px] uppercase tracking-wider text-content-subtle">@(string.IsNullOrEmpty(bill.InvoiceStatus) ? "—" : bill.InvoiceStatus)</td>
+                                    <td class="px-4 py-2.5 whitespace-nowrap eyebrow">@(string.IsNullOrEmpty(bill.InvoiceStatus) ? "—" : bill.InvoiceStatus)</td>
                                     <td class="px-4 py-2.5 text-right whitespace-nowrap @(bill.OutstandingNet < 0 ? "text-negative" : "text-content")">@MoneyExact(bill.OutstandingNet)</td>
                                     <td class="px-4 py-2.5 text-right whitespace-nowrap @(bill.OutstandingGross < 0 ? "text-negative" : "text-content")">@MoneyExact(bill.OutstandingGross) gross</td>
                                 </tr>

@@ -148,7 +148,7 @@
                     @if (item.Status == DocumentControlStatus.Pending)
                     {
                         <div class="pt-3 border-t border-line space-y-3">
-                            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">File this document</p>
+                            <p class="eyebrow">File this document</p>
 
                             <div class="inline-flex rounded-lg border border-line-strong p-0.5 gap-0.5">
                                 <button type="button" @onclick="() => SetDestination(FileDestination.Drawing)"
@@ -177,7 +177,7 @@
                                 </div>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
+                                        <label class="block eyebrow mb-1">Project *</label>
                                         <select class="field" value="@filingProjectId" @onchange="OnFilingProjectChanged">
                                             <option value="">Select a project…</option>
                                             @foreach (var project in ProjectOptions)
@@ -189,7 +189,7 @@
                                     @if (drawingIsRevision)
                                     {
                                         <div>
-                                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Existing document *</label>
+                                            <label class="block eyebrow mb-1">Existing document *</label>
                                             <select class="field" @bind="drawingId" disabled="@string.IsNullOrWhiteSpace(filingProjectId)">
                                                 @if (string.IsNullOrWhiteSpace(filingProjectId))
                                                 {
@@ -244,7 +244,7 @@
                                 </p>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Project *</label>
+                                        <label class="block eyebrow mb-1">Project *</label>
                                         <select class="field" value="@filingProjectId" @onchange="OnFilingProjectChanged">
                                             <option value="">Select a project…</option>
                                             @foreach (var project in ProjectOptions)
@@ -254,7 +254,7 @@
                                         </select>
                                     </div>
                                     <div>
-                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Valuation claim</label>
+                                        <label class="block eyebrow mb-1">Valuation claim</label>
                                         <select class="field" @bind="certificateClaimId" disabled="@string.IsNullOrWhiteSpace(filingProjectId)">
                                             @if (string.IsNullOrWhiteSpace(filingProjectId))
                                             {
@@ -283,7 +283,7 @@
                                     <FormField Label="Certificate number" Value="@certificateNumber" OnChange="v => certificateNumber = v" Required="true" />
                                     <FormField Label="Certified amount (£)" Value="@certificateAmountText" OnChange="v => certificateAmountText = v" />
                                     <div>
-                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Issued date *</label>
+                                        <label class="block eyebrow mb-1">Issued date *</label>
                                         <input type="date" class="field" @bind="certificateIssuedDate" />
                                     </div>
                                 </div>
@@ -302,14 +302,14 @@
                                 </p>
                                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
-                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subcontractor *</label>
+                                        <label class="block eyebrow mb-1">Subcontractor *</label>
                                         <SearchSelect Options="SubcontractorOptions" Value="@subcontractorId"
                                                       ValueChanged="v => subcontractorId = v"
                                                       Placeholder="Search subcontractors…" WidthClass="w-full"
                                                       InputClass="field" />
                                     </div>
                                     <div>
-                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Kind *</label>
+                                        <label class="block eyebrow mb-1">Kind *</label>
                                         @* Free text with suggestions — the same shape as the portal upload, so
                                            "Insurance" filed here and "Public liability insurance" uploaded there
                                            can be steered to ONE spelling per kind (matching is case-insensitive
@@ -324,7 +324,7 @@
                                         </datalist>
                                     </div>
                                     <div>
-                                        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Expiry date</label>
+                                        <label class="block eyebrow mb-1">Expiry date</label>
                                         <input type="date" class="field" @bind="subcontractorExpiry" />
                                     </div>
                                 </div>

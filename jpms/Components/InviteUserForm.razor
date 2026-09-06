@@ -5,7 +5,7 @@
 
     @if (outcome?.Success == true && outcome.Result is not null)
     {
-        <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-2">Invite created</p>
+        <p class="eyebrow mb-2">Invite created</p>
         <p class="text-sm text-content-muted leading-relaxed mb-3">
             We've emailed a single-use sign-in link to <span class="font-medium text-content">@outcome.Result.Email</span>.
             You can also copy it below to send yourself. It expires @outcome.Result.ExpiresAt.ToLocalTime().ToString("d MMM yyyy, HH:mm").
@@ -31,21 +31,21 @@
     }
     else
     {
-        <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-3">Invite a user</p>
+        <p class="eyebrow mb-3">Invite a user</p>
 
         <div class="space-y-3">
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Email *</label>
+                <label class="block eyebrow mb-1">Email *</label>
                 <input type="email" value="@email" @oninput="e => email = e.Value?.ToString() ?? string.Empty"
                        class="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Display name</label>
+                <label class="block eyebrow mb-1">Display name</label>
                 <input type="text" value="@displayName" @oninput="e => displayName = e.Value?.ToString() ?? string.Empty"
                        class="w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-content focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent" />
             </div>
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Roles</label>
+                <label class="block eyebrow mb-2">Roles</label>
                 <div class="grid grid-cols-2 gap-x-4 gap-y-1.5">
                     @foreach (var role in AllRoles)
                     {

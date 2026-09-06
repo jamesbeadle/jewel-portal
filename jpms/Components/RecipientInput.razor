@@ -25,7 +25,7 @@
         {
             var index = i;
             var chip = chips[index];
-            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium max-w-full
+            <span class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium max-w-full
                          @(chip.LooksValid ? "bg-surface-raised border-line text-content" : "bg-negative/10 border-negative/30 text-negative")"
                   title="@(chip.LooksValid ? chip.Email : "Not an email address — it will be dropped on send")">
                 <span class="truncate">@chip.Label</span>
@@ -57,7 +57,7 @@
                         class="block w-full text-left px-3 py-1.5 @(index == highlight ? "bg-content text-surface" : "text-content hover:bg-surface")"
                         @onmousedown="() => PickAsync(suggestion)" @onmousedown:preventDefault="true" @onmousedown:stopPropagation="true">
                     <span class="block text-sm truncate">@suggestion.Name</span>
-                    <span class="block text-[11px] truncate @(index == highlight ? "text-surface/80" : "text-content-subtle")">
+                    <span class="block text-xs truncate @(index == highlight ? "text-surface/80" : "text-content-subtle")">
                         @SecondLineOf(suggestion)
                     </span>
                 </button>

@@ -27,7 +27,7 @@
 @if (CanSearchMailbox && Active)
 {
     <div class="border-t border-line pt-4 mt-2">
-        <h3 class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mb-2">Emails</h3>
+        <h3 class="eyebrow mb-2">Emails</h3>
 
         @if (recordMatch is LinkableRecord match)
         {
@@ -62,7 +62,7 @@
                     </div>
                     @if (recordEmails.Count > RecordEmailCap && HrefFor(match) is string moreHref)
                     {
-                        <p class="text-[11px] text-content-subtle mt-2">
+                        <p class="text-xs text-content-subtle mt-2">
                             Showing @RecordEmailCap of @recordEmails.Count —
                             <a class="underline underline-offset-2 hover:text-content" href="@moreHref">open @match.Reference for the rest</a>.
                         </p>
@@ -256,7 +256,7 @@
               @onclick="() => OpenInControlCentre(email)">
             <div class="flex items-baseline justify-between gap-2">
                 <span class="text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
-                <span class="text-[11px] text-content-subtle shrink-0">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                <span class="text-xs text-content-subtle shrink-0">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
             </div>
             <div class="flex items-center gap-1.5 mt-0.5">
                 <p class="text-sm text-content truncate flex-1">@email.Subject</p>
@@ -280,7 +280,7 @@
                     {
                         @if (resolved.TryGetValue(stem, out var record) && HrefFor(record) is string href)
                         {
-                            <a class="inline-flex items-center rounded-full bg-accent/10 text-accent text-[10px] font-medium px-2 py-0.5 hover:bg-accent/20 hover:underline"
+                            <a class="inline-flex items-center rounded-full bg-accent/10 text-accent text-xs font-medium px-2 py-0.5 hover:bg-accent/20 hover:underline"
                                href="@href" title="@ChipTitle(record)" @onclick:stopPropagation="true">@record.Reference</a>
                         }
                         else

@@ -42,7 +42,7 @@
 {
     <div class="rounded-lg bg-surface-raised border border-line p-3">
         <div class="flex items-center justify-between gap-3 mb-2">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">
+            <p class="eyebrow">
                 @Detail.Attachments.Count attachment@(Detail.Attachments.Count == 1 ? "" : "s")
             </p>
             @* One click ticks (or clears) "Send to document triage" on every attachment — a
@@ -124,7 +124,7 @@ else if (Selected.HasAttachments && Detail is not null)
 @if (SentReplies.Count > 0)
 {
     <div class="rounded-lg border border-positive/30 bg-positive/5 p-3 space-y-1.5">
-        <p class="text-[11px] uppercase tracking-wider text-positive font-semibold">Replies sent · @SentReplies.Count</p>
+        <p class="text-sm font-medium text-positive">Replies sent · @SentReplies.Count</p>
         @foreach (var sent in SentReplies)
         {
             <button type="button" @key="sent.Id" class="w-full text-left text-xs hover:bg-surface-raised rounded px-1.5 py-1"
@@ -158,7 +158,7 @@ else if (Selected.HasAttachments && Detail is not null)
            highlighted — click a tab and the content above switches to that email. *@
         <div class="rounded-lg bg-surface-raised border border-line px-3 py-2">
             <div class="flex flex-wrap items-center gap-1.5">
-                <span class="text-[11px] uppercase tracking-wider text-content-subtle font-semibold mr-1">
+                <span class="eyebrow mr-1">
                     Thread · email @ThreadPositionOfSelected of @Thread.Count
                 </span>
                 @for (var position = 0; position < Thread.Count; position++)
@@ -175,11 +175,11 @@ else if (Selected.HasAttachments && Detail is not null)
                 }
                 @if (Thread[^1].Id != Selected.Id)
                 {
-                    <span class="text-[11px] text-content-subtle">· read the latest (@Thread.Count) before triaging — actions apply to the whole thread</span>
+                    <span class="text-xs text-content-subtle">· read the latest (@Thread.Count) before triaging — actions apply to the whole thread</span>
                 }
                 @if (ThreadMatchedBySubject)
                 {
-                    <span class="text-[11px] text-warning"
+                    <span class="text-xs text-warning"
                           title="Outlook gave this email a different conversation id from the rest of the chain, so its members were found by subject. Apply's whole-thread sweep follows Outlook's id — emails matched here by subject keep their own queue entries and are triaged from those.">
                         · thread matched by subject — Entire thread = Yes sweeps only the emails sharing this one's Outlook id
                     </span>

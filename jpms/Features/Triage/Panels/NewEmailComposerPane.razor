@@ -21,25 +21,25 @@
     }
 
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">To *</label>
+        <label class="block eyebrow mb-1">To *</label>
         <RecipientInput Value="@toField" ValueChanged="value => toField = value" />
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Cc</label>
+            <label class="block eyebrow mb-1">Cc</label>
             <RecipientInput Value="@ccField" ValueChanged="value => ccField = value" Placeholder="Copied recipients" />
         </div>
         <div>
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Bcc</label>
+            <label class="block eyebrow mb-1">Bcc</label>
             <RecipientInput Value="@bccField" ValueChanged="value => bccField = value" Placeholder="Blind-copied recipients" />
         </div>
     </div>
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Subject *</label>
+        <label class="block eyebrow mb-1">Subject *</label>
         <input class="field" type="text" value="@subject" @oninput="e => subject = e.Value?.ToString() ?? string.Empty" />
     </div>
     <div>
-        <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Message *</label>
+        <label class="block eyebrow mb-1">Message *</label>
         <RichTextEditor @bind-Value="body" MinHeight="200" Placeholder="Write the email…" />
     </div>
 

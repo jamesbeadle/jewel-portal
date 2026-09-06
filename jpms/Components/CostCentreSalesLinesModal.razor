@@ -34,7 +34,7 @@
             <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
                 <table class="w-full text-sm border-collapse">
                     <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                        <tr class="text-left eyebrow">
                             <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Ref</th>
                             @if (ShowCentreColumn)
                             {
@@ -49,7 +49,7 @@
                         @foreach (var line in CountingLines)
                         {
                             <tr>
-                                <td class="px-4 py-2.5 font-mono text-[11px] text-content-subtle whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
+                                <td class="px-4 py-2.5 font-mono text-xs text-content-subtle whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
                                 @if (ShowCentreColumn)
                                 {
                                     <td class="px-4 py-2.5 whitespace-nowrap">
@@ -62,12 +62,12 @@
                                                           ValueChanged="value => SetCostCentreAsync(line, value)" />
                                             @if (costCentreErrorLineId == line.ValuationLineItemId && costCentreError is not null)
                                             {
-                                                <div class="text-[11px] text-negative mt-1">@costCentreError</div>
+                                                <div class="text-xs text-negative mt-1">@costCentreError</div>
                                             }
                                         }
                                         else
                                         {
-                                            <span class="font-mono text-[11px] text-content-subtle">@line.CostCode</span>
+                                            <span class="font-mono text-xs text-content-subtle">@line.CostCode</span>
                                         }
                                     </td>
                                 }
@@ -89,7 +89,7 @@
             @if (NonCountingLines.Count > 0)
             {
                 <div class="rounded-lg border border-line overflow-x-auto">
-                    <p class="px-4 pt-3 pb-1 text-[11px] uppercase tracking-wider text-content-subtle font-semibold">
+                    <p class="px-4 pt-3 pb-1 eyebrow">
                         Recorded but not priced into the total
                     </p>
                     <table class="w-full text-sm border-collapse">
@@ -97,7 +97,7 @@
                             @foreach (var line in NonCountingLines)
                             {
                                 <tr class="text-content-muted">
-                                    <td class="px-4 py-2.5 font-mono text-[11px] whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
+                                    <td class="px-4 py-2.5 font-mono text-xs whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
                                     @if (ShowCentreColumn)
                                     {
                                         <td class="px-4 py-2.5 whitespace-nowrap">
@@ -110,12 +110,12 @@
                                                               ValueChanged="value => SetCostCentreAsync(line, value)" />
                                                 @if (costCentreErrorLineId == line.ValuationLineItemId && costCentreError is not null)
                                                 {
-                                                    <div class="text-[11px] text-negative mt-1">@costCentreError</div>
+                                                    <div class="text-xs text-negative mt-1">@costCentreError</div>
                                                 }
                                             }
                                             else
                                             {
-                                                <span class="font-mono text-[11px]">@line.CostCode</span>
+                                                <span class="font-mono text-xs">@line.CostCode</span>
                                             }
                                         </td>
                                     }

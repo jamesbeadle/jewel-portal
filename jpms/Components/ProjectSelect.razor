@@ -57,9 +57,9 @@
                     @onclick="() => PickAsync(project.ProjectId)">
                 <span class="w-1.5 h-1.5 rounded-full shrink-0 @project.Stage.AccentDotClass()"
                       title="@project.Stage.DisplayName()" aria-hidden="true"></span>
-                <span class="font-mono text-[11px] text-content-subtle shrink-0">@project.Reference</span>
+                <span class="font-mono text-xs text-content-subtle shrink-0">@project.Reference</span>
                 <span class="text-content truncate">@project.Name</span>
-                <span class="ml-auto pl-2 text-[11px] text-content-subtle whitespace-nowrap shrink-0">@project.Stage.DisplayName()</span>
+                <span class="ml-auto pl-2 text-xs text-content-subtle whitespace-nowrap shrink-0">@project.Stage.DisplayName()</span>
             </button>
         </li>
     };

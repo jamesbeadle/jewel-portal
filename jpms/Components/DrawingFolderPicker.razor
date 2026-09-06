@@ -11,7 +11,7 @@
    parent re-render skips it — without the subscription it could sit on "Loading folders…" (or a
    stale option list) after the folders had actually landed. *@
 <div>
-    <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Folder</label>
+    <label class="block eyebrow mb-1">Folder</label>
     <select @bind="selectedFolderId" disabled="@(!IsEnabled)" class="field">
         @if (!HasProject)
         {

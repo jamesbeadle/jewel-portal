@@ -106,7 +106,7 @@
                ConfirmDisabled="@(folderBusy || string.IsNullOrWhiteSpace(folderName))"
                OnCancel="CloseFolderDialog"
                OnConfirm="SaveFolderAsync">
-            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Folder name *</label>
+            <label class="block eyebrow mb-1">Folder name *</label>
             <input type="text" @bind="folderName" @bind:event="oninput" placeholder="Architectural, Structural, M&E…"
                    class="field" />
             @if (folderError is not null)

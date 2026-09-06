@@ -29,7 +29,7 @@
 
     <div class="pt-3 border-t border-line space-y-4">
         <div>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Tags on this email</p>
+            <p class="eyebrow mb-2">Tags on this email</p>
             @* The pathway badge is shown apart from the tag chips: it isn't removable here —
                the server drops the bucket itself when the last record tag goes. *@
             @if (Pathway is { } taggedPathway)
@@ -57,7 +57,7 @@
         </div>
 
         <div>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold mb-2">Link to another record</p>
+            <p class="eyebrow mb-2">Link to another record</p>
             <div class="space-y-3">
                 @* Each type shows the pathway it files under. Every type is offered
                    whatever the thread's pathway (the hard client wall was removed

@@ -89,7 +89,7 @@
                     </div>
                     <dl class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 text-sm mb-4">
                         <div>
-                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Contact</dt>
+                            <dt class="eyebrow">Contact</dt>
                             <dd class="text-content">@(string.IsNullOrWhiteSpace(ActiveCase.ContactName) ? "—" : ActiveCase.ContactName)</dd>
                             @if (!string.IsNullOrWhiteSpace(ActiveCase.ContactEmail))
                             {
@@ -97,15 +97,15 @@
                             }
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Notice submitted</dt>
+                            <dt class="eyebrow">Notice submitted</dt>
                             <dd class="text-content">@DateText(ActiveCase.NoticeSubmittedOn)</dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Accepted</dt>
+                            <dt class="eyebrow">Accepted</dt>
                             <dd class="text-content">@DateText(ActiveCase.AcceptedOn)</dd>
                         </div>
                         <div>
-                            <dt class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Completion certified</dt>
+                            <dt class="eyebrow">Completion certified</dt>
                             <dd class="text-content">@DateText(ActiveCase.CompletionCertifiedOn)</dd>
                         </div>
                     </dl>
@@ -165,7 +165,7 @@
                     <div class="space-y-3">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Regime</label>
+                                <label class="block eyebrow mb-1">Regime</label>
                                 <select class="field" value="@((int)formRegime)" @onchange="e => formRegime = ParseRegime(e)">
                                     @foreach (var regime in BuildingControlRegimes.All)
                                     {
@@ -174,47 +174,47 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Body *</label>
+                                <label class="block eyebrow mb-1">Body *</label>
                                 <input type="text" class="field" maxlength="256" placeholder="Who signs the work off — the council or the approver"
                                        value="@formBodyName" @oninput="e => formBodyName = e.Value?.ToString() ?? string.Empty" />
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Their reference</label>
+                                <label class="block eyebrow mb-1">Their reference</label>
                                 <input type="text" class="field" maxlength="128" placeholder="e.g. BC2415406DOMFPB"
                                        value="@formBodyReference" @oninput="e => formBodyReference = e.Value?.ToString() ?? string.Empty" />
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notice submitted</label>
+                                <label class="block eyebrow mb-1">Notice submitted</label>
                                 <input type="date" class="field" value="@formNoticeSubmittedOn"
                                        @onchange="e => formNoticeSubmittedOn = e.Value?.ToString() ?? string.Empty" />
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Accepted / in force</label>
+                                <label class="block eyebrow mb-1">Accepted / in force</label>
                                 <input type="date" class="field" value="@formAcceptedOn"
                                        @onchange="e => formAcceptedOn = e.Value?.ToString() ?? string.Empty" />
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Contact name</label>
+                                <label class="block eyebrow mb-1">Contact name</label>
                                 <input type="text" class="field" maxlength="256"
                                        value="@formContactName" @oninput="e => formContactName = e.Value?.ToString() ?? string.Empty" />
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Contact email</label>
+                                <label class="block eyebrow mb-1">Contact email</label>
                                 <input type="text" class="field" maxlength="256"
                                        value="@formContactEmail" @oninput="e => formContactEmail = e.Value?.ToString() ?? string.Empty" />
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Contact phone</label>
+                                <label class="block eyebrow mb-1">Contact phone</label>
                                 <input type="text" class="field" maxlength="64"
                                        value="@formContactPhone" @oninput="e => formContactPhone = e.Value?.ToString() ?? string.Empty" />
                             </div>
                         </div>
                         <div>
-                            <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Notes</label>
+                            <label class="block eyebrow mb-1">Notes</label>
                             <textarea class="field" rows="2" maxlength="4096"
                                       value="@formNotes" @oninput="e => formNotes = e.Value?.ToString() ?? string.Empty"></textarea>
                         </div>
@@ -255,12 +255,12 @@
                     <section class="rounded-xl border border-line bg-surface p-5 mb-4">
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                             <div class="sm:col-span-2">
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Stage *</label>
+                                <label class="block eyebrow mb-1">Stage *</label>
                                 <input type="text" class="field" maxlength="256" placeholder="What's being inspected — Foundations, Drainage, Steel frame…"
                                        value="@newStageName" @oninput="e => newStageName = e.Value?.ToString() ?? string.Empty" />
                             </div>
                             <div>
-                                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Booked for</label>
+                                <label class="block eyebrow mb-1">Booked for</label>
                                 <input type="date" class="field" value="@newStageBookedFor"
                                        @onchange="e => newStageBookedFor = e.Value?.ToString() ?? string.Empty" />
                             </div>
@@ -283,12 +283,12 @@
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b border-line text-left">
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Ref</th>
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Stage</th>
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Status</th>
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Booked for</th>
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Inspected</th>
-                                    <th class="px-4 py-2.5 text-xs uppercase tracking-wider text-content-subtle font-semibold">Files</th>
+                                    <th class="px-4 py-2.5 eyebrow">Ref</th>
+                                    <th class="px-4 py-2.5 eyebrow">Stage</th>
+                                    <th class="px-4 py-2.5 eyebrow">Status</th>
+                                    <th class="px-4 py-2.5 eyebrow">Booked for</th>
+                                    <th class="px-4 py-2.5 eyebrow">Inspected</th>
+                                    <th class="px-4 py-2.5 eyebrow">Files</th>
                                     <th class="px-4 py-2.5"></th>
                                 </tr>
                             </thead>

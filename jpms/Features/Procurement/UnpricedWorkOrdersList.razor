@@ -12,7 +12,7 @@
     @foreach (var detail in Orders)
     {
         <li class="px-4 py-2 flex items-center gap-3">
-            <span class="font-mono text-[11px] text-content-subtle">@detail.Order.Reference</span>
+            <span class="font-mono text-xs text-content-subtle">@detail.Order.Reference</span>
             <span class="text-content font-medium">@detail.Order.Title</span>
             <span class="text-content-subtle">@detail.SubcontractorName</span>
             <span class="ml-auto">@Money(detail.Order.Value)</span>

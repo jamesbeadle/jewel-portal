@@ -19,7 +19,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField Label="Reference" Value="@reference" OnChange="v => reference = v" Required="true" />
             <div>
-                <label class="block text-xs uppercase tracking-wider text-content-subtle font-semibold mb-1">Status</label>
+                <label class="block eyebrow mb-1">Status</label>
                 <select class="field" value="@((int)status)" @onchange="OnStatusChanged">
                     @foreach (var option in StatusOptions)
                     {

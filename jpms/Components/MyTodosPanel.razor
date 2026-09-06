@@ -27,7 +27,7 @@
             <h2 class="text-sm font-semibold text-content">My to-dos</h2>
             @if (!loading && openItems.Count > 0)
             {
-                <span class="text-[11px] text-content-subtle">@openItems.Count open</span>
+                <span class="text-xs text-content-subtle">@openItems.Count open</span>
             }
         </div>
         <div class="flex items-center gap-2">
@@ -103,7 +103,7 @@
                     <p class="truncate text-sm text-content">
                         <span class="font-mono text-xs text-content-muted mr-2">@item.Reference</span>@item.Title
                     </p>
-                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-[11px] text-content-subtle">
+                    <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                         <span class="whitespace-nowrap @(IsGeneral(item) ? "text-accent font-medium" : "")">@ScopeLabel(item)</span>
                         @if (item.DueAt is not null)
                         {
@@ -241,8 +241,8 @@
 
     private string ViewTabClass(bool board) =>
         boardView == board
-            ? "btn-primary text-[10px] px-2 py-1"
-            : "btn-secondary text-[10px] px-2 py-1";
+            ? "btn-primary text-xs px-2 py-1"
+            : "btn-secondary text-xs px-2 py-1";
 
     private async Task SetView(bool board)
     {
