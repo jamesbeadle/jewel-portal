@@ -19,25 +19,13 @@
     undone from here. Edits are modals; the page never renders an inline form.
 *@
 
-@if (!sessionReady)
-{
-    <section class="px-6 md:px-8 py-12">
-        <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else if (!Detail.LoadedFor(LeadId) && !dataFailed)
-{
-    <section class="px-6 md:px-8 py-12">
+<Page>
+    @if (!Detail.LoadedFor(LeadId) && !dataFailed)
+    {
         <LoadGate IsLoading="true" Prominent="true" Label="Loading lead" />
-    </section>
-}
-else if (Lead is null)
-{
-    <section class="px-6 md:px-8 py-12 max-w-2xl">
+    }
+    else if (Lead is null)
+    {
         <WorkspaceSectionNav />
         <div class="panel p-6">
             <p class="text-sm text-content-muted">
@@ -45,293 +33,293 @@ else if (Lead is null)
                 <a href="/sales/leads" class="text-info underline underline-offset-4 ml-1">Back to leads</a>
             </p>
         </div>
-    </section>
-}
-else
-{
-    var lead = Lead;
-    <section class="px-6 md:px-8 py-8 md:py-12">
-        <WorkspaceSectionNav />
-        <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
-            <div class="min-w-0">
-                <p class="eyebrow mb-1"><a href="/sales/leads" class="hover:text-content">Leads</a> · @lead.Reference</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight flex flex-wrap items-center gap-3">
-                    <span>@Headline</span>
-                    <LeadStagePill Stage="@lead.Stage" />
-                </h1>
-                <p class="text-sm text-content-muted mt-2">
-                    @(string.IsNullOrWhiteSpace(lead.Summary) ? lead.Stage.Meaning() : lead.Summary)
-                </p>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-                @if (CanWork)
-                {
-                    <button type="button" class="btn-secondary" @onclick="() => editOpen = true">Edit</button>
-                    <button type="button" class="btn-secondary" @onclick="OpenLog">Log activity</button>
-                }
-                @if (CanDecide && lead.Stage != LeadStage.Won)
-                {
-                    <button type="button" class="btn-primary" @onclick="OpenWin">Won — create client &amp; project</button>
-                }
-            </div>
-        </header>
+    }
+    else
+    {
+        var lead = Lead;
+        <section class="px-6 md:px-8 py-8 md:py-12">
+            <WorkspaceSectionNav />
+            <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
+                <div class="min-w-0">
+                    <p class="eyebrow mb-1"><a href="/sales/leads" class="hover:text-content">Leads</a> · @lead.Reference</p>
+                    <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight flex flex-wrap items-center gap-3">
+                        <span>@Headline</span>
+                        <LeadStagePill Stage="@lead.Stage" />
+                    </h1>
+                    <p class="text-sm text-content-muted mt-2">
+                        @(string.IsNullOrWhiteSpace(lead.Summary) ? lead.Stage.Meaning() : lead.Summary)
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    @if (CanWork)
+                    {
+                        <button type="button" class="btn-secondary" @onclick="() => editOpen = true">Edit</button>
+                        <button type="button" class="btn-secondary" @onclick="OpenLog">Log activity</button>
+                    }
+                    @if (CanDecide && lead.Stage != LeadStage.Won)
+                    {
+                        <button type="button" class="btn-primary" @onclick="OpenWin">Won — create client &amp; project</button>
+                    }
+                </div>
+            </header>
 
-        @if (actionNote is not null)
-        {
-            <p class="rounded bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-4">@actionNote</p>
-        }
+            @if (actionNote is not null)
+            {
+                <Notice Tone="Tone.Positive" Class="mb-4">@actionNote</Notice>
+            }
 
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
-            <div class="xl:col-span-2 space-y-6">
-                <Panel Title="Details">
-                    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                        <div>
-                            <dt class="eyebrow">Contact</dt>
-                            <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.ContactName) ? "—" : lead.ContactName)</dd>
-                            @if (!string.IsNullOrWhiteSpace(lead.ContactEmail))
-                            {
-                                <dd class="text-content-muted"><a href="mailto:@lead.ContactEmail" class="text-info hover:underline underline-offset-4">@lead.ContactEmail</a></dd>
-                            }
-                            @if (!string.IsNullOrWhiteSpace(lead.ContactPhone))
-                            {
-                                <dd class="text-content-muted">@lead.ContactPhone</dd>
-                            }
-                        </div>
-                        <div>
-                            <dt class="eyebrow">Company / practice</dt>
-                            <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.CompanyName) ? "—" : lead.CompanyName)</dd>
-                            <dd class="text-content-muted">@lead.ProspectKind.DisplayName()</dd>
-                        </div>
-                        <div class="sm:col-span-2">
-                            <dt class="eyebrow">Property / site</dt>
-                            <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.PropertyAddress) ? "—" : lead.PropertyAddress)</dd>
-                            @if (!string.IsNullOrWhiteSpace(lead.Postcode))
-                            {
-                                <dd class="text-content-muted">@lead.Postcode</dd>
-                            }
-                        </div>
-                        <div>
-                            <dt class="eyebrow">Estimated value</dt>
-                            <dd class="text-content mt-1">@(lead.EstimatedValue is { } v ? WholeMoney(v) : "—")</dd>
-                        </div>
-                        <div>
-                            <dt class="eyebrow">Owner</dt>
-                            <dd class="text-content mt-1">@lead.OwnerEmail</dd>
-                        </div>
-                        <div>
-                            <dt class="eyebrow">Found by</dt>
-                            <dd class="text-content mt-1">
-                                @if (lead.StrategyId is not null)
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                <div class="xl:col-span-2 space-y-6">
+                    <Panel Title="Details">
+                        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                            <div>
+                                <dt class="eyebrow">Contact</dt>
+                                <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.ContactName) ? "—" : lead.ContactName)</dd>
+                                @if (!string.IsNullOrWhiteSpace(lead.ContactEmail))
                                 {
-                                    <a href="/sales/strategies/@lead.StrategyId" class="text-info hover:underline underline-offset-4">@(lead.StrategyName ?? "Strategy")</a>
+                                    <dd class="text-content-muted"><a href="mailto:@lead.ContactEmail" class="text-info hover:underline underline-offset-4">@lead.ContactEmail</a></dd>
                                 }
-                                else
+                                @if (!string.IsNullOrWhiteSpace(lead.ContactPhone))
                                 {
-                                    @lead.Source.DisplayName()
+                                    <dd class="text-content-muted">@lead.ContactPhone</dd>
                                 }
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="eyebrow">Captured</dt>
-                            <dd class="text-content mt-1">@lead.CapturedAt.ToLocalTime().ToString("d MMM yyyy")</dd>
-                            <dd class="text-content-muted">@lead.Stage.DisplayName() since @lead.StageChangedAt.ToLocalTime().ToString("d MMM yyyy")</dd>
-                        </div>
-                        @if (lead.Stage == LeadStage.Won && lead.ProjectId is not null)
-                        {
+                            </div>
+                            <div>
+                                <dt class="eyebrow">Company / practice</dt>
+                                <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.CompanyName) ? "—" : lead.CompanyName)</dd>
+                                <dd class="text-content-muted">@lead.ProspectKind.DisplayName()</dd>
+                            </div>
                             <div class="sm:col-span-2">
-                                <dt class="eyebrow">Became</dt>
+                                <dt class="eyebrow">Property / site</dt>
+                                <dd class="text-content mt-1">@(string.IsNullOrWhiteSpace(lead.PropertyAddress) ? "—" : lead.PropertyAddress)</dd>
+                                @if (!string.IsNullOrWhiteSpace(lead.Postcode))
+                                {
+                                    <dd class="text-content-muted">@lead.Postcode</dd>
+                                }
+                            </div>
+                            <div>
+                                <dt class="eyebrow">Estimated value</dt>
+                                <dd class="text-content mt-1">@(lead.EstimatedValue is { } v ? WholeMoney(v) : "—")</dd>
+                            </div>
+                            <div>
+                                <dt class="eyebrow">Owner</dt>
+                                <dd class="text-content mt-1">@lead.OwnerEmail</dd>
+                            </div>
+                            <div>
+                                <dt class="eyebrow">Found by</dt>
                                 <dd class="text-content mt-1">
-                                    <a href="/projects/@lead.ProjectId" class="text-info hover:underline underline-offset-4">Open the project</a>
-                                    <span class="text-content-subtle"> · client account created</span>
+                                    @if (lead.StrategyId is not null)
+                                    {
+                                        <a href="/sales/strategies/@lead.StrategyId" class="text-info hover:underline underline-offset-4">@(lead.StrategyName ?? "Strategy")</a>
+                                    }
+                                    else
+                                    {
+                                        @lead.Source.DisplayName()
+                                    }
                                 </dd>
                             </div>
-                        }
-                        @if (lead.Stage == LeadStage.Lost && !string.IsNullOrWhiteSpace(lead.LostReason))
-                        {
-                            <div class="sm:col-span-2">
-                                <dt class="eyebrow">Why lost</dt>
-                                <dd class="text-content mt-1">@lead.LostReason</dd>
+                            <div>
+                                <dt class="eyebrow">Captured</dt>
+                                <dd class="text-content mt-1">@lead.CapturedAt.ToLocalTime().ToString("d MMM yyyy")</dd>
+                                <dd class="text-content-muted">@lead.Stage.DisplayName() since @lead.StageChangedAt.ToLocalTime().ToString("d MMM yyyy")</dd>
                             </div>
-                        }
-                    </dl>
-                </Panel>
-
-                @if (!string.IsNullOrWhiteSpace(lead.Notes))
-                {
-                    <Panel Title="Notes">
-                        <p class="text-sm text-content-muted whitespace-pre-wrap">@lead.Notes</p>
+                            @if (lead.Stage == LeadStage.Won && lead.ProjectId is not null)
+                            {
+                                <div class="sm:col-span-2">
+                                    <dt class="eyebrow">Became</dt>
+                                    <dd class="text-content mt-1">
+                                        <a href="/projects/@lead.ProjectId" class="text-info hover:underline underline-offset-4">Open the project</a>
+                                        <span class="text-content-subtle"> · client account created</span>
+                                    </dd>
+                                </div>
+                            }
+                            @if (lead.Stage == LeadStage.Lost && !string.IsNullOrWhiteSpace(lead.LostReason))
+                            {
+                                <div class="sm:col-span-2">
+                                    <dt class="eyebrow">Why lost</dt>
+                                    <dd class="text-content mt-1">@lead.LostReason</dd>
+                                </div>
+                            }
+                        </dl>
                     </Panel>
-                }
 
-                <Panel Title="Timeline">
-                    @if (Activities.Count == 0)
+                    @if (!string.IsNullOrWhiteSpace(lead.Notes))
                     {
-                        <p class="text-sm text-content-subtle italic">Nothing logged yet.</p>
+                        <Panel Title="Notes">
+                            <p class="text-sm text-content-muted whitespace-pre-wrap">@lead.Notes</p>
+                        </Panel>
                     }
-                    else
-                    {
-                        <ol class="space-y-4">
-                            @foreach (var activity in Activities)
-                            {
-                                <li class="flex gap-4">
-                                    <div class="shrink-0 w-28 text-xs text-content-subtle pt-0.5" title="@activity.OccurredAt.ToLocalTime().ToString("d MMM yyyy HH:mm")">
-                                        @activity.OccurredAt.ToLocalTime().ToString("d MMM yyyy")<br />@activity.OccurredAt.ToLocalTime().ToString("HH:mm")
-                                    </div>
-                                    <div class="min-w-0">
-                                        <p class="text-xs font-medium @(activity.Kind == LeadActivityKind.StageChange ? "text-accent" : "text-content-subtle")">@activity.Kind.DisplayName()</p>
-                                        <p class="text-sm text-content whitespace-pre-wrap">@activity.Summary</p>
-                                        @if (!string.IsNullOrWhiteSpace(activity.RecordedByEmail))
-                                        {
-                                            <p class="text-xs text-content-faint">@activity.RecordedByEmail</p>
-                                        }
-                                    </div>
-                                </li>
-                            }
-                        </ol>
-                    }
-                </Panel>
-            </div>
 
-            <div class="space-y-6">
-                <Panel Title="Stage">
-                    <p class="text-sm text-content-muted mb-4">@lead.Stage.Meaning()</p>
-                    @if (lead.Stage == LeadStage.Won)
-                    {
-                        <p class="text-sm text-content-subtle">Won leads stay put — the project carries on from here.</p>
-                    }
-                    else
-                    {
-                        <ol class="space-y-1.5">
-                            @foreach (var stage in LeadStageExtensions.Ladder.Where(s => s != LeadStage.Won))
-                            {
-                                var s = stage;
-                                var isCurrent = s == lead.Stage;
-                                var allowed = s.IsOpen() ? CanWork : CanDecide;
-                                <li>
-                                    <button type="button" disabled="@(isCurrent || !allowed || busy)"
-                                            class="w-full text-left rounded border px-3 py-2 text-sm transition disabled:opacity-60 @(isCurrent ? "border-accent bg-accent/10 text-content" : "border-line text-content-muted hover:border-line-strong hover:text-content")"
-                                            title="@(allowed ? s.Meaning() : "Directors decide Lost and Nurture")"
-                                            @onclick="() => OpenMove(s)">
-                                        <span class="font-medium">@s.DisplayName()</span>
-                                        @if (isCurrent)
-                                        {
-                                            <span class="text-xs text-content-subtle ml-2">current</span>
-                                        }
-                                    </button>
-                                </li>
-                            }
-                        </ol>
-                        @if (CanDecide)
+                    <Panel Title="Timeline">
+                        @if (Activities.Count == 0)
                         {
-                            <p class="text-xs text-content-subtle mt-3">Won is the green button above — it creates the client and the project.</p>
+                            <p class="text-sm text-content-subtle italic">Nothing logged yet.</p>
                         }
-                    }
-                </Panel>
+                        else
+                        {
+                            <ol class="space-y-4">
+                                @foreach (var activity in Activities)
+                                {
+                                    <li class="flex gap-4">
+                                        <div class="shrink-0 w-28 text-xs text-content-subtle pt-0.5" title="@activity.OccurredAt.ToLocalTime().ToString("d MMM yyyy HH:mm")">
+                                            @activity.OccurredAt.ToLocalTime().ToString("d MMM yyyy")<br />@activity.OccurredAt.ToLocalTime().ToString("HH:mm")
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="text-xs font-medium @(activity.Kind == LeadActivityKind.StageChange ? "text-accent" : "text-content-subtle")">@activity.Kind.DisplayName()</p>
+                                            <p class="text-sm text-content whitespace-pre-wrap">@activity.Summary</p>
+                                            @if (!string.IsNullOrWhiteSpace(activity.RecordedByEmail))
+                                            {
+                                                <p class="text-xs text-content-faint">@activity.RecordedByEmail</p>
+                                            }
+                                        </div>
+                                    </li>
+                                }
+                            </ol>
+                        }
+                    </Panel>
+                </div>
+
+                <div class="space-y-6">
+                    <Panel Title="Stage">
+                        <p class="text-sm text-content-muted mb-4">@lead.Stage.Meaning()</p>
+                        @if (lead.Stage == LeadStage.Won)
+                        {
+                            <p class="text-sm text-content-subtle">Won leads stay put — the project carries on from here.</p>
+                        }
+                        else
+                        {
+                            <ol class="space-y-1.5">
+                                @foreach (var stage in LeadStageExtensions.Ladder.Where(s => s != LeadStage.Won))
+                                {
+                                    var s = stage;
+                                    var isCurrent = s == lead.Stage;
+                                    var allowed = s.IsOpen() ? CanWork : CanDecide;
+                                    <li>
+                                        <button type="button" disabled="@(isCurrent || !allowed || busy)"
+                                                class="w-full text-left rounded border px-3 py-2 text-sm transition disabled:opacity-60 @(isCurrent ? "border-accent bg-accent/10 text-content" : "border-line text-content-muted hover:border-line-strong hover:text-content")"
+                                                title="@(allowed ? s.Meaning() : "Directors decide Lost and Nurture")"
+                                                @onclick="() => OpenMove(s)">
+                                            <span class="font-medium">@s.DisplayName()</span>
+                                            @if (isCurrent)
+                                            {
+                                                <span class="text-xs text-content-subtle ml-2">current</span>
+                                            }
+                                        </button>
+                                    </li>
+                                }
+                            </ol>
+                            @if (CanDecide)
+                            {
+                                <p class="text-xs text-content-subtle mt-3">Won is the green button above — it creates the client and the project.</p>
+                            }
+                        }
+                    </Panel>
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <LeadFormModal IsOpen="@editOpen" Existing="@lead" Strategies="@Strategies.Current" OnSaved="OnEditedAsync" OnCancel="() => editOpen = false" />
+        <LeadFormModal IsOpen="@editOpen" Existing="@lead" Strategies="@Strategies.Current" OnSaved="OnEditedAsync" OnCancel="() => editOpen = false" />
 
-    <Modal IsOpen="@(moveTo is not null)"
-           Title="@(moveTo is { } m ? $"Move to {m.DisplayName()}" : "")"
-           ConfirmLabel="@(busy ? "Saving…" : moveTo is { } t ? $"Move to {t.DisplayName()}" : "Move")"
-           ConfirmDisabled="@(busy || (moveTo == LeadStage.Lost && string.IsNullOrWhiteSpace(lostReason)))"
-           OnCancel="() => moveTo = null"
-           OnConfirm="MoveAsync">
-        @if (moveTo is { } target)
-        {
-            <p class="text-sm text-content-muted mb-4">@target.Meaning()</p>
-        }
-        @if (actionError is not null)
-        {
-            <p class="rounded bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@actionError</p>
-        }
-        @if (moveTo == LeadStage.Lost)
-        {
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-content mb-1">Why *</label>
-                <input type="text" class="field w-full" maxlength="1024" placeholder="Went with another builder; not going ahead; budget"
-                       value="@lostReason" @oninput="e => lostReason = e.Value?.ToString() ?? string.Empty" />
-            </div>
-        }
-        <div>
-            <label class="block text-sm font-medium text-content mb-1">Note</label>
-            <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Optional — goes on the timeline with the move"
-                      value="@moveNote" @oninput="e => moveNote = e.Value?.ToString() ?? string.Empty"></textarea>
-        </div>
-    </Modal>
-
-    <Modal IsOpen="@winOpen"
-           Title="Won — create client and project"
-           ConfirmLabel="@(busy ? "Creating…" : "Create client & project")"
-           ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(projectReference) || string.IsNullOrWhiteSpace(projectName))"
-           OnCancel="() => winOpen = false"
-           OnConfirm="WinAsync">
-        <p class="text-sm text-content-muted mb-4">
-            This creates the client account (<span class="text-content">@(string.IsNullOrWhiteSpace(lead.CompanyName) ? lead.ContactName : lead.CompanyName)</span>)
-            and the project shell, links both to @lead.Reference and marks it Won. It runs once.
-        </p>
-        @if (actionError is not null)
-        {
-            <p class="rounded bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@actionError</p>
-        }
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Modal IsOpen="@(moveTo is not null)"
+               Title="@(moveTo is { } m ? $"Move to {m.DisplayName()}" : "")"
+               ConfirmLabel="@(busy ? "Saving…" : moveTo is { } t ? $"Move to {t.DisplayName()}" : "Move")"
+               ConfirmDisabled="@(busy || (moveTo == LeadStage.Lost && string.IsNullOrWhiteSpace(lostReason)))"
+               OnCancel="() => moveTo = null"
+               OnConfirm="MoveAsync">
+            @if (moveTo is { } target)
+            {
+                <p class="text-sm text-content-muted mb-4">@target.Meaning()</p>
+            }
+            @if (actionError is not null)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
+            }
+            @if (moveTo == LeadStage.Lost)
+            {
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-content mb-1">Why *</label>
+                    <input type="text" class="field w-full" maxlength="1024" placeholder="Went with another builder; not going ahead; budget"
+                           value="@lostReason" @oninput="e => lostReason = e.Value?.ToString() ?? string.Empty" />
+                </div>
+            }
             <div>
-                <label class="block text-sm font-medium text-content mb-1">Project reference *</label>
-                <input type="text" class="field w-full" maxlength="64" placeholder="e.g. JBB-2026-014"
-                       value="@projectReference" @oninput="e => projectReference = e.Value?.ToString() ?? string.Empty" />
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-content mb-1">Project name *</label>
-                <input type="text" class="field w-full" maxlength="256"
-                       value="@projectName" @oninput="e => projectName = e.Value?.ToString() ?? string.Empty" />
-            </div>
-            <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-content mb-1">Project manager</label>
-                <input type="email" class="field w-full" maxlength="256" placeholder="@($"Blank = the lead's owner ({lead.OwnerEmail})")"
-                       value="@projectManagerEmail" @oninput="e => projectManagerEmail = e.Value?.ToString() ?? string.Empty" />
-            </div>
-            <div class="sm:col-span-2">
                 <label class="block text-sm font-medium text-content mb-1">Note</label>
-                <textarea class="field w-full" rows="2" maxlength="4000" placeholder="Optional — goes on the timeline"
-                          value="@winNote" @oninput="e => winNote = e.Value?.ToString() ?? string.Empty"></textarea>
+                <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Optional — goes on the timeline with the move"
+                          value="@moveNote" @oninput="e => moveNote = e.Value?.ToString() ?? string.Empty"></textarea>
             </div>
-        </div>
-    </Modal>
+        </Modal>
 
-    <Modal IsOpen="@logOpen"
-           Title="Log activity"
-           ConfirmLabel="@(busy ? "Saving…" : "Add to timeline")"
-           ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(logSummary))"
-           OnCancel="() => logOpen = false"
-           OnConfirm="LogAsync">
-        @if (actionError is not null)
-        {
-            <p class="rounded bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@actionError</p>
-        }
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-content mb-1">What</label>
-                <select class="field w-full" value="@logKind" @onchange="e => logKind = Enum.Parse<LeadActivityKind>(e.Value?.ToString() ?? nameof(LeadActivityKind.Note))">
-                    @foreach (var kind in LeadActivityKindExtensions.Loggable)
-                    {
-                        <option value="@kind">@kind.DisplayName()</option>
-                    }
-                </select>
+        <Modal IsOpen="@winOpen"
+               Title="Won — create client and project"
+               ConfirmLabel="@(busy ? "Creating…" : "Create client & project")"
+               ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(projectReference) || string.IsNullOrWhiteSpace(projectName))"
+               OnCancel="() => winOpen = false"
+               OnConfirm="WinAsync">
+            <p class="text-sm text-content-muted mb-4">
+                This creates the client account (<span class="text-content">@(string.IsNullOrWhiteSpace(lead.CompanyName) ? lead.ContactName : lead.CompanyName)</span>)
+                and the project shell, links both to @lead.Reference and marks it Won. It runs once.
+            </p>
+            @if (actionError is not null)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
+            }
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-content mb-1">Project reference *</label>
+                    <input type="text" class="field w-full" maxlength="64" placeholder="e.g. JBB-2026-014"
+                           value="@projectReference" @oninput="e => projectReference = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-content mb-1">Project name *</label>
+                    <input type="text" class="field w-full" maxlength="256"
+                           value="@projectName" @oninput="e => projectName = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-content mb-1">Project manager</label>
+                    <input type="email" class="field w-full" maxlength="256" placeholder="@($"Blank = the lead's owner ({lead.OwnerEmail})")"
+                           value="@projectManagerEmail" @oninput="e => projectManagerEmail = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-content mb-1">Note</label>
+                    <textarea class="field w-full" rows="2" maxlength="4000" placeholder="Optional — goes on the timeline"
+                              value="@winNote" @oninput="e => winNote = e.Value?.ToString() ?? string.Empty"></textarea>
+                </div>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-content mb-1">When</label>
-                <input type="datetime-local" class="field w-full" value="@logWhen" @onchange="e => logWhen = e.Value?.ToString() ?? string.Empty" />
+        </Modal>
+
+        <Modal IsOpen="@logOpen"
+               Title="Log activity"
+               ConfirmLabel="@(busy ? "Saving…" : "Add to timeline")"
+               ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(logSummary))"
+               OnCancel="() => logOpen = false"
+               OnConfirm="LogAsync">
+            @if (actionError is not null)
+            {
+                <Notice Tone="Tone.Negative" Class="mb-4">@actionError</Notice>
+            }
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-content mb-1">What</label>
+                    <select class="field w-full" value="@logKind" @onchange="e => logKind = Enum.Parse<LeadActivityKind>(e.Value?.ToString() ?? nameof(LeadActivityKind.Note))">
+                        @foreach (var kind in LeadActivityKindExtensions.Loggable)
+                        {
+                            <option value="@kind">@kind.DisplayName()</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-content mb-1">When</label>
+                    <input type="datetime-local" class="field w-full" value="@logWhen" @onchange="e => logWhen = e.Value?.ToString() ?? string.Empty" />
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-sm font-medium text-content mb-1">What happened *</label>
+                    <textarea class="field w-full" rows="4" maxlength="4000" placeholder="Who you spoke to, what was said, what happens next"
+                              value="@logSummary" @oninput="e => logSummary = e.Value?.ToString() ?? string.Empty"></textarea>
+                </div>
             </div>
-            <div class="sm:col-span-2">
-                <label class="block text-sm font-medium text-content mb-1">What happened *</label>
-                <textarea class="field w-full" rows="4" maxlength="4000" placeholder="Who you spoke to, what was said, what happens next"
-                          value="@logSummary" @oninput="e => logSummary = e.Value?.ToString() ?? string.Empty"></textarea>
-            </div>
-        </div>
-    </Modal>
-}
+        </Modal>
+    }
+</Page>
 
 @code {
     [Parameter] public string LeadId { get; set; } = "";

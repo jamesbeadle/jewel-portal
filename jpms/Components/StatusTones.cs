@@ -103,6 +103,33 @@ public static class StatusTones
         _ => Tone.Muted
     };
 
+    /// <summary>The sales ladder: open stages read neutral → in flight, Won positive, Lost negative,
+    /// Nurture and New plain facts. (The label carries the rung; the tone carries the verdict.)</summary>
+    public static Tone ToTone(this LeadStage stage) => stage switch
+    {
+        LeadStage.Engaged => Tone.Info,
+        LeadStage.SiteVisit => Tone.Info,
+        LeadStage.Proposal => Tone.Info,
+        LeadStage.Won => Tone.Positive,
+        LeadStage.Lost => Tone.Negative,
+        _ => Tone.Muted
+    };
+
+    public static Tone ToTone(this SalesStrategyStatus status) => status switch
+    {
+        SalesStrategyStatus.Active => Tone.Positive,
+        SalesStrategyStatus.Paused => Tone.Info,
+        _ => Tone.Muted
+    };
+
+    public static Tone ToTone(this HsSeverity severity) => severity switch
+    {
+        HsSeverity.Critical => Tone.Negative,
+        HsSeverity.High => Tone.Negative,
+        HsSeverity.Medium => Tone.Warning,
+        _ => Tone.Muted
+    };
+
     public static Tone ToTone(this DefectStatus status) => status switch
     {
         DefectStatus.Verified => Tone.Positive,
