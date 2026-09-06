@@ -7,7 +7,6 @@ public partial class ProjectRequests
     [Parameter] public string ProjectId { get; set; } = "";
     [Parameter] public string? Kind { get; set; }
 
-    private bool isLoaded;
 
     // ---- Manual RFI entry ----------------------------------------------------------------------
     // The RFI-locked raise dialog (attachments and all). Most RFIs are raised from an email in

@@ -17,16 +17,16 @@
 *@
 
 <Page CanAccess="CanSee" AccessDeniedMessage="You do not have access to the assistant's actions.">
-        <p class="eyebrow mb-1">Assistant</p>
-        <h1 class="text-2xl font-semibold text-content mb-1">AI actions</h1>
-        <p class="text-sm text-content-muted mb-6 max-w-3xl">
-            Every action a connected AI tool can perform, and the
-            <a class="underline" href="/admin/skills">skills</a> attached to each. An attached
-            skill's doctrine is served with the action's contract, so the model reads it in the
-            same breath as the schema — before it performs anything. Attach to a whole
-            <span class="text-content">area</span> for discipline-wide doctrine, or to a single
-            action for the exceptions. Changes are in force immediately.
-        </p>
+        <PageHeader>
+            <SubtitleContent>
+                Every action a connected AI tool can perform, and the
+                <a class="underline" href="/admin/skills">skills</a> attached to each. An attached
+                skill's doctrine is served with the action's contract, so the model reads it in the
+                same breath as the schema — before it performs anything. Attach to a whole
+                <span class="text-content">area</span> for discipline-wide doctrine, or to a single
+                action for the exceptions. Changes are in force immediately.
+            </SubtitleContent>
+        </PageHeader>
 
         @if (dataFailed)
         {

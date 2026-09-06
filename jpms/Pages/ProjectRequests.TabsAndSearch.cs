@@ -224,7 +224,6 @@ public partial class ProjectRequests
         // background reload lands — so navigating back to this tab never shows stale data.
         RequestRegister.Refresh(ProjectId);
         Activity.Refresh(ProjectId);    // Activity badges land in the background — absent until then.
-        isLoaded = true;
     }
 
     public void Dispose()

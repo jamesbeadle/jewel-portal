@@ -30,15 +30,13 @@
     else
     {
         <WorkspaceSectionNav />
-        <header class="mb-6 md:mb-8">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Trades</h1>
-            <p class="text-sm text-content-muted mt-1">
+        <PageHeader>
+            <SubtitleContent>
                 The curated list every directory record and bid package picks its trade from.
                 Renaming updates every directory record carrying the trade; deleting is only
                 possible once no record carries it.
-            </p>
-        </header>
+            </SubtitleContent>
+        </PageHeader>
 
         @if (dataFailed && !Loaded)
         {
@@ -158,7 +156,6 @@
 </Page>
 
 @code {
-    private bool sessionReady;
     private bool dataFailed;
     private bool fetchStarted;
     private bool busy;
@@ -271,7 +268,6 @@
         Session.OnChange += OnSessionChanged;
         TradesModel.OnChanged += StateHasChanged;
         SubsModel.OnChanged += StateHasChanged;
-        sessionReady = true;
 
         if (Session.ActiveRole == Role.Admin)
         {

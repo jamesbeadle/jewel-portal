@@ -15,7 +15,6 @@ public partial class ProjectWorkOrderAllocation
         (QueueFilter.All, "All")
     };
 
-    private bool isLoaded;
     private List<WorkOrderInvoiceSummary> summaries = new();
     private List<ProjectCostOfSalesLine> AllLines = new();
     private QueueFilter queueFilter = QueueFilter.Unlinked;
@@ -323,7 +322,6 @@ public partial class ProjectWorkOrderAllocation
         // data-loading convention) — the read model backs the dropdown's centre matching.
         _ = WorkOrders.RefreshAsync(ProjectId, CancellationToken.None);
         await RefreshAsync();
-        isLoaded = true;
     }
 
     public void Dispose()

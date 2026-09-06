@@ -16,7 +16,7 @@
 <Page>
     @if (!CanAccess || !HasLinkedRecord)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">
             This page shows a subcontractor one of their own work orders. Your login isn't linked
             to a subcontractor record.
@@ -28,7 +28,7 @@
     }
     else if (Order is null)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Work order not found</h1>
+        <PageHeader Title="Work order not found" />
         <p class="text-content-muted">
             This work order isn't one of yours, or hasn't been issued yet.
             <a class="underline underline-offset-4" href="/portal">Back to your record</a>
@@ -97,7 +97,6 @@
 @code {
     [Parameter] public string WorkOrderId { get; set; } = "";
 
-    private bool isLoaded;
     private bool acceptBusy;
     private string? acceptError;
     private string? acceptNote;
@@ -146,7 +145,6 @@
         PortalStore.OnChange += HandleChange;
         // Revalidate in the background on every visit (stale-while-revalidate, per CLAUDE.md).
         if (CanAccess && HasLinkedRecord) _ = PortalStore.Refresh();
-        isLoaded = true;
     }
 
     private void HandleChange() => StateHasChanged();

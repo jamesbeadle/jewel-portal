@@ -8,7 +8,6 @@ public partial class ProjectArchitectInstructions
 
     // Session checked and the user is signed in — the heading and the File button show straight
     // away. Whether the register has arrived is a separate question, answered by `instructions`.
-    private bool sessionReady;
     private bool busy;
     private string? error;
     private string? dialogError;
@@ -47,7 +46,6 @@ public partial class ProjectArchitectInstructions
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         if (!Session.IsApproved) return;
 
         await LoadAsync();

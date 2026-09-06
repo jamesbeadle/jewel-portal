@@ -28,32 +28,32 @@
 <Page>
     @if (!CanAccess)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">The directory is restricted to administrators, directors and project managers.</p>
     }
     else
     {
-        <header class="mb-6 flex flex-wrap items-start justify-between gap-3">
-            <div>
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Directory</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Directory</h1>
-                <p class="text-sm text-content-muted mt-2">@GroupSummary</p>
-            </div>
-            @if (group == DirectoryGroup.Subcontractors)
-            {
-                <div class="flex items-center gap-4 shrink-0">
-                    <ExportToExcelButton FileName="Directory"
-                                         Disabled="@(DirectoryCompanies().Count == 0)"
-                                         ShowIncludeAllRows="@(!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(categoryFilter))"
-                                         IncludeAllLabel="Ignore search & filter"
-                                         BuildWorkbook="BuildExportWorkbook" />
-                    @if (CanManage)
-                    {
-                        <button type="button" class="btn-primary" @onclick="OpenAddModal">+ Add company</button>
-                    }
-                </div>
-            }
-        </header>
+        <PageHeader>
+            <SubtitleContent>
+                @GroupSummary
+            </SubtitleContent>
+            <Actions>
+                @if (group == DirectoryGroup.Subcontractors)
+                {
+                    <div class="flex items-center gap-4 shrink-0">
+                        <ExportToExcelButton FileName="Directory"
+                                             Disabled="@(DirectoryCompanies().Count == 0)"
+                                             ShowIncludeAllRows="@(!string.IsNullOrWhiteSpace(search) || !string.IsNullOrWhiteSpace(categoryFilter))"
+                                             IncludeAllLabel="Ignore search & filter"
+                                             BuildWorkbook="BuildExportWorkbook" />
+                        @if (CanManage)
+                        {
+                            <button type="button" class="btn-primary" @onclick="OpenAddModal">+ Add company</button>
+                        }
+                    </div>
+                }
+            </Actions>
+        </PageHeader>
 
         @* The group chips: who you're looking for. Subcontractors is the company directory
            (the page's original body, unchanged); the other groups fold in alongside. *@

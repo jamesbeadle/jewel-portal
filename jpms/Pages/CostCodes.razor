@@ -15,40 +15,38 @@
 
 <Page CanAccess="CanManage" AccessDeniedMessage="You don't have access to cost codes.">
     <WorkspaceSectionNav />
-    <header class="mb-6 flex items-end justify-between gap-4">
-        <div>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Commercial</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Cost codes</h1>
-            <p class="text-sm text-content-muted mt-2">
-                @if (activeTab == CostCodesTab.Ours)
-                {
-                    <text>The global cost-code master. Every project's financials, valuation report and invoice
-                    allocations group by these codes. Retired codes keep their historical allocations.</text>
-                }
-                else if (activeTab == CostCodesTab.XeroSites)
-                {
-                    <text>The options of Xero's Sites tracking category, spelt exactly as Xero holds them —
-                    the names a project's Xero site mapping must match for its costs to land on the right job.</text>
-                }
-                else
-                {
-                    <text>The options of Xero's Cost Code tracking category, spelt exactly as Xero holds them,
-                    side by side with the system's own master list.</text>
-                }
-            </p>
-        </div>
-        @if (activeTab == CostCodesTab.Ours)
-        {
-            <button type="button" class="btn-primary shrink-0" @onclick="OpenAdd">New cost code</button>
-        }
-        else
-        {
-            <Toolbar>
-                <ToolbarButton Icon="refresh" Label="Refresh from Xero"
-                               Busy="@xeroRefreshing" OnClick="ForceRefreshXeroAsync" />
-            </Toolbar>
-        }
-    </header>
+    <PageHeader>
+        <SubtitleContent>
+            @if (activeTab == CostCodesTab.Ours)
+            {
+                <text>The global cost-code master. Every project's financials, valuation report and invoice
+                allocations group by these codes. Retired codes keep their historical allocations.</text>
+            }
+            else if (activeTab == CostCodesTab.XeroSites)
+            {
+                <text>The options of Xero's Sites tracking category, spelt exactly as Xero holds them —
+                the names a project's Xero site mapping must match for its costs to land on the right job.</text>
+            }
+            else
+            {
+                <text>The options of Xero's Cost Code tracking category, spelt exactly as Xero holds them,
+                side by side with the system's own master list.</text>
+            }
+        </SubtitleContent>
+        <Actions>
+            @if (activeTab == CostCodesTab.Ours)
+            {
+                <button type="button" class="btn-primary shrink-0" @onclick="OpenAdd">New cost code</button>
+            }
+            else
+            {
+                <Toolbar>
+                    <ToolbarButton Icon="refresh" Label="Refresh from Xero"
+                                   Busy="@xeroRefreshing" OnClick="ForceRefreshXeroAsync" />
+                </Toolbar>
+            }
+        </Actions>
+    </PageHeader>
 
     <div class="mb-6 inline-flex flex-wrap rounded-lg border border-line overflow-hidden">
         <button class="@TabCss(activeTab == CostCodesTab.Ours)" @onclick="() => SwitchTab(CostCodesTab.Ours)">

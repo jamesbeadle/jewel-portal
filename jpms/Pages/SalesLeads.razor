@@ -22,21 +22,19 @@
 
 <Page>
     <WorkspaceSectionNav />
-    <header class="mb-6 flex items-end justify-between gap-4">
-        <div>
-            <p class="eyebrow mb-1">JPMS · Sales</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Leads</h1>
-            <p class="text-sm text-content-muted mt-2 max-w-3xl">
-                Everyone we might convince to build with Jewel — to upgrade their house or have a new one built —
-                and the property the work would be on. Every lead lands here whatever found it; the strategy that
-                found it is named on the row, so a strategy is judged by how far its leads climb.
-            </p>
-        </div>
-        @if (CanWork)
-        {
-            <button type="button" class="btn-primary shrink-0" @onclick="OpenCapture">New lead</button>
-        }
-    </header>
+    <PageHeader>
+        <SubtitleContent>
+            Everyone we might convince to build with Jewel — to upgrade their house or have a new one built —
+            and the property the work would be on. Every lead lands here whatever found it; the strategy that
+            found it is named on the row, so a strategy is judged by how far its leads climb.
+        </SubtitleContent>
+        <Actions>
+            @if (CanWork)
+            {
+                <button type="button" class="btn-primary shrink-0" @onclick="OpenCapture">New lead</button>
+            }
+        </Actions>
+    </PageHeader>
 
     @if (dataFailed && Leads.Current is null)
     {
@@ -151,7 +149,6 @@
 </Page>
 
 @code {
-    private bool sessionReady;
     private bool dataFailed;
     private bool captureOpen;
     private string search = "";
@@ -211,7 +208,6 @@
         Strategies.OnChanged += StateHasChanged;
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         await LoadAsync();
     }
 

@@ -23,16 +23,12 @@
 <Page>
     @if (!CanAccess)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">The audit trail is restricted to administrators, the finance director and project managers.</p>
     }
     else
     {
-        <header class="mb-6">
-            <p class="eyebrow mb-1">JPMS</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Audit trail</h1>
-            <p class="text-sm text-content-muted mt-1">Client-facing interactions and finance recodes recorded by the portal.</p>
-        </header>
+        <PageHeader Subtitle="Client-facing interactions and finance recodes recorded by the portal." />
 
         <div class="flex flex-wrap items-center gap-2 mb-4">
             <button type="button" class="@PathwayTabClass(null)" @onclick="() => OnPathwayChanged(null)">All</button>

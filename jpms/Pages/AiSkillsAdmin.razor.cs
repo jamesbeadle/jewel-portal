@@ -3,7 +3,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class AiSkillsAdmin
 {
-    private bool sessionReady;
     private bool dataFailed;
     private bool saving;
     private bool savedTick;
@@ -25,7 +24,6 @@ public partial class AiSkillsAdmin
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
-        sessionReady = true;
         if (!CanSee) return;
 
         await LoadAsync();

@@ -32,16 +32,19 @@
 *@
 
 <Page>
-        <header class="mb-6">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">@family.Pathway</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Communications</h1>
-            @if (loaded && total > 0)
-            {
-                <p class="text-sm text-content-muted mt-2">
-                    @total email@(total == 1 ? "" : "s") @(categoryTagFilter is null ? $"tagged as {family.Label.ToLowerInvariant()}" : $"tagged {ActiveFilterLabel}").
-                </p>
-            }
-        </header>
+        <PageHeader>
+            <EyebrowContent>
+                @family.Pathway
+            </EyebrowContent>
+            <SubtitleContent>
+                @if (loaded && total > 0)
+                {
+                    <p>
+                        @total email@(total == 1 ? "" : "s") @(categoryTagFilter is null ? $"tagged as {family.Label.ToLowerInvariant()}" : $"tagged {ActiveFilterLabel}").
+                    </p>
+                }
+            </SubtitleContent>
+        </PageHeader>
 
         @* The category chips — a filter control, so never gated: they render from the contracts
            constant alone, usable before the first page lands, and stay put when a category comes

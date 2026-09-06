@@ -20,12 +20,10 @@
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
 
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        isLoaded = true;
     }
 }

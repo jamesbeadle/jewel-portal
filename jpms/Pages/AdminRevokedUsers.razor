@@ -28,14 +28,12 @@
     else
     {
         <WorkspaceSectionNav />
-        <header class="mb-6 md:mb-8">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Revoked users</h1>
-            <p class="text-sm text-content-muted mt-1">
+        <PageHeader>
+            <SubtitleContent>
                 People whose access has been revoked. They can't sign in, but their record and old roles are kept —
                 restore brings them back exactly as they were; permanent deletion removes the record for good.
-            </p>
-        </header>
+            </SubtitleContent>
+        </PageHeader>
 
         @if (dataFailed && !UserDirectory.IsRevokedLoaded)
         {
@@ -53,7 +51,6 @@
 </Page>
 
 @code {
-    private bool sessionReady;
     private bool dataFailed;
 
     protected override async Task OnInitializedAsync()
@@ -65,7 +62,6 @@
             return;
         }
         Session.OnChange += StateHasChanged;
-        sessionReady = true;
 
         if (Session.ActiveRole == Role.Admin)
         {

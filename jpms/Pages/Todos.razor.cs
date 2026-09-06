@@ -13,7 +13,6 @@ public partial class Todos
 
     // Session checked and the user signed in. This is NOT "the data is here" — keeping the two
     // apart is what lets the page show its chrome at once and hold the list until it lands.
-    private bool sessionReady;
     private bool loading = true;
     // A failed fetch has to open the gate, or the jewel pulses forever; the panel then says so
     // rather than reporting an empty list nobody actually asked for.
@@ -84,7 +83,6 @@ public partial class Todos
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         boardView = await ViewStorage.ReadBoardAsync(Auth.CurrentUser!.Email);
         // Paint the chrome before the fetches: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed, so without this the page waits on the list.

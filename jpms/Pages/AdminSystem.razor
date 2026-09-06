@@ -28,15 +28,13 @@
     else
     {
         <WorkspaceSectionNav />
-        <header class="mb-6 md:mb-8">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">System</h1>
-            <p class="text-sm text-content-muted mt-1">
+        <PageHeader>
+            <SubtitleContent>
                 The version every signed-in tab is asked to run. Publishing an update raises the
                 refresh bar on every open tab — use it once a deploy has finished, so nobody keeps
                 working on the old build.
-            </p>
-        </header>
+            </SubtitleContent>
+        </PageHeader>
 
         @if (dataFailed && !Store.IsLoaded)
         {
@@ -155,7 +153,6 @@
 </Page>
 
 @code {
-    private bool sessionReady;
     private bool dataFailed;
     private bool fetchStarted;
     private bool confirming;
@@ -212,7 +209,6 @@
         }
         Session.OnChange += OnSessionChanged;
         Store.OnChange += StateHasChanged;
-        sessionReady = true;
 
         if (Session.ActiveRole == Role.Admin)
         {

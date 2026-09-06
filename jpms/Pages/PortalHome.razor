@@ -11,21 +11,21 @@
 <Page>
     @if (!CanAccess)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">The portal is for subcontractor accounts.</p>
     }
     else if (!HasLinkedRecord)
     {
         @* The session has the Subcontractor role but no linked record (typically an admin or internal
            user browsing here) — say so immediately instead of firing portal calls that will 403. *@
-        <section class="px-4 md:px-8 py-12">
-            <h1 class="text-2xl font-semibold text-content mb-2">No record linked</h1>
+        <div>
+            <PageHeader Title="No record linked" />
             <p class="text-content-muted">
                 This page shows a subcontractor their own record, work orders and variations. Your login
                 isn't linked to a subcontractor record — subcontractors are invited from their directory
                 record, which links their login and scopes everything here to their company.
             </p>
-        </section>
+        </div>
     }
     else if (!PortalStore.IsLoaded)
     {
@@ -33,7 +33,7 @@
     }
     else if (myRecord is null)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">No record linked</h1>
+        <PageHeader Title="No record linked" />
         <p class="text-content-muted">
             Your login isn't linked to a subcontractor record yet. Ask your JBB contact to re-send
             your portal invite.
@@ -41,13 +41,15 @@
     }
     else
     {
-        <header class="mb-6">
-            <h1 class="text-2xl md:text-3xl font-semibold text-content">@myRecord.Record.CompanyName</h1>
-            <p class="text-sm text-content-muted mt-1">
+        <PageHeader>
+            <TitleContent>
+                @myRecord.Record.CompanyName
+            </TitleContent>
+            <SubtitleContent>
                 @string.Join(" · ", new[] { myRecord.Record.TradesLabel, myRecord.Record.ContactName, myRecord.Record.ContactEmail }
                     .Where(x => !string.IsNullOrWhiteSpace(x)))
-            </p>
-        </header>
+            </SubtitleContent>
+        </PageHeader>
 
         @if (ExpiringOrExpired.Count > 0)
         {

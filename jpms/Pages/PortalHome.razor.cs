@@ -4,7 +4,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class PortalHome
 {
-    private bool isLoaded;
 
     private SubcontractorPortalRecord? myRecord;
 
@@ -176,7 +175,6 @@ public partial class PortalHome
         // Only for linked portal logins — unlinked sessions get an immediate explanation instead.
         if (CanAccess && HasLinkedRecord) _ = PortalStore.Refresh();
         Reload();
-        isLoaded = true;
     }
 
     // Don't touch the store for unlinked sessions — avoids a pointless 403 fetch.

@@ -19,7 +19,7 @@
     @* Full-width (no max-w cap): the allocation table is the whole page. A capped,
        centred container left growing side margins when zooming out instead of giving
        the columns the reclaimed space. *@
-    <section class="w-full px-6 py-8 md:py-12">
+    <div class="w-full">
         <WorkspaceSectionNav />
         <AllocationPageHeader Busy="isBusy" Rechecking="isRechecking" Syncing="isSyncing"
                               OnRecheck="RecheckMatchesAsync" OnSync="SyncAsync" />
@@ -374,5 +374,5 @@
                 </div>
             }
         </Modal>
-    </section>
+    </div>
 </Page>

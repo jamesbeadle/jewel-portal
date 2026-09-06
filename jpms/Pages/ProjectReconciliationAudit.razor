@@ -21,7 +21,7 @@
 <Page>
     @if (!CanAccess)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">The reconciliation audit is restricted to the commercial team.</p>
     }
     else
@@ -112,7 +112,6 @@
 
     // Session checked and the user signed in. This is NOT "the trail is here" — that is `loaded`,
     // below; keeping the two apart lets the page chrome show while the first page is in flight.
-    private bool sessionReady;
     private bool loaded;
     private bool loadingMore;
     private string? loadError;
@@ -131,7 +130,6 @@
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         // Paint the chrome before the fetch: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed, so without this the page waits on the first page.
         StateHasChanged();

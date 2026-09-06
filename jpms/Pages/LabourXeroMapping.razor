@@ -176,7 +176,6 @@
 </Page>
 
 @code {
-    private bool sessionReady;
     private bool dataFailed;
     private bool refreshing;
     private bool isSaving;
@@ -200,7 +199,6 @@
         Projects.OnChanged += StateHasChanged;
         Tracking.OnChanged += StateHasChanged;
         CostCenters.OnChanged += StateHasChanged;
-        sessionReady = true;
         StateHasChanged();
         try
         {

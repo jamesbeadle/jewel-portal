@@ -43,30 +43,31 @@
 *@
 
 <Page>
-    <header class="mb-6 md:mb-8 flex items-end justify-between gap-4 flex-wrap">
-        <div>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Company</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Weekly Cashflow</h1>
-            <p class="text-sm text-content-muted mt-1">
-                The next @WeeklyCashflowMaths.DefaultWeekCount weeks, week by week — every outstanding bill and invoice from Xero, plus the
-                outgoings it can't see. Move any entry to the week it will really be paid.
-            </p>
-        </div>
-        <div class="flex items-center gap-3">
-            <Toolbar>
-                <ExportToExcelButton FileName="Weekly cashflow"
-                                     Disabled="@(!GridReady || !XeroReady)"
-                                     BuildWorkbook="BuildExportWorkbook" />
-                <ToolbarDivider />
-                <ToolbarButton Icon="folder" Label="Group suppliers"
-                               Disabled="@(!GridReady || planFailed)" OnClick="() => groupsModal.Open()" />
-                <ToolbarButton Icon="refresh" Label="Refresh from Xero"
-                               Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
-            </Toolbar>
-            @* A control, so never gated — disabled until the plan has landed, in its own language. *@
+    <PageHeader>
+        <SubtitleContent>
+            The next @WeeklyCashflowMaths.DefaultWeekCount weeks, week by week — every outstanding bill and invoice from Xero, plus the
+            outgoings it can't see. Move any entry to the week it will really be paid.
+        </SubtitleContent>
+        <Primary>
             <button type="button" class="btn-primary" disabled="@(!GridReady || planFailed)" @onclick="() => itemModal.OpenAdd(today)">Add item</button>
-        </div>
-    </header>
+        </Primary>
+        <Actions>
+            <div class="flex items-center gap-3">
+                <Toolbar>
+                    <ExportToExcelButton FileName="Weekly cashflow"
+                                         Disabled="@(!GridReady || !XeroReady)"
+                                         BuildWorkbook="BuildExportWorkbook" />
+                    <ToolbarDivider />
+                    <ToolbarButton Icon="folder" Label="Group suppliers"
+                                   Disabled="@(!GridReady || planFailed)" OnClick="() => groupsModal.Open()" />
+                    <ToolbarButton Icon="refresh" Label="Refresh from Xero"
+                                   Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
+                </Toolbar>
+                @* A control, so never gated — disabled until the plan has landed, in its own language. *@
+
+            </div>
+        </Actions>
+    </PageHeader>
 
     @{
         // Computed ONCE per render and threaded through — the tiles, the bands and the

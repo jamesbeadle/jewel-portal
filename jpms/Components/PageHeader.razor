@@ -17,13 +17,17 @@
 {
     <header class="mb-6 flex flex-wrap items-end justify-between gap-x-6 gap-y-3 @Class">
         <div class="min-w-0">
-            @if (Eyebrow is not null)
+            @if (EyebrowContent is not null)
+            {
+                <p class="text-sm font-medium text-content-subtle mb-1">@EyebrowContent</p>
+            }
+            else if (Eyebrow is not null)
             {
                 <p class="text-sm font-medium text-content-subtle mb-1">@Eyebrow</p>
             }
             @if (TitleContent is not null)
             {
-                <h1 class="text-xl font-medium text-content leading-tight">@TitleContent</h1>
+                <h1 class="text-xl font-medium text-content leading-tight flex flex-wrap items-center gap-2">@TitleContent</h1>
             }
             else if (Title is not null)
             {
@@ -55,6 +59,8 @@
     [Parameter] public RenderFragment? TitleContent { get; set; }
     /// <summary>The line above the title — a reference, a parent.</summary>
     [Parameter] public string? Eyebrow { get; set; }
+    /// <summary>Eyebrow with markup (a link back to the register, a reference badge). Wins over Eyebrow.</summary>
+    [Parameter] public RenderFragment? EyebrowContent { get; set; }
     [Parameter] public string? Subtitle { get; set; }
     /// <summary>Subtitle with markup or data-dependent parts. Wins over Subtitle.</summary>
     [Parameter] public RenderFragment? SubtitleContent { get; set; }
@@ -64,6 +70,6 @@
     [Parameter] public RenderFragment? Primary { get; set; }
     [Parameter] public string Class { get; set; } = "";
 
-    private bool HasTitleBlock => Title is not null || TitleContent is not null || Eyebrow is not null || Subtitle is not null || SubtitleContent is not null;
+    private bool HasTitleBlock => Title is not null || TitleContent is not null || Eyebrow is not null || EyebrowContent is not null || Subtitle is not null || SubtitleContent is not null;
     private bool HasActions => Actions is not null || Primary is not null;
 }

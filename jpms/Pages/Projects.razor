@@ -8,72 +8,56 @@
 
 <PageTitle>Projects · JPMS</PageTitle>
 
-@if (!isLoaded)
-{
-    <section class="px-6 py-6 md:px-8 text-content-subtle text-sm">
-        Loading projects…
-    </section>
-}
-else if (!Session.IsApproved)
-{
-    <RequestAccessView Email="@Auth.CurrentUser!.Email" DisplayName="@Auth.CurrentUser.DisplayName" />
-}
-else
-{
-    <section class="px-6 py-6 md:px-8">
-        <header class="mb-6 flex items-end justify-between gap-4">
-            <div>
-                <p class="eyebrow mb-1">JPMS · Projects</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Project portfolio</h1>
-                <p class="text-sm text-content-muted mt-2">
-                    @ActiveProjects.Count(p => p.Stage != ProjectStage.Completed) active.
-                    @if (CanCreateProjects)
-                    {
-                        <span>Projects are created from a won lead, or add one directly.</span>
-                    }
-                    else
-                    {
-                        <span>New projects are created from a won lead.</span>
-                    }
-                </p>
-            </div>
+<Page>
+    <PageHeader>
+        <SubtitleContent>
+            @ActiveProjects.Count(p => p.Stage != ProjectStage.Completed) active.
+            @if (CanCreateProjects)
+            {
+                <span>Projects are created from a won lead, or add one directly.</span>
+            }
+            else
+            {
+                <span>New projects are created from a won lead.</span>
+            }
+        </SubtitleContent>
+        <Actions>
             @if (CanCreateProjects)
             {
                 <button type="button" @onclick="OpenForm" class="btn-primary shrink-0">+ New project</button>
             }
-        </header>
+        </Actions>
+    </PageHeader>
 
-        <div class="mb-3 flex items-center justify-end gap-4">
-            @* Where the dashboard's "Valuations overdue" tile lands: the same rows it counted. *@
-            <label class="flex items-center gap-2 text-sm cursor-pointer select-none @(overdueValuationsOnly ? "text-negative font-medium" : "text-content-muted")">
-                <input type="checkbox" checked="@overdueValuationsOnly" @onchange="e => overdueValuationsOnly = (bool)e.Value!" />
-                <span>Overdue valuations only@(OverdueValuationCount > 0 ? $" ({OverdueValuationCount})" : "")</span>
-            </label>
-            <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
-                <input type="checkbox" checked="@showCompleted" @onchange="e => showCompleted = (bool)e.Value!" />
-                <span>Show completed</span>
-            </label>
-            <ExportToExcelButton FileName="Projects"
-                                 Disabled="@(ActiveProjects.Count == 0)"
-                                 ShowIncludeAllRows="@(!showCompleted)"
-                                 IncludeAllLabel="Include completed"
-                                 BuildWorkbook="BuildExportWorkbook" />
-        </div>
+    <div class="mb-3 flex items-center justify-end gap-4">
+        @* Where the dashboard's "Valuations overdue" tile lands: the same rows it counted. *@
+        <label class="flex items-center gap-2 text-sm cursor-pointer select-none @(overdueValuationsOnly ? "text-negative font-medium" : "text-content-muted")">
+            <input type="checkbox" checked="@overdueValuationsOnly" @onchange="e => overdueValuationsOnly = (bool)e.Value!" />
+            <span>Overdue valuations only@(OverdueValuationCount > 0 ? $" ({OverdueValuationCount})" : "")</span>
+        </label>
+        <label class="flex items-center gap-2 text-sm text-content-muted cursor-pointer select-none">
+            <input type="checkbox" checked="@showCompleted" @onchange="e => showCompleted = (bool)e.Value!" />
+            <span>Show completed</span>
+        </label>
+        <ExportToExcelButton FileName="Projects"
+                             Disabled="@(ActiveProjects.Count == 0)"
+                             ShowIncludeAllRows="@(!showCompleted)"
+                             IncludeAllLabel="Include completed"
+                             BuildWorkbook="BuildExportWorkbook" />
+    </div>
 
-        @if (overdueValuationsOnly && VisibleProjects.Count == 0)
-        {
-            <p class="text-sm text-content-subtle italic mb-3">No live project has an overdue valuation date. Dates are set on each project's Settings tab.</p>
-        }
-        <ProjectsTable Projects="VisibleProjects" />
-    </section>
+    @if (overdueValuationsOnly && VisibleProjects.Count == 0)
+    {
+        <p class="text-sm text-content-subtle italic mb-3">No live project has an overdue valuation date. Dates are set on each project's Settings tab.</p>
+    }
+    <ProjectsTable Projects="VisibleProjects" />
 
     <Modal IsOpen="showForm" Title="New project" ShowFooter="false" OnCancel="CloseForm">
         <NewProjectForm OnCreated="HandleCreated" OnClosed="CloseForm" />
     </Modal>
-}
+</Page>
 
 @code {
-    private bool isLoaded;
     private bool showForm;
     private bool showCompleted;
     private bool overdueValuationsOnly;
@@ -147,7 +131,6 @@ else
         ProjectsReadModel.OnChanged += StateHasChanged;
         Session.OnChange += StateHasChanged;
         await ProjectsReadModel.RefreshAsync(CancellationToken.None);
-        isLoaded = true;
     }
 
     public void Dispose()

@@ -8,7 +8,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class LabourOverview
 {
-    private bool sessionReady;
     private bool dataFailed;
     private bool refreshing;
     private string? actionError;
@@ -45,7 +44,6 @@ public partial class LabourOverview
         Labour.OnChange += HandleChange;
         Projects.OnChanged += HandleChange;
         CostCenters.OnChanged += HandleChange;
-        sessionReady = true;
         // Paint the chrome before the fetch: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed (Workers.razor has the full story).
         StateHasChanged();

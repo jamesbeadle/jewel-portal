@@ -19,14 +19,14 @@
 *@
 
 <Page CanAccess="CanSee" AccessDeniedMessage="You do not have access to the assistant's skills.">
-        <p class="eyebrow mb-1">Assistant</p>
-        <h1 class="text-2xl font-semibold text-content mb-1">AI skills</h1>
-        <p class="text-sm text-content-muted mb-6 max-w-3xl">
-            The domain knowledge behind each agent — doctrine, method, standing rules — written as
-            markdown and versioned on every save. A skill saved here is in force on the assistant's
-            next message. <span class="text-content">Pinned</span> skills ride with the agent on every
-            turn; unpinned ones are loaded by the assistant when the task needs them.
-        </p>
+        <PageHeader>
+            <SubtitleContent>
+                The domain knowledge behind each agent — doctrine, method, standing rules — written as
+                markdown and versioned on every save. A skill saved here is in force on the assistant's
+                next message. <span class="text-content">Pinned</span> skills ride with the agent on every
+                turn; unpinned ones are loaded by the assistant when the task needs them.
+            </SubtitleContent>
+        </PageHeader>
 
         @if (editing is null)
         {

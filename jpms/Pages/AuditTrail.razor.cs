@@ -9,7 +9,6 @@ public partial class AuditTrail
     // Session checked and the user signed in. This is NOT "the register is here" — that is
     // `loaded`, below; keeping the two apart is what lets the chrome and the filters show at once
     // while the first page is still in flight.
-    private bool sessionReady;
     private bool loaded;
     // The project labels have answered (or failed — a failure leaves the picker with the one
     // "All projects" option, which is honest once it is known to be all there is).
@@ -82,7 +81,6 @@ public partial class AuditTrail
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         // Paint the chrome before the fetches: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed, so without this the page waits on the first page.
         StateHasChanged();

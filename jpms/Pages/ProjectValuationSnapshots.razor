@@ -123,7 +123,6 @@
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
     private string? viewingSnapshotId;
 
     // Email-draft flow — same circle as the register's take/delete gate: the roles that run
@@ -160,7 +159,6 @@
         // background reload revalidates them (stale-while-revalidate).
         Store.Refresh(ProjectId);
         try { invoices = await Invoices.ListAsync(ProjectId); } catch { }
-        isLoaded = true;
     }
 
     private void OnStoreChanged() => StateHasChanged();

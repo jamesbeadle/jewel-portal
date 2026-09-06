@@ -70,7 +70,6 @@
     private const string CorrespondencePane = "Correspondence";
     private static readonly string[] Panes = { DetailsPane, RetentionPane, ContractPane, CorrespondencePane };
 
-    private bool isLoaded;
     private string activePane = DetailsPane;
 
     private Project? Project => Projects.Find(ProjectId);
@@ -104,7 +103,6 @@
         // pick up the new stage / entity / project manager without a page reload.
         Projects.OnChanged += StateHasChanged;
         if (Projects.Current is null) await Projects.RefreshAsync(CancellationToken.None);
-        isLoaded = true;
     }
 
     public void Dispose() => Projects.OnChanged -= StateHasChanged;

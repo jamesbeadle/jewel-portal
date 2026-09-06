@@ -15,21 +15,23 @@
     }
     else if (record is null)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Variation order not found</h1>
+        <PageHeader Title="Variation order not found" />
         <p class="text-content-muted">This variation order isn't on one of your projects, or it no longer exists.</p>
     }
     else
     {
         <a href="/client" class="text-sm text-accent hover:underline">&larr; Your projects</a>
-        <header>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">
+        <PageHeader>
+            <TitleContent>
+                @record.Title
+            </TitleContent>
+            <EyebrowContent>
                 @(record.VariationRef ?? record.Reference) · Variation order · @record.ProjectName
-            </p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">@record.Title</h1>
-            <p class="text-sm text-content-muted mt-1">
+            </EyebrowContent>
+            <SubtitleContent>
                 @record.Status.DisplayName()@(ClientPortalDisplay.ValueLabel(record) is { } value ? $" · {value}" : "")@(record.ApprovedAt is { } approved ? $" · approved {approved.LocalDateTime:d MMM yyyy}" : "")
-            </p>
-        </header>
+            </SubtitleContent>
+        </PageHeader>
 
         @if (!string.IsNullOrWhiteSpace(record.Description))
         {
@@ -45,7 +47,6 @@
 @code {
     [Parameter] public string VariationOrderId { get; set; } = "";
 
-    private bool sessionReady;
     private bool loaded;
     private ClientPortalVariationOrder? record;
 
@@ -55,7 +56,6 @@
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         if (!Session.IsApproved || !CanAccess) return;
         StateHasChanged();
         // A failed fetch opens the gate too — null renders the not-found explanation.

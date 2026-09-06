@@ -19,20 +19,22 @@
 *@
 
 <Page CanAccess="CanSee" AccessDeniedMessage="You do not have access to the agent architecture.">
-        <p class="eyebrow mb-1">Assistant</p>
-        <h1 class="text-2xl font-semibold text-content mb-1">AI agents</h1>
-        <p class="text-sm text-content-muted mb-2 max-w-3xl">
+        <PageHeader>
+            <SubtitleContent>
+        <p class="mb-2 max-w-3xl">
             The architecture the assistant runs on, live — not a diagram. One conversation, one
             turn loop; an agent is the configuration in force: its tools, its working instructions,
             and its skills. The <span class="text-content">orchestrator</span> fronts every
             conversation and hands over before any content is drafted.
         </p>
-        <p class="text-xs text-content-subtle mb-6 max-w-3xl">
+        <p class="text-xs text-content-subtle max-w-3xl">
             Configuration (grey) is code — changed by a developer, so every conversation runs on the
             same rails. Knowledge (the skills on each card) is yours — edited on
             <a class="underline underline-offset-2 hover:text-content" href="/admin/skills">AI Skills</a>,
             in force on the assistant's next message.
         </p>
+            </SubtitleContent>
+        </PageHeader>
 
         <div class="space-y-4">
             @foreach (var agent in AgentCatalogue.All)
@@ -172,7 +174,6 @@
 </Page>
 
 @code {
-    private bool sessionReady;
 
     // Null means no fetch has landed (CLAUDE.md loading states). The agent cards render without
     // it — the catalogue is code — and each card's skill list waits on its own line.
@@ -185,7 +186,6 @@
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
-        sessionReady = true;
         if (!CanSee) return;
 
         try

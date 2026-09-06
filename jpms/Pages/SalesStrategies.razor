@@ -21,21 +21,19 @@
 
 <Page>
     <WorkspaceSectionNav />
-    <header class="mb-6 flex items-end justify-between gap-4">
-        <div>
-            <p class="eyebrow mb-1">JPMS · Sales</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Strategies</h1>
-            <p class="text-sm text-content-muted mt-2 max-w-3xl">
-                How we find the next project — each way written down with its justification: who, where, why now,
-                the evidence behind it, how they are reached and what we say. Every lead a strategy finds carries
-                its name, so the funnel below each card is the strategy's own scorecard.
-            </p>
-        </div>
-        @if (CanWork)
-        {
-            <button type="button" class="btn-primary shrink-0" @onclick="() => createOpen = true">New strategy</button>
-        }
-    </header>
+    <PageHeader>
+        <SubtitleContent>
+            How we find the next project — each way written down with its justification: who, where, why now,
+            the evidence behind it, how they are reached and what we say. Every lead a strategy finds carries
+            its name, so the funnel below each card is the strategy's own scorecard.
+        </SubtitleContent>
+        <Actions>
+            @if (CanWork)
+            {
+                <button type="button" class="btn-primary shrink-0" @onclick="() => createOpen = true">New strategy</button>
+            }
+        </Actions>
+    </PageHeader>
 
     @if (dataFailed && Strategies.Current is null)
     {
@@ -109,7 +107,6 @@
 </Page>
 
 @code {
-    private bool sessionReady;
     private bool dataFailed;
     private bool createOpen;
 
@@ -123,7 +120,6 @@
         Strategies.OnChanged += StateHasChanged;
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         try { await Strategies.RefreshAsync(CancellationToken.None); }
         catch { dataFailed = true; }
     }

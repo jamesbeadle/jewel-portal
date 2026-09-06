@@ -36,15 +36,13 @@
     else
     {
         <WorkspaceSectionNav />
-        <header class="mb-6 md:mb-8">
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Admin</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">KPI emails</h1>
-            <p class="text-sm text-content-muted mt-1">
+        <PageHeader>
+            <SubtitleContent>
                 Emails marked as a KPI against a member of staff — filed under the person (with or without a
                 portal login), visible to administrators only. Mark one from the Control Centre's Internal pane
                 (Actions → Mark as KPI); the email is tagged Admin so it leaves the queue — the tag never says KPI.
-            </p>
-        </header>
+            </SubtitleContent>
+        </PageHeader>
 
         @if (dataFailed && (Kpis.Current is null || People.Current is null))
         {
@@ -233,7 +231,6 @@
 </Page>
 
 @code {
-    private bool sessionReady;
     private bool dataFailed;
     private bool fetchStarted;
     private bool busy;
@@ -375,7 +372,6 @@
         Kpis.OnChanged += StateHasChanged;
         People.OnChanged += StateHasChanged;
         UserDirectory.OnChange += StateHasChanged;
-        sessionReady = true;
 
         if (Session.ActiveRole == Role.Admin)
         {

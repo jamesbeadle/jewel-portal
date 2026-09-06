@@ -17,24 +17,22 @@
 *@
 
 <Page>
-    <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
-        <div>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Company</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Aged Payables</h1>
-            <p class="text-sm text-content-muted mt-1">
-                Outstanding supplier bills aged as in Xero — including draft bills still being coded,
-                which Xero's own report leaves out.
-            </p>
-        </div>
-        <Toolbar>
-            <ExportToExcelButton FileName="Aged payables"
-                                 Disabled="@(Snapshot?.Error is not null || Rows.Count == 0)"
-                                 BuildWorkbook="BuildExportWorkbook" />
-            <ToolbarDivider />
-            <ToolbarButton Icon="refresh" Label="Refresh from Xero"
-                           Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
-        </Toolbar>
-    </header>
+    <PageHeader>
+        <SubtitleContent>
+            Outstanding supplier bills aged as in Xero — including draft bills still being coded,
+            which Xero's own report leaves out.
+        </SubtitleContent>
+        <Actions>
+            <Toolbar>
+                <ExportToExcelButton FileName="Aged payables"
+                                     Disabled="@(Snapshot?.Error is not null || Rows.Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+                <ToolbarDivider />
+                <ToolbarButton Icon="refresh" Label="Refresh from Xero"
+                               Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
+            </Toolbar>
+        </Actions>
+    </PageHeader>
 
     @* The whole page reads off one Xero snapshot, so it arrives in one piece. *@
     @if (Snapshot is null)

@@ -3,7 +3,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class AiActionsAdmin
 {
-    private bool sessionReady;
     private bool dataFailed;
     private bool saving;
     private string search = "";
@@ -28,7 +27,6 @@ public partial class AiActionsAdmin
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
-        sessionReady = true;
         if (!CanSee) return;
         await LoadAsync();
     }

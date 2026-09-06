@@ -8,27 +8,26 @@
 <PageTitle>Architects · JPMS</PageTitle>
 
 <Page CanAccess="CanManage" AccessDeniedMessage="You don't have access to architect practices.">
-    <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
-        <div>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Architect practices</h1>
-            @* The count waits for the list. Rendering "0 architects" while the fetch is in
-               flight states a fact the page does not yet have; the sentence itself is chrome. *@
-            <p class="text-sm text-content-muted mt-2">
-                @if (architects is not null)
-                {
-                    <text>@architects.Count architect@(architects.Count == 1 ? "" : "s") · </text>
-                }
-                when an architect is a project's party, RFIs and other request documents go to the contact email here.
-            </p>
-        </div>
-        <div class="flex items-center gap-4 shrink-0">
-            <ExportToExcelButton FileName="Architects"
-                                 Disabled="@(AllArchitects.Count == 0)"
-                                 BuildWorkbook="BuildExportWorkbook" />
+    <PageHeader>
+        <SubtitleContent>
+            @if (architects is not null)
+            {
+                <text>@architects.Count architect@(architects.Count == 1 ? "" : "s") · </text>
+            }
+            when an architect is a project's party, RFIs and other request documents go to the contact email here.
+        </SubtitleContent>
+        <Primary>
             <button type="button" class="btn-primary" @onclick="OpenCreate">New architect</button>
-        </div>
-    </header>
+        </Primary>
+        <Actions>
+            <div class="flex items-center gap-4 shrink-0">
+                <ExportToExcelButton FileName="Architects"
+                                     Disabled="@(AllArchitects.Count == 0)"
+                                     BuildWorkbook="BuildExportWorkbook" />
+
+            </div>
+        </Actions>
+    </PageHeader>
 
     @if (loadError is not null)
     {
@@ -119,7 +118,6 @@
 @code {
     // Session checked and the user signed in. This is NOT "the data is here" — keeping the two
     // apart is what lets the page show its chrome at once and hold the table until the list lands.
-    private bool sessionReady;
     private bool busy;
     private string? loadError;
     private string? formError;
@@ -146,7 +144,6 @@
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         // Paint the chrome before the fetch: Blazor re-renders OnInitializedAsync only at its
         // FIRST await, which has already passed, so without this the page waits on the list.
         StateHasChanged();

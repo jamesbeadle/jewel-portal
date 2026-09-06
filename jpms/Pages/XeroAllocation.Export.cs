@@ -129,7 +129,6 @@ public partial class XeroAllocation
         Ledger.OnChange += StateHasChanged;
         CostCenters.OnChange += StateHasChanged;
         ProjectsReadModel.OnChanged += StateHasChanged;
-        sessionReady = true;
         await RestoreLastTabAsync();
         tabRestored = true;
 

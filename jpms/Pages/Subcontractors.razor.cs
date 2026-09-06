@@ -5,7 +5,6 @@ namespace Jewel.JPMS.Pages;
 
 public partial class Subcontractors
 {
-    private bool isLoaded;
     private string search = "";
     private string categoryFilter = ""; // "" = all
 
@@ -177,7 +176,6 @@ public partial class Subcontractors
         _ = SubcontractorStore.All(); // kick off the directory load (async; raises OnChange)
         _ = SubcontractorStore.Trades(); // and the curated trade list for the add-company form
         _ = RefreshComplianceAsync(); // and the compliance column's whole-company read
-        isLoaded = true;
     }
 
     // Store convention: refresh once from OnInitializedAsync. The failure is swallowed — the

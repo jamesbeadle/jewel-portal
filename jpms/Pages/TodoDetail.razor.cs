@@ -13,7 +13,6 @@ public partial class TodoDetail
 
     // Session checked and the user signed in — NOT "the data is here"; every data-bearing region
     // gates on its own sources.
-    private bool sessionReady;
     private bool itemLoading = true;
     private bool loadFailed;
     private TodoItem? item;
@@ -60,7 +59,6 @@ public partial class TodoDetail
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         StateHasChanged();
         if (!Session.IsApproved || !HasInternalRole) { itemLoading = false; return; }
 

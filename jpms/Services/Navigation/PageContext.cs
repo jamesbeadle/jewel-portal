@@ -29,6 +29,25 @@ public static class PageContext
         }
         // The portfolio has no sidebar entry (deliberately) — keep it labelled all the same.
         if (trimmed == "/projects") return "Projects";
+        // Routes with no sidebar row of their own. The top bar is THE page title (the Figma puts
+        // it there and nowhere else — PageHeader carries no title on a register page), so every
+        // reachable route must answer here rather than leave the bar blank.
+        foreach (var (prefix, label) in Fallbacks)
+        {
+            if (trimmed == prefix || trimmed.StartsWith(prefix + "/", StringComparison.Ordinal)) return label;
+        }
         return null;
     }
+
+    private static readonly (string Prefix, string Label)[] Fallbacks =
+    {
+        ("/architects", "Architects"),
+        ("/clients", "Clients"),
+        ("/rfis", "RFIs"),
+        ("/my-day", "My day"),
+        ("/client", "Client portal"),
+        ("/portal", "Subcontractor portal"),
+        ("/document-control", "Document Triage"),
+        ("/requests/triage", "Control Centre"),
+    };
 }

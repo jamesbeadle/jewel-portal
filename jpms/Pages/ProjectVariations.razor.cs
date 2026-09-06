@@ -6,7 +6,6 @@ public partial class ProjectVariations
 {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
 
     // The request register rides along read-only: the Request column links each variation back to
     // the RFI it prices, and the search reads the originating request's text.

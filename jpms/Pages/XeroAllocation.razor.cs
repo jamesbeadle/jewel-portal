@@ -9,7 +9,6 @@ public partial class XeroAllocation
     // Session checked and the user is signed in. This is NOT "the ledger is here" — the heading,
     // the Sync and Re-check buttons show at once; the tab bar and the rows wait behind their own
     // gates.
-    private bool sessionReady;
 
     // Which tab is open decides which status is fetched and which counts the bar shows, so the
     // ledger section waits for the remembered choice rather than opening on the wrong tab.

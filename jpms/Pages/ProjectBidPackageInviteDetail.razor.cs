@@ -16,7 +16,6 @@ public partial class ProjectBidPackageInviteDetail
 
     // Session checked and the user is signed in — not "the package is here". The tab chrome and
     // the back link show straight away; each section waits behind its own gate.
-    private bool sessionReady;
 
     // ---- Section tabs (Details leads) — local panes, the request page's pattern. ----
 

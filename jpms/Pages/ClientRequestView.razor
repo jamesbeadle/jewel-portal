@@ -15,21 +15,23 @@
     }
     else if (record is null)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Request not found</h1>
+        <PageHeader Title="Request not found" />
         <p class="text-content-muted">This request isn't on one of your projects, or it no longer exists.</p>
     }
     else
     {
         <a href="/client" class="text-sm text-accent hover:underline">&larr; Your projects</a>
-        <header>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">
+        <PageHeader>
+            <TitleContent>
+                @record.Title
+            </TitleContent>
+            <EyebrowContent>
                 @record.Reference · @record.Kind.DisplayName() · @record.ProjectName
-            </p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">@record.Title</h1>
-            <p class="text-sm text-content-muted mt-1">
+            </EyebrowContent>
+            <SubtitleContent>
                 @record.Status.DisplayName() · raised @record.RaisedAt.LocalDateTime.ToString("d MMM yyyy")@(record.RespondedAt is { } responded ? $" · responded {responded.LocalDateTime:d MMM yyyy}" : "")
-            </p>
-        </header>
+            </SubtitleContent>
+        </PageHeader>
 
         @if (!string.IsNullOrWhiteSpace(record.Description))
         {
@@ -52,7 +54,6 @@
 @code {
     [Parameter] public string RequestId { get; set; } = "";
 
-    private bool sessionReady;
     private bool loaded;
     private ClientPortalRequest? record;
 
@@ -62,7 +63,6 @@
     {
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         if (!Session.IsApproved || !CanAccess) return;
         StateHasChanged();
         // A failed fetch opens the gate too — null renders the not-found explanation.

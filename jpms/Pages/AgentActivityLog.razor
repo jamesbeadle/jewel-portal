@@ -18,12 +18,12 @@
 *@
 
 <Page CanAccess="CanSee" AccessDeniedMessage="You do not have access to the agent activity log.">
-        <p class="eyebrow mb-1">Assistant</p>
-        <h1 class="text-2xl font-semibold text-content mb-1">Agent activity</h1>
-        <p class="text-sm text-content-muted mb-6">
-            Every run the assistant has made, newest first. Rows marked
-            <span class="text-content">unattended</span> ran with nobody watching.
-        </p>
+        <PageHeader>
+            <SubtitleContent>
+                Every run the assistant has made, newest first. Rows marked
+                <span class="text-content">unattended</span> ran with nobody watching.
+            </SubtitleContent>
+        </PageHeader>
 
         <div class="flex flex-wrap items-center gap-2 mb-4">
             <button type="button" @onclick="() => SetFilter(false)" class="@FilterClass(false)">All runs</button>
@@ -122,7 +122,6 @@
 </Page>
 
 @code {
-    private bool sessionReady;
     private bool dataFailed;
     private bool autonomousOnly;
 
@@ -135,7 +134,6 @@
     protected override async Task OnInitializedAsync()
     {
         await Session.EnsureLoadedAsync();
-        sessionReady = true;
         if (CanSee) await LoadAsync();
     }
 

@@ -12,19 +12,19 @@
 <Page>
     @if (!CanAccess)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">The company directory is restricted to administrators, the managing and finance directors, and project managers.</p>
     }
     else if (!SubcontractorStore.IsLoaded)
     {
         @* Directory fetch still in flight — don't flash "not found" before it lands. *@
-        <section class="px-6 md:px-8 py-12">
+        <div>
             <LoadGate IsLoading="true" Prominent="true" Label="Loading" />
-        </section>
+        </div>
     }
     else if (subcontractor is null)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Subcontractor not found</h1>
+        <PageHeader Title="Subcontractor not found" />
         <p class="text-content-muted">
             <a class="text-content underline" href="/directory">Back to directory</a>.
         </p>
@@ -37,26 +37,28 @@
             <span class="text-content-muted font-medium">@subcontractor.CompanyName</span>
         </nav>
 
-        <header class="mb-6 flex items-start justify-between gap-4">
-            <div>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content inline-flex items-center gap-2">
-                    @subcontractor.CompanyName
-                    @if (subcontractor.XeroLinked)
-                    {
-                        <span class="inline-flex items-center gap-1 rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted"
-                              title="This record was imported from Xero (or a Xero-imported record was consolidated into it)">
-                            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                 stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
-                            Linked to Xero
-                        </span>
-                    }
-                </h1>
-                <p class="text-sm text-content-muted mt-1">@ContactLine(subcontractor)</p>
-            </div>
-            <button type="button" class="btn-secondary shrink-0"
-                    title="Edit the company name and contact details — rename to match Xero so invoices line up on WO Allocation"
-                    @onclick="OpenEdit">Edit details…</button>
-        </header>
+        <PageHeader>
+            <TitleContent>
+                @subcontractor.CompanyName
+                @if (subcontractor.XeroLinked)
+                {
+                    <span class="inline-flex items-center gap-1 rounded-full bg-surface-raised border border-line px-2 py-0.5 text-[11px] font-medium text-content-muted"
+                          title="This record was imported from Xero (or a Xero-imported record was consolidated into it)">
+                        <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+                        Linked to Xero
+                    </span>
+                }
+            </TitleContent>
+            <SubtitleContent>
+                @ContactLine(subcontractor)
+            </SubtitleContent>
+            <Actions>
+                <button type="button" class="btn-secondary shrink-0"
+                        title="Edit the company name and contact details — rename to match Xero so invoices line up on WO Allocation"
+                        @onclick="OpenEdit">Edit details…</button>
+            </Actions>
+        </PageHeader>
 
         @* Trades are managed here: each is a chip from the curated list, so when a company changes
            what it does (no longer a bricklayer, now a hod carrier) the record is updated in place. *@

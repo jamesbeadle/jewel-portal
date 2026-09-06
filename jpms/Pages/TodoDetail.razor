@@ -22,7 +22,7 @@
 <Page>
     @if (!HasInternalRole)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">To-dos are an internal Jewel surface.</p>
     }
     else
@@ -37,21 +37,18 @@
         else if (item is null)
         {
             <div class="mt-4">
-                <h1 class="text-2xl font-semibold text-content mb-2">This to-do is gone</h1>
+                <PageHeader Title="This to-do is gone" />
                 <p class="text-content-muted">It may have been deleted. The <a class="underline underline-offset-2" href="/todos">To-dos list</a> has everything current.</p>
             </div>
         }
         else
         {
-            <header class="mt-3 mb-6 flex flex-wrap items-end justify-between gap-3">
-                <div>
-                    <p class="eyebrow mb-1">JPMS · <span class="font-mono">@item.Reference</span></p>
-                    <div class="flex items-center gap-3">
-                        <h1 class="text-2xl md:text-3xl font-semibold leading-tight @(item.IsComplete ? "text-content-subtle line-through" : "text-content")">@item.Title</h1>
-                        <Pill Tone="@TodoStatus.Tone(item)" Class="shrink-0">@TodoStatus.Label(item)</Pill>
-                    </div>
-                </div>
-                <div class="flex items-center gap-2">
+            <PageHeader Eyebrow="@item.Reference">
+                <TitleContent>
+                    <span class="@(item.IsComplete ? "text-content-subtle line-through" : "")">@item.Title</span>
+                    <Pill Tone="@TodoStatus.Tone(item)" Class="shrink-0 ml-3 align-middle">@TodoStatus.Label(item)</Pill>
+                </TitleContent>
+                <Actions>
                     @if (CanManage)
                     {
                         @* Two-step delete, confirmed in place: the first click arms the button —
@@ -67,14 +64,16 @@
                            emails sent from this page move it along on their own. *@
                         <button type="button" class="btn-secondary" disabled="@busy" @onclick="StartAsync">Working on it</button>
                     }
+                </Actions>
+                <Primary>
                     @if (CanComplete)
                     {
                         <button type="button" class="btn-primary" disabled="@busy" @onclick="ToggleCompleteAsync">
                             @(item.IsComplete ? "Reopen" : "Mark done")
                         </button>
                     }
-                </div>
-            </header>
+                </Primary>
+            </PageHeader>
 
             @if (error is not null)
             {

@@ -9,25 +9,23 @@
 
 <Page>
     <WorkspaceSectionNav />
-    <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
-        <div>
-            <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · Financials · Xero</p>
-            <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Transactions</h1>
-            <p class="text-sm text-content-muted mt-2">
-                Purchase invoices read live from Xero since @FromDateText — with each line's site and cost code, ready for reconciliation.
-            </p>
-        </div>
-        <Toolbar>
-            <ExportToExcelButton FileName="Xero transactions"
-                                 Disabled="@(VisibleTransactions.Count == 0 && Breakdown.Count == 0)"
-                                 ShowIncludeAllRows="@(statusFilter is not null || !string.IsNullOrWhiteSpace(search))"
-                                 IncludeAllLabel="Ignore search & status"
-                                 BuildWorkbook="BuildExportWorkbook" />
-            <ToolbarDivider />
-            <ToolbarButton Icon="refresh" Label="Refresh from Xero"
-                           Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
-        </Toolbar>
-    </header>
+    <PageHeader>
+        <SubtitleContent>
+            Purchase invoices read live from Xero since @FromDateText — with each line's site and cost code, ready for reconciliation.
+        </SubtitleContent>
+        <Actions>
+            <Toolbar>
+                <ExportToExcelButton FileName="Xero transactions"
+                                     Disabled="@(VisibleTransactions.Count == 0 && Breakdown.Count == 0)"
+                                     ShowIncludeAllRows="@(statusFilter is not null || !string.IsNullOrWhiteSpace(search))"
+                                     IncludeAllLabel="Ignore search & status"
+                                     BuildWorkbook="BuildExportWorkbook" />
+                <ToolbarDivider />
+                <ToolbarButton Icon="refresh" Label="Refresh from Xero"
+                               Busy="@isRefreshing" OnClick="ForceRefreshAsync" />
+            </Toolbar>
+        </Actions>
+    </PageHeader>
 
     @* Both views — the transaction list and the site × cost code pivot — are computed off the
        one snapshot, so the whole body waits on it together. A multi-year read is slow enough

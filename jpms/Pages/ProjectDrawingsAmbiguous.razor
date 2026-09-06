@@ -34,7 +34,6 @@
 @code {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
 
     private IReadOnlyList<DrawingRevision> Ambiguous => DrawingStore.AmbiguousFor(ProjectId);
 
@@ -46,7 +45,6 @@
         // Refresh on entry so the ambiguity list reflects changes made since the register
         // was first cached (stale-while-revalidate).
         DrawingStore.Refresh(ProjectId);
-        isLoaded = true;
     }
 
     public void Dispose() => DrawingStore.OnChange -= StateHasChanged;

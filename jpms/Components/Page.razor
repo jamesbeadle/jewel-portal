@@ -15,6 +15,10 @@
     {
         <section class="px-4 md:px-8 py-6 text-sm text-content-subtle">@AccessDeniedMessage</section>
     }
+    else if (Bare)
+    {
+        @ChildContent
+    }
     else
     {
         <section class="px-4 md:px-8 py-6 @MaxWidth @Class">
@@ -31,4 +35,6 @@
     /// <summary>A max-width class for narrow pages (forms, settings) — e.g. "max-w-2xl".</summary>
     [Parameter] public string MaxWidth { get; set; } = "";
     [Parameter] public string Class { get; set; } = "";
+    /// <summary>No gutter at all — for a full-bleed workspace (the Control Centre) that lays itself out edge to edge.</summary>
+    [Parameter] public bool Bare { get; set; }
 }

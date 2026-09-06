@@ -6,7 +6,6 @@ public partial class ProjectDrawings
 {
     [Parameter] public string ProjectId { get; set; } = "";
 
-    private bool isLoaded;
     private bool isUploading;
     private bool confirmingExtractAll;
     private bool extractAllBusy;
@@ -232,7 +231,6 @@ public partial class ProjectDrawings
         // Refresh on entry: cached drawings render immediately, then update when the
         // background reload lands — so navigating back to this tab never shows stale data.
         DrawingStore.Refresh(ProjectId);
-        isLoaded = true;
         // Fetched once per session; the Extract all button only appears once it reports connected.
         _ = Bluebeam.EnsureLoadedAsync();
     }

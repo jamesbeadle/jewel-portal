@@ -9,29 +9,28 @@
 
 <Page>
         <WorkspaceSectionNav />
-        <header class="mb-6 md:mb-8 flex items-end justify-between gap-4">
-            <div>
-                <p class="text-xs uppercase tracking-wider text-content-subtle font-medium mb-1">JPMS · QS</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">Rate library</h1>
-                <p class="text-sm text-content-muted mt-2">@Rates.All().Count rates · @StaleCount stale.</p>
-            </div>
-            <div class="flex items-center gap-4">
-                <ExportToExcelButton FileName="Rate library"
-                                     Disabled="@(Rates.All().Count == 0)"
-                                     BuildWorkbook="BuildExportWorkbook" />
-                <a href="/rate-library/stale"
-                   class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4">
-                    View stale rates →
-                </a>
-            </div>
-        </header>
+        <PageHeader>
+            <SubtitleContent>
+                @Rates.All().Count rates · @StaleCount stale.
+            </SubtitleContent>
+            <Actions>
+                <div class="flex items-center gap-4">
+                    <ExportToExcelButton FileName="Rate library"
+                                         Disabled="@(Rates.All().Count == 0)"
+                                         BuildWorkbook="BuildExportWorkbook" />
+                    <a href="/rate-library/stale"
+                       class="text-sm font-medium text-content-muted hover:text-content underline underline-offset-4">
+                        View stale rates →
+                    </a>
+                </div>
+            </Actions>
+        </PageHeader>
 
         <RateTable Rates="Rates.All()" />
 </Page>
 
 @code {
     private const int StaleDayThreshold = 60;
-    private bool isLoaded;
 
     private int StaleCount => Rates.Stale(StaleDayThreshold).Count;
 
@@ -67,7 +66,6 @@
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
         Rates.OnChange += StateHasChanged;
-        isLoaded = true;
     }
 
     public void Dispose() => Rates.OnChange -= StateHasChanged;

@@ -11,7 +11,6 @@ public partial class ProjectRequestDetail
 
     // Session checked and the user is signed in — not "the record is here". The tab chrome shows
     // straight away; `dataLoaded` is the separate question of whether the record has arrived.
-    private bool sessionReady;
     private bool dataLoaded;
     private Request? record;
 
@@ -134,7 +133,6 @@ public partial class ProjectRequestDetail
 
         await Session.EnsureLoadedAsync();
         if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
-        sessionReady = true;
         // Activity dots on the tab bar land in the background — absent until then (never gated).
         Activity.Refresh(ProjectId);
         // Two waves instead of six sequential round-trips. Everything in the first wave is

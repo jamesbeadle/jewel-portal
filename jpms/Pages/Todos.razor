@@ -43,30 +43,28 @@
 <Page>
     @if (!HasInternalRole)
     {
-        <h1 class="text-2xl font-semibold text-content mb-2">Not available</h1>
+        <PageHeader Title="Not available" />
         <p class="text-content-muted">The to-do list is an internal Jewel surface.</p>
     }
     else
     {
 
-        <header class="mb-6 flex flex-wrap items-end justify-between gap-3">
-            <div>
-                <p class="eyebrow mb-1">JPMS</p>
-                <h1 class="text-2xl md:text-3xl font-semibold text-content leading-tight">To-dos</h1>
-                <p class="text-sm text-content-muted mt-1">
-                    @(CanSeeAll
-                        ? "The master list: every to-do item — company-wide and project items alike. Each project's To-do tab shows just its own."
-                        : "The items assigned to your roles or to you by name — company-wide and project items alike.")
-                </p>
-            </div>
-            @* One button, not two: the project picker inside decides whether the item lands on a
-               project or company-wide, so "Add to-do" is honest for both. Gated on CanManage, the
-               wider add gate — a PM raising a project item is the common case. *@
-            @if (CanManage)
-            {
-                <button type="button" class="btn-primary text-xs px-3 py-2" @onclick="OpenAdd">Add to-do</button>
-            }
-        </header>
+        <PageHeader>
+            <SubtitleContent>
+                @(CanSeeAll
+                    ? "The master list: every to-do item — company-wide and project items alike. Each project's To-do tab shows just its own."
+                    : "The items assigned to your roles or to you by name — company-wide and project items alike.")
+            </SubtitleContent>
+            <Actions>
+                @* One button, not two: the project picker inside decides whether the item lands on a
+                   project or company-wide, so "Add to-do" is honest for both. Gated on CanManage, the
+                   wider add gate — a PM raising a project item is the common case. *@
+                @if (CanManage)
+                {
+                    <button type="button" class="btn-primary text-xs px-3 py-2" @onclick="OpenAdd">Add to-do</button>
+                }
+            </Actions>
+        </PageHeader>
 
         @if (error is not null)
         {
