@@ -3,13 +3,11 @@ using Jewel.JPMS.Api.Features.Architects.Commands;
 using Jewel.JPMS.Api.Features.Clients;
 using Jewel.JPMS.Api.Features.Clients.Commands;
 using Jewel.JPMS.Api.Features.Directory.Commands;
-using Jewel.JPMS.Api.Features.Leads.Commands;
 using Jewel.JPMS.Api.Features.Parties;
 using Jewel.JPMS.Api.Features.Subcontractors.Commands;
 using Jewel.JPMS.Contracts.Architects;
 using Jewel.JPMS.Contracts.Clients;
 using Jewel.JPMS.Contracts.Directory;
-using Jewel.JPMS.Contracts.Leads;
 using Jewel.JPMS.Contracts.Parties;
 using Jewel.JPMS.Contracts.Subcontractors;
 
