@@ -90,7 +90,38 @@ public static class OfficePageGuides
             + "logged by hand plus every stage change, newest first. \"Log activity\" adds a "
             + "touch. A Won lead links to its project. Over the connector: get_lead reads it "
             + "(an LD-#### reference resolves), log_lead_activity, move_lead_stage, update_lead, "
-            + "win_lead act on it."),
+            + "win_lead act on it. Below the details sit the two panels of the journey AFTER a lead "
+            + "is identified. Imagine: \"Issue link & QR code\" mints the lead's private "
+            + "/imagine/{token} link (the QR code goes on the letter — only that link opens the "
+            + "page, there is no general address; re-issuing kills printed codes); every round the "
+            + "prospect runs shows here — their photos and brief, the AI concepts rendered over their "
+            + "own photos, what they liked and said — with Retry for a failed render. Proposals: "
+            + "versions of the scope / base price / options (price deltas) / schedule of works / "
+            + "terms; a draft is edited and sent (the prospect is emailed the imagine link, where it "
+            + "shows; the lead moves to Proposal); their acceptance — name, email, options, price, "
+            + "moment — is the agreement the Won button then builds on."),
+
+        new("/sales/inbox", "Sales inbox",
+            "Sales → Inbox: sales@jewelbb.co.uk read live from the mailbox — deliberately its own "
+            + "thing, NOT the Control Centre's projects@ triage: nothing is tagged, moved or "
+            + "stored. Left: the Inbox newest first (search reads the whole mailbox), each sender "
+            + "chipped with the lead whose contact email it is. Open a row for the whole thread; "
+            + "expand a message for its body. From the thread: Reply (sent from sales@, reply-all, "
+            + "quoted history, logged on the matched lead), \"Log on LD-####\" (an Email activity "
+            + "on the lead's timeline), \"New lead from this email\" (the lead form pre-filled from "
+            + "the sender) or \"Log on a lead…\" (pick one). If the page says it isn't connected, "
+            + "the API needs the MailboxIntake Graph credentials and the Exchange access policy "
+            + "must include sales@."),
+
+        new("/imagine/{token}", "Imagine (public)",
+            "The prospect's private page, opened from the QR code on their letter — no sign-in; "
+            + "the token is the lead's. They upload photos of their house or plot (shrunk in the "
+            + "browser), write what they dream of, leave an email, and the worker returns three "
+            + "concepts rendered over their own photos (Claude writes them, Azure image generation "
+            + "renders them); they like, comment, and ask for a revision of one (up to four rounds). "
+            + "When a proposal has been sent it shows here too — options with a live price, the "
+            + "schedule of works, the terms — and they accept or decline. Staff never use this "
+            + "page; everything it does lands on the lead's timeline."),
 
         new("/sales/strategies", "Sales strategies",
             "Sales → Strategies: the methodologies Jewel uses to FIND leads, each written down "

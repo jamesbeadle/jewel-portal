@@ -7,6 +7,7 @@ using Jewel.JPMS.Api.Cqrs;
 using Jewel.JPMS.Api.Features.Ai;
 using Jewel.JPMS.Api.Features.Bluebeam;
 using Jewel.JPMS.Api.Features.Bluebeam.Extraction;
+using Jewel.JPMS.Api.Features.Sales.Imagine;
 using Jewel.JPMS.Api.Features.Sales.Research;
 using Jewel.JPMS.Api.Features.Drawings.Storage;
 using Jewel.JPMS.Api.Features.Xero;
@@ -133,6 +134,39 @@ var host = new HostBuilder()
         services.AddSingleton(sp => new StrategyResearcher(
             new HttpClient { Timeout = TimeSpan.FromMinutes(6) }, anthropicOptions, sp.GetRequiredService<ILogger<StrategyResearcher>>()));
         services.AddScoped<StrategyResearchRunner>();
+
+        // Imagine renders (2026-09-06): the queue consumer behind the public /imagine page — Claude
+        // reads the prospect's photos and writes the concepts (Anthropic__ApiKey, as above), Azure
+        // OpenAI gpt-image-1 renders each over their photo (AzureImage__Endpoint / ApiKey /
+        // Deployment), the renders land in the "imagine" blob container (ImagineStorage:
+        // ConnectionString, else AzureWebJobsStorage — the api resolves identically), and the
+        // prospect is emailed through ACS (CommunicationServicesConnectionString, with
+        // PublicSiteUrl and SalesMailbox:Address for the link and the Reply-To). Every piece has a
+        // null stand-in: without it the round is stamped Failed with the reason, never a crash.
+        services.AddSingleton(sp => new ImagineConceptWriter(
+            new HttpClient { Timeout = TimeSpan.FromMinutes(4) }, anthropicOptions, sp.GetRequiredService<ILogger<ImagineConceptWriter>>()));
+        var azureImageOptions = AzureImageOptions.FromConfiguration(context.Configuration);
+        services.AddSingleton(azureImageOptions);
+        if (azureImageOptions.IsConfigured)
+            services.AddSingleton<IAzureImageClient>(sp => new AzureImageClient(
+                new HttpClient { Timeout = TimeSpan.FromMinutes(4) }, azureImageOptions, sp.GetRequiredService<ILogger<AzureImageClient>>()));
+        else
+            services.AddSingleton<IAzureImageClient, NullAzureImageClient>();
+        var imagineStorage = context.Configuration["ImagineStorage:ConnectionString"]
+            ?? context.Configuration["AzureWebJobsStorage"];
+        if (string.IsNullOrWhiteSpace(imagineStorage))
+            services.AddSingleton<IImagineImageStore, NullImagineImageStore>();
+        else
+            services.AddSingleton<IImagineImageStore>(_ => new AzureBlobImagineImageStore(imagineStorage!));
+        var notifierOptions = ImagineNotifierOptions.FromConfiguration(context.Configuration);
+        services.AddSingleton(notifierOptions);
+        var acsConnection = context.Configuration["CommunicationServicesConnectionString"];
+        if (string.IsNullOrWhiteSpace(acsConnection))
+            services.AddSingleton<IImagineNotifier, NullImagineNotifier>();
+        else
+            services.AddSingleton<IImagineNotifier>(sp => new AcsImagineNotifier(
+                new Azure.Communication.Email.EmailClient(acsConnection!), notifierOptions, sp.GetRequiredService<ILogger<AcsImagineNotifier>>()));
+        services.AddScoped<ImagineRenderRunner>();
 
         // The drawings blob store — the extraction reads revision PDFs and writes the payload
         // blobs beside them. Same connection resolution as DrawingsFeatureRegistration in the api.

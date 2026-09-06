@@ -274,6 +274,28 @@ public sealed partial class JpmsContext
         modelBuilder.Entity<SalesStrategyEntity>()
             .HasIndex(row => row.Status)
             .HasDatabaseName("IX_SalesStrategies_Status");
+        // Imagine (2026-09-06): the public page resolves a lead by its token (unique, filtered so
+        // the many nulls don't collide); rounds and images read per lead and per round.
+        modelBuilder.Entity<LeadEntity>()
+            .HasIndex(row => row.ImagineToken)
+            .IsUnique()
+            .HasFilter("[ImagineToken] IS NOT NULL")
+            .HasDatabaseName("IX_Leads_ImagineToken");
+        modelBuilder.Entity<ImagineRoundEntity>()
+            .HasIndex(row => row.LeadId)
+            .HasDatabaseName("IX_ImagineRounds_LeadId");
+        modelBuilder.Entity<ImagineRoundEntity>()
+            .HasIndex(row => row.RequestedAt)
+            .HasDatabaseName("IX_ImagineRounds_RequestedAt");
+        modelBuilder.Entity<ImagineImageEntity>()
+            .HasIndex(row => row.LeadId)
+            .HasDatabaseName("IX_ImagineImages_LeadId");
+        modelBuilder.Entity<ImagineImageEntity>()
+            .HasIndex(row => row.RoundId)
+            .HasDatabaseName("IX_ImagineImages_RoundId");
+        modelBuilder.Entity<SalesProposalEntity>()
+            .HasIndex(row => row.LeadId)
+            .HasDatabaseName("IX_SalesProposals_LeadId");
 
         // ---- KPI emails --------------------------------------------------------------------------
         // People resolve by portal email (a user's KpiPerson is found, never duplicated); emails

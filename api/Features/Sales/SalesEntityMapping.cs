@@ -29,7 +29,9 @@ internal static class SalesEntityMapping
             entity.CapturedAt,
             entity.ClientId,
             entity.ProjectId,
-            entity.LostReason);
+            entity.LostReason,
+            entity.ImagineToken,
+            entity.ImagineTokenIssuedAt);
 
     public static LeadActivity ToModel(this LeadActivityEntity entity) =>
         new(entity.LeadActivityId, entity.LeadId, (LeadActivityKind)entity.Kind, entity.Summary,

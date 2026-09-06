@@ -82,6 +82,7 @@ public static class WorkspaceSections
         new[]
         {
             new WorkspaceTab("Leads", "/sales/leads", DesktopNavigation.AllInternalRoles),
+            new WorkspaceTab("Inbox", "/sales/inbox", DesktopNavigation.AllInternalRoles),
             new WorkspaceTab("Strategies", "/sales/strategies", DesktopNavigation.AllInternalRoles)
         });
 

@@ -39,7 +39,12 @@ public sealed record Lead(
     string? ClientId,
     string? ProjectId,
     // Set by Lost (and cleared on reopen): why not.
-    string? LostReason);
+    string? LostReason,
+    // The lead's private "imagine" link (see Imagine.cs): the token that opens /imagine/{token},
+    // printed as the QR code on the letter, and when it was issued. Null until a link is issued;
+    // re-issuing replaces it, so an old QR code stops working.
+    string? ImagineToken = null,
+    DateTimeOffset? ImagineTokenIssuedAt = null);
 
 /// <summary>What kind of touch an activity records. Values persist as ints — append only.</summary>
 public enum LeadActivityKind
@@ -51,7 +56,12 @@ public enum LeadActivityKind
     SiteVisit = 4,
     Proposal = 5,
     StageChange = 6,
-    Letter = 7
+    Letter = 7,
+    // Written by the imagine journey (the prospect's own actions and the worker's renders) and
+    // the proposal flow — never logged by hand.
+    Imagine = 8,
+    ProposalSent = 9,
+    ProposalAccepted = 10
 }
 
 public static class LeadActivityKindExtensions
@@ -66,6 +76,9 @@ public static class LeadActivityKindExtensions
         LeadActivityKind.Proposal    => "Proposal",
         LeadActivityKind.StageChange => "Stage change",
         LeadActivityKind.Letter      => "Letter / brochure",
+        LeadActivityKind.Imagine     => "Imagine",
+        LeadActivityKind.ProposalSent => "Proposal sent",
+        LeadActivityKind.ProposalAccepted => "Proposal accepted",
         _ => kind.ToString()
     };
 
@@ -87,8 +100,12 @@ public sealed record LeadActivity(
     DateTimeOffset OccurredAt,
     string RecordedByEmail);
 
-/// <summary>A lead with its timeline — the lead page's read.</summary>
-public sealed record LeadDetail(Lead Lead, IReadOnlyList<LeadActivity> Activities);
+/// <summary>A lead with its timeline, its imagine rounds and its proposals — the lead page's read.</summary>
+public sealed record LeadDetail(
+    Lead Lead,
+    IReadOnlyList<LeadActivity> Activities,
+    LeadImagine? Imagine = null,
+    IReadOnlyList<SalesProposal>? Proposals = null);
 
 /// <summary>What Won produced: the lead as it now stands, and the client and project it became.</summary>
 public sealed record LeadWonOutcome(Lead Lead, string ClientId, string ProjectId);

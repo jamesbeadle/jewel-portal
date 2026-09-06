@@ -362,6 +362,10 @@ public static class SidebarFolders
                 // the project shell.
                 new SidebarRow(new NavigationItem("Leads", "/sales/leads"),
                     DesktopNavigation.DirectorRoles),
+                // sales@jewelbb.co.uk read live — its own thing, not the Control Centre's
+                // triage: the conversation with a prospect beside the lead it belongs to.
+                new SidebarRow(new NavigationItem("Inbox", "/sales/inbox"),
+                    DesktopNavigation.DirectorRoles),
                 // The ways of finding leads, each with its hypothesis, evidence, channel,
                 // Claude-drafted approach plan and the funnel its leads make.
                 new SidebarRow(new NavigationItem("Strategies", "/sales/strategies"),

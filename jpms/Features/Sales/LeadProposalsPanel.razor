@@ -1,0 +1,210 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject ICommandSender Commands
+
+@*
+    The lead page's Proposals panel (2026-09-06): every version, newest first, with its status;
+    a draft can be edited and sent, a sent one withdrawn (directors) or superseded by a new
+    version, and an accepted one is the agreement — who, when, at what price, with which options
+    — ready for the Won button. Sending emails the prospect the imagine link, where the proposal
+    shows; the lead moves to Proposal.
+*@
+
+<Panel Title="Proposals">
+    <HeaderActions>
+        @if (CanWork)
+        {
+            <button type="button" class="btn-primary text-sm" disabled="@busy" @onclick="() => OpenEditor(null)">New proposal</button>
+        }
+    </HeaderActions>
+    <ChildContent>
+        @if (error is not null)
+        {
+            <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
+        }
+        @if (note is not null)
+        {
+            <Notice Tone="Tone.Positive" Class="mb-4" Dismissible="true" OnDismiss="() => note = null">@note</Notice>
+        }
+        @if (Proposals.Count == 0)
+        {
+            <p class="text-sm text-content-muted">
+                No proposal yet. When the concepts have landed and the site visit is done, write the scope, the price, the options
+                and the schedule here; sending it puts it on the prospect's imagine page and emails them the link. Their acceptance
+                is recorded here, and Won takes it from there.
+            </p>
+        }
+        else
+        {
+            <div class="space-y-4">
+                @foreach (var proposal in Proposals.OrderByDescending(p => p.Version))
+                {
+                    var p = proposal;
+                    <div class="rounded border @(p.Status == SalesProposalStatus.Accepted ? "border-accent" : "border-line") p-4">
+                        <div class="flex flex-wrap items-center gap-2 mb-1">
+                            <span class="text-sm font-medium text-content">v@(p.Version) · @p.Title</span>
+                            <Pill Tone="@ToneFor(p.Status)">@p.Status.DisplayName()</Pill>
+                        </div>
+                        <p class="text-xs text-content-subtle mb-3">
+                            Base @Money(p.BasePrice)
+                            @if (p.Options.Count > 0)
+                            {
+                                <text> · @p.Options.Count @(p.Options.Count == 1 ? "option" : "options")</text>
+                            }
+                            @if (p.Schedule.Count > 0)
+                            {
+                                <text> · @p.Schedule.Max(s => s.StartWeek + s.Weeks - 1) weeks</text>
+                            }
+                            · by @p.CreatedByEmail, @p.UpdatedAt.ToLocalTime().ToString("d MMM HH:mm")
+                            @if (p.SentAt is { } sent)
+                            {
+                                <text> · sent @sent.ToLocalTime().ToString("d MMM HH:mm")</text>
+                            }
+                        </p>
+                        @if (p.Status == SalesProposalStatus.Accepted)
+                        {
+                            <p class="text-sm text-content mb-3">
+                                Accepted by <strong>@p.AcceptedByName</strong> (@p.AcceptedByEmail) on @p.AcceptedAt?.ToLocalTime().ToString("d MMM yyyy HH:mm")
+                                at <strong>@Money(p.AcceptedPrice ?? p.BasePrice)</strong>
+                                @if (p.AcceptedOptionIds.Count > 0)
+                                {
+                                    <text> with @string.Join(", ", p.Options.Where(o => p.AcceptedOptionIds.Contains(o.OptionId)).Select(o => o.Name))</text>
+                                }
+                                else
+                                {
+                                    <text> with no options</text>
+                                }
+                                . @(CanDecide ? "Mark the lead Won to create the client and the project." : "Ready for a director to mark Won.")
+                            </p>
+                        }
+                        @if (p.Status == SalesProposalStatus.Declined && !string.IsNullOrWhiteSpace(p.DeclineReason))
+                        {
+                            <p class="text-sm text-content-muted mb-3">Declined: <em>@p.DeclineReason</em></p>
+                        }
+                        @if (CanWork)
+                        {
+                            <div class="flex flex-wrap gap-2">
+                                @if (p.Status == SalesProposalStatus.Draft)
+                                {
+                                    <button type="button" class="btn-secondary text-sm" disabled="@busy" @onclick="() => OpenEditor(p)">Edit</button>
+                                    <button type="button" class="btn-primary text-sm" disabled="@busy" @onclick="() => OpenSend(p)">Send to prospect</button>
+                                }
+                                else
+                                {
+                                    <button type="button" class="btn-secondary text-sm" disabled="@busy" @onclick="() => OpenEditor(p)">New version from this</button>
+                                }
+                                @if (p.Status == SalesProposalStatus.Sent && CanDecide)
+                                {
+                                    <InlineConfirm Label="Withdraw" Question="Take it off the prospect's page?" Busy="@busy" OnConfirm="() => WithdrawAsync(p)" />
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </ChildContent>
+</Panel>
+
+<ProposalFormModal IsOpen="@editorOpen" LeadId="@LeadId" Existing="@editing" Concepts="@Concepts" OnSaved="OnSavedAsync" OnCancel="() => editorOpen = false" />
+
+<Modal IsOpen="@(sending is not null)"
+       Title="@(sending is { } s ? $"Send v{s.Version} to {ContactEmail}" : "")"
+       ConfirmLabel="@(busy ? "Sending…" : "Send")"
+       ConfirmDisabled="@busy"
+       OnCancel="() => sending = null"
+       OnConfirm="SendAsync">
+    <p class="text-sm text-content-muted mb-4">
+        The prospect gets an email from Jewel (reply-to sales@@) with the link to their imagine page, where the proposal
+        now shows with the options, the schedule and the terms. The lead moves to Proposal.
+        @if (string.IsNullOrWhiteSpace(ContactEmail))
+        {
+            <span class="text-negative"> The lead has no contact email — add one first.</span>
+        }
+    </p>
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
+    }
+    <FormField Label="A note for the email (optional)">
+    <textarea class="field w-full" rows="3" maxlength="2000" placeholder="e.g. Lovely to meet you on Tuesday — here's what we discussed, priced."
+              value="@sendNote" @oninput="e => sendNote = e.Value?.ToString() ?? string.Empty"></textarea>
+    </FormField>
+</Modal>
+
+@code {
+    [Parameter, EditorRequired] public string LeadId { get; set; } = "";
+    [Parameter] public string ContactEmail { get; set; } = "";
+    [Parameter] public IReadOnlyList<SalesProposal> Proposals { get; set; } = Array.Empty<SalesProposal>();
+    [Parameter] public IReadOnlyList<ImagineImageView> Concepts { get; set; } = Array.Empty<ImagineImageView>();
+    [Parameter] public bool CanWork { get; set; }
+    [Parameter] public bool CanDecide { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool busy;
+    private string? error;
+    private string? note;
+    private bool editorOpen;
+    private SalesProposal? editing;
+    private SalesProposal? sending;
+    private string sendNote = "";
+
+    private static string Money(decimal value) => "£" + value.ToString("N0");
+
+    private static Tone ToneFor(SalesProposalStatus status) => status switch
+    {
+        SalesProposalStatus.Accepted => Tone.Positive,
+        SalesProposalStatus.Sent => Tone.Info,
+        SalesProposalStatus.Declined => Tone.Negative,
+        SalesProposalStatus.Superseded => Tone.Muted,
+        _ => Tone.Warning
+    };
+
+    private void OpenEditor(SalesProposal? proposal)
+    {
+        error = null;
+        editing = proposal;
+        editorOpen = true;
+    }
+
+    private async Task OnSavedAsync(SalesProposal saved)
+    {
+        editorOpen = false;
+        note = $"Draft v{saved.Version} saved.";
+        await OnChanged.InvokeAsync();
+    }
+
+    private void OpenSend(SalesProposal proposal)
+    {
+        error = null;
+        sendNote = "";
+        sending = proposal;
+    }
+
+    private async Task SendAsync()
+    {
+        if (busy || sending is null) return;
+        busy = true; error = null;
+        try
+        {
+            var sent = await Commands.SendAsync(new SendSalesProposal(LeadId, sending.ProposalId, string.IsNullOrWhiteSpace(sendNote) ? null : sendNote.Trim()), CancellationToken.None);
+            sending = null;
+            note = $"v{sent.Version} sent to {ContactEmail}.";
+            await OnChanged.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task WithdrawAsync(SalesProposal proposal)
+    {
+        if (busy) return;
+        busy = true; error = null;
+        try
+        {
+            await Commands.SendAsync(new WithdrawSalesProposal(LeadId, proposal.ProposalId), CancellationToken.None);
+            await OnChanged.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+}

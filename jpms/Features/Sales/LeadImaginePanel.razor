@@ -1,0 +1,222 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject ICommandSender Commands
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+@*
+    The lead page's Imagine panel (2026-09-06): the lead's private link and its QR code — issued
+    here, drawn here, downloaded as a PNG for the letter — and every round the prospect has run:
+    their photos, their brief, the concepts that came back, what they liked and said, and a
+    Retry for a render that failed. The link is the only way onto the public page, so re-issuing
+    is behind a confirm: a QR code already printed stops working.
+*@
+
+<Panel Title="Imagine">
+    <HeaderActions>
+        @if (CanWork)
+        {
+            @if (Imagine?.Token is null)
+            {
+                <button type="button" class="btn-primary text-sm" disabled="@busy" @onclick="IssueAsync">Issue link &amp; QR code</button>
+            }
+            else
+            {
+                <InlineConfirm Label="Re-issue link" Question="Printed QR codes will stop working — re-issue?" Busy="@busy" OnConfirm="IssueAsync" Danger="false" />
+            }
+        }
+    </HeaderActions>
+    <ChildContent>
+        @if (error is not null)
+        {
+            <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
+        }
+        @if (Imagine?.Token is null)
+        {
+            <p class="text-sm text-content-muted">
+                No link yet. Issue one and the QR code below goes on the letter or brochure: the prospect scans it, uploads
+                photos of their house and what they dream of, and the AI concepts come back rendered over their own photos.
+                Everything they do lands on this timeline.
+            </p>
+        }
+        else
+        {
+            var token = Imagine.Token;
+            <div class="flex flex-col sm:flex-row gap-6 mb-6">
+                <div class="shrink-0">
+                    <div id="@QrElementId" class="bg-white p-3 rounded inline-block" style="min-width:246px;min-height:246px"></div>
+                    @if (qrFailed)
+                    {
+                        <p class="text-xs text-content-subtle mt-2 max-w-[246px]">The QR encoder couldn't be loaded (offline?). The link below still works — paste it into any QR tool.</p>
+                    }
+                </div>
+                <div class="min-w-0 flex-1 space-y-3">
+                    <div>
+                        <p class="eyebrow mb-1">The link</p>
+                        <p class="text-sm text-content break-all font-mono">@ImagineUrl</p>
+                        <p class="text-xs text-content-subtle mt-1">Issued @Imagine.IssuedAt?.ToLocalTime().ToString("d MMM yyyy HH:mm") · only this link opens the page — there is no general address.</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" class="btn-secondary text-sm" @onclick="CopyAsync">@(copied ? "Copied" : "Copy link")</button>
+                        <button type="button" class="btn-secondary text-sm" disabled="@qrFailed" @onclick="DownloadAsync">Download QR (PNG)</button>
+                        <a class="btn-ghost text-sm" href="@ImagineUrl" target="_blank" rel="noopener">Open the page</a>
+                    </div>
+                    <p class="text-xs text-content-subtle">Put the QR code on the letter with a line like "Scan to see what your home could become". The letter merge can use the link as text too.</p>
+                </div>
+            </div>
+        }
+
+        @if (Rounds.Count > 0)
+        {
+            <div class="space-y-6 @(Imagine?.Token is null ? "" : "border-t border-line pt-6")">
+                @foreach (var round in Rounds.OrderByDescending(r => r.Number))
+                {
+                    var r = round;
+                    <div>
+                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                            <span class="text-sm font-medium text-content">Round @r.Number · @(r.Kind == ImagineRoundKind.Concepts ? "Concepts" : "Revision")</span>
+                            <Pill Tone="@ToneFor(r.Status)">@r.Status.DisplayName()</Pill>
+                            <span class="text-xs text-content-subtle">@r.RequestedAt.ToLocalTime().ToString("d MMM HH:mm")</span>
+                            @if (CanWork && r.Status == ImagineRoundStatus.Failed)
+                            {
+                                <button type="button" class="btn-secondary text-xs" disabled="@busy" @onclick="() => RetryAsync(r)">Retry render</button>
+                            }
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(r.Brief))
+                        {
+                            <p class="text-sm text-content-muted mb-2">@(r.Kind == ImagineRoundKind.Concepts ? "They wrote" : "They asked"): <em>@r.Brief</em></p>
+                        }
+                        @if (r.Status == ImagineRoundStatus.Failed && !string.IsNullOrWhiteSpace(r.Error))
+                        {
+                            <p class="text-xs text-negative mb-2">@r.Error</p>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(r.Error))
+                        {
+                            <p class="text-xs text-warning mb-2">@r.Error</p>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(r.Observations))
+                        {
+                            <p class="text-xs text-content-subtle mb-3">Claude saw: @r.Observations</p>
+                        }
+                        @if (r.Photos.Count > 0)
+                        {
+                            <div class="flex flex-wrap gap-2 mb-3">
+                                @foreach (var photo in r.Photos)
+                                {
+                                    var p = photo;
+                                    <a href="@ImageUrl(p.ImageId)" target="_blank" rel="noopener" class="block w-20 h-20 rounded overflow-hidden border border-line bg-surface" title="@p.Title">
+                                        <img src="@ImageUrl(p.ImageId)" alt="" class="w-full h-full object-cover" loading="lazy" />
+                                    </a>
+                                }
+                            </div>
+                        }
+                        @if (r.Concepts.Count > 0)
+                        {
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                @foreach (var concept in r.Concepts)
+                                {
+                                    var c = concept;
+                                    <div class="rounded border @(c.Liked ? "border-accent" : "border-line") overflow-hidden">
+                                        <a href="@ImageUrl(c.ImageId)" target="_blank" rel="noopener" class="block aspect-[3/2] bg-surface">
+                                            <img src="@ImageUrl(c.ImageId)" alt="@c.Title" class="w-full h-full object-cover" loading="lazy" />
+                                        </a>
+                                        <div class="p-3">
+                                            <p class="text-sm font-medium text-content">@(c.Liked ? "♥ " : "")@c.Title</p>
+                                            <p class="text-xs text-content-muted mt-1">@c.Description</p>
+                                            @if (!string.IsNullOrWhiteSpace(c.Comment))
+                                            {
+                                                <p class="text-xs text-content mt-2">They said: <em>@c.Comment</em></p>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </ChildContent>
+</Panel>
+
+@code {
+    [Parameter, EditorRequired] public string LeadId { get; set; } = "";
+    [Parameter, EditorRequired] public string LeadReference { get; set; } = "";
+    [Parameter] public LeadImagine? Imagine { get; set; }
+    [Parameter] public bool CanWork { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private bool busy;
+    private bool copied;
+    private bool qrFailed;
+    private string? error;
+    private string? drawnFor;
+
+    private IReadOnlyList<ImagineRoundView> Rounds => Imagine?.Rounds ?? Array.Empty<ImagineRoundView>();
+    private string QrElementId => $"lead-qr-{LeadId}";
+    private string ImagineUrl => Imagine?.Token is { } token ? $"{Nav.BaseUri.TrimEnd('/')}/imagine/{token}" : "";
+    private string ImageUrl(string imageId) => $"/api/sales/leads/{LeadId}/imagine/images/{imageId}";
+
+    private static Tone ToneFor(ImagineRoundStatus status) => status switch
+    {
+        ImagineRoundStatus.Complete => Tone.Positive,
+        ImagineRoundStatus.Failed => Tone.Negative,
+        ImagineRoundStatus.Running => Tone.Info,
+        _ => Tone.Muted
+    };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var token = Imagine?.Token;
+        if (token is null || drawnFor == token) return;
+        drawnFor = token;
+        try
+        {
+            var ok = await JS.InvokeAsync<bool>("jpmsLeadQr.draw", QrElementId, ImagineUrl, 220);
+            if (!ok) { qrFailed = true; StateHasChanged(); }
+        }
+        catch { qrFailed = true; StateHasChanged(); }
+    }
+
+    private async Task IssueAsync()
+    {
+        if (busy) return;
+        busy = true; error = null; drawnFor = null; qrFailed = false;
+        try
+        {
+            await Commands.SendAsync(new IssueImagineLink(LeadId), CancellationToken.None);
+            await OnChanged.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task RetryAsync(ImagineRoundView round)
+    {
+        if (busy) return;
+        busy = true; error = null;
+        try
+        {
+            await Commands.SendAsync(new RetryImagineRound(LeadId, round.RoundId), CancellationToken.None);
+            await OnChanged.InvokeAsync();
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task CopyAsync()
+    {
+        try { copied = await JS.InvokeAsync<bool>("jpmsLeadQr.copy", ImagineUrl); }
+        catch { copied = false; }
+        if (copied)
+        {
+            await Task.Delay(1500);
+            copied = false;
+        }
+    }
+
+    private async Task DownloadAsync()
+    {
+        try { await JS.InvokeAsync<bool>("jpmsLeadQr.download", QrElementId, $"{LeadReference}-imagine-qr.png"); }
+        catch { }
+    }
+}

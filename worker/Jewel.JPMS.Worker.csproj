@@ -33,6 +33,9 @@
          the drawings container via the api's own AzureBlobDrawingStore (linked below). -->
     <PackageReference Include="Azure.Storage.Blobs" Version="12.22.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.10" />
+    <!-- Azure.Communication.Email: the imagine render worker emails the prospect when their
+         concepts are ready — same package + version as the api, whose notifier is linked below. -->
+    <PackageReference Include="Azure.Communication.Email" Version="1.0.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -135,6 +138,15 @@
     <Compile Include="..\api\Features\Sales\Research\StrategyPlanPrompt.cs" Link="Shared\Sales\StrategyPlanPrompt.cs" />
     <Compile Include="..\api\Features\Sales\Research\StrategyResearcher.cs" Link="Shared\Sales\StrategyResearcher.cs" />
     <Compile Include="..\api\Features\Sales\Research\StrategyResearchRunner.cs" Link="Shared\Sales\StrategyResearchRunner.cs" />
+    <!-- Shared Imagine render source (2026-09-06): the render queue consumer runs the SAME runner,
+         concept writer, Azure image client, blob store and email notifier the api compiles. The
+         public endpoints, the public service and the command handlers are deliberately NOT linked. -->
+    <Compile Include="..\api\Storage\AzureBlobFileStore.cs" Link="Shared\Storage\AzureBlobFileStore.cs" />
+    <Compile Include="..\api\Features\Sales\Imagine\IImagineImageStore.cs" Link="Shared\Sales\Imagine\IImagineImageStore.cs" />
+    <Compile Include="..\api\Features\Sales\Imagine\AzureImageClient.cs" Link="Shared\Sales\Imagine\AzureImageClient.cs" />
+    <Compile Include="..\api\Features\Sales\Imagine\ImagineConceptWriter.cs" Link="Shared\Sales\Imagine\ImagineConceptWriter.cs" />
+    <Compile Include="..\api\Features\Sales\Imagine\ImagineNotifier.cs" Link="Shared\Sales\Imagine\ImagineNotifier.cs" />
+    <Compile Include="..\api\Features\Sales\Imagine\ImagineRenderRunner.cs" Link="Shared\Sales\Imagine\ImagineRenderRunner.cs" />
   </ItemGroup>
 
   <ItemGroup>

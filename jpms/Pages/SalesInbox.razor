@@ -1,0 +1,457 @@
+@page "/sales/inbox"
+@using Jewel.JPMS.Contracts.Sales
+@using Jewel.JPMS.Features.Sales
+@inject AuthService Auth
+@inject SessionService Session
+@inject NavigationManager Nav
+@inject SalesInboxReadModel Inbox
+@inject SalesStrategyListReadModel Strategies
+@inject ICommandSender Commands
+@implements IDisposable
+
+<PageTitle>Sales inbox · JPMS</PageTitle>
+
+@*
+    Sales → Inbox (2026-09-06): sales@jewelbb.co.uk read live from Graph, its own thing under
+    Sales — deliberately not the Control Centre's triage. The list is the Inbox as it stands,
+    newest first, each sender chipped with the lead whose contact email it is. Opening a row
+    reads the whole thread; each message's body is fetched when it's expanded. From the thread:
+    reply (sent from sales@, reply-all, quoted history), log the email on the lead's timeline, or
+    raise a new lead from it with the sender pre-filled. Nothing is tagged or moved.
+*@
+
+<Page>
+    <WorkspaceSectionNav />
+    <PageHeader>
+        <SubtitleContent>
+            @(Inbox.Current?.MailboxAddress ?? "sales@jewelbb.co.uk"), live — the conversation with a prospect beside the lead it belongs to.
+            Reply from here; log an email on the lead; raise a lead from an email.
+        </SubtitleContent>
+        <Actions>
+            <div class="flex items-center gap-2">
+                <SearchInput Value="@search" ValueChanged="OnSearchChanged" Placeholder="Search the mailbox" Width="w-64" />
+                <button type="button" class="btn-secondary shrink-0" disabled="@refreshing" @onclick="RefreshAsync">@(refreshing ? "Refreshing…" : "Refresh")</button>
+            </div>
+        </Actions>
+    </PageHeader>
+
+    @if (dataFailed && Inbox.Current is null)
+    {
+        <div class="panel p-6 max-w-3xl">
+            <p class="text-sm text-negative">The inbox couldn't be read — the error banner has the detail. Reload the page to retry.</p>
+        </div>
+    }
+    else if (Inbox.Current is null)
+    {
+        <LoadGate IsLoading="true" Prominent="true" Label="Reading the sales inbox" />
+    }
+    else
+    {
+        var inbox = Inbox.Current;
+        @if (!inbox.Configured)
+        {
+            <Notice Tone="Tone.Warning" Class="mb-4" Title="Not connected">@inbox.Notice</Notice>
+        }
+        else if (inbox.Notice is not null)
+        {
+            <Notice Tone="Tone.Info" Class="mb-4">@inbox.Notice</Notice>
+        }
+        @if (actionNote is not null)
+        {
+            <Notice Tone="Tone.Positive" Class="mb-4" Dismissible="true" OnDismiss="() => actionNote = null">@actionNote</Notice>
+        }
+
+        <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
+            <div class="xl:col-span-2">
+                <div class="panel overflow-hidden">
+                    @if (inbox.Page.Items.Count == 0)
+                    {
+                        <p class="p-6 text-sm text-content-subtle italic">@(string.IsNullOrWhiteSpace(search) ? "Nothing in the inbox." : "No emails match.")</p>
+                    }
+                    else
+                    {
+                        <ul class="divide-y divide-line">
+                            @foreach (var item in inbox.Page.Items)
+                            {
+                                var m = item;
+                                var match = Inbox.MatchFor(m.FromEmail);
+                                var isOpen = opened?.Id == m.Id;
+                                <li>
+                                    <button type="button" class="w-full text-left px-4 py-3 hover:bg-surface transition @(isOpen ? "bg-surface" : "")" @onclick="() => OpenAsync(m)">
+                                        <div class="flex items-baseline justify-between gap-3">
+                                            <span class="text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(m.FromName) ? m.FromEmail : m.FromName)</span>
+                                            <span class="text-xs text-content-subtle shrink-0">@When(m.ReceivedAt)</span>
+                                        </div>
+                                        <p class="text-sm text-content-muted truncate">@(string.IsNullOrWhiteSpace(m.Subject) ? "(no subject)" : m.Subject)</p>
+                                        <p class="text-xs text-content-subtle truncate">@m.BodyPreview</p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            @if (match is not null)
+                                            {
+                                                <Pill Tone="@match.Stage.ToTone()" Title="@match.ContactName">@match.Reference · @match.Stage.DisplayName()</Pill>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-xs text-content-faint">no lead</span>
+                                            }
+                                            @if (m.HasAttachments)
+                                            {
+                                                <span class="text-xs text-content-subtle">📎</span>
+                                            }
+                                        </div>
+                                    </button>
+                                </li>
+                            }
+                        </ul>
+                        <div class="flex items-center justify-between px-4 py-3 border-t border-line text-xs text-content-subtle">
+                            <span>@(inbox.Page.Total > 0 ? $"{inbox.Page.Total} in the inbox" : $"{inbox.Page.Items.Count} shown")</span>
+                            <div class="flex gap-2">
+                                @if (!string.IsNullOrWhiteSpace(Inbox.Cursor))
+                                {
+                                    <button type="button" class="btn-ghost text-xs" @onclick="() => PageAsync(null)">First page</button>
+                                }
+                                @if (inbox.Page.NextCursor is { } next)
+                                {
+                                    <button type="button" class="btn-ghost text-xs" @onclick="() => PageAsync(next)">Older</button>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="xl:col-span-3">
+                @if (opened is null)
+                {
+                    <div class="panel p-6">
+                        <p class="text-sm text-content-subtle italic">Open an email to read the thread.</p>
+                    </div>
+                }
+                else
+                {
+                    var open = opened;
+                    var openMatch = Inbox.MatchFor(open.FromEmail);
+                    var thread = string.IsNullOrWhiteSpace(open.ConversationId) ? null : Inbox.Conversation(open.ConversationId);
+                    <div class="panel">
+                        <div class="panel-header flex flex-wrap items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <h2 class="text-base font-semibold text-content">@(string.IsNullOrWhiteSpace(open.Subject) ? "(no subject)" : open.Subject)</h2>
+                                <p class="text-xs text-content-subtle">
+                                    @open.FromName &lt;@open.FromEmail&gt;
+                                    @if (openMatch is not null)
+                                    {
+                                        <text> · <a href="/sales/leads/@openMatch.LeadId" class="text-info hover:underline underline-offset-4">@openMatch.Reference @openMatch.ContactName</a></text>
+                                    }
+                                </p>
+                            </div>
+                            @if (CanWork)
+                            {
+                                <div class="flex flex-wrap gap-2">
+                                    @if (openMatch is not null)
+                                    {
+                                        <button type="button" class="btn-secondary text-sm" disabled="@busy" @onclick="() => LogAsync(open, openMatch)">Log on @openMatch.Reference</button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn-secondary text-sm" disabled="@busy" @onclick="() => OpenNewLead(open)">New lead from this email</button>
+                                        <button type="button" class="btn-ghost text-sm" disabled="@busy" @onclick="OpenLogPickerAsync">Log on a lead…</button>
+                                    }
+                                    <button type="button" class="btn-primary text-sm" disabled="@busy" @onclick="() => replyOpen = !replyOpen">Reply</button>
+                                </div>
+                            }
+                        </div>
+                        <div class="p-6 space-y-4">
+                            @if (actionError is not null)
+                            {
+                                <Notice Tone="Tone.Negative">@actionError</Notice>
+                            }
+                            @if (replyOpen && CanWork)
+                            {
+                                <div class="rounded border border-line p-4 space-y-3">
+                                    <p class="text-xs text-content-subtle">Reply-all from @inbox.MailboxAddress, your text above the quoted thread.</p>
+                                    <textarea class="field w-full" rows="6" maxlength="20000" placeholder="Hello…" value="@replyBody" @oninput="e => replyBody = e.Value?.ToString() ?? string.Empty"></textarea>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" class="btn-primary text-sm" disabled="@(busy || string.IsNullOrWhiteSpace(replyBody))" @onclick="() => ReplyAsync(open, openMatch)">@(busy ? "Sending…" : "Send")</button>
+                                        <button type="button" class="btn-ghost text-sm" disabled="@busy" @onclick="() => replyOpen = false">Cancel</button>
+                                        @if (openMatch is not null)
+                                        {
+                                            <span class="text-xs text-content-subtle">Logged on @openMatch.Reference when sent.</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            @if (thread is null)
+                            {
+                                <LoadGate IsLoading="true" Label="Reading the thread" />
+                            }
+                            else
+                            {
+                                var members = thread.Items.Count == 0 ? new List<MailboxMessage> { open } : thread.Items.ToList();
+                                @foreach (var member in members)
+                                {
+                                    var msg = member;
+                                    var expanded = expandedIds.Contains(msg.Id);
+                                    var detail = Inbox.Detail(msg.Id);
+                                    <article class="rounded border @(msg.Id == open.Id ? "border-line-strong" : "border-line")">
+                                        <button type="button" class="w-full text-left px-4 py-3 flex items-baseline justify-between gap-3" @onclick="() => ToggleAsync(msg)">
+                                            <span class="min-w-0">
+                                                <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(msg.FromName) ? msg.FromEmail : msg.FromName)</span>
+                                                <span class="text-xs text-content-subtle ml-2">@msg.FromEmail</span>
+                                                @if (!expanded)
+                                                {
+                                                    <span class="block text-xs text-content-subtle truncate">@msg.BodyPreview</span>
+                                                }
+                                            </span>
+                                            <span class="text-xs text-content-subtle shrink-0">@DateTimeText(msg.ReceivedAt.ToLocalTime())</span>
+                                        </button>
+                                        @if (expanded)
+                                        {
+                                            <div class="px-4 pb-4">
+                                                @if (detail is null)
+                                                {
+                                                    <LoadGate IsLoading="true" Label="Reading" />
+                                                }
+                                                else if (detail.BodyIsHtml)
+                                                {
+                                                    <div class="rounded bg-white text-gray-900 p-3 text-sm overflow-x-auto max-h-[32rem] overflow-y-auto">@((MarkupString)detail.BodyHtml)</div>
+                                                }
+                                                else
+                                                {
+                                                    <pre class="text-sm text-content-muted whitespace-pre-wrap font-sans">@detail.BodyHtml</pre>
+                                                }
+                                                @if (detail is { Attachments.Count: > 0 })
+                                                {
+                                                    <p class="text-xs text-content-subtle mt-3">Attachments: @string.Join(", ", detail.Attachments.Select(a => a.Name))</p>
+                                                }
+                                            </div>
+                                        }
+                                    </article>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <LeadFormModal IsOpen="@newLeadOpen" Prefill="@newLeadPrefill" Strategies="@Strategies.Current" OnSaved="OnLeadCreatedAsync" OnCancel="() => newLeadOpen = false" />
+
+        <Modal IsOpen="@logPickerOpen" Title="Log this email on a lead" ConfirmLabel="@(busy ? "Logging…" : "Log it")"
+               ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(logLeadId))" OnCancel="() => logPickerOpen = false" OnConfirm="LogPickedAsync">
+            <FormField Label="Lead reference or name" Hint="Type LD-0012, a name or an address">
+            <input type="text" class="field w-full" value="@logLeadSearch" @oninput="e => logLeadSearch = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
+            @if (leads is not null)
+            {
+                <ul class="mt-2 max-h-56 overflow-y-auto divide-y divide-line border border-line rounded">
+                    @foreach (var lead in leads.Where(MatchesLeadSearch).Take(20))
+                    {
+                        var l = lead;
+                        <li>
+                            <button type="button" class="w-full text-left px-3 py-2 text-sm hover:bg-surface @(logLeadId == l.LeadId ? "bg-surface text-content" : "text-content-muted")" @onclick="() => logLeadId = l.LeadId">
+                                @l.Reference · @(string.IsNullOrWhiteSpace(l.ContactName) ? l.CompanyName : l.ContactName) <span class="text-xs text-content-subtle">@l.PropertyAddress</span>
+                            </button>
+                        </li>
+                    }
+                </ul>
+            }
+        </Modal>
+    }
+</Page>
+
+@code {
+    private bool dataFailed;
+    private bool refreshing;
+    private bool busy;
+    private string search = "";
+    private string? actionNote;
+    private string? actionError;
+
+    private MailboxMessage? opened;
+    private readonly HashSet<string> expandedIds = new();
+    private bool replyOpen;
+    private string replyBody = "";
+
+    private bool newLeadOpen;
+    private Lead? newLeadPrefill;
+    private bool logPickerOpen;
+    private string logLeadSearch = "";
+    private string logLeadId = "";
+    private IReadOnlyList<Lead>? leads;
+
+    [Inject] private LeadListReadModel LeadList { get; set; } = default!;
+
+    private bool CanWork => Session.ActiveRole is Role.Admin or Role.ManagingDirector or Role.FinanceDirector
+        or Role.ProjectManager or Role.QuantitySurveyor or Role.SalesMarketing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Inbox.OnChanged += StateHasChanged;
+        Strategies.OnChanged += StateHasChanged;
+        await Session.EnsureLoadedAsync();
+        if (!Auth.IsSignedIn) { Nav.NavigateTo("/login", forceLoad: true); return; }
+        try { await Inbox.RefreshAsync(null, "", CancellationToken.None); }
+        catch { dataFailed = true; }
+    }
+
+    private async Task RefreshAsync()
+    {
+        refreshing = true;
+        try { await Inbox.RefreshAsync(Inbox.Cursor, search, CancellationToken.None); }
+        catch (OperationCanceledException) { throw; }
+        catch { }
+        finally { refreshing = false; }
+    }
+
+    private async Task PageAsync(string? cursor)
+    {
+        try { await Inbox.RefreshAsync(cursor, search, CancellationToken.None); }
+        catch (OperationCanceledException) { throw; }
+        catch { }
+    }
+
+    private async Task OnSearchChanged(string value)
+    {
+        search = value;
+        await PageAsync(null);
+    }
+
+    private async Task OpenAsync(MailboxMessage message)
+    {
+        opened = message;
+        actionError = null;
+        replyOpen = false;
+        replyBody = "";
+        expandedIds.Clear();
+        expandedIds.Add(message.Id);
+        _ = Inbox.LoadDetailAsync(message.Id, CancellationToken.None);
+        if (!string.IsNullOrWhiteSpace(message.ConversationId) && Inbox.Conversation(message.ConversationId) is null)
+        {
+            try { await Inbox.LoadConversationAsync(message.ConversationId, CancellationToken.None); }
+            catch (OperationCanceledException) { throw; }
+            catch { }
+        }
+    }
+
+    private async Task ToggleAsync(MailboxMessage message)
+    {
+        if (!expandedIds.Add(message.Id)) { expandedIds.Remove(message.Id); return; }
+        try { await Inbox.LoadDetailAsync(message.Id, CancellationToken.None); }
+        catch (OperationCanceledException) { throw; }
+        catch { }
+    }
+
+    private async Task ReplyAsync(MailboxMessage message, SalesInboxLeadMatch? match)
+    {
+        if (busy || string.IsNullOrWhiteSpace(replyBody)) return;
+        busy = true; actionError = null;
+        try
+        {
+            var outcome = await Commands.SendAsync(new ReplyToSalesEmail(message.Id, replyBody.Trim(), match?.LeadId), CancellationToken.None);
+            if (outcome.Sent)
+            {
+                actionNote = outcome.Message;
+                replyOpen = false;
+                replyBody = "";
+                if (!string.IsNullOrWhiteSpace(message.ConversationId))
+                {
+                    Inbox.ForgetConversation(message.ConversationId);
+                    try { await Inbox.LoadConversationAsync(message.ConversationId, CancellationToken.None); } catch (OperationCanceledException) { throw; } catch { }
+                }
+            }
+            else
+            {
+                actionError = outcome.Message + (outcome.DraftWebLink is null ? "" : $" Open the draft: {outcome.DraftWebLink}");
+            }
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task LogAsync(MailboxMessage message, SalesInboxLeadMatch match)
+    {
+        if (busy) return;
+        busy = true; actionError = null;
+        try
+        {
+            await Commands.SendAsync(new LogSalesEmailToLead(message.Id, match.LeadId, null), CancellationToken.None);
+            actionNote = $"Logged on {match.Reference}.";
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private async Task LogPickedAsync()
+    {
+        if (busy || opened is null || string.IsNullOrWhiteSpace(logLeadId)) return;
+        busy = true; actionError = null;
+        try
+        {
+            await Commands.SendAsync(new LogSalesEmailToLead(opened.Id, logLeadId, null), CancellationToken.None);
+            logPickerOpen = false;
+            actionNote = "Logged on the lead.";
+            // The lead now has this sender's email, so the row chips it.
+            await PageAsync(Inbox.Cursor);
+        }
+        catch (CommandFailedException ex) { actionError = ex.Message; }
+        finally { busy = false; }
+    }
+
+    private void OpenNewLead(MailboxMessage message)
+    {
+        // A prefill only — the form captures a new lead from these starting values.
+        newLeadPrefill = new Lead("", "", message.FromName, message.FromEmail, "", "", LeadProspectKind.Homeowner, "", "",
+            string.IsNullOrWhiteSpace(message.Subject) ? "" : message.Subject, "",
+            LeadSource.Inbound, null, null, LeadStage.Contacted, DateTimeOffset.UtcNow, null, Auth.CurrentUser?.Email ?? "",
+            DateTimeOffset.UtcNow, null, null, null);
+        newLeadOpen = true;
+    }
+
+    private async Task OnLeadCreatedAsync(Lead lead)
+    {
+        newLeadOpen = false;
+        actionNote = $"{lead.Reference} captured from the email.";
+        if (opened is not null)
+        {
+            try { await Commands.SendAsync(new LogSalesEmailToLead(opened.Id, lead.LeadId, null), CancellationToken.None); }
+            catch (CommandFailedException) { }
+        }
+        await PageAsync(Inbox.Cursor);
+    }
+
+    private async Task OpenLogPickerAsync()
+    {
+        actionError = null;
+        logLeadId = "";
+        logLeadSearch = opened?.FromEmail ?? "";
+        logPickerOpen = true;
+        if (leads is null)
+        {
+            try { await LeadList.RefreshAsync(CancellationToken.None); leads = LeadList.Current; }
+            catch (OperationCanceledException) { throw; }
+            catch { leads = Array.Empty<Lead>(); }
+        }
+    }
+
+    private bool MatchesLeadSearch(Lead lead)
+    {
+        if (string.IsNullOrWhiteSpace(logLeadSearch)) return true;
+        var q = logLeadSearch.Trim();
+        return lead.Reference.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || lead.ContactName.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || lead.CompanyName.Contains(q, StringComparison.OrdinalIgnoreCase)
+            || lead.PropertyAddress.Contains(q, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string When(DateTimeOffset at)
+    {
+        var local = at.ToLocalTime();
+        return local.Date == DateTime.Today ? local.ToString("HH:mm") : local.ToString("d MMM");
+    }
+
+    public void Dispose()
+    {
+        Inbox.OnChanged -= StateHasChanged;
+        Strategies.OnChanged -= StateHasChanged;
+    }
+}

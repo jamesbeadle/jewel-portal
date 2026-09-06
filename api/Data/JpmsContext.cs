@@ -35,6 +35,9 @@ public sealed partial class JpmsContext : DbContext
     // Sales (2026-09-06): strategies for finding leads, and each lead's timeline.
     public DbSet<SalesStrategyEntity> SalesStrategies => Set<SalesStrategyEntity>();
     public DbSet<LeadActivityEntity> LeadActivities => Set<LeadActivityEntity>();
+    public DbSet<ImagineRoundEntity> ImagineRounds => Set<ImagineRoundEntity>();
+    public DbSet<ImagineImageEntity> ImagineImages => Set<ImagineImageEntity>();
+    public DbSet<SalesProposalEntity> SalesProposals => Set<SalesProposalEntity>();
 
     public DbSet<BoqLineItemEntity> BoqLineItems => Set<BoqLineItemEntity>();
     public DbSet<BoqSignOffEntity> BoqSignOffs => Set<BoqSignOffEntity>();

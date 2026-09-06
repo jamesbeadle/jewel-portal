@@ -59,7 +59,7 @@
                         }
                         @if (CanDecide && lead.Stage != LeadStage.Won)
                         {
-                            <button type="button" class="btn-primary" @onclick="OpenWin">Won — create client &amp; project</button>
+                            <button type="button" class="btn-primary" title="@(Proposals.Any(p => p.Status == SalesProposalStatus.Accepted) ? "The proposal is accepted — this creates the client and the project" : "Creates the client and the project")" @onclick="OpenWin">Won — create client &amp; project</button>
                         }
                     </div>
                 </Actions>
@@ -152,6 +152,12 @@
                         </Panel>
                     }
 
+                    @* The journey after identification (2026-09-06): the QR-coded imagine link and
+                       its rounds, then the proposals — acceptance there is what Won builds on. *@
+                    <LeadImaginePanel LeadId="@LeadId" LeadReference="@lead.Reference" Imagine="@Detail.Current(LeadId)?.Imagine" CanWork="@CanWork" OnChanged="ReloadAsync" />
+                    <LeadProposalsPanel LeadId="@LeadId" ContactEmail="@lead.ContactEmail" Proposals="@Proposals" Concepts="@Concepts"
+                                        CanWork="@CanWork" CanDecide="@CanDecide" OnChanged="ReloadAsync" />
+
                     <Panel Title="Timeline">
                         @if (Activities.Count == 0)
                         {
@@ -167,7 +173,7 @@
                                             @DateText(activity.OccurredAt)<br />@activity.OccurredAt.ToLocalTime().ToString("HH:mm")
                                         </div>
                                         <div class="min-w-0">
-                                            <p class="text-xs font-medium @(activity.Kind == LeadActivityKind.StageChange ?"text-accent" : "text-content-subtle")">@activity.Kind.DisplayName()</p>
+                                            <p class="text-xs font-medium @(activity.Kind is LeadActivityKind.StageChange or LeadActivityKind.ProposalAccepted ? "text-accent" : activity.Kind is LeadActivityKind.Imagine or LeadActivityKind.ProposalSent ? "text-info" : "text-content-subtle")">@activity.Kind.DisplayName()</p>
                                             <p class="text-sm text-content whitespace-pre-wrap">@activity.Summary</p>
                                             @if (!string.IsNullOrWhiteSpace(activity.RecordedByEmail))
                                             {
@@ -358,6 +364,9 @@
 
     private Lead? Lead => Detail.Current(LeadId)?.Lead;
     private IReadOnlyList<LeadActivity> Activities => Detail.Current(LeadId)?.Activities ?? Array.Empty<LeadActivity>();
+    private IReadOnlyList<SalesProposal> Proposals => Detail.Current(LeadId)?.Proposals ?? Array.Empty<SalesProposal>();
+    private IReadOnlyList<ImagineImageView> Concepts =>
+        Detail.Current(LeadId)?.Imagine?.Rounds.SelectMany(round => round.Concepts).ToList() ?? new List<ImagineImageView>();
 
     private string Headline => Lead is { } lead
         ? (string.IsNullOrWhiteSpace(lead.ContactName) ? lead.CompanyName : lead.ContactName)

@@ -1,3 +1,5 @@
+using Jewel.JPMS.Api.Features.Sales.Imagine;
+using Jewel.JPMS.Api.Features.Sales.Proposals;
 using Jewel.JPMS.Contracts.Sales;
 
 namespace Jewel.JPMS.Api.Features.Sales.Queries;
@@ -33,7 +35,16 @@ public sealed class GetLeadHandler : IQueryHandler<GetLead, LeadDetail?>
             .Where(activity => activity.LeadId == query.LeadId)
             .OrderByDescending(activity => activity.OccurredAt)
             .ToListAsync(cancellationToken);
-        return new LeadDetail(row.ToModel(strategyName), activities.Select(activity => activity.ToModel()).ToList());
+        var rounds = await ImagineMapping.RoundsForLeadAsync(context, query.LeadId, cancellationToken);
+        var proposals = await context.SalesProposals.AsNoTracking()
+            .Where(proposal => proposal.LeadId == query.LeadId)
+            .OrderByDescending(proposal => proposal.Version)
+            .ToListAsync(cancellationToken);
+        return new LeadDetail(
+            row.ToModel(strategyName),
+            activities.Select(activity => activity.ToModel()).ToList(),
+            new LeadImagine(row.ImagineToken, row.ImagineTokenIssuedAt, rounds),
+            proposals.Select(proposal => proposal.ToModel()).ToList());
     }
 }
 

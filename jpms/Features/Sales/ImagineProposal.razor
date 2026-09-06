@@ -1,0 +1,252 @@
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+@*
+    The prospect's proposal on the public imagine page (2026-09-06): the chosen render at the
+    top, the scope, the options they can toggle with the price moving as they do, the schedule of
+    works as a week-by-week timeline, the terms, and acceptance — name, email, the tick, the
+    button. Accepted, it turns into the record of what was agreed. Raw HttpClient, keyed by the
+    lead's token, like the page it sits on.
+*@
+
+<div class="panel overflow-hidden">
+    @if (Proposal.HeroImageId is { } heroId)
+    {
+        <a href="@ImageUrl(heroId)" target="_blank" rel="noopener" class="block aspect-[3/2] md:aspect-[21/9] bg-surface">
+            <img src="@ImageUrl(heroId)" alt="" class="w-full h-full object-cover" />
+        </a>
+    }
+    <div class="p-6 md:p-8">
+        <p class="eyebrow mb-1">@(Proposal.Status == SalesProposalStatus.Accepted ? "Your agreement" : "Your proposal") · v@(Proposal.Version)</p>
+        <h2 class="text-2xl md:text-3xl font-semibold text-content mb-4">@Proposal.Title</h2>
+
+        @if (Proposal.Status == SalesProposalStatus.Accepted)
+        {
+            <Notice Tone="Tone.Positive" Class="mb-6">
+                Accepted by @Proposal.AcceptedByName on @Proposal.AcceptedAt?.ToLocalTime().ToString("d MMMM yyyy") at
+                <strong>@Money(Proposal.AcceptedPrice ?? Proposal.BasePrice)</strong>
+                @if (AcceptedOptions.Count > 0)
+                {
+                    <text> with @string.Join(", ", AcceptedOptions.Select(o => o.Name))</text>
+                }
+                . We'll be in touch to arrange the contract paperwork and the start.
+            </Notice>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Proposal.Scope))
+        {
+            <section class="mb-8">
+                <h3 class="font-semibold text-content mb-2">What we'd build</h3>
+                <SimpleMarkdown Text="@Proposal.Scope" />
+            </section>
+        }
+
+        <section class="mb-8">
+            <h3 class="font-semibold text-content mb-2">The price</h3>
+            <div class="flex items-baseline justify-between gap-4 py-3 border-b border-line">
+                <span class="text-content-muted">Base — everything in the scope above</span>
+                <span class="text-content font-medium">@Money(Proposal.BasePrice)</span>
+            </div>
+            @if (Proposal.Options.Count > 0)
+            {
+                <p class="text-xs text-content-subtle mt-3 mb-1">@(Accepted ? "Options chosen" : "Options — tick what you'd like and watch the price move")</p>
+                @foreach (var option in Proposal.Options)
+                {
+                    var o = option;
+                    var chosen = Chosen(o.OptionId);
+                    <label class="flex items-start gap-3 py-3 border-b border-line @(Accepted ? "" : "cursor-pointer")">
+                        <input type="checkbox" class="mt-1" checked="@chosen" disabled="@(Accepted || busy)" @onchange="() => Toggle(o.OptionId)" />
+                        <span class="flex-1 min-w-0">
+                            <span class="text-content font-medium">@o.Name</span>
+                            @if (o.Recommended && !Accepted)
+                            {
+                                <Pill Tone="Tone.Info" Class="ml-2">Recommended</Pill>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(o.Description))
+                            {
+                                <span class="block text-sm text-content-muted mt-0.5">@o.Description</span>
+                            }
+                        </span>
+                        <span class="text-content-muted shrink-0">@(o.PriceDelta >= 0 ? "+" : "−")@Money(Math.Abs(o.PriceDelta))</span>
+                    </label>
+                }
+            }
+            <div class="flex items-baseline justify-between gap-4 pt-4">
+                <span class="text-content font-semibold">@(Accepted ? "Agreed price" : "Your price")</span>
+                <span class="text-2xl font-semibold text-content">@Money(Total)</span>
+            </div>
+            <p class="text-xs text-content-subtle mt-1">Excluding VAT unless the terms say otherwise.</p>
+        </section>
+
+        @if (Proposal.Schedule.Count > 0)
+        {
+            <section class="mb-8">
+                <h3 class="font-semibold text-content mb-1">When</h3>
+                <p class="text-sm text-content-muted mb-3">About @TotalWeeks weeks on site, in @Proposal.Schedule.Count @(Proposal.Schedule.Count == 1 ? "phase" : "phases").</p>
+                <div class="space-y-2">
+                    @foreach (var phase in Proposal.Schedule.OrderBy(p => p.StartWeek).ThenBy(p => p.Weeks))
+                    {
+                        var ph = phase;
+                        <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-3 items-center text-sm">
+                            <span class="text-content-muted truncate" title="@ph.Name">@ph.Name</span>
+                            <div class="relative h-6 bg-surface rounded">
+                                <div class="absolute top-0 bottom-0 rounded bg-accent/70" style="@BarStyle(ph)" title="@($"Weeks {ph.StartWeek}–{ph.StartWeek + ph.Weeks - 1}")"></div>
+                                <span class="absolute inset-y-0 left-2 text-xs text-content flex items-center pointer-events-none">wk @ph.StartWeek · @ph.Weeks wk</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Proposal.Terms))
+        {
+            <section class="mb-8">
+                <h3 class="font-semibold text-content mb-2">Terms</h3>
+                <SimpleMarkdown Text="@Proposal.Terms" />
+            </section>
+        }
+
+        @if (!Accepted && Proposal.Status == SalesProposalStatus.Sent)
+        {
+            <section class="border-t border-line pt-6">
+                <h3 class="font-semibold text-content mb-1">Accept this proposal</h3>
+                <p class="text-sm text-content-muted mb-4">Accepting is your instruction to proceed on these terms at the price above; we'll follow up with the formal contract for signature.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block eyebrow mb-1">Full name</label>
+                        <input type="text" class="field w-full" maxlength="256" autocomplete="name" disabled="@busy"
+                               value="@name" @oninput="e => name = e.Value?.ToString() ?? string.Empty" />
+                    </div>
+                    <div>
+                        <label class="block eyebrow mb-1">Email</label>
+                        <input type="email" class="field w-full" maxlength="256" autocomplete="email" disabled="@busy"
+                               value="@email" @oninput="e => email = e.Value?.ToString() ?? string.Empty" />
+                    </div>
+                </div>
+                <Checkbox Value="@agreed" ValueChanged="a => agreed = a" Disabled="@busy" Class="mb-4"
+                          Label="I've read the scope, the price and the terms, and I accept this proposal." />
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="button" class="btn-primary btn-lg" disabled="@(busy || !agreed || string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email))" @onclick="AcceptAsync">
+                        @(busy ? "Sending…" : $"Accept at {Money(Total)}")
+                    </button>
+                    @if (!declining)
+                    {
+                        <button type="button" class="btn-ghost" disabled="@busy" @onclick="() => declining = true">Not for us</button>
+                    }
+                </div>
+                @if (declining)
+                {
+                    <div class="mt-4 space-y-2 max-w-xl">
+                        <label class="block eyebrow">Tell us why, if you'd like to</label>
+                        <input type="text" class="field w-full" maxlength="1024" disabled="@busy" placeholder="Optional"
+                               value="@reason" @oninput="e => reason = e.Value?.ToString() ?? string.Empty" />
+                        <div class="flex items-center gap-2">
+                            <button type="button" class="btn-secondary text-sm" disabled="@busy" @onclick="DeclineAsync">Decline the proposal</button>
+                            <button type="button" class="btn-ghost text-sm" disabled="@busy" @onclick="() => declining = false">Cancel</button>
+                        </div>
+                    </div>
+                }
+            </section>
+        }
+        else if (Proposal.Status == SalesProposalStatus.Declined)
+        {
+            <p class="text-sm text-content-muted border-t border-line pt-4">You declined this proposal. If anything changes, email <a class="text-info underline underline-offset-4" href="mailto:sales@jewelbb.co.uk">sales@jewelbb.co.uk</a>.</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public string Token { get; set; } = "";
+    [Parameter, EditorRequired] public ProposalView Proposal { get; set; } = default!;
+    [Parameter] public IReadOnlyList<ImagineImageView> Concepts { get; set; } = Array.Empty<ImagineImageView>();
+    [Parameter] public string ProspectEmail { get; set; } = "";
+    [Parameter] public EventCallback<ImagineView> OnChanged { get; set; }
+    [Parameter] public EventCallback<string> OnError { get; set; }
+
+    private bool busy;
+    private bool agreed;
+    private bool declining;
+    private string name = "";
+    private string email = "";
+    private string reason = "";
+    private HashSet<string> selected = new();
+    private string? loadedFor;
+
+    private string Base => $"/api/imagine/{Uri.EscapeDataString(Token)}";
+    private string ImageUrl(string imageId) => $"{Base}/images/{imageId}";
+    private bool Accepted => Proposal.Status == SalesProposalStatus.Accepted;
+    private bool Chosen(string optionId) => Accepted ? Proposal.AcceptedOptionIds.Contains(optionId) : selected.Contains(optionId);
+    private decimal Total => Accepted
+        ? Proposal.AcceptedPrice ?? Proposal.BasePrice
+        : Proposal.BasePrice + Proposal.Options.Where(o => selected.Contains(o.OptionId)).Sum(o => o.PriceDelta);
+    private IReadOnlyList<ProposalOption> AcceptedOptions => Proposal.Options.Where(o => Proposal.AcceptedOptionIds.Contains(o.OptionId)).ToList();
+    private int TotalWeeks => Proposal.Schedule.Count == 0 ? 0 : Proposal.Schedule.Max(p => p.StartWeek + p.Weeks - 1);
+
+    protected override void OnParametersSet()
+    {
+        if (loadedFor == Proposal.ProposalId) return;
+        loadedFor = Proposal.ProposalId;
+        selected = new HashSet<string>(Proposal.Options.Where(o => o.Recommended).Select(o => o.OptionId));
+        if (string.IsNullOrWhiteSpace(email)) email = ProspectEmail;
+    }
+
+    private void Toggle(string optionId)
+    {
+        if (Accepted) return;
+        if (!selected.Add(optionId)) selected.Remove(optionId);
+    }
+
+    private string BarStyle(ProposalPhase phase)
+    {
+        var total = Math.Max(1, TotalWeeks);
+        var left = (phase.StartWeek - 1) * 100.0 / total;
+        var width = Math.Max(2.0, phase.Weeks * 100.0 / total);
+        return $"left:{left:0.##}%;width:{width:0.##}%";
+    }
+
+    private async Task AcceptAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            await PostAsync($"{Base}/proposal/accept", new ProposalAcceptance(Proposal.ProposalId, name.Trim(), email.Trim(), selected.ToList(), agreed));
+        }
+        finally { busy = false; }
+    }
+
+    private async Task DeclineAsync()
+    {
+        if (busy) return;
+        busy = true;
+        try
+        {
+            await PostAsync($"{Base}/proposal/decline", new ProposalDecline(Proposal.ProposalId, reason.Trim()));
+            declining = false;
+        }
+        finally { busy = false; }
+    }
+
+    private async Task PostAsync<T>(string url, T body)
+    {
+        try
+        {
+            using var response = await Http.PostAsJsonAsync(url, body);
+            if (response.IsSuccessStatusCode)
+            {
+                var updated = await response.Content.ReadFromJsonAsync<ImagineView>();
+                if (updated is not null) await OnChanged.InvokeAsync(updated);
+                return;
+            }
+            var message = await response.Content.ReadAsStringAsync();
+            await OnError.InvokeAsync(string.IsNullOrWhiteSpace(message) ? "Something went wrong — please try again." : message.Trim().Trim('"'));
+        }
+        catch
+        {
+            await OnError.InvokeAsync("We couldn't reach the server — check your connection and try again.");
+        }
+    }
+
+    private static string Money(decimal value) => "£" + value.ToString("N0");
+}

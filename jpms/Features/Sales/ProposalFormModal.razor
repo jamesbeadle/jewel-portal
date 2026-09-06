@@ -1,0 +1,192 @@
+@using Jewel.JPMS.Contracts.Sales
+@inject ICommandSender Commands
+
+@*
+    Write or edit a proposal draft (2026-09-06): title, the scope in markdown, the base price,
+    the options (name, one line, price difference, recommended), the schedule of works (phase,
+    start week, weeks), the terms, and which concept render heads it. Saving keeps it a draft;
+    sending is on the proposals panel. Editing a sent version is refused by the server — the
+    panel opens a new version pre-filled from it instead.
+*@
+
+<Modal IsOpen="@IsOpen"
+       Title="@(Existing is null ? "New proposal" : Existing.Status == SalesProposalStatus.Draft ? $"Edit proposal v{Existing.Version}" : $"New version from v{Existing.Version}")"
+       ConfirmLabel="@(busy ? "Saving…" : "Save draft")"
+       ConfirmDisabled="@(busy || string.IsNullOrWhiteSpace(title))"
+       OnCancel="Cancel"
+       OnConfirm="SaveAsync"
+       Class="max-w-4xl">
+    @if (error is not null)
+    {
+        <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
+    }
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="sm:col-span-2">
+            <FormField Label="Title" Required>
+            <input type="text" class="field w-full" maxlength="256" placeholder="e.g. Rear extension and garden room — The Old Rectory"
+                   value="@title" @oninput="e => title = e.Value?.ToString() ?? string.Empty" />
+            </FormField>
+        </div>
+        <div>
+            <FormField Label="Base price (£)" Required Hint="Everything in the scope; options add to it">
+            <input type="number" class="field w-full" min="0" step="1000" value="@basePrice" @onchange="e => basePrice = ParseMoney(e.Value)" />
+            </FormField>
+        </div>
+        <div class="sm:col-span-3">
+            <FormField Label="Scope — what we'd build" Hint="Markdown: ## headings, bullet lists, **bold**. What's included, the specification, what isn't.">
+            <textarea class="field w-full font-mono text-sm" rows="8" value="@scope" @oninput="e => scope = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
+        </div>
+
+        <div class="sm:col-span-3">
+            <div class="flex items-center justify-between mb-2">
+                <p class="eyebrow">Options the client can add</p>
+                <button type="button" class="btn-ghost text-sm" @onclick="AddOption">Add option</button>
+            </div>
+            @if (options.Count == 0)
+            {
+                <p class="text-xs text-content-subtle">None yet — an option is an extra with its own price difference, e.g. "Underfloor heating throughout · +£14,000".</p>
+            }
+            <div class="space-y-2">
+                @foreach (var option in options)
+                {
+                    var o = option;
+                    <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)_120px_auto_auto] gap-2 items-center">
+                        <input type="text" class="field w-full text-sm" maxlength="256" placeholder="Name" value="@o.Name" @oninput="e => o.Name = e.Value?.ToString() ?? string.Empty" />
+                        <input type="text" class="field w-full text-sm" maxlength="2000" placeholder="One line on what it is" value="@o.Description" @oninput="e => o.Description = e.Value?.ToString() ?? string.Empty" />
+                        <input type="number" class="field w-full text-sm" step="500" placeholder="± £" value="@o.PriceDelta" @onchange="e => o.PriceDelta = ParseMoney(e.Value)" />
+                        <Checkbox Value="@o.Recommended" ValueChanged="v => o.Recommended = v" Label="Rec." Title="Pre-ticked when the client opens it" />
+                        <button type="button" class="btn-ghost text-xs" title="Remove" @onclick="() => options.Remove(o)">Remove</button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="sm:col-span-3">
+            <div class="flex items-center justify-between mb-2">
+                <p class="eyebrow">Schedule of works</p>
+                <button type="button" class="btn-ghost text-sm" @onclick="AddPhase">Add phase</button>
+            </div>
+            @if (phases.Count == 0)
+            {
+                <p class="text-xs text-content-subtle">None yet — phases in weeks from the start on site, e.g. "Groundworks · week 1 · 4 weeks".</p>
+            }
+            <div class="space-y-2">
+                @foreach (var phase in phases)
+                {
+                    var p = phase;
+                    <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,3fr)_120px_120px_auto] gap-2 items-center">
+                        <input type="text" class="field w-full text-sm" maxlength="256" placeholder="Phase" value="@p.Name" @oninput="e => p.Name = e.Value?.ToString() ?? string.Empty" />
+                        <input type="number" class="field w-full text-sm" min="1" placeholder="Start week" value="@p.StartWeek" @onchange="e => p.StartWeek = ParseInt(e.Value, 1)" />
+                        <input type="number" class="field w-full text-sm" min="1" placeholder="Weeks" value="@p.Weeks" @onchange="e => p.Weeks = ParseInt(e.Value, 1)" />
+                        <button type="button" class="btn-ghost text-xs" title="Remove" @onclick="() => phases.Remove(p)">Remove</button>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="sm:col-span-3">
+            <FormField Label="Terms" Hint="Markdown. Payment stages, validity, what acceptance means, the contract form to follow.">
+            <textarea class="field w-full font-mono text-sm" rows="6" value="@terms" @oninput="e => terms = e.Value?.ToString() ?? string.Empty"></textarea>
+            </FormField>
+        </div>
+
+        @if (Concepts.Count > 0)
+        {
+            <div class="sm:col-span-3">
+                <p class="eyebrow mb-2">The render at the top</p>
+                <div class="flex flex-wrap gap-2">
+                    <button type="button" class="w-24 h-16 rounded border @(heroImageId is null ? "border-accent" : "border-line") text-xs text-content-muted" @onclick="() => heroImageId = null">None</button>
+                    @foreach (var concept in Concepts)
+                    {
+                        var c = concept;
+                        <button type="button" class="w-24 h-16 rounded overflow-hidden border @(heroImageId == c.ImageId ? "border-accent" : "border-line")" title="@c.Title" @onclick="() => heroImageId = c.ImageId">
+                            <img src="@ImageUrl(c.ImageId)" alt="@c.Title" class="w-full h-full object-cover" />
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</Modal>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter, EditorRequired] public string LeadId { get; set; } = "";
+    /// <summary>A draft to edit, or a sent/accepted version to base a new one on.</summary>
+    [Parameter] public SalesProposal? Existing { get; set; }
+    [Parameter] public IReadOnlyList<ImagineImageView> Concepts { get; set; } = Array.Empty<ImagineImageView>();
+    [Parameter] public EventCallback<SalesProposal> OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private sealed class OptionRow { public string OptionId = ""; public string Name = ""; public string Description = ""; public decimal PriceDelta; public bool Recommended; }
+    private sealed class PhaseRow { public string Name = ""; public int StartWeek = 1; public int Weeks = 2; }
+
+    private bool busy;
+    private string? error;
+    private string? loadedForKey;
+    private string title = "";
+    private string scope = "";
+    private decimal basePrice;
+    private string terms = "";
+    private string? heroImageId;
+    private readonly List<OptionRow> options = new();
+    private readonly List<PhaseRow> phases = new();
+
+    private const string DefaultTerms =
+        "## Terms\n\n- This proposal is valid for 30 days.\n- Prices exclude VAT.\n- Accepting this proposal is your instruction to proceed; a JCT Building Contract for a Home Owner/Occupier follows for signature before work starts.\n- Payment in stages against the schedule of works, invoiced monthly.\n- Variations agreed in writing before the work is done.";
+
+    private string ImageUrl(string imageId) => $"/api/sales/leads/{LeadId}/imagine/images/{imageId}";
+
+    protected override void OnParametersSet()
+    {
+        var key = IsOpen ? Existing?.ProposalId ?? "new" : null;
+        if (key is null) { loadedForKey = null; return; }
+        if (loadedForKey == key) return;
+        loadedForKey = key;
+        error = null;
+        options.Clear(); phases.Clear();
+        if (Existing is { } existing)
+        {
+            title = existing.Title; scope = existing.Scope; basePrice = existing.BasePrice; terms = existing.Terms; heroImageId = existing.HeroImageId;
+            foreach (var o in existing.Options) options.Add(new OptionRow { OptionId = o.OptionId, Name = o.Name, Description = o.Description, PriceDelta = o.PriceDelta, Recommended = o.Recommended });
+            foreach (var p in existing.Schedule) phases.Add(new PhaseRow { Name = p.Name, StartWeek = p.StartWeek, Weeks = p.Weeks });
+        }
+        else
+        {
+            title = ""; scope = ""; basePrice = 0; terms = DefaultTerms;
+            heroImageId = Concepts.FirstOrDefault(c => c.Liked)?.ImageId;
+        }
+    }
+
+    private void AddOption() => options.Add(new OptionRow());
+    private void AddPhase() => phases.Add(new PhaseRow { StartWeek = phases.Count == 0 ? 1 : phases.Max(p => p.StartWeek + p.Weeks) });
+
+    private static decimal ParseMoney(object? value) => decimal.TryParse(value?.ToString(), out var parsed) ? parsed : 0m;
+    private static int ParseInt(object? value, int fallback) => int.TryParse(value?.ToString(), out var parsed) ? parsed : fallback;
+
+    private async Task Cancel()
+    {
+        if (busy) return;
+        await OnCancel.InvokeAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        if (busy || string.IsNullOrWhiteSpace(title)) return;
+        busy = true; error = null;
+        try
+        {
+            // Editing a draft keeps its id; anything else (new, or based on a sent version) is a new version.
+            var proposalId = Existing is { Status: SalesProposalStatus.Draft } draft ? draft.ProposalId : null;
+            var saved = await Commands.SendAsync(new SaveSalesProposal(
+                LeadId, proposalId, title.Trim(), scope, basePrice,
+                options.Where(o => !string.IsNullOrWhiteSpace(o.Name)).Select(o => new ProposalOption(o.OptionId, o.Name.Trim(), o.Description.Trim(), o.PriceDelta, o.Recommended)).ToList(),
+                phases.Where(p => !string.IsNullOrWhiteSpace(p.Name)).Select(p => new ProposalPhase(p.Name.Trim(), p.StartWeek, p.Weeks)).ToList(),
+                terms, heroImageId), CancellationToken.None);
+            await OnSaved.InvokeAsync(saved);
+        }
+        catch (CommandFailedException ex) { error = ex.Message; }
+        finally { busy = false; }
+    }
+}

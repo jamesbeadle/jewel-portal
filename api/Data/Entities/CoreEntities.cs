@@ -40,6 +40,13 @@ public sealed class LeadEntity
     // Set by MoveLeadStage → Lost; cleared on reopen.
     [MaxLength(1024)]    public string? LostReason { get; set; }
 
+    // ---- Imagine (2026-09-06, AddImagine) ----
+    // The token behind the lead's private /imagine/{token} page (printed as its QR code). Stored
+    // raw, not hashed, on purpose: the lead page must render the QR code again whenever a letter
+    // is printed. It opens a design page, not an account. Indexed unique; null until issued.
+    [MaxLength(64)]      public string? ImagineToken { get; set; }
+    public DateTimeOffset? ImagineTokenIssuedAt { get; set; }
+
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string DisplayReference => Number > 0
         ? $"LD-{Number:0000}"

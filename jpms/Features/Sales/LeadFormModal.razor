@@ -143,6 +143,10 @@
     [Parameter] public IReadOnlyList<SalesStrategyOverview>? Strategies { get; set; }
     /// <summary>Pre-selects and pins the strategy — the strategy page's "Add lead".</summary>
     [Parameter] public string? FixedStrategyId { get; set; }
+    /// <summary>Starting values for a NEW lead (the sales inbox's "New lead from this email"):
+    /// name, email, summary, source and stage are taken from it; everything else as for a blank
+    /// form. Ignored when Existing is set.</summary>
+    [Parameter] public Lead? Prefill { get; set; }
     [Parameter] public EventCallback<Lead> OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
@@ -193,7 +197,7 @@
     {
         // Re-seed the fields each time the modal opens (or opens for a different lead), never
         // while it is open — a re-render must not wipe what is being typed.
-        var key = IsOpen ? (Existing?.LeadId ?? "new") + "|" + (FixedStrategyId ?? "") : null;
+        var key = IsOpen ? (Existing?.LeadId ?? "new") + "|" + (FixedStrategyId ?? "") + "|" + (Prefill?.ContactEmail ?? "") + (Prefill?.Summary ?? "") : null;
         if (key is null) { openedFor = false; loadedForKey = null; return; }
         if (openedFor && loadedForKey == key) return;
         openedFor = true;
@@ -218,6 +222,15 @@
             var audience = (Strategies ?? Array.Empty<SalesStrategyOverview>())
                 .FirstOrDefault(row => row.Strategy.StrategyId == FixedStrategyId)?.Strategy.Audience;
             prospectKind = audience?.DefaultProspectKind() ?? LeadProspectKind.Homeowner;
+            if (Prefill is { } prefill)
+            {
+                contactName = prefill.ContactName; contactEmail = prefill.ContactEmail; contactPhone = prefill.ContactPhone;
+                companyName = prefill.CompanyName; summary = prefill.Summary; notes = prefill.Notes;
+                propertyAddress = prefill.PropertyAddress; postcode = prefill.Postcode;
+                if (FixedStrategyId is null) source = prefill.Source;
+                stage = prefill.Stage;
+                if (!string.IsNullOrWhiteSpace(prefill.OwnerEmail)) ownerEmail = prefill.OwnerEmail;
+            }
         }
     }
 
