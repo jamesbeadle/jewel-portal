@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using Jewel.JPMS.Api.Data;
 using Jewel.JPMS.Api.Data.Entities;
 
 namespace Jewel.JPMS.Api.Features.Sales;
@@ -37,6 +39,7 @@ internal static class SalesEntityMapping
         new(
             entity.StrategyId,
             entity.Name,
+            entity.Brief,
             (SalesAudience)entity.Audience,
             entity.TargetArea,
             entity.Hypothesis,
@@ -48,7 +51,12 @@ internal static class SalesEntityMapping
             (SalesStrategyStatus)entity.Status,
             entity.OwnerEmail,
             entity.CreatedAt,
-            entity.UpdatedAt);
+            entity.UpdatedAt,
+            (StrategyResearchStatus)entity.ResearchStatus,
+            entity.ResearchRequestedAt,
+            entity.ResearchCompletedAt,
+            entity.ResearchError,
+            entity.ResearchFindings);
 
     /// <summary>The funnel from a strategy's leads: how many were found, how far they got, what
     /// the open ones are worth and what the won ones were.</summary>

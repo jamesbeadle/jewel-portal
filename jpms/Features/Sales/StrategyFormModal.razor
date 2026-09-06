@@ -5,15 +5,17 @@
 @implements IDisposable
 
 @*
-    Create or edit a sales strategy — the methodology written down with its justification. The
-    fields ARE the argument: who, where, why now, what backs it, how they are reached, what we say.
-    The approach plan is not here — it is drafted (or written) on the strategy page from these
-    fields, and an edit here carries the existing plan forward untouched.
+    Create or edit a sales strategy. The brief comes first and is all a new strategy needs — the
+    idea in the team's own words; the audience and channel say who and how; and "Research it now
+    with AI" (on by default when creating) sends it to the worker, which finds the areas, the
+    evidence and the pitch and fills the rest in. The definition fields sit under a fold for
+    anyone who wants to write them by hand — the research keeps whatever is written. The
+    approach plan is not here: it is drafted (or written) on the strategy page.
 *@
 
 <Modal IsOpen="@IsOpen"
        Title="@(Existing is null ? "New strategy" : "Edit strategy")"
-       ConfirmLabel="@(busy ? "Saving…" : Existing is null ? "Create strategy" : "Save changes")"
+       ConfirmLabel="@(busy ? "Saving…" : Existing is null ? (researchNow ? "Create & research" : "Create strategy") : "Save changes")"
        ConfirmDisabled="@(busy || !FormReady)"
        OnCancel="Cancel"
        OnConfirm="SaveAsync"
@@ -25,8 +27,15 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="sm:col-span-2">
             <label class="block text-sm font-medium text-content mb-1">Name *</label>
-            <input type="text" class="field w-full" maxlength="256" placeholder="e.g. Farnham postcodes — build before the price rise"
+            <input type="text" class="field w-full" maxlength="256" placeholder="Something short you'd say out loud — e.g. Build before the price rise"
                    value="@name" @oninput="e => name = e.Value?.ToString() ?? string.Empty" />
+        </div>
+        <div class="sm:col-span-2">
+            <label class="block text-sm font-medium text-content mb-1">The idea, in your own words *</label>
+            <textarea class="field w-full" rows="5" maxlength="4000"
+                      placeholder="e.g. Find the areas where house prices are about to rise faster than the rest of the county — new stations, big planning consents, that sort of thing — and write to the owners of the bigger houses there with the research, making the case that extending or rebuilding now is an investment that pays twice."
+                      value="@brief" @oninput="e => brief = e.Value?.ToString() ?? string.Empty"></textarea>
+            <p class="text-xs text-content-subtle mt-1">This is what the research works from. Say who you're after and why they'd say yes; the AI finds the where, the numbers and the sources.</p>
         </div>
         <div>
             <label class="block text-sm font-medium text-content mb-1">Who it targets</label>
@@ -46,29 +55,43 @@
                 }
             </select>
         </div>
+        @if (Existing is null)
+        {
+            <div class="sm:col-span-2">
+                <label class="inline-flex items-center gap-2 text-sm text-content cursor-pointer">
+                    <input type="checkbox" checked="@researchNow" @onchange="e => researchNow = e.Value is true" />
+                    <span>Research it now with AI — find the areas, the evidence and the pitch, and draft the plan (a few minutes, in the background)</span>
+                </label>
+            </div>
+        }
         <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Where</label>
-            <input type="text" class="field w-full" maxlength="512" placeholder="Postcodes, towns, a radius — e.g. GU9, GU10, RH12; practices within 25 miles"
-                   value="@targetArea" @oninput="e => targetArea = e.Value?.ToString() ?? string.Empty" />
+            <button type="button" class="btn-ghost text-sm" @onclick="() => detailsOpen = !detailsOpen">
+                @(detailsOpen ? "Hide the details" : Existing is null ? "Write the details yourself instead (optional)" : "Show the details")
+            </button>
         </div>
-        <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Hypothesis — why these people, why now</label>
-            <textarea class="field w-full" rows="4" maxlength="4000"
-                      placeholder="e.g. House prices in these postcodes will rise faster than the county over the next 3–5 years as the station upgrade lands; an owner who extends now captures the gain on a bigger house."
-                      value="@hypothesis" @oninput="e => hypothesis = e.Value?.ToString() ?? string.Empty"></textarea>
-        </div>
-        <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Evidence — the data and findings behind it</label>
-            <textarea class="field w-full" rows="4" maxlength="4000"
-                      placeholder="What backs it and where it came from: Land Registry price-paid trends, planning applications granted, infrastructure announcements, Companies House, what architects told us…"
-                      value="@evidence" @oninput="e => evidence = e.Value?.ToString() ?? string.Empty"></textarea>
-        </div>
-        <div class="sm:col-span-2">
-            <label class="block text-sm font-medium text-content mb-1">Proposition — what we say to them</label>
-            <textarea class="field w-full" rows="2" maxlength="1024"
-                      placeholder="e.g. Building now is the investment that pays twice: a better home, and the gain when prices move."
-                      value="@proposition" @oninput="e => proposition = e.Value?.ToString() ?? string.Empty"></textarea>
-        </div>
+        @if (detailsOpen)
+        {
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-content mb-1">Where</label>
+                <input type="text" class="field w-full" maxlength="512" placeholder="Leave blank for the research to find — or postcodes, towns, a radius"
+                       value="@targetArea" @oninput="e => targetArea = e.Value?.ToString() ?? string.Empty" />
+            </div>
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-content mb-1">Hypothesis — why these people, why now</label>
+                <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Leave blank for the research to write from the evidence"
+                          value="@hypothesis" @oninput="e => hypothesis = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-content mb-1">Evidence — the data and findings behind it</label>
+                <textarea class="field w-full" rows="3" maxlength="4000" placeholder="Leave blank for the research to find — or what you already know and where it came from"
+                          value="@evidence" @oninput="e => evidence = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+            <div class="sm:col-span-2">
+                <label class="block text-sm font-medium text-content mb-1">Proposition — what we say to them</label>
+                <textarea class="field w-full" rows="2" maxlength="1024" placeholder="Leave blank for the research to draft"
+                          value="@proposition" @oninput="e => proposition = e.Value?.ToString() ?? string.Empty"></textarea>
+            </div>
+        }
         <div class="sm:col-span-2">
             <label class="block text-sm font-medium text-content mb-1">Owner *</label>
             <SearchSelect Options="@OwnerOptions" Value="@ownerEmail" ValueChanged="v => ownerEmail = v"
@@ -80,14 +103,18 @@
 @code {
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public SalesStrategy? Existing { get; set; }
+    /// <summary>Fires with the saved strategy and whether research was requested (creating only).</summary>
     [Parameter] public EventCallback<SalesStrategy> OnSaved { get; set; }
     [Parameter] public EventCallback OnCancel { get; set; }
 
     private bool busy;
     private string? error;
     private string? loadedForKey;
+    private bool detailsOpen;
+    private bool researchNow = true;
 
     private string name = "";
+    private string brief = "";
     private SalesAudience audience = SalesAudience.Homeowners;
     private SalesChannel channel = SalesChannel.DirectMail;
     private string targetArea = "";
@@ -96,7 +123,7 @@
     private string proposition = "";
     private string ownerEmail = "";
 
-    private bool FormReady => !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(ownerEmail);
+    private bool FormReady => !string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(brief) && !string.IsNullOrWhiteSpace(ownerEmail);
 
     private IReadOnlyList<SearchSelect.Option> OwnerOptions =>
         UserDirectory.All()
@@ -119,15 +146,19 @@
         error = null;
         if (Existing is { } strategy)
         {
-            name = strategy.Name; audience = strategy.Audience; channel = strategy.Channel;
+            name = strategy.Name; brief = strategy.Brief; audience = strategy.Audience; channel = strategy.Channel;
             targetArea = strategy.TargetArea; hypothesis = strategy.Hypothesis; evidence = strategy.Evidence;
             proposition = strategy.Proposition; ownerEmail = strategy.OwnerEmail;
+            detailsOpen = true;
+            researchNow = false;
         }
         else
         {
-            name = ""; audience = SalesAudience.Homeowners; channel = SalesChannel.DirectMail;
+            name = ""; brief = ""; audience = SalesAudience.Homeowners; channel = SalesChannel.DirectMail;
             targetArea = ""; hypothesis = ""; evidence = ""; proposition = "";
             ownerEmail = Auth.CurrentUser?.Email ?? "";
+            detailsOpen = false;
+            researchNow = true;
         }
     }
 
@@ -145,11 +176,18 @@
         {
             SalesStrategy saved = Existing is { } strategy
                 ? await Commands.SendAsync(new UpdateSalesStrategy(
-                    strategy.StrategyId, name.Trim(), audience, targetArea.Trim(), hypothesis.Trim(), evidence.Trim(),
+                    strategy.StrategyId, name.Trim(), brief.Trim(), audience, targetArea.Trim(), hypothesis.Trim(), evidence.Trim(),
                     channel, proposition.Trim(), strategy.ApproachPlan, ownerEmail.Trim()), CancellationToken.None)
                 : await Commands.SendAsync(new CreateSalesStrategy(
-                    name.Trim(), audience, targetArea.Trim(), hypothesis.Trim(), evidence.Trim(),
+                    name.Trim(), brief.Trim(), audience, targetArea.Trim(), hypothesis.Trim(), evidence.Trim(),
                     channel, proposition.Trim(), ownerEmail.Trim()), CancellationToken.None);
+            if (Existing is null && researchNow)
+            {
+                // Kick the research off straight away; a refusal here (no queue configured) is
+                // shown on the strategy page's research banner rather than blocking the create.
+                try { saved = await Commands.SendAsync(new RunStrategyResearch(saved.StrategyId), CancellationToken.None); }
+                catch (CommandFailedException) { }
+            }
             await OnSaved.InvokeAsync(saved);
         }
         catch (CommandFailedException ex) { error = ex.Message; }

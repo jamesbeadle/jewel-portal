@@ -63,10 +63,10 @@ else
         {
             <div class="panel p-6 max-w-3xl">
                 <p class="text-sm text-content-muted">
-                    No strategies yet. A strategy is a way of finding leads with the reasoning written down —
-                    for example, homeowners in the postcodes where house prices are about to move, approached by post
-                    with the research; or the architects whose jobs the portal would make run more smoothly.
-                    Start with New strategy, then let the approach plan be drafted from what you write.
+                    No strategies yet. A strategy starts as an idea in your own words — homeowners in the areas where
+                    prices are about to move, sold building now as an investment; the architects whose jobs the portal
+                    would make run more smoothly — and the AI research finds the where, the evidence and the pitch.
+                    Start with New strategy.
                 </p>
             </div>
         }
@@ -92,9 +92,25 @@ else
                             </div>
                             <span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium whitespace-nowrap @strategy.Status.PillClass()">@strategy.Status.DisplayName()</span>
                         </div>
-                        <p class="text-sm text-content-muted line-clamp-3 mb-4" title="@strategy.Hypothesis">
-                            @(string.IsNullOrWhiteSpace(strategy.Hypothesis) ? "No hypothesis written yet." : strategy.Hypothesis)
+                        <p class="text-sm text-content-muted line-clamp-3 mb-2" title="@(string.IsNullOrWhiteSpace(strategy.Hypothesis) ? strategy.Brief : strategy.Hypothesis)">
+                            @(string.IsNullOrWhiteSpace(strategy.Hypothesis) ? (string.IsNullOrWhiteSpace(strategy.Brief) ? "No brief written yet." : strategy.Brief) : strategy.Hypothesis)
                         </p>
+                        @if (strategy.ResearchStatus.IsInProgress())
+                        {
+                            <p class="text-xs text-content-subtle mb-4 flex items-center gap-2"><JewelIcon Class="w-3 h-3 animate-jewel-pulse" /> Claude is researching this strategy</p>
+                        }
+                        else if (strategy.ResearchStatus == StrategyResearchStatus.Failed)
+                        {
+                            <p class="text-xs text-negative mb-4">Research failed — open to see why</p>
+                        }
+                        else if (strategy.ResearchStatus == StrategyResearchStatus.NotRun)
+                        {
+                            <p class="text-xs text-content-subtle mb-4">Not researched yet</p>
+                        }
+                        else
+                        {
+                            <p class="text-xs text-content-subtle mb-4">Researched @strategy.ResearchCompletedAt?.ToLocalTime().ToString("d MMM")</p>
+                        }
                         <div class="grid grid-cols-4 gap-2 text-center border-t border-line pt-4">
                             <div><p class="text-xl font-medium text-content">@funnel.Leads</p><p class="text-xs text-content-subtle">leads</p></div>
                             <div><p class="text-xl font-medium text-content">@funnel.Engaged</p><p class="text-xs text-content-subtle">engaged</p></div>

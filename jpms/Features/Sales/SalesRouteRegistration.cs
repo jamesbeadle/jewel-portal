@@ -49,6 +49,9 @@ public static class SalesRouteRegistration
         commands.Register<SetSalesStrategyStatus, SalesStrategy>(
             new CommandRoute("POST", "/api/sales/strategies/{strategyId}/status",
                 command => $"/api/sales/strategies/{((SetSalesStrategyStatus)command).StrategyId}/status"));
+        commands.Register<RunStrategyResearch, SalesStrategy>(
+            new CommandRoute("POST", "/api/sales/strategies/{strategyId}/research",
+                command => $"/api/sales/strategies/{((RunStrategyResearch)command).StrategyId}/research"));
         commands.Register<GenerateStrategyApproachPlan, SalesStrategy>(
             new CommandRoute("POST", "/api/sales/strategies/{strategyId}/plan",
                 command => $"/api/sales/strategies/{((GenerateStrategyApproachPlan)command).StrategyId}/plan"));

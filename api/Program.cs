@@ -95,7 +95,7 @@ var host = new HostBuilder()
         services.AddClientsFeature();
         services.AddArchitectsFeature();
         services.AddPartiesFeature();
-        services.AddSalesFeature();
+        services.AddSalesFeature(context.Configuration);
         services.AddBoqFeature();
         services.AddRatesFeature();
         services.AddDrawingsFeature(context.Configuration);

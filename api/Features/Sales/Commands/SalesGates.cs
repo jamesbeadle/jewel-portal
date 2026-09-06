@@ -135,6 +135,7 @@ public sealed class CreateSalesStrategyValidation
         if (string.IsNullOrWhiteSpace(command.Name)) errors.Add("Name is required.");
         if (string.IsNullOrWhiteSpace(command.OwnerEmail)) errors.Add("OwnerEmail is required.");
         SalesFieldLimits.CheckStrategy(errors, command.Name, command.TargetArea, command.Hypothesis, command.Evidence, command.Proposition);
+        SalesFieldLimits.Check(errors, command.Brief, 4000, "Brief");
         return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
     }
 }
@@ -153,6 +154,22 @@ public sealed class UpdateSalesStrategyValidation
         if (string.IsNullOrWhiteSpace(command.Name)) errors.Add("Name is required.");
         if (string.IsNullOrWhiteSpace(command.OwnerEmail)) errors.Add("OwnerEmail is required.");
         SalesFieldLimits.CheckStrategy(errors, command.Name, command.TargetArea, command.Hypothesis, command.Evidence, command.Proposition);
+        SalesFieldLimits.Check(errors, command.Brief, 4000, "Brief");
+        return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
+    }
+}
+
+public sealed class RunStrategyResearchAuthorisation
+{
+    public bool Allows(SignedInUser user, RunStrategyResearch command) => SalesRoles.SalesTeam.IncludesAny(user.Roles);
+}
+
+public sealed class RunStrategyResearchValidation
+{
+    public ValidationOutcome Check(RunStrategyResearch command)
+    {
+        var errors = new List<string>();
+        if (string.IsNullOrWhiteSpace(command.StrategyId)) errors.Add("StrategyId is required.");
         return errors.Count == 0 ? ValidationOutcome.Passed : new ValidationOutcome(errors);
     }
 }

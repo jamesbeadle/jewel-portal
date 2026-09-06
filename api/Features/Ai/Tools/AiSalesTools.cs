@@ -10,7 +10,7 @@ namespace Jewel.JPMS.Api.Features.Ai.Tools;
 /// every internal role, mirroring SalesRoles.Readers on the endpoints. The writes are actions:
 /// capture_lead, update_lead, move_lead_stage, win_lead, log_lead_activity,
 /// create_sales_strategy, update_sales_strategy, set_sales_strategy_status,
-/// generate_strategy_plan (SalesActions).
+/// generate_strategy_plan, run_strategy_research (SalesActions).
 /// </summary>
 internal static class AiSalesTools
 {
@@ -106,10 +106,11 @@ internal static class AiSalesTools
         new(
             ListSalesStrategies,
             "Every sales strategy — a methodology for FINDING leads, written down with its "
-            + "justification: audience, target area, hypothesis (why these people, why now), the "
-            + "evidence behind it, channel, proposition, whether an approach plan has been "
-            + "drafted, status (Active first, then Draft, Paused, Retired), owner — each with its "
-            + "funnel: leads found, how many reached Contacted / Engaged / Proposal, Won, Lost, "
+            + "justification: the brief (the idea in the team's words), audience, target area, "
+            + "hypothesis (why these people, why now), the evidence behind it, channel, "
+            + "proposition, whether an approach plan has been drafted, the AI research status "
+            + "(NotRun / Queued / Running / Complete / Failed), status (Active first, then "
+            + "Draft, Paused, Retired), owner — each with its funnel: leads found, how many reached Contacted / Engaged / Proposal, Won, Lost, "
             + "Nurture, the open pipeline value and the won value. Call this to compare "
             + "strategies, to find a strategyId for capture_lead, or before proposing a new one.",
             AiToolSchema.Empty(),
@@ -128,6 +129,8 @@ internal static class AiSalesTools
                     {
                         row.Strategy.StrategyId,
                         row.Strategy.Name,
+                        row.Strategy.Brief,
+                        researchStatus = row.Strategy.ResearchStatus.ToString(),
                         audience = row.Strategy.Audience.ToString(),
                         row.Strategy.TargetArea,
                         row.Strategy.Hypothesis,
@@ -147,7 +150,8 @@ internal static class AiSalesTools
 
         new(
             GetSalesStrategy,
-            "One sales strategy in full — its definition, the approach plan (markdown), its "
+            "One sales strategy in full — its brief and definition, the AI research findings "
+            + "(markdown with source URLs) and status, the approach plan (markdown), its "
             + "funnel and every lead it has found. Takes the strategyId from list_sales_strategies.",
             AiToolSchema.Object(
                 ("strategyId", "string", "The strategy's id (list_sales_strategies).", true)),
@@ -168,6 +172,12 @@ internal static class AiSalesTools
                     {
                         detail.Strategy.StrategyId,
                         detail.Strategy.Name,
+                        detail.Strategy.Brief,
+                        researchStatus = detail.Strategy.ResearchStatus.ToString(),
+                        detail.Strategy.ResearchRequestedAt,
+                        detail.Strategy.ResearchCompletedAt,
+                        detail.Strategy.ResearchError,
+                        detail.Strategy.ResearchFindings,
                         audience = detail.Strategy.Audience.ToString(),
                         detail.Strategy.TargetArea,
                         detail.Strategy.Hypothesis,

@@ -189,6 +189,9 @@ public sealed class SalesStrategyEndpoints
     private readonly GenerateStrategyApproachPlanAuthorisation planAuthorisation;
     private readonly GenerateStrategyApproachPlanValidation planValidation;
     private readonly ICommandHandler<GenerateStrategyApproachPlan, SalesStrategy> generatePlan;
+    private readonly RunStrategyResearchAuthorisation researchAuthorisation;
+    private readonly RunStrategyResearchValidation researchValidation;
+    private readonly ICommandHandler<RunStrategyResearch, SalesStrategy> runResearch;
 
     public SalesStrategyEndpoints(
         SignedInUserResolver users,
@@ -206,8 +209,12 @@ public sealed class SalesStrategyEndpoints
         ICommandHandler<SetSalesStrategyStatus, SalesStrategy> setStatus,
         GenerateStrategyApproachPlanAuthorisation planAuthorisation,
         GenerateStrategyApproachPlanValidation planValidation,
-        ICommandHandler<GenerateStrategyApproachPlan, SalesStrategy> generatePlan)
+        ICommandHandler<GenerateStrategyApproachPlan, SalesStrategy> generatePlan,
+        RunStrategyResearchAuthorisation researchAuthorisation,
+        RunStrategyResearchValidation researchValidation,
+        ICommandHandler<RunStrategyResearch, SalesStrategy> runResearch)
     {
+        this.researchAuthorisation = researchAuthorisation; this.researchValidation = researchValidation; this.runResearch = runResearch;
         this.users = users; this.auditActor = auditActor; this.list = list; this.get = get;
         this.createAuthorisation = createAuthorisation; this.createValidation = createValidation; this.create = create;
         this.updateAuthorisation = updateAuthorisation; this.updateValidation = updateValidation; this.update = update;
@@ -298,6 +305,22 @@ public sealed class SalesStrategyEndpoints
         var outcome = planValidation.Check(command);
         if (outcome.HasFailed) return new BadRequestObjectResult(outcome.Errors);
         return await Run(() => generatePlan.HandleAsync(command, request.HttpContext.RequestAborted));
+    }
+
+    [Function(nameof(RunStrategyResearch))]
+    public async Task<IActionResult> Research(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "sales/strategies/{strategyId}/research")] HttpRequest request, string strategyId)
+    {
+        var signedInUser = await users.ResolveAsync(request, request.HttpContext.RequestAborted);
+        if (signedInUser is null) return new UnauthorizedResult();
+        var command = await request.ReadFromJsonAsync<RunStrategyResearch>();
+        if (command is null) return new BadRequestResult();
+        if (command.StrategyId != strategyId) return new BadRequestObjectResult("Route strategyId does not match body.");
+        auditActor.Email = signedInUser.Email;
+        if (!researchAuthorisation.Allows(signedInUser, command)) return new StatusCodeResult(403);
+        var outcome = researchValidation.Check(command);
+        if (outcome.HasFailed) return new BadRequestObjectResult(outcome.Errors);
+        return await Run(() => runResearch.HandleAsync(command, request.HttpContext.RequestAborted));
     }
 
     private static async Task<IActionResult> Run<T>(Func<Task<T>> handle)
