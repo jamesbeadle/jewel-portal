@@ -10,7 +10,7 @@
    creates a reply-all draft in the projects mailbox — nothing is sent from here. *@
 @if (Error is not null)
 {
-    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@Error</p>
+    <Notice Tone="Tone.Negative" Class="mb-4">@Error</Notice>
 }
 
 <LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="Loading programme emails">
@@ -99,7 +99,7 @@ else
                     <div class="mt-2 rounded-lg border border-line bg-surface-raised px-4 py-3">
                         @if (replyError is not null)
                         {
-                            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@replyError</p>
+                            <Notice Tone="Tone.Negative" Class="mb-3">@replyError</Notice>
                         }
                         <textarea class="field mb-3" rows="4" value="@replyBody" @oninput='e => replyBody = e.Value?.ToString() ?? ""'
                                   placeholder="Write your reply — in the draft it will sit above the quoted thread…"></textarea>
@@ -117,7 +117,7 @@ else
                 }
                 @if (replyDraftForId == email.Id && replyDraft is not null)
                 {
-                    <div class="mt-2 rounded-lg bg-positive/10 border border-positive/30 px-3 py-2">
+                    <Notice Tone="Tone.Positive" Class="mt-2">
                         <p class="text-sm font-medium text-positive">
                             Reply draft created in the projects mailbox — in this email's thread.
                         </p>
@@ -135,7 +135,7 @@ else
                             <a href="@replyDraft.WebLink" target="_blank" rel="noopener"
                                class="text-xs text-accent hover:underline underline-offset-2">Open the draft in Outlook</a>
                         }
-                    </div>
+                    </Notice>
                 }
             </li>
         }

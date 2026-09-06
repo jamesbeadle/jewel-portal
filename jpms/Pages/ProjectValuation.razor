@@ -74,10 +74,10 @@
 
         @if (actionError is not null)
         {
-            <p class="mb-2 rounded-lg border border-negative/30 bg-negative/10 px-3 py-2 text-sm text-negative">
+            <Notice Tone="Tone.Negative" Class="mb-2">
                 @actionError
                 <button @onclick="@(() => actionError = null)" class="ml-2 underline underline-offset-2">Dismiss</button>
-            </p>
+            </Notice>
         }
 
         @* One card per selected claim: where it is in its life, the ONE next action as the

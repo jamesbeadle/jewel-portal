@@ -84,7 +84,7 @@ else
             </div>
             @if (tradesError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@tradesError</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@tradesError</Notice>
             }
             <div class="flex flex-wrap gap-1.5 mb-3">
                 @if (subcontractor.Trades.Count == 0)
@@ -133,7 +133,7 @@ else
             </div>
             @if (contactsError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@contactsError</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@contactsError</Notice>
             }
             @if (!SubcontractorStore.ContactsLoadedFor(subcontractor.SubcontractorId))
             {
@@ -217,7 +217,7 @@ else
             </div>
             @if (inviteError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@inviteError</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@inviteError</Notice>
             }
             @if (inviteResult is not null)
             {
@@ -273,7 +273,7 @@ else
                OnCancel="CloseEdit" OnConfirm="SaveEdit" Class="max-w-lg w-full">
             @if (editError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@editError</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@editError</Notice>
             }
             <div class="space-y-3">
                 <div>

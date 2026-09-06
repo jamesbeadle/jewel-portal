@@ -19,7 +19,7 @@
         <RequestForm @ref="form" ProjectId="@ProjectId" LockToRfi="@RfiOnly" Busy="@saving" OnSubmit="SendAsync" />
         @if (attachmentWarning is not null)
         {
-            <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">@attachmentWarning</p>
+            <Notice Tone="Tone.Warning">@attachmentWarning</Notice>
         }
     </div>
 </Modal>

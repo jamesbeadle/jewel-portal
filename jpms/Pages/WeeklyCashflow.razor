@@ -80,10 +80,10 @@
 
         @if (moveError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">
+            <Notice Tone="Tone.Negative" Class="mb-4">
                 @moveError
                 <button type="button" class="underline underline-offset-2 ml-1" @onclick="() => moveError = null">Dismiss</button>
-            </p>
+            </Notice>
         }
 
         @* One gate for the whole grid: every cell is arithmetic over all three sources, so it

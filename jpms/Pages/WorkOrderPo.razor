@@ -102,17 +102,17 @@ else
 
         @if (emailNote is not null)
         {
-            <p class="po-toolbar rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-4 max-w-[820px] mx-auto">
+            <Notice Tone="Tone.Positive" Class="po-toolbar mb-4 max-w-[820px] mx-auto">
                 @emailNote
                 @if (emailLink is not null)
                 {
                     <a class="text-accent underline ml-1" href="@emailLink" target="_blank" rel="noopener">Open the draft in Outlook</a>
                 }
-            </p>
+            </Notice>
         }
         @if (emailError is not null)
         {
-            <p class="po-toolbar rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4 max-w-[820px] mx-auto">@emailError</p>
+            <Notice Tone="Tone.Negative" Class="po-toolbar mb-4 max-w-[820px] mx-auto">@emailError</Notice>
         }
 
         <PurchaseOrderSheet Order="Detail.Order"

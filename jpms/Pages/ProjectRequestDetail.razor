@@ -73,7 +73,7 @@ else
            facts strip, now that the Manage panel is gone. *@
         @if (actionError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-5">@actionError</p>
+            <Notice Tone="Tone.Negative" Class="mb-5">@actionError</Notice>
         }
         @if (ShowCriticalPathNudge)
         {
@@ -205,7 +205,7 @@ else
             <FormField Label="Date closed" Value="@closeDate" OnChange="v => closeDate = v" InputType="date" />
             @if (closeError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@closeError</p>
+                <Notice Tone="Tone.Negative">@closeError</Notice>
             }
         </div>
     </Modal>
@@ -237,7 +237,7 @@ else
                       placeholder="The answer or decision…"></textarea>
             @if (actionError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
+                <Notice Tone="Tone.Negative">@actionError</Notice>
             }
         </div>
     </Modal>

@@ -17,7 +17,7 @@
     <div class="space-y-3">
         @if (Error is not null)
         {
-            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</div>
+            <Notice Tone="Tone.Negative">@Error</Notice>
         }
         <p class="text-sm text-content">
             <span class="font-mono">@Order.DisplayNumber</span> — @Order.Title

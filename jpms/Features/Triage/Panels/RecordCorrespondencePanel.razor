@@ -26,7 +26,7 @@
 
 @if (Error is not null)
 {
-    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@Error</p>
+    <Notice Tone="Tone.Negative" Class="mb-3">@Error</Notice>
 }
 
 <LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="@LoadingLabel">

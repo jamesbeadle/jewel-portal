@@ -40,7 +40,7 @@ else if (DisputeOpen)
         </div>
         @if (DisputeError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@DisputeError</p>
+            <Notice Tone="Tone.Negative">@DisputeError</Notice>
         }
         <textarea class="w-full min-h-[4.5rem] rounded-lg bg-surface border border-line px-3 py-2 text-sm text-content placeholder:text-content-subtle"
                   placeholder="Why is this disputed? (optional — the discussion continues on the Disputed tab)"

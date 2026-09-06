@@ -16,9 +16,9 @@ else if (Xero.Snapshot() is not { } snapshot)
 {
     @if (loadFailed)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">
+        <Notice Tone="Tone.Negative">
             Couldn't read Xero. The reason is in the red bar above — reload to try again.
-        </p>
+        </Notice>
     }
     else
     {
@@ -34,7 +34,7 @@ else
     <div class="space-y-3">
         @if (snapshot.Error is { } error)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+            <Notice Tone="Tone.Negative">@error</Notice>
         }
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <input class="field" type="search" placeholder="Search contact, number or reference…"

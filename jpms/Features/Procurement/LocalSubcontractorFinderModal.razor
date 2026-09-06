@@ -35,7 +35,7 @@
     }
     else if (notReadyReason is not null)
     {
-        <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800 mb-3">@notReadyReason</p>
+        <Notice Tone="Tone.Warning" Class="mb-3">@notReadyReason</Notice>
     }
     else
     {
@@ -60,7 +60,7 @@
 
     @if (searchError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@searchError</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@searchError</Notice>
     }
 
     @if (results.Count > 0)

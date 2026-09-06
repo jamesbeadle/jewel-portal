@@ -16,7 +16,7 @@
 <div class="space-y-4">
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        <Notice Tone="Tone.Negative">@error</Notice>
     }
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -186,19 +186,19 @@
         {
             @if (SelectedSupplier is { } supplier && string.IsNullOrWhiteSpace(supplier.ContactEmail))
             {
-                <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                <Notice Tone="Tone.Warning">
                     @supplier.CompanyName has no email address in the directory, so the purchase order
                     can't be emailed. The order will still be created — add an email address in the
                     directory, then send the PO from its page.
-                </p>
+                </Notice>
             }
             else
             {
-                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content">
+                <Notice Tone="Tone.Positive">
                     When it saves, the purchase-order email will be <strong>sent</strong> to
                     <strong>@(SelectedSupplier?.ContactEmail ?? "the subcontractor's directory email")</strong>
                     from the projects mailbox. Tick "Save as a draft" if it shouldn't go out yet.
-                </p>
+                </Notice>
             }
         }
     }

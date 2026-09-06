@@ -67,15 +67,14 @@ else
 
         @if (ExpiringOrExpired.Count > 0)
         {
-            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 mb-6">
-                <h2 class="text-sm font-semibold text-amber-900 mb-1">Documents needing attention</h2>
-                <ul class="text-sm text-amber-900">
+            <Notice Tone="Tone.Warning" Title="Documents needing attention" Class="mb-6">
+                <ul class="text-sm">
                     @foreach (var document in ExpiringOrExpired)
                     {
                         <li>@document.Kind — @document.Status().DisplayName().ToLowerInvariant()@(document.ExpiresAt is null ? "" : $" ({document.ExpiresAt.Value.LocalDateTime:d MMM yyyy})")</li>
                     }
                 </ul>
-            </div>
+            </Notice>
         }
 
         <div class="rounded-xl border border-line bg-surface overflow-hidden mb-6">
@@ -152,7 +151,7 @@ else
             <h2 class="text-sm font-semibold text-content mb-3">Upload a document</h2>
             @if (uploadError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@uploadError</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@uploadError</Notice>
             }
             @if (uploadNote is not null)
             {
@@ -315,7 +314,7 @@ else
             </p>
             @if (variationError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@variationError</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@variationError</Notice>
             }
             @if (variationNote is not null)
             {

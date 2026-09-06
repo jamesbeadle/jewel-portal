@@ -8,10 +8,10 @@
 <div class="space-y-3">
     @if (QsRecipients.Count == 0)
     {
-        <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-sm text-content">
+        <Notice Tone="Tone.Warning">
             Nobody in the staff directory holds the Quantity Surveyor role, so there's no one to
             forward to. Add the role to the QS in the Directory, or use a plain Forward from the email window.
-        </p>
+        </Notice>
     }
     else
     {

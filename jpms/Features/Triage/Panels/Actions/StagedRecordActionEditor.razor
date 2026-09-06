@@ -240,19 +240,19 @@ else if (Kind == StagedRecordKind.WorkOrder)
         {
             @if (WorkOrderSupplier is { } woSupplier && string.IsNullOrWhiteSpace(woSupplier.ContactEmail))
             {
-                <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-sm text-amber-800">
+                <Notice Tone="Tone.Warning">
                     @woSupplier.CompanyName has no email address in the directory, so the purchase
                     order can't be emailed. The order will still be raised — add an email address
                     in the directory, then send the PO from its page.
-                </p>
+                </Notice>
             }
             else
             {
-                <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content">
+                <Notice Tone="Tone.Positive">
                     Apply will raise the order, <strong>send</strong> the purchase order to
                     <strong>@(WorkOrderSupplier?.ContactEmail ?? "the subcontractor's directory email")</strong>
                     from the projects mailbox, tag this email to it, and send any reply you've written — all in the one go.
-                </p>
+                </Notice>
             }
         }
 

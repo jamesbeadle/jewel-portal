@@ -29,7 +29,7 @@
 
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
     }
 
     @if (notes is null)
@@ -97,7 +97,7 @@
     <div class="space-y-3">
         @if (dialogError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</p>
+            <Notice Tone="Tone.Negative">@dialogError</Notice>
         }
 
         <FormField Label="Title" Value="@draftTitle" OnChange="v => draftTitle = v" Required="true" />

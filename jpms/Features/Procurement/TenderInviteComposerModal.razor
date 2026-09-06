@@ -35,27 +35,27 @@
 
     @if (sendError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@sendError</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@sendError</Notice>
     }
     @if (draftSavedAt is { } savedAt)
     {
-        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-xs text-content mb-3">
+        <Notice Tone="Tone.Positive" Class="mb-3">
             Picked up the saved draft from @savedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm").
-        </p>
+        </Notice>
     }
     @if (MissingEmail.Count > 0)
     {
-        <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
+        <Notice Tone="Tone.Warning" Class="mb-3">
             Won't receive it (no email address in the directory): @string.Join(", ", MissingEmail).
             Add their email in the <a class="underline" href="/directory">Directory</a> and reopen this window.
-        </p>
+        </Notice>
     }
     @if (LineItems.Count == 0)
     {
-        <p class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mb-3">
+        <Notice Tone="Tone.Warning" Class="mb-3">
             This package has no line items yet, so the pricing schedule has nothing to price.
             You can still send — or close, add line items, and come back (the draft keeps).
-        </p>
+        </Notice>
     }
 
     <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">To</label>

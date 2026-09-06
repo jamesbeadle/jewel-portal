@@ -27,7 +27,7 @@
 else
 {
     var snapshot = detail.Snapshot;
-    <div class="mb-4 rounded-lg bg-info/10 border border-info/30 px-4 py-2.5 text-sm text-content">
+    <Notice Tone="Tone.Info" Class="mb-4">
         <span class="font-medium">Snapshot taken @snapshot.TakenAt.ToString("dd MMM yyyy HH:mm")</span>
         <span class="text-content-muted"> — @snapshot.Label.</span>
         @if (snapshot.IsSuperseded)
@@ -35,7 +35,7 @@ else
             <span class="text-content-muted"> Superseded by a later snapshot.</span>
         }
         <span class="text-content-subtle"> Read-only: this is the report exactly as it stood; live changes never alter it.</span>
-    </div>
+    </Notice>
 
     <div class="mb-4">
         <Toolbar>
@@ -206,7 +206,7 @@ else
         <LoadGate IsLoading="@(emails is null && emailsError is null)" Label="Loading correspondence">
             @if (emailsError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@emailsError</p>
+                <Notice Tone="Tone.Negative">@emailsError</Notice>
             }
             else if (emails is { Count: 0 })
             {

@@ -41,24 +41,24 @@ else
         {
             @if (Summary.LastRefreshFailed(ProjectId))
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+                <Notice Tone="Tone.Negative" Class="mb-3">
                     The financial summary could not be loaded — the figures below only show work-order data.
                     <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetrySummaryAsync">Retry</button>
-                </p>
+                </Notice>
             }
             @if (actionError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+                <Notice Tone="Tone.Negative" Class="mb-3">
                     @actionError
-                </p>
+                </Notice>
             }
             @if (PendingLabourTotal > 0m)
             {
-                <p class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-sm text-amber-600 mb-3">
+                <Notice Tone="Tone.Warning" Class="mb-3">
                     Pending labour: £@PendingLabourTotal.ToString("N2") submitted on timesheets but not yet approved —
                     it posts to cost of sales only once approved on the
                     <a class="underline underline-offset-2" href="@($"/projects/{ProjectId}/labour")">Labour tab</a>.
-                </p>
+                </Notice>
             }
             <FinancialsTable CostCenters="CostCenters.Current"
                              SummaryRows="Summary.Current(ProjectId)"

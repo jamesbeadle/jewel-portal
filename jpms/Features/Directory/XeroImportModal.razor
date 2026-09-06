@@ -10,7 +10,7 @@
        OnCancel="() => open = false" Class="max-w-2xl w-full">
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@error</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@error</Notice>
     }
     <div class="flex flex-wrap items-end gap-3 mb-4">
         <div class="grow min-w-[14rem]">
@@ -46,7 +46,7 @@
     }
     else if (snapshot.Error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@snapshot.Error</p>
+        <Notice Tone="Tone.Negative">@snapshot.Error</Notice>
     }
     else if (FilteredSuppliers().Count == 0)
     {

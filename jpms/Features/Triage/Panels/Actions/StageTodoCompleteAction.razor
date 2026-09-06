@@ -11,7 +11,7 @@
 <div class="space-y-3">
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@error</p>
+        <Notice Tone="Tone.Negative">@error</Notice>
     }
     <select class="field" disabled="@(ProjectId == "" || items is null)" @bind="todoItemId">
         @if (ProjectId == "")

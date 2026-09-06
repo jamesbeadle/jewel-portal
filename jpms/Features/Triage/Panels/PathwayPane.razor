@@ -79,9 +79,9 @@
         {
             @if (HasOpenEmail && Config.LinkTypes.Count > 0 && string.IsNullOrWhiteSpace(ProjectId))
             {
-                <p class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-xs text-content">
+                <Notice Tone="Tone.Warning">
                     Set the email's <span class="font-medium">Project</span> in the bar above — the record sections below fill with that project's records.
-                </p>
+                </Notice>
             }
             @if (!HasOpenEmail && Config.LinkTypes.Count > 0)
             {

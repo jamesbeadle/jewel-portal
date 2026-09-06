@@ -80,7 +80,7 @@ else
 
         @if (loadError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
         }
 
         @if (activeTab == CostCodesTab.Ours)
@@ -349,7 +349,7 @@ else
         <div class="space-y-4">
             @if (formError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+                <Notice Tone="Tone.Negative">@formError</Notice>
             }
             <FormField Label="Code" Value="@formCode" OnChange="v => formCode = v" Required="true" />
             <FormField Label="Name" Value="@formName" OnChange="v => formName = v" Required="true" />
@@ -372,7 +372,7 @@ else
             }
             else if (gaps.Error is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-negative">@gaps.Error</p>
+                <Notice Tone="Tone.Negative">@gaps.Error</Notice>
             }
             else
             {
@@ -427,7 +427,7 @@ else
         <div class="space-y-4">
             @if (formError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+                <Notice Tone="Tone.Negative">@formError</Notice>
             }
             <FormField Label="Code" Value="@formCode" OnChange="v => formCode = v" Required="true" />
             <FormField Label="Name" Value="@formName" OnChange="v => formName = v" Required="true" />

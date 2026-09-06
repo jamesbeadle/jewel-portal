@@ -18,7 +18,7 @@
     <ChildContent>
         @if (failed is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@failed</p>
+            <Notice Tone="Tone.Negative">@failed</Notice>
         }
         else if (linked.Count == 0)
         {

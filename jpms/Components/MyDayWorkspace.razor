@@ -19,7 +19,7 @@
 
         @if (actionError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+            <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
         }
 
         <p class="text-sm text-content-subtle mb-4">@day.WorkerName · @day.WorkDate.ToString("dddd dd MMMM")</p>
@@ -94,7 +94,7 @@
                     </div>
                     @if (TotalHours() > 12m)
                     {
-                        <p class="text-xs text-amber-600 mb-2">Over 12 hours — fine if it's right, just double-check.</p>
+                        <p class="text-xs text-warning mb-2">Over 12 hours — fine if it's right, just double-check.</p>
                     }
                     <button type="button" class="btn-primary w-full py-3.5 text-base font-semibold" disabled="@(TotalHours() <= 0m || isBusy)"
                             @onclick="() => SubmitSignOutAsync(project.ProjectId)">@(isBusy ? "Sending…" : "Submit & sign out")</button>

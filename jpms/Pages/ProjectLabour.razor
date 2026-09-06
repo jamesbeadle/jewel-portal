@@ -27,7 +27,7 @@
 
         @if (actionError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+            <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
         }
         @if (approvalFailures.Count > 0)
         {
@@ -251,7 +251,7 @@
             </label>
             @if (manualError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@manualError</p>
+                <Notice Tone="Tone.Negative">@manualError</Notice>
             }
             <p class="text-xs text-content-subtle">Hours in half-hour steps — 0.5, 1, 1.5 and so on. A whole day is 8.</p>
         </div>
@@ -264,7 +264,7 @@
         <input class="field w-full mb-2" @bind="rejectReason" placeholder="e.g. Hours look double-entered — please re-check Tuesday" />
         @if (rejectError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@rejectError</p>
+            <Notice Tone="Tone.Negative">@rejectError</Notice>
         }
     </Modal>
 
@@ -279,19 +279,19 @@
             anyway — the overspend stays red on the project's Financials, and each row is written to
             the audit trail with your name and the reason below.
         </p>
-        <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">
+        <Notice Tone="Tone.Negative" Class="mb-3">
             @foreach (var failure in overBudgetFailures)
             {
                 <p>· @failure.Reason</p>
             }
-        </div>
+        </Notice>
         <label class="block text-sm text-content-muted mb-2">Reason (required — this is what the audit trail records)
             <input class="field mt-1 w-full" @bind="overBudgetReason" @bind:event="oninput"
                    placeholder="e.g. Agreed with Nigel — VO covering these hours is being raised" />
         </label>
         @if (overBudgetError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@overBudgetError</p>
+            <Notice Tone="Tone.Negative">@overBudgetError</Notice>
         }
     </Modal>
 </ApprovedSessionGate>

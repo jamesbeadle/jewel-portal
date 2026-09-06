@@ -77,7 +77,7 @@
 
         @if (loadError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
         }
 
         <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="@(SearchActive ? "Searching emails" : "Loading communications")">
@@ -192,7 +192,7 @@
                                 <p class="text-xs uppercase tracking-wider text-content-subtle font-semibold">Add a tag</p>
                                 @if (tagError is not null)
                                 {
-                                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@tagError</p>
+                                    <Notice Tone="Tone.Negative">@tagError</Notice>
                                 }
                                 <div class="flex flex-wrap items-center gap-2">
                                     <select class="field w-64" value="@((int)tagRecordType)" @onchange="OnTagTypeChanged" disabled="@tagBusy">

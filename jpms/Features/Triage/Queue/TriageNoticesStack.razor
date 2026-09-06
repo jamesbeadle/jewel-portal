@@ -6,8 +6,8 @@
    the cleared selection's place so the answer to "did that work?" is where the eye already is. *@
 @if (ComposeOutcome is { } outcome)
 {
-    <NoticePanel Title="@(outcome.Sent ? "Email sent" : "Saved as draft")"
-                 Tone="@(outcome.Sent ? NoticePanel.NoticeTone.Positive : NoticePanel.NoticeTone.Warning)"
+    <Notice Dismissible="true" Class="mb-4" Title="@(outcome.Sent ? "Email sent" : "Saved as draft")"
+                 Tone="@(outcome.Sent ? Tone.Positive : Tone.Warning)"
                  OnDismiss="() => OnDismissComposeOutcome.InvokeAsync()">
         <p class="text-sm text-content">
             <span class="font-medium">@outcome.Subject</span>
@@ -19,33 +19,33 @@
         </p>
         @if (!string.IsNullOrWhiteSpace(outcome.FailureNote))
         {
-            <p class="text-sm text-amber-600">@outcome.FailureNote</p>
+            <p class="text-sm text-warning">@outcome.FailureNote</p>
         }
         @if (!string.IsNullOrWhiteSpace(outcome.WebLink))
         {
             <a class="text-accent underline text-sm" href="@outcome.WebLink" target="_blank" rel="noopener">Open in Outlook</a>
         }
-    </NoticePanel>
+    </Notice>
 }
 @if (LinkNote is not null)
 {
-    <NoticePanel Title="Partially linked" Tone="NoticePanel.NoticeTone.Warning" OnDismiss="() => OnDismissLinkNote.InvokeAsync()">
+    <Notice Dismissible="true" Class="mb-4" Title="Partially linked" Tone="Tone.Warning" OnDismiss="() => OnDismissLinkNote.InvokeAsync()">
         <p class="text-sm text-content">@LinkNote</p>
-    </NoticePanel>
+    </Notice>
 }
 @if (PoEmailNote is not null)
 {
-    <NoticePanel Title="Purchase-order email"
-                 Tone="@(PoEmailNoteIsSuccess ? NoticePanel.NoticeTone.Positive : NoticePanel.NoticeTone.Warning)"
+    <Notice Dismissible="true" Class="mb-4" Title="Purchase-order email"
+                 Tone="@(PoEmailNoteIsSuccess ? Tone.Positive : Tone.Warning)"
                  OnDismiss="() => OnDismissPoEmailNote.InvokeAsync()">
         <p class="text-sm text-content">@PoEmailNote</p>
-    </NoticePanel>
+    </Notice>
 }
 @if (OutboxNote is not null)
 {
-    <NoticePanel Title="Outbox" OnDismiss="() => OnDismissOutboxNote.InvokeAsync()">
+    <Notice Dismissible="true" Class="mb-4" Tone="Tone.Info" Title="Outbox" OnDismiss="() => OnDismissOutboxNote.InvokeAsync()">
         <p class="text-sm text-content">@OutboxNote</p>
-    </NoticePanel>
+    </Notice>
 }
 
 @code {

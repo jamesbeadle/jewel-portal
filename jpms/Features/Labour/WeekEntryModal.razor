@@ -95,7 +95,7 @@
     </table>
     @if (error is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-3">@error</p>
+        <Notice Tone="Tone.Negative" Class="mt-3">@error</Notice>
     }
     <p class="text-xs text-content-subtle mt-3">
         Hours in half-hour steps — a whole day is 8. Leave a day's site as "— not on site" to

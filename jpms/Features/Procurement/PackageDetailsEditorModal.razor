@@ -19,7 +19,7 @@
     <ChildContent>
         @if ((validationError ?? Error) is { } shown)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@shown</p>
+            <Notice Tone="Tone.Negative" Class="mb-3">@shown</Notice>
         }
 
         <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Specification summary</label>

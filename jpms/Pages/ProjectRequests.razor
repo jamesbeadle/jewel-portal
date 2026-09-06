@@ -93,7 +93,7 @@ else
                     project needs. An RFI carries an issue date and a contractual response-due date, and its
                     official document can be drafted to the projects mailbox from here.
                 </p>
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-2">
+                <Notice Tone="Tone.Negative" Class="mt-2">
                     While an RFI is unanswered the project may be waiting on information — that wait can have a
                     material impact on the programme.
                     @if (OverdueRfiCount > 0)
@@ -101,7 +101,7 @@ else
                         <span class="font-semibold">@OverdueRfiCount RFI@(OverdueRfiCount == 1 ? " is" : "s are") past
                         @(OverdueRfiCount == 1 ? "its" : "their") response-due date — chase before the programme slips.</span>
                     }
-                </p>
+                </Notice>
             }
         </div>
 
@@ -195,7 +195,7 @@ else
 
         @if (mergeError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@mergeError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@mergeError</Notice>
         }
         @if (mergeResult is not null)
         {
@@ -204,7 +204,7 @@ else
 
         @if (draftBatchError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@draftBatchError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@draftBatchError</Notice>
         }
         @if (draftBatch is not null)
         {
@@ -253,7 +253,7 @@ else
         {
             @if (statusError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@statusError</p>
+                <Notice Tone="Tone.Negative" Class="mb-3">@statusError</Notice>
             }
             <div class="mb-6">
                 <RequestTable Records="FilteredRecords" ProjectId="@ProjectId"

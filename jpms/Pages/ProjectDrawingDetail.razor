@@ -191,13 +191,15 @@
                 <div class="lg:col-span-3">
                     @if (IsPreviewingOlderRevision)
                     {
-                        <div class="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 flex flex-wrap items-center justify-between gap-3">
+                        <Notice Tone="Tone.Warning" Class="mb-3">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
                             <span>Showing an earlier revision — not the approved / latest one.</span>
                             <button type="button" @onclick="PreviewLatest"
-                                    class="rounded-lg border border-amber-300 px-3 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100 transition">
+                                    class="btn-secondary">
                                 Back to latest
                             </button>
-                        </div>
+                            </div>
+                        </Notice>
                     }
                     @if (PreviewRevision is null)
                     {

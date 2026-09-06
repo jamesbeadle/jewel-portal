@@ -44,7 +44,7 @@ else
 
         @if (actionError is { } error)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/40 px-3 py-2 text-sm text-content mb-4">@error</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
         }
 
         @if (formOpen)

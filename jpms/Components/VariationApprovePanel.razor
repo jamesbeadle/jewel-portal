@@ -36,7 +36,7 @@
        belongs in front of the lines it is about, not on the page behind the dialog. *@
     @if (error is not null || SubmitError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@(error ?? SubmitError)</p>
+        <Notice Tone="Tone.Negative">@(error ?? SubmitError)</Notice>
     }
 
     <div class="space-y-2">

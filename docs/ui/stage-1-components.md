@@ -103,7 +103,7 @@ changes every page's first line, so it's yours to decide.
 **230 times**, another 20 with `tracking-wide`, 38 as `eyebrow block mb-1`, 35 as
 `block text-sm text-content-muted` — 129 files carry a raw `<label>`. `FormField` exists (32
 uses) but only wraps a text `<input>`, so every `<select>` (72 files), `<textarea>` (52), date
-input (26) and `SearchSelect` (53) hand-rolls its label. Checkboxes (53 files) have five
+input (26) and `SearchSelect` (53) hand-rolls its label. Checkboxes (53 files) have eight
 different class strings and none of them is the Figma checkbox.
 
 **API.** `<FormField Label="…" Hint="…" Error="…" Required>` with `ChildContent` — any control

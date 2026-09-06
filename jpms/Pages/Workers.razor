@@ -35,7 +35,7 @@
 
         @if (actionError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+            <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
         }
 
         @{ var workers = Labour.Workers(); }
@@ -131,7 +131,7 @@
                 </div>
                 @if (matchError is not null)
                 {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mt-3">@matchError</p>
+                    <Notice Tone="Tone.Negative" Class="mt-3">@matchError</Notice>
                 }
                 @if (linkReport is not null)
                 {
@@ -198,7 +198,7 @@
            OnCancel="CloseForm">
         @if (formError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@formError</p>
+            <Notice Tone="Tone.Negative" Class="mb-3">@formError</Notice>
         }
         <div class="grid sm:grid-cols-2 gap-3">
             <label class="text-xs text-content-subtle sm:col-span-2">Name

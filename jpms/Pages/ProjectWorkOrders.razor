@@ -55,11 +55,11 @@
            approval) — sent, saved as a mailbox draft, or skipped and why. *@
         @if (poEmailNote is not null)
         {
-            <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
+            <Notice Tone="Tone.Positive" Class="mb-3">
                 @poEmailNote
                 <button type="button" class="text-xs text-content-subtle underline underline-offset-4 ml-2"
                         @onclick="() => poEmailNote = null">Dismiss</button>
-            </p>
+            </Notice>
         }
 
         @* One panel. The summary line, the table and its footer are the same arithmetic over the

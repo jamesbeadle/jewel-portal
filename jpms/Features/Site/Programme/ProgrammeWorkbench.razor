@@ -7,7 +7,7 @@
    wants to raise a Notice of Delay from. *@
 @if (error is not null)
 {
-    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</p>
+    <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
 }
 
 <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="Loading programme">
@@ -21,7 +21,7 @@
         var movement = Movement;
         @if (movement.CompletionSlipDays > 0)
         {
-            <div class="rounded-lg bg-negative/10 border border-negative/30 px-4 py-3 mb-5">
+            <Notice Tone="Tone.Negative" Class="mb-5">
                 <p class="text-sm font-semibold text-negative">
                     Completion has moved @movement.CompletionSlipDays day(s) against baseline “@baseline.Label”
                     <span class="font-normal">(@(movement.BaselineCompletion?.LocalDateTime.ToString("d MMM yyyy")) → @(movement.CurrentCompletion?.LocalDateTime.ToString("d MMM yyyy")))</span>
@@ -39,7 +39,7 @@
                 {
                     <p class="text-xs text-content-subtle mt-2">No Notice of Delay has been raised since this baseline — under JCT ICD 2024 cl. 2.19 notice is due forthwith once delay is apparent.</p>
                 }
-            </div>
+            </Notice>
         }
         else if (movement.HasSlippage)
         {
@@ -49,16 +49,16 @@
         }
         else
         {
-            <div class="rounded-lg bg-accent/10 border border-accent/30 px-4 py-3 mb-5">
+            <Notice Tone="Tone.Positive" Class="mb-5">
                 <p class="text-sm text-content">Programme holding against baseline “@baseline.Label” (taken @baseline.TakenAt.LocalDateTime.ToString("d MMM yyyy")).</p>
-            </div>
+            </Notice>
         }
     }
     else if (Tasks.Count > 0)
     {
-        <div class="rounded-lg bg-info/10 border border-info/30 px-4 py-3 mb-5">
+        <Notice Tone="Tone.Info" Class="mb-5">
             <p class="text-sm text-content">No baseline yet — take one so movement can be measured and delay notices evidenced.</p>
-        </div>
+        </Notice>
     }
 
     <div class="flex flex-wrap gap-2 mb-5">

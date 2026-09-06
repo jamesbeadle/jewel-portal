@@ -1,0 +1,47 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE inline message box — the one way a view says something ABOUT an action or a state:
+    "Couldn't save", "Email sent", "3 RFIs are overdue", "PO emails go out automatically".
+    Tone carries the meaning (Tone.cs), the component carries the look, so no view ever types a
+    bordered box again. Title is optional (a short bold lead-in); Dismissible adds the ✕ and
+    raises OnDismiss — the caller clears its own state, the component never hides itself.
+
+    Not for: field validation (that stays as a text-sm text-negative line under the field) or
+    the app-wide error toast (ErrorToast). Class is for placement only (margins, max-width).
+*@
+
+<div class="rounded border px-4 py-3 text-sm @Tone.Box() @Class" role="@Role">
+    <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0 grow">
+            @if (Title is not null)
+            {
+                <p class="font-medium @(ChildContent is not null ? "mb-1" : "")">@Title</p>
+            }
+            @if (ChildContent is not null)
+            {
+                <div class="@(Title is not null ? "text-content-muted" : "")">@ChildContent</div>
+            }
+        </div>
+        @if (Dismissible)
+        {
+            <button type="button" class="shrink-0 -mr-1 inline-flex items-center justify-center w-6 h-6 rounded hover:bg-surface-raised"
+                    title="Dismiss" aria-label="Dismiss" @onclick="() => OnDismiss.InvokeAsync()">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public Tone Tone { get; set; } = Tone.Info;
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool Dismissible { get; set; }
+    [Parameter] public EventCallback OnDismiss { get; set; }
+    /// <summary>Placement only — margins, max-width, grid span. Never colour.</summary>
+    [Parameter] public string Class { get; set; } = "";
+
+    private string Role => Tone is Tone.Negative or Tone.Warning ? "alert" : "status";
+}

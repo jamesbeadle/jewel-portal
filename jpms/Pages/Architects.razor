@@ -48,7 +48,7 @@ else
 
         @if (loadError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
         }
 
         <LoadGate IsLoading="@(!ArchitectsReady)" Prominent="true" Label="Loading architect practices">
@@ -103,7 +103,7 @@ else
         <div class="space-y-4">
             @if (formError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+                <Notice Tone="Tone.Negative">@formError</Notice>
             }
             <FormField Label="Practice name" Value="@formName" OnChange="v => formName = v" Required="true" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -122,7 +122,7 @@ else
         <div class="space-y-4">
             @if (formError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+                <Notice Tone="Tone.Negative">@formError</Notice>
             }
             <FormField Label="Practice name" Value="@formName" OnChange="v => formName = v" Required="true" />
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

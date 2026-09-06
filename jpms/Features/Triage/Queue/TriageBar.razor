@@ -64,13 +64,13 @@
     }
     @if (ActionError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@ActionError</p>
+        <Notice Tone="Tone.Negative">@ActionError</Notice>
     }
     @if (DiscardArmed)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-content">
+        <Notice Tone="Tone.Negative">
             Discard this email if it isn't for a record at all — spam, an auto-reply, or sent to the wrong place. It (and its thread) gets a "discarded" tag and leaves the queue; nothing moves in the mailbox, and it can be restored from the Tagged tab. Press <strong class="font-semibold">@ApplyLabel</strong> to go ahead, or <strong class="font-semibold">Keep email</strong> to change your mind.
-        </p>
+        </Notice>
     }
     @* ---- The one action bar: whatever is set up here and in the windows below — a reply,
            to-dos, a record filing — is applied together, in one click. ---- *@

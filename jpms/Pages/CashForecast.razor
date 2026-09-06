@@ -77,14 +77,14 @@
 
         @* Standing notice until the FD and consultant sign off the §4 phasing rules — the
            AMOUNTS are live and tie to the statements; only their TIMING is provisional. *@
-        <p class="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-sm text-amber-600 mb-6 max-w-4xl">
+        <Notice Tone="Tone.Warning" Class="mb-6 max-w-4xl">
             <span class="font-semibold">Unconfirmed figures.</span> The timing rules behind this
             forecast are awaiting sign-off (Financial-Reports-and-Nav-Refactor-Plan §4). Amounts
             are live and reconcile to the statement below; treat the months as indicative. Two
             known simplifications: supplier bills are assumed payable this month (per-bill due
             dates come with the confirmed build), and the overheads figure is entered on this
             page, not yet a system setting.
-        </p>
+        </Notice>
 
         @{
             // Computed ONCE per render and threaded through — the KPI strip, the table, the
@@ -140,10 +140,10 @@
             {
                 @if (FailedSelectedProjects.Count > 0)
                 {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">
+                    <Notice Tone="Tone.Negative" Class="mb-4">
                         The cash position could not be loaded for @string.Join(", ", FailedSelectedProjects.Select(p => p.Reference)) — those rows show zeros.
                         <button type="button" class="underline underline-offset-2 ml-1" @onclick="RetryFailedAsync">Retry</button>
-                    </p>
+                    </Notice>
                 }
 
                 var forecast = forecastView!;
@@ -189,11 +189,11 @@
                 }
                 else
                 {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-xs text-negative mb-10 max-w-4xl">
+                    <Notice Tone="Tone.Negative" Class="mb-10 max-w-4xl">
                         Phasing does not explain the statement for
                         @string.Join(", ", forecast.Variances.Select(variance => $"{variance.Project.Reference} ({Signed(variance.Variance)})"))
                         — this is a defect to report, not a judgement call. The statement below remains authoritative.
-                    </p>
+                    </Notice>
                 }
 
                 @* ════════════════════════ the divider ════════════════════════ *@

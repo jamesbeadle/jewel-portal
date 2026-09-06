@@ -54,9 +54,9 @@
             }
             else if (extraction.Status == DrawingExtractionStatus.Failed)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">
+                <Notice Tone="Tone.Negative">
                     The extraction failed@(extraction.ErrorMessage is { Length: > 0 } error ? $": {error}" : ".")
-                </p>
+                </Notice>
                 @if (CanManage)
                 {
                     <div class="mt-3">

@@ -13,7 +13,7 @@
        OnCancel="Close" OnConfirm="SaveAsync" Class="max-w-3xl w-full">
     @if (saveError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@saveError</p>
+        <Notice Tone="Tone.Negative" Class="mb-3">@saveError</Notice>
     }
     @if (sourceEmail is { } fromEmail)
     {
@@ -43,7 +43,7 @@
     {
     @if (issues.Count > 0)
     {
-        <div class="rounded-lg bg-amber-500/10 border border-amber-500/40 px-3 py-2 text-sm text-content mb-3">
+        <Notice Tone="Tone.Warning" Class="mb-3">
             <p class="font-medium mb-1">@(proposed ? "The extraction found gaps in this tender:" : "This tender couldn't be read automatically:")</p>
             <ul class="list-disc pl-5 space-y-0.5">
                 @foreach (var issue in issues)
@@ -51,14 +51,14 @@
                     <li>@issue</li>
                 }
             </ul>
-        </div>
+        </Notice>
     }
     else if (sourceEmail is not null && complete)
     {
-        <p class="rounded-lg bg-positive/10 border border-positive/40 px-3 py-2 text-sm text-content mb-3">
+        <Notice Tone="Tone.Positive" Class="mb-3">
             The tender reads complete — every line item is priced and the sums reconcile. Review the
             figures and save it as a submission.
-        </p>
+        </Notice>
     }
 
     <label class="block text-xs font-semibold uppercase tracking-wide text-content-subtle mb-1">Subcontractor</label>

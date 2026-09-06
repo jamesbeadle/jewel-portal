@@ -35,13 +35,13 @@
 
     @if (SendNote is not null)
     {
-        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">
+        <Notice Tone="Tone.Positive" Class="mb-3">
             @SendNote
             @if (DraftWebLink is not null)
             {
                 <a class="text-accent underline ml-1" href="@DraftWebLink" target="_blank" rel="noopener">Open it in Outlook on the web</a>
             }
-        </p>
+        </Notice>
     }
 
     <LoadGate IsLoading="@(!Loaded)" Prominent="true" Label="Loading invited subcontractors">

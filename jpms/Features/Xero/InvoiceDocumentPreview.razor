@@ -8,7 +8,7 @@
    error slot over the document, exactly as the inline version behaved. *@
 @if ((Error ?? fetchError) is { } shown)
 {
-    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@shown</p>
+    <Notice Tone="Tone.Negative">@shown</Notice>
 }
 else if (attachments is null)
 {

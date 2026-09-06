@@ -84,7 +84,7 @@ else
 
         @if (loadError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@loadError</p>
+            <Notice Tone="Tone.Negative" Class="mb-4">@loadError</Notice>
         }
 
         <LoadGate IsLoading="@(!loaded)" Prominent="true" Label="Loading the audit trail">

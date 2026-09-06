@@ -6,7 +6,7 @@
 <div class="panel px-4 py-3 mb-3 relative space-y-3">
     @if (ActionError is not null)
     {
-        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@ActionError</p>
+        <Notice Tone="Tone.Negative">@ActionError</Notice>
     }
     <div class="flex flex-wrap items-center gap-3">
         @if (PendingSummary is { } pending)

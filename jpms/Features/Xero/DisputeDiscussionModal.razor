@@ -37,7 +37,7 @@
 
             @if (Error is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+                <Notice Tone="Tone.Negative">@Error</Notice>
             }
             <div class="flex items-start gap-2">
                 <textarea class="grow bg-surface border border-line rounded-lg px-3 py-2 text-sm text-content placeholder:text-content-subtle"

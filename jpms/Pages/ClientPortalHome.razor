@@ -51,7 +51,7 @@ else
 
         @if (loadError is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@loadError</p>
+            <Notice Tone="Tone.Negative">@loadError</Notice>
         }
 
         <div>

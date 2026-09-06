@@ -47,7 +47,7 @@ else
 
         @if (error is not null)
         {
-            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@error</div>
+            <Notice Tone="Tone.Negative" Class="mb-4">@error</Notice>
         }
 
         @* A failed load must open the panel, or the jewel pulses for ever; the banner above carries
@@ -169,7 +169,7 @@ else
         <div class="space-y-4">
             @if (dialogError is not null)
             {
-                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</div>
+                <Notice Tone="Tone.Negative">@dialogError</Notice>
             }
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -238,7 +238,7 @@ else
         <div class="space-y-3">
             @if (dialogError is not null)
             {
-                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</div>
+                <Notice Tone="Tone.Negative">@dialogError</Notice>
             }
             @if (VariationOptions.Count == 0)
             {
@@ -284,7 +284,7 @@ else
         <div class="space-y-3">
             @if (dialogError is not null)
             {
-                <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@dialogError</div>
+                <Notice Tone="Tone.Negative">@dialogError</Notice>
             }
             <p class="text-sm text-content-subtle">
                 Permanently removes the instruction, its stored document and its links to variations. The variations

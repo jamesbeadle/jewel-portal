@@ -80,11 +80,11 @@ else
                     <ChildContent>
                     @if (actionError is not null)
                     {
-                        <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-3">@actionError</p>
+                        <Notice Tone="Tone.Negative" Class="mb-3">@actionError</Notice>
                     }
                     @if (actionNote is not null)
                     {
-                        <p class="rounded-lg bg-accent/10 border border-accent/30 px-3 py-2 text-sm text-content mb-3">@actionNote</p>
+                        <Notice Tone="Tone.Positive" Class="mb-3">@actionNote</Notice>
                     }
 
                     @if (Rows.Count == 0)
@@ -204,7 +204,7 @@ else
             <div class="space-y-4">
                 @if (formError is not null)
                 {
-                    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+                    <Notice Tone="Tone.Negative">@formError</Notice>
                 }
                 <p class="text-sm text-content truncate" title="@editing.Subject">@editing.Subject</p>
                 <div class="space-y-1">
@@ -229,7 +229,7 @@ else
         <div class="space-y-4">
             @if (formError is not null)
             {
-                <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@formError</p>
+                <Notice Tone="Tone.Negative">@formError</Notice>
             }
             <p class="text-sm text-content-muted">
                 Someone at Jewel without a portal login — they'll be offered wherever a KPI is filed. Portal

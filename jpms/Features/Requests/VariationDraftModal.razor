@@ -16,7 +16,7 @@
     <div class="space-y-4">
         @if (Error is not null)
         {
-            <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@Error</p>
+            <Notice Tone="Tone.Negative">@Error</Notice>
         }
 
         <div class="">

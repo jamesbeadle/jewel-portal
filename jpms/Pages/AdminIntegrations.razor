@@ -100,9 +100,9 @@ else
                         }
                         @if (status.LastRefreshError is { Length: > 0 } refreshError)
                         {
-                            <p class="mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">
+                            <Notice Tone="Tone.Negative" Class="mt-3">
                                 The connection is failing: @refreshError
-                            </p>
+                            </Notice>
                             <div class="mt-3">
                                 <button type="button" class="btn-primary" disabled="@busy" @onclick="ConnectAsync">
                                     @(busy ? "Redirecting…" : "Reconnect Bluebeam")
@@ -135,7 +135,7 @@ else
                     }
                     @if (actionError is not null)
                     {
-                        <p class="mt-3 rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative">@actionError</p>
+                        <Notice Tone="Tone.Negative" Class="mt-3">@actionError</Notice>
                     }
                 }
             </Panel>

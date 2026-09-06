@@ -10,7 +10,7 @@
    the page prefills the NOD from a detected delay event and re-reads the LADs when one lands. *@
 @if ((Error ?? error) is { } shown)
 {
-    <p class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4">@shown</p>
+    <Notice Tone="Tone.Negative" Class="mb-4">@shown</Notice>
 }
 
 <div class="flex flex-wrap gap-2 mb-5">

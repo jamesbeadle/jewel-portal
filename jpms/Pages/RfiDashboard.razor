@@ -47,12 +47,14 @@ else
 
         @if (loadError is not null)
         {
-            <div class="rounded-lg bg-negative/10 border border-negative/30 px-3 py-2 text-sm text-negative mb-4 flex flex-wrap items-center gap-3">
+            <Notice Tone="Tone.Negative" Class="mb-4">
+                <div class="flex flex-wrap items-center gap-3">
                 <span>Couldn't load the RFI register: @loadError</span>
                 <button type="button" class="btn-secondary" disabled="@reloading" @onclick="Reload">
                     @(reloading ? "Retrying…" : "Retry")
                 </button>
-            </div>
+                </div>
+            </Notice>
         }
 
         @if (FilteredRecords.Count == 0)
