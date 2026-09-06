@@ -224,7 +224,7 @@ public partial class AuditTrail
         if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes}m ago";
         if (span < TimeSpan.FromHours(24)) return $"{(int)span.TotalHours}h ago";
         if (span < TimeSpan.FromDays(30)) return $"{(int)span.TotalDays}d ago";
-        return at.LocalDateTime.ToString("d MMM yyyy");
+        return DateText(at);
     }
 
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;

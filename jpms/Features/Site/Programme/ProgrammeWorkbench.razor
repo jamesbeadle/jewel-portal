@@ -24,13 +24,13 @@
             <Notice Tone="Tone.Negative" Class="mb-5">
                 <p class="text-sm font-semibold text-negative">
                     Completion has moved @movement.CompletionSlipDays day(s) against baseline “@baseline.Label”
-                    <span class="font-normal">(@(movement.BaselineCompletion?.LocalDateTime.ToString("d MMM yyyy")) → @(movement.CurrentCompletion?.LocalDateTime.ToString("d MMM yyyy")))</span>
+                    <span class="font-normal">(@(DateText(movement.BaselineCompletion?.LocalDateTime)) → @(DateText(movement.CurrentCompletion?.LocalDateTime)))</span>
                 </p>
                 <ul class="mt-2 space-y-1">
                     @foreach (var delayEvent in movement.DelayEvents)
                     {
                         <li class="flex flex-wrap items-center gap-2 text-xs text-content-muted">
-                            <span>@delayEvent.Title — end moved @delayEvent.BaselineEnd.LocalDateTime.ToString("d MMM") → @delayEvent.PlannedEnd.LocalDateTime.ToString("d MMM yyyy") (+@delayEvent.SlipDays d)@(delayEvent.DrivesCompletion ? " · drives completion" : "")</span>
+                            <span>@delayEvent.Title — end moved @delayEvent.BaselineEnd.LocalDateTime.ToString("d MMM") → @DateText(delayEvent.PlannedEnd) (+@delayEvent.SlipDays d)@(delayEvent.DrivesCompletion ? " · drives completion" : "")</span>
                             <button type="button" class="text-accent hover:underline" @onclick="() => OnRaiseNod.InvokeAsync(delayEvent)">Raise NOD</button>
                         </li>
                     }
@@ -50,7 +50,7 @@
         else
         {
             <Notice Tone="Tone.Positive" Class="mb-5">
-                <p class="text-sm text-content">Programme holding against baseline “@baseline.Label” (taken @baseline.TakenAt.LocalDateTime.ToString("d MMM yyyy")).</p>
+                <p class="text-sm text-content">Programme holding against baseline “@baseline.Label” (taken @DateText(baseline.TakenAt)).</p>
             </Notice>
         }
     }
@@ -159,7 +159,7 @@
                                 {
                                     <Pill Tone="Tone.Info">current yardstick</Pill>
                                 }
-                                <span class="text-xs text-content-subtle">taken @baselineEntry.TakenAt.LocalDateTime.ToString("d MMM yyyy, HH:mm") by @baselineEntry.TakenByEmail</span>
+                                <span class="text-xs text-content-subtle">taken @DateTimeText(baselineEntry.TakenAt) by @baselineEntry.TakenByEmail</span>
                                 @if (confirmingRemoveBaselineId == baselineEntry.ProgrammeBaselineId)
                                 {
                                     <button type="button" class="text-xs font-semibold text-negative hover:underline" disabled="@busy" @onclick="() => RemoveBaselineAsync(baselineEntry.ProgrammeBaselineId)">Confirm remove</button>

@@ -45,32 +45,30 @@
     }
     else
     {
-        <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-left text-content-subtle border-b border-line">
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Practice</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact email</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
+        <RecordsTable>
+            <thead>
+                <tr>
+                    <th>Practice</th>
+                    <th>Contact</th>
+                    <th>Contact email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var architect in architects)
+                {
+                    <tr>
+                        <td class="font-medium text-content">@architect.Name</td>
+                        <td>@Dash(architect.ContactName)</td>
+                        <td>@Dash(architect.ContactEmail)</td>
+                        <td class="text-right whitespace-nowrap">
+                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenContacts(architect)">Contacts</button>
+                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenEdit(architect)">Edit</button>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach (var architect in architects)
-                    {
-                        <tr class="border-b border-line last:border-0">
-                            <td class="px-4 py-3 font-medium text-content">@architect.Name</td>
-                            <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactName)</td>
-                            <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactEmail)</td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenContacts(architect)">Contacts</button>
-                                <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenEdit(architect)">Edit</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                }
+            </tbody>
+        </RecordsTable>
     }
     </LoadGate>
 

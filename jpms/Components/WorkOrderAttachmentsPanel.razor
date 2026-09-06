@@ -55,7 +55,7 @@
                         <span class="block text-xs text-content-subtle">
                             @(attachment.Source == WorkOrderAttachmentSource.Email ? "From the triaged email" : attachment.Source == WorkOrderAttachmentSource.Chat ? "From the assistant chat" : "Uploaded")
                             @(attachment.FileSizeBytes > 0 ? $" · {Size(attachment.FileSizeBytes)}" : "")
-                            · @attachment.AddedAt.LocalDateTime.ToString("d MMM yyyy")
+                            · @DateText(attachment.AddedAt)
                         </span>
                     </span>
                     <a class="text-xs text-accent hover:underline whitespace-nowrap"

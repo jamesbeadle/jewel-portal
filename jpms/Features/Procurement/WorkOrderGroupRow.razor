@@ -37,19 +37,19 @@
 {
     <tr>
         <td colspan="@(GroupBySupplier ? 6 : 7)" class="px-4 pb-4 pt-1 bg-surface-raised/50">
-            <table class="w-full text-sm border-collapse">
+            <table class="data-table">
                 <thead>
-                    <tr class="text-left eyebrow border-b border-line">
-                        <th class="px-3 py-2 w-[90px]">Order</th>
-                        <th class="px-3 py-2 min-w-[180px]">@(GroupBySupplier ? "Cost centre" : "Supplier")</th>
-                        <th class="px-3 py-2">Line</th>
-                        <th class="px-3 py-2 whitespace-nowrap">Status</th>
-                        <th class="px-3 py-2 text-right whitespace-nowrap">Total</th>
-                        <th class="px-3 py-2 text-right whitespace-nowrap">Paid</th>
-                        <th class="px-3 py-2 w-[170px]"><span class="sr-only">Actions</span></th>
+                    <tr>
+                        <th class="w-[90px]">Order</th>
+                        <th class="min-w-[180px]">@(GroupBySupplier ? "Cost centre" : "Supplier")</th>
+                        <th>Line</th>
+                        <th class="whitespace-nowrap">Status</th>
+                        <th class="text-right whitespace-nowrap">Total</th>
+                        <th class="text-right whitespace-nowrap">Paid</th>
+                        <th class="w-[170px]"><span class="sr-only">Actions</span></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-line">
+                <tbody>
                     @foreach (var entry in Lines)
                     {
                         <WorkOrderLineRow Entry="entry" GroupBySupplier="GroupBySupplier"

@@ -46,33 +46,31 @@
     }
     else
     {
-        <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-left text-content-subtle border-b border-line">
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Client</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Primary contact</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact email</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
+        <RecordsTable>
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Primary contact</th>
+                    <th>Contact email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var client in clients)
+                {
+                    <tr>
+                        <td class="font-medium text-content">@client.Name</td>
+                        <td>@Dash(client.PrimaryContactName)</td>
+                        <td>@Dash(client.PrimaryContactEmail)</td>
+                        <td class="text-right whitespace-nowrap">
+                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenContacts(client)">Contacts</button>
+                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenEdit(client)">Edit</button>
+                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenInvite(client)">Invite to portal</button>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach (var client in clients)
-                    {
-                        <tr class="border-b border-line last:border-0">
-                            <td class="px-4 py-3 font-medium text-content">@client.Name</td>
-                            <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactName)</td>
-                            <td class="px-4 py-3 text-content-muted">@Dash(client.PrimaryContactEmail)</td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenContacts(client)">Contacts</button>
-                                <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenEdit(client)">Edit</button>
-                                <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => OpenInvite(client)">Invite to portal</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                }
+            </tbody>
+        </RecordsTable>
     }
     </LoadGate>
 
@@ -118,7 +116,7 @@
             @if (inviteResult is not null)
             {
                 <Notice Tone="Tone.Positive">
-                    <p class="mb-1">Invite sent to <span class="font-medium">@inviteResult.Email</span>. If the email doesn't arrive, share this link (valid until @inviteResult.ExpiresAt.LocalDateTime.ToString("d MMM yyyy")):</p>
+                    <p class="mb-1">Invite sent to <span class="font-medium">@inviteResult.Email</span>. If the email doesn't arrive, share this link (valid until @DateText(inviteResult.ExpiresAt)):</p>
                     <code class="block break-all text-xs bg-white/60 rounded px-2 py-1">@inviteResult.InviteLink</code>
                 </Notice>
             }

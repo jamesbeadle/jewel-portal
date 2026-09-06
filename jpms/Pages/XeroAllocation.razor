@@ -140,10 +140,10 @@
                absolutely inside this container, and with the overflow active its bottom
                entries would be clipped at the container's edge. *@
             <div class="rounded-xl border border-line bg-surface @(IsRowMenuOpen ? "" : "overflow-x-auto overflow-y-auto max-h-[85vh]")">
-                <table class="w-full text-sm">
+                <table class="data-table">
                     <AllocationTableHeader Tab="activeTab" LabourTab="labourTab"
                                            AllSelected="AllVisibleSelected" OnToggleAll="ToggleSelectAll" />
-                    <tbody class="divide-y divide-line">
+                    <tbody>
                         @foreach (var line in Paged)
                         {
                             @* Keyed so a row's component state (an open menu, a dropdown's

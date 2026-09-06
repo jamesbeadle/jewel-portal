@@ -122,7 +122,7 @@
                                 <SimpleMarkdown Text="@strategy.ApproachPlan" />
                                 @if (strategy.PlanGeneratedAt is { } generatedAt)
                                 {
-                                    <p class="text-xs text-content-faint mt-4">Drafted by Claude @generatedAt.ToLocalTime().ToString("d MMM yyyy HH:mm") — edited since if the text differs.</p>
+                                    <p class="text-xs text-content-faint mt-4">Drafted by Claude @DateTimeText(generatedAt.ToLocalTime()) — edited since if the text differs.</p>
                                 }
                             }
                         </ChildContent>
@@ -136,7 +136,7 @@
                         else
                         {
                             <div class="overflow-x-auto">
-                                <table class="data-table w-full">
+                                <table class="data-table">
                                     <thead>
                                         <tr>
                                             <th>Ref</th>
@@ -169,7 +169,7 @@
                                                 </td>
                                                 <td><LeadStagePill Stage="@row.Stage" /></td>
                                                 <td class="text-right whitespace-nowrap">@(row.EstimatedValue is { } v ? WholeMoney(v) : "—")</td>
-                                                <td class="whitespace-nowrap text-xs">@row.CapturedAt.ToLocalTime().ToString("d MMM yyyy")</td>
+                                                <td class="whitespace-nowrap text-xs">@DateText(row.CapturedAt)</td>
                                             </tr>
                                         }
                                     </tbody>
@@ -209,7 +209,7 @@
                                 </div>
                                 <div>
                                     <dt class="eyebrow">Since</dt>
-                                    <dd class="text-content mt-1">@strategy.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</dd>
+                                    <dd class="text-content mt-1">@DateText(strategy.CreatedAt)</dd>
                                 </div>
                             </div>
                         </dl>

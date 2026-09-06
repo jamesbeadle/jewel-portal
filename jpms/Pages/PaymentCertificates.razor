@@ -65,30 +65,30 @@
                                 @group.Rows.Count certificate@(group.Rows.Count == 1 ? "" : "s")@(group.Total is { } total ? $" · {WholeMoney(total)} certified" : "")
                             </p>
                         </div>
-                        <table class="w-full text-sm">
-                            <thead class="border-b border-line">
-                                <tr class="text-left eyebrow">
-                                    <th class="px-4 py-2.5">Certificate</th>
-                                    <th class="px-4 py-2.5 whitespace-nowrap">Issued</th>
-                                    <th class="px-4 py-2.5">Valuation claim</th>
-                                    <th class="px-4 py-2.5 text-right whitespace-nowrap">Certified amount</th>
-                                    <th class="px-4 py-2.5 text-right">File</th>
+                        <table class="data-table data-table-dense">
+                            <thead>
+                                <tr>
+                                    <th>Certificate</th>
+                                    <th class="whitespace-nowrap">Issued</th>
+                                    <th>Valuation claim</th>
+                                    <th class="text-right whitespace-nowrap">Certified amount</th>
+                                    <th class="text-right">File</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-line">
+                            <tbody>
                                 @foreach (var certificate in group.Rows)
                                 {
                                     <tr @key="certificate.PaymentCertificateId">
-                                        <td class="px-4 py-2.5">
+                                        <td>
                                             <span class="font-medium text-content">@certificate.CertificateNumber</span>
                                             <span class="block text-xs text-content-subtle truncate max-w-[18rem]" title="@certificate.FileName">@certificate.FileName</span>
                                         </td>
-                                        <td class="px-4 py-2.5 whitespace-nowrap text-content">@certificate.IssuedDate.LocalDateTime.ToString("d MMM yyyy")</td>
-                                        <td class="px-4 py-2.5 text-content">@ClaimLabel(certificate)</td>
-                                        <td class="px-4 py-2.5 text-right tabular-nums text-content">
+                                        <td class="whitespace-nowrap text-content">@DateText(certificate.IssuedDate)</td>
+                                        <td class="text-content">@ClaimLabel(certificate)</td>
+                                        <td class="text-right tabular-nums text-content">
                                             @(certificate.CertifiedAmount is { } amount ? WholeMoney(amount) : "—")
                                         </td>
-                                        <td class="px-4 py-2.5 text-right whitespace-nowrap">
+                                        <td class="text-right whitespace-nowrap">
                                             @if (IsPdf(certificate))
                                             {
                                                 <button type="button" class="text-xs text-accent hover:underline mr-3"
@@ -103,7 +103,7 @@
                                     @if (previewId == certificate.PaymentCertificateId)
                                     {
                                         <tr>
-                                            <td colspan="5" class="px-4 py-3 bg-surface-raised">
+                                            <td colspan="5">
                                                 <PdfViewer FileUrl="@Store.FileUrl(certificate.PaymentCertificateId, inline: true)"
                                                            DownloadUrl="@Store.FileUrl(certificate.PaymentCertificateId)"
                                                            Caption="@certificate.FileName" HeightClass="h-[60vh]" />

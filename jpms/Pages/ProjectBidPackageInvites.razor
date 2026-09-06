@@ -46,34 +46,32 @@
         }
         else
         {
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left eyebrow">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Package</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Created</th>
+            <RecordsTable>
+                <thead>
+                    <tr>
+                        <th>Package</th>
+                        <th class="hidden sm:table-cell">Trade</th>
+                        <th>Status</th>
+                        <th class="hidden lg:table-cell">Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var package in Packages)
+                    {
+                        <tr class="hover:bg-surface-raised @(package.Status == BidPackageStatus.Closed ? "opacity-60" : "")">
+                            <td>
+                                <a class="text-content font-medium hover:underline underline-offset-4"
+                                   href="@($"/projects/{ProjectId}/bid-package-invites/{package.BidPackageId}")">@package.Title</a>
+                            </td>
+                            <td class="hidden sm:table-cell">@package.Trade</td>
+                            <td>
+                                <Pill Tone="Tone.Muted">@package.Status</Pill>
+                            </td>
+                            <td class="text-content-subtle hidden lg:table-cell">@DateText(package.CreatedAt)</td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var package in Packages)
-                        {
-                            <tr class="hover:bg-surface-raised @(package.Status == BidPackageStatus.Closed ? "opacity-60" : "")">
-                                <td class="px-4 py-3">
-                                    <a class="text-content font-medium hover:underline underline-offset-4"
-                                       href="@($"/projects/{ProjectId}/bid-package-invites/{package.BidPackageId}")">@package.Title</a>
-                                </td>
-                                <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@package.Trade</td>
-                                <td class="px-4 py-3">
-                                    <Pill Tone="Tone.Muted">@package.Status</Pill>
-                                </td>
-                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell">@package.CreatedAt.LocalDateTime.ToString("d MMM yyyy")</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
         }
     </ProjectPageShell>
 

@@ -196,5 +196,5 @@ public partial class ProjectArchitectInstructions
         finally { busy = false; }
     }
 
-    private static string Date(DateTimeOffset value) => value.ToLocalTime().ToString("dd MMM yyyy");
+    private static string Date(DateTimeOffset value) => DateText(value);
 }

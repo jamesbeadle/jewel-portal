@@ -129,7 +129,7 @@
                         <span class="mt-1.5 w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-hidden="true"></span>
                         <div class="min-w-0">
                             <p class="text-sm text-content">Raised@(Detail.Order.IsDraft ? " — still a draft" : Detail.Order.IsRejected ? " — draft, later rejected" : "")</p>
-                            <p class="text-xs text-content-subtle mt-0.5">@Detail.Order.CreatedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")</p>
+                            <p class="text-xs text-content-subtle mt-0.5">@DateTimeText(Detail.Order.CreatedAt.ToLocalTime())</p>
                         </div>
                     </li>
                     @if (Detail.Order.Status is WorkOrderStatus.Released or WorkOrderStatus.Complete or WorkOrderStatus.Cancelled)
@@ -139,7 +139,7 @@
                             <div class="min-w-0">
                                 <p class="text-sm text-content">Approved &amp; issued as @Detail.Order.Reference</p>
                                 <p class="text-xs text-content-subtle mt-0.5">
-                                    @Detail.Order.AwardedAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                                    @DateTimeText(Detail.Order.AwardedAt.ToLocalTime())
                                     @if (!string.IsNullOrWhiteSpace(ApproverDisplay))
                                     {
                                         <span class="mx-1.5" aria-hidden="true">·</span>
@@ -156,7 +156,7 @@
                             <div class="min-w-0">
                                 <p class="text-sm text-content">Accepted by the supplier</p>
                                 <p class="text-xs text-content-subtle mt-0.5">
-                                    @Detail.Order.AcceptedAt!.Value.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                                    @DateTimeText(Detail.Order.AcceptedAt!.Value.ToLocalTime())
                                     @if (!string.IsNullOrWhiteSpace(Detail.Order.AcceptedByName))
                                     {
                                         <span class="mx-1.5" aria-hidden="true">·</span>

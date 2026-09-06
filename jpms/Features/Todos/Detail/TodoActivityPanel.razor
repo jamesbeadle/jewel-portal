@@ -41,7 +41,7 @@
                         <div class="min-w-0">
                             <p class="text-content break-words">@row.Summary</p>
                             <p class="text-xs text-content-subtle">
-                                @row.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")@(string.IsNullOrWhiteSpace(row.ActorEmail) ? "" : $" · {row.ActorEmail}")
+                                @DateTimeText(row.OccurredAt)@(string.IsNullOrWhiteSpace(row.ActorEmail) ? "" : $" · {row.ActorEmail}")
                             </p>
                         </div>
                     </li>

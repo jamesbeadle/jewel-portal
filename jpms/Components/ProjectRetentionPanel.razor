@@ -79,7 +79,7 @@
             balance @Current.DefectsPeriodMonths months later
             @if (Current.PracticalCompletionAt is { } pc)
             {
-                <text> · practical completion @pc.ToString("d MMM yyyy")</text>
+                <text> · practical completion @DateText(pc)</text>
             }
             else
             {
@@ -122,7 +122,7 @@
                             }
                             else if (line.DueOn is { } due)
                             {
-                                <text>Due @due.ToString("d MMM yyyy") (forecast)</text>
+                                <text>Due @DateText(due) (forecast)</text>
                             }
                             else
                             {

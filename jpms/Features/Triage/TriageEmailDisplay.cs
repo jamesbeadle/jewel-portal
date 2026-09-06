@@ -13,7 +13,7 @@ public static class TriageEmailDisplay
 
     public static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
-    public static string Date(DateTimeOffset value) => value.LocalDateTime.ToString("d MMM yyyy, HH:mm");
+    public static string Date(DateTimeOffset value) => DateTimeText(value);
 
     /// <summary>
     /// Outlook-style compact date for list rows: time alone today, "Yesterday 14:21", day name
@@ -26,7 +26,7 @@ public static class TriageEmailDisplay
         if (local.Date == today) return local.ToString("HH:mm");
         if (local.Date == today.AddDays(-1)) return $"Yesterday {local:HH:mm}";
         if (local.Date > today.AddDays(-6)) return local.ToString("ddd HH:mm");
-        return local.ToString("d MMM yyyy");
+        return DateText(local);
     }
 
     /// <summary>The group header a list row falls under — Today / Yesterday / day names this week / month.</summary>

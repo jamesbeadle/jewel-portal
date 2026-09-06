@@ -27,7 +27,7 @@
             {
                 <li class="flex flex-wrap items-baseline gap-x-2 text-xs text-content-muted">
                     <span class="text-content font-medium">@(string.IsNullOrWhiteSpace(reply.FromName) ? reply.FromEmail : reply.FromName)</span>
-                    <span>@reply.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                    <span>@DateTimeText(reply.ReceivedAt)</span>
                     <span class="italic truncate max-w-[24rem]">@reply.Subject</span>
                 </li>
             }

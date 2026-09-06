@@ -33,26 +33,26 @@
     }
     else
     {
-        <table class="w-full text-sm border-collapse">
+        <table class="data-table data-table-dense">
             <thead>
-                <tr class="text-left border-b border-line">
-                    <th class="px-5 py-2 eyebrow">Company</th>
-                    <th class="px-5 py-2 eyebrow">Document</th>
-                    <th class="px-5 py-2 eyebrow text-right">Expires</th>
+                <tr>
+                    <th>Company</th>
+                    <th>Document</th>
+                    <th class="text-right">Expires</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var document in Rows)
                 {
-                    <tr class="border-b border-line last:border-b-0 hover:bg-surface-raised/60 transition">
-                        <td class="px-5 py-2.5">
+                    <tr class="last:border-b-0 hover:bg-surface-raised/60">
+                        <td>
                             <a href="@($"/directory/{document.SubcontractorId}")" class="hover:underline underline-offset-4">
                                 <span class="text-content font-medium">@CompanyNameFor(document.SubcontractorId)</span>
                             </a>
                         </td>
-                        <td class="px-5 py-2.5 text-content-muted">@document.Kind</td>
-                        <td class="px-5 py-2.5 text-right whitespace-nowrap">
-                            <span class="mr-2 text-content-muted">@document.ExpiresAt?.LocalDateTime.ToString("d MMM yyyy")</span>
+                        <td>@document.Kind</td>
+                        <td class="text-right whitespace-nowrap">
+                            <span class="mr-2 text-content-muted">@DateText(document.ExpiresAt?.LocalDateTime)</span>
                             <ComplianceStatusPill Status="@document.Status()" />
                         </td>
                     </tr>

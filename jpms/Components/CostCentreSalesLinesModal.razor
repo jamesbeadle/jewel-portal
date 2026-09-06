@@ -32,27 +32,27 @@
                                      BuildWorkbook="BuildExportWorkbook" />
             </div>
             <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
-                <table class="w-full text-sm border-collapse">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left eyebrow">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Ref</th>
+                <table class="data-table data-table-dense">
+                    <thead>
+                        <tr>
+                            <th class="whitespace-nowrap">Ref</th>
                             @if (ShowCentreColumn)
                             {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Centre</th>
+                                <th class="whitespace-nowrap">Centre</th>
                             }
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Description</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Type</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Amount</th>
+                            <th>Description</th>
+                            <th class="whitespace-nowrap">Type</th>
+                            <th class="text-right whitespace-nowrap">Amount</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-line">
+                    <tbody>
                         @foreach (var line in CountingLines)
                         {
                             <tr>
-                                <td class="px-4 py-2.5 font-mono text-xs text-content-subtle whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
+                                <td class="font-mono text-xs text-content-subtle whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
                                 @if (ShowCentreColumn)
                                 {
-                                    <td class="px-4 py-2.5 whitespace-nowrap">
+                                    <td class="whitespace-nowrap">
                                         @if (CanRecodeCostCentres)
                                         {
                                             <SearchSelect Options="@CostCentreOptionsFor(line)" WidthClass="w-52"
@@ -71,16 +71,16 @@
                                         }
                                     </td>
                                 }
-                                <td class="px-4 py-2.5 text-content" title="@line.Comments">@DescriptionFor(line)</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap"><Pill Tone="Tone.Muted">@TypeLabel(line)</Pill></td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.LineAmount < 0m ? "text-negative" : "text-content")">@Money(line.LineAmount)</td>
+                                <td class="text-content" title="@line.Comments">@DescriptionFor(line)</td>
+                                <td class="whitespace-nowrap"><Pill Tone="Tone.Muted">@TypeLabel(line)</Pill></td>
+                                <td class="text-right whitespace-nowrap @(line.LineAmount < 0m ?"text-negative" : "text-content")">@Money(line.LineAmount)</td>
                             </tr>
                         }
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-2.5" colspan="@(ShowCentreColumn ? 4 : 3)">Total — contract sales value</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(CountingLines.Sum(line => line.LineAmount))</td>
+                            <td colspan="@(ShowCentreColumn ? 4 : 3)">Total — contract sales value</td>
+                            <td class="text-right whitespace-nowrap">@Money(CountingLines.Sum(line => line.LineAmount))</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -92,15 +92,15 @@
                     <p class="px-4 pt-3 pb-1 eyebrow">
                         Recorded but not priced into the total
                     </p>
-                    <table class="w-full text-sm border-collapse">
-                        <tbody class="divide-y divide-line">
+                    <table class="data-table data-table-dense">
+                        <tbody>
                             @foreach (var line in NonCountingLines)
                             {
                                 <tr class="text-content-muted">
-                                    <td class="px-4 py-2.5 font-mono text-xs whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
+                                    <td class="font-mono text-xs whitespace-nowrap" title="@RefTitle(line)">@Ref(line)</td>
                                     @if (ShowCentreColumn)
                                     {
-                                        <td class="px-4 py-2.5 whitespace-nowrap">
+                                        <td class="whitespace-nowrap">
                                             @if (CanRecodeCostCentres)
                                             {
                                                 <SearchSelect Options="@CostCentreOptionsFor(line)" WidthClass="w-52"
@@ -119,9 +119,9 @@
                                             }
                                         </td>
                                     }
-                                    <td class="px-4 py-2.5" title="@line.Comments">@DescriptionFor(line)</td>
-                                    <td class="px-4 py-2.5 whitespace-nowrap"><Pill Tone="Tone.Muted">@(line.LineType == ValuationLineType.Tbc ? "TBC" : "Declined")</Pill></td>
-                                    <td class="px-4 py-2.5 text-right whitespace-nowrap">@Money(line.LineAmount)</td>
+                                    <td title="@line.Comments">@DescriptionFor(line)</td>
+                                    <td class="whitespace-nowrap"><Pill Tone="Tone.Muted">@(line.LineType == ValuationLineType.Tbc ? "TBC" : "Declined")</Pill></td>
+                                    <td class="text-right whitespace-nowrap">@Money(line.LineAmount)</td>
                                 </tr>
                             }
                         </tbody>

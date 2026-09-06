@@ -84,54 +84,52 @@
         }
         else
         {
-            <div class="rounded-xl border border-line bg-surface overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-line text-left">
-                            <th class="px-4 py-2.5 eyebrow">Ref</th>
-                            <th class="px-4 py-2.5 eyebrow">Title</th>
-                            <th class="px-4 py-2.5 eyebrow">Instruction</th>
-                            <th class="px-4 py-2.5 eyebrow">Location</th>
-                            <th class="px-4 py-2.5 eyebrow">Raised</th>
-                            <th class="px-4 py-2.5"></th>
+            <RecordsTable Dense="true" MaxHeight="">
+                <thead>
+                    <tr>
+                        <th>Ref</th>
+                        <th>Title</th>
+                        <th>Instruction</th>
+                        <th>Location</th>
+                        <th>Raised</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Rows)
+                    {
+                        var isExpanded = expandedId == row.SiteInstructionId;
+                        <tr @key="row.SiteInstructionId" class="border-b border-line last:border-0 align-top">
+                            <td class="font-mono text-xs whitespace-nowrap">@row.Reference</td>
+                            <td class="text-content">@row.Title</td>
+                            <td class="max-w-lg whitespace-pre-wrap">@row.Instruction</td>
+                            <td class="max-w-xs">@row.Location</td>
+                            <td class="whitespace-nowrap" title="@DateTimeText(row.CreatedAt.ToLocalTime())">
+                                @DateText(row.CreatedAt)
+                            </td>
+                            <td class="whitespace-nowrap text-right">
+                                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 mr-3"
+                                        @onclick="() => StartEdit(row)">
+                                    Edit
+                                </button>
+                                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                        @onclick="() => ToggleEmailsAsync(row.SiteInstructionId)">
+                                    @(isExpanded ? "Hide emails" : "Emails")
+                                </button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var row in Rows)
+                        @if (isExpanded)
                         {
-                            var isExpanded = expandedId == row.SiteInstructionId;
-                            <tr @key="row.SiteInstructionId" class="border-b border-line last:border-0 align-top">
-                                <td class="px-4 py-2.5 font-mono text-xs text-content-muted whitespace-nowrap">@row.Reference</td>
-                                <td class="px-4 py-2.5 text-content">@row.Title</td>
-                                <td class="px-4 py-2.5 text-content-muted max-w-lg whitespace-pre-wrap">@row.Instruction</td>
-                                <td class="px-4 py-2.5 text-content-muted max-w-xs">@row.Location</td>
-                                <td class="px-4 py-2.5 text-content-muted whitespace-nowrap" title="@row.CreatedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")">
-                                    @row.CreatedAt.ToLocalTime().ToString("d MMM yyyy")
-                                </td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-right">
-                                    <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 mr-3"
-                                            @onclick="() => StartEdit(row)">
-                                        Edit
-                                    </button>
-                                    <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                            @onclick="() => ToggleEmailsAsync(row.SiteInstructionId)">
-                                        @(isExpanded ? "Hide emails" : "Emails")
-                                    </button>
+                            <tr class="bg-surface-raised/50">
+                                <td colspan="6">
+                                    <FiledEmailList Emails="@(emailsByRow.TryGetValue(row.SiteInstructionId, out var filedEmails) ? filedEmails : null)"
+                                        EmptyMessage="@($"No emails filed to {row.Reference} yet — file one from the Control Centre (Internal pathway → Site instructions).")" />
                                 </td>
                             </tr>
-                            @if (isExpanded)
-                            {
-                                <tr class="border-b border-line last:border-0 bg-surface-raised/50">
-                                    <td colspan="6" class="px-4 py-3">
-                                        <FiledEmailList Emails="@(emailsByRow.TryGetValue(row.SiteInstructionId, out var filedEmails) ? filedEmails : null)"
-                                            EmptyMessage="@($"No emails filed to {row.Reference} yet — file one from the Control Centre (Internal pathway → Site instructions).")" />
-                                    </td>
-                                </tr>
-                            }
                         }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
         }
     </ProjectPageShell>
 </Page>

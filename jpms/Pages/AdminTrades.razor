@@ -74,75 +74,73 @@
                     }
                     else
                     {
-                        <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead class="bg-surface-raised border-b border-line">
-                                    <tr class="text-left eyebrow">
-                                        <th class="px-4 py-3">Trade</th>
-                                        <th class="px-4 py-3">In use by</th>
-                                        <th class="px-4 py-3"></th>
+                        <RecordsTable Dense="true" MaxHeight="">
+                            <thead>
+                                <tr>
+                                    <th>Trade</th>
+                                    <th>In use by</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var trade in Sorted)
+                                {
+                                    var usage = UsageCount(trade.TradeId);
+                                    <tr>
+                                        <td>
+                                            @if (renamingId == trade.TradeId)
+                                            {
+                                                <input class="field" @bind="renameValue" @bind:event="oninput"
+                                                       @onkeydown="@(e => { if (e.Key == "Enter") _ = ConfirmRenameAsync(); })" />
+                                            }
+                                            else
+                                            {
+                                                <span class="text-content font-medium">@trade.Name</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @(usage == 0 ? "—" : $"{usage} compan{(usage == 1 ? "y" : "ies")}")
+                                        </td>
+                                        <td class="text-right">
+                                            @* Row actions follow the button colour rule: acts are green
+                                               (btn-secondary), the destructive one warns. *@
+                                            @if (renamingId == trade.TradeId)
+                                            {
+                                                <span class="inline-flex items-center gap-2">
+                                                    <button type="button" class="btn-secondary px-2 py-1 text-xs"
+                                                            disabled="@(busy || string.IsNullOrWhiteSpace(renameValue))"
+                                                            @onclick="ConfirmRenameAsync">Save</button>
+                                                    <button type="button" class="btn-neutral px-2 py-1 text-xs" disabled="@busy"
+                                                            @onclick="CancelRename">Cancel</button>
+                                                </span>
+                                            }
+                                            else if (deletingId == trade.TradeId)
+                                            {
+                                                <span class="inline-flex items-center gap-2">
+                                                    <span class="text-xs text-content-muted">Delete “@trade.Name”?</span>
+                                                    <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
+                                                            disabled="@busy" @onclick="() => ConfirmDeleteAsync(trade)">Delete now</button>
+                                                    <button type="button" class="btn-neutral px-2 py-1 text-xs" disabled="@busy"
+                                                            @onclick="() => deletingId = null">Cancel</button>
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="inline-flex items-center gap-2">
+                                                    <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
+                                                            title="Rename the trade — every directory record carrying it shows the new name at once."
+                                                            @onclick="() => StartRename(trade)">Rename</button>
+                                                    <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
+                                                            disabled="@(busy || usage > 0)"
+                                                            title="@DeleteTitle(usage)"
+                                                            @onclick="() => StartDelete(trade)">Delete</button>
+                                                </span>
+                                            }
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody class="divide-y divide-line">
-                                    @foreach (var trade in Sorted)
-                                    {
-                                        var usage = UsageCount(trade.TradeId);
-                                        <tr>
-                                            <td class="px-4 py-2.5">
-                                                @if (renamingId == trade.TradeId)
-                                                {
-                                                    <input class="field" @bind="renameValue" @bind:event="oninput"
-                                                           @onkeydown="@(e => { if (e.Key == "Enter") _ = ConfirmRenameAsync(); })" />
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-content font-medium">@trade.Name</span>
-                                                }
-                                            </td>
-                                            <td class="px-4 py-2.5 text-content-muted">
-                                                @(usage == 0 ? "—" : $"{usage} compan{(usage == 1 ? "y" : "ies")}")
-                                            </td>
-                                            <td class="px-4 py-2.5 text-right">
-                                                @* Row actions follow the button colour rule: acts are green
-                                                   (btn-secondary), the destructive one warns. *@
-                                                @if (renamingId == trade.TradeId)
-                                                {
-                                                    <span class="inline-flex items-center gap-2">
-                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs"
-                                                                disabled="@(busy || string.IsNullOrWhiteSpace(renameValue))"
-                                                                @onclick="ConfirmRenameAsync">Save</button>
-                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs" disabled="@busy"
-                                                                @onclick="CancelRename">Cancel</button>
-                                                    </span>
-                                                }
-                                                else if (deletingId == trade.TradeId)
-                                                {
-                                                    <span class="inline-flex items-center gap-2">
-                                                        <span class="text-xs text-content-muted">Delete “@trade.Name”?</span>
-                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
-                                                                disabled="@busy" @onclick="() => ConfirmDeleteAsync(trade)">Delete now</button>
-                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs" disabled="@busy"
-                                                                @onclick="() => deletingId = null">Cancel</button>
-                                                    </span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="inline-flex items-center gap-2">
-                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
-                                                                title="Rename the trade — every directory record carrying it shows the new name at once."
-                                                                @onclick="() => StartRename(trade)">Rename</button>
-                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
-                                                                disabled="@(busy || usage > 0)"
-                                                                title="@DeleteTitle(usage)"
-                                                                @onclick="() => StartDelete(trade)">Delete</button>
-                                                    </span>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                                }
+                            </tbody>
+                        </RecordsTable>
                         <p class="text-xs text-content-subtle mt-2">
                             “In use by” counts every company record carrying the trade — including tender-only
                             prospects that aren't shown in the Directory. Existing bid packages keep the trade

@@ -49,7 +49,7 @@
                             <p class="text-sm font-medium text-content truncate">@report.Title</p>
                             <p class="text-xs text-content-subtle">
                                 @Period(report) · @report.SelectedUpdateIds.Count photo group@(report.SelectedUpdateIds.Count == 1 ? "" : "s")
-                                · created @report.CreatedAt.ToString("dd MMM yyyy") by @report.CreatedByEmail
+                                · created @DateText(report.CreatedAt) by @report.CreatedByEmail
                             </p>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
@@ -121,7 +121,7 @@
                             <div class="min-w-0">
                                 <p class="text-sm font-semibold text-content">@update.Title</p>
                                 <p class="text-xs text-content-subtle">
-                                    @(update.WorkDate?.ToString("dd MMM yyyy") ?? update.CreatedAt.ToString("dd MMM yyyy"))
+                                    @(update.WorkDate?.ToString("dd MMM yyyy") ?? DateText(update.CreatedAt))
                                     · @update.Photos.Count photo@(update.Photos.Count == 1 ? "" : "s")
                                     · @update.CreatedByEmail
                                 </p>

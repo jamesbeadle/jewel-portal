@@ -66,31 +66,31 @@
             }
             else
             {
-                <table class="w-full text-sm">
+                <table class="data-table data-table-dense">
                     <thead>
-                        <tr class="text-left eyebrow border-b border-line">
-                            <th class="px-5 py-3">Name</th>
-                            <th class="px-2 py-3">@CounterpartyLabel(activeKind)</th>
-                            <th class="px-2 py-3">@ReferenceLabel(activeKind)</th>
-                            <th class="px-2 py-3 text-right">Cost</th>
-                            <th class="px-2 py-3">Cycle</th>
-                            <th class="px-2 py-3">@KeyDateLabel(activeKind)</th>
-                            <th class="px-2 py-3">@SecondaryDateLabel(activeKind)</th>
-                            <th class="px-5 py-3"></th>
+                        <tr>
+                            <th>Name</th>
+                            <th>@CounterpartyLabel(activeKind)</th>
+                            <th>@ReferenceLabel(activeKind)</th>
+                            <th class="text-right">Cost</th>
+                            <th>Cycle</th>
+                            <th>@KeyDateLabel(activeKind)</th>
+                            <th>@SecondaryDateLabel(activeKind)</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in rows)
                         {
-                            <tr class="border-b border-line/60 hover:bg-surface-raised/40">
-                                <td class="px-5 py-2.5 font-medium text-content">@item.Name</td>
-                                <td class="px-2 py-2.5 text-content-muted">@item.Counterparty</td>
-                                <td class="px-2 py-2.5 text-content-muted tabular-nums">@item.Reference</td>
-                                <td class="px-2 py-2.5 text-right tabular-nums text-content-muted">@(item.Cost == 0m ? "—" : item.Cost.ToString("£#,##0"))</td>
-                                <td class="px-2 py-2.5 text-content-subtle">@item.BillingCycle</td>
-                                <td class="px-2 py-2.5">@DueCell(item.KeyDate)</td>
-                                <td class="px-2 py-2.5">@DueCell(item.SecondaryDate)</td>
-                                <td class="px-5 py-2.5 text-right whitespace-nowrap">
+                            <tr class="hover:bg-surface-raised/40">
+                                <td class="font-medium text-content">@item.Name</td>
+                                <td>@item.Counterparty</td>
+                                <td class="tabular-nums">@item.Reference</td>
+                                <td class="text-right tabular-nums">@(item.Cost == 0m ? "—" : item.Cost.ToString("£#,##0"))</td>
+                                <td class="text-content-subtle">@item.BillingCycle</td>
+                                <td>@DueCell(item.KeyDate)</td>
+                                <td>@DueCell(item.SecondaryDate)</td>
+                                <td class="text-right whitespace-nowrap">
                                     <button type="button" class="btn-secondary mr-1" @onclick="() => StartEdit(item)">Edit</button>
                                     <button type="button" class="btn-ghost text-negative" @onclick="() => DeactivateAsync(item)">Deactivate</button>
                                 </td>
@@ -252,15 +252,15 @@
             var days = (date.Value.UtcDateTime.Date - DateTime.Today).Days;
             @if (days < 0)
             {
-                <Pill Tone="Tone.Negative">@date.Value.ToString("dd MMM yyyy") · lapsed</Pill>
+                <Pill Tone="Tone.Negative">@DateText(date.Value) · lapsed</Pill>
             }
             else if (days <= 30)
             {
-                <Pill Tone="Tone.Negative">@date.Value.ToString("dd MMM yyyy") · @days d</Pill>
+                <Pill Tone="Tone.Negative">@DateText(date.Value) · @days d</Pill>
             }
             else
             {
-                <span class="text-content-muted tabular-nums">@date.Value.ToString("dd MMM yyyy")</span>
+                <span class="text-content-muted tabular-nums">@DateText(date.Value)</span>
             }
         }
     };

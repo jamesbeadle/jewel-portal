@@ -34,30 +34,30 @@
         <button type="button" class="btn-secondary" title="Copies the first filled day's site, hours and cost code over the other unlocked weekdays."
                 @onclick="CopyFirstDayDown">Copy down (Mon–Fri)</button>
     </div>
-    <table class="w-full text-sm">
+    <table class="data-table data-table-dense">
         <thead>
-            <tr class="text-left eyebrow border-b border-line">
-                <th class="py-2 pr-3">Day</th>
-                <th class="py-2 pr-3">Site</th>
-                <th class="py-2 pr-3 w-20">Hours</th>
-                <th class="py-2">Cost code</th>
+            <tr>
+                <th>Day</th>
+                <th>Site</th>
+                <th class="w-20">Hours</th>
+                <th>Cost code</th>
             </tr>
         </thead>
         <tbody>
             @foreach (var row in rows)
             {
                 var isWeekend = row.Date.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
-                <tr class="border-b border-line/40 align-middle">
-                    <td class="py-1.5 pr-3 whitespace-nowrap @(isWeekend ? "text-content-subtle" : "text-content-muted")">@row.Date.ToString("ddd dd MMM")</td>
+                <tr class="border-line/40 align-middle">
+                    <td class="whitespace-nowrap @(isWeekend ?"text-content-subtle" : "text-content-muted")">@row.Date.ToString("ddd dd MMM")</td>
                     @if (row.Locked)
                     {
-                        <td colspan="3" class="py-1.5 text-content-subtle">
+                        <td colspan="3" class="text-content-subtle">
                             <Pill Tone="Tone.Muted" Class="mr-2">recorded</Pill>@row.LockedDetail
                         </td>
                     }
                     else
                     {
-                        <td class="py-1.5 pr-3">
+                        <td>
                             @if (Projects.Current is null)
                             {
                                 <select class="field w-full" disabled><option>Loading projects…</option></select>
@@ -74,11 +74,11 @@
                                 </select>
                             }
                         </td>
-                        <td class="py-1.5 pr-3">
+                        <td>
                             <input class="field w-20" type="number" step="0.5" min="0.5" max="24"
                                    @bind="row.Hours" />
                         </td>
-                        <td class="py-1.5">
+                        <td>
                             <select class="field w-full" @bind="row.CostCode"
                                     disabled="@(!CostCenters.IsLoaded)">
                                 <option value="">MD codes at approval…</option>

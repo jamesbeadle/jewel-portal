@@ -32,53 +32,51 @@
             draft is created, so its figures are always current.
         </p>
 
-        <div class="rounded-xl border border-line bg-surface mb-3 overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left eyebrow">
-                        <th class="px-3 py-2">Project</th>
-                        <th class="px-3 py-2 text-right">Orders</th>
-                        <th class="px-3 py-2 text-right">Ordered</th>
-                        <th class="px-3 py-2 text-right">Invoiced</th>
-                        <th class="px-3 py-2 text-right">Remaining</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    @if (statement.Projects.Count == 0)
-                    {
-                        <tr>
-                            <td colspan="5" class="px-3 py-3 text-content-subtle italic">
-                                No work orders are recorded on this account yet.
-                            </td>
-                        </tr>
-                    }
-                    @foreach (var project in statement.Projects)
-                    {
-                        <tr>
-                            <td class="px-3 py-2 text-content whitespace-nowrap">
-                                <span class="font-mono text-xs text-content-subtle mr-1.5">@project.ProjectReference</span>@project.ProjectName
-                            </td>
-                            <td class="px-3 py-2 text-right">@project.Orders.Count</td>
-                            <td class="px-3 py-2 text-right">@MoneyExact(project.Ordered)</td>
-                            <td class="px-3 py-2 text-right">@MoneyExact(project.Invoiced)</td>
-                            <td class="px-3 py-2 text-right @(project.Remaining < 0 ? "text-negative" : "")">@MoneyExact(project.Remaining)</td>
-                        </tr>
-                    }
-                </tbody>
-                @if (statement.Projects.Count > 0)
+        <RecordsTable Dense="true" MaxHeight="" Class="mb-3">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th class="text-right">Orders</th>
+                    <th class="text-right">Ordered</th>
+                    <th class="text-right">Invoiced</th>
+                    <th class="text-right">Remaining</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (statement.Projects.Count == 0)
                 {
-                    <tfoot class="border-t border-line-strong bg-surface-raised">
-                        <tr class="font-semibold text-content">
-                            <td class="px-3 py-2">Account total</td>
-                            <td class="px-3 py-2 text-right">@statement.OrderCount</td>
-                            <td class="px-3 py-2 text-right">@MoneyExact(statement.TotalOrdered)</td>
-                            <td class="px-3 py-2 text-right">@MoneyExact(statement.TotalInvoiced)</td>
-                            <td class="px-3 py-2 text-right @(statement.TotalRemaining < 0 ? "text-negative" : "")">@MoneyExact(statement.TotalRemaining)</td>
-                        </tr>
-                    </tfoot>
+                    <tr>
+                        <td colspan="5" class="text-content-subtle italic">
+                            No work orders are recorded on this account yet.
+                        </td>
+                    </tr>
                 }
-            </table>
-        </div>
+                @foreach (var project in statement.Projects)
+                {
+                    <tr>
+                        <td class="text-content whitespace-nowrap">
+                            <span class="font-mono text-xs text-content-subtle mr-1.5">@project.ProjectReference</span>@project.ProjectName
+                        </td>
+                        <td class="text-right">@project.Orders.Count</td>
+                        <td class="text-right">@MoneyExact(project.Ordered)</td>
+                        <td class="text-right">@MoneyExact(project.Invoiced)</td>
+                        <td class="text-right @(project.Remaining < 0 ?"text-negative" : "")">@MoneyExact(project.Remaining)</td>
+                    </tr>
+                }
+            </tbody>
+            @if (statement.Projects.Count > 0)
+            {
+                <tfoot class="border-t border-line-strong bg-surface-raised">
+                    <tr class="font-semibold text-content">
+                        <td>Account total</td>
+                        <td class="text-right">@statement.OrderCount</td>
+                        <td class="text-right">@MoneyExact(statement.TotalOrdered)</td>
+                        <td class="text-right">@MoneyExact(statement.TotalInvoiced)</td>
+                        <td class="text-right @(statement.TotalRemaining < 0 ?"text-negative" : "")">@MoneyExact(statement.TotalRemaining)</td>
+                    </tr>
+                </tfoot>
+            }
+        </RecordsTable>
 
         <div class="flex items-center justify-between gap-3 mb-3">
             <a class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"

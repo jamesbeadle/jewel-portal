@@ -75,11 +75,11 @@
                         <div class="mt-1 flex items-center gap-x-3 overflow-hidden text-xs text-content-subtle">
                             @if (note.UpdatedAt is not null)
                             {
-                                <span class="truncate">Updated @note.UpdatedAt.Value.LocalDateTime.ToString("d MMM yyyy") by @(note.UpdatedByEmail ?? "")</span>
+                                <span class="truncate">Updated @DateText(note.UpdatedAt.Value) by @(note.UpdatedByEmail ?? "")</span>
                             }
                             else
                             {
-                                <span class="truncate">Added @note.CreatedAt.LocalDateTime.ToString("d MMM yyyy") by @note.CreatedByEmail</span>
+                                <span class="truncate">Added @DateText(note.CreatedAt) by @note.CreatedByEmail</span>
                             }
                         </div>
                     </button>

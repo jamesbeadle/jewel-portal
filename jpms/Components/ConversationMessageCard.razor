@@ -18,7 +18,7 @@
                 <Pill Tone="Tone.Warning">Internal</Pill>
             }
             <time class="text-xs text-content-subtle whitespace-nowrap" datetime="@Entry.PostedAt.ToString("o")">
-                @Entry.PostedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")
+                @DateTimeText(Entry.PostedAt)
             </time>
         </div>
     </div>

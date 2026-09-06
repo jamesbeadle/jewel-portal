@@ -42,7 +42,7 @@
                         <Stat Label="Xero site"       Value="@XeroSite(Project)" />
                     </div>
                     @* Created is the system's own stamp — a secondary fact here, never a lead date. *@
-                    <p class="text-xs text-content-subtle mb-6">Created @Project.CreatedAt.ToLocalTime().ToString("d MMM yyyy")</p>
+                    <p class="text-xs text-content-subtle mb-6">Created @DateText(Project.CreatedAt)</p>
                     break;
                 case ContractPane:
                     <ProjectContractPanel ProjectId="@ProjectId" />

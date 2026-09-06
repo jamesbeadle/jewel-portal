@@ -49,7 +49,7 @@
             </span>
         }
         <span class="text-xs text-content-faint">
-            Revoked @User.RevokedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm")@(string.IsNullOrEmpty(User.RevokedBy) ? "" : $" by {User.RevokedBy}")
+            Revoked @DateTimeText(User.RevokedAt.ToLocalTime())@(string.IsNullOrEmpty(User.RevokedBy) ? "" : $" by {User.RevokedBy}")
         </span>
     </div>
 

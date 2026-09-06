@@ -135,7 +135,7 @@
                                     <span class="@BucketChipClass(pathway)">@pathway</span>
                                 }
                             </span>
-                            <span class="text-xs text-content-subtle">@item.Message.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                            <span class="text-xs text-content-subtle">@DateTimeText(item.Message.ReceivedAt)</span>
                         </div>
                         <p class="text-sm text-content mt-0.5">
                             @item.Message.Subject

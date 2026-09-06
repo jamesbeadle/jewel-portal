@@ -18,6 +18,6 @@ public static class RequestDisplay
     public static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
     public static string Date(DateTimeOffset? value) =>
-        value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
+        value is null ? "—" : DateText(value.Value);
 
 }

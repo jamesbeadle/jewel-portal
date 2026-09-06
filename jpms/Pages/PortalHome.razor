@@ -95,11 +95,11 @@
                                     {
                                         @document.FileName
                                     }
-                                    <span> · uploaded @document.UploadedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                    <span> · uploaded @DateText(document.UploadedAt)</span>
                                 </p>
                                 @if (document.ExpiresAt is not null)
                                 {
-                                    <p class="text-xs text-content-subtle">Expires @document.ExpiresAt.Value.LocalDateTime.ToString("d MMM yyyy")</p>
+                                    <p class="text-xs text-content-subtle">Expires @DateText(document.ExpiresAt.Value)</p>
                                 }
                             </div>
                             <ComplianceStatusPill Status="document.Status()" />
@@ -124,7 +124,7 @@
                                 {
                                     @document.FileName
                                 }
-                                <span> · replaced @(document.SupersededAt?.LocalDateTime.ToString("d MMM yyyy"))</span>
+                                <span> · replaced @(DateText(document.SupersededAt?.LocalDateTime))</span>
                             </li>
                         }
                     </ul>
@@ -203,7 +203,7 @@
                                         }
                                     </p>
                                     <p class="text-xs text-content-subtle mt-1">
-                                        @workOrder.ProjectName · issued @workOrder.Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy")@(workOrder.Order.ScheduledCompletion is null ? "" : $" · completion {workOrder.Order.ScheduledCompletion.Value.LocalDateTime:d MMM yyyy}")
+                                        @workOrder.ProjectName · issued @DateText(workOrder.Order.AwardedAt)@(workOrder.Order.ScheduledCompletion is null ? "" : $" · completion {workOrder.Order.ScheduledCompletion.Value.LocalDateTime:d MMM yyyy}")
                                     </p>
                                 </div>
                                 <div class="text-right shrink-0">
@@ -211,7 +211,7 @@
                                     <Pill Tone="@workOrder.Order.Status.ToTone()" Class="mt-1">@StatusLabel(workOrder.Order.Status)</Pill>
                                     @if (workOrder.Order.IsAccepted)
                                     {
-                                        <p class="text-xs text-content-subtle mt-1">Accepted @workOrder.Order.AcceptedAt!.Value.LocalDateTime.ToString("d MMM yyyy")</p>
+                                        <p class="text-xs text-content-subtle mt-1">Accepted @DateText(workOrder.Order.AcceptedAt!.Value)</p>
                                     }
                                 </div>
                             </div>
@@ -264,7 +264,7 @@
                                 <div>
                                     <p class="font-medium text-content">@variationRequest.Title</p>
                                     <p class="text-xs text-content-subtle mt-1">
-                                        Against WO-@variationRequest.WorkOrderNumber.ToString("0000")@(string.IsNullOrWhiteSpace(variationRequest.ProjectName) ? "" : $" · {variationRequest.ProjectName}") · raised @variationRequest.SubmittedAt.LocalDateTime.ToString("d MMM yyyy")
+                                        Against WO-@variationRequest.WorkOrderNumber.ToString("0000")@(string.IsNullOrWhiteSpace(variationRequest.ProjectName) ? "" : $" · {variationRequest.ProjectName}") · raised @DateText(variationRequest.SubmittedAt)
                                     </p>
                                     @if (variationRequest.Status == VariationRequestStatus.Rejected && !string.IsNullOrWhiteSpace(variationRequest.RejectionReason))
                                     {

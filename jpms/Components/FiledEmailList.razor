@@ -16,7 +16,7 @@ else
         @foreach (var email in Emails)
         {
             <div class="flex items-baseline gap-3 text-sm">
-                <span class="text-content-subtle whitespace-nowrap shrink-0">@email.ReceivedAt.ToLocalTime().ToString("d MMM yyyy")</span>
+                <span class="text-content-subtle whitespace-nowrap shrink-0">@DateText(email.ReceivedAt)</span>
                 <span class="text-content truncate" title="@email.BodyPreview">@email.Subject</span>
                 <span class="text-content-subtle truncate shrink-0">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
                 @if (email.HasAttachments)

@@ -99,93 +99,91 @@
         }
         else
         {
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[70vh]">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left eyebrow">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Client</th>
-                            @foreach (var label in AgedReceivablesMaths.BucketLabels)
-                            {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">@label</th>
-                            }
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var row in Rows)
+            <RecordsTable Dense="true" MaxHeight="max-h-[70vh]">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        @foreach (var label in AgedReceivablesMaths.BucketLabels)
                         {
-                            var isExpanded = expandedClients.Contains(row.Client);
-                            <tr class="cursor-pointer hover:bg-surface-raised transition" @onclick="() => ToggleExpanded(row.Client)">
-                                <td class="px-4 py-3 text-content font-medium whitespace-nowrap">
-                                    <span class="inline-flex items-center gap-2">
-                                        <svg class="w-3.5 h-3.5 text-content-subtle shrink-0 transition-transform @(isExpanded ? "rotate-90" : "")"
-                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-                                        @row.Client
-                                        @if (row.DraftTotal != 0)
-                                        {
-                                            <span class="text-xs font-medium border border-line rounded px-1.5 py-0.5 text-content-subtle"
-                                                  title="Includes draft invoices still being prepared — not in Xero's own aged receivables">Incl. draft</span>
-                                        }
-                                    </span>
-                                </td>
-                                @for (var bucket = 0; bucket < AgedReceivablesMaths.BucketCount; bucket++)
-                                {
-                                    var amount = row.Buckets[bucket];
-                                    <td class="px-4 py-3 text-right whitespace-nowrap @BucketCellClass(bucket, amount)">
-                                        @(amount == 0 ? "—" : Money(amount))
-                                    </td>
-                                }
-                                <td class="px-4 py-3 text-right whitespace-nowrap text-content font-semibold">@Money(row.Total)</td>
-                            </tr>
-                            @if (isExpanded)
+                            <th class="text-right whitespace-nowrap">@label</th>
+                        }
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Rows)
+                    {
+                        var isExpanded = expandedClients.Contains(row.Client);
+                        <tr class="cursor-pointer hover:bg-surface-raised transition" @onclick="() => ToggleExpanded(row.Client)">
+                            <td class="text-content font-medium whitespace-nowrap">
+                                <span class="inline-flex items-center gap-2">
+                                    <svg class="w-3.5 h-3.5 text-content-subtle shrink-0 transition-transform @(isExpanded ? "rotate-90" : "")"
+                                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+                                    @row.Client
+                                    @if (row.DraftTotal != 0)
+                                    {
+                                        <span class="text-xs font-medium border border-line rounded px-1.5 py-0.5 text-content-subtle"
+                                              title="Includes draft invoices still being prepared — not in Xero's own aged receivables">Incl. draft</span>
+                                    }
+                                </span>
+                            </td>
+                            @for (var bucket = 0; bucket < AgedReceivablesMaths.BucketCount; bucket++)
                             {
-                                @foreach (var invoice in row.Invoices)
-                                {
-                                    <tr class="bg-surface-raised/50">
-                                        <td class="pl-10 pr-4 py-2 text-content-muted whitespace-nowrap">
-                                            @(invoice.Number ?? invoice.Reference ?? "—")
-                                            @if (invoice.IsCreditNote)
-                                            {
-                                                <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5">Credit</span>
-                                            }
-                                            @if (invoice.IsDraft)
-                                            {
-                                                <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5"
-                                                      title="Draft in Xero — still being prepared; not in Xero's own aged receivables">Draft</span>
-                                            }
-                                            <span class="block text-xs text-content-subtle">
-                                                @DateText(invoice.Date) · due @DateText(invoice.DueDate)
-                                            </span>
-                                        </td>
-                                        @for (var bucket = 0; bucket < AgedReceivablesMaths.BucketCount; bucket++)
+                                var amount = row.Buckets[bucket];
+                                <td class="text-right whitespace-nowrap @BucketCellClass(bucket, amount)">
+                                    @(amount == 0 ? "—" : Money(amount))
+                                </td>
+                            }
+                            <td class="text-right whitespace-nowrap text-content font-semibold">@Money(row.Total)</td>
+                        </tr>
+                        @if (isExpanded)
+                        {
+                            @foreach (var invoice in row.Invoices)
+                            {
+                                <tr class="bg-surface-raised/50">
+                                    <td class="pl-10 whitespace-nowrap">
+                                        @(invoice.Number ?? invoice.Reference ?? "—")
+                                        @if (invoice.IsCreditNote)
                                         {
-                                            var inBucket = AgedReceivablesMaths.BucketFor(invoice, today, basis) == bucket;
-                                            var amount = inBucket ? AgedReceivablesMaths.SignedAmountDue(invoice) : 0m;
-                                            <td class="px-4 py-2 text-right whitespace-nowrap @(amount < 0 ? "text-negative" : "text-content-muted")">
-                                                @(inBucket ? Money(amount) : "")
-                                            </td>
+                                            <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5">Credit</span>
                                         }
-                                        <td class="px-4 py-2 text-right whitespace-nowrap @(AgedReceivablesMaths.SignedAmountDue(invoice) < 0 ? "text-negative" : "text-content-muted")">
-                                            @Money(AgedReceivablesMaths.SignedAmountDue(invoice))
+                                        @if (invoice.IsDraft)
+                                        {
+                                            <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5"
+                                                  title="Draft in Xero — still being prepared; not in Xero's own aged receivables">Draft</span>
+                                        }
+                                        <span class="block text-xs text-content-subtle">
+                                            @DateText(invoice.Date) · due @DateText(invoice.DueDate)
+                                        </span>
+                                    </td>
+                                    @for (var bucket = 0; bucket < AgedReceivablesMaths.BucketCount; bucket++)
+                                    {
+                                        var inBucket = AgedReceivablesMaths.BucketFor(invoice, today, basis) == bucket;
+                                        var amount = inBucket ? AgedReceivablesMaths.SignedAmountDue(invoice) : 0m;
+                                        <td class="text-right whitespace-nowrap @(amount < 0 ?"text-negative" : "text-content-muted")">
+                                            @(inBucket ? Money(amount) : "")
                                         </td>
-                                    </tr>
-                                }
+                                    }
+                                    <td class="text-right whitespace-nowrap @(AgedReceivablesMaths.SignedAmountDue(invoice) < 0 ?"text-negative" : "text-content-muted")">
+                                        @Money(AgedReceivablesMaths.SignedAmountDue(invoice))
+                                    </td>
+                                </tr>
                             }
                         }
-                    </tbody>
-                    <tfoot class="bg-surface-raised border-t border-line">
-                        <tr class="font-semibold">
-                            <td class="px-4 py-3 text-content">All clients</td>
-                            @foreach (var total in BucketTotals)
-                            {
-                                <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(total)</td>
-                            }
-                            <td class="px-4 py-3 text-right whitespace-nowrap text-content">@Money(GrandTotal)</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+                    }
+                </tbody>
+                <tfoot class="bg-surface-raised border-t border-line">
+                    <tr class="font-semibold">
+                        <td class="text-content">All clients</td>
+                        @foreach (var total in BucketTotals)
+                        {
+                            <td class="text-right whitespace-nowrap text-content">@Money(total)</td>
+                        }
+                        <td class="text-right whitespace-nowrap text-content">@Money(GrandTotal)</td>
+                    </tr>
+                </tfoot>
+            </RecordsTable>
         }
     }
 </Page>

@@ -82,62 +82,60 @@
         }
         else
         {
-            <div class="rounded-xl border border-line bg-surface overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-line text-left">
-                            <th class="px-4 py-2.5 eyebrow">Ref</th>
-                            <th class="px-4 py-2.5 eyebrow">Location</th>
-                            <th class="px-4 py-2.5 eyebrow">Description</th>
-                            <th class="px-4 py-2.5 eyebrow">Assigned to</th>
-                            <th class="px-4 py-2.5 eyebrow">Raised</th>
-                            <th class="px-4 py-2.5 eyebrow">Status</th>
-                            <th class="px-4 py-2.5"></th>
+            <RecordsTable Dense="true" MaxHeight="">
+                <thead>
+                    <tr>
+                        <th>Ref</th>
+                        <th>Location</th>
+                        <th>Description</th>
+                        <th>Assigned to</th>
+                        <th>Raised</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var defect in Rows)
+                    {
+                        var isExpanded = expandedDefectId == defect.DefectId;
+                        <tr @key="defect.DefectId" class="border-b border-line last:border-0 align-top">
+                            <td class="font-mono text-xs whitespace-nowrap">@defect.Reference</td>
+                            <td class="text-content">@defect.Location</td>
+                            <td class="max-w-md">
+                                <span title="@defect.Description">@defect.Description</span>
+                            </td>
+                            <td>@defect.AssignedToEmail</td>
+                            <td class="whitespace-nowrap" title="@DateTimeText(defect.RaisedAt.ToLocalTime())">
+                                @DateText(defect.RaisedAt)
+                            </td>
+                            <td class="whitespace-nowrap">
+                                <select class="field py-1" value="@((int)defect.Status)" disabled="@busy"
+                                        @onchange="e => SetStatusAsync(defect, e)">
+                                    @foreach (var status in Enum.GetValues<DefectStatus>())
+                                    {
+                                        <option value="@((int)status)">@status.DisplayName()</option>
+                                    }
+                                </select>
+                            </td>
+                            <td class="whitespace-nowrap text-right">
+                                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                        @onclick="() => ToggleEmailsAsync(defect.DefectId)">
+                                    @(isExpanded ? "Hide emails" : "Emails")
+                                </button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var defect in Rows)
+                        @if (isExpanded)
                         {
-                            var isExpanded = expandedDefectId == defect.DefectId;
-                            <tr @key="defect.DefectId" class="border-b border-line last:border-0 align-top">
-                                <td class="px-4 py-2.5 font-mono text-xs text-content-muted whitespace-nowrap">@defect.Reference</td>
-                                <td class="px-4 py-2.5 text-content">@defect.Location</td>
-                                <td class="px-4 py-2.5 text-content-muted max-w-md">
-                                    <span title="@defect.Description">@defect.Description</span>
-                                </td>
-                                <td class="px-4 py-2.5 text-content-muted">@defect.AssignedToEmail</td>
-                                <td class="px-4 py-2.5 text-content-muted whitespace-nowrap" title="@defect.RaisedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")">
-                                    @defect.RaisedAt.ToLocalTime().ToString("d MMM yyyy")
-                                </td>
-                                <td class="px-4 py-2.5 whitespace-nowrap">
-                                    <select class="field py-1" value="@((int)defect.Status)" disabled="@busy"
-                                            @onchange="e => SetStatusAsync(defect, e)">
-                                        @foreach (var status in Enum.GetValues<DefectStatus>())
-                                        {
-                                            <option value="@((int)status)">@status.DisplayName()</option>
-                                        }
-                                    </select>
-                                </td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-right">
-                                    <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                            @onclick="() => ToggleEmailsAsync(defect.DefectId)">
-                                        @(isExpanded ? "Hide emails" : "Emails")
-                                    </button>
+                            <tr class="bg-surface-raised/50">
+                                <td colspan="7">
+                                    <FiledEmailList Emails="@(emailsByDefect.TryGetValue(defect.DefectId, out var filedEmails) ? filedEmails : null)"
+                                        EmptyMessage="@($"No emails filed to {defect.Reference} yet — file one from the Control Centre (System Tags → Subcontractor → Defect).")" />
                                 </td>
                             </tr>
-                            @if (isExpanded)
-                            {
-                                <tr class="border-b border-line last:border-0 bg-surface-raised/50">
-                                    <td colspan="7" class="px-4 py-3">
-                                        <FiledEmailList Emails="@(emailsByDefect.TryGetValue(defect.DefectId, out var filedEmails) ? filedEmails : null)"
-                                            EmptyMessage="@($"No emails filed to {defect.Reference} yet — file one from the Control Centre (System Tags → Subcontractor → Defect).")" />
-                                    </td>
-                                </tr>
-                            }
                         }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
         }
     </ProjectPageShell>
 </Page>

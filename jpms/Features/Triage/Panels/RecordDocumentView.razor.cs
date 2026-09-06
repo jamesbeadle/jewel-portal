@@ -43,6 +43,4 @@ public partial class RecordDocumentView
         }
     }
 
-    private static string DateText(DateTimeOffset? value) =>
-        value is { } date ? date.LocalDateTime.ToString("d MMM yyyy") : "—";
 }

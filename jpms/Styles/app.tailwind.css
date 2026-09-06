@@ -158,33 +158,53 @@
     /* The Figma `Table Wrapper`: header row on the CANVAS colour in white SemiBold, body rows on
        surface in G4, every cell separated by the Table-Seperator border, 40px header / 48px rows,
        16/24 cell padding. Links inside are `font-medium text-info`; money in the trailing column
-       is `font-medium text-content`. */
+       is `font-medium text-content`. The header is sticky by construction, so a table inside a
+       scrolling panel keeps its column names without each view re-typing `sticky top-0 z-20`.
+       Rows a view makes clickable carry `is-clickable`; a totals row lives in <tfoot>.
+       `data-table-dense` is the 40px-row cut for long financial registers. */
     .data-table {
-        @apply w-full text-sm text-left border border-line-strong;
-    }
-
-    .data-table thead tr {
-        @apply text-content font-semibold;
+        @apply w-full text-sm text-left border-collapse;
     }
 
     .data-table th {
-        @apply h-10 px-6 py-3 bg-canvas border-b border-line-strong font-semibold text-content;
-    }
-
-    .data-table tbody tr {
-        @apply transition;
+        @apply sticky top-0 z-10 h-10 px-6 py-3 bg-canvas border-b border-line-strong font-semibold text-content text-left align-bottom;
     }
 
     .data-table td {
-        @apply h-12 px-6 py-4 bg-surface border-b border-line-strong text-content-muted;
+        @apply h-12 px-6 py-4 bg-surface border-b border-line-strong text-content-muted align-middle;
     }
 
     .data-table tbody tr:last-child td {
         @apply border-b-0;
     }
 
+    .data-table tbody tr.is-clickable {
+        @apply cursor-pointer;
+    }
+
     .data-table tbody tr.is-clickable:hover td {
-        @apply bg-surface-raised cursor-pointer;
+        @apply bg-surface-raised;
+    }
+
+    .data-table tbody tr.is-selected td {
+        @apply bg-surface-raised;
+    }
+
+    .data-table tfoot td {
+        @apply bg-canvas border-t border-line-strong font-semibold text-content;
+    }
+
+    .data-table-dense th {
+        @apply h-8 px-4 py-2;
+    }
+
+    .data-table-dense td {
+        @apply h-10 px-4 py-2;
+    }
+
+    /* Money and numbers sit right-aligned in the same figures font as everything else. */
+    .data-table .num, .data-table th.num, .data-table td.num {
+        @apply text-right whitespace-nowrap tabular-nums;
     }
 
     /* The assistant panel's slide, and the shell's matching squeeze

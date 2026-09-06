@@ -28,20 +28,20 @@
         else
         {
             <div class="border border-line rounded-lg overflow-hidden">
-                <table class="w-full text-sm">
+                <table class="data-table data-table-dense">
                     <thead>
-                        <tr class="text-left text-content-subtle border-b border-line">
-                            <th class="px-3 py-2 font-medium">Name</th>
-                            <th class="px-3 py-2 font-medium">Email</th>
-                            <th class="px-3 py-2 font-medium">Routing</th>
-                            <th class="px-3 py-2"></th>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Routing</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var contact in contacts)
                         {
-                            <tr class="border-b border-line last:border-0">
-                                <td class="px-3 py-2 text-content">
+                            <tr>
+                                <td class="text-content">
                                     @contact.Name
                                     @if (contact.IsPrimary)
                                     {
@@ -52,8 +52,8 @@
                                         <span class="block text-xs text-content-subtle">@contact.JobTitle</span>
                                     }
                                 </td>
-                                <td class="px-3 py-2 text-content-muted">@contact.Email</td>
-                                <td class="px-3 py-2">
+                                <td>@contact.Email</td>
+                                <td>
                                     <select class="field text-xs py-1" value="@((int)contact.DefaultRouting)" disabled="@(busy || contact.IsPrimary)"
                                             @onchange="e => ChangeRoutingAsync(contact, e)">
                                         <option value="@((int)CorrespondenceRouting.To)">To</option>
@@ -62,7 +62,7 @@
                                         <option value="@((int)CorrespondenceRouting.None)">Off</option>
                                     </select>
                                 </td>
-                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                <td class="text-right whitespace-nowrap">
                                     @if (!contact.IsPrimary)
                                     {
                                         <button type="button" class="text-xs font-medium text-content-muted hover:text-content mr-3"

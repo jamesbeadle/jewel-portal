@@ -46,25 +46,25 @@
             @if (Record.ItemList.Count > 0)
             {
                 <div class="overflow-x-auto -mx-1 px-1">
-                    <table class="w-full text-sm">
+                    <table class="data-table data-table-dense">
                         <thead>
-                            <tr class="text-left text-content-subtle border-b border-line">
-                                <th class="py-2 pr-3 font-medium w-10">Item</th>
-                                <th class="py-2 pr-3 font-medium">Drawing ref</th>
-                                <th class="py-2 pr-3 font-medium">Member / area</th>
-                                <th class="py-2 pr-3 font-medium">Query</th>
-                                <th class="py-2 font-medium">Response</th>
+                            <tr>
+                                <th class="w-10">Item</th>
+                                <th>Drawing ref</th>
+                                <th>Member / area</th>
+                                <th>Query</th>
+                                <th>Response</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in Record.ItemList)
                             {
-                                <tr class="border-b border-line last:border-0 align-top">
-                                    <td class="py-2 pr-3 font-mono text-content-muted">@item.Position</td>
-                                    <td class="py-2 pr-3 text-content-muted whitespace-pre-wrap">@Dash(item.DrawingRef)</td>
-                                    <td class="py-2 pr-3 text-content whitespace-pre-wrap">@Dash(item.MemberArea)</td>
-                                    <td class="py-2 pr-3 text-content whitespace-pre-wrap">@Dash(item.Query)</td>
-                                    <td class="py-2 text-content-muted whitespace-pre-wrap">@Dash(item.Response)</td>
+                                <tr class="align-top">
+                                    <td class="font-mono">@item.Position</td>
+                                    <td class="whitespace-pre-wrap">@Dash(item.DrawingRef)</td>
+                                    <td class="text-content whitespace-pre-wrap">@Dash(item.MemberArea)</td>
+                                    <td class="text-content whitespace-pre-wrap">@Dash(item.Query)</td>
+                                    <td class="whitespace-pre-wrap">@Dash(item.Response)</td>
                                 </tr>
                             }
                         </tbody>

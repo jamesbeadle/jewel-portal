@@ -8,7 +8,7 @@
 <li class="rounded-lg border border-line bg-surface-raised px-4 py-3">
     <div class="flex flex-wrap items-center justify-between gap-2">
         <span class="text-sm font-medium text-content">@(string.IsNullOrWhiteSpace(Email.FromName) ? Email.FromEmail : Email.FromName)</span>
-        <span class="text-xs text-content-subtle">@Email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+        <span class="text-xs text-content-subtle">@DateTimeText(Email.ReceivedAt)</span>
     </div>
     <p class="text-sm text-content mt-0.5">
         @Email.Subject

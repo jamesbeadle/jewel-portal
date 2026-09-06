@@ -46,7 +46,7 @@
         {
             <Notice Tone="Tone.Positive" Class="mt-4">
                 Reconciled: @reconciliations.Count project@(reconciliations.Count == 1 ? "" : "s") agree with Xero's whole-job site P&L
-                (@reconciliations[0].FromDate.ToString("d MMM yyyy") → @reconciliations[0].ToDate.ToString("d MMM yyyy")) to the pound.
+                (@DateText(reconciliations[0].FromDate) → @DateText(reconciliations[0].ToDate)) to the pound.
             </Notice>
         }
         else

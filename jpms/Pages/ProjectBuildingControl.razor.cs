@@ -253,8 +253,6 @@ public partial class ProjectBuildingControl
     private static string Plural(int count) => count == 1 ? "" : "s";
 
 
-    private static string DateText(DateTimeOffset? value) =>
-        value is { } date ? date.ToString("d MMM yyyy") : "—";
 
     private static string DateInput(DateTimeOffset? value) =>
         value is { } date ? date.ToString("yyyy-MM-dd") : "";

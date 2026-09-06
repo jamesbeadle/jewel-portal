@@ -54,7 +54,7 @@
                             @FormatSize(contract.DocumentFileSizeBytes)
                             @if (contract.DocumentUploadedAt is { } uploadedAt)
                             {
-                                <text> · uploaded @uploadedAt.ToLocalTime().ToString("d MMM yyyy")</text>
+                                <text> · uploaded @DateText(uploadedAt)</text>
                             }
                             @if (!string.IsNullOrWhiteSpace(contract.DocumentUploadedByEmail))
                             {
@@ -141,7 +141,7 @@
                                     <span class="text-content-subtle">@(index + 1).</span> @amendment.Title
                                     @if (amendment.AmendmentDate is { } made)
                                     {
-                                        <span class="text-content-subtle font-normal"> · @made.ToString("d MMM yyyy")</span>
+                                        <span class="text-content-subtle font-normal"> · @DateText(made)</span>
                                     }
                                 </p>
                                 @if (!string.IsNullOrWhiteSpace(amendment.Notes))
@@ -150,7 +150,7 @@
                                 }
                                 <p class="text-xs text-content-subtle mt-0.5">
                                     @amendment.DocumentFileName · @FormatSize(amendment.DocumentFileSizeBytes)
-                                    · uploaded @amendment.DocumentUploadedAt.ToLocalTime().ToString("d MMM yyyy")
+                                    · uploaded @DateText(amendment.DocumentUploadedAt)
                                     by @amendment.DocumentUploadedByEmail
                                 </p>
                             </div>
@@ -254,7 +254,7 @@
                 @if (!string.IsNullOrWhiteSpace(terms.UpdatedByEmail))
                 {
                     <p class="text-xs text-content-subtle mt-3">
-                        Last updated @terms.UpdatedAt.ToLocalTime().ToString("d MMM yyyy") by @terms.UpdatedByEmail
+                        Last updated @DateText(terms.UpdatedAt) by @terms.UpdatedByEmail
                     </p>
                 }
             }

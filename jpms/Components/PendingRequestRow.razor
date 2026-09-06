@@ -38,7 +38,7 @@
     private bool isApproving;
 
     private string RequestedAtDisplay =>
-        Request.RequestedAt.LocalDateTime.ToString("d MMM yyyy HH:mm");
+        DateTimeText(Request.RequestedAt);
 
     private void StartApproving() => isApproving = true;
 

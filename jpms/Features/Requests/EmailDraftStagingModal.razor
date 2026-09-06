@@ -46,7 +46,7 @@
                                    @onchange="() => SelectedChainIdChanged.InvokeAsync(email.MailboxId!)" />
                             <span class="min-w-0">
                                 <span class="block text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.Subject) ? Truncate(email.Body, 80) : email.Subject)</span>
-                                <span class="block text-xs text-content-subtle mt-0.5">@AuthorLabel(email) · @email.PostedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm") — reply-all in this thread, the whole chain quoted beneath.</span>
+                                <span class="block text-xs text-content-subtle mt-0.5">@AuthorLabel(email) · @DateTimeText(email.PostedAt) — reply-all in this thread, the whole chain quoted beneath.</span>
                             </span>
                         </label>
                     }

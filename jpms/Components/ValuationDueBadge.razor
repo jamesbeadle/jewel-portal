@@ -12,7 +12,7 @@
                      ValuationDue.Status.Overdue => "text-negative",
                      ValuationDue.Status.DueSoon => "text-warning",
                      _ => "text-content",
-                 })">@date.ToString("d MMM yyyy")</span>
+                 })">@DateText(date)</span>
     @if (status == ValuationDue.Status.Overdue)
     {
         <Pill Tone="Tone.Negative" Class="ml-2">Overdue</Pill>

@@ -80,7 +80,7 @@
                         @if (status.LastRefreshSucceededAt is { } refreshed)
                         {
                             <p class="text-xs text-content-subtle mt-1">
-                                Connection last verified @refreshed.ToLocalTime().ToString("d MMM yyyy, HH:mm") —
+                                Connection last verified @DateTimeText(refreshed.ToLocalTime()) —
                                 the nightly keep-alive exercises it so it never lapses.
                             </p>
                         }

@@ -51,40 +51,38 @@
             }
             else
             {
-                <div class="panel overflow-hidden">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="border-b border-line text-left">
-                                <th class="px-4 py-2.5 eyebrow">Tool</th>
+                <RecordsTable Dense="true" MaxHeight="">
+                    <thead>
+                        <tr>
+                            <th>Tool</th>
+                            @if (showAll)
+                            {
+                                <th>User</th>
+                            }
+                            <th>Connected</th>
+                            <th>Last used</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Rows)
+                        {
+                            <tr>
+                                <td class="font-medium text-content">@row.ClientName</td>
                                 @if (showAll)
                                 {
-                                    <th class="px-4 py-2.5 eyebrow">User</th>
+                                    <td>@row.UserEmail</td>
                                 }
-                                <th class="px-4 py-2.5 eyebrow">Connected</th>
-                                <th class="px-4 py-2.5 eyebrow">Last used</th>
-                                <th class="px-4 py-2.5"></th>
+                                <td>@DateTimeText(row.ConnectedAt.ToLocalTime())</td>
+                                <td>@(DateTimeText(row.LastUsedAt?.ToLocalTime()) ?? "—")</td>
+                                <td class="text-right">
+                                    <button type="button" class="btn-secondary text-xs" disabled="@busy"
+                                            @onclick="() => RevokeAsync(row)">Disconnect</button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var row in Rows)
-                            {
-                                <tr class="border-b border-line/60 last:border-0">
-                                    <td class="px-4 py-2.5 font-medium text-content">@row.ClientName</td>
-                                    @if (showAll)
-                                    {
-                                        <td class="px-4 py-2.5 text-content-muted">@row.UserEmail</td>
-                                    }
-                                    <td class="px-4 py-2.5 text-content-muted">@row.ConnectedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")</td>
-                                    <td class="px-4 py-2.5 text-content-muted">@(row.LastUsedAt?.ToLocalTime().ToString("d MMM yyyy HH:mm") ?? "—")</td>
-                                    <td class="px-4 py-2.5 text-right">
-                                        <button type="button" class="btn-secondary text-xs" disabled="@busy"
-                                                @onclick="() => RevokeAsync(row)">Disconnect</button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                        }
+                    </tbody>
+                </RecordsTable>
             }
         </LoadGate>
     </div>

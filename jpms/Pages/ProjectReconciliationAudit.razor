@@ -64,32 +64,30 @@
             }
             else
             {
-                <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-surface-raised border-b border-line">
-                            <tr class="text-left eyebrow">
-                                <th class="px-4 py-3 whitespace-nowrap">When</th>
-                                <th class="px-4 py-3 whitespace-nowrap">Moved by</th>
-                                <th class="px-4 py-3 whitespace-nowrap">Line</th>
-                                <th class="px-4 py-3 min-w-[320px]">Move</th>
+                <RecordsTable MaxHeight="">
+                    <thead>
+                        <tr>
+                            <th class="whitespace-nowrap">When</th>
+                            <th class="whitespace-nowrap">Moved by</th>
+                            <th class="whitespace-nowrap">Line</th>
+                            <th class="min-w-[320px]">Move</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in items)
+                        {
+                            <tr @key="item.AuditEventId">
+                                <td class="whitespace-nowrap"
+                                    title="@item.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm:ss")">@Ago(item.OccurredAt)</td>
+                                <td class="whitespace-nowrap">@Dash(item.ActorEmail)</td>
+                                <td class="whitespace-nowrap">
+                                    <span class="font-mono text-xs text-content-muted">@Dash(item.RecordReference)</span>
+                                </td>
+                                <td class="text-content">@item.Detail</td>
                             </tr>
-                        </thead>
-                        <tbody class="divide-y divide-line">
-                            @foreach (var item in items)
-                            {
-                                <tr @key="item.AuditEventId">
-                                    <td class="px-4 py-3 text-content-muted whitespace-nowrap"
-                                        title="@item.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm:ss")">@Ago(item.OccurredAt)</td>
-                                    <td class="px-4 py-3 text-content-muted whitespace-nowrap">@Dash(item.ActorEmail)</td>
-                                    <td class="px-4 py-3 whitespace-nowrap">
-                                        <span class="font-mono text-xs text-content-muted">@Dash(item.RecordReference)</span>
-                                    </td>
-                                    <td class="px-4 py-3 text-content">@item.Detail</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
+                        }
+                    </tbody>
+                </RecordsTable>
 
                 @if (nextCursor is not null)
                 {
@@ -184,7 +182,7 @@
         if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes}m ago";
         if (span < TimeSpan.FromHours(24)) return $"{(int)span.TotalHours}h ago";
         if (span < TimeSpan.FromDays(30)) return $"{(int)span.TotalDays}d ago";
-        return at.LocalDateTime.ToString("d MMM yyyy");
+        return DateText(at);
     }
 
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;

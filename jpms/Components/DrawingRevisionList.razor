@@ -46,7 +46,7 @@
                                 }
                             </p>
                             <p class="text-xs text-content-subtle">
-                                Received @revision.ReceivedAt.LocalDateTime.ToString("d MMM yyyy") · @revision.ViewCount views
+                                Received @DateText(revision.ReceivedAt) · @revision.ViewCount views
                                 @if (revision.ApprovalStatus == DrawingApprovalStatus.Approved && revision.ApprovedByEmail is not null)
                                 {
                                     <span> · approved by @revision.ApprovedByEmail</span>

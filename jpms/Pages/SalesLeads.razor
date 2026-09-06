@@ -87,7 +87,7 @@
                 else
                 {
                     <div class="overflow-x-auto">
-                        <table class="data-table w-full">
+                        <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Ref</th>
@@ -134,7 +134,7 @@
                                         <td><LeadStagePill Stage="@row.Stage" /></td>
                                         <td class="text-right whitespace-nowrap">@(row.EstimatedValue is { } v ? WholeMoney(v) : "—")</td>
                                         <td class="whitespace-nowrap text-xs">@OwnerLabel(row.OwnerEmail)</td>
-                                        <td class="whitespace-nowrap text-xs" title="@row.CapturedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")">@row.CapturedAt.ToLocalTime().ToString("d MMM yyyy")</td>
+                                        <td class="whitespace-nowrap text-xs" title="@DateTimeText(row.CapturedAt.ToLocalTime())">@DateText(row.CapturedAt)</td>
                                     </tr>
                                 }
                             </tbody>

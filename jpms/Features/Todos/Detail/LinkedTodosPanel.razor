@@ -48,7 +48,7 @@
                             }
                             @if (item.DueAt is not null)
                             {
-                                <span class="whitespace-nowrap">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                <span class="whitespace-nowrap">Due @DateText(item.DueAt.Value)</span>
                             }
                         </div>
                     </a>

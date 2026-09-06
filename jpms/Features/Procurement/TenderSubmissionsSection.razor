@@ -35,7 +35,7 @@
                                     <Pill Tone="Tone.Muted" Class="ml-2">attachment</Pill>
                                 }
                             </p>
-                            <p class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</p>
+                            <p class="text-xs text-content-subtle">@DateTimeText(email.ReceivedAt)</p>
                         </div>
                         @if (CanEdit)
                         {
@@ -63,7 +63,7 @@
                 <span class="font-semibold">Awarded</span> to
                 <span class="font-medium">@awarded.SubcontractorName</span>
                 at @awarded.Order.Value.ToString("£#,##0.00")
-                on @awarded.Order.AwardedAt.LocalDateTime.ToString("d MMM yyyy") —
+                on @DateText(awarded.Order.AwardedAt) —
                 <a class="text-accent hover:underline" href="@($"/projects/{ProjectId}/work-orders")"
                    title="Open the project's Work Orders tab, where this order's cost-coded lines feed the cost-centre totals.">
                     work order WO-@awarded.Order.Number.ToString("0000")</a>

@@ -139,7 +139,7 @@ else if (openForm == Form.Lad)
                             </div>
                             <div class="flex items-center gap-2">
                                 <Pill Tone="Tone.Muted">@nod.Status</Pill>
-                                <span class="text-xs text-content-subtle">@((nod.IssuedAt ?? nod.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
+                                <span class="text-xs text-content-subtle">@(DateText(nod.IssuedAt ?? nod.RaisedAt))</span>
                             </div>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(nod.Description))
@@ -177,7 +177,7 @@ else if (openForm == Form.Lad)
                                     <Pill Tone="Tone.Info" Title="Arises from this Notice of Delay">from @nodRef</Pill>
                                 }
                                 <Pill Tone="Tone.Muted">@eot.Status</Pill>
-                                <span class="text-xs text-content-subtle">@((eot.IssuedAt ?? eot.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</span>
+                                <span class="text-xs text-content-subtle">@(DateText(eot.IssuedAt ?? eot.RaisedAt))</span>
                             </div>
                         </div>
                         @if (!string.IsNullOrWhiteSpace(eot.Description))
@@ -215,7 +215,7 @@ else if (openForm == Form.Lad)
                             </div>
                             <div class="flex items-center gap-2">
                                 <Pill Tone="Tone.Muted">@lad.Status.DisplayName()</Pill>
-                                <span class="text-xs text-content-subtle">@lad.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                <span class="text-xs text-content-subtle">@DateText(lad.RaisedAt)</span>
                             </div>
                         </div>
                         <p class="text-xs text-content-subtle mt-1">

@@ -60,45 +60,45 @@
             else
             {
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
+                    <table class="data-table data-table-dense">
                         <thead>
-                            <tr class="text-left eyebrow border-b border-line">
-                                <th class="py-2 pr-3 font-semibold">Ref</th>
-                                <th class="py-2 pr-3 font-semibold">Title</th>
-                                <th class="py-2 pr-3 font-semibold">Instructed</th>
-                                <th class="py-2 pr-3 font-semibold">Issued by</th>
-                                <th class="py-2 pr-3 font-semibold">Variations</th>
-                                <th class="py-2 pr-3 font-semibold">Document</th>
-                                <th class="py-2 font-semibold"></th>
+                            <tr>
+                                <th>Ref</th>
+                                <th>Title</th>
+                                <th>Instructed</th>
+                                <th>Issued by</th>
+                                <th>Variations</th>
+                                <th>Document</th>
+                                <th></th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in instructions!)
                             {
                                 var instruction = item;
-                                <tr class="border-b border-line/60 align-top">
-                                    <td class="py-2.5 pr-3">
+                                <tr class="align-top">
+                                    <td>
                                         <span class="font-mono text-content">@instruction.DisplayReference</span>
                                         @if (!string.Equals(instruction.DisplayReference, instruction.Reference, StringComparison.OrdinalIgnoreCase))
                                         {
                                             <span class="block text-xs text-content-subtle font-mono">@instruction.Reference</span>
                                         }
                                     </td>
-                                    <td class="py-2.5 pr-3 text-content">
+                                    <td class="text-content">
                                         @instruction.Title
                                         @if (!string.IsNullOrWhiteSpace(instruction.Notes))
                                         {
                                             <span class="block text-xs text-content-subtle">@instruction.Notes</span>
                                         }
                                     </td>
-                                    <td class="py-2.5 pr-3 text-content-muted whitespace-nowrap">@Date(instruction.InstructedAt ?? instruction.ReceivedAt)</td>
-                                    <td class="py-2.5 pr-3 text-content-muted">
+                                    <td class="whitespace-nowrap">@Date(instruction.InstructedAt ?? instruction.ReceivedAt)</td>
+                                    <td>
                                         @(string.IsNullOrWhiteSpace(instruction.IssuedByEmail) ? "—" : instruction.IssuedByEmail)
                                         <span class="block text-xs text-content-subtle">
                                             @(instruction.Source == ArchitectInstructionSource.Email ? "From email" : "Uploaded")
                                         </span>
                                     </td>
-                                    <td class="py-2.5 pr-3">
+                                    <td>
                                         @if (instruction.Links.Count == 0)
                                         {
                                             <span class="text-content-subtle text-xs">Not linked</span>
@@ -122,7 +122,7 @@
                                                     disabled="@busy" @onclick="() => OpenLinkDialog(instruction)">Link a variation…</button>
                                         }
                                     </td>
-                                    <td class="py-2.5 pr-3">
+                                    <td>
                                         @if (instruction.HasFile)
                                         {
                                             <a class="text-accent hover:underline text-xs"
@@ -134,7 +134,7 @@
                                             <span class="text-xs text-content-subtle" title="No document has been attached yet">Awaited</span>
                                         }
                                     </td>
-                                    <td class="py-2.5 text-right">
+                                    <td class="text-right">
                                         @if (CanManage)
                                         {
                                             <button type="button" class="text-xs text-content-subtle hover:text-negative"

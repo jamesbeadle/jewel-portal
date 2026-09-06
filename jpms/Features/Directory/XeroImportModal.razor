@@ -58,12 +58,12 @@
     else
     {
         <div class="rounded-xl border border-line overflow-y-auto max-h-[50vh]">
-            <table class="w-full text-sm">
-                <tbody class="divide-y divide-line">
+            <table class="data-table">
+                <tbody>
                     @foreach (var supplier in FilteredSuppliers())
                     {
                         <tr>
-                            <td class="px-4 py-3">
+                            <td>
                                 <p class="text-content font-medium inline-flex items-center gap-1.5">
                                     @supplier.Name
                                     @if (supplier.IsCustomer && !supplier.IsSupplier)
@@ -79,7 +79,7 @@
                                     @string.Join(" · ", new[] { supplier.EmailAddress, supplier.Town }.Where(x => !string.IsNullOrWhiteSpace(x)))
                                 </p>
                             </td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="text-right">
                                 @if (supplier.AlreadyImported)
                                 {
                                     <Pill Tone="Tone.Muted">Imported</Pill>

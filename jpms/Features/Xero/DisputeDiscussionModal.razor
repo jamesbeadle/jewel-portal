@@ -23,7 +23,7 @@
                     {
                         <div class="rounded-lg border border-line px-3 py-2">
                             <span class="block text-xs text-content-subtle">
-                                @message.Author · @message.SentAtUtc.ToLocalTime().ToString("d MMM yyyy HH:mm")
+                                @message.Author · @DateTimeText(message.SentAtUtc.ToLocalTime())
                             </span>
                             <span class="block text-sm text-content whitespace-pre-wrap mt-0.5">@message.Body</span>
                         </div>

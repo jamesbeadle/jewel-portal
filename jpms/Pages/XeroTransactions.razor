@@ -95,84 +95,82 @@
                 }
             </div>
 
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left eyebrow">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Date</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Supplier</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden md:table-cell">Number</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Site</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Cost code</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right hidden md:table-cell">Net</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Total</th>
+            <RecordsTable Dense="true" MaxHeight="max-h-[85vh]">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Supplier</th>
+                        <th class="hidden md:table-cell">Number</th>
+                        <th>Site</th>
+                        <th class="hidden lg:table-cell">Cost code</th>
+                        <th>Status</th>
+                        <th class="text-right hidden md:table-cell">Net</th>
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var transaction in Filtered)
+                    {
+                        <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => ToggleExpanded(transaction.TransactionId)">
+                            <td class="whitespace-nowrap">@DateText(transaction.Date)</td>
+                            <td class="text-content font-medium">@(transaction.ContactName ?? "—")</td>
+                            <td class="hidden md:table-cell">
+                                @(transaction.Number ?? "—")
+                                @if (IsCreditNote(transaction))
+                                {
+                                    <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5">Credit note</span>
+                                }
+                            </td>
+                            <td>@DistinctText(transaction.Lines.Select(l => l.Site))</td>
+                            <td class="hidden lg:table-cell">@DistinctText(transaction.Lines.Select(l => l.CostCode))</td>
+                            <td class="text-content-subtle">@transaction.Status</td>
+                            <td class="text-right hidden md:table-cell">@WholeMoney(transaction.SubTotal)</td>
+                            <td class="text-right text-content font-medium">@WholeMoney(transaction.Total)</td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var transaction in Filtered)
+                        @if (expandedId == transaction.TransactionId)
                         {
-                            <tr class="cursor-pointer hover:bg-surface-raised" @onclick="() => ToggleExpanded(transaction.TransactionId)">
-                                <td class="px-4 py-3 text-content-muted whitespace-nowrap">@DateText(transaction.Date)</td>
-                                <td class="px-4 py-3 text-content font-medium">@(transaction.ContactName ?? "—")</td>
-                                <td class="px-4 py-3 text-content-muted hidden md:table-cell">
-                                    @(transaction.Number ?? "—")
-                                    @if (IsCreditNote(transaction))
+                            <tr>
+                                <td colspan="8" class="pb-4 pt-1">
+                                    @if (transaction.Reference is not null)
                                     {
-                                        <span class="ml-1.5 text-xs font-medium border border-line rounded px-1.5 py-0.5">Credit note</span>
+                                        <p class="text-xs text-content-subtle mb-2">Reference: @transaction.Reference</p>
+                                    }
+                                    @if (transaction.Lines.Count == 0)
+                                    {
+                                        <p class="text-xs text-content-subtle">Xero returned no line detail for this invoice.</p>
+                                    }
+                                    else
+                                    {
+                                        <table class="w-full text-xs">
+                                            <thead>
+                                                <tr>
+                                                    <th>Description</th>
+                                                    <th>Account</th>
+                                                    <th>Site</th>
+                                                    <th>Cost code</th>
+                                                    <th class="text-right">Net</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var line in transaction.Lines)
+                                                {
+                                                    <tr>
+                                                        <td>@(line.Description ?? "—")</td>
+                                                        <td>@AccountText(line)</td>
+                                                        <td>@(line.Site ?? "—")</td>
+                                                        <td>@(line.CostCode ?? "—")</td>
+                                                        <td class="text-right text-content">@WholeMoney(line.LineAmount)</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
                                     }
                                 </td>
-                                <td class="px-4 py-3 text-content-muted">@DistinctText(transaction.Lines.Select(l => l.Site))</td>
-                                <td class="px-4 py-3 text-content-muted hidden lg:table-cell">@DistinctText(transaction.Lines.Select(l => l.CostCode))</td>
-                                <td class="px-4 py-3 text-content-subtle">@transaction.Status</td>
-                                <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell">@WholeMoney(transaction.SubTotal)</td>
-                                <td class="px-4 py-3 text-right text-content font-medium">@WholeMoney(transaction.Total)</td>
                             </tr>
-                            @if (expandedId == transaction.TransactionId)
-                            {
-                                <tr>
-                                    <td colspan="8" class="px-4 pb-4 pt-1 bg-surface-raised">
-                                        @if (transaction.Reference is not null)
-                                        {
-                                            <p class="text-xs text-content-subtle mb-2">Reference: @transaction.Reference</p>
-                                        }
-                                        @if (transaction.Lines.Count == 0)
-                                        {
-                                            <p class="text-xs text-content-subtle">Xero returned no line detail for this invoice.</p>
-                                        }
-                                        else
-                                        {
-                                            <table class="w-full text-xs">
-                                                <thead>
-                                                    <tr class="text-left text-xs text-content-subtle">
-                                                        <th class="px-2 py-1.5">Description</th>
-                                                        <th class="px-2 py-1.5">Account</th>
-                                                        <th class="px-2 py-1.5">Site</th>
-                                                        <th class="px-2 py-1.5">Cost code</th>
-                                                        <th class="px-2 py-1.5 text-right">Net</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody class="divide-y divide-line">
-                                                    @foreach (var line in transaction.Lines)
-                                                    {
-                                                        <tr>
-                                                            <td class="px-2 py-1.5 text-content-muted">@(line.Description ?? "—")</td>
-                                                            <td class="px-2 py-1.5 text-content-muted">@AccountText(line)</td>
-                                                            <td class="px-2 py-1.5 text-content-muted">@(line.Site ?? "—")</td>
-                                                            <td class="px-2 py-1.5 text-content-muted">@(line.CostCode ?? "—")</td>
-                                                            <td class="px-2 py-1.5 text-right text-content">@WholeMoney(line.LineAmount)</td>
-                                                        </tr>
-                                                    }
-                                                </tbody>
-                                            </table>
-                                        }
-                                    </td>
-                                </tr>
-                            }
                         }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
         }
         else
         {
@@ -192,54 +190,52 @@
                 </span>
             </p>
 
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left eyebrow">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Site / cost code</th>
+            <RecordsTable Dense="true" MaxHeight="max-h-[85vh]">
+                <thead>
+                    <tr>
+                        <th>Site / cost code</th>
+                        @foreach (var year in Years)
+                        {
+                            <th class="text-right">@year</th>
+                        }
+                        <th class="text-right">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var site in Breakdown)
+                    {
+                        <tr class="bg-surface-raised/50">
+                            <td class="text-content font-semibold">@site.Name</td>
                             @foreach (var year in Years)
                             {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">@year</th>
+                                <td class="text-right text-content font-semibold">@MoneyOrDash(site.ForYear(year))</td>
                             }
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Total</th>
+                            <td class="text-right text-content font-semibold">@WholeMoney(site.Total)</td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var site in Breakdown)
+                        @foreach (var costCode in site.CostCodes)
                         {
-                            <tr class="bg-surface-raised/50">
-                                <td class="px-4 py-3 text-content font-semibold">@site.Name</td>
+                            <tr>
+                                <td class="pl-8">@costCode.Name</td>
                                 @foreach (var year in Years)
                                 {
-                                    <td class="px-4 py-3 text-right text-content font-semibold">@MoneyOrDash(site.ForYear(year))</td>
+                                    <td class="text-right">@MoneyOrDash(costCode.ForYear(year))</td>
                                 }
-                                <td class="px-4 py-3 text-right text-content font-semibold">@WholeMoney(site.Total)</td>
+                                <td class="text-right">@WholeMoney(costCode.Total)</td>
                             </tr>
-                            @foreach (var costCode in site.CostCodes)
-                            {
-                                <tr>
-                                    <td class="px-4 py-2.5 pl-8 text-content-muted">@costCode.Name</td>
-                                    @foreach (var year in Years)
-                                    {
-                                        <td class="px-4 py-2.5 text-right text-content-muted">@MoneyOrDash(costCode.ForYear(year))</td>
-                                    }
-                                    <td class="px-4 py-2.5 text-right text-content-muted">@WholeMoney(costCode.Total)</td>
-                                </tr>
-                            }
                         }
-                    </tbody>
-                    <tfoot class="bg-surface-raised border-t border-line">
-                        <tr>
-                            <td class="px-4 py-3 text-content font-semibold">All sites</td>
-                            @foreach (var year in Years)
-                            {
-                                <td class="px-4 py-3 text-right text-content font-semibold">@MoneyOrDash(Breakdown.Sum(site => site.ForYear(year)))</td>
-                            }
-                            <td class="px-4 py-3 text-right text-content font-semibold">@WholeMoney(Breakdown.Sum(site => site.Total))</td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
+                    }
+                </tbody>
+                <tfoot class="bg-surface-raised border-t border-line">
+                    <tr>
+                        <td class="text-content font-semibold">All sites</td>
+                        @foreach (var year in Years)
+                        {
+                            <td class="text-right text-content font-semibold">@MoneyOrDash(Breakdown.Sum(site => site.ForYear(year)))</td>
+                        }
+                        <td class="text-right text-content font-semibold">@WholeMoney(Breakdown.Sum(site => site.Total))</td>
+                    </tr>
+                </tfoot>
+            </RecordsTable>
         }
     }
 </Page>

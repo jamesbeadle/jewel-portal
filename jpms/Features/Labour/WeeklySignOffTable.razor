@@ -14,13 +14,13 @@
     }
     else
     {
-        <table class="w-full text-sm">
+        <table class="data-table data-table-dense">
             <thead>
-                <tr class="text-left eyebrow border-b border-line">
-                    <th class="px-5 py-3">Name</th>
+                <tr>
+                    <th>Name</th>
                     @foreach (var weekStart in MonthWeeks)
                     {
-                        <th class="px-2 py-3 text-center">
+                        <th class="text-center">
                             <div>w/c @weekStart.ToString("dd MMM")</div>
                             @if (PartLabel(weekStart) is { } part)
                             {
@@ -33,11 +33,11 @@
             <tbody>
                 @foreach (var worker in Snapshot.Workers)
                 {
-                    <tr class="border-b border-line/60">
-                        <td class="px-5 py-2.5 font-medium text-content whitespace-nowrap">@worker.Name</td>
+                    <tr>
+                        <td class="font-medium text-content whitespace-nowrap">@worker.Name</td>
                         @foreach (var weekStart in MonthWeeks)
                         {
-                            <td class="px-2 py-2.5 text-center">@WeekCell(worker, weekStart)</td>
+                            <td class="text-center">@WeekCell(worker, weekStart)</td>
                         }
                     </tr>
                 }

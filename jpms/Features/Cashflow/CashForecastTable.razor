@@ -5,77 +5,75 @@
 @* The forecast table: one column per month, rows in two bands, every category expandable to
    its per-project lines; then the running answer — project movement, the overheads row, net
    movement, and for directors the closing bank balance with its low point ringed. *@
-<div class="rounded-xl border border-line bg-surface overflow-x-auto mb-6">
-    <table class="w-full text-sm border-collapse">
-        <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left eyebrow">
-                <th class="px-4 py-3 min-w-[230px]"></th>
-                @foreach (var month in Forecast.Axis)
-                {
-                    <th class="px-3 py-3 text-right whitespace-nowrap">@MonthLabel(month)</th>
-                }
-                <th class="px-3 py-3 text-right whitespace-nowrap border-l border-line"
-                    title="Dated flows beyond the visible months — typically the final retention releases.">Later</th>
-                <th class="px-3 py-3 text-right whitespace-nowrap border-l border-line text-content-subtle"
-                    title="Flows with no honest date — e.g. spreads on a project with no practical-completion date. Kept out of the balance until dated.">Undated</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr class="border-b border-line">
-                <td colspan="@(Forecast.Axis.Length + 3)" class="px-4 pt-4 pb-2 eyebrow">Cash in</td>
-            </tr>
-            @foreach (var row in ForecastRows.In)
+<RecordsTable Dense="true" MaxHeight="" Class="mb-6">
+    <thead>
+        <tr>
+            <th class="min-w-[230px]"></th>
+            @foreach (var month in Forecast.Axis)
             {
-                <ForecastCategoryRow Forecast="Forecast" Row="row" Expanded="ExpandedCategories.Contains(row.Category)" OnToggle="OnToggle"
-                                     OnNextValuationChanged="OnNextValuationChanged" OnMonthlyValuationChanged="OnMonthlyValuationChanged" />
+                <th class="text-right whitespace-nowrap">@MonthLabel(month)</th>
             }
-            <tr class="border-b border-line">
-                <td colspan="@(Forecast.Axis.Length + 3)" class="px-4 pt-4 pb-2 eyebrow">Cash out</td>
-            </tr>
-            @foreach (var row in ForecastRows.Out)
+            <th class="text-right whitespace-nowrap border-l"
+                title="Dated flows beyond the visible months — typically the final retention releases.">Later</th>
+            <th class="text-right whitespace-nowrap border-l"
+                title="Flows with no honest date — e.g. spreads on a project with no practical-completion date. Kept out of the balance until dated.">Undated</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="@(Forecast.Axis.Length + 3)" class="eyebrow">Cash in</td>
+        </tr>
+        @foreach (var row in ForecastRows.In)
+        {
+            <ForecastCategoryRow Forecast="Forecast" Row="row" Expanded="ExpandedCategories.Contains(row.Category)" OnToggle="OnToggle"
+                                 OnNextValuationChanged="OnNextValuationChanged" OnMonthlyValuationChanged="OnMonthlyValuationChanged" />
+        }
+        <tr>
+            <td colspan="@(Forecast.Axis.Length + 3)" class="eyebrow">Cash out</td>
+        </tr>
+        @foreach (var row in ForecastRows.Out)
+        {
+            <ForecastCategoryRow Forecast="Forecast" Row="row" Expanded="ExpandedCategories.Contains(row.Category)" OnToggle="OnToggle"
+                                 OnNextValuationChanged="OnNextValuationChanged" OnMonthlyValuationChanged="OnMonthlyValuationChanged" />
+        }
+        @* Project movement — the ticked projects' cash in less cash out,
+           before company overheads (FD, 2026-08-17): what the selected jobs
+           themselves move, so the jobs and the overheads read separately. *@
+        <tr class="border-t-2 font-medium">
+            <td>
+                <span class="text-content font-medium">Project movement</span>
+                <span class="block text-xs text-content-faint font-normal">cash in less cash out for the projects ticked — before company overheads</span>
+            </td>
+            @for (var index = 0; index < Forecast.Axis.Length; index++)
             {
-                <ForecastCategoryRow Forecast="Forecast" Row="row" Expanded="ExpandedCategories.Contains(row.Category)" OnToggle="OnToggle"
-                                     OnNextValuationChanged="OnNextValuationChanged" OnMonthlyValuationChanged="OnMonthlyValuationChanged" />
+                var movement = Forecast.ProjectNet[index];
+                <td class="text-right whitespace-nowrap @(movement < 0m ?"text-negative" : "text-positive")">@Signed(movement)</td>
             }
-            @* Project movement — the ticked projects' cash in less cash out,
-               before company overheads (FD, 2026-08-17): what the selected jobs
-               themselves move, so the jobs and the overheads read separately. *@
-            <tr class="border-t-2 border-line border-b border-line font-medium">
-                <td class="px-4 py-2.5">
-                    <span class="text-content font-medium">Project movement</span>
-                    <span class="block text-xs text-content-faint font-normal">cash in less cash out for the projects ticked — before company overheads</span>
-                </td>
-                @for (var index = 0; index < Forecast.Axis.Length; index++)
-                {
-                    var movement = Forecast.ProjectNet[index];
-                    <td class="px-3 py-2.5 text-right whitespace-nowrap @(movement < 0m ? "text-negative" : "text-positive")">@Signed(movement)</td>
-                }
-                <td class="px-3 py-2.5 text-right whitespace-nowrap border-l border-line @(Forecast.LaterNet < 0m ? "text-negative" : "text-positive")">@Signed(Forecast.LaterNet)</td>
-                <td class="px-3 py-2.5 text-right border-l border-line text-content-faint font-normal" title="Undated flows are excluded from the balance until they earn a date.">excluded</td>
-            </tr>
-            <OverheadsRow Axis="Forecast.Axis" Default="OverheadsDefault" Overrides="OverheadsOverrides"
-                          OnDefaultChanged="OnOverheadsDefaultChanged" OnMonthChanged="OnOverheadsMonthChanged" />
-            @* ── The running answer ── *@
-            <tr class="border-t-2 border-line border-b border-line font-semibold">
-                <td class="px-4 py-3 text-content">
-                    Net movement
-                    <span class="block text-xs text-content-faint font-normal">project movement less company overheads</span>
-                </td>
-                @for (var index = 0; index < Forecast.Axis.Length; index++)
-                {
-                    var net = Forecast.Net[index];
-                    <td class="px-3 py-3 text-right whitespace-nowrap @(net < 0m ? "text-negative" : "text-positive")">@Signed(net)</td>
-                }
-                <td class="px-3 py-3 text-right whitespace-nowrap border-l border-line @(Forecast.LaterNet < 0m ? "text-negative" : "text-positive")">@Signed(Forecast.LaterNet)</td>
-                <td class="px-3 py-3 text-right border-l border-line text-content-faint font-normal" title="Undated flows are excluded from the balance until they earn a date.">excluded</td>
-            </tr>
-            @if (IsDirector && Forecast.Closing.Length > 0)
+            <td class="text-right whitespace-nowrap border-l @(Forecast.LaterNet < 0m ?"text-negative" : "text-positive")">@Signed(Forecast.LaterNet)</td>
+            <td class="text-right border-l text-content-faint font-normal" title="Undated flows are excluded from the balance until they earn a date.">excluded</td>
+        </tr>
+        <OverheadsRow Axis="Forecast.Axis" Default="OverheadsDefault" Overrides="OverheadsOverrides"
+                      OnDefaultChanged="OnOverheadsDefaultChanged" OnMonthChanged="OnOverheadsMonthChanged" />
+        @* ── The running answer ── *@
+        <tr class="border-t-2 font-semibold">
+            <td class="text-content">
+                Net movement
+                <span class="block text-xs text-content-faint font-normal">project movement less company overheads</span>
+            </td>
+            @for (var index = 0; index < Forecast.Axis.Length; index++)
             {
-                <ClosingBalanceRow Forecast="Forecast" />
+                var net = Forecast.Net[index];
+                <td class="text-right whitespace-nowrap @(net < 0m ?"text-negative" : "text-positive")">@Signed(net)</td>
             }
-        </tbody>
-    </table>
-</div>
+            <td class="text-right whitespace-nowrap border-l @(Forecast.LaterNet < 0m ?"text-negative" : "text-positive")">@Signed(Forecast.LaterNet)</td>
+            <td class="text-right border-l text-content-faint font-normal" title="Undated flows are excluded from the balance until they earn a date.">excluded</td>
+        </tr>
+        @if (IsDirector && Forecast.Closing.Length > 0)
+        {
+            <ClosingBalanceRow Forecast="Forecast" />
+        }
+    </tbody>
+</RecordsTable>
 
 @code {
     [Parameter, EditorRequired] public ForecastView Forecast { get; set; } = default!;

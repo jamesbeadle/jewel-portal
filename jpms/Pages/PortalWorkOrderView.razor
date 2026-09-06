@@ -43,7 +43,7 @@
                     @if (Order.Order.IsAccepted)
                     {
                         <Pill Tone="Tone.Positive">
-                            Accepted @Order.Order.AcceptedAt!.Value.LocalDateTime.ToString("d MMM yyyy")
+                            Accepted @DateText(Order.Order.AcceptedAt!.Value)
                         </Pill>
                     }
                     else if (CanAcceptThisOrder)

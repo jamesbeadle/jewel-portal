@@ -31,165 +31,159 @@
             @* ── Sales: the valuation lines grouped under this centre ─────────── *@
             <div>
                 <h3 class="text-sm font-semibold text-content mb-2">Sales — valuation lines</h3>
-                <div class="rounded-xl border border-line bg-surface overflow-x-auto max-h-60 overflow-y-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <tbody class="divide-y divide-line">
-                            @foreach (var line in SalesLines)
-                            {
-                                <tr>
-                                    <td class="px-4 py-2 font-mono text-xs text-content-subtle whitespace-nowrap w-[90px]">@SalesRef(line)</td>
-                                    <td class="px-4 py-2 text-content">@DescriptionFor(line)</td>
-                                    <td class="px-4 py-2 text-right whitespace-nowrap">@Money(line.LineAmount)</td>
-                                </tr>
-                            }
-                            @if (SalesOther != 0m)
-                            {
-                                <tr>
-                                    <td class="px-4 py-2"></td>
-                                    <td class="px-4 py-2 text-content-subtle italic">Other / unlisted adjustments</td>
-                                    <td class="px-4 py-2 text-right whitespace-nowrap">@Money(SalesOther)</td>
-                                </tr>
-                            }
-                            @if (SalesLines.Count == 0 && SalesOther == 0m)
-                            {
-                                <tr><td class="px-4 py-2 text-content-subtle italic" colspan="3">No valuation lines are coded to this centre.</td></tr>
-                            }
-                        </tbody>
-                        <tfoot class="border-t border-line-strong bg-surface-raised">
-                            <tr class="font-medium text-content">
-                                <td class="px-4 py-2" colspan="2">Sales value</td>
-                                <td class="px-4 py-2 text-right">@Money(SalesValue)</td>
+                <RecordsTable Dense="true" MaxHeight="max-h-60">
+                    <tbody>
+                        @foreach (var line in SalesLines)
+                        {
+                            <tr>
+                                <td class="font-mono text-xs text-content-subtle whitespace-nowrap w-[90px]">@SalesRef(line)</td>
+                                <td class="text-content">@DescriptionFor(line)</td>
+                                <td class="text-right whitespace-nowrap">@Money(line.LineAmount)</td>
                             </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                        }
+                        @if (SalesOther != 0m)
+                        {
+                            <tr>
+                                <td></td>
+                                <td class="text-content-subtle italic">Other / unlisted adjustments</td>
+                                <td class="text-right whitespace-nowrap">@Money(SalesOther)</td>
+                            </tr>
+                        }
+                        @if (SalesLines.Count == 0 && SalesOther == 0m)
+                        {
+                            <tr><td class="text-content-subtle italic" colspan="3">No valuation lines are coded to this centre.</td></tr>
+                        }
+                    </tbody>
+                    <tfoot class="border-t border-line-strong bg-surface-raised">
+                        <tr class="font-medium text-content">
+                            <td colspan="2">Sales value</td>
+                            <td class="text-right">@Money(SalesValue)</td>
+                        </tr>
+                    </tfoot>
+                </RecordsTable>
             </div>
 
             @* ── Costs: work orders (drafts count and are marked) ─────────────── *@
             <div>
                 <h3 class="text-sm font-semibold text-content mb-2">Costs — work orders</h3>
-                <div class="rounded-xl border border-line bg-surface overflow-x-auto max-h-60 overflow-y-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <tbody class="divide-y divide-line">
-                            @foreach (var order in WorkOrderShares)
-                            {
-                                <tr>
-                                    <td class="px-4 py-2 font-mono text-xs text-content-subtle whitespace-nowrap w-[90px]">@order.Detail.Order.Reference</td>
-                                    <td class="px-4 py-2 whitespace-nowrap">@order.Detail.SubcontractorName</td>
-                                    <td class="px-4 py-2 text-content">@order.Detail.Order.Title</td>
-                                    <td class="px-4 py-2 whitespace-nowrap">
-                                        <Pill Tone="Tone.Muted">@order.Detail.Order.Status</Pill>
-                                    </td>
-                                    <td class="px-4 py-2 text-right whitespace-nowrap" title="This centre's share of the order">@Money(order.Share)</td>
-                                </tr>
-                            }
-                            @if (WorkOrderShares.Count == 0)
-                            {
-                                <tr><td class="px-4 py-2 text-content-subtle italic" colspan="5">No work orders are coded to this centre.</td></tr>
-                            }
-                        </tbody>
-                        <tfoot class="border-t border-line-strong bg-surface-raised">
-                            <tr class="font-medium text-content">
-                                <td class="px-4 py-2" colspan="4">Work orders committed <span class="text-xs text-content-subtle font-normal">(drafts included)</span></td>
-                                <td class="px-4 py-2 text-right">@Money(WoCommitted)</td>
+                <RecordsTable Dense="true" MaxHeight="max-h-60">
+                    <tbody>
+                        @foreach (var order in WorkOrderShares)
+                        {
+                            <tr>
+                                <td class="font-mono text-xs text-content-subtle whitespace-nowrap w-[90px]">@order.Detail.Order.Reference</td>
+                                <td class="whitespace-nowrap">@order.Detail.SubcontractorName</td>
+                                <td class="text-content">@order.Detail.Order.Title</td>
+                                <td class="whitespace-nowrap">
+                                    <Pill Tone="Tone.Muted">@order.Detail.Order.Status</Pill>
+                                </td>
+                                <td class="text-right whitespace-nowrap" title="This centre's share of the order">@Money(order.Share)</td>
                             </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                        }
+                        @if (WorkOrderShares.Count == 0)
+                        {
+                            <tr><td class="text-content-subtle italic" colspan="5">No work orders are coded to this centre.</td></tr>
+                        }
+                    </tbody>
+                    <tfoot class="border-t border-line-strong bg-surface-raised">
+                        <tr class="font-medium text-content">
+                            <td colspan="4">Work orders committed <span class="text-xs text-content-subtle font-normal">(drafts included)</span></td>
+                            <td class="text-right">@Money(WoCommitted)</td>
+                        </tr>
+                    </tfoot>
+                </RecordsTable>
             </div>
 
             @* ── Costs: Xero spend not linked to any work order ───────────────── *@
             <div>
                 <h3 class="text-sm font-semibold text-content mb-2">Costs — Xero spend not on work orders</h3>
-                <div class="rounded-xl border border-line bg-surface overflow-x-auto max-h-60 overflow-y-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <tbody class="divide-y divide-line">
-                            @foreach (var entry in XeroEntries)
-                            {
-                                <tr>
-                                    <td class="px-4 py-2 font-mono text-xs text-content-subtle whitespace-nowrap w-[100px]">@(entry.Line.Date?.ToString("dd MMM yyyy") ?? "")</td>
-                                    <td class="px-4 py-2 whitespace-nowrap">@entry.Line.Supplier</td>
-                                    <td class="px-4 py-2 font-mono text-xs text-content-subtle whitespace-nowrap">@entry.Line.InvoiceNumber</td>
-                                    <td class="px-4 py-2 text-content-muted">@entry.Line.Description</td>
-                                    <td class="px-4 py-2 text-right whitespace-nowrap">@Money(entry.Share)</td>
-                                </tr>
-                            }
-                            @if (LabourCost != 0m)
-                            {
-                                <tr>
-                                    <td class="px-4 py-2"></td>
-                                    <td class="px-4 py-2 whitespace-nowrap">Internal labour</td>
-                                    <td class="px-4 py-2"></td>
-                                    <td class="px-4 py-2 text-content-muted">Approved timesheets coded to this centre</td>
-                                    <td class="px-4 py-2 text-right whitespace-nowrap">@Money(LabourCost)</td>
-                                </tr>
-                            }
-                            @if (OtherAdjustments != 0m)
-                            {
-                                <tr>
-                                    <td class="px-4 py-2"></td>
-                                    <td class="px-4 py-2 whitespace-nowrap">Other allocations &amp; adjustments</td>
-                                    <td class="px-4 py-2"></td>
-                                    <td class="px-4 py-2 text-content-muted">Splits and re-attributions not itemised above</td>
-                                    <td class="px-4 py-2 text-right whitespace-nowrap">@Money(OtherAdjustments)</td>
-                                </tr>
-                            }
-                            @if (XeroEntries.Count == 0 && LabourCost == 0m && OtherAdjustments == 0m)
-                            {
-                                <tr><td class="px-4 py-2 text-content-subtle italic" colspan="5">No non-work-order spend is allocated to this centre.</td></tr>
-                            }
-                        </tbody>
-                        <tfoot class="border-t border-line-strong bg-surface-raised">
-                            <tr class="font-medium text-content">
-                                <td class="px-4 py-2" colspan="4">Xero &amp; other costs</td>
-                                <td class="px-4 py-2 text-right">@Money(NonWoCost)</td>
+                <RecordsTable Dense="true" MaxHeight="max-h-60">
+                    <tbody>
+                        @foreach (var entry in XeroEntries)
+                        {
+                            <tr>
+                                <td class="font-mono text-xs text-content-subtle whitespace-nowrap w-[100px]">@(entry.Line.Date?.ToString("dd MMM yyyy") ?? "")</td>
+                                <td class="whitespace-nowrap">@entry.Line.Supplier</td>
+                                <td class="font-mono text-xs text-content-subtle whitespace-nowrap">@entry.Line.InvoiceNumber</td>
+                                <td>@entry.Line.Description</td>
+                                <td class="text-right whitespace-nowrap">@Money(entry.Share)</td>
                             </tr>
-                        </tfoot>
-                    </table>
-                </div>
+                        }
+                        @if (LabourCost != 0m)
+                        {
+                            <tr>
+                                <td></td>
+                                <td class="whitespace-nowrap">Internal labour</td>
+                                <td></td>
+                                <td>Approved timesheets coded to this centre</td>
+                                <td class="text-right whitespace-nowrap">@Money(LabourCost)</td>
+                            </tr>
+                        }
+                        @if (OtherAdjustments != 0m)
+                        {
+                            <tr>
+                                <td></td>
+                                <td class="whitespace-nowrap">Other allocations &amp; adjustments</td>
+                                <td></td>
+                                <td>Splits and re-attributions not itemised above</td>
+                                <td class="text-right whitespace-nowrap">@Money(OtherAdjustments)</td>
+                            </tr>
+                        }
+                        @if (XeroEntries.Count == 0 && LabourCost == 0m && OtherAdjustments == 0m)
+                        {
+                            <tr><td class="text-content-subtle italic" colspan="5">No non-work-order spend is allocated to this centre.</td></tr>
+                        }
+                    </tbody>
+                    <tfoot class="border-t border-line-strong bg-surface-raised">
+                        <tr class="font-medium text-content">
+                            <td colspan="4">Xero &amp; other costs</td>
+                            <td class="text-right">@Money(NonWoCost)</td>
+                        </tr>
+                    </tfoot>
+                </RecordsTable>
             </div>
 
             @* ── The reconciliation itself ────────────────────────────────────── *@
             <div class="rounded-xl border border-line bg-surface">
-                <table class="w-full text-sm border-collapse">
-                    <tbody class="divide-y divide-line">
+                <table class="data-table data-table-dense">
+                    <tbody>
                         <tr>
-                            <td class="px-4 py-2 text-content-muted">Sales value</td>
-                            <td class="px-4 py-2 text-right whitespace-nowrap">@Money(SalesValue)</td>
+                            <td>Sales value</td>
+                            <td class="text-right whitespace-nowrap">@Money(SalesValue)</td>
                         </tr>
                         <tr>
-                            <td class="px-4 py-2 text-content-muted">Costs — work orders committed</td>
-                            <td class="px-4 py-2 text-right whitespace-nowrap">@Money(WoCommitted)</td>
+                            <td>Costs — work orders committed</td>
+                            <td class="text-right whitespace-nowrap">@Money(WoCommitted)</td>
                         </tr>
                         <tr>
-                            <td class="px-4 py-2 text-content-muted">Costs — Xero &amp; other</td>
-                            <td class="px-4 py-2 text-right whitespace-nowrap">@Money(NonWoCost)</td>
+                            <td>Costs — Xero &amp; other</td>
+                            <td class="text-right whitespace-nowrap">@Money(NonWoCost)</td>
                         </tr>
                         <tr>
-                            <td class="px-4 py-2 text-content-muted">Total forecast cost of sales</td>
-                            <td class="px-4 py-2 text-right whitespace-nowrap">@Money(TotalCosts)</td>
+                            <td>Total forecast cost of sales</td>
+                            <td class="text-right whitespace-nowrap">@Money(TotalCosts)</td>
                         </tr>
                         <tr class="bg-surface-raised font-semibold">
-                            <td class="px-4 py-2 text-content">Gross profit</td>
-                            <td class="px-4 py-2 text-right whitespace-nowrap @(GrossProfit < 0m ? "text-negative" : "text-content")">@Money(GrossProfit)</td>
+                            <td class="text-content">Gross profit</td>
+                            <td class="text-right whitespace-nowrap @(GrossProfit < 0m ?"text-negative" : "text-content")">@Money(GrossProfit)</td>
                         </tr>
                         <tr>
-                            <td class="px-4 py-2 text-content-muted"
+                            <td
                                 title="@($"Contract sales value with our assumed {FinancialSummaryAssumptions.MarkupPercent:0.#}% markup backed out — what this line should cost us")">
                                 Target cost
                             </td>
-                            <td class="px-4 py-2 text-right whitespace-nowrap">@Money(TargetCost)</td>
+                            <td class="text-right whitespace-nowrap">@Money(TargetCost)</td>
                         </tr>
                         <tr>
-                            <td class="px-4 py-2 text-content-muted"
+                            <td
                                 title="Target cost less total costs — the buying gain (or loss) procuring this scope">
                                 Procurement gain / loss
                             </td>
-                            <td class="px-4 py-2 text-right whitespace-nowrap @(ProcurementGainLoss < 0m ? "text-negative" : ProcurementGainLoss > 0m ? "text-positive" : "text-content-muted")">@Money(ProcurementGainLoss)</td>
+                            <td class="text-right whitespace-nowrap @(ProcurementGainLoss < 0m ?"text-negative" : ProcurementGainLoss > 0m ? "text-positive" : "text-content-muted")">@Money(ProcurementGainLoss)</td>
                         </tr>
                         <tr class="bg-surface-raised font-semibold">
-                            <td class="px-4 py-2 text-content" title="Gross profit as a percentage of sales value">Margin</td>
-                            <td class="px-4 py-2 text-right whitespace-nowrap @(GrossProfit < 0m ? "text-negative" : "text-content")">
+                            <td class="text-content" title="Gross profit as a percentage of sales value">Margin</td>
+                            <td class="text-right whitespace-nowrap @(GrossProfit < 0m ?"text-negative" : "text-content")">
                                 @(MarginPercent is { } margin ? $"{margin.ToString(margin == Math.Truncate(margin) ? "0" : "0.#")}%" : "—")
                             </td>
                         </tr>

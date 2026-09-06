@@ -97,7 +97,7 @@
                                             @foreach (var kpi in filed)
                                             {
                                                 <div class="flex items-baseline gap-3 text-xs">
-                                                    <span class="text-content-subtle whitespace-nowrap shrink-0">@kpi.ReceivedAt.ToLocalTime().ToString("d MMM yyyy")</span>
+                                                    <span class="text-content-subtle whitespace-nowrap shrink-0">@DateText(kpi.ReceivedAt)</span>
                                                     <span class="text-content-muted shrink-0">@kpi.Reference</span>
                                                     <span class="text-content truncate" title="@kpi.Subject">@kpi.Subject</span>
                                                     @if (!string.IsNullOrWhiteSpace(kpi.Note))

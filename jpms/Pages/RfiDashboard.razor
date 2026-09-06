@@ -51,66 +51,64 @@
     }
     else
     {
-        <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-            <table class="w-full text-sm data-table">
-                <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left eyebrow">
-                        <th class="px-4 py-3">Project</th>
-                        <th class="px-4 py-3">Ref</th>
-                        <th class="px-4 py-3">Subject</th>
-                        <th class="px-4 py-3 hidden xl:table-cell">Drawing / Detail</th>
-                        <th class="px-4 py-3 hidden lg:table-cell">Issued</th>
-                        <th class="px-4 py-3 hidden lg:table-cell">Response Due</th>
-                        <th class="px-4 py-3 text-right hidden md:table-cell">Days Out</th>
-                        <th class="px-4 py-3 text-right hidden md:table-cell">Value</th>
-                        <th class="px-4 py-3">Status</th>
+        <RecordsTable MaxHeight="">
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Ref</th>
+                    <th>Subject</th>
+                    <th class="hidden xl:table-cell">Drawing / Detail</th>
+                    <th class="hidden lg:table-cell">Issued</th>
+                    <th class="hidden lg:table-cell">Response Due</th>
+                    <th class="text-right hidden md:table-cell">Days Out</th>
+                    <th class="text-right hidden md:table-cell">Value</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var record in FilteredRecords)
+                {
+                    <tr class="align-top is-clickable cursor-pointer" @onclick="() => Open(record)">
+                        <td class="whitespace-nowrap">
+                            <span class="block text-content font-medium">@ProjectName(record.ProjectId)</span>
+                            <span class="block font-mono text-xs text-content-subtle">@ProjectReference(record.ProjectId)</span>
+                        </td>
+                        <td class="font-mono text-xs whitespace-nowrap">@record.Reference</td>
+                        <td class="text-content font-medium">
+                            @record.Title
+                            @if (record.ImpliesVariation)
+                            {
+                                <Pill Tone="Tone.Warning" Class="ml-1.5">Variation</Pill>
+                            }
+                        </td>
+                        <td class="text-content-subtle hidden xl:table-cell font-mono text-xs">@Dash(record.DrawingRef)</td>
+                        @* The user-set issue date once recorded; falls back to the raised date until one is set. *@
+                        <td class="text-content-subtle hidden lg:table-cell whitespace-nowrap">@(DateText(record.IssuedAt ?? record.RaisedAt))</td>
+                        <td class="text-content-subtle hidden lg:table-cell whitespace-nowrap">@Date(record.ResponseDue)</td>
+                        <td class="text-right hidden md:table-cell whitespace-nowrap">
+                            @if (record.DaysOutstanding is int days)
+                            {
+                                <span class="@(record.IsOverdue ? "text-red-600 font-semibold" : "text-content-muted")">@days</span>
+                            }
+                            else
+                            {
+                                @* On a closed row the dash means the close predates the
+                                   close-date field — backfill the date on the record
+                                   (Edit facts) to fix its days out. *@
+                                <span class="text-content-subtle"
+                                      title="@(record.Status is RequestStatus.Closed ? "No close date recorded — open the record and set one via Edit facts to fix its days out" : null)">—</span>
+                            }
+                        </td>
+                        <td class="text-right hidden md:table-cell whitespace-nowrap">
+                            @(record.Value is null ? "—" : WholeMoney(record.Value.Value))
+                        </td>
+                        <td>
+                            <Pill Tone="@record.Status.ToTone()">@StatusLabel(record.Status)</Pill>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    @foreach (var record in FilteredRecords)
-                    {
-                        <tr class="align-top is-clickable cursor-pointer" @onclick="() => Open(record)">
-                            <td class="px-4 py-3 whitespace-nowrap">
-                                <span class="block text-content font-medium">@ProjectName(record.ProjectId)</span>
-                                <span class="block font-mono text-xs text-content-subtle">@ProjectReference(record.ProjectId)</span>
-                            </td>
-                            <td class="px-4 py-3 font-mono text-xs text-content-muted whitespace-nowrap">@record.Reference</td>
-                            <td class="px-4 py-3 text-content font-medium">
-                                @record.Title
-                                @if (record.ImpliesVariation)
-                                {
-                                    <Pill Tone="Tone.Warning" Class="ml-1.5">Variation</Pill>
-                                }
-                            </td>
-                            <td class="px-4 py-3 text-content-subtle hidden xl:table-cell font-mono text-xs">@Dash(record.DrawingRef)</td>
-                            @* The user-set issue date once recorded; falls back to the raised date until one is set. *@
-                            <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@((record.IssuedAt ?? record.RaisedAt).LocalDateTime.ToString("d MMM yyyy"))</td>
-                            <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@Date(record.ResponseDue)</td>
-                            <td class="px-4 py-3 text-right hidden md:table-cell whitespace-nowrap">
-                                @if (record.DaysOutstanding is int days)
-                                {
-                                    <span class="@(record.IsOverdue ? "text-red-600 font-semibold" : "text-content-muted")">@days</span>
-                                }
-                                else
-                                {
-                                    @* On a closed row the dash means the close predates the
-                                       close-date field — backfill the date on the record
-                                       (Edit facts) to fix its days out. *@
-                                    <span class="text-content-subtle"
-                                          title="@(record.Status is RequestStatus.Closed ? "No close date recorded — open the record and set one via Edit facts to fix its days out" : null)">—</span>
-                                }
-                            </td>
-                            <td class="px-4 py-3 text-right text-content-muted hidden md:table-cell whitespace-nowrap">
-                                @(record.Value is null ? "—" : WholeMoney(record.Value.Value))
-                            </td>
-                            <td class="px-4 py-3">
-                                <Pill Tone="@record.Status.ToTone()">@StatusLabel(record.Status)</Pill>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                }
+            </tbody>
+        </RecordsTable>
     }
 </Page>
 
@@ -202,7 +200,7 @@
     private static string Dash(string? value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 
     private static string Date(DateTimeOffset? value) =>
-        value is null ? "—" : value.Value.LocalDateTime.ToString("d MMM yyyy");
+        value is null ? "—" : DateText(value.Value);
 
 
     private static string StatusLabel(RequestStatus status) => status.DisplayName();

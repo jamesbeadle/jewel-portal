@@ -65,7 +65,7 @@
                             <span class="min-w-0">
                                 <span class="block text-sm text-content font-medium truncate">@update.Title</span>
                                 <span class="block text-xs text-content-subtle">
-                                    @(update.WorkDate?.ToString("dd MMM yyyy") ?? update.CreatedAt.ToString("dd MMM yyyy")) · @update.Photos.Count photo@(update.Photos.Count == 1 ? "" : "s")
+                                    @(update.WorkDate?.ToString("dd MMM yyyy") ?? DateText(update.CreatedAt)) · @update.Photos.Count photo@(update.Photos.Count == 1 ? "" : "s")
                                 </span>
                             </span>
                         </button>

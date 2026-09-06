@@ -246,12 +246,12 @@
                                     }
                                     @if (item.DueAt is not null)
                                     {
-                                        <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @item.DueAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                        <span class="whitespace-nowrap @(IsOverdue(item) ? "text-negative font-medium" : "")">Due @DateText(item.DueAt.Value)</span>
                                     }
                                     <TodoAssigneeBadge Item="item" />
                                     @if (item.CompletedAt is not null)
                                     {
-                                        <span class="whitespace-nowrap">Done @item.CompletedAt.Value.LocalDateTime.ToString("d MMM yyyy")</span>
+                                        <span class="whitespace-nowrap">Done @DateText(item.CompletedAt.Value)</span>
                                     }
                                     @if (!string.IsNullOrWhiteSpace(item.CreatedByEmail))
                                     {

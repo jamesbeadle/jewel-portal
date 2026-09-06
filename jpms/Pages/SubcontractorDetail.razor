@@ -133,25 +133,25 @@
             }
             else
             {
-                <table class="w-full text-sm mb-3">
+                <table class="data-table data-table-dense mb-3">
                     <thead>
-                        <tr class="text-left text-content-subtle border-b border-line">
-                            <th class="py-2 pr-3 font-medium">Name</th>
-                            <th class="py-2 pr-3 font-medium">Purpose</th>
-                            <th class="py-2 pr-3 font-medium">Email</th>
-                            <th class="py-2 pr-3 font-medium">Phone</th>
-                            <th class="py-2 w-24"></th>
+                        <tr>
+                            <th>Name</th>
+                            <th>Purpose</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th class="w-24"></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var contact in Contacts)
                         {
-                            <tr class="border-b border-line last:border-0">
-                                <td class="py-2 pr-3 text-content font-medium">@Dash(contact.Name)</td>
-                                <td class="py-2 pr-3 text-content-muted">@Dash(contact.Purpose)</td>
-                                <td class="py-2 pr-3 text-content-muted">@Dash(contact.Email)</td>
-                                <td class="py-2 pr-3 text-content-muted">@Dash(contact.Phone)</td>
-                                <td class="py-2 text-right whitespace-nowrap">
+                            <tr>
+                                <td class="text-content font-medium">@Dash(contact.Name)</td>
+                                <td>@Dash(contact.Purpose)</td>
+                                <td>@Dash(contact.Email)</td>
+                                <td>@Dash(contact.Phone)</td>
+                                <td class="text-right whitespace-nowrap">
                                     <button type="button" class="text-xs text-content-subtle hover:text-content underline underline-offset-2 mr-2"
                                             disabled="@contactBusy" @onclick="() => EditContact(contact)">Edit</button>
                                     <button type="button" class="text-xs text-content-subtle hover:text-negative underline underline-offset-2"
@@ -214,7 +214,7 @@
             @if (inviteResult is not null)
             {
                 <Notice Tone="Tone.Positive" Class="mb-3">
-                    <p class="mb-1">Invite sent to <span class="font-medium">@inviteResult.Email</span>. If the email doesn't arrive, share this link (valid until @inviteResult.ExpiresAt.LocalDateTime.ToString("d MMM yyyy")):</p>
+                    <p class="mb-1">Invite sent to <span class="font-medium">@inviteResult.Email</span>. If the email doesn't arrive, share this link (valid until @DateText(inviteResult.ExpiresAt)):</p>
                     <code class="block break-all text-xs bg-white/60 rounded px-2 py-1">@inviteResult.InviteLink</code>
                 </Notice>
             }

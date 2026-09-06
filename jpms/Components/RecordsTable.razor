@@ -1,0 +1,48 @@
+@namespace Jewel.JPMS.Components
+
+@*
+    THE list of records: a data-table (the Figma table skin, Styles/app.tailwind.css) inside its
+    scrolling panel, with the two states every register needs handled once — loading (the
+    pulsing jewel, per the loading-states convention: never a row count from a store that has
+    not landed) and empty (an EmptyState, so "No work orders yet" reads the same everywhere).
+
+        <RecordsTable IsLoading="@(!Store.IsLoaded)" IsEmpty="@(rows.Count == 0)" EmptyMessage="No RFIs yet">
+            <thead><tr><th>Reference</th><th class="num">Value</th></tr></thead>
+            <tbody>…</tbody>
+        </RecordsTable>
+
+    ChildContent is the <thead>/<tbody>/<tfoot> — the columns stay the view's own. Dense is
+    the 40px-row cut for long financial registers; MaxHeight caps the scroll box (default
+    85vh); Class goes on the outer panel.
+*@
+
+<div class="panel overflow-x-auto overflow-y-auto @MaxHeight @Class">
+    <LoadGate IsLoading="IsLoading" Prominent="true" Label="@LoadingLabel">
+        @if (IsEmpty)
+        {
+            <EmptyState Message="@EmptyMessage">@EmptyContent</EmptyState>
+        }
+        else
+        {
+            <table class="data-table @(Dense ? "data-table-dense" : "") @TableClass">
+                @ChildContent
+            </table>
+        }
+    </LoadGate>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>True until every store the rows read has landed.</summary>
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public string LoadingLabel { get; set; } = "Loading";
+    /// <summary>True when the (loaded) list has nothing in it — renders EmptyMessage instead of a header with no rows.</summary>
+    [Parameter] public bool IsEmpty { get; set; }
+    [Parameter] public string EmptyMessage { get; set; } = "Nothing here yet.";
+    /// <summary>The one thing to do about an empty list — a Primary button, usually.</summary>
+    [Parameter] public RenderFragment? EmptyContent { get; set; }
+    [Parameter] public bool Dense { get; set; }
+    [Parameter] public string MaxHeight { get; set; } = "max-h-[85vh]";
+    [Parameter] public string Class { get; set; } = "";
+    [Parameter] public string TableClass { get; set; } = "";
+}

@@ -15,27 +15,25 @@ else if (Architects.Count == 0)
 }
 else
 {
-    <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="text-left text-content-subtle border-b border-line">
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Practice</th>
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact</th>
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Contact email</th>
+    <RecordsTable>
+        <thead>
+            <tr>
+                <th>Practice</th>
+                <th>Contact</th>
+                <th>Contact email</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var architect in Architects)
+            {
+                <tr>
+                    <td class="font-medium text-content">@architect.Name</td>
+                    <td>@Dash(architect.ContactName)</td>
+                    <td>@Dash(architect.ContactEmail)</td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach (var architect in Architects)
-                {
-                    <tr class="border-b border-line last:border-0">
-                        <td class="px-4 py-3 font-medium text-content">@architect.Name</td>
-                        <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactName)</td>
-                        <td class="px-4 py-3 text-content-muted">@Dash(architect.ContactEmail)</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+            }
+        </tbody>
+    </RecordsTable>
 }
 <p class="text-xs text-content-subtle mt-3">
     Create, edit and manage contacts on the

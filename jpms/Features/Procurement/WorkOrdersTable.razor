@@ -7,27 +7,27 @@
    container, so with the overflow active its bottom entries would be cut off at the
    container's edge (same fix as the valuation invoices table). *@
 <div class="rounded-xl border border-line bg-surface @(openRowMenuKey is null ? "overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
-    <table class="w-full text-sm border-collapse">
-        <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left eyebrow">
+    <table class="data-table">
+        <thead>
+            <tr>
                 @if (GroupBySupplier)
                 {
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 min-w-[240px]">Supplier</th>
+                    <th class="min-w-[240px]">Supplier</th>
                 }
                 else
                 {
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[110px]">Code</th>
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 min-w-[200px]">Cost Centre</th>
+                    <th class="w-[110px]">Code</th>
+                    <th class="min-w-[200px]">Cost Centre</th>
                 }
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Orders</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Committed</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Paid</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap">Remaining</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"
+                <th class="text-right whitespace-nowrap">Orders</th>
+                <th class="text-right whitespace-nowrap">Committed</th>
+                <th class="text-right whitespace-nowrap">Paid</th>
+                <th class="text-right whitespace-nowrap">Remaining</th>
+                <th class="text-right whitespace-nowrap"
                     title="Committed value not yet invoiced (a whole-order figure spread across its cost-centre lines by value) — see the WO Allocation tab">Left to invoice</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-line">
+        <tbody>
             @foreach (var group in Rows)
             {
                 <WorkOrderGroupRow Group="group" GroupBySupplier="GroupBySupplier"
@@ -42,13 +42,13 @@
         </tbody>
         <tfoot class="border-t-2 border-line-strong bg-surface-raised">
             <tr class="font-semibold text-content">
-                <td class="px-4 py-3" colspan="@(GroupBySupplier ? 1 : 2)">@(Searching ? "Total (filtered)" : "Total")</td>
-                <td class="px-4 py-3 text-right">@Total.OrderCount</td>
-                <td class="px-4 py-3 text-right">@Money(Total.Committed)</td>
-                <td class="px-4 py-3 text-right">@Money(Total.Paid)</td>
-                <td class="px-4 py-3 text-right"
+                <td colspan="@(GroupBySupplier ? 1 : 2)">@(Searching ? "Total (filtered)" : "Total")</td>
+                <td class="text-right">@Total.OrderCount</td>
+                <td class="text-right">@Money(Total.Committed)</td>
+                <td class="text-right">@Money(Total.Paid)</td>
+                <td class="text-right"
                     title="@(Total.UnknownCommitted > 0m ? $"The sum of the figures above it. {MoneyExact(Total.UnknownCommitted)} committed on the “{Dash}” rows is not counted — nothing is known about what has been paid on those orders" : "")">@Money(Total.Remaining)</td>
-                <td class="px-4 py-3 text-right">@Money(AtPennies(Total.Committed - Total.Invoiced))</td>
+                <td class="text-right">@Money(AtPennies(Total.Committed - Total.Invoiced))</td>
             </tr>
         </tfoot>
     </table>

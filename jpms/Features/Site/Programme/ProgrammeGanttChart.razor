@@ -50,14 +50,14 @@
                     }
                     <div class="absolute top-1.5 h-3.5 rounded @(slip > 0 ? "bg-negative/80" : "bg-accent/80")"
                          style="@BarStyle(task.PlannedStart, task.PlannedEnd)"
-                         title="@task.Title: @task.PlannedStart.LocalDateTime.ToString("d MMM yyyy") – @task.PlannedEnd.LocalDateTime.ToString("d MMM yyyy") (@((int)task.ProgressPercent)% complete)">
+                         title="@task.Title: @DateText(task.PlannedStart) – @DateText(task.PlannedEnd) (@((int)task.ProgressPercent)% complete)">
                         <div class="h-full rounded-l bg-black/35" style="width:@(Pct((double)task.ProgressPercent))"></div>
                     </div>
                     @if (BaselineTaskFor(task.ProgrammeTaskId) is { } baselined)
                     {
                         <div class="absolute top-[26px] h-1 rounded bg-content-faint/70"
                              style="@BarStyle(baselined.PlannedStart, baselined.PlannedEnd)"
-                             title="Baseline: @baselined.PlannedStart.LocalDateTime.ToString("d MMM yyyy") – @baselined.PlannedEnd.LocalDateTime.ToString("d MMM yyyy")"></div>
+                             title="Baseline: @DateText(baselined.PlannedStart) – @DateText(baselined.PlannedEnd)"></div>
                     }
                 </div>
             </div>

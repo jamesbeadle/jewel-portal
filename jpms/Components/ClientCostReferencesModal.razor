@@ -27,23 +27,23 @@
         }
         else if (rows is not null)
         {
-            <table class="w-full text-sm">
+            <table class="data-table data-table-dense">
                 <thead>
-                    <tr class="text-left eyebrow">
-                        <th class="py-1.5 pr-3 font-semibold">Cost centre</th>
-                        <th class="py-1.5 pr-3 font-semibold">Client ref</th>
+                    <tr>
+                        <th>Cost centre</th>
+                        <th>Client ref</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var row in rows)
                     {
-                        <tr class="border-t border-line">
-                            <td class="py-1.5 pr-3 align-middle">
+                        <tr class="border-t">
+                            <td class="align-middle">
                                 <span class="font-medium text-content">@row.CostCode</span>
                                 <span class="text-content-muted ml-1.5">@row.Name</span>
                                 @if (!row.IsOnReport) { <span class="ml-1.5 text-xs text-content-subtle">— no longer on the report</span> }
                             </td>
-                            <td class="py-1.5 w-40">
+                            <td class="w-40">
                                 <input class="field" maxlength="64" placeholder="e.g. 3.12" @bind="row.ClientReference" />
                             </td>
                         </tr>

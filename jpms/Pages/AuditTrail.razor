@@ -88,62 +88,60 @@
         }
         else
         {
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left eyebrow">
-                            <th class="px-4 py-3 whitespace-nowrap">When</th>
-                            <th class="px-4 py-3 whitespace-nowrap">Actor</th>
-                            <th class="px-4 py-3 whitespace-nowrap">Event</th>
-                            <th class="px-4 py-3 whitespace-nowrap">Pathway</th>
-                            <th class="px-4 py-3 whitespace-nowrap">Record</th>
-                            <th class="px-4 py-3 min-w-[240px]">Detail</th>
-                            <th class="px-4 py-3 whitespace-nowrap">Email</th>
+            <RecordsTable MaxHeight="">
+                <thead>
+                    <tr>
+                        <th class="whitespace-nowrap">When</th>
+                        <th class="whitespace-nowrap">Actor</th>
+                        <th class="whitespace-nowrap">Event</th>
+                        <th class="whitespace-nowrap">Pathway</th>
+                        <th class="whitespace-nowrap">Record</th>
+                        <th class="min-w-[240px]">Detail</th>
+                        <th class="whitespace-nowrap">Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in items)
+                    {
+                        <tr @key="item.AuditEventId">
+                            <td class="whitespace-nowrap"
+                                title="@item.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm:ss")">@Ago(item.OccurredAt)</td>
+                            <td class="whitespace-nowrap">@Dash(item.ActorEmail)</td>
+                            <td class="text-content whitespace-nowrap">@EventLabel(item.EventType)</td>
+                            <td class="whitespace-nowrap">
+                                @if (!string.IsNullOrEmpty(item.Pathway))
+                                {
+                                    <span class="@PathwayChipClass(item.Pathway)">@item.Pathway</span>
+                                }
+                                else
+                                {
+                                    <span class="text-content-subtle">—</span>
+                                }
+                            </td>
+                            <td class="whitespace-nowrap">
+                                @* Requests are the only record family with a detail page today;
+                                   other references read as plain text. *@
+                                @if (RecordHref(item) is { } href)
+                                {
+                                    <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent" href="@href">@item.RecordReference</a>
+                                }
+                                else
+                                {
+                                    <span class="font-mono text-xs text-content-muted">@Dash(item.RecordReference)</span>
+                                }
+                            </td>
+                            <td>@item.Detail</td>
+                            <td class="whitespace-nowrap">
+                                @if (!string.IsNullOrWhiteSpace(item.WebLink))
+                                {
+                                    <a class="text-xs text-content-muted underline underline-offset-2 hover:text-content"
+                                       href="@item.WebLink" target="_blank" rel="noopener">Open in Outlook</a>
+                                }
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var item in items)
-                        {
-                            <tr @key="item.AuditEventId">
-                                <td class="px-4 py-3 text-content-muted whitespace-nowrap"
-                                    title="@item.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm:ss")">@Ago(item.OccurredAt)</td>
-                                <td class="px-4 py-3 text-content-muted whitespace-nowrap">@Dash(item.ActorEmail)</td>
-                                <td class="px-4 py-3 text-content whitespace-nowrap">@EventLabel(item.EventType)</td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @if (!string.IsNullOrEmpty(item.Pathway))
-                                    {
-                                        <span class="@PathwayChipClass(item.Pathway)">@item.Pathway</span>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-content-subtle">—</span>
-                                    }
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @* Requests are the only record family with a detail page today;
-                                       other references read as plain text. *@
-                                    @if (RecordHref(item) is { } href)
-                                    {
-                                        <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent" href="@href">@item.RecordReference</a>
-                                    }
-                                    else
-                                    {
-                                        <span class="font-mono text-xs text-content-muted">@Dash(item.RecordReference)</span>
-                                    }
-                                </td>
-                                <td class="px-4 py-3 text-content-muted">@item.Detail</td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @if (!string.IsNullOrWhiteSpace(item.WebLink))
-                                    {
-                                        <a class="text-xs text-content-muted underline underline-offset-2 hover:text-content"
-                                           href="@item.WebLink" target="_blank" rel="noopener">Open in Outlook</a>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
 
             @if (nextCursor is not null)
             {

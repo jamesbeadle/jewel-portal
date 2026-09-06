@@ -32,43 +32,41 @@
                   @bind="specDraft"></textarea>
 
         <label class="block text-sm font-medium text-content mb-1">Line items</label>
-        <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left eyebrow">
-                        <th class="px-3 py-2">Trade</th>
-                        <th class="px-3 py-2">Description</th>
-                        <th class="px-3 py-2 hidden sm:table-cell">Unit</th>
-                        <th class="px-3 py-2">Qty</th>
-                        <th class="px-3 py-2">Cost code</th>
-                        <th class="px-3 py-2"></th>
+        <RecordsTable Dense="true" MaxHeight="">
+            <thead>
+                <tr>
+                    <th>Trade</th>
+                    <th>Description</th>
+                    <th class="hidden sm:table-cell">Unit</th>
+                    <th>Qty</th>
+                    <th>Cost code</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < lineDrafts.Count; i++)
+                {
+                    var draft = lineDrafts[i];
+                    <tr>
+                        <td><input class="field" @bind="draft.Trade" placeholder="e.g. Electrical" /></td>
+                        <td><input class="field" @bind="draft.Description" placeholder="Description" /></td>
+                        <td class="hidden sm:table-cell"><input class="field" @bind="draft.Unit" placeholder="e.g. m²" /></td>
+                        <td><input class="field" type="number" step="any" @bind="draft.Quantity" /></td>
+                        <td>
+                            <select class="field min-w-[14rem]" @bind="draft.CostCode">
+                                <option value="">Cost centre…</option>
+                                @foreach (var centre in CostCenters.Alphabetical)
+                                {
+                                    <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
+                                }
+                            </select>
+                        </td>
+                        <td class="text-right">
+                            <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40" @onclick="() => lineDrafts.Remove(draft)">Remove</button>
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    @for (var i = 0; i < lineDrafts.Count; i++)
-                    {
-                        var draft = lineDrafts[i];
-                        <tr>
-                            <td class="px-3 py-2"><input class="field" @bind="draft.Trade" placeholder="e.g. Electrical" /></td>
-                            <td class="px-3 py-2"><input class="field" @bind="draft.Description" placeholder="Description" /></td>
-                            <td class="px-3 py-2 hidden sm:table-cell"><input class="field" @bind="draft.Unit" placeholder="e.g. m²" /></td>
-                            <td class="px-3 py-2"><input class="field" type="number" step="any" @bind="draft.Quantity" /></td>
-                            <td class="px-3 py-2">
-                                <select class="field min-w-[14rem]" @bind="draft.CostCode">
-                                    <option value="">Cost centre…</option>
-                                    @foreach (var centre in CostCenters.Alphabetical)
-                                    {
-                                        <option value="@centre.Code">@($"{centre.Code} — {centre.Name}")</option>
-                                    }
-                                </select>
-                            </td>
-                            <td class="px-3 py-2 text-right">
-                                <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40" @onclick="() => lineDrafts.Remove(draft)">Remove</button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                }
+            </tbody>
+        </RecordsTable>
     </ChildContent>
 </Modal>

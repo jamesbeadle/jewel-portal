@@ -61,7 +61,7 @@
                             class="field">
                         @foreach (var claim in Claims)
                         {
-                            <option value="@claim.ValuationClaimId">@claim.DisplayName — @claim.Status.DisplayName() (@claim.ClaimDate.ToString("dd MMM yyyy"))</option>
+                            <option value="@claim.ValuationClaimId">@claim.DisplayName — @claim.Status.DisplayName() (@DateText(claim.ClaimDate))</option>
                         }
                     </select>
                 }

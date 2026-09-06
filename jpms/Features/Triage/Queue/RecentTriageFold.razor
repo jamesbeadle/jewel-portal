@@ -18,7 +18,7 @@
                 {
                     <div @key="entry.AuditEventId" class="flex items-center gap-3 py-2">
                         <span class="text-xs text-content-subtle whitespace-nowrap w-16 shrink-0"
-                              title="@entry.OccurredAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")">@Ago(entry.OccurredAt)</span>
+                              title="@DateTimeText(entry.OccurredAt)">@Ago(entry.OccurredAt)</span>
                         @if (Href(entry) is { } href)
                         {
                             <a class="font-mono text-xs text-content underline underline-offset-2 hover:text-accent whitespace-nowrap" href="@href">@TriageEmailDisplay.Dash(entry.RecordReference)</a>
@@ -90,6 +90,6 @@
         if (span < TimeSpan.FromHours(1)) return $"{(int)span.TotalMinutes}m ago";
         if (span < TimeSpan.FromHours(24)) return $"{(int)span.TotalHours}h ago";
         if (span < TimeSpan.FromDays(30)) return $"{(int)span.TotalDays}d ago";
-        return at.LocalDateTime.ToString("d MMM yyyy");
+        return DateText(at);
     }
 }

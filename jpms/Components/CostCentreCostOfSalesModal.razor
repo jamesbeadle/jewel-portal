@@ -28,35 +28,35 @@
     {
         <div class="space-y-4">
             <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[60vh]">
-                <table class="w-full text-sm border-collapse">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left eyebrow">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Date</th>
+                <table class="data-table data-table-dense">
+                    <thead>
+                        <tr>
+                            <th class="whitespace-nowrap">Date</th>
                             @if (ShowCentreColumn)
                             {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Centre</th>
+                                <th class="whitespace-nowrap">Centre</th>
                             }
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Supplier</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Invoice</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Description</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Net £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Work Order</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5"><span class="sr-only">Move</span></th>
+                            <th>Supplier</th>
+                            <th class="whitespace-nowrap">Invoice</th>
+                            <th>Description</th>
+                            <th class="text-right whitespace-nowrap">Net £</th>
+                            <th class="whitespace-nowrap">Work Order</th>
+                            <th><span class="sr-only">Move</span></th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-line">
+                    <tbody>
                         @foreach (var entry in ResidentEntries)
                         {
                             var line = entry.Line;
                             <tr>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                <td class="whitespace-nowrap">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
                                 @if (ShowCentreColumn)
                                 {
-                                    <td class="px-4 py-2.5 font-mono text-xs text-content-subtle whitespace-nowrap">@entry.CostCode</td>
+                                    <td class="font-mono text-xs text-content-subtle whitespace-nowrap">@entry.CostCode</td>
                                 }
-                                <td class="px-4 py-2.5 text-content">@line.Supplier</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
-                                <td class="px-4 py-2.5 text-content-muted">
+                                <td class="text-content">@line.Supplier</td>
+                                <td class="whitespace-nowrap">@line.InvoiceNumber</td>
+                                <td>
                                     @line.Description
                                     @if (line.IsSplit)
                                     {
@@ -64,8 +64,8 @@
                                               title="This centre's share of a line split across several cost centres">Split</span>
                                     }
                                 </td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0 ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap">
+                                <td class="text-right whitespace-nowrap @(line.Net < 0 ?"text-negative" : "text-content")">@MoneyExact(line.Net)</td>
+                                <td class="whitespace-nowrap">
                                     @if (line.IsSplit)
                                     {
                                         @* Linking classifies the whole ledger line — a split's other shares
@@ -118,7 +118,7 @@
                                         </span>
                                     }
                                 </td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-right">
+                                <td class="whitespace-nowrap text-right">
                                     @if (line.IsSplit)
                                     {
                                         @* Only a share of the line sits here — moving the whole line from this
@@ -158,12 +158,12 @@
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-2.5" colspan="@(ShowCentreColumn ? 5 : 4)">Total — allocated to this centre</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(ResidentEntries.Sum(entry => entry.Line.Net))</td>
-                            <td class="px-4 py-2.5 whitespace-nowrap text-content-subtle text-xs">
+                            <td colspan="@(ShowCentreColumn ? 5 : 4)">Total — allocated to this centre</td>
+                            <td class="text-right whitespace-nowrap">@MoneyExact(ResidentEntries.Sum(entry => entry.Line.Net))</td>
+                            <td class="whitespace-nowrap text-content-subtle text-xs">
                                 @MoneyExact(ResidentEntries.Sum(entry => entry.Line.Net - (entry.Line.IsSplit ? 0m : entry.Line.LinkedTotal))) not linked
                             </td>
-                            <td class="px-4 py-2.5"></td>
+                            <td></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -179,29 +179,29 @@
                     <p class="px-4 pt-3 pb-1 eyebrow">
                         Moved via work orders — linked spend follows the order's cost centres
                     </p>
-                    <table class="w-full text-sm border-collapse">
-                        <tbody class="divide-y divide-line">
+                    <table class="data-table data-table-dense">
+                        <tbody>
                             @foreach (var entry in AttributionEntries)
                             {
                                 var line = entry.Line;
                                 <tr class="text-content-muted">
-                                    <td class="px-4 py-2.5 whitespace-nowrap">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
-                                    <td class="px-4 py-2.5">@line.Supplier</td>
-                                    <td class="px-4 py-2.5 whitespace-nowrap">@line.InvoiceNumber</td>
-                                    <td class="px-4 py-2.5">@line.Description</td>
-                                    <td class="px-4 py-2.5 whitespace-nowrap">
+                                    <td class="whitespace-nowrap">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                    <td>@line.Supplier</td>
+                                    <td class="whitespace-nowrap">@line.InvoiceNumber</td>
+                                    <td>@line.Description</td>
+                                    <td class="whitespace-nowrap">
                                         <Pill Tone="Tone.Muted" Title="@(line.Net < 0m
                                                          ? $"Linked to {line.ViaWorkOrderRef} — moved onto that order's cost centres"
                                                          : $"Arrives via {line.ViaWorkOrderRef}, invoiced on {line.SourceCostCode}")">
                                             @line.ViaWorkOrderRef
                                         </Pill>
                                     </td>
-                                    <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.Net < 0m ? "text-negative" : "text-content")">@MoneyExact(line.Net)</td>
+                                    <td class="text-right whitespace-nowrap @(line.Net < 0m ?"text-negative" : "text-content")">@MoneyExact(line.Net)</td>
                                 </tr>
                             }
                             <tr class="border-t-2 border-line-strong bg-surface-raised font-semibold text-content">
-                                <td class="px-4 py-2.5" colspan="5">Total — actual cost of sales for this centre</td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(entries.Sum(entry => entry.Line.Net))</td>
+                                <td colspan="5">Total — actual cost of sales for this centre</td>
+                                <td class="text-right whitespace-nowrap">@MoneyExact(entries.Sum(entry => entry.Line.Net))</td>
                             </tr>
                         </tbody>
                     </table>

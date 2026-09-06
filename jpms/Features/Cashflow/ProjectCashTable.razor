@@ -3,37 +3,35 @@
 @* The position to completion by project — the former Cash Summary's table, unchanged: each
    row is that project's Cashflow tab collapsed to a line, the totals row when more than one
    is selected, and the note that reads the columns. *@
-<div class="rounded-xl border border-line bg-surface overflow-x-auto">
-    <table class="w-full text-sm border-collapse">
-        <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left eyebrow">
-                <th class="px-4 py-3 min-w-[220px]">Project</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap" title="The valuation report's counting lines — the full value of the works as currently valued.">Project Claim</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap" title="Valuation invoices the client has paid, plus retention withheld on works complete.">Cash Allocated</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Project claim less cash allocated, less the retention that will be withheld on the works still to value — what can actually be invoiced before the releases.">Left to Claim</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap" title="The Financials tab's drawdown to the penny — budget still expected to be spent, on top of orders and bills. Drawdown side only: overspent centres are not netted off.">Drawdowns</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap" title="Work-order value not yet invoiced by suppliers — committed spend still to bill.">Uninvoiced WOs</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap" title="The net still owed on allocated purchase lines, part-payment aware: a part-paid bill counts only its remainder.">Unpaid Bills</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap" title="The first retention release where still forecast — due at practical completion. A confirmed release has moved into the claim.">Retention R1</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap border-l border-line" title="Left to claim, less drawdowns, uninvoiced work orders and unpaid bills, plus the first retention release — the net cash movement to practical completion.">PC Cashflow</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap" title="The final retention release where still forecast — due after the defects period.">Retention R2</th>
-                <th class="px-4 py-3 text-right whitespace-nowrap" title="Practical completion cashflow plus the final retention release — the project's net cash movement to the end of the defects period.">Completion Cashflow</th>
-            </tr>
-        </thead>
-        <tbody class="divide-y divide-line">
-            @foreach (var (project, row) in Rows)
-            {
-                <ProjectCashRow Project="project" Row="row" />
-            }
-        </tbody>
-        @if (Rows.Count > 1)
+<RecordsTable MaxHeight="">
+    <thead>
+        <tr>
+            <th class="min-w-[220px]">Project</th>
+            <th class="text-right whitespace-nowrap" title="The valuation report's counting lines — the full value of the works as currently valued.">Project Claim</th>
+            <th class="text-right whitespace-nowrap" title="Valuation invoices the client has paid, plus retention withheld on works complete.">Cash Allocated</th>
+            <th class="text-right whitespace-nowrap border-l" title="Project claim less cash allocated, less the retention that will be withheld on the works still to value — what can actually be invoiced before the releases.">Left to Claim</th>
+            <th class="text-right whitespace-nowrap" title="The Financials tab's drawdown to the penny — budget still expected to be spent, on top of orders and bills. Drawdown side only: overspent centres are not netted off.">Drawdowns</th>
+            <th class="text-right whitespace-nowrap" title="Work-order value not yet invoiced by suppliers — committed spend still to bill.">Uninvoiced WOs</th>
+            <th class="text-right whitespace-nowrap" title="The net still owed on allocated purchase lines, part-payment aware: a part-paid bill counts only its remainder.">Unpaid Bills</th>
+            <th class="text-right whitespace-nowrap" title="The first retention release where still forecast — due at practical completion. A confirmed release has moved into the claim.">Retention R1</th>
+            <th class="text-right whitespace-nowrap border-l" title="Left to claim, less drawdowns, uninvoiced work orders and unpaid bills, plus the first retention release — the net cash movement to practical completion.">PC Cashflow</th>
+            <th class="text-right whitespace-nowrap" title="The final retention release where still forecast — due after the defects period.">Retention R2</th>
+            <th class="text-right whitespace-nowrap" title="Practical completion cashflow plus the final retention release — the project's net cash movement to the end of the defects period.">Completion Cashflow</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var (project, row) in Rows)
         {
-            <tfoot class="border-t border-line bg-surface-raised">
-                <ProjectCashTotalsRow Total="Total" />
-            </tfoot>
+            <ProjectCashRow Project="project" Row="row" />
         }
-    </table>
-</div>
+    </tbody>
+    @if (Rows.Count > 1)
+    {
+        <tfoot class="border-t border-line bg-surface-raised">
+            <ProjectCashTotalsRow Total="Total" />
+        </tfoot>
+    }
+</RecordsTable>
 <p class="text-xs text-content-subtle mt-3 max-w-3xl">
     Each row is that project's Cashflow tab collapsed to a line — the same sources,
     the same arithmetic, to the penny. Cash allocated counts valuation invoices the

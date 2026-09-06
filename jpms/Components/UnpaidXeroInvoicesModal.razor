@@ -36,27 +36,27 @@
             @if (Lines.Count > 0)
             {
             <div class="rounded-lg border border-line overflow-x-auto overflow-y-auto max-h-[55vh]">
-                <table class="w-full text-sm border-collapse">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left eyebrow">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Date</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5">Supplier</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Invoice</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Centre</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 whitespace-nowrap">Xero status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Line net £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Settled £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap">Outstanding net £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2.5 text-right whitespace-nowrap"
+                <table class="data-table data-table-dense">
+                    <thead>
+                        <tr>
+                            <th class="whitespace-nowrap">Date</th>
+                            <th>Supplier</th>
+                            <th class="whitespace-nowrap">Invoice</th>
+                            <th class="whitespace-nowrap">Centre</th>
+                            <th class="whitespace-nowrap">Xero status</th>
+                            <th class="text-right whitespace-nowrap">Line net £</th>
+                            <th class="text-right whitespace-nowrap">Settled £</th>
+                            <th class="text-right whitespace-nowrap">Outstanding net £</th>
+                            <th class="text-right whitespace-nowrap"
                                 title="This line's share of the bill's gross still owed — ties to the Aged Payables Detail TOTAL column">Outstanding gross £</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-line">
+                    <tbody>
                         @foreach (var line in Ordered)
                         {
                             <tr title="@line.Description">
-                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
-                                <td class="px-4 py-2.5 text-content">
+                                <td class="whitespace-nowrap">@(line.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                <td class="text-content">
                                     @line.Supplier
                                     @if (line.IsSplit)
                                     {
@@ -64,25 +64,25 @@
                                               title="This project's share of a line split across several cost centres">Split</span>
                                     }
                                 </td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@line.InvoiceNumber</td>
-                                <td class="px-4 py-2.5 font-mono text-xs text-content-subtle whitespace-nowrap">@line.CostCode</td>
-                                <td class="px-4 py-2.5 whitespace-nowrap eyebrow">
+                                <td class="whitespace-nowrap">@line.InvoiceNumber</td>
+                                <td class="font-mono text-xs text-content-subtle whitespace-nowrap">@line.CostCode</td>
+                                <td class="whitespace-nowrap eyebrow">
                                     @(string.IsNullOrEmpty(line.InvoiceStatus) ? "—" : line.InvoiceStatus)@(line.SettledFraction is > 0m and < 1m ? " · part-paid" : "")
                                 </td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap text-content-muted">@MoneyExact(line.Net)</td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap text-content-muted">@MoneyExact(line.PaidNet)</td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.OutstandingNet < 0 ? "text-negative" : "text-content")">@MoneyExact(line.OutstandingNet)</td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap @(line.OutstandingGross < 0 ? "text-negative" : "text-content")">@MoneyExact(line.OutstandingGross)</td>
+                                <td class="text-right whitespace-nowrap">@MoneyExact(line.Net)</td>
+                                <td class="text-right whitespace-nowrap">@MoneyExact(line.PaidNet)</td>
+                                <td class="text-right whitespace-nowrap @(line.OutstandingNet < 0 ?"text-negative" : "text-content")">@MoneyExact(line.OutstandingNet)</td>
+                                <td class="text-right whitespace-nowrap @(line.OutstandingGross < 0 ?"text-negative" : "text-content")">@MoneyExact(line.OutstandingGross)</td>
                             </tr>
                         }
                     </tbody>
                     <tfoot class="border-t-2 border-line-strong bg-surface-raised">
                         <tr class="font-semibold text-content">
-                            <td class="px-4 py-2.5" colspan="5">Total — allocated to this project</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.Net))</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.PaidNet))</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.OutstandingNet))</td>
-                            <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.OutstandingGross))</td>
+                            <td colspan="5">Total — allocated to this project</td>
+                            <td class="text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.Net))</td>
+                            <td class="text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.PaidNet))</td>
+                            <td class="text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.OutstandingNet))</td>
+                            <td class="text-right whitespace-nowrap">@MoneyExact(Lines.Sum(line => line.OutstandingGross))</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -101,23 +101,23 @@
                     <p class="px-4 pb-2 text-xs text-content-subtle">
                         Allocate these on the Xero allocation screen and they move into the table above on the next load.
                     </p>
-                    <table class="w-full text-sm border-collapse">
-                        <tbody class="divide-y divide-line">
+                    <table class="data-table data-table-dense">
+                        <tbody>
                             @foreach (var bill in OrderedUnallocated)
                             {
                                 <tr title="@bill.Description">
-                                    <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@(bill.Date?.ToString("dd MMM yyyy") ?? "—")</td>
-                                    <td class="px-4 py-2.5 text-content">@bill.Supplier</td>
-                                    <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@bill.InvoiceNumber</td>
-                                    <td class="px-4 py-2.5 whitespace-nowrap eyebrow">@(string.IsNullOrEmpty(bill.InvoiceStatus) ? "—" : bill.InvoiceStatus)</td>
-                                    <td class="px-4 py-2.5 text-right whitespace-nowrap @(bill.OutstandingNet < 0 ? "text-negative" : "text-content")">@MoneyExact(bill.OutstandingNet)</td>
-                                    <td class="px-4 py-2.5 text-right whitespace-nowrap @(bill.OutstandingGross < 0 ? "text-negative" : "text-content")">@MoneyExact(bill.OutstandingGross) gross</td>
+                                    <td class="whitespace-nowrap">@(bill.Date?.ToString("dd MMM yyyy") ?? "—")</td>
+                                    <td class="text-content">@bill.Supplier</td>
+                                    <td class="whitespace-nowrap">@bill.InvoiceNumber</td>
+                                    <td class="whitespace-nowrap eyebrow">@(string.IsNullOrEmpty(bill.InvoiceStatus) ? "—" : bill.InvoiceStatus)</td>
+                                    <td class="text-right whitespace-nowrap @(bill.OutstandingNet < 0 ?"text-negative" : "text-content")">@MoneyExact(bill.OutstandingNet)</td>
+                                    <td class="text-right whitespace-nowrap @(bill.OutstandingGross < 0 ?"text-negative" : "text-content")">@MoneyExact(bill.OutstandingGross) gross</td>
                                 </tr>
                             }
                             <tr class="border-t-2 border-line-strong bg-surface-raised font-semibold text-content">
-                                <td class="px-4 py-2.5" colspan="4">Total — awaiting allocation</td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(UnallocatedBills.Sum(bill => bill.OutstandingNet))</td>
-                                <td class="px-4 py-2.5 text-right whitespace-nowrap">@MoneyExact(UnallocatedBills.Sum(bill => bill.OutstandingGross)) gross</td>
+                                <td colspan="4">Total — awaiting allocation</td>
+                                <td class="text-right whitespace-nowrap">@MoneyExact(UnallocatedBills.Sum(bill => bill.OutstandingNet))</td>
+                                <td class="text-right whitespace-nowrap">@MoneyExact(UnallocatedBills.Sum(bill => bill.OutstandingGross)) gross</td>
                             </tr>
                         </tbody>
                     </table>

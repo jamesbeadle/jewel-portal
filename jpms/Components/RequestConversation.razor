@@ -70,7 +70,7 @@
                                     <Pill Tone="Tone.Muted">Shared</Pill>
                                 }
                                 <time class="text-xs text-content-subtle whitespace-nowrap" datetime="@message.PostedAt.ToString("o")">
-                                    @message.PostedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")
+                                    @DateTimeText(message.PostedAt)
                                 </time>
                             </div>
                         </div>

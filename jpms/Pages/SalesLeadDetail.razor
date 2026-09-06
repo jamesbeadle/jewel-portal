@@ -122,8 +122,8 @@
                             </div>
                             <div>
                                 <dt class="eyebrow">Captured</dt>
-                                <dd class="text-content mt-1">@lead.CapturedAt.ToLocalTime().ToString("d MMM yyyy")</dd>
-                                <dd class="text-content-muted">@lead.Stage.DisplayName() since @lead.StageChangedAt.ToLocalTime().ToString("d MMM yyyy")</dd>
+                                <dd class="text-content mt-1">@DateText(lead.CapturedAt)</dd>
+                                <dd class="text-content-muted">@lead.Stage.DisplayName() since @DateText(lead.StageChangedAt)</dd>
                             </div>
                             @if (lead.Stage == LeadStage.Won && lead.ProjectId is not null)
                             {
@@ -163,8 +163,8 @@
                                 @foreach (var activity in Activities)
                                 {
                                     <li class="flex gap-4">
-                                        <div class="shrink-0 w-28 text-xs text-content-subtle pt-0.5" title="@activity.OccurredAt.ToLocalTime().ToString("d MMM yyyy HH:mm")">
-                                            @activity.OccurredAt.ToLocalTime().ToString("d MMM yyyy")<br />@activity.OccurredAt.ToLocalTime().ToString("HH:mm")
+                                        <div class="shrink-0 w-28 text-xs text-content-subtle pt-0.5" title="@DateTimeText(activity.OccurredAt.ToLocalTime())">
+                                            @DateText(activity.OccurredAt)<br />@activity.OccurredAt.ToLocalTime().ToString("HH:mm")
                                         </div>
                                         <div class="min-w-0">
                                             <p class="text-xs font-medium @(activity.Kind == LeadActivityKind.StageChange ? "text-accent" : "text-content-subtle")">@activity.Kind.DisplayName()</p>

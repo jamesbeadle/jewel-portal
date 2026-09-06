@@ -37,11 +37,11 @@
                             {
                                 @document.FileName
                             }
-                            <span> · uploaded @document.UploadedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                            <span> · uploaded @DateText(document.UploadedAt)</span>
                         </p>
                         @if (document.ExpiresAt is not null)
                         {
-                            <p class="text-xs text-content-subtle">Expires @document.ExpiresAt.Value.LocalDateTime.ToString("d MMM yyyy")</p>
+                            <p class="text-xs text-content-subtle">Expires @DateText(document.ExpiresAt.Value)</p>
                         }
                     </div>
                     <ComplianceStatusPill Status="document.Status()" />
@@ -67,7 +67,7 @@
                         {
                             @document.FileName
                         }
-                        <span> · replaced @(document.SupersededAt?.LocalDateTime.ToString("d MMM yyyy"))</span>
+                        <span> · replaced @(DateText(document.SupersededAt?.LocalDateTime))</span>
                     </li>
                 }
             </ul>

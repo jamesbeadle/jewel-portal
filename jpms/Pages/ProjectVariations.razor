@@ -143,7 +143,7 @@
                                     <div>
                                         <p class="font-medium text-content">@variationRequest.Title</p>
                                         <p class="text-xs text-content-subtle mt-1">
-                                            @variationRequest.SubcontractorName · against WO-@variationRequest.WorkOrderNumber.ToString("0000") · raised @variationRequest.SubmittedAt.LocalDateTime.ToString("d MMM yyyy")
+                                            @variationRequest.SubcontractorName · against WO-@variationRequest.WorkOrderNumber.ToString("0000") · raised @DateText(variationRequest.SubmittedAt)
                                         </p>
                                         <p class="text-sm text-content-muted mt-2 whitespace-pre-line">@variationRequest.Description</p>
                                     </div>
@@ -228,131 +228,129 @@
             {
                 <Notice Tone="Tone.Negative" Class="mb-3">@variationStatusError</Notice>
             }
-            <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full text-sm">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left eyebrow">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Ref</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Title</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Request</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right">Value</th>
-                            @* Issued is the official date the client was notified (stamped when
-                               the variation enters Issued) — a dash while it is still being
-                               quoted. The system's Created stamp travels on the export only. *@
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Issued</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden lg:table-cell">Approved</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Work order</th>
+            <RecordsTable>
+                <thead>
+                    <tr>
+                        <th>Ref</th>
+                        <th>Title</th>
+                        <th>Request</th>
+                        <th>Status</th>
+                        <th class="text-right">Value</th>
+                        @* Issued is the official date the client was notified (stamped when
+                           the variation enters Issued) — a dash while it is still being
+                           quoted. The system's Created stamp travels on the export only. *@
+                        <th class="hidden lg:table-cell">Issued</th>
+                        <th class="hidden lg:table-cell">Approved</th>
+                        <th>Work order</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in FilteredRows)
+                    {
+                        <tr class="hover:bg-surface-raised">
+                            <td class="font-mono text-[12px] whitespace-nowrap">
+                                <a class="text-content hover:underline underline-offset-4"
+                                   href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@RowReference(order)</a>
+                            </td>
+                            <td>
+                                <a class="text-content font-medium hover:underline underline-offset-4"
+                                   href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@order.Title</a>
+                                @* Recent triage activity — the api coalesces the historic
+                                   VOQ-typed rows onto Variation, so one lookup covers the
+                                   variation's whole correspondence. *@
+                                <ActivityBadge Activity="@Activity.For(ProjectId, RecordType.Variation, order.VariationOrderId)" Class="ml-1.5" />
+                            </td>
+                            <td class="whitespace-nowrap">
+                                @{ var sourceRequest = RequestFor(order); }
+                                @if (sourceRequest is not null)
+                                {
+                                    @* The trace back up the lifecycle: the variation → the RFI/request it prices. *@
+                                    <a class="font-mono text-xs text-content-muted hover:text-content hover:underline underline-offset-4"
+                                       title="@sourceRequest.Title"
+                                       href="@($"/projects/{ProjectId}/requests/view/{sourceRequest.RequestId}")">@RefLabel(sourceRequest)</a>
+                                }
+                                else
+                                {
+                                    @* Seeded rows predate the variation→request link. Kept quiet here — repairing
+                                       the link is done deliberately on the variation itself, so the badge
+                                       links through to the variation page's Originating-request panel. *@
+                                    <a class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 py-0.5 text-xs font-medium text-content-subtle hover:text-content hover:border-content-subtle transition-colors"
+                                       title="No request behind this variation yet — open it to link the RFI it was raised from"
+                                       href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">No request</a>
+                                }
+                            </td>
+                            <td class="whitespace-nowrap">
+                                @{ var statusChoices = CanManageVariations ? VariationStatusChoices(order) : new List<VariationStatusChoice>(); }
+                                @if (statusChoices.Count > 0)
+                                {
+                                    @* The chip doubles as the status control. Direct moves cover the
+                                       side-effect-free stages; the commercial transitions (approve,
+                                       un-approve, reject) link through to the variation, where their
+                                       real flows — cost code, confirms, reversals — live. *@
+                                    <div class="relative">
+                                        <Pill Tone="@order.Status.ToTone()"
+                                              Title="Change status"
+                                              Disabled="@(variationStatusBusyId == order.VariationOrderId)"
+                                              OnClick="() => ToggleVariationStatusMenu(order.VariationOrderId)">
+                                            @VariationStatusLabel(order)
+                                        </Pill>
+                                        @if (variationStatusMenuId == order.VariationOrderId)
+                                        {
+                                            <div class="absolute left-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden">
+                                                <ul class="divide-y divide-line">
+                                                    @foreach (var choice in statusChoices)
+                                                    {
+                                                        var pick = choice;
+                                                        <li>
+                                                            <button type="button"
+                                                                    class="w-full text-left px-3 py-2 text-sm transition @(pick.IsCurrent ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
+                                                                    disabled="@pick.IsCurrent"
+                                                                    title="@pick.Hint"
+                                                                    @onclick="() => PickVariationStatus(pick)">
+                                                                @pick.Label@(pick.IsCurrent ? " ✓" : "")
+                                                            </button>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <Pill Tone="@order.Status.ToTone()">@VariationStatusLabel(order)</Pill>
+                                }
+                            </td>
+                            <td class="text-right whitespace-nowrap @(order.Status == VariationOrderStatus.Rejected ?"text-content-subtle line-through" : "text-content")">
+                                @(RowValue(order) is { } v ? Money(v) : "—")
+                            </td>
+                            <td class="text-content-subtle hidden lg:table-cell whitespace-nowrap">@(DateText(order.IssuedAt?.LocalDateTime) ?? "—")</td>
+                            <td class="text-content-subtle hidden lg:table-cell whitespace-nowrap">
+                                @(order.Status == VariationOrderStatus.Approved ? DateText(order.ApprovedAt?.LocalDateTime) ?? "—" : "—")
+                            </td>
+                            <td class="whitespace-nowrap">
+                                @{ var issued = IssuedWorkOrdersFor(order); }
+                                @if (issued.Count > 0)
+                                {
+                                    <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}"))</span>
+                                }
+                                @if (CanIssueWorkOrder(order))
+                                {
+                                    <button type="button" class="@(issued.Count > 0 ? "block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
+                                            title="@(issued.Count > 0 ? "Issue a further work order for this variation" : "Issue the work order instructing this variation")"
+                                            disabled="@requestBusy" @onclick="() => IssueWorkOrder(order.VariationOrderId)">
+                                        @(issued.Count > 0 ? "Issue another" : "Issue WO")
+                                    </button>
+                                }
+                                else if (issued.Count == 0)
+                                {
+                                    <span class="text-content-subtle">—</span>
+                                }
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody class="divide-y divide-line">
-                        @foreach (var order in FilteredRows)
-                        {
-                            <tr class="hover:bg-surface-raised">
-                                <td class="px-4 py-3 font-mono text-[12px] whitespace-nowrap">
-                                    <a class="text-content hover:underline underline-offset-4"
-                                       href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@RowReference(order)</a>
-                                </td>
-                                <td class="px-4 py-3">
-                                    <a class="text-content font-medium hover:underline underline-offset-4"
-                                       href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">@order.Title</a>
-                                    @* Recent triage activity — the api coalesces the historic
-                                       VOQ-typed rows onto Variation, so one lookup covers the
-                                       variation's whole correspondence. *@
-                                    <ActivityBadge Activity="@Activity.For(ProjectId, RecordType.Variation, order.VariationOrderId)" Class="ml-1.5" />
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @{ var sourceRequest = RequestFor(order); }
-                                    @if (sourceRequest is not null)
-                                    {
-                                        @* The trace back up the lifecycle: the variation → the RFI/request it prices. *@
-                                        <a class="font-mono text-xs text-content-muted hover:text-content hover:underline underline-offset-4"
-                                           title="@sourceRequest.Title"
-                                           href="@($"/projects/{ProjectId}/requests/view/{sourceRequest.RequestId}")">@RefLabel(sourceRequest)</a>
-                                    }
-                                    else
-                                    {
-                                        @* Seeded rows predate the variation→request link. Kept quiet here — repairing
-                                           the link is done deliberately on the variation itself, so the badge
-                                           links through to the variation page's Originating-request panel. *@
-                                        <a class="inline-flex items-center rounded border border-line bg-surface-raised px-1.5 py-0.5 text-xs font-medium text-content-subtle hover:text-content hover:border-content-subtle transition-colors"
-                                           title="No request behind this variation yet — open it to link the RFI it was raised from"
-                                           href="@($"/projects/{ProjectId}/variations/{order.VariationOrderId}")">No request</a>
-                                    }
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @{ var statusChoices = CanManageVariations ? VariationStatusChoices(order) : new List<VariationStatusChoice>(); }
-                                    @if (statusChoices.Count > 0)
-                                    {
-                                        @* The chip doubles as the status control. Direct moves cover the
-                                           side-effect-free stages; the commercial transitions (approve,
-                                           un-approve, reject) link through to the variation, where their
-                                           real flows — cost code, confirms, reversals — live. *@
-                                        <div class="relative">
-                                            <Pill Tone="@order.Status.ToTone()"
-                                                  Title="Change status"
-                                                  Disabled="@(variationStatusBusyId == order.VariationOrderId)"
-                                                  OnClick="() => ToggleVariationStatusMenu(order.VariationOrderId)">
-                                                @VariationStatusLabel(order)
-                                            </Pill>
-                                            @if (variationStatusMenuId == order.VariationOrderId)
-                                            {
-                                                <div class="absolute left-0 mt-2 w-64 rounded-lg border border-line bg-surface shadow-lg z-30 overflow-hidden">
-                                                    <ul class="divide-y divide-line">
-                                                        @foreach (var choice in statusChoices)
-                                                        {
-                                                            var pick = choice;
-                                                            <li>
-                                                                <button type="button"
-                                                                        class="w-full text-left px-3 py-2 text-sm transition @(pick.IsCurrent ? "text-content-subtle cursor-default" : "text-content hover:bg-surface-raised")"
-                                                                        disabled="@pick.IsCurrent"
-                                                                        title="@pick.Hint"
-                                                                        @onclick="() => PickVariationStatus(pick)">
-                                                                    @pick.Label@(pick.IsCurrent ? " ✓" : "")
-                                                                </button>
-                                                            </li>
-                                                        }
-                                                    </ul>
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <Pill Tone="@order.Status.ToTone()">@VariationStatusLabel(order)</Pill>
-                                    }
-                                </td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap @(order.Status == VariationOrderStatus.Rejected ? "text-content-subtle line-through" : "text-content")">
-                                    @(RowValue(order) is { } v ? Money(v) : "—")
-                                </td>
-                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">@(order.IssuedAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—")</td>
-                                <td class="px-4 py-3 text-content-subtle hidden lg:table-cell whitespace-nowrap">
-                                    @(order.Status == VariationOrderStatus.Approved ? order.ApprovedAt?.LocalDateTime.ToString("d MMM yyyy") ?? "—" : "—")
-                                </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    @{ var issued = IssuedWorkOrdersFor(order); }
-                                    @if (issued.Count > 0)
-                                    {
-                                        <span class="text-xs text-content-muted">@string.Join(", ", issued.Select(wo => $"WO-{wo.Number:0000}"))</span>
-                                    }
-                                    @if (CanIssueWorkOrder(order))
-                                    {
-                                        <button type="button" class="@(issued.Count > 0 ? "block " : "")text-xs text-accent underline underline-offset-2 disabled:opacity-60"
-                                                title="@(issued.Count > 0 ? "Issue a further work order for this variation" : "Issue the work order instructing this variation")"
-                                                disabled="@requestBusy" @onclick="() => IssueWorkOrder(order.VariationOrderId)">
-                                            @(issued.Count > 0 ? "Issue another" : "Issue WO")
-                                        </button>
-                                    }
-                                    else if (issued.Count == 0)
-                                    {
-                                        <span class="text-content-subtle">—</span>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
             <p class="text-xs text-content-subtle mt-3">
                 Only approved variations are included on the valuation report; the rest stay here until they are.
             </p>

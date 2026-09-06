@@ -88,58 +88,56 @@
         }
         else
         {
-            <div class="rounded-xl border border-line bg-surface overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="border-b border-line text-left">
-                            <th class="px-4 py-2.5 eyebrow">Ref</th>
-                            <th class="px-4 py-2.5 eyebrow">Product</th>
-                            <th class="px-4 py-2.5 eyebrow">Details</th>
-                            <th class="px-4 py-2.5 eyebrow">Location</th>
-                            <th class="px-4 py-2.5 eyebrow">Added</th>
-                            <th class="px-4 py-2.5"></th>
+            <RecordsTable Dense="true" MaxHeight="">
+                <thead>
+                    <tr>
+                        <th>Ref</th>
+                        <th>Product</th>
+                        <th>Details</th>
+                        <th>Location</th>
+                        <th>Added</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Rows)
+                    {
+                        var isExpanded = expandedItemId == item.InventoryItemId;
+                        <tr @key="item.InventoryItemId" class="border-b border-line last:border-0 align-top">
+                            <td class="font-mono text-xs whitespace-nowrap">@item.Reference</td>
+                            <td class="text-content">@item.ProductName</td>
+                            <td class="max-w-md">
+                                <span title="@item.ProductDetails">@item.ProductDetails</span>
+                            </td>
+                            <td class="max-w-xs">
+                                <span title="@item.LocationDetails">@item.Location</span>
+                            </td>
+                            <td class="whitespace-nowrap" title="@DateTimeText(item.CreatedAt.ToLocalTime())">
+                                @DateText(item.CreatedAt)
+                            </td>
+                            <td class="whitespace-nowrap text-right">
+                                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 mr-3"
+                                        @onclick="() => StartEdit(item)">
+                                    Edit
+                                </button>
+                                <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
+                                        @onclick="() => ToggleEmailsAsync(item.InventoryItemId)">
+                                    @(isExpanded ? "Hide emails" : "Emails")
+                                </button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Rows)
+                        @if (isExpanded)
                         {
-                            var isExpanded = expandedItemId == item.InventoryItemId;
-                            <tr @key="item.InventoryItemId" class="border-b border-line last:border-0 align-top">
-                                <td class="px-4 py-2.5 font-mono text-xs text-content-muted whitespace-nowrap">@item.Reference</td>
-                                <td class="px-4 py-2.5 text-content">@item.ProductName</td>
-                                <td class="px-4 py-2.5 text-content-muted max-w-md">
-                                    <span title="@item.ProductDetails">@item.ProductDetails</span>
-                                </td>
-                                <td class="px-4 py-2.5 text-content-muted max-w-xs">
-                                    <span title="@item.LocationDetails">@item.Location</span>
-                                </td>
-                                <td class="px-4 py-2.5 text-content-muted whitespace-nowrap" title="@item.CreatedAt.ToLocalTime().ToString("d MMM yyyy HH:mm")">
-                                    @item.CreatedAt.ToLocalTime().ToString("d MMM yyyy")
-                                </td>
-                                <td class="px-4 py-2.5 whitespace-nowrap text-right">
-                                    <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4 mr-3"
-                                            @onclick="() => StartEdit(item)">
-                                        Edit
-                                    </button>
-                                    <button type="button" class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
-                                            @onclick="() => ToggleEmailsAsync(item.InventoryItemId)">
-                                        @(isExpanded ? "Hide emails" : "Emails")
-                                    </button>
+                            <tr class="bg-surface-raised/50">
+                                <td colspan="6">
+                                    <FiledEmailList Emails="@(emailsByItem.TryGetValue(item.InventoryItemId, out var filedEmails) ? filedEmails : null)"
+                                        EmptyMessage="@($"No emails filed to {item.Reference} yet — file one from the Control Centre (Supplier pathway → Inventory items).")" />
                                 </td>
                             </tr>
-                            @if (isExpanded)
-                            {
-                                <tr class="border-b border-line last:border-0 bg-surface-raised/50">
-                                    <td colspan="6" class="px-4 py-3">
-                                        <FiledEmailList Emails="@(emailsByItem.TryGetValue(item.InventoryItemId, out var filedEmails) ? filedEmails : null)"
-                                            EmptyMessage="@($"No emails filed to {item.Reference} yet — file one from the Control Centre (Supplier pathway → Inventory items).")" />
-                                    </td>
-                                </tr>
-                            }
                         }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
         }
     </ProjectPageShell>
 </Page>

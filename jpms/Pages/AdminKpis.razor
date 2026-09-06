@@ -99,74 +99,72 @@
                                 }
                             </div>
                         }
-                        <div class="rounded-xl border border-line bg-surface overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead class="bg-surface-raised border-b border-line">
-                                    <tr class="text-left eyebrow">
-                                        <th class="px-4 py-3">Ref</th>
-                                        <th class="px-4 py-3">Person</th>
-                                        <th class="px-4 py-3">Email</th>
-                                        <th class="px-4 py-3">Note</th>
-                                        <th class="px-4 py-3">Marked</th>
-                                        <th class="px-4 py-3"></th>
+                        <RecordsTable Dense="true" MaxHeight="">
+                            <thead>
+                                <tr>
+                                    <th>Ref</th>
+                                    <th>Person</th>
+                                    <th>Email</th>
+                                    <th>Note</th>
+                                    <th>Marked</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var row in Rows)
+                                {
+                                    var kpi = row;
+                                    <tr>
+                                        <td class="whitespace-nowrap">@kpi.Reference</td>
+                                        <td class="whitespace-nowrap">
+                                            <span class="text-content font-medium">@kpi.PersonName</span>
+                                            @if (kpi.PersonEmail is null)
+                                            {
+                                                <span class="ml-1 text-xs text-content-subtle" title="Added by name — no portal login">no login</span>
+                                            }
+                                        </td>
+                                        <td class="min-w-0">
+                                            <p class="text-content truncate max-w-md" title="@kpi.Subject">@kpi.Subject</p>
+                                            <p class="text-xs text-content-subtle truncate max-w-md">
+                                                @(string.IsNullOrWhiteSpace(kpi.FromName) ? kpi.FromEmail : kpi.FromName) · @DateText(kpi.ReceivedAt)
+                                            </p>
+                                        </td>
+                                        <td class="max-w-xs">
+                                            <span class="line-clamp-2" title="@kpi.Note">@(string.IsNullOrWhiteSpace(kpi.Note) ? "—" : kpi.Note)</span>
+                                        </td>
+                                        <td class="whitespace-nowrap text-xs text-content-subtle">
+                                            @DateText(kpi.MarkedAt)<br />@kpi.MarkedByEmail
+                                        </td>
+                                        <td class="text-right">
+                                            @if (removingId == kpi.KpiEmailId)
+                                            {
+                                                <span class="inline-flex items-center gap-2">
+                                                    <span class="text-xs text-content-muted">Remove @kpi.Reference?</span>
+                                                    <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
+                                                            disabled="@busy" @onclick="() => ConfirmRemoveAsync(kpi)">Remove now</button>
+                                                    <button type="button" class="btn-neutral px-2 py-1 text-xs" disabled="@busy"
+                                                            @onclick="() => removingId = null">Cancel</button>
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="inline-flex items-center gap-2">
+                                                    <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
+                                                            title="Open the email in the Control Centre"
+                                                            @onclick="() => OpenInControlCentre(kpi)">Open</button>
+                                                    <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
+                                                            title="Re-file under another person, or change the note"
+                                                            @onclick="() => StartEdit(kpi)">Edit</button>
+                                                    <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
+                                                            disabled="@busy" title="Take the KPI mark off this email"
+                                                            @onclick="() => StartRemove(kpi)">Remove</button>
+                                                </span>
+                                            }
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody class="divide-y divide-line">
-                                    @foreach (var row in Rows)
-                                    {
-                                        var kpi = row;
-                                        <tr>
-                                            <td class="px-4 py-2.5 whitespace-nowrap text-content-muted">@kpi.Reference</td>
-                                            <td class="px-4 py-2.5 whitespace-nowrap">
-                                                <span class="text-content font-medium">@kpi.PersonName</span>
-                                                @if (kpi.PersonEmail is null)
-                                                {
-                                                    <span class="ml-1 text-xs text-content-subtle" title="Added by name — no portal login">no login</span>
-                                                }
-                                            </td>
-                                            <td class="px-4 py-2.5 min-w-0">
-                                                <p class="text-content truncate max-w-md" title="@kpi.Subject">@kpi.Subject</p>
-                                                <p class="text-xs text-content-subtle truncate max-w-md">
-                                                    @(string.IsNullOrWhiteSpace(kpi.FromName) ? kpi.FromEmail : kpi.FromName) · @kpi.ReceivedAt.ToLocalTime().ToString("d MMM yyyy")
-                                                </p>
-                                            </td>
-                                            <td class="px-4 py-2.5 text-content-muted max-w-xs">
-                                                <span class="line-clamp-2" title="@kpi.Note">@(string.IsNullOrWhiteSpace(kpi.Note) ? "—" : kpi.Note)</span>
-                                            </td>
-                                            <td class="px-4 py-2.5 whitespace-nowrap text-xs text-content-subtle">
-                                                @kpi.MarkedAt.ToLocalTime().ToString("d MMM yyyy")<br />@kpi.MarkedByEmail
-                                            </td>
-                                            <td class="px-4 py-2.5 text-right">
-                                                @if (removingId == kpi.KpiEmailId)
-                                                {
-                                                    <span class="inline-flex items-center gap-2">
-                                                        <span class="text-xs text-content-muted">Remove @kpi.Reference?</span>
-                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
-                                                                disabled="@busy" @onclick="() => ConfirmRemoveAsync(kpi)">Remove now</button>
-                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs" disabled="@busy"
-                                                                @onclick="() => removingId = null">Cancel</button>
-                                                    </span>
-                                                }
-                                                else
-                                                {
-                                                    <span class="inline-flex items-center gap-2">
-                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
-                                                                title="Open the email in the Control Centre"
-                                                                @onclick="() => OpenInControlCentre(kpi)">Open</button>
-                                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@busy"
-                                                                title="Re-file under another person, or change the note"
-                                                                @onclick="() => StartEdit(kpi)">Edit</button>
-                                                        <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40"
-                                                                disabled="@busy" title="Take the KPI mark off this email"
-                                                                @onclick="() => StartRemove(kpi)">Remove</button>
-                                                    </span>
-                                                }
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
+                                }
+                            </tbody>
+                        </RecordsTable>
                         <p class="text-xs text-content-subtle mt-2">
                             Open hands the email to the Control Centre with it selected. Removing takes the mark off; the
                             email itself is untouched.

@@ -100,45 +100,43 @@
         }
         else
         {
-        <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-            <table class="w-full text-sm">
-                <thead>
-                    <tr class="text-left text-content-subtle border-b border-line">
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Code</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Name</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium text-right hidden md:table-cell">Sort order</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Status</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
+        <RecordsTable>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th class="text-right hidden md:table-cell">Sort order</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var costCode in VisibleCostCodes)
+                {
+                    <tr class="border-b border-line last:border-0 @(costCode.IsActive ? "" : "opacity-60")">
+                        <td class="font-medium text-content whitespace-nowrap">@costCode.Code</td>
+                        <td>@costCode.Name</td>
+                        <td class="text-right text-content-subtle hidden md:table-cell">@costCode.SortOrder</td>
+                        <td>
+                            @if (costCode.IsActive)
+                            {
+                                <Pill Tone="Tone.Positive">Active</Pill>
+                            }
+                            else
+                            {
+                                <Pill Tone="Tone.Muted">Retired</Pill>
+                            }
+                        </td>
+                        <td class="text-right whitespace-nowrap">
+                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenEdit(costCode)">Edit</button>
+                            <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => ToggleActiveAsync(costCode)">
+                                @(costCode.IsActive ? "Retire" : "Reinstate")
+                            </button>
+                        </td>
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach (var costCode in VisibleCostCodes)
-                    {
-                        <tr class="border-b border-line last:border-0 @(costCode.IsActive ? "" : "opacity-60")">
-                            <td class="px-4 py-3 font-medium text-content whitespace-nowrap">@costCode.Code</td>
-                            <td class="px-4 py-3 text-content-muted">@costCode.Name</td>
-                            <td class="px-4 py-3 text-right text-content-subtle hidden md:table-cell">@costCode.SortOrder</td>
-                            <td class="px-4 py-3">
-                                @if (costCode.IsActive)
-                                {
-                                    <Pill Tone="Tone.Positive">Active</Pill>
-                                }
-                                else
-                                {
-                                    <Pill Tone="Tone.Muted">Retired</Pill>
-                                }
-                            </td>
-                            <td class="px-4 py-3 text-right whitespace-nowrap">
-                                <button type="button" class="text-sm font-medium text-content-muted hover:text-content mr-3" @onclick="() => OpenEdit(costCode)">Edit</button>
-                                <button type="button" class="text-sm font-medium text-content-muted hover:text-content" @onclick="() => ToggleActiveAsync(costCode)">
-                                    @(costCode.IsActive ? "Retire" : "Reinstate")
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                }
+            </tbody>
+        </RecordsTable>
         }
     }
     </LoadGate>
@@ -218,65 +216,63 @@
             }
             else
             {
-            <div class="panel overflow-x-auto overflow-y-auto max-h-[85vh]">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="text-left text-content-subtle border-b border-line">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">@(sites ? "Xero site" : "Xero cost code")</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">Status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 font-medium">@(sites ? "Linked project" : "System cost code")</th>
+            <RecordsTable>
+                <thead>
+                    <tr>
+                        <th>@(sites ? "Xero site" : "Xero cost code")</th>
+                        <th>Status</th>
+                        <th>@(sites ? "Linked project" : "System cost code")</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var option in SortedOptions(category))
+                    {
+                        <tr class="border-b border-line last:border-0 @(option.IsArchived ? "opacity-60" : "")">
+                            @* whitespace-pre so a stray leading/trailing space in Xero's
+                               spelling stays visible rather than being swallowed — exact
+                               phrasing is what this tab is for. *@
+                            <td class="font-medium text-content whitespace-pre">@option.Name</td>
+                            <td>
+                                @if (option.IsArchived)
+                                {
+                                    <Pill Tone="Tone.Muted">Archived</Pill>
+                                }
+                                else
+                                {
+                                    <Pill Tone="Tone.Positive">Active</Pill>
+                                }
+                            </td>
+                            <td>
+                                @if (sites)
+                                {
+                                    var linked = ProjectsMappedTo(option.Name);
+                                    @if (linked.Count == 0)
+                                    {
+                                        <span class="text-content-subtle">—</span>
+                                    }
+                                    else
+                                    {
+                                        @string.Join(", ", linked.Select(p => p.Name))
+                                    }
+                                }
+                                else
+                                {
+                                    var match = SystemCodeFor(option.Name);
+                                    @if (match is null)
+                                    {
+                                        <span class="text-content-subtle">—</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="font-medium text-content">@match.Code</span>
+                                        <span> · @match.Name</span>
+                                    }
+                                }
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var option in SortedOptions(category))
-                        {
-                            <tr class="border-b border-line last:border-0 @(option.IsArchived ? "opacity-60" : "")">
-                                @* whitespace-pre so a stray leading/trailing space in Xero's
-                                   spelling stays visible rather than being swallowed — exact
-                                   phrasing is what this tab is for. *@
-                                <td class="px-4 py-3 font-medium text-content whitespace-pre">@option.Name</td>
-                                <td class="px-4 py-3">
-                                    @if (option.IsArchived)
-                                    {
-                                        <Pill Tone="Tone.Muted">Archived</Pill>
-                                    }
-                                    else
-                                    {
-                                        <Pill Tone="Tone.Positive">Active</Pill>
-                                    }
-                                </td>
-                                <td class="px-4 py-3 text-content-muted">
-                                    @if (sites)
-                                    {
-                                        var linked = ProjectsMappedTo(option.Name);
-                                        @if (linked.Count == 0)
-                                        {
-                                            <span class="text-content-subtle">—</span>
-                                        }
-                                        else
-                                        {
-                                            @string.Join(", ", linked.Select(p => p.Name))
-                                        }
-                                    }
-                                    else
-                                    {
-                                        var match = SystemCodeFor(option.Name);
-                                        @if (match is null)
-                                        {
-                                            <span class="text-content-subtle">—</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="font-medium text-content">@match.Code</span>
-                                            <span> · @match.Name</span>
-                                        }
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+                    }
+                </tbody>
+            </RecordsTable>
 
             @if (sites && !projectsFailed && UnmatchedSiteMappings(category) is { Count: > 0 } unmatched)
             {
@@ -374,13 +370,13 @@
                     </p>
                     <textarea readonly class="field h-48 font-mono text-xs">@MissingNamesText(gaps)</textarea>
                     <div class="max-h-48 overflow-y-auto rounded-lg border border-line">
-                        <table class="w-full text-xs">
+                        <table class="data-table data-table-dense">
                             <tbody>
                                 @foreach (var gap in gaps.Missing)
                                 {
-                                    <tr class="border-b border-line last:border-0">
-                                        <td class="px-3 py-1.5 font-mono font-medium text-content whitespace-pre">@gap.OptionName</td>
-                                        <td class="px-3 py-1.5 text-content-muted">@gap.Name@(gap.OptionName != gap.Code ? $" (code {gap.Code}, mapped)" : "")</td>
+                                    <tr>
+                                        <td class="font-mono font-medium text-content whitespace-pre">@gap.OptionName</td>
+                                        <td>@gap.Name@(gap.OptionName != gap.Code ? $" (code {gap.Code}, mapped)" : "")</td>
                                     </tr>
                                 }
                             </tbody>

@@ -7,91 +7,89 @@
    anything it added. The winning column is badged; a tender-only prospect's column carries the
    deliberate add-to-directory act (a submitted tender is the moment to judge quality); the
    footer totals each tender and, while the package is unawarded, offers Award per column. *@
-<div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-    <table class="w-full text-sm">
-        <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left eyebrow">
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2">Line item</th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 hidden sm:table-cell">Qty</th>
+<RecordsTable Dense="true" MaxHeight="max-h-[85vh]">
+    <thead>
+        <tr>
+            <th>Line item</th>
+            <th class="hidden sm:table-cell">Qty</th>
+            @foreach (var quote in Quotes)
+            {
+                var sub = Subs.Find(quote.SubcontractorId);
+                var won = Recipients.Any(r =>
+                    string.Equals(r.SubcontractorId, quote.SubcontractorId, StringComparison.OrdinalIgnoreCase)
+                    && r.Status == BidPackageRecipientStatus.Won);
+                <th class="text-right">
+                    @(sub?.CompanyName ?? quote.SubcontractorId)
+                    @if (won)
+                    {
+                        <Pill Tone="Tone.Positive" Class="ml-1.5">Won</Pill>
+                    }
+                    @if (sub is { IsProspect: true } && CanAddToDirectory)
+                    {
+                        <span class="block mt-1">
+                            <button type="button" class="btn-secondary px-2 py-0.5 text-xs normal-case tracking-normal font-medium" disabled="@Busy"
+                                    title="This company isn't in the Directory — it was only added to this tender list. Add it if the tender's worth keeping them for."
+                                    @onclick="() => OnAddToDirectory.InvokeAsync(sub!.SubcontractorId)">Add to directory</button>
+                        </span>
+                    }
+                </th>
+            }
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in LineItems)
+        {
+            <tr>
+                <td class="text-content">@item.Description</td>
+                <td class="hidden sm:table-cell">@item.Quantity @item.Unit</td>
                 @foreach (var quote in Quotes)
                 {
-                    var sub = Subs.Find(quote.SubcontractorId);
-                    var won = Recipients.Any(r =>
-                        string.Equals(r.SubcontractorId, quote.SubcontractorId, StringComparison.OrdinalIgnoreCase)
-                        && r.Status == BidPackageRecipientStatus.Won);
-                    <th class="sticky top-0 z-20 bg-surface-raised px-4 py-2 text-right">
-                        @(sub?.CompanyName ?? quote.SubcontractorId)
-                        @if (won)
-                        {
-                            <Pill Tone="Tone.Positive" Class="ml-1.5">Won</Pill>
-                        }
-                        @if (sub is { IsProspect: true } && CanAddToDirectory)
-                        {
-                            <span class="block mt-1">
-                                <button type="button" class="btn-secondary px-2 py-0.5 text-xs normal-case tracking-normal font-medium" disabled="@Busy"
-                                        title="This company isn't in the Directory — it was only added to this tender list. Add it if the tender's worth keeping them for."
-                                        @onclick="() => OnAddToDirectory.InvokeAsync(sub!.SubcontractorId)">Add to directory</button>
-                            </span>
-                        }
-                    </th>
+                    var line = QuoteLines.FirstOrDefault(l => l.QuoteId == quote.QuoteId && l.BidPackageLineItemId == item.LineItemId);
+                    <td class="text-right">
+                        @(line is null ? "—" : line.Total.ToString("£#,##0.00"))
+                    </td>
                 }
             </tr>
-        </thead>
-        <tbody class="divide-y divide-line">
-            @foreach (var item in LineItems)
-            {
-                <tr>
-                    <td class="px-4 py-2 text-content">@item.Description</td>
-                    <td class="px-4 py-2 text-content-muted hidden sm:table-cell">@item.Quantity @item.Unit</td>
-                    @foreach (var quote in Quotes)
-                    {
-                        var line = QuoteLines.FirstOrDefault(l => l.QuoteId == quote.QuoteId && l.BidPackageLineItemId == item.LineItemId);
-                        <td class="px-4 py-2 text-right text-content-muted">
-                            @(line is null ? "—" : line.Total.ToString("£#,##0.00"))
-                        </td>
-                    }
-                </tr>
-            }
-            @{ var extras = QuoteLines.Where(l => l.BidPackageLineItemId is null).ToList(); }
-            @if (extras.Count > 0)
-            {
-                <tr>
-                    <td class="px-4 py-2 text-content-subtle italic">Outside package scope</td>
-                    <td class="px-4 py-2 hidden sm:table-cell"></td>
-                    @foreach (var quote in Quotes)
-                    {
-                        var sum = extras.Where(l => l.QuoteId == quote.QuoteId).Sum(l => l.Total);
-                        <td class="px-4 py-2 text-right text-content-subtle italic">@(sum == 0 ? "—" : sum.ToString("£#,##0.00"))</td>
-                    }
-                </tr>
-            }
-        </tbody>
-        <tfoot class="bg-surface-raised border-t border-line">
-            <tr class="font-semibold text-content">
-                <td class="px-4 py-2">Total</td>
-                <td class="px-4 py-2 hidden sm:table-cell"></td>
+        }
+        @{ var extras = QuoteLines.Where(l => l.BidPackageLineItemId is null).ToList(); }
+        @if (extras.Count > 0)
+        {
+            <tr>
+                <td class="text-content-subtle italic">Outside package scope</td>
+                <td class="hidden sm:table-cell"></td>
                 @foreach (var quote in Quotes)
                 {
-                    <td class="px-4 py-2 text-right">@quote.Value.ToString("£#,##0.00")</td>
+                    var sum = extras.Where(l => l.QuoteId == quote.QuoteId).Sum(l => l.Total);
+                    <td class="text-right text-content-subtle italic">@(sum == 0 ? "—" : sum.ToString("£#,##0.00"))</td>
                 }
             </tr>
-            @if (AwardEnabled)
+        }
+    </tbody>
+    <tfoot class="bg-surface-raised border-t border-line">
+        <tr class="font-semibold text-content">
+            <td>Total</td>
+            <td class="hidden sm:table-cell"></td>
+            @foreach (var quote in Quotes)
             {
-                <tr>
-                    <td class="px-4 py-2"></td>
-                    <td class="px-4 py-2 hidden sm:table-cell"></td>
-                    @foreach (var quote in Quotes)
-                    {
-                        <td class="px-4 py-2 text-right">
-                            <button type="button" class="text-xs text-accent hover:underline" disabled="@Busy"
-                                    @onclick="() => OnAward.InvokeAsync(quote)">Award</button>
-                        </td>
-                    }
-                </tr>
+                <td class="text-right">@quote.Value.ToString("£#,##0.00")</td>
             }
-        </tfoot>
-    </table>
-</div>
+        </tr>
+        @if (AwardEnabled)
+        {
+            <tr>
+                <td></td>
+                <td class="hidden sm:table-cell"></td>
+                @foreach (var quote in Quotes)
+                {
+                    <td class="text-right">
+                        <button type="button" class="text-xs text-accent hover:underline" disabled="@Busy"
+                                @onclick="() => OnAward.InvokeAsync(quote)">Award</button>
+                    </td>
+                }
+            </tr>
+        }
+    </tfoot>
+</RecordsTable>
 
 @foreach (var quote in Quotes.Where(q => !string.IsNullOrWhiteSpace(q.Notes)))
 {

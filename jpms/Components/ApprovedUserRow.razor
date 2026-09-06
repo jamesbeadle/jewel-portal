@@ -261,7 +261,7 @@
         if (outcome.Success && outcome.Result is not null)
         {
             resetLink = outcome.Result.InviteLink;
-            resetExpiry = outcome.Result.ExpiresAt.ToLocalTime().ToString("d MMM yyyy, HH:mm");
+            resetExpiry = DateTimeText(outcome.Result.ExpiresAt.ToLocalTime());
         }
         else
         {

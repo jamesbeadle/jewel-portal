@@ -9,15 +9,15 @@
 }
 else
 {
-    <table class="w-auto text-sm">
+    <table class="data-table data-table-dense w-auto">
         <tbody>
             @foreach (var (name, day) in Visits)
             {
-                <tr class="border-b border-line/40">
-                    <td class="py-1.5 pr-6 text-content-muted whitespace-nowrap">@day.Date.ToString("ddd dd MMM")</td>
-                    <td class="py-1.5 pr-6 font-medium text-content whitespace-nowrap">@name</td>
-                    <td class="py-1.5 pr-6 text-right tabular-nums text-content-muted">@($"{day.Hours:0.#} h")</td>
-                    <td class="py-1.5"><StatusPill Status="@day.Status!.Value" /></td>
+                <tr class="border-line/40">
+                    <td class="whitespace-nowrap">@day.Date.ToString("ddd dd MMM")</td>
+                    <td class="font-medium text-content whitespace-nowrap">@name</td>
+                    <td class="text-right tabular-nums">@($"{day.Hours:0.#} h")</td>
+                    <td><StatusPill Status="@day.Status!.Value" /></td>
                 </tr>
             }
         </tbody>

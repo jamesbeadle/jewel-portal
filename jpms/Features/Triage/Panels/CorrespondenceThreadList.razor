@@ -101,7 +101,7 @@
         <div class="min-w-0">
             <div class="flex flex-wrap items-baseline justify-between gap-2">
                 <span class="text-sm font-medium text-content truncate">@(string.IsNullOrWhiteSpace(email.FromName) ? email.FromEmail : email.FromName)</span>
-                <span class="text-xs text-content-subtle">@email.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</span>
+                <span class="text-xs text-content-subtle">@DateTimeText(email.ReceivedAt)</span>
             </div>
             <p class="text-sm text-content mt-0.5">
                 @email.Subject

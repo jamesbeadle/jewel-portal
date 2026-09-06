@@ -14,13 +14,13 @@
         }
         else
         {
-            <table class="w-full text-sm">
+            <table class="data-table data-table-dense">
                 <tbody>
                     @foreach (var day in Worker.Days)
                     {
-                        <tr class="border-b border-line/40">
-                            <td class="py-1.5 pr-3 text-content-muted whitespace-nowrap">@day.Date.ToString("ddd dd MMM")</td>
-                            <td class="py-1.5 pr-3">
+                        <tr class="border-line/40">
+                            <td class="whitespace-nowrap">@day.Date.ToString("ddd dd MMM")</td>
+                            <td>
                                 @if (day.Absence is not null)
                                 {
                                     <span class="text-content-subtle">@AbsenceLabel(day.Absence.Value)</span>
@@ -31,8 +31,8 @@
                                     <span class="text-content">@day.ProjectName</span>
                                 }
                             </td>
-                            <td class="py-1.5 pr-3 text-right tabular-nums text-content-muted">@(day.Hours > 0 ? $"{day.Hours:0.#} h" : "")</td>
-                            <td class="py-1.5 text-right">
+                            <td class="text-right tabular-nums">@(day.Hours > 0 ? $"{day.Hours:0.#} h" : "")</td>
+                            <td class="text-right">
                                 @if (day.Status is not null)
                                 {
                                     <StatusPill Status="@day.Status.Value" />

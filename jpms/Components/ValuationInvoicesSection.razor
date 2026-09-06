@@ -68,39 +68,39 @@
                Delete entirely. Short lists render identically either way; a long list grows to
                full height for the moment the menu is showing and gets its cap back on close. *@
             <div class="border-t border-line @(openMenuId is null ? "overflow-x-auto overflow-y-auto max-h-[85vh]" : "")">
-                <table class="w-full text-sm border-collapse">
-                    <thead class="bg-surface-raised border-b border-line">
-                        <tr class="text-left eyebrow">
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 w-[100px]">Ref</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Period</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Status</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Paid £</th>
-                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap">Report</th>
+                <table class="data-table data-table-dense">
+                    <thead>
+                        <tr>
+                            <th class="w-[100px]">Ref</th>
+                            <th class="whitespace-nowrap">Period</th>
+                            <th class="text-right whitespace-nowrap">Amount £</th>
+                            <th class="whitespace-nowrap">Status</th>
+                            <th class="text-right whitespace-nowrap">Paid £</th>
+                            <th class="whitespace-nowrap">Report</th>
                             @if (CanManage)
                             {
-                                <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[110px]"></th>
+                                <th class="text-right w-[110px]"></th>
                             }
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-line">
+                    <tbody>
                         @foreach (var invoice in invoices)
                         {
                             <tr class="@(invoice.Status == ValuationInvoiceStatus.Cancelled ? "opacity-50" : "")">
-                                <td class="px-3 py-2 font-mono text-xs text-content-subtle whitespace-nowrap">
+                                <td class="font-mono text-xs text-content-subtle whitespace-nowrap">
                                     @invoice.DisplayNumber
                                     @if (invoice.IsManual)
                                     {
                                         <Pill Tone="Tone.Muted" Class="ml-1" Title="Historic entry keyed in manually — counts toward certified to date and total paid">Manual</Pill>
                                     }
                                 </td>
-                                <td class="px-3 py-2 text-content-muted whitespace-nowrap">@invoice.PeriodMonth.ToString("MMM yyyy")</td>
-                                <td class="px-3 py-2 text-right text-content whitespace-nowrap">@Money(invoice.Amount)</td>
-                                <td class="px-3 py-2 whitespace-nowrap">
+                                <td class="whitespace-nowrap">@invoice.PeriodMonth.ToString("MMM yyyy")</td>
+                                <td class="text-right text-content whitespace-nowrap">@Money(invoice.Amount)</td>
+                                <td class="whitespace-nowrap">
                                     <Pill Tone="@invoice.Status.ToTone()" Title="@StatusTitle(invoice)">@StatusLabel(invoice.Status)</Pill>
                                 </td>
-                                <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@(invoice.AmountPaid > 0 ? Money(invoice.AmountPaid) : "—")</td>
-                                <td class="px-3 py-2 whitespace-nowrap">
+                                <td class="text-right whitespace-nowrap">@(invoice.AmountPaid > 0 ? Money(invoice.AmountPaid) : "—")</td>
+                                <td class="whitespace-nowrap">
                                     @if (invoice.ValuationReportSnapshotId is not null)
                                     {
                                         <button type="button" @onclick="() => OnViewSnapshot.InvokeAsync(invoice.ValuationReportSnapshotId)"
@@ -114,7 +114,7 @@
                                 </td>
                                 @if (CanManage)
                                 {
-                                    <td class="px-3 py-2 text-right whitespace-nowrap">
+                                    <td class="text-right whitespace-nowrap">
                                         @* One menu per row instead of a run of text links — the
                                            stage decides which moves it offers. Delete keeps its
                                            two-step confirm: choosing it swaps the menu for an
@@ -140,7 +140,7 @@
                             @if (invoice.Status == ValuationInvoiceStatus.Rejected && !string.IsNullOrWhiteSpace(invoice.RejectionReason))
                             {
                                 <tr>
-                                    <td colspan="@ColumnCount" class="px-3 py-1.5 bg-negative/5 text-xs text-negative">
+                                    <td colspan="@ColumnCount" class="bg-negative/5 text-xs text-negative">
                                         Rejected@(invoice.RejectedAt is { } r ? $" {r:dd MMM yyyy}" : ""): @invoice.RejectionReason
                                     </td>
                                 </tr>
@@ -148,7 +148,7 @@
                             @if (historyOpenId == invoice.ValuationInvoiceId)
                             {
                                 <tr>
-                                    <td colspan="@ColumnCount" class="px-3 py-2 bg-surface-raised/60">
+                                    <td colspan="@ColumnCount" class="bg-surface-raised/60">
                                         @if (historyEvents is null)
                                         {
                                             <span class="text-xs text-content-subtle italic">Loading history…</span>
@@ -163,7 +163,7 @@
                                                 @foreach (var entry in historyEvents)
                                                 {
                                                     <li class="text-xs text-content-muted">
-                                                        <span class="font-mono text-content-subtle">@entry.OccurredAt.ToString("dd MMM yyyy HH:mm")</span>
+                                                        <span class="font-mono text-content-subtle">@DateTimeText(entry.OccurredAt)</span>
                                                         <span class="ml-2 font-medium text-content">@EventLabel(entry.EventType)</span>
                                                         @if (entry.AmountBefore is not null && entry.AmountAfter is not null && entry.AmountBefore != entry.AmountAfter)
                                                         {

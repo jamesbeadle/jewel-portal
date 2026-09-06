@@ -8,34 +8,34 @@
         <span class="text-xs text-content-subtle">On the Valuation Report as <span class="font-mono">@VariationRef</span></span>
     </div>
     <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="data-table data-table-dense">
             <thead>
-                <tr class="text-left text-content-subtle border-b border-line">
-                    <th class="py-2 pr-3 font-medium">Cost centre</th>
-                    <th class="py-2 pr-3 font-medium">Description</th>
-                    <th class="py-2 pr-3 font-medium text-right">Qty</th>
-                    <th class="py-2 pr-3 font-medium text-right">Rate £</th>
-                    <th class="py-2 font-medium text-right">Amount £</th>
+                <tr>
+                    <th>Cost centre</th>
+                    <th>Description</th>
+                    <th class="text-right">Qty</th>
+                    <th class="text-right">Rate £</th>
+                    <th class="text-right">Amount £</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-line">
+            <tbody>
                 @foreach (var line in Lines)
                 {
                     <tr>
-                        <td class="py-2 pr-3 font-mono text-xs whitespace-nowrap">@line.CostCode</td>
-                        <td class="py-2 pr-3">@line.Description</td>
-                        <td class="py-2 pr-3 text-right font-mono">@line.Quantity.ToString("0.##", Gb)</td>
-                        <td class="py-2 pr-3 text-right font-mono">@line.Rate.ToString("N2", Gb)</td>
-                        <td class="py-2 text-right font-mono @(line.LineAmount < 0m ? "text-negative" : "")">@line.LineAmount.ToString("N2", Gb)</td>
+                        <td class="font-mono text-xs whitespace-nowrap">@line.CostCode</td>
+                        <td>@line.Description</td>
+                        <td class="text-right font-mono">@line.Quantity.ToString("0.##", Gb)</td>
+                        <td class="text-right font-mono">@line.Rate.ToString("N2", Gb)</td>
+                        <td class="text-right font-mono @(line.LineAmount < 0m ?"text-negative" : "")">@line.LineAmount.ToString("N2", Gb)</td>
                     </tr>
                 }
             </tbody>
             <tfoot>
                 <tr class="border-t border-line-strong font-semibold text-content">
-                    <td class="py-2 pr-3" colspan="4">Total</td>
+                    <td colspan="4">Total</td>
                     @* whitespace-nowrap: a negative total must never wrap its minus sign onto
                        its own line and read as positive. *@
-                    <td class="py-2 text-right font-mono whitespace-nowrap @(Total < 0m ? "text-negative" : "")">@Total.ToString("C2", Gb)</td>
+                    <td class="text-right font-mono whitespace-nowrap @(Total < 0m ?"text-negative" : "")">@Total.ToString("C2", Gb)</td>
                 </tr>
             </tfoot>
         </table>

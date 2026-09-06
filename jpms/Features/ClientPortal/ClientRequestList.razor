@@ -11,32 +11,30 @@
 }
 else
 {
-    <div class="panel overflow-x-auto">
-        <table class="w-full text-sm">
-            <thead>
-                <tr class="text-left text-content-subtle border-b border-line">
-                    <th class="px-4 py-3 font-medium">Reference</th>
-                    <th class="px-4 py-3 font-medium">Title</th>
-                    <th class="px-4 py-3 font-medium">Project</th>
-                    <th class="px-4 py-3 font-medium">Status</th>
-                    <th class="px-4 py-3 font-medium">Raised</th>
+    <RecordsTable MaxHeight="">
+        <thead>
+            <tr>
+                <th>Reference</th>
+                <th>Title</th>
+                <th>Project</th>
+                <th>Status</th>
+                <th>Raised</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var request in Requests)
+            {
+                <tr class="border-b border-line last:border-0 hover:bg-surface-raised cursor-pointer"
+                    @onclick="() => Open(request.RequestId)">
+                    <td class="font-medium text-content whitespace-nowrap">@request.Reference</td>
+                    <td class="text-content">@request.Title</td>
+                    <td>@request.ProjectName</td>
+                    <td class="whitespace-nowrap">@request.Status.DisplayName()</td>
+                    <td class="whitespace-nowrap">@DateText(request.RaisedAt)</td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach (var request in Requests)
-                {
-                    <tr class="border-b border-line last:border-0 hover:bg-surface-raised cursor-pointer"
-                        @onclick="() => Open(request.RequestId)">
-                        <td class="px-4 py-3 font-medium text-content whitespace-nowrap">@request.Reference</td>
-                        <td class="px-4 py-3 text-content">@request.Title</td>
-                        <td class="px-4 py-3 text-content-muted">@request.ProjectName</td>
-                        <td class="px-4 py-3 text-content-muted whitespace-nowrap">@request.Status.DisplayName()</td>
-                        <td class="px-4 py-3 text-content-muted whitespace-nowrap">@request.RaisedAt.LocalDateTime.ToString("d MMM yyyy")</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
+            }
+        </tbody>
+    </RecordsTable>
 }
 
 @code {

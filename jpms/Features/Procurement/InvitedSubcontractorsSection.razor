@@ -55,88 +55,86 @@
     }
     else
     {
-        <div class="rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-            <table class="w-full text-sm">
-                <thead class="bg-surface-raised border-b border-line">
-                    <tr class="text-left eyebrow">
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Subcontractor</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 hidden sm:table-cell">Trade</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Added</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3">Status</th>
-                        <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3"></th>
+        <RecordsTable>
+            <thead>
+                <tr>
+                    <th>Subcontractor</th>
+                    <th class="hidden sm:table-cell">Trade</th>
+                    <th>Added</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var recipient in Recipients)
+                {
+                    var sub = Subs.Find(recipient.SubcontractorId);
+                    <tr>
+                        <td>
+                            <span class="text-content font-medium">@(sub?.CompanyName ?? recipient.SubcontractorId)</span>
+                            @if (sub is { IsProspect: true })
+                            {
+                                @* Tender-only prospect: on this list but deliberately NOT in the
+                                   Directory — promotion happens from their submitted tender. *@
+                                <Pill Tone="Tone.Muted" Class="ml-2" Title="Only on tender lists — not in the Directory. Add them from their submitted tender if they're worth keeping.">Not in directory</Pill>
+                            }
+                            @if (sub is not null && string.IsNullOrWhiteSpace(sub.ContactEmail))
+                            {
+                                <Pill Tone="Tone.Warning" Class="ml-2">No email address</Pill>
+                            }
+                            else if (sub is not null)
+                            {
+                                <span class="block text-xs text-content-subtle">@sub.ContactEmail</span>
+                            }
+                            @if (sub is not null && !string.IsNullOrWhiteSpace(sub.Website))
+                            {
+                                @* Their site in a new tab — the quickest sanity-check on who a
+                                   search-found company actually is before the invite drafts. *@
+                                <a class="block text-xs text-accent hover:underline truncate max-w-xs"
+                                   href="@WebsiteHref(sub.Website)" target="_blank" rel="noopener">@WebsiteLabel(sub.Website)</a>
+                            }
+                        </td>
+                        <td class="hidden sm:table-cell">@(sub?.TradesLabel ?? "")</td>
+                        <td class="text-content-subtle">@DateTimeText(recipient.InvitedAt)</td>
+                        @* "Invited" as a word implies an email went out, which the system can't know
+                           (sends happen in Outlook) — "On list" says exactly what is true. The other
+                           statuses read fine as-is. *@
+                        <td class="@(recipient.Status == BidPackageRecipientStatus.Declined ?"text-content-subtle" : "text-content-muted")">@(recipient.Status == BidPackageRecipientStatus.Invited ? "On list" : recipient.Status.ToString())</td>
+                        <td class="text-right">
+                            @if (CanEdit)
+                            {
+                                @* Row actions follow the button colour rule: acts are green
+                                   (btn-secondary), the destructive one warns (btn-neutral +
+                                   negative text/border) — compact paddings for a table row. *@
+                                <span class="inline-flex items-center gap-2">
+                                    @if (recipient.Status == BidPackageRecipientStatus.Responded
+                                        && sub is { IsProspect: true } && CanAddToDirectory)
+                                    {
+                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy"
+                                                title="Their tender is in and this company isn't in the Directory yet — add it if they're worth keeping for future work."
+                                                @onclick="() => OnAddToDirectory.InvokeAsync(sub!.SubcontractorId)">Add to directory</button>
+                                    }
+                                    @if (recipient.Status == BidPackageRecipientStatus.Declined)
+                                    {
+                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy"
+                                                title="Put them back in the running — restores Responded if they have a tender in, otherwise back on the list."
+                                                @onclick="() => OnSetDeclined.InvokeAsync((recipient, false))">Undo decline</button>
+                                    }
+                                    else if (recipient.Status != BidPackageRecipientStatus.Won)
+                                    {
+                                        <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy"
+                                                title="Record that they've declined to tender (e.g. told you by phone). Keeps them on the list for the record."
+                                                @onclick="() => OnSetDeclined.InvokeAsync((recipient, true))">Mark declined</button>
+                                    }
+                                    <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40" disabled="@Busy"
+                                            @onclick="() => OnRemove.InvokeAsync(recipient)">Remove</button>
+                                </span>
+                            }
+                        </td>
                     </tr>
-                </thead>
-                <tbody class="divide-y divide-line">
-                    @foreach (var recipient in Recipients)
-                    {
-                        var sub = Subs.Find(recipient.SubcontractorId);
-                        <tr>
-                            <td class="px-4 py-3">
-                                <span class="text-content font-medium">@(sub?.CompanyName ?? recipient.SubcontractorId)</span>
-                                @if (sub is { IsProspect: true })
-                                {
-                                    @* Tender-only prospect: on this list but deliberately NOT in the
-                                       Directory — promotion happens from their submitted tender. *@
-                                    <Pill Tone="Tone.Muted" Class="ml-2" Title="Only on tender lists — not in the Directory. Add them from their submitted tender if they're worth keeping.">Not in directory</Pill>
-                                }
-                                @if (sub is not null && string.IsNullOrWhiteSpace(sub.ContactEmail))
-                                {
-                                    <Pill Tone="Tone.Warning" Class="ml-2">No email address</Pill>
-                                }
-                                else if (sub is not null)
-                                {
-                                    <span class="block text-xs text-content-subtle">@sub.ContactEmail</span>
-                                }
-                                @if (sub is not null && !string.IsNullOrWhiteSpace(sub.Website))
-                                {
-                                    @* Their site in a new tab — the quickest sanity-check on who a
-                                       search-found company actually is before the invite drafts. *@
-                                    <a class="block text-xs text-accent hover:underline truncate max-w-xs"
-                                       href="@WebsiteHref(sub.Website)" target="_blank" rel="noopener">@WebsiteLabel(sub.Website)</a>
-                                }
-                            </td>
-                            <td class="px-4 py-3 text-content-muted hidden sm:table-cell">@(sub?.TradesLabel ?? "")</td>
-                            <td class="px-4 py-3 text-content-subtle">@recipient.InvitedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm")</td>
-                            @* "Invited" as a word implies an email went out, which the system can't know
-                               (sends happen in Outlook) — "On list" says exactly what is true. The other
-                               statuses read fine as-is. *@
-                            <td class="px-4 py-3 @(recipient.Status == BidPackageRecipientStatus.Declined ? "text-content-subtle" : "text-content-muted")">@(recipient.Status == BidPackageRecipientStatus.Invited ? "On list" : recipient.Status.ToString())</td>
-                            <td class="px-4 py-3 text-right">
-                                @if (CanEdit)
-                                {
-                                    @* Row actions follow the button colour rule: acts are green
-                                       (btn-secondary), the destructive one warns (btn-neutral +
-                                       negative text/border) — compact paddings for a table row. *@
-                                    <span class="inline-flex items-center gap-2">
-                                        @if (recipient.Status == BidPackageRecipientStatus.Responded
-                                            && sub is { IsProspect: true } && CanAddToDirectory)
-                                        {
-                                            <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy"
-                                                    title="Their tender is in and this company isn't in the Directory yet — add it if they're worth keeping for future work."
-                                                    @onclick="() => OnAddToDirectory.InvokeAsync(sub!.SubcontractorId)">Add to directory</button>
-                                        }
-                                        @if (recipient.Status == BidPackageRecipientStatus.Declined)
-                                        {
-                                            <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy"
-                                                    title="Put them back in the running — restores Responded if they have a tender in, otherwise back on the list."
-                                                    @onclick="() => OnSetDeclined.InvokeAsync((recipient, false))">Undo decline</button>
-                                        }
-                                        else if (recipient.Status != BidPackageRecipientStatus.Won)
-                                        {
-                                            <button type="button" class="btn-secondary px-2 py-1 text-xs" disabled="@Busy"
-                                                    title="Record that they've declined to tender (e.g. told you by phone). Keeps them on the list for the record."
-                                                    @onclick="() => OnSetDeclined.InvokeAsync((recipient, true))">Mark declined</button>
-                                        }
-                                        <button type="button" class="btn-neutral px-2 py-1 text-xs text-negative border-negative/40" disabled="@Busy"
-                                                @onclick="() => OnRemove.InvokeAsync(recipient)">Remove</button>
-                                    </span>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                }
+            </tbody>
+        </RecordsTable>
         <p class="text-xs text-content-subtle mt-2">
             Adding a subcontractor only builds the invite list — nothing is emailed until you
             compose the “Invite email” above and press Send there. It sends from the projects

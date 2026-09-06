@@ -35,8 +35,8 @@
                     <div class="min-w-0">
                         <p class="text-sm text-content">@item.Detail</p>
                         <p class="text-xs text-content-subtle mt-0.5">
-                            <span title="@item.OccurredAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")">
-                                @item.OccurredAt.ToLocalTime().ToString("dd MMM yyyy HH:mm")
+                            <span title="@DateTimeText(item.OccurredAt.ToLocalTime())">
+                                @DateTimeText(item.OccurredAt.ToLocalTime())
                             </span>
                             <span class="mx-1.5" aria-hidden="true">·</span>
                             <span>@EventLabel(item.EventType)</span>

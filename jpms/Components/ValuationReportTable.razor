@@ -44,34 +44,34 @@ else
                         @* `isolate` traps the sticky cells' z-10/20/30 in a local stacking context so they
                            never paint over the app header (sticky z-30 in MainLayout) when the page scrolls. *@
                         <div class="isolate border-t border-line overflow-x-auto overflow-y-auto max-h-[85vh]">
-                            <table class="w-full text-sm border-collapse">
-                                <thead class="bg-surface-raised border-b border-line">
-                                    <tr class="text-left eyebrow">
-                                        <th class="sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 w-[72px]">Code</th>
-                                        <th class="sticky left-[72px] top-0 z-30 bg-surface-raised px-3 py-3 min-w-[220px]">Description</th>
-                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 whitespace-nowrap min-w-[220px]">Cost centre</th>
-                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Qty</th>
-                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Rate £</th>
-                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Amount £</th>
+                            <table class="data-table data-table-dense">
+                                <thead>
+                                    <tr>
+                                        <th class="sticky left-0 z-30 bg-canvas w-[72px]">Code</th>
+                                        <th class="sticky left-[72px] z-30 bg-canvas min-w-[220px]">Description</th>
+                                        <th class="whitespace-nowrap min-w-[220px]">Cost centre</th>
+                                        <th class="text-right whitespace-nowrap">Qty</th>
+                                        <th class="text-right whitespace-nowrap">Rate £</th>
+                                        <th class="text-right whitespace-nowrap">Amount £</th>
                                         @if (SelectedClaim is not null)
                                         {
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap"
+                                            <th class="text-right whitespace-nowrap"
                                                 title="@PrevColumnTitle">Prev. %</th>
                                         }
-                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">% Complete</th>
-                                        <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap">Claimed £</th>
+                                        <th class="text-right whitespace-nowrap">% Complete</th>
+                                        <th class="text-right whitespace-nowrap">Claimed £</th>
                                         @if (SelectedClaim is not null)
                                         {
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right whitespace-nowrap"
+                                            <th class="text-right whitespace-nowrap"
                                                 title="Movement this period — cumulative claimed now less the previous claim's cumulative">Period £</th>
                                         }
                                         @if (CanEditLines)
                                         {
-                                            <th class="sticky top-0 z-20 bg-surface-raised px-3 py-3 text-right w-[80px]"></th>
+                                            <th class="text-right w-[80px]"></th>
                                         }
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-line">
+                                <tbody>
                                     @{ var currentArea = ""; }
                                     @foreach (var row in RowsFor(valuationSection))
                                     {
@@ -82,8 +82,8 @@ else
                                         {
                                             var isRollUpOpen = IsRollUpOpen(rollUp);
                                             <tr class="@(rollUp.CountsTowardTotals ? "bg-surface-raised" : "bg-surface-raised opacity-60")">
-                                                <td class="sticky left-0 z-10 bg-surface-raised px-3 py-2 font-mono text-xs text-content-subtle whitespace-nowrap">@rollUp.VariationRef</td>
-                                                <td class="sticky left-[72px] z-10 bg-surface-raised px-3 py-2 text-content">
+                                                <td class="sticky left-0 z-10 bg-surface font-mono text-xs text-content-subtle whitespace-nowrap">@rollUp.VariationRef</td>
+                                                <td class="sticky left-[72px] z-10 bg-surface text-content">
                                                     <button type="button" @onclick="() => ToggleRollUp(rollUp)" aria-expanded="@isRollUpOpen"
                                                             title="@(isRollUpOpen ? "Hide this row's lines" : "Show this row's lines")"
                                                             class="flex items-start gap-1.5 text-left">
@@ -98,17 +98,17 @@ else
                                                         </span>
                                                     </button>
                                                 </td>
-                                                <td class="px-3 py-2 whitespace-nowrap text-content-muted">@CostCentreLabel(rollUp.CostCode)</td>
-                                                <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">—</td>
-                                                <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">—</td>
-                                                <td class="px-3 py-2 text-right text-content font-medium whitespace-nowrap">@Money(rollUp.Amount)</td>
+                                                <td class="whitespace-nowrap">@CostCentreLabel(rollUp.CostCode)</td>
+                                                <td class="text-right text-content-subtle whitespace-nowrap">—</td>
+                                                <td class="text-right text-content-subtle whitespace-nowrap">—</td>
+                                                <td class="text-right text-content font-medium whitespace-nowrap">@Money(rollUp.Amount)</td>
                                                 @if (SelectedClaim is not null)
                                                 {
-                                                    <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">
+                                                    <td class="text-right text-content-subtle whitespace-nowrap">
                                                         @(rollUp.CountsTowardTotals && HasPreviousClaim ? Pct(RollUpPreviousPercent(rollUp)) : "—")
                                                     </td>
                                                 }
-                                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                <td class="text-right whitespace-nowrap">
                                                     @if (bulkEditing && CanEditEntries)
                                                     {
                                                         <span class="text-xs text-content-subtle" title="In bulk edit the percentages are typed per line below">per line</span>
@@ -149,18 +149,18 @@ else
                                                         }
                                                     }
                                                 </td>
-                                                <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">
+                                                <td class="text-right whitespace-nowrap">
                                                     @(rollUp.CountsTowardTotals ? Money(RollUpClaimed(rollUp)) : "—")
                                                 </td>
                                                 @if (SelectedClaim is not null)
                                                 {
-                                                    <td class="px-3 py-2 text-right whitespace-nowrap @(RollUpPeriod(rollUp) == 0m ? "text-content-subtle" : "text-content")">
+                                                    <td class="text-right whitespace-nowrap @(RollUpPeriod(rollUp) == 0m ?"text-content-subtle" : "text-content")">
                                                         @(rollUp.CountsTowardTotals ? Money(RollUpPeriod(rollUp)) : "—")
                                                     </td>
                                                 }
                                                 @if (CanEditLines)
                                                 {
-                                                    <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                    <td class="text-right whitespace-nowrap">
                                                         <button type="button" @onclick="() => ToggleRollUp(rollUp)"
                                                                 class="text-content-subtle hover:text-content underline underline-offset-2 text-xs">@(isRollUpOpen ? "Hide lines" : "Show lines")</button>
                                                     </td>
@@ -180,13 +180,13 @@ else
                                             {
                                                 currentArea = area;
                                                 <tr>
-                                                    <td colspan="2" class="sticky left-0 z-10 bg-surface-raised px-3 pt-3 pb-1.5 text-xs font-semibold text-content-muted whitespace-nowrap">@area</td>
-                                                    <td colspan="@(ColumnCount - 2)" class="bg-surface-raised"></td>
+                                                    <td colspan="2" class="sticky left-0 z-10 bg-surface pb-1.5 text-xs font-semibold whitespace-nowrap">@area</td>
+                                                    <td colspan="@(ColumnCount - 2)"></td>
                                                 </tr>
                                             }
                                         }
                                         <tr class="@(line.CountsTowardTotals ? "" : "opacity-60")">
-                                            <td class="sticky left-0 z-10 bg-surface px-3 py-2 font-mono text-xs text-content-subtle whitespace-nowrap">
+                                            <td class="sticky left-0 z-10 bg-surface font-mono text-xs text-content-subtle whitespace-nowrap">
                                                 <div>@(row.IsDetail ? "↳ " : "")@CodeFor(line)</div>
                                                 @* The client's own item number for the line — how the contract document reads. *@
                                                 @if (!string.IsNullOrWhiteSpace(line.ClientReference))
@@ -194,7 +194,7 @@ else
                                                     <div class="text-xs text-content-muted">@line.ClientReference</div>
                                                 }
                                             </td>
-                                            <td class="sticky left-[72px] z-10 bg-surface px-3 py-2 text-content @(row.IsDetail ? "pl-7" : "")">
+                                            <td class="sticky left-[72px] z-10 bg-surface text-content @(row.IsDetail ?"pl-7" : "")">
                                                 <div class="font-medium">@TitleFor(line)</div>
                                                 @if (!string.IsNullOrWhiteSpace(line.Comments))
                                                 {
@@ -210,7 +210,7 @@ else
                                                same gate): recoding is a finance allocation, never a value change, so
                                                it stays open when the bill itself is locked by a preapproved claim.
                                                Variation recodes move the mirrored VO's committed budget with them. *@
-                                            <td class="px-3 py-2 whitespace-nowrap">
+                                            <td class="whitespace-nowrap">
                                                     @if (CanRecodeCostCentres)
                                                     {
                                                         <SearchSelect Options="@CostCentreOptionsFor(line)" WidthClass="w-52"
@@ -228,9 +228,9 @@ else
                                                         <span class="text-content-muted">@CostCentreLabel(line.CostCode)</span>
                                                     }
                                                 </td>
-                                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Quantity)</td>
-                                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">@Num(line.Rate)</td>
-                                            <td class="px-3 py-2 text-right text-content whitespace-nowrap">
+                                            <td class="text-right whitespace-nowrap">@Num(line.Quantity)</td>
+                                            <td class="text-right whitespace-nowrap">@Num(line.Rate)</td>
+                                            <td class="text-right text-content whitespace-nowrap">
                                                 @if (CanEditLines && line.ElementType == ValuationElementType.Variation
                                                      && CanReviseVariationValue && RevisableVoFor(line) is { } amountVo)
                                                 {
@@ -267,11 +267,11 @@ else
                                             {
                                                 @* Cumulative % claimed on the previous claim — the baseline the current
                                                    claim moves off, so the client can see what changed this period. *@
-                                                <td class="px-3 py-2 text-right text-content-subtle whitespace-nowrap">
+                                                <td class="text-right text-content-subtle whitespace-nowrap">
                                                     @(line.CountsTowardTotals && HasPreviousClaim ? Pct(PreviousPercentFor(line)) : "—")
                                                 </td>
                                             }
-                                            <td class="px-3 py-2 text-right whitespace-nowrap">
+                                            <td class="text-right whitespace-nowrap">
                                                 @if (bulkEditing && CanEditEntries && line.CountsTowardTotals)
                                                 {
                                                     <input type="text" inputmode="decimal"
@@ -330,20 +330,20 @@ else
                                                     }
                                                 }
                                             </td>
-                                            <td class="px-3 py-2 text-right text-content-muted whitespace-nowrap">
+                                            <td class="text-right whitespace-nowrap">
                                                 @(line.CountsTowardTotals ? Money(ClaimedFor(line)) : "—")
                                             </td>
                                             @if (SelectedClaim is not null)
                                             {
                                                 @* What this period moved in money. On Claim 1 (no previous claim)
                                                    everything claimed is movement, which is exactly right. *@
-                                                <td class="px-3 py-2 text-right whitespace-nowrap @(PeriodFor(line) == 0m ? "text-content-subtle" : "text-content")">
+                                                <td class="text-right whitespace-nowrap @(PeriodFor(line) == 0m ?"text-content-subtle" : "text-content")">
                                                     @(line.CountsTowardTotals ? Money(PeriodFor(line)) : "—")
                                                 </td>
                                             }
                                             @if (CanEditLines)
                                             {
-                                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                                <td class="text-right whitespace-nowrap">
                                                     @if (line.ElementType == ValuationElementType.Variation)
                                                     {
                                                         @if (CanReviseVariationValue && RevisableVoFor(line) is { } actionVo)

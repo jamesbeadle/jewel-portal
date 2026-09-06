@@ -29,7 +29,7 @@
                 @record.Reference · @record.Kind.DisplayName() · @record.ProjectName
             </EyebrowContent>
             <SubtitleContent>
-                @record.Status.DisplayName() · raised @record.RaisedAt.LocalDateTime.ToString("d MMM yyyy")@(record.RespondedAt is { } responded ? $" · responded {responded.LocalDateTime:d MMM yyyy}" : "")
+                @record.Status.DisplayName() · raised @DateText(record.RaisedAt)@(record.RespondedAt is { } responded ? $" · responded {responded.LocalDateTime:d MMM yyyy}" : "")
             </SubtitleContent>
         </PageHeader>
 

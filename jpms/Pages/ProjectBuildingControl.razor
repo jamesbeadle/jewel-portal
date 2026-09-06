@@ -290,44 +290,42 @@
                 }
                 else
                 {
-                    <div class="rounded-xl border border-line bg-surface overflow-hidden">
-                        <table class="w-full text-sm">
-                            <thead>
-                                <tr class="border-b border-line text-left">
-                                    <th class="px-4 py-2.5 eyebrow">Ref</th>
-                                    <th class="px-4 py-2.5 eyebrow">Stage</th>
-                                    <th class="px-4 py-2.5 eyebrow">Status</th>
-                                    <th class="px-4 py-2.5 eyebrow">Booked for</th>
-                                    <th class="px-4 py-2.5 eyebrow">Inspected</th>
-                                    <th class="px-4 py-2.5 eyebrow">Files</th>
-                                    <th class="px-4 py-2.5"></th>
+                    <RecordsTable Dense="true" MaxHeight="">
+                        <thead>
+                            <tr>
+                                <th>Ref</th>
+                                <th>Stage</th>
+                                <th>Status</th>
+                                <th>Booked for</th>
+                                <th>Inspected</th>
+                                <th>Files</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var inspection in Inspections)
+                            {
+                                <tr @key="inspection.BuildingControlInspectionId" class="border-b border-line last:border-0 hover:bg-surface-raised/50 cursor-pointer"
+                                    @onclick="() => OpenInspection(inspection)">
+                                    <td class="font-mono text-xs whitespace-nowrap">@inspection.Reference</td>
+                                    <td class="text-content font-medium">@inspection.StageName</td>
+                                    <td class="whitespace-nowrap">
+                                        <Pill Tone="@inspection.Status.ToTone()">@inspection.Status.DisplayName()</Pill>
+                                    </td>
+                                    <td class="whitespace-nowrap">@DateText(inspection.BookedFor)</td>
+                                    <td class="whitespace-nowrap">@DateText(inspection.InspectedAt)</td>
+                                    <td class="whitespace-nowrap">@FileCountText(inspection)</td>
+                                    <td class="whitespace-nowrap text-right" @onclick:stopPropagation>
+                                        @if (inspection.Status == BuildingControlInspectionStatus.Planned && FilesFor(inspection).Count == 0)
+                                        {
+                                            <button type="button" class="text-xs text-content-subtle hover:text-negative underline underline-offset-4" disabled="@busy"
+                                                    @onclick="() => DeleteStageAsync(inspection)">Remove</button>
+                                        }
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var inspection in Inspections)
-                                {
-                                    <tr @key="inspection.BuildingControlInspectionId" class="border-b border-line last:border-0 hover:bg-surface-raised/50 cursor-pointer"
-                                        @onclick="() => OpenInspection(inspection)">
-                                        <td class="px-4 py-2.5 font-mono text-xs text-content-muted whitespace-nowrap">@inspection.Reference</td>
-                                        <td class="px-4 py-2.5 text-content font-medium">@inspection.StageName</td>
-                                        <td class="px-4 py-2.5 whitespace-nowrap">
-                                            <Pill Tone="@inspection.Status.ToTone()">@inspection.Status.DisplayName()</Pill>
-                                        </td>
-                                        <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@DateText(inspection.BookedFor)</td>
-                                        <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@DateText(inspection.InspectedAt)</td>
-                                        <td class="px-4 py-2.5 text-content-muted whitespace-nowrap">@FileCountText(inspection)</td>
-                                        <td class="px-4 py-2.5 whitespace-nowrap text-right" @onclick:stopPropagation>
-                                            @if (inspection.Status == BuildingControlInspectionStatus.Planned && FilesFor(inspection).Count == 0)
-                                            {
-                                                <button type="button" class="text-xs text-content-subtle hover:text-negative underline underline-offset-4" disabled="@busy"
-                                                        @onclick="() => DeleteStageAsync(inspection)">Remove</button>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
+                            }
+                        </tbody>
+                    </RecordsTable>
                 }
             }
         }

@@ -41,37 +41,37 @@
    the cells' z-10/20/30 in a local stacking context so they never paint over the app
    header (sticky z-30 in MainLayout) when the page scrolls under it. *@
 <div @ref="scrollerRef" class="isolate rounded-xl border border-line bg-surface overflow-x-auto overflow-y-auto max-h-[85vh]">
-    <table class="w-full text-sm border-collapse">
-        <thead class="bg-surface-raised border-b border-line">
-            <tr class="text-left eyebrow">
-                <th class="sticky left-0 top-0 z-30 bg-surface-raised px-3 py-3 w-[36px]"></th>
-                <th class="sticky left-[36px] top-0 z-30 bg-surface-raised px-4 py-3 w-[88px]"><SortableColumnHeader Column="code" Label="Code" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky left-[124px] top-0 z-30 bg-surface-raised px-4 py-3 min-w-[200px]"><SortableColumnHeader Column="name" Label="Cost Centre" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th class="sticky left-0 z-30 bg-canvas w-[36px]"></th>
+                <th class="sticky left-[36px] z-30 bg-canvas w-[88px]"><SortableColumnHeader Column="code" Label="Code" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="sticky left-[124px] z-30 bg-canvas min-w-[200px]"><SortableColumnHeader Column="name" Label="Cost Centre" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
                 @* Sales side: what we bill the client. *@
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="sales" Label="Contract Sales Value" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="complete" Label="% Complete" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="claim" Label="Claim Value" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="sales" Label="Contract Sales Value" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="complete" Label="% Complete" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="claim" Label="Claim Value" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
                 @* Cost side: what we expect to pay out, in the order the maths runs (finance
                    meeting 2026-08-03): Work Orders + Non-WO = Committed Cost of Sales; target −
                    committed splits by sign into Drawdown / Overspend; committed + drawdown =
                    Forecasted Cost of Sales, the cost side's subtotal. *@
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap border-l border-line"><SortableColumnHeader Column="target" Label="Target Cost Value" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="wo" Label="Work Orders" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="nonwo" Label="Non-WO Cost of Sales" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="committed" Label="Committed Cost of Sales" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="drawdown" Label="Drawdown" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="overspend" Label="Overspend" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="forecast" Label="Forecasted Cost of Sales" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="pl" Label="Profit / Loss" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="costpct" Label="Cost % Complete" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[80px]"><span class="sr-only">Lock</span></th>
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 w-[76px]"><span class="sr-only">Report</span></th>
+                <th class="text-right whitespace-nowrap border-l"><SortableColumnHeader Column="target" Label="Target Cost Value" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="wo" Label="Work Orders" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="nonwo" Label="Non-WO Cost of Sales" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="committed" Label="Committed Cost of Sales" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="drawdown" Label="Drawdown" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="overspend" Label="Overspend" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="forecast" Label="Forecasted Cost of Sales" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="pl" Label="Profit / Loss" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="costpct" Label="Cost % Complete" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="w-[80px]"><span class="sr-only">Lock</span></th>
+                <th class="w-[76px]"><span class="sr-only">Report</span></th>
                 @* Reference column: actual allocated spend, kept last — its click-through
                    opens the invoice modal where actual costs are allocated to work orders. *@
-                <th class="sticky top-0 z-20 bg-surface-raised px-4 py-3 text-right whitespace-nowrap"><SortableColumnHeader Column="acos" Label="Actual Cost of Sales" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
+                <th class="text-right whitespace-nowrap"><SortableColumnHeader Column="acos" Label="Actual Cost of Sales" ActiveColumn="@sortColumn" Descending="sortDescending" OnSort="SortBy" /></th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-line">
+        <tbody>
             @* Named roll-ups and remaining individual centres, alphabetically. Master cost
                centres first among individuals, then values sitting on codes that are not in
                the active master (legacy / retired) — shown rather than silently swallowed.
@@ -90,7 +90,7 @@
                 var allLocked = AllFinalised(reportLine.CostCodes);
                 var anyLocked = AnyFinalised(reportLine.CostCodes);
                 <tr>
-                    <td class="sticky left-0 z-10 bg-surface px-3 py-3">
+                    <td class="sticky left-0 z-10 bg-surface">
                         @if (reportLine.IsGroup)
                         {
                             <input type="checkbox" class="cursor-pointer align-middle"
@@ -108,9 +108,9 @@
                     </td>
                     @if (reportLine.IsGroup)
                     {
-                        <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-xs text-content-subtle whitespace-nowrap"
+                        <td class="sticky left-[36px] z-10 bg-surface font-mono text-xs text-content-subtle whitespace-nowrap"
                             title="@string.Join(", ", reportLine.CostCodes)">@($"{reportLine.CostCodes.Count} centres")</td>
-                        <td class="sticky left-[124px] z-10 bg-surface px-4 py-3 whitespace-nowrap">
+                        <td class="sticky left-[124px] z-10 bg-surface whitespace-nowrap">
                             <span class="text-content font-medium" title="@string.Join(", ", reportLine.CostCodes)">@reportLine.Name</span>
                             <button type="button"
                                     class="ml-2 text-xs text-content-subtle underline underline-offset-2 hover:text-content"
@@ -122,20 +122,20 @@
                     }
                     else
                     {
-                        <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-xs text-content-subtle whitespace-nowrap">@reportLine.Code</td>
+                        <td class="sticky left-[36px] z-10 bg-surface font-mono text-xs text-content-subtle whitespace-nowrap">@reportLine.Code</td>
                         @if (reportLine.InMaster)
                         {
-                            <td class="sticky left-[124px] z-10 bg-surface px-4 py-3 text-content font-medium whitespace-nowrap">@reportLine.Name</td>
+                            <td class="sticky left-[124px] z-10 bg-surface text-content font-medium whitespace-nowrap">@reportLine.Name</td>
                         }
                         else
                         {
-                            <td class="sticky left-[124px] z-10 bg-surface px-4 py-3 text-content-subtle italic whitespace-nowrap">(not in cost-code master)</td>
+                            <td class="sticky left-[124px] z-10 bg-surface text-content-subtle italic whitespace-nowrap">(not in cost-code master)</td>
                         }
                     }
 
                     @if (contractSales != 0m)
                     {
-                        <td class="px-4 py-3 text-right">
+                        <td class="text-right">
                             <button type="button"
                                     class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
                                     title="Show the valuation lines behind this figure"
@@ -146,16 +146,16 @@
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right text-content-muted">@WholeMoney(0m)</td>
+                        <td class="text-right">@WholeMoney(0m)</td>
                     }
-                    <td class="px-4 py-3 text-right @MoneyClass(SalesCompletionFor(reportLine.CostCodes))">@Percent(SalesCompletionFor(reportLine.CostCodes))</td>
-                    <td class="px-4 py-3 text-right @MoneyClass(ClaimValueFor(reportLine.CostCodes))">@WholeMoney(ClaimValueFor(reportLine.CostCodes))</td>
+                    <td class="text-right @MoneyClass(SalesCompletionFor(reportLine.CostCodes))">@Percent(SalesCompletionFor(reportLine.CostCodes))</td>
+                    <td class="text-right @MoneyClass(ClaimValueFor(reportLine.CostCodes))">@WholeMoney(ClaimValueFor(reportLine.CostCodes))</td>
 
-                    <td class="px-4 py-3 text-right border-l border-line @MoneyClass(TargetCostFor(reportLine.CostCodes))">@WholeMoney(TargetCostFor(reportLine.CostCodes))</td>
+                    <td class="text-right border-l @MoneyClass(TargetCostFor(reportLine.CostCodes))">@WholeMoney(TargetCostFor(reportLine.CostCodes))</td>
 
                     @if (woCommitted != 0m)
                     {
-                        <td class="px-4 py-3 text-right">
+                        <td class="text-right">
                             <button type="button"
                                     class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
                                     title="Show this line's work orders"
@@ -166,14 +166,14 @@
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right text-content-muted">@WholeMoney(0m)</td>
+                        <td class="text-right">@WholeMoney(0m)</td>
                     }
 
-                    <td class="px-4 py-3 text-right @MoneyClass(NonWoCostOfSalesFor(reportLine.CostCodes))">@WholeMoney(NonWoCostOfSalesFor(reportLine.CostCodes))</td>
+                    <td class="text-right @MoneyClass(NonWoCostOfSalesFor(reportLine.CostCodes))">@WholeMoney(NonWoCostOfSalesFor(reportLine.CostCodes))</td>
 
                     @* Committed Cost of Sales = Work Orders + Non-WO Cost of Sales — what is
                        already committed against the line. *@
-                    <td class="px-4 py-3 text-right @MoneyClass(committedCoS)"
+                    <td class="text-right @MoneyClass(committedCoS)"
                         title="Work Orders + Non-WO Cost of Sales">@WholeMoney(committedCoS)</td>
 
                     @* Target − Committed, split by sign per centre: budget still available on
@@ -181,33 +181,33 @@
                        show — in both: their remainder is realised to profit / loss. *@
                     @if (allLocked)
                     {
-                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — profit / loss now shows sales less forecast cost">—</td>
-                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — profit / loss now shows sales less forecast cost">—</td>
+                        <td class="text-right" title="Locked — profit / loss now shows sales less forecast cost">—</td>
+                        <td class="text-right" title="Locked — profit / loss now shows sales less forecast cost">—</td>
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right @(drawdown == 0m ? "text-content-muted" : "text-content")"
+                        <td class="text-right @(drawdown == 0m ?"text-content-muted" : "text-content")"
                             title="Target Cost Value − Committed Cost of Sales, where positive — funds still available on the line">@WholeMoney(drawdown)</td>
-                        <td class="px-4 py-3 text-right @(overspend == 0m ? "text-content-muted" : "text-negative")"
+                        <td class="text-right @(overspend == 0m ?"text-content-muted" : "text-negative")"
                             title="Target Cost Value − Committed Cost of Sales, where negative — committed cost past the line's target">@WholeMoney(overspend)</td>
                     }
 
                     @* Forecasted Cost of Sales = Committed + Drawdown, the cost side's subtotal:
                        an underspent line is expected to spend its full target, an overspent one
                        what is already committed. *@
-                    <td class="px-4 py-3 text-right @MoneyClass(forecast)"
+                    <td class="text-right @MoneyClass(forecast)"
                         title="Committed Cost of Sales + Drawdown — what the line is expected to cost in total">@WholeMoney(forecast)</td>
 
                     @if (anyLocked)
                     {
-                        <td class="px-4 py-3 text-right font-medium @(profitLoss == 0m ? "text-content-muted" : profitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(profitLoss)</td>
+                        <td class="text-right font-medium @(profitLoss == 0m ?"text-content-muted" : profitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(profitLoss)</td>
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right text-content-muted" title="Lock the line to realise sales less forecast cost as profit / loss">—</td>
+                        <td class="text-right" title="Lock the line to realise sales less forecast cost as profit / loss">—</td>
                     }
 
-                    <td class="px-4 py-3 text-right">
+                    <td class="text-right">
                         <input type="number" min="0" max="100" step="1"
                                class="field w-20 text-right"
                                title="@(reportLine.IsGroup
@@ -218,7 +218,7 @@
                                @onchange="args => HandleCostCompletionChangedAsync(reportLine, args)" />
                     </td>
 
-                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <td class="text-right whitespace-nowrap">
                         <button type="button"
                                 class="text-xs font-medium underline underline-offset-4 @(allLocked ? "text-content" : "text-content-subtle hover:text-content")"
                                 title="@LockTitle(reportLine, allLocked, anyLocked)"
@@ -227,7 +227,7 @@
                         </button>
                     </td>
 
-                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <td class="text-right whitespace-nowrap">
                         <button type="button"
                                 class="text-xs font-medium text-content-subtle hover:text-content underline underline-offset-4"
                                 title="Reconciliation of this line — sales lines, work orders and Xero costs, gross profit, procurement gain / loss and margin, with a PDF for the accountant"
@@ -240,7 +240,7 @@
                        invoices to work orders. Not part of the drawdown arithmetic. *@
                     @if (CostOfSalesFor(reportLine.CostCodes) != 0m)
                     {
-                        <td class="px-4 py-3 text-right">
+                        <td class="text-right">
                             <button type="button"
                                     class="underline decoration-dotted underline-offset-2 hover:decoration-solid text-content"
                                     title="Show the allocated purchase invoices behind this figure, and link them to work orders"
@@ -251,7 +251,7 @@
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right text-content-muted">@WholeMoney(0m)</td>
+                        <td class="text-right">@WholeMoney(0m)</td>
                     }
                 </tr>
             }
@@ -264,9 +264,9 @@
             @foreach (var package in VisiblePackages)
             {
                 <tr class="bg-surface-raised/40">
-                    <td class="sticky left-0 z-10 bg-surface px-3 py-3"></td>
-                    <td class="sticky left-[36px] z-10 bg-surface px-4 py-3 font-mono text-xs text-content-subtle whitespace-nowrap">PKG</td>
-                    <td class="sticky left-[124px] z-10 bg-surface px-4 py-3 whitespace-nowrap">
+                    <td class="sticky left-0 z-10 bg-surface"></td>
+                    <td class="sticky left-[36px] z-10 bg-surface font-mono text-xs text-content-subtle whitespace-nowrap">PKG</td>
+                    <td class="sticky left-[124px] z-10 bg-surface whitespace-nowrap">
                         <span class="text-content font-medium">@package.Name</span>
                         <Pill Tone="Tone.Muted" Class="ml-2" Title="A reconciliation package: work orders matched against the valuation lines that priced their scope — manage it in the Packages section below">Package</Pill>
                         @if (package.IsLocked)
@@ -274,71 +274,71 @@
                             <Pill Tone="Tone.Muted" Class="ml-1" Title="Locked — figures frozen; profit / loss realised against actual invoiced cost">Locked</Pill>
                         }
                     </td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.SalesValue)">@WholeMoney(package.SalesValue)</td>
-                    <td class="px-4 py-3 text-right text-content-muted">
+                    <td class="text-right whitespace-nowrap @MoneyClass(package.SalesValue)">@WholeMoney(package.SalesValue)</td>
+                    <td class="text-right">
                         @Percent(package.SalesValue == 0m ? 0m : Math.Round(package.ClaimedToDate / package.SalesValue * 100m, 1))
                     </td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.ClaimedToDate)">@WholeMoney(package.ClaimedToDate)</td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap border-l border-line @MoneyClass(package.TargetCost)">@WholeMoney(package.TargetCost)</td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.WoCommitted)">@WholeMoney(package.WoCommitted)</td>
-                    <td class="px-4 py-3 text-right text-content-muted"
+                    <td class="text-right whitespace-nowrap @MoneyClass(package.ClaimedToDate)">@WholeMoney(package.ClaimedToDate)</td>
+                    <td class="text-right whitespace-nowrap border-l @MoneyClass(package.TargetCost)">@WholeMoney(package.TargetCost)</td>
+                    <td class="text-right whitespace-nowrap @MoneyClass(package.WoCommitted)">@WholeMoney(package.WoCommitted)</td>
+                    <td class="text-right"
                         title="Direct invoice spend assigned to this package is included in its Actual Cost of Sales figure">—</td>
                     @if (package.IsLocked)
                     {
-                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — figures frozen at lock">—</td>
-                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — figures frozen at lock">—</td>
-                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — figures frozen at lock">—</td>
-                        <td class="px-4 py-3 text-right text-content-muted" title="Locked — profit / loss realised as sales less invoiced cost">—</td>
+                        <td class="text-right" title="Locked — figures frozen at lock">—</td>
+                        <td class="text-right" title="Locked — figures frozen at lock">—</td>
+                        <td class="text-right" title="Locked — figures frozen at lock">—</td>
+                        <td class="text-right" title="Locked — profit / loss realised as sales less invoiced cost">—</td>
                     }
                     else
                     {
                         @* Committed orders plus direct packaged spend — the same figure the
                            package's drawdown nets off its target cost. *@
-                        <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.TargetCost - package.Drawdown)"
+                        <td class="text-right whitespace-nowrap @MoneyClass(package.TargetCost - package.Drawdown)"
                             title="Work orders + direct packaged spend">@WholeMoney(package.TargetCost - package.Drawdown)</td>
-                        <td class="px-4 py-3 text-right @(package.Drawdown <= 0m ? "text-content-muted" : "text-content")">@WholeMoney(Math.Max(0m, package.Drawdown))</td>
-                        <td class="px-4 py-3 text-right @(package.Drawdown < 0m ? "text-negative" : "text-content-muted")">@WholeMoney(Math.Min(0m, package.Drawdown))</td>
-                        <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.TargetCost - package.Drawdown + Math.Max(0m, package.Drawdown))"
+                        <td class="text-right @(package.Drawdown <= 0m ?"text-content-muted" : "text-content")">@WholeMoney(Math.Max(0m, package.Drawdown))</td>
+                        <td class="text-right @(package.Drawdown < 0m ?"text-negative" : "text-content-muted")">@WholeMoney(Math.Min(0m, package.Drawdown))</td>
+                        <td class="text-right whitespace-nowrap @MoneyClass(package.TargetCost - package.Drawdown + Math.Max(0m, package.Drawdown))"
                             title="Committed Cost of Sales + Drawdown — what the package is expected to cost in total">@WholeMoney(package.TargetCost - package.Drawdown + Math.Max(0m, package.Drawdown))</td>
                     }
                     @if (package.IsLocked)
                     {
-                        <td class="px-4 py-3 text-right font-medium @(package.ProfitLoss == 0m ? "text-content-muted" : package.ProfitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(package.ProfitLoss)</td>
+                        <td class="text-right font-medium @(package.ProfitLoss == 0m ?"text-content-muted" : package.ProfitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(package.ProfitLoss)</td>
                     }
                     else
                     {
-                        <td class="px-4 py-3 text-right text-content-muted" title="Lock the package below to realise sales less invoiced cost as profit / loss">—</td>
+                        <td class="text-right" title="Lock the package below to realise sales less invoiced cost as profit / loss">—</td>
                     }
-                    <td class="px-4 py-3 text-right text-content-muted">—</td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                    <td class="text-right">—</td>
+                    <td class="text-right whitespace-nowrap">
                         <span class="text-xs text-content-subtle" title="Edit, lock or dissolve this package in the Packages section below the table">below</span>
                     </td>
-                    <td class="px-4 py-3 text-right text-content-muted"
+                    <td class="text-right"
                         title="Packages are reconciled in the Packages section below the table">—</td>
-                    <td class="px-4 py-3 text-right whitespace-nowrap @MoneyClass(package.InvoicedToDate)">@WholeMoney(package.InvoicedToDate)</td>
+                    <td class="text-right whitespace-nowrap @MoneyClass(package.InvoicedToDate)">@WholeMoney(package.InvoicedToDate)</td>
                 </tr>
             }
         </tbody>
         <tfoot class="border-t-2 border-line-strong bg-surface-raised">
             <tr class="font-semibold text-content">
-                <td class="sticky left-0 z-10 bg-surface-raised px-3 py-3"></td>
-                <td class="sticky left-[36px] z-10 bg-surface-raised px-4 py-3"></td>
-                <td class="sticky left-[124px] z-10 bg-surface-raised px-4 py-3 whitespace-nowrap">Total</td>
-                <td class="px-4 py-3 text-right">@WholeMoney(TotalContractSales)</td>
-                <td class="px-4 py-3 text-right">@Percent(WeightedSalesCompletion)</td>
-                <td class="px-4 py-3 text-right">@WholeMoney(TotalClaimValue)</td>
-                <td class="px-4 py-3 text-right border-l border-line">@WholeMoney(TotalTargetCost)</td>
-                <td class="px-4 py-3 text-right">@WholeMoney(TotalWoCommitted)</td>
-                <td class="px-4 py-3 text-right">@WholeMoney(TotalNonWoCostOfSales)</td>
-                <td class="px-4 py-3 text-right">@WholeMoney(TotalCommittedCostOfSales)</td>
-                <td class="px-4 py-3 text-right">@WholeMoney(TotalDrawdown)</td>
-                <td class="px-4 py-3 text-right @(TotalOverspend < 0m ? "text-negative" : "")">@WholeMoney(TotalOverspend)</td>
-                <td class="px-4 py-3 text-right">@WholeMoney(TotalForecastCostOfSales)</td>
-                <td class="px-4 py-3 text-right @(TotalProfitLoss == 0m ? "" : TotalProfitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(TotalProfitLoss)</td>
-                <td class="px-4 py-3 text-right pr-6">@Percent(WeightedCostCompletion)</td>
-                <td class="px-4 py-3"></td>
-                <td class="px-4 py-3"></td>
-                <td class="px-4 py-3 text-right">@WholeMoney(TotalCostOfSales)</td>
+                <td class="sticky left-0 z-10 bg-surface"></td>
+                <td class="sticky left-[36px] z-10 bg-surface"></td>
+                <td class="sticky left-[124px] z-10 bg-surface whitespace-nowrap">Total</td>
+                <td class="text-right">@WholeMoney(TotalContractSales)</td>
+                <td class="text-right">@Percent(WeightedSalesCompletion)</td>
+                <td class="text-right">@WholeMoney(TotalClaimValue)</td>
+                <td class="text-right border-l">@WholeMoney(TotalTargetCost)</td>
+                <td class="text-right">@WholeMoney(TotalWoCommitted)</td>
+                <td class="text-right">@WholeMoney(TotalNonWoCostOfSales)</td>
+                <td class="text-right">@WholeMoney(TotalCommittedCostOfSales)</td>
+                <td class="text-right">@WholeMoney(TotalDrawdown)</td>
+                <td class="text-right @(TotalOverspend < 0m ?"text-negative" : "")">@WholeMoney(TotalOverspend)</td>
+                <td class="text-right">@WholeMoney(TotalForecastCostOfSales)</td>
+                <td class="text-right @(TotalProfitLoss == 0m ?"" : TotalProfitLoss > 0m ? "text-positive" : "text-negative")">@WholeMoney(TotalProfitLoss)</td>
+                <td class="text-right">@Percent(WeightedCostCompletion)</td>
+                <td></td>
+                <td></td>
+                <td class="text-right">@WholeMoney(TotalCostOfSales)</td>
             </tr>
         </tfoot>
     </table>

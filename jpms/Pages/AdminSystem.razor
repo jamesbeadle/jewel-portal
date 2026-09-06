@@ -57,7 +57,7 @@
                         @if (!string.IsNullOrWhiteSpace(announced.PublishedBy))
                         {
                             <p class="text-xs text-content-subtle mt-2">
-                                Published @announced.PublishedAt.ToLocalTime().ToString("d MMM yyyy, HH:mm") by @announced.PublishedBy
+                                Published @DateTimeText(announced.PublishedAt.ToLocalTime()) by @announced.PublishedBy
                             </p>
                         }
 

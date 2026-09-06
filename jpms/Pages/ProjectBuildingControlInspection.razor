@@ -101,7 +101,7 @@
                         Save changes
                     </button>
                     <p class="text-xs text-content-subtle" title="System stamp — the official dates above are what matters">
-                        Created @inspection.RaisedAt.ToLocalTime().ToString("d MMM yyyy")@(string.IsNullOrWhiteSpace(inspection.RaisedByEmail) ? "" : $" by {inspection.RaisedByEmail}")
+                        Created @DateText(inspection.RaisedAt)@(string.IsNullOrWhiteSpace(inspection.RaisedByEmail) ? "" : $" by {inspection.RaisedByEmail}")
                     </p>
                 </div>
             </section>
@@ -164,7 +164,7 @@
                                     <a class="text-sm font-medium text-content hover:underline"
                                        href="@Attachments.FileUrl(file.BuildingControlAttachmentId)" download>@file.DisplayName</a>
                                     <span class="text-xs text-content-subtle ml-2">@file.Kind.Label() · @FormatSize(file.FileSizeBytes)</span>
-                                    <span class="text-xs text-content-subtle ml-2">· @SourceLabel(file.Source) @file.AddedAt.LocalDateTime.ToString("d MMM yyyy")</span>
+                                    <span class="text-xs text-content-subtle ml-2">· @SourceLabel(file.Source) @DateText(file.AddedAt)</span>
                                 </div>
                                 <button type="button" class="text-xs text-content-muted hover:text-negative" disabled="@busy"
                                         @onclick="() => RemoveFileAsync(file.BuildingControlAttachmentId)">Remove</button>

@@ -25,7 +25,7 @@
             <p class="text-sm text-content-muted">
                 @(ComposeAnchorIsForward ? "Forwarding" : "Replying to") <span class="text-content font-medium">@DisplayFrom(anchor)</span> —
                 <span class="italic">@anchor.Subject</span>
-                <span class="text-content-subtle">(@anchor.ReceivedAt.LocalDateTime.ToString("d MMM yyyy, HH:mm"))</span>
+                <span class="text-content-subtle">(@DateTimeText(anchor.ReceivedAt))</span>
             </p>
             <MailReplyComposer @key="@($"{anchor.Id}:{ComposeAnchorIsForward}")" ReplyTo="anchor" Forward="ComposeAnchorIsForward"
                                Projects="@Projects" ProjectId="@ProjectId"
@@ -61,7 +61,7 @@
                             <span class="text-sm font-medium text-accent mr-2">@(entry.IsForward ? "→ forward" : "↩ reply")</span>
                             <span class="text-content font-medium">@entry.AnchorFrom</span>
                             <span class="text-content-muted"> — @entry.AnchorSubject</span>
-                            <span class="text-xs text-content-subtle ml-1">(@entry.AnchorReceivedAt.LocalDateTime.ToString("d MMM yyyy"))</span>
+                            <span class="text-xs text-content-subtle ml-1">(@DateText(entry.AnchorReceivedAt))</span>
                         </p>
                         <span class="flex items-center gap-3 shrink-0">
                             @if (!isEditing)
